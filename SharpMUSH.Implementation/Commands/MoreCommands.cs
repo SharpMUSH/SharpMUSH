@@ -15,6 +15,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -71,7 +72,7 @@ public partial class Commands
 	private async ValueTask<OneOf<Success, Error<string>>> SetFollowingAsync(
 		AnySharpObject follower, AnySharpObject leader)
 		=> await AttributeService.SetAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
-			AttrFollowing, MModule.single(leader.Object().DBRef.ToString()));
+			AttrFollowing, MarkupText.Plain(leader.Object().DBRef.ToString()));
 
 
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
@@ -704,7 +705,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
+		if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToPlainText()))
 		{
 			await NotifyService.Notify(executor, "Usage: @warnings <object>=<warning list>", executor);
 			await NotifyService.Notify(executor, "Available warnings: none, serious, normal, extra, all", executor);
@@ -737,7 +738,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var warningListString = warningListArg.Message?.ToString() ?? string.Empty;
+		var warningListString = warningListArg.Message?.ToPlainText() ?? string.Empty;
 		var unknownWarnings = new List<string>();
 		var newWarnings = WarningTypeHelper.ParseWarnings(warningListString, unknownWarnings);
 
@@ -801,7 +802,7 @@ public partial class Commands
 		}
 		else
 		{
-			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToString()))
+			if (!args.TryGetValue("0", out var objectArg) || string.IsNullOrWhiteSpace(objectArg.Message?.ToPlainText()))
 			{
 				await NotifyService.Notify(executor, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all", executor);
 				return CallState.Empty;
@@ -861,7 +862,7 @@ public partial class Commands
 
 		if (args.Count == 1)
 		{
-			var argText = args["0"].Message!.ToString();
+			var argText = args["0"].Message!.ToPlainText();
 
 			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
@@ -919,31 +920,31 @@ public partial class Commands
 
 		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 		var nameRow = showFlags
-			? MModule.multiple([
+			? MarkupText.Concat([
 				name.Hilight(),
-				MModule.single(" "),
-				MModule.single($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+				MarkupText.Space,
+				MarkupText.Plain($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
 			])
-			: MModule.concat(name.Hilight(), MModule.single($" (#{obj.DBRef.Number})"));
+			: MarkupText.Concat(name.Hilight(), MarkupText.Plain($" (#{obj.DBRef.Number})"));
 
 		outputSections.Add(nameRow);
 
 		if (showFlags)
 		{
-			outputSections.Add(MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+			outputSections.Add(MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
 		}
 		else
 		{
-			outputSections.Add(MModule.single($"Type: {obj.Type}"));
+			outputSections.Add(MarkupText.Plain($"Type: {obj.Type}"));
 		}
 
 		var ownerRow = showFlags
-			? MModule.single($"Owner: {ownerName.Hilight()}" +
+			? MarkupText.Plain($"Owner: {ownerName.Hilight()}" +
 											 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
-			: MModule.single($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
+			: MarkupText.Plain($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
 		outputSections.Add(ownerRow);
 
-		outputSections.Add(MModule.single($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
+		outputSections.Add(MarkupText.Plain($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
 
 		if (obj.Locks.Count > 0)
 		{
@@ -958,31 +959,31 @@ public partial class Commands
 				})
 				.ToList();
 
-			outputSections.Add(MModule.single($"Locks:"));
+			outputSections.Add(MarkupText.Plain($"Locks:"));
 			foreach (var lockLine in lockLines)
 			{
-				outputSections.Add(MModule.single($"  {lockLine}"));
+				outputSections.Add(MarkupText.Plain($"  {lockLine}"));
 			}
 		}
 
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
 		{
-			outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
+			outputSections.Add(MarkupText.Plain($"Powers: {string.Join(" ", powersList)}"));
 		}
 
 		if (viewingKnown.IsPlayer || viewingKnown.IsThing)
 		{
 			var homeObj = (await viewingKnown.MinusRoom().Home()).WithoutNone();
-			outputSections.Add(MModule.single($"Home: {homeObj.Object().Name}(#{homeObj.Object().DBRef.Number})"));
+			outputSections.Add(MarkupText.Plain($"Home: {homeObj.Object().Name}(#{homeObj.Object().DBRef.Number})"));
 
 			var locationObj = await viewingKnown.Where();
-			outputSections.Add(MModule.single($"Location: {locationObj.Object().Name}(#{locationObj.Object().DBRef.Number})"));
+			outputSections.Add(MarkupText.Plain($"Location: {locationObj.Object().Name}(#{locationObj.Object().DBRef.Number})"));
 		}
 
-		outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
+		outputSections.Add(MarkupText.Plain($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F}"));
 
-		await NotifyService.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
+		await NotifyService.Notify(enactor, MarkupText.Join(MarkupText.Plain("\n"), outputSections), enactor);
 
 		if (!switches.Contains("OPAQUE") && contents.Length > 0)
 		{
@@ -2147,7 +2148,7 @@ public partial class Commands
 
 		if (executor.IsPlayer)
 		{
-			await parser.CommandParse(MModule.single("look"));
+			await parser.CommandParse(MarkupText.Plain("look"));
 		}
 
 		return new CallState(homeObj.DBRef.ToString());
@@ -2325,7 +2326,7 @@ public partial class Commands
 
 		if (executor.IsPlayer)
 		{
-			await parser.CommandParse(MModule.single("look"));
+			await parser.CommandParse(MarkupText.Plain("look"));
 		}
 
 		return new CallState(destinationLocation.Object().DBRef.ToString());
@@ -2341,12 +2342,12 @@ public partial class Commands
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 
 		var recipientsArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		var messageArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
 
 		string recipientsText;
 
@@ -2475,7 +2476,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
 
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MModule.single(lastPagedText));
+			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
 		}
 		else if (recipientNames.Length > 0)
 		{
@@ -2495,8 +2496,8 @@ public partial class Commands
 		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
@@ -2505,10 +2506,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
+		var executorName = MarkupText.Plain(executor.Object().Name);
 		var poseMessage = isNoSpace
-			? MModule.concat(executorName, MModule.trim(message, " ", global::MarkupString.TrimType.TrimStart))
-			: MModule.ConcatMany([executorName, MModule.Space(), message]);
+			? MarkupText.Concat(executorName, message.Trim(global::MarkupString.TrimType.TrimStart, " "))
+			: MarkupText.Concat([executorName, MarkupText.Space, message]);
 
 		await CommunicationService.SendToRoomAsync(executor, executorLocation,
 			_ => poseMessage,
@@ -2536,8 +2537,8 @@ public partial class Commands
 		var executorLocation = await executor.Where();
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
@@ -2546,9 +2547,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
-		var youSayMessage = MModule.multiple([MModule.single("You say, \""), message, MModule.single("\"")]);
-		var namesSaysMessage = MModule.multiple([executorName, MModule.single(" says, \""), message, MModule.single("\"")]);
+		var executorName = MarkupText.Plain(executor.Object().Name);
+		var youSayMessage = MarkupText.Concat([MarkupText.Plain("You say, \""), message, MarkupText.Plain("\"")]);
+		var namesSaysMessage = MarkupText.Concat([executorName, MarkupText.Plain(" says, \""), message, MarkupText.Plain("\"")]);
 
 		await NotifyService.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
 
@@ -2569,8 +2570,8 @@ public partial class Commands
 		var executorLocation = await executor.Where();
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
 		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
@@ -2579,8 +2580,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var executorName = MModule.single(executor.Object().Name);
-		var semiposeMessage = MModule.concat(executorName, message);
+		var executorName = MarkupText.Plain(executor.Object().Name);
+		var semiposeMessage = MarkupText.Concat(executorName, message);
 
 		await CommunicationService.SendToRoomAsync(executor, executorLocation,
 			_ => semiposeMessage,
@@ -2608,10 +2609,10 @@ public partial class Commands
 
 			var executorLocation = await executor.Where();
 			await CommunicationService.SendToRoomAsync(executor, executorLocation,
-				_ => MModule.single($"{executor.Object().Name} types --> {actionList}"),
+				_ => MarkupText.Plain($"{executor.Object().Name} types --> {actionList}"),
 				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
-			await parser.CommandListParse(MModule.single(actionList));
+			await parser.CommandListParse(MarkupText.Plain(actionList));
 
 			return CallState.Empty;
 		}
@@ -2626,10 +2627,10 @@ public partial class Commands
 
 		var location = await executor.Where();
 		await CommunicationService.SendToRoomAsync(executor, location,
-			_ => MModule.single($"{executor.Object().Name} types --> {command}"),
+			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
 			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
 
-		await parser.CommandParse(MModule.single(command));
+		await parser.CommandParse(MarkupText.Plain(command));
 
 		return CallState.Empty;
 	}
@@ -2808,11 +2809,11 @@ public partial class Commands
 
 		var isNoEval = switches.Contains("NOEVAL");
 		var targetArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 		var messageArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
 
 		if (string.IsNullOrWhiteSpace(targetArg.ToPlainText()))
 		{
@@ -3026,7 +3027,7 @@ public partial class Commands
 	{
 		if (pattern.Contains('*') || pattern.Contains('?'))
 		{
-			return MModule.isWildcardMatch2(MModule.single(playerName), pattern);
+			return MushText.IsWildcardMatch(MarkupText.Plain(playerName), pattern);
 		}
 
 		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
@@ -3127,7 +3128,7 @@ public partial class Commands
 			return ValueTask.FromResult<Option<CallState>>(new None());
 		}
 
-		var value = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MModule.empty())
+		var value = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
 			.ToPlainText().TrimStart();
 
 		if (string.IsNullOrEmpty(value))
@@ -3188,7 +3189,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var locale = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToPlainText().Trim();
+		var locale = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText().Trim();
 
 		// Explicit empty argument (@locale =) → clear locale back to server default.
 		if (string.IsNullOrEmpty(locale))
@@ -3222,7 +3223,7 @@ public partial class Commands
 		var canonicalLocale = culture.Name; // e.g. "en-US" → "en-US", "fr" → "fr"
 
 		// Persist to the player's LOCALE attribute so it survives reconnects.
-		await AttributeService.SetAttributeAsync(executor, executor, "LOCALE", MModule.single(canonicalLocale));
+		await AttributeService.SetAttributeAsync(executor, executor, "LOCALE", MarkupText.Plain(canonicalLocale));
 
 		await foreach (var conn in ConnectionService.Get(executor.Object().DBRef))
 		{

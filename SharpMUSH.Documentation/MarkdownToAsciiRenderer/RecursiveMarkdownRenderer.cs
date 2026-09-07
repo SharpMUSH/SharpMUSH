@@ -1,4 +1,3 @@
-using ANSILibrary;
 using ColorCode;
 using ColorCode.Common;
 using ColorCode.Compilation;
@@ -9,9 +8,10 @@ using Markdig.Extensions.Tables;
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using SharpMUSH.MarkupString;
+using MarkupString;
 using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -25,10 +25,10 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 public partial class RecursiveMarkdownRenderer
 {
 	protected readonly Ansi _dimStyle = Ansi.Create(faint: true);
-	private readonly Ansi _boldStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), bold: true);
+	private readonly Ansi _boldStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), bold: true);
 	private readonly Ansi _underlineStyle = Ansi.Create(underlined: true);
-	private readonly Ansi _headingStyle = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), underlined: true, bold: true);
-	private readonly Ansi _heading3Style = Ansi.Create(foreground: new AnsiColor.RGB(Color.White), underlined: true);
+	private readonly Ansi _headingStyle = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true, bold: true);
+	private readonly Ansi _heading3Style = Ansi.Create(foreground: Color.White.ToAnsiColor(), underlined: true);
 	private readonly int _maxWidth;
 	private readonly IMUSHCodeParser? _mushParser;
 
@@ -73,13 +73,13 @@ public partial class RecursiveMarkdownRenderer
 	// bleeds into the following plain-text segment.  With both fg+bg in the outer style,
 	// WrapAndRestore re-applies both after every inner span, keeping colours correct.
 	private static readonly Ansi CodeBackgroundStyle = Ansi.Create(
-		foreground: new AnsiColor.RGB(Color.FromArgb(0xD4, 0xD4, 0xD4)),
-		background: new AnsiColor.RGB(Color.FromArgb(0x2D, 0x2D, 0x2D)));
+		foreground: Color.FromArgb(0xD4, 0xD4, 0xD4).ToAnsiColor(),
+		background: Color.FromArgb(0x2D, 0x2D, 0x2D).ToAnsiColor());
 
 	// Light-blue colour applied to inline code spans (`...`).
 	// #9CDCFE matches VS Code Dark+'s variable/property colour and reads well on dark terminals.
 	private static readonly Ansi InlineCodeStyle = Ansi.Create(
-		foreground: new AnsiColor.RGB(Color.FromArgb(0x9C, 0xDC, 0xFE)));
+		foreground: Color.FromArgb(0x9C, 0xDC, 0xFE).ToAnsiColor());
 
 	/// <summary>
 	/// Initializes a new instance of the RecursiveMarkdownRenderer
@@ -134,7 +134,7 @@ public partial class RecursiveMarkdownRenderer
 			// Default case - try to render children if it's a container block
 			ContainerBlock container => RenderContainerBlock(container),
 
-			_ => MModule.empty()
+			_ => MarkupText.Empty
 		};
 	}
 
@@ -147,7 +147,7 @@ public partial class RecursiveMarkdownRenderer
 			.Select(child => Render(child))
 			.Where(IsNonWhitespace)
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		return MarkupText.Join(MarkupText.Plain("\n"), parts);
 	}
 
 	private MString RenderDocument(MarkdownDocument doc)
@@ -161,7 +161,7 @@ public partial class RecursiveMarkdownRenderer
 			.Where(x => IsNonWhitespace(x.rendered))
 			.ToList();
 
-		if (items.Count == 0) return MModule.empty();
+		if (items.Count == 0) return MarkupText.Empty;
 
 		var result = new List<MString> { items[0].rendered };
 		for (var i = 1; i < items.Count; i++)
@@ -169,11 +169,11 @@ public partial class RecursiveMarkdownRenderer
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
 										 + (items[i].block.LinesBefore?.Count ?? 0);
 			var delimiter = "\n" + new string('\n', blankLines);
-			result.Add(MModule.single(delimiter));
+			result.Add(MarkupText.Plain(delimiter));
 			result.Add(items[i].rendered);
 		}
 
-		return MModule.multiple(result);
+		return MarkupText.Concat(result);
 	}
 
 	private MString RenderInlines(Inline? inline)
@@ -188,7 +188,7 @@ public partial class RecursiveMarkdownRenderer
 			}
 			inline = inline.NextSibling;
 		}
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	private MString RenderContainerInline(ContainerInline container)
@@ -200,5 +200,5 @@ public partial class RecursiveMarkdownRenderer
 	// between document blocks. Only hard breaks (two trailing spaces or backslash)
 	// produce actual newlines.
 	private MString RenderLineBreak(LineBreakInline lineBreak)
-	=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
+	=> lineBreak.IsHard ? MarkupText.Plain("\n") : MarkupText.Plain(" ");
 }

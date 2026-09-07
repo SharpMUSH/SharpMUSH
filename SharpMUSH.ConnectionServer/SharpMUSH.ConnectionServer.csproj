@@ -30,7 +30,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
-    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+    <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
   </ItemGroup>
 
 </Project>

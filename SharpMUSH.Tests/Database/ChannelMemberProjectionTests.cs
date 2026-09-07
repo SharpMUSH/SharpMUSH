@@ -34,7 +34,7 @@ public class ChannelMemberProjectionTests
 		var ownerNode = await Database.GetObjectNodeAsync(new DBRef(1));
 		var owner = ownerNode.AsPlayer;
 		var home = ownerNode.Known().AsContainer;
-		await Mediator.Send(new CreateChannelCommand(MModule.single(ChannelName), ["Open"], owner));
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(ChannelName), ["Open"], owner));
 
 		var channel = await Mediator.Send(new GetChannelQuery(ChannelName));
 		await Assert.That(channel).IsNotNull();

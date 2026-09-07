@@ -51,7 +51,7 @@ public class SurrealAttributeEnumerationTests
 		var godRef = new DBRef(god.Object.Key);
 
 		// Setting only the child auto-creates BRANCH as a parent node; it must be owned, like the leaf.
-		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MModule.single("child"), god);
+		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MarkupText.Plain("child"), god);
 
 		var obj = await db.GetObjectNodeAsync(godRef);
 		var branch = (await obj.Object()!.Attributes.Value.ToListAsync()).Single(a => a.Name == "BRANCH");
@@ -68,8 +68,8 @@ public class SurrealAttributeEnumerationTests
 		var god = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var godRef = new DBRef(god.Object.Key);
 
-		await db.SetAttributeAsync(godRef, ["LEAFONE"], MModule.single("one"), god);
-		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MModule.single("child"), god);
+		await db.SetAttributeAsync(godRef, ["LEAFONE"], MarkupText.Plain("one"), god);
+		await db.SetAttributeAsync(godRef, ["BRANCH", "CHILD"], MarkupText.Plain("child"), god);
 
 		var obj = await db.GetObjectNodeAsync(godRef);
 		var all = await db.GetAttributeAsync(godRef, ["BRANCH", "CHILD"])!.ToListAsync();

@@ -21,7 +21,7 @@ public static class JsonHelpers
 		{
 			return ValueTask.FromResult(new CallState("null"));
 		}
-		if (args.Count == 2 && MModule.plainText(args["1"].Message).Equals("null", StringComparison.OrdinalIgnoreCase))
+		if (args.Count == 2 && (args["1"].Message ?? MarkupText.Empty).ToPlainText().Equals("null", StringComparison.OrdinalIgnoreCase))
 		{
 			return ValueTask.FromResult(new CallState("null"));
 		}
@@ -35,7 +35,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = MModule.plainText(args["1"].Message);
+		var entry = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
 
 		return entry switch
 		{
@@ -63,7 +63,7 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
 		}
 
-		var entry = MModule.plainText(args["1"].Message);
+		var entry = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
 		if (!decimal.TryParse(entry, out var value))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
@@ -83,7 +83,7 @@ public static class JsonHelpers
 		{
 			var sortedArgs = args
 				.Skip(1)
-				.Select(x => JsonDocument.Parse(x.Value.Message!.ToString()).RootElement);
+				.Select(x => JsonDocument.Parse(x.Value.Message!.ToPlainText()).RootElement);
 
 			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
 		}

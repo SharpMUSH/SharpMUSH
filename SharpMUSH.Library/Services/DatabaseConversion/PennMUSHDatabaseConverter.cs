@@ -189,7 +189,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var godPennObject = pennDatabase.GetObject(1);
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				await _database.SetObjectName(existingPlayer1.AsT0, MModule.single(godPennObject.Name), cancellationToken);
+				await _database.SetObjectName(existingPlayer1.AsT0, MarkupText.Plain(godPennObject.Name), cancellationToken);
 
 				if (!string.IsNullOrEmpty(godPennObject.Password))
 				{
@@ -259,7 +259,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var room0Penn = pennDatabase.GetObject(0);
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				await _database.SetObjectName(existingRoom0.AsT1, MModule.single(room0Penn.Name), cancellationToken);
+				await _database.SetObjectName(existingRoom0.AsT1, MarkupText.Plain(room0Penn.Name), cancellationToken);
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -607,7 +607,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					try
 					{
-						var value = AnsiEscapeParser.ConvertAnsiToMarkupString(pennAttr.Value);
+						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
 
 						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
 						{

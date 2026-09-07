@@ -200,7 +200,7 @@ public class CacheCoherenceTests
 	public static IEnumerable<Func<(string, Func<FusionCache, Task>)>> AttributeWriteCommands()
 	{
 		yield return () => ("set",
-			c => Invalidate(c, new SetAttributeCommand(Seven, NestedPath, MModule.single("v"), null!)));
+			c => Invalidate(c, new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!)));
 		yield return () => ("clear",
 			c => Invalidate(c, new ClearAttributeCommand(Seven, NestedPath)));
 		yield return () => ("wipe",
@@ -231,7 +231,7 @@ public class CacheCoherenceTests
 		await StoreUntagged(cache, key);
 
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, ["LISTEN"], MModule.single("*"), null!),
+			.Handle(new SetAttributeCommand(Seven, ["LISTEN"], MarkupText.Plain("*"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That((await cache.TryGetAsync<string>(key)).HasValue).IsFalse();
@@ -255,7 +255,7 @@ public class CacheCoherenceTests
 		}
 
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, NestedPath, MModule.single("v"), null!),
+			.Handle(new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That(await Surviving(cache, DirectAttributeReadKeys(Eight)))
@@ -283,7 +283,7 @@ public class CacheCoherenceTests
 		}
 
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, NestedPath, MModule.single("v"), null!),
+			.Handle(new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That(await Surviving(cache, InheritedAttributeReadKeys(Eight))).IsEmpty();
@@ -301,7 +301,7 @@ public class CacheCoherenceTests
 		await StoreUntagged(cache, parent);
 
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, NestedPath, MModule.single("v"), null!),
+			.Handle(new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That((await cache.TryGetAsync<string>(parent)).HasValue).IsFalse();
@@ -319,7 +319,7 @@ public class CacheCoherenceTests
 		await cache.SetAsync(read.CacheKey, "raced the write", CacheEntryProfiles.Tagged, tags: read.CacheTags);
 
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, NestedPath, MModule.single("v"), null!),
+			.Handle(new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That((await cache.TryGetAsync<string>(read.CacheKey)).HasValue).IsFalse();
@@ -374,7 +374,7 @@ public class CacheCoherenceTests
 
 		// The write names only itself; nothing about #8 appears in its keys.
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
-			.Handle(new SetAttributeCommand(Seven, ["CMD"], MModule.single("$foo:@pemit %#=bar"), null!),
+			.Handle(new SetAttributeCommand(Seven, ["CMD"], MarkupText.Plain("$foo:@pemit %#=bar"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
 
 		await Assert.That(await Surviving(cache, [commands.CacheKey, listens.CacheKey])).IsEmpty();

@@ -31,7 +31,7 @@ public partial class Functions
 
 		// extchat.c:2434 (fun_ctitle) / :2491 (fun_cstatus) — "You must pass the channel's see-lock".
 		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
-			NotifyService, executor, MModule.single(channelName!), false);
+			NotifyService, executor, MarkupText.Plain(channelName!), false);
 
 		if (maybeChannel.IsError) return (maybePlayer.AsSharpObject, null, maybeChannel.AsError.Value);
 
@@ -120,9 +120,9 @@ public partial class Functions
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
 			message,
-			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
-			MModule.single("says"),
+			status.Title ?? MarkupText.Empty,
+			MarkupText.Plain(executor.Object().Name),
+			MarkupText.Plain("says"),
 			[]
 		));
 
@@ -451,7 +451,7 @@ public partial class Functions
 			.Select(x => x.Message)
 			.ToListAsync();
 
-		return new CallState(MModule.multiple(messages));
+		return new CallState(MarkupText.Concat(messages));
 	}
 
 	[SharpFunction(Name = "cstatus", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]
@@ -507,7 +507,7 @@ public partial class Functions
 
 		var (_, status) = maybeMemberStatus;
 
-		return new CallState(status.Title ?? MModule.empty());
+		return new CallState(status.Title ?? MarkupText.Empty);
 	}
 
 	[SharpFunction(Name = "cwho", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
@@ -586,9 +586,9 @@ public partial class Functions
 				? INotifyService.NotificationType.NSEmit
 				: INotifyService.NotificationType.Emit,
 			message,
-			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
-			MModule.single("says"),
+			status.Title ?? MarkupText.Empty,
+			MarkupText.Plain(executor.Object().Name),
+			MarkupText.Plain("says"),
 			[]
 		));
 

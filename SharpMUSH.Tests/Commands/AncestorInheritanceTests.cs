@@ -42,7 +42,7 @@ public class AncestorInheritanceTests
 	public async Task AncestorOnlyAttribute_IsReadableOnPlainThing()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&ANCESTOR_ONLY_ATTR {AncestorThing}=from ancestor"));
+			MarkupText.Plain($"&ANCESTOR_ONLY_ATTR {AncestorThing}=from ancestor"));
 
 		// A plain, unrelated thing must inherit it through the type ancestor.
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncInheritPlain");
@@ -60,11 +60,11 @@ public class AncestorInheritanceTests
 	public async Task OwnAttribute_ShadowsAncestor()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&SHADOW_ATTR {AncestorThing}=ancestor value"));
+			MarkupText.Plain($"&SHADOW_ATTR {AncestorThing}=ancestor value"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncShadow");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&SHADOW_ATTR {thingRef}=own value"));
+			MarkupText.Plain($"&SHADOW_ATTR {thingRef}=own value"));
 		var thing = await Known(thingRef);
 
 		var attr = await AttributeService.GetAttributeAsync(thing, thing, "SHADOW_ATTR",
@@ -79,9 +79,9 @@ public class AncestorInheritanceTests
 	public async Task NoInheritAncestorAttribute_IsNotInherited()
 	{
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&NO_INHERIT_ATTR {AncestorThing}=secret"));
+			MarkupText.Plain($"&NO_INHERIT_ATTR {AncestorThing}=secret"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {AncestorThing}/NO_INHERIT_ATTR=no_inherit"));
+			MarkupText.Plain($"@set {AncestorThing}/NO_INHERIT_ATTR=no_inherit"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncNoInherit");
 		var thing = await Known(thingRef);
@@ -107,17 +107,17 @@ public class AncestorInheritanceTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&ANCNI{uid} {AncestorThing}=branchval"));
+			MarkupText.Plain($"&ANCNI{uid} {AncestorThing}=branchval"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&ANCNI{uid}`LEAF {AncestorThing}=leafval"));
+			MarkupText.Plain($"&ANCNI{uid}`LEAF {AncestorThing}=leafval"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {AncestorThing}/ANCNI{uid}=no_inherit"));
+			MarkupText.Plain($"@set {AncestorThing}/ANCNI{uid}=no_inherit"));
 
 		// Control: an identically-shaped, unflagged branch on the same ancestor.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&ANCOK{uid} {AncestorThing}=okbranch"));
+			MarkupText.Plain($"&ANCOK{uid} {AncestorThing}=okbranch"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&ANCOK{uid}`LEAF {AncestorThing}=okleaf"));
+			MarkupText.Plain($"&ANCOK{uid}`LEAF {AncestorThing}=okleaf"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncNoInheritBranch");
 		var thing = await Known(thingRef);
@@ -156,7 +156,7 @@ public class AncestorInheritanceTests
 	{
 		// A $-command defined on the Ancestor Thing must be discoverable on a plain thing of that type.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD`ANCTEST {AncestorThing}=$anctestcmd:@pemit %#=ANCESTOR_CMD_FIRED"));
+			MarkupText.Plain($"&CMD`ANCTEST {AncestorThing}=$anctestcmd:@pemit %#=ANCESTOR_CMD_FIRED"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncCmdHost");
 		var thing = await Known(thingRef);
@@ -174,9 +174,9 @@ public class AncestorInheritanceTests
 		// A ^-listen pattern defined on the Ancestor Thing should match for a plain thing of that type
 		// when parent/ancestor checking is enabled.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&LISTEN`ANC {AncestorThing}=^anc hears *:@pemit %#=HEARD %1"));
+			MarkupText.Plain($"&LISTEN`ANC {AncestorThing}=^anc hears *:@pemit %#=HEARD %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {AncestorThing}/LISTEN`ANC=aahear"));
+			MarkupText.Plain($"@set {AncestorThing}/LISTEN`ANC=aahear"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncListenHost");
 		var thing = await Known(thingRef);
@@ -212,7 +212,7 @@ public class AncestorInheritanceTests
 		// computed once and cached keyed by ancestor dbref, so that every child object falling through
 		// to it reuses the cached contribution instead of re-scanning #6 + its @parent chain per object.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD`CACHEGUARD {AncestorThing}=$cacheguardcmd:@pemit %#=OK"));
+			MarkupText.Plain($"&CMD`CACHEGUARD {AncestorThing}=$cacheguardcmd:@pemit %#=OK"));
 
 		// Touch the derived-ancestor query directly; this must populate the per-ancestor cache key.
 		var cacheKey = CacheKeys.AncestorCommands(AncestorThing.Number);
@@ -253,7 +253,7 @@ public class AncestorInheritanceTests
 
 		// Define a brand-new $command on the ancestor — this must invalidate the cached contribution.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD`INVALIDATE {AncestorThing}=$invalidatecmd:@pemit %#=OK"));
+			MarkupText.Plain($"&CMD`INVALIDATE {AncestorThing}=$invalidatecmd:@pemit %#=OK"));
 
 		var commands = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
 		await Assert.That(commands.Select(c => c.Attribute.LongName ?? string.Empty))

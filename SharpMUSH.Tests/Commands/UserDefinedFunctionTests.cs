@@ -40,10 +40,10 @@ public class UserDefinedFunctionTests
 	private static string U() => Guid.NewGuid().ToString("N");
 
 	private Task Cmd(string command) =>
-		CommandParser.CommandParse(1, ConnectionService, MModule.single(command)).AsTask();
+		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	/// <summary>Evaluates <paramref name="expression"/> with <paramref name="executor"/> as the executor (not #1).</summary>
 	private async Task<string> EvalAs(DBRef executor, string expression)
@@ -77,7 +77,7 @@ public class UserDefinedFunctionTests
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag()));
 
-		return (await parser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		return (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 	}
 
 	private Task<DBRef> NewNonWizardPlayer() =>

@@ -67,7 +67,7 @@ public class FollowCommandTests
 		var before = recorder.CountFor(follower.DbRef);
 
 		await Parser.CommandParse(follower.Handle, ConnectionService,
-			MModule.single($"follow {await NameOf(leader)}"));
+			MarkupText.Plain($"follow {await NameOf(leader)}"));
 
 		return [.. recorder.For(follower.DbRef).Skip(before)];
 	}
@@ -124,7 +124,7 @@ public class FollowCommandTests
 		var before = recorder.CountFor(follower.DbRef);
 
 		await Parser.CommandParse(follower.Handle, ConnectionService,
-			MModule.single($"follow {TestIsolationHelpers.GenerateUniqueName("NobodyHere")}"));
+			MarkupText.Plain($"follow {TestIsolationHelpers.GenerateUniqueName("NobodyHere")}"));
 
 		var report = recorder.For(follower.DbRef).Skip(before).ToArray();
 
@@ -148,7 +148,7 @@ public class FollowCommandTests
 		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
 			.Because("precondition: a fresh player follows nobody");
 
-		await Parser.CommandParse(follower.Handle, ConnectionService, MModule.single("unfollow"));
+		await Parser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain("unfollow"));
 
 		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse()
 			.Because("clearing an attribute that was never set must not create it");
@@ -175,7 +175,7 @@ public class FollowCommandTests
 		await Assert.That(before.Exists).IsTrue()
 			.Because("precondition: there is nothing to unfollow unless the follow landed");
 
-		await Parser.CommandParse(follower.Handle, ConnectionService, MModule.single("unfollow"));
+		await Parser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain("unfollow"));
 
 		var after = await FollowingOf(follower.DbRef);
 		await Assert.That(after.Exists).IsFalse()

@@ -24,9 +24,9 @@ public partial class Functions
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "from-base", "to-base"])]
 	public ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var input = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!);
-		var fromBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!);
-		var toBaseStr = MModule.plainText(parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!);
+		var input = parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!.ToPlainText();
+		var fromBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!.ToPlainText();
+		var toBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!.ToPlainText();
 
 		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
 		{

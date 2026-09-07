@@ -130,10 +130,10 @@ public class MyrddinBBSIntegrationTests
 			Console.WriteLine(message);
 		}
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=WIZARD"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=DEBUG"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=VERBOSE"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set #1=PUPPET"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=VERBOSE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=PUPPET"));
 
 		var scriptLines = ReadBBSInstallScript();
 		var executedLines = 0;
@@ -160,39 +160,39 @@ public class MyrddinBBSIntegrationTests
 
 			try
 			{
-				var parseErrors = Parser.ValidateAndGetErrors(MModule.single(line), ParseType.CommandList);
+				var parseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(line), ParseType.CommandList);
 				if (parseErrors.Count > 0)
 				{
 					antlrErrorsByLine[i + 1] = [.. parseErrors.Select(e => $"col {e.Column}: {e.Message}")];
 				}
 
-				await Parser.CommandParse(1, ConnectionService, MModule.single(line));
+				await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(line));
 				executedLines++;
 
 				if (bbpocketDbref == null && line.TrimStart().StartsWith("@create bbpocket", StringComparison.OrdinalIgnoreCase))
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
-						MModule.single("think [num(bbpocket)]"));
+						MarkupText.Plain("think [num(bbpocket)]"));
 					bbpocketDbref = numResult.Message?.ToPlainText()?.Trim();
 					_bbpocketDbref = bbpocketDbref;
 					Log($"[BBS INSTALL] bbpocket created with dbref: {bbpocketDbref} (replacing #222 in remaining lines)");
 
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=DEBUG"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=VERBOSE"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {bbpocketDbref}=PUPPET"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {bbpocketDbref}=DEBUG"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {bbpocketDbref}=VERBOSE"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {bbpocketDbref}=PUPPET"));
 				}
 
 				if (mbboardDbref == null && line.TrimStart().StartsWith("@create mbboard", StringComparison.OrdinalIgnoreCase))
 				{
 					var numResult = await Parser.CommandParse(1, ConnectionService,
-						MModule.single("think [num(mbboard)]"));
+						MarkupText.Plain("think [num(mbboard)]"));
 					mbboardDbref = numResult.Message?.ToPlainText()?.Trim();
 					_mbboardDbref = mbboardDbref;
 					Log($"[BBS INSTALL] mbboard created with dbref: {mbboardDbref}");
 
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=DEBUG"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=VERBOSE"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mbboardDbref}=PUPPET"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mbboardDbref}=DEBUG"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mbboardDbref}=VERBOSE"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mbboardDbref}=PUPPET"));
 				}
 			}
 			catch (Exception ex)
@@ -215,9 +215,9 @@ public class MyrddinBBSIntegrationTests
 		// in both PennMUSH and SharpMUSH. BBS operations should be tested as a regular player.
 		// Use pmatch() (not num()) to look up the player by name — num() requires the object to be
 		// visible from the caller's location, but pmatch() does a global player-name search.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pcreate BBSTester=bbs_test_password_123"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@pcreate BBSTester=bbs_test_password_123"));
 		var testerDbrefResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("think [pmatch(BBSTester)]"));
+			MarkupText.Plain("think [pmatch(BBSTester)]"));
 		_regularUserDbref = testerDbrefResult.Message?.ToPlainText()?.Trim();
 		Log($"[BBS INSTALL] Regular test user created with dbref: {_regularUserDbref}");
 		if (!string.IsNullOrEmpty(_regularUserDbref) && _regularUserDbref != "#-1"
@@ -235,12 +235,12 @@ public class MyrddinBBSIntegrationTests
 			if (!string.IsNullOrEmpty(_mbboardDbref))
 			{
 				var mbboardLocResult = await Parser.CommandParse(1, ConnectionService,
-					MModule.single($"think [loc({_mbboardDbref})]"));
+					MarkupText.Plain($"think [loc({_mbboardDbref})]"));
 				var mbboardLoc = mbboardLocResult.Message?.ToPlainText()?.Trim();
 				if (!string.IsNullOrEmpty(mbboardLoc) && !mbboardLoc.StartsWith("#-"))
 				{
 					await Parser.CommandParse(1, ConnectionService,
-						MModule.single($"@tel {_regularUserDbref}={mbboardLoc}"));
+						MarkupText.Plain($"@tel {_regularUserDbref}={mbboardLoc}"));
 					Log($"[BBS INSTALL] Teleported BBSTester to mbboard's room: {mbboardLoc}.");
 				}
 			}
@@ -255,7 +255,7 @@ public class MyrddinBBSIntegrationTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("+bbread"));
 			Log("[BBS INSTALL] +bbread command executed successfully.");
 		}
 		catch (Exception ex)
@@ -595,7 +595,7 @@ public class MyrddinBBSIntegrationTests
 	private async Task<IReadOnlyList<string>> RunAndCollect(string command, int delayMs = 0)
 	{
 		var before = NotificationCount();
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		if (delayMs > 0)
 			await Task.Delay(delayMs);
 		var after = NotificationCount();
@@ -606,7 +606,7 @@ public class MyrddinBBSIntegrationTests
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(string command, long handle, int delayMs = 0)
 	{
 		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		if (delayMs > 0)
 			await Task.Delay(delayMs);
 		var after = NotificationCount();
@@ -620,7 +620,7 @@ public class MyrddinBBSIntegrationTests
 		if (string.IsNullOrEmpty(bbpocket))
 			return string.Empty;
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"think [name(extract(get({bbpocket}/groups),{position},1))]"));
+			MarkupText.Plain($"think [name(extract(get({bbpocket}/groups),{position},1))]"));
 		return result.Message?.ToPlainText()?.Trim() ?? string.Empty;
 	}
 
@@ -648,20 +648,20 @@ public class MyrddinBBSIntegrationTests
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
 		var newGroupCmd = $"+bbnewgroup {groupName}";
-		var parseErrors = Parser.ValidateAndGetErrors(MModule.single(newGroupCmd), ParseType.CommandList);
+		var parseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(newGroupCmd), ParseType.CommandList);
 		await Assert.That(parseErrors.Count).IsEqualTo(0)
 			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
 
 		// Execute +bbnewgroup and wait for the @wait 1={...} callback to complete.
 		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
-		await Parser.CommandParse(1, ConnectionService, MModule.single(newGroupCmd));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(newGroupCmd));
 		await Task.Delay(10000);
 
 		string? groupDbref = null;
 		try
 		{
 			var numResult = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"think [num({groupName})]"));
+				MarkupText.Plain($"think [num({groupName})]"));
 			groupDbref = numResult.Message?.ToPlainText()?.Trim();
 
 			if (groupDbref != null && !groupDbref.Contains("#-1"))
@@ -669,9 +669,9 @@ public class MyrddinBBSIntegrationTests
 				Log($"[BBS NEWGROUP] Group '{groupName}' created with dbref: {groupDbref}");
 				try
 				{
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=DEBUG"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=VERBOSE"));
-					await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {groupDbref}=PUPPET"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {groupDbref}=DEBUG"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {groupDbref}=VERBOSE"));
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {groupDbref}=PUPPET"));
 				}
 				catch (Exception flagEx) when (flagEx is not OperationCanceledException and not TaskCanceledException)
 				{
@@ -723,11 +723,11 @@ public class MyrddinBBSIntegrationTests
 		preTestNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
 
-		var bbreadParseErrors = Parser.ValidateAndGetErrors(MModule.single("+bbread"), ParseType.CommandList);
+		var bbreadParseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain("+bbread"), ParseType.CommandList);
 		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
 			.Because("+bbread command should not produce any ANTLR parser errors");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("+bbread"));
 
 		var bbreadMessages = new List<(int Index, string Message)>();
 		var bbreadErrors = new List<(int Index, string Message)>();
@@ -832,7 +832,7 @@ public class MyrddinBBSIntegrationTests
 		Log(new string('=', 78));
 
 		var postCmd = "+bbpost 1/Title Goes Here=Body of the test post.";
-		var postParseErrors = Parser.ValidateAndGetErrors(MModule.single(postCmd), ParseType.CommandList);
+		var postParseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(postCmd), ParseType.CommandList);
 
 		Log($"\nPosting with command: {postCmd}");
 		Log($"ANTLR parse errors for +bbpost: {postParseErrors.Count}");
@@ -847,7 +847,7 @@ public class MyrddinBBSIntegrationTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single(postCmd));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(postCmd));
 			Log("[BBS POST] +bbpost command executed successfully.");
 		}
 		catch (Exception ex)
@@ -896,7 +896,7 @@ public class MyrddinBBSIntegrationTests
 		}
 
 		var readCmd = "+bbread 1/1";
-		var readParseErrors = Parser.ValidateAndGetErrors(MModule.single(readCmd), ParseType.CommandList);
+		var readParseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(readCmd), ParseType.CommandList);
 
 		Log($"\nReading with command: {readCmd}");
 		Log($"ANTLR parse errors for +bbread 1/1: {readParseErrors.Count}");
@@ -911,7 +911,7 @@ public class MyrddinBBSIntegrationTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single(readCmd));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(readCmd));
 			Log("[BBS READ] +bbread 1/1 command executed successfully.");
 		}
 		catch (Exception ex)
@@ -963,7 +963,7 @@ public class MyrddinBBSIntegrationTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single("+bbread"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("+bbread"));
 			Log("\n[BBS READ] +bbread (list) command executed successfully.");
 		}
 		catch (Exception ex)
@@ -1352,7 +1352,7 @@ public class MyrddinBBSIntegrationTests
 		Log($"  Group 1 name: {group1Name}");
 
 		// Clear bb_read to make all messages appear unread
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&bb_read #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&bb_read #1"));
 
 		var msgs = await RunAndCollect("+bbscan");
 		Log($"  +bbscan notifications: {msgs.Count}");

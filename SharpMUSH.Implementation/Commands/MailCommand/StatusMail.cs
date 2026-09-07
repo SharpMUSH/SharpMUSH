@@ -21,7 +21,7 @@ public static class StatusMail
 		if (filteredList.IsError)
 		{
 			await notifyService.Notify(executor, $"#-1 {filteredList.AsError}", executor);
-			return MModule.single(filteredList.AsError);
+			return MarkupText.Plain(filteredList.AsError);
 		}
 
 		var actualList = filteredList.AsMailList;
@@ -32,7 +32,7 @@ public static class StatusMail
 			// STATUS switch has to resolve to one of the concrete status verbs before dispatch.
 			case "STATUS" when string.IsNullOrEmpty(statusString):
 				await notifyService.Notify(executor, "Update to what?", executor);
-				return MModule.single(ErrorMessages.Returns.UpdateToWhat);
+				return MarkupText.Plain(ErrorMessages.Returns.UpdateToWhat);
 			case "STATUS"
 				when statusString is "CLEARED" or "UNCLEARED" or "TAGGED" or "UNTAGGED" or "UNREAD" or "READ" or "URGENT"
 					or "UNURGENT":
@@ -47,7 +47,7 @@ public static class StatusMail
 				break;
 			case "STATUS":
 				await notifyService.Notify(executor, $"{statusString} is not a valid status.", executor);
-				return MModule.single($"{statusString} is not a valid status.");
+				return MarkupText.Plain($"{statusString} is not a valid status.");
 		}
 
 		var mailUpdate = sw switch
@@ -74,6 +74,6 @@ public static class StatusMail
 			index++;
 		}
 
-		return MModule.single(string.Join(" ", idList));
+		return MarkupText.Plain(string.Join(" ", idList));
 	}
 }

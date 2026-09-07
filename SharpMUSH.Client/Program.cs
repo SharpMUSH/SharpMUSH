@@ -14,6 +14,13 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using Slugify;
 
+// The markup layers this app can render: MarkupText resolves emitters and codecs through
+// MarkupRegistry.Default, which throws until something sets it.
+if (!MarkupRegistry.IsConfigured)
+{
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+}
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");

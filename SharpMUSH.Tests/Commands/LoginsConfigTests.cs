@@ -40,7 +40,7 @@ public class LoginsConfigTests
 		try
 		{
 			var plebHandle = 3001L;
-			await Parser.CommandParse(plebHandle, ConnectionService, MModule.single("connect LoginsPleb pleb-password-1"));
+			await Parser.CommandParse(plebHandle, ConnectionService, MarkupText.Plain("connect LoginsPleb pleb-password-1"));
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == plebHandle),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
@@ -48,12 +48,12 @@ public class LoginsConfigTests
 
 			// Staff bypass: God (#1, empty hash) still connects with logins disabled.
 			var godHandle = 3002L;
-			var result = await Parser.CommandParse(godHandle, ConnectionService, MModule.single("connect God anything"));
+			var result = await Parser.CommandParse(godHandle, ConnectionService, MarkupText.Plain("connect God anything"));
 			await Assert.That((result.Message?.ToString() ?? "").Contains("#-1")).IsFalse();
 
 			// Guest login also refused.
 			var guestHandle = 3003L;
-			await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+			await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == guestHandle),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),

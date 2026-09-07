@@ -18,7 +18,7 @@ public class ParserFailureTests
 
 	private async Task<string?> Eval(string input)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		return result?.Message?.ToString();
 	}
 
@@ -115,7 +115,7 @@ public class ParserFailureTests
 	[Test]
 	public async Task MissingParen_ErrorColumnIsCorrect()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
 		Console.WriteLine($@"add(1,2 → error column {col}");
@@ -129,7 +129,7 @@ public class ParserFailureTests
 	[Test]
 	public async Task MissingParen_SnippetIsPopulated()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var snippet = errors[0].Snippet;
 		await Assert.That(snippet).IsNotEmpty();
@@ -143,7 +143,7 @@ public class ParserFailureTests
 	public async Task NestedMissingParen_ErrorColumnIsCorrect()
 	{
 		const string input = "add(1,add(1,add(1,add(1,5)))";
-		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
 		Console.WriteLine($@"{input} → error column {col} (input length {input.Length})");
@@ -157,7 +157,7 @@ public class ParserFailureTests
 	public async Task ToMushFailureString_ProducesCorrectFormat()
 	{
 		const string input = "add(1,add(1,add(1,add(1,5)))";
-		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var failureMsg = errors[0].ToMushFailureString();
 		Console.WriteLine($"ToMushFailureString → '{failureMsg}'");
@@ -170,7 +170,7 @@ public class ParserFailureTests
 	public async Task MissingParen_InEqSplit_CurrentBehavior()
 	{
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("some=add(1,2"), ParseType.CommandEqSplit);
+			MarkupText.Plain("some=add(1,2"), ParseType.CommandEqSplit);
 		await Assert.That(errors).IsNotEmpty();
 	}
 

@@ -33,11 +33,11 @@ public class PmatchFunctionTests
 		var name = node.Known.Object().Name;
 
 		// Separate the looker (#1) from the target: God in Room Zero, target in the Master Room (#2).
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single("@tel me=#0"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@tel {target}=#2"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {target}=#2"));
 
 		// Only a GLOBAL player-name match can resolve the target now.
-		var result = (await FunctionParser.FunctionParse(MModule.single($"pmatch({name})")))?.Message?.ToString();
+		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"pmatch({name})")))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(target.ToString());
 	}

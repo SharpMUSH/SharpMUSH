@@ -21,7 +21,7 @@ public class SceneDbrefResolutionTests
 	private const string God = "#1";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	private async Task<string> NewPublicSceneAsync(string title)
 	{

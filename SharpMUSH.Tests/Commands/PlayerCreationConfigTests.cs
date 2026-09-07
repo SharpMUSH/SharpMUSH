@@ -34,7 +34,7 @@ public class PlayerCreationConfigTests
 		try
 		{
 			var handle = 2001L;
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("register nocreate-user somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register nocreate-user somepassword"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
@@ -66,7 +66,7 @@ public class PlayerCreationConfigTests
 		try
 		{
 			var handle = 2003L;
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("register nocreate-user2 somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register nocreate-user2 somepassword"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
@@ -107,7 +107,7 @@ public class PlayerCreationConfigTests
 		options.CurrentValue.Returns(restricted);
 		try
 		{
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("make NewCharacter somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make NewCharacter somepassword"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
@@ -148,7 +148,7 @@ public class PlayerCreationConfigTests
 		options.CurrentValue.Returns(restricted);
 		try
 		{
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("make NewCharacter2 somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make NewCharacter2 somepassword"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),

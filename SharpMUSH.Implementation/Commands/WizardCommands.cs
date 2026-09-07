@@ -148,7 +148,7 @@ public partial class Commands
 			if (result != null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, flagName, symbol);
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -191,7 +191,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, flagName);
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -279,7 +279,7 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, flag.Name);
 			}
 
-			return new CallState(MModule.single(flag.Name));
+			return new CallState(MarkupText.Plain(flag.Name));
 		}
 
 		if (switches.Contains("TYPE"))
@@ -328,7 +328,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat), executor, flagName, string.Join(", ", types));
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -388,7 +388,7 @@ public partial class Commands
 			{
 				var aliasStr = aliases != null && aliases.Length > 0 ? string.Join(", ", aliases) : "none";
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasesSetFormat), executor, flagName, aliasStr);
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -441,7 +441,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat), executor, flagName, string.Join(", ", perms));
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -516,7 +516,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FlagDisabledFormat : ErrorMessages.Notifications.FlagEnabledFormat, flagName), executor);
-				return new CallState(MModule.single(flagName));
+				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
@@ -634,7 +634,7 @@ public partial class Commands
 			["ExecutorName"] = executor.Object().Name
 		}))
 		{
-			Logger.LogInformation("{LogMessage}", MModule.serialize(logMessage));
+			Logger.LogInformation("{LogMessage}", MarkupTextSerializer.Serialize(logMessage));
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, category);
@@ -731,7 +731,7 @@ public partial class Commands
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
@@ -753,7 +753,7 @@ public partial class Commands
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
@@ -880,7 +880,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
@@ -1052,7 +1052,7 @@ public partial class Commands
 			if (result != null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, powerName, alias);
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1095,7 +1095,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, powerName);
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1146,7 +1146,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasChangedFormat), executor, powerName, newAlias);
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1236,7 +1236,7 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, power.Name);
 			}
 
-			return new CallState(MModule.single(power.Name));
+			return new CallState(MarkupText.Plain(power.Name));
 		}
 
 		if (switches.Contains("TYPE"))
@@ -1285,7 +1285,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat), executor, powerName, string.Join(", ", types));
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1338,7 +1338,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat), executor, powerName, string.Join(", ", perms));
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1413,7 +1413,7 @@ public partial class Commands
 			if (result)
 			{
 				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.PowerDisabledFormat : ErrorMessages.Notifications.PowerEnabledFormat, powerName), executor);
-				return new CallState(MModule.single(powerName));
+				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
@@ -1458,7 +1458,7 @@ public partial class Commands
 			info.Append($"{"ResetPrms",9}: {string.Join(" ", namedPower.UnsetPermissions)}");
 
 			await NotifyService.Notify(executor, info.ToString(), executor);
-			return new CallState(MModule.single(namedPower.Name));
+			return new CallState(MarkupText.Plain(namedPower.Name));
 		}
 
 		// do_power refuses non-wizards before resolving <object>, so a non-wizard is told they may not
@@ -1488,7 +1488,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
@@ -2169,13 +2169,13 @@ public partial class Commands
 		var defaultHomeDbref = new DBRef((int)defaultHome);
 		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
-		var name = MModule.plainText(args["0"].Message!);
-		var password = MModule.plainText(args["1"].Message!);
+		var name = args["0"].Message!.ToPlainText();
+		var password = args["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
 		// an existing AnySharpObject target (for rename operations), which we don't have yet
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, MModule.single(name), new None()))
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None()))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
 			return CallState.Empty;
@@ -2188,7 +2188,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MModule.single(password), new None()))
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidPassword), executor);
 			return CallState.Empty;
@@ -2558,7 +2558,7 @@ public partial class Commands
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MModule.concat(MModule.single(Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
@@ -2758,7 +2758,7 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 		var newData = pollData with { Message = argText };
 		await ObjectDataService.SetExpandedServerDataAsync(newData, ignoreNull: true);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageSet), executor);
@@ -2803,7 +2803,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty()).ToString();
+		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 

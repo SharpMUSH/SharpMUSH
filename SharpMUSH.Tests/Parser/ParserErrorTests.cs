@@ -12,7 +12,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task ValidInput_ShouldHaveNoErrors()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2)"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2)"), ParseType.Function);
 
 		await Assert.That(errors).IsEmpty();
 	}
@@ -20,7 +20,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task UnclosedFunction_ShouldReportError()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 		await Assert.That(errors[0].Message).Contains("end of input");
@@ -29,7 +29,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task UnclosedBracket_ShouldReportError()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("test[function"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("test[function"), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 	}
@@ -37,7 +37,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task UnclosedBrace_ShouldReportError()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("test{brace"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("test{brace"), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 	}
@@ -45,7 +45,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task ErrorPosition_ShouldBeCorrect()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 
@@ -58,7 +58,7 @@ public class ParserErrorTests
 	public async Task ComplexNestedInput_WithoutErrors_ShouldValidate()
 	{
 		var input = "strcat(add(1,2),[sub(5,3)],{concat})";
-		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 
 		await Assert.That(errors).IsEmpty();
 	}
@@ -66,7 +66,7 @@ public class ParserErrorTests
 	[Test]
 	public async Task CommandValidation_ShouldWork()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("@emit Hello"), ParseType.Command);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("@emit Hello"), ParseType.Command);
 
 		// Commands might have different validation rules,
 		// but this shouldn't throw an exception
@@ -79,7 +79,7 @@ public class ParserErrorTests
 		// PennMUSH: '=' inside function arguments is a literal character.
 		// strmatch(%1,*=*) should parse without errors even in EqSplit context.
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("strmatch(test,*=*)"), ParseType.CommandEqSplit);
+			MarkupText.Plain("strmatch(test,*=*)"), ParseType.CommandEqSplit);
 
 		await Assert.That(errors).IsEmpty();
 	}
@@ -89,7 +89,7 @@ public class ParserErrorTests
 	{
 		// = inside nested function args should be literal even with EqSplitArgs parsing
 		var errors = Parser.ValidateAndGetErrors(
-			MModule.single("[strmatch(a=b,*=*)]"), ParseType.CommandEqSplitArgs);
+			MarkupText.Plain("[strmatch(a=b,*=*)]"), ParseType.CommandEqSplitArgs);
 
 		await Assert.That(errors).IsEmpty();
 	}
@@ -98,7 +98,7 @@ public class ParserErrorTests
 	public async Task ParseError_ShouldHaveInputText()
 	{
 		var input = "add(1,2";
-		var errors = Parser.ValidateAndGetErrors(MModule.single(input), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 		await Assert.That(errors[0].InputText).IsEqualTo(input);

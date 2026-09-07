@@ -120,7 +120,7 @@ public static class SceneCommandModule
 				=> await ScenePlotHandlers.Plot(parser, sceneService, notifyService, executor, plotSub, arg0!, arg1),
 			null when hasArg0
 				=> await SceneRead.Display(parser, sceneService, notifyService, executor, arg0!),
-			_ => MModule.single(SceneCommandHelper.BadArguments),
+			_ => MarkupText.Plain(SceneCommandHelper.BadArguments),
 		};
 
 		return new CallState(response);

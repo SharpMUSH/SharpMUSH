@@ -47,19 +47,19 @@ public class ObjectDestructionTests
 	private async Task<DBRef> CreateThingAsync(string prefix)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 
 	private async Task<DBRef> DigRoomAsync(string prefix)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {name}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {name}"));
 		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 
 	private ValueTask<CallState> RunAsync(string command) =>
-		Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>
 	/// The reported bug: two <c>@destroy</c>es said "Destroyed." and left the object in the database
@@ -250,7 +250,7 @@ public class ObjectDestructionTests
 			await Assert.That(logged).IsNotEmpty()
 				.Because("the OBJECT`DESTROY handler should have run and written DESTROYLOG");
 
-			var value = MModule.plainText(logged[^1].Value);
+			var value = logged[^1].Value.ToPlainText();
 			var fields = value.Split('|');
 
 			await Assert.That(fields.Length).IsEqualTo(4);

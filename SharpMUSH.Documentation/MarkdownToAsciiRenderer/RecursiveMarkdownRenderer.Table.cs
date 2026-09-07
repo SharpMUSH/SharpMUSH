@@ -1,6 +1,6 @@
 using Markdig.Extensions.Tables;
-using SharpMUSH.MarkupString;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using MarkupString;
+using SharpMUSH.Library.Markup;
 using System.Text;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -21,7 +21,7 @@ public partial class RecursiveMarkdownRenderer
 			))
 			.ToList();
 
-		if (allRows.Count == 0) return MModule.empty();
+		if (allRows.Count == 0) return MarkupText.Empty;
 
 		var columnCount = allRows.Max(r => r.Cells.Count);
 		var cellsByRow = allRows.Select(r => (IReadOnlyList<MString>)r.Cells).ToList();
@@ -48,16 +48,16 @@ public partial class RecursiveMarkdownRenderer
 
 			var borderlessRows = allRows
 				.Where(r => !r.IsHeader)
-				.Select(r => TextAlignerModule.align(
+				.Select(r => TextAligner.Align(
 					borderlessSpecs.ToString(),
 					r.Cells,
-					MModule.single(" "),
-					MModule.single("  "),
-					MModule.single("")
+					MarkupText.Plain(" "),
+					MarkupText.Plain("  "),
+					MarkupText.Plain("")
 				))
 				.ToList();
 
-			return MModule.multipleWithDelimiter(MModule.single("\n"), borderlessRows);
+			return MarkupText.Join(MarkupText.Plain("\n"), borderlessRows);
 		}
 
 		// Fit the table to the width left once the borders are accounted for.
@@ -90,18 +90,18 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var (isHeader, cells) = allRows[rowIndex];
 
-			var alignedRow = TextAlignerModule.align(
+			var alignedRow = TextAligner.Align(
 				columnSpecs.ToString(),
 				cells,
-				MModule.single(" "),
-				MModule.MarkupSingle(borderStyle, " | "),
-				MModule.single("")
+				MarkupText.Plain(" "),
+				MarkupText.Wrap(borderStyle, " | "),
+				MarkupText.Plain("")
 			);
 
-			var rowWithBorders = MModule.multiple([
-				MModule.MarkupSingle(borderStyle, "| "),
+			var rowWithBorders = MarkupText.Concat([
+				MarkupText.Wrap(borderStyle, "| "),
 				alignedRow,
-				MModule.MarkupSingle(borderStyle, " |")
+				MarkupText.Wrap(borderStyle, " |")
 			]);
 
 			renderedRows.Add(rowWithBorders);
@@ -115,11 +115,11 @@ public partial class RecursiveMarkdownRenderer
 					separator.Append('-', columnWidths[col] + 2);
 					separator.Append('|');
 				}
-				renderedRows.Add(MModule.MarkupSingle(borderStyle, separator.ToString()));
+				renderedRows.Add(MarkupText.Wrap(borderStyle, separator.ToString()));
 			}
 		}
 
-		return MModule.multipleWithDelimiter(MModule.single("\n"), renderedRows);
+		return MarkupText.Join(MarkupText.Plain("\n"), renderedRows);
 	}
 
 	/// <summary>
@@ -227,7 +227,7 @@ public partial class RecursiveMarkdownRenderer
 
 	// Rows are handled by RenderTable for proper alignment
 	private MString RenderTableRow(TableRow _)
-		=> MModule.empty();
+		=> MarkupText.Empty;
 
 	/// <summary>
 	/// Renders one table cell's contents, inline markup and all.
@@ -238,7 +238,7 @@ public partial class RecursiveMarkdownRenderer
 	/// <see cref="RenderTable"/> across every row at once, so this is not a hook for cell layout.
 	/// </remarks>
 	protected virtual MString RenderTableCell(TableCell cell)
-		=> MModule.multiple(cell
+		=> MarkupText.Concat(cell
 			.Select(Render)
 			.Where(rendered => rendered.Length > 0));
 }

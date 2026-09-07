@@ -6,7 +6,7 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 ///
 /// <para>Each provider used to do this its own way and two of them were wrong. Arango wrote the same
 /// string into both, so <c>markup</c> was whatever <c>content</c> was. Memgraph ran the incoming text
-/// through <c>MModule.single</c>, which treats it as literal characters — fine while callers passed
+/// through <c>MarkupText.Plain</c>, which treats it as literal characters — fine while callers passed
 /// bare text, and destructive the moment one passed real markup. Only SurrealDB read the input as
 /// serialised markup, which is what the command layer now always sends.</para>
 ///
@@ -25,13 +25,13 @@ internal static class ScenePoseContent
 
 		try
 		{
-			return (MModule.plainText(MModule.deserialize(content)), content);
+			return (MarkupTextSerializer.Deserialize(content).ToPlainText(), content);
 		}
 		catch
 		{
 			// Not serialised markup — bare text, which is what every caller sent before the command
 			// layer began preserving it. Its plain form is itself.
-			return (content, MModule.serialize(MModule.single(content)));
+			return (content, MarkupTextSerializer.Serialize(MarkupText.Plain(content)));
 		}
 	}
 }

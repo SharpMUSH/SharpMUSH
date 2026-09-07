@@ -23,10 +23,10 @@ public class HaltFlagTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private Task Cmd(string command) =>
-		CommandParser.CommandParse(1, ConnectionService, MModule.single(command)).AsTask();
+		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	[Test]
 	public async ValueTask HaltedObjectReturnsCodeUnevaluated()

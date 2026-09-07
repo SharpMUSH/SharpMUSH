@@ -30,7 +30,7 @@ public class ParserExamples
 		foreach (var testCase in testCases)
 		{
 			Console.WriteLine($"Input: '{testCase}'");
-			var errors = Parser.ValidateAndGetErrors(MModule.single(testCase), ParseType.Function);
+			var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(testCase), ParseType.Function);
 
 			if (errors.Count == 0)
 			{
@@ -59,7 +59,7 @@ public class ParserExamples
 		Console.WriteLine($"Input: '{input}'\n");
 		Console.WriteLine("Tokens:");
 
-		var tokens = Parser.Tokenize(MModule.single(input));
+		var tokens = Parser.Tokenize(MarkupText.Plain(input));
 
 		foreach (var token in tokens)
 		{
@@ -94,7 +94,7 @@ public class ParserExamples
 		foreach (var (description, input) in examples)
 		{
 			Console.WriteLine($"{description}: '{input}'");
-			var tokens = Parser.Tokenize(MModule.single(input));
+			var tokens = Parser.Tokenize(MarkupText.Plain(input));
 			var tokenTypes = tokens.Select(t => t.Type).Distinct().ToList();
 			Console.WriteLine($"  Token types: {string.Join(", ", tokenTypes)}\n");
 		}

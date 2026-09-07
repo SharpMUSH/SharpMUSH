@@ -2,7 +2,6 @@ using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.ConnectionServer.Models;
-using MModule = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -54,16 +53,15 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
 
-		var ms = MModule.deserialize(markup);
+		var ms = MarkupTextSerializer.Deserialize(markup);
 		var text = connection.Capabilities.Format switch
 		{
-			OutputFormat.Pueblo => ms.Render("pueblo"),
-			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render("mxp")),
-			// Explicitly the ANSI render, NOT ToString(): ToString() renders every markup in its
-			// own native form, so an HtmlMarkup span (every exit name is wrapped in <send>) went
-			// out as a literal tag to clients that negotiated neither Pueblo nor MXP. The ANSI
-			// render maps HtmlMarkup to its ANSI equivalent, or to plain text when it has none.
-			_ => ms.Render("ansi")
+			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo),
+			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render(MarkupFormat.Mxp)),
+			// The ANSI render for everything else, which maps an HtmlMarkup span — every exit name is
+			// wrapped in <send> — to its ANSI equivalent, or to plain text when it has none. A client
+			// that negotiated neither Pueblo nor MXP must never see a literal tag.
+			_ => ms.Render(MarkupFormat.Ansi)
 		};
 
 		text = NormalizeLineEnding(text);

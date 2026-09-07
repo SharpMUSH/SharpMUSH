@@ -104,10 +104,10 @@ public class LoginGreetingTests
 		var characterName = TestIsolationHelpers.GenerateUniqueName("GreetMade");
 
 		var handle = await RegisterHandleAsync();
-		await Parser.CommandParse(handle, ConnectionService, MModule.single($"register {username} some-password-1"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 		await Assert.That(await AccountService.GetByUsernameAsync(username)).IsNotNull();
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single($"make {characterName} some-password-1"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"make {characterName} some-password-1"));
 
 		await Assert.That(GreetingKeyTo(handle))
 			.IsEqualTo(nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat));

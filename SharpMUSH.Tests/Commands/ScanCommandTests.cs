@@ -37,16 +37,16 @@ public class ScanCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
 		var digResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
 		var room = digResult.Message!.ToPlainText().Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={room}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={room}"));
 
 		return (player, room, TestIsolationHelpers.GenerateUniqueName(prefix.ToLowerInvariant()));
 	}
 
 	private async Task<string> ScanAsync(TestIsolationHelpers.TestPlayer player, string command)
 	{
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(command));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 		return result.Message?.ToPlainText() ?? string.Empty;
 	}
 
@@ -60,7 +60,7 @@ public class ScanCommandTests
 	{
 		var (player, room, word) = await ScannerAsync("ScanHere");
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&CMD_HERE {room}=${word} *:think here"));
+			MarkupText.Plain($"&CMD_HERE {room}=${word} *:think here"));
 
 		await Assert.That(await ScanAsync(player, $"@scan {word} test"))
 			.Contains($"#{DBRef.Parse(room).Number}/CMD_HERE");
@@ -81,7 +81,7 @@ public class ScanCommandTests
 	{
 		var (player, _, word) = await ScannerAsync("ScanSelf");
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&CMD_SELF me=${word} *:think self"));
+			MarkupText.Plain($"&CMD_SELF me=${word} *:think self"));
 
 		await Assert.That(await ScanAsync(player, $"@scan/self {word} test"))
 			.Contains($"#{player.DbRef.Number}/CMD_SELF");
@@ -104,12 +104,12 @@ public class ScanCommandTests
 		// Owned by the player, so CanScan passes without needing VISUAL; moved by God, who controls
 		// the master room.
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("ScanGlobalObj")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanGlobalObj")}"));
 		var global = createResult.Message!.ToPlainText().Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {global}=#{MasterRoom}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {global}=#{MasterRoom}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&CMD_GLOBAL {global}=${word} *:think global"));
+			MarkupText.Plain($"&CMD_GLOBAL {global}=${word} *:think global"));
 
 		var expected = $"#{DBRef.Parse(global).Number}/CMD_GLOBAL";
 		await Assert.That(await ScanAsync(player, $"@scan/globals {word} test")).Contains(expected);
@@ -131,12 +131,12 @@ public class ScanCommandTests
 		var (player, room, word) = await ScannerAsync("ScanZone");
 
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("ScanZoneObj")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanZoneObj")}"));
 		var zone = createResult.Message!.ToPlainText().Trim();
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&CMD_ZONE {zone}=${word} *:think zone"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone {room}={zone}"));
+			MarkupText.Plain($"&CMD_ZONE {zone}=${word} *:think zone"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {room}={zone}"));
 
 		await Assert.That(await ScanAsync(player, $"@scan/zone {word} test"))
 			.Contains($"#{DBRef.Parse(zone).Number}/CMD_ZONE");

@@ -21,9 +21,9 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgBasic");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGBASIC_93751 {objDbRef}=MessageBasic_UniqueValue_93751"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGBASIC_93751 {objDbRef}=MessageBasic_UniqueValue_93751"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGBASIC_93751"));
 
 		// First argument is the recipient list, so target = objDbRef; sender = executor (not spoofed).
 		await NotifyService
@@ -40,9 +40,9 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgWithAttr");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGATTR_84729 {objDbRef}=MessageWithAttribute_Result_84729:[add(5,10)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGATTR_84729 {objDbRef}=MessageWithAttribute_Result_84729:[add(5,10)]"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGATTR_84729"));
 
 		// First argument is the recipient list, so target = objDbRef; sender = executor; [add(5,10)] evaluates to 15.
 		await NotifyService
@@ -60,7 +60,7 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgMissingAttr");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=DefaultMessage_UniqueValue_72914,NONEXISTENT_ATTR_72914"));
 
 		// Attribute is absent — falls back to the default message string; first argument still targets objDbRef.
 		await NotifyService
@@ -78,7 +78,7 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgSilent");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGSILENT_61829 {objDbRef}=MessageSilent_Value_61829"));
 
 		// Count confirmations already received (from other tests in session) before this command runs.
 		var calls = NotifyService.ReceivedCalls().ToList();
@@ -91,7 +91,7 @@ public class MessageCommandTests
 			return text == "Message sent to 1 recipient(s).";
 		});
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/silent {objDbRef}=Default,TESTFORMAT_MSGSILENT_61829"));
 
 		// Unique content string confirms the message was delivered to executor.
 		await NotifyService
@@ -121,9 +121,9 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgNoisy");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOISY_55193 {objDbRef}=MessageNoisy_Value_55193"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGNOISY_55193 {objDbRef}=MessageNoisy_Value_55193"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/noisy {objDbRef}=Default,TESTFORMAT_MSGNOISY_55193"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/noisy {objDbRef}=Default,TESTFORMAT_MSGNOISY_55193"));
 
 		// Unique content — noisy sends the message and a confirmation.
 		await NotifyService
@@ -159,9 +159,9 @@ public class MessageCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgNospoof");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTFORMAT_MSGNOSPOOF_48203 {objDbRef}=MessageNospoof_Value_48203"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGNOSPOOF_48203 {objDbRef}=MessageNospoof_Value_48203"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message/nospoof {objDbRef}=Default,TESTFORMAT_MSGNOSPOOF_48203"));
 
 		// Nospoof: executor is God (can nospoof) → NSAnnounce; target = executor; sender = executor.
 		await NotifyService

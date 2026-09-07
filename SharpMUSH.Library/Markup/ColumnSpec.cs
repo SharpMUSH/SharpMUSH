@@ -1,10 +1,11 @@
-using System;
 using System.Text.RegularExpressions;
 
-namespace SharpMUSH.MarkupString.ColumnModule;
+namespace SharpMUSH.Library.Markup;
 
+/// <summary>How a column's text sits inside its width.</summary>
 public enum Justification { Left, Center, Right, Full, Paragraph }
 
+/// <summary>Per-column behaviour flags parsed out of an <c>align()</c> width token.</summary>
 [Flags]
 public enum ColumnOptions
 {
@@ -18,8 +19,13 @@ public enum ColumnOptions
 	NoColSep = 64,
 }
 
+/// <summary>One column of an <c>align()</c> layout.</summary>
 public record ColumnSpec(int Width, Justification Justification, ColumnOptions Options, string Ansi);
 
+/// <summary>
+/// Parses PennMUSH <c>align()</c> column specifications: an optional justification character, a
+/// width, any number of option characters, and an optional parenthesised ANSI string.
+/// </summary>
 public static partial class ColumnSpecParser
 {
 	[GeneratedRegex(@"^([<>=_\-])?(\d+)([\.`'$xX#]*)(?:\((.+)\))?$")]
@@ -31,21 +37,23 @@ public static partial class ColumnSpecParser
 		if (!m.Success)
 			throw new ArgumentException($"Invalid column specification: {spec}");
 
-		Justification justification = m.Groups[1].Success
-				? m.Groups[1].Value switch
-				{
-					"<" => Justification.Left,
-					"=" => Justification.Paragraph,
-					">" => Justification.Right,
-					"_" => Justification.Full,
-					"-" => Justification.Center,
-					_ => Justification.Left,
-				}
-				: Justification.Left;
+		var justification = m.Groups[1].Success
+			? m.Groups[1].Value switch
+			{
+				"<" => Justification.Left,
+				"=" => Justification.Paragraph,
+				">" => Justification.Right,
+				"_" => Justification.Full,
+				"-" => Justification.Center,
+				_ => Justification.Left,
+			}
+			: Justification.Left;
 
-		ColumnOptions options = ColumnOptions.Default;
+		var options = ColumnOptions.Default;
 		if (m.Groups[3].Success)
-			foreach (char c in m.Groups[3].Value)
+		{
+			foreach (var c in m.Groups[3].Value)
+			{
 				options |= c switch
 				{
 					'.' => ColumnOptions.Repeat,
@@ -57,18 +65,22 @@ public static partial class ColumnSpecParser
 					'#' => ColumnOptions.NoColSep,
 					_ => ColumnOptions.Default,
 				};
+			}
+		}
 
-		int width = int.Parse(m.Groups[2].Value);
-		string ansi = m.Groups[4].Success ? m.Groups[4].Value : string.Empty;
+		var width = int.Parse(m.Groups[2].Value);
+		var ansi = m.Groups[4].Success ? m.Groups[4].Value : string.Empty;
 
 		return new ColumnSpec(width, justification, options, ansi);
 	}
 
-	public static System.Collections.Generic.List<ColumnSpec> ParseList(string spec)
+	public static List<ColumnSpec> ParseList(string spec)
 	{
-		var result = new System.Collections.Generic.List<ColumnSpec>();
+		var result = new List<ColumnSpec>();
 		foreach (var token in spec.Split(' '))
+		{
 			result.Add(Parse(token));
+		}
 		return result;
 	}
 }

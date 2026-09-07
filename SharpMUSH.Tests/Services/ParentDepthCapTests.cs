@@ -36,7 +36,7 @@ public class ParentDepthCapTests
 
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
-		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		var message = result.Message!.ToPlainText()!;
 
 		// This test builds ancestor chains of up to ~23 objects and has been implicated in

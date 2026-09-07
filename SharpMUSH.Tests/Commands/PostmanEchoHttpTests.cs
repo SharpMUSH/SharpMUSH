@@ -7,7 +7,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -60,7 +59,7 @@ public class PostmanEchoHttpTests
 		await Database.SetAttributeAsync(
 			playerOne.Object.DBRef,
 			[attributeName],
-			A.single($"think {uniqueToken} %0"),
+			MarkupText.Plain($"think {uniqueToken} %0"),
 			playerOne);
 	}
 
@@ -73,7 +72,7 @@ public class PostmanEchoHttpTests
 		await Database.SetAttributeAsync(
 			playerOne.Object.DBRef,
 			[attributeName],
-			A.single(mushCode),
+			MarkupText.Plain(mushCode),
 			playerOne);
 	}
 
@@ -121,7 +120,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo echoes the request URL in the response, which includes the unique token.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -144,7 +143,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo echoes the form body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/post #1/{attrName}={PostmanEchoBase}/post,testid={token}"));
+			MarkupText.Plain($"@http/post #1/{attrName}={PostmanEchoBase}/post,testid={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -167,7 +166,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo echoes the PUT body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/put #1/{attrName}={PostmanEchoBase}/put,testid={token}"));
+			MarkupText.Plain($"@http/put #1/{attrName}={PostmanEchoBase}/put,testid={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -190,7 +189,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo echoes the request URL; the unique token appears in the query args.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/delete #1/{attrName}={PostmanEchoBase}/delete?testid={token}"));
+			MarkupText.Plain($"@http/delete #1/{attrName}={PostmanEchoBase}/delete?testid={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -213,7 +212,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo echoes the PATCH body; the unique token appears in the "form" JSON field.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,testid={token}"));
+			MarkupText.Plain($"@http/patch #1/{attrName}={PostmanEchoBase}/patch,testid={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -239,7 +238,7 @@ public class PostmanEchoHttpTests
 		// The unique token is prefixed by the callback attribute ("think {token} %0"),
 		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/gzip"));
 
 		await WaitForNotify(msg =>
 			TestHelpers.MessageContains(msg, token) &&
@@ -267,7 +266,7 @@ public class PostmanEchoHttpTests
 		// The unique token is prefixed by the callback attribute ("think {token} %0"),
 		// so it appears in the notification regardless of the response body content.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/deflate"));
 
 		await WaitForNotify(msg =>
 			TestHelpers.MessageContains(msg, token) &&
@@ -293,7 +292,7 @@ public class PostmanEchoHttpTests
 		// Use the unique token as both the query param key and value so the assertion
 		// is scoped to this test's request. postman-echo echoes query params in "args".
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?{token}={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?{token}={token}"));
 
 		await WaitForNotify(msg => TestHelpers.MessageContains(msg, token));
 
@@ -313,7 +312,7 @@ public class PostmanEchoHttpTests
 		await SetCallbackAttribute(attrName, token);
 
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}=not-a-valid-url"));
+			MarkupText.Plain($"@http #1/{attrName}=not-a-valid-url"));
 
 		// Invalid URLs are rejected synchronously before the task is queued.
 		await Assert.That(result.Message?.ToPlainText()).Contains("#-1");
@@ -328,7 +327,7 @@ public class PostmanEchoHttpTests
 		await SetCallbackAttribute(attrName, token);
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http/get #1/{attrName}={PostmanEchoBase}/get,{token}"));
+			MarkupText.Plain($"@http/get #1/{attrName}={PostmanEchoBase}/get,{token}"));
 
 		// GET with a body is refused before the task is queued — error message is immediate.
 		await NotifyService
@@ -350,7 +349,7 @@ public class PostmanEchoHttpTests
 		await SetCallbackAttributeWithContent(attrName, $"think {token} %q<STATUS>");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/get?testid={token}"));
 
 		// The callback should emit "{token} 200" because postman-echo returns 200 OK.
 		await WaitForNotify(msg =>
@@ -377,7 +376,7 @@ public class PostmanEchoHttpTests
 
 		// postman-echo.com/status/404 deliberately returns a 404 response.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@http #1/{attrName}={PostmanEchoBase}/status/404"));
+			MarkupText.Plain($"@http #1/{attrName}={PostmanEchoBase}/status/404"));
 
 		// The callback should emit "{token} 404".
 		await WaitForNotify(msg =>

@@ -1,7 +1,7 @@
-using ANSILibrary;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Drawing;
-using Ansi = MarkupString.MarkupImplementation.AnsiMarkup;
+using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Library.Services;
 
@@ -45,7 +45,7 @@ public static class SemanticTokenAnsiPalette
 		var bold = modifiers.HasFlag(SemanticTokenModifier.DefaultLibrary) &&
 							 tokenType == SemanticTokenType.Function;
 
-		return Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: bold);
+		return Ansi.Create(foreground: color.Value.ToAnsiColor(), bold: bold);
 	}
 
 	/// <summary>
@@ -80,6 +80,6 @@ public static class SemanticTokenAnsiPalette
 	/// <param name="depth">Nesting depth, 0 for an outermost group. Negative values are treated as 0.</param>
 	public static Ansi GetBracketDepthStyle(int depth) =>
 		Ansi.Create(
-			foreground: new AnsiColor.RGB(BracketDepthColors[Math.Max(depth, 0) % BracketDepthColors.Length]),
+			foreground: BracketDepthColors[Math.Max(depth, 0) % BracketDepthColors.Length].ToAnsiColor(),
 			bold: true);
 }

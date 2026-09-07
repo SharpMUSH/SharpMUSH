@@ -56,7 +56,7 @@ public class AttributeTreeWriteGateTests
 	/// </summary>
 	private async Task<string> Eval(long handle, string expression)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result?.Message?.ToPlainText() ?? string.Empty;
 	}
 
@@ -75,28 +75,28 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGSafeBOwner");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSB{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSB{uid}`LEAF me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WSB{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WSB{uid}`LEAF me=original"));
 		// Applied by God, not the wizard owner: SetAttributeFlagAsync doesn't call CanSet yet
 		// (Task 6), so a wizard could self-apply "safe" today only because of that gap - not
 		// because CanSet actually grants it. Routing the flag-set through God keeps this test
 		// isolated to the CanSet write gate, so it stays green once Task 6 closes that gap.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WSB{uid}=safe"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/WSB{uid}=safe"));
 
 		// Control: an unflagged sibling branch's leaf can be overwritten by its wizard owner,
 		// so a no-op on the safe branch's leaf below is the safe flag, not a Controls failure
 		// or a broken backtick path.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSBOK{uid}`LEAF me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WSBOK{uid}`LEAF me=original"));
 		await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=WSBOK{uid}`LEAF:changed"));
+			MarkupText.Plain($"@set me=WSBOK{uid}`LEAF:changed"));
 		var control = await Eval(owner.Handle, $"get(me/WSBOK{uid}`LEAF)");
 		await Assert.That(control).IsEqualTo("changed")
 			.Because("a wizard owner can overwrite a leaf under an unflagged branch");
 
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=WSB{uid}`LEAF:changed"));
+			MarkupText.Plain($"@set me=WSB{uid}`LEAF:changed"));
 		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
 			.Because("AF_SAFE on the branch must block writes to its leaf, even for the wizard owner");
 	}
@@ -115,22 +115,22 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGSafeAOwner");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSA{uid} me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WSA{uid} me=original"));
 		// Applied by God, not the wizard owner - see the comment in SafeBranch_BlocksWritingALeaf.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WSA{uid}=safe"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WSAOK{uid} me=original"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/WSA{uid}=safe"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WSAOK{uid} me=original"));
 
 		// Control: the wizard owner can overwrite its own unflagged sibling attribute, so a
 		// no-op on the safe one below is the flag denial, not a Controls/locate failure.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me=WSAOK{uid}:changed"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me=WSAOK{uid}:changed"));
 		var control = await Eval(owner.Handle, $"get(me/WSAOK{uid})");
 		await Assert.That(control).IsEqualTo("changed")
 			.Because("a wizard owner can overwrite its own unflagged attribute");
 
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=WSA{uid}:changed"));
+			MarkupText.Plain($"@set me=WSA{uid}:changed"));
 		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
 			.Because("AF_SAFE blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
 	}
@@ -149,30 +149,30 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGNodumpOwner");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WND{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WND{uid} me=branchvalue"));
 		// Applied by God, not the wizard owner - see the comment in SafeBranch_BlocksWritingALeaf.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/WND{uid}=nodump"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/WND{uid}=nodump"));
 
 		// Control: the wizard owner CAN create a new leaf under an unflagged sibling branch,
 		// so a miss on the nodump branch below is the flag denial, not a broken backtick-path
 		// leaf creation.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WNDOK{uid} me=okbranch"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WNDOK{uid} me=okbranch"));
 		await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=WNDOK{uid}`LEAF:okleaf"));
+			MarkupText.Plain($"@set me=WNDOK{uid}`LEAF:okleaf"));
 		var control = await Eval(owner.Handle, $"get(me/WNDOK{uid}`LEAF)");
 		await Assert.That(control).IsEqualTo("okleaf")
 			.Because("a wizard owner can create a new leaf under an unflagged branch");
 
 		var wizardAttempt = await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=WND{uid}`LEAF:leafvalue"));
+			MarkupText.Plain($"@set me=WND{uid}`LEAF:leafvalue"));
 		await Assert.That(wizardAttempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
 			.Because("only God may create a leaf under a nodump branch - a wizard owner must be denied");
 
 		// God (dbref #1 in the seeded database) creating the same leaf must succeed.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {ownerDbRef}=WND{uid}`LEAF:godvalue"));
+			MarkupText.Plain($"@set {ownerDbRef}=WND{uid}`LEAF:godvalue"));
 		var godResult = await Eval(owner.Handle, $"get(me/WND{uid}`LEAF)");
 		await Assert.That(godResult).IsEqualTo("godvalue")
 			.Because("God bypasses the nodump create-time gate");
@@ -196,10 +196,10 @@ public class AttributeTreeWriteGateTests
 		var ownerDbRef = owner.DbRef.ToString();
 		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&MSW{uid} me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&MSW{uid} me=original"));
 		// God applies WIZARD directly, so the precondition doesn't depend on the very path
 		// under test (SetAttributeFlagAsync) having been trustworthy.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/MSW{uid}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/MSW{uid}=WIZARD"));
 
 		var before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSW{uid}",
 			IAttributeService.AttributeMode.Read, false);
@@ -209,16 +209,16 @@ public class AttributeTreeWriteGateTests
 		// Control: a mortal owner CAN unset an unrelated, unprivileged flag on its own
 		// attribute, so a no-op on the wizard attribute below is the wizard-flag denial, not a
 		// broken @set/! parse or a Controls failure.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&MSWOK{uid} me=original"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {ownerDbRef}/MSWOK{uid}=VISUAL"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/MSWOK{uid}=!VISUAL"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&MSWOK{uid} me=original"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/MSWOK{uid}=VISUAL"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/MSWOK{uid}=!VISUAL"));
 		var controlAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSWOK{uid}",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(controlAfter.AsAttribute.Last().Flags.Any(f => f.Name.Equals("VISUAL", StringComparison.OrdinalIgnoreCase)))
 			.IsFalse().Because("a mortal owner can unset an unprivileged flag on its own attribute");
 
 		// The mortal owner attempts to strip WIZARD from its own attribute.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/MSW{uid}=!WIZARD"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/MSW{uid}=!WIZARD"));
 
 		var after = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSW{uid}",
 			IAttributeService.AttributeMode.Read, false);
@@ -243,17 +243,17 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeOwner");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WWB{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WWB{uid}`LEAF me=leafvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWB{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWB{uid}`LEAF me=leafvalue"));
 		// God flags the branch WIZARD - not the leaf underneath it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/WWB{uid}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}/WWB{uid}=WIZARD"));
 
 		// Control: the mortal owner CAN wipe an unflagged sibling branch's leaf directly, so a
 		// no-op on the wizard branch's leaf below is the ancestor flag denial, not a Controls
 		// failure or a broken @wipe/backtick path.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WWBOK{uid} me=okbranch"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WWBOK{uid}`LEAF me=okleaf"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WWBOK{uid}`LEAF"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWBOK{uid} me=okbranch"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWBOK{uid}`LEAF me=okleaf"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WWBOK{uid}`LEAF"));
 		var controlLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WWBOK{uid}`LEAF",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(controlLeaf.IsAttribute).IsFalse()
@@ -263,7 +263,7 @@ public class AttributeTreeWriteGateTests
 		// directly, so wiping it would be denied even by the old per-leaf-only CanSet call - that
 		// would prove nothing about the ancestor walk. Only a pattern that matches solely the
 		// unflagged leaf (never touching the branch node in attrArr) exercises the actual gap.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WWB{uid}`LEAF"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WWB{uid}`LEAF"));
 
 		var leafAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WWB{uid}`LEAF",
 			IAttributeService.AttributeMode.Read, false);
@@ -291,17 +291,17 @@ public class AttributeTreeWriteGateTests
 		// WPROT{uid} itself carries no flag - only its WIZLEAF child does. The outer
 		// ancestor-path gate on WPROT{uid} alone would pass; only per-descendant gating
 		// inside the wipe itself can catch this.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid}`WIZLEAF me=protectedvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROT{uid}`OKLEAF me=removablevalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROT{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROT{uid}`WIZLEAF me=protectedvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROT{uid}`OKLEAF me=removablevalue"));
 		// God flags only the descendant leaf WIZARD - not the branch.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/WPROT{uid}`WIZLEAF=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}/WPROT{uid}`WIZLEAF=WIZARD"));
 
 		// Control: a wholly-unflagged branch is fully removed by @wipe, so a survivor below is
 		// the protection actually working, not @wipe silently no-op'ing on the whole subtree.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROTOK{uid} me=okbranch"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&WPROTOK{uid}`LEAF me=okleaf"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROTOK{uid}"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROTOK{uid} me=okbranch"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROTOK{uid}`LEAF me=okleaf"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WPROTOK{uid}"));
 		var controlBranch = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROTOK{uid}",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(controlBranch.IsAttribute).IsFalse()
@@ -309,7 +309,7 @@ public class AttributeTreeWriteGateTests
 
 		// The mortal owner wipes the branch that has one protected descendant among its children.
 		var wipeMessages = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/WPROT{uid}")).AsTask());
+			Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WPROT{uid}")).AsTask());
 
 		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
 			IAttributeService.AttributeMode.Read, false);
@@ -369,7 +369,7 @@ public class AttributeTreeWriteGateTests
 		// No attribute named anything like this exists on owner - the pattern matches nothing.
 		var messages = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
-				MModule.single($"@wipe me/NOSUCHPATTERN{uid}*")).AsTask());
+				MarkupText.Plain($"@wipe me/NOSUCHPATTERN{uid}*")).AsTask());
 
 		await Assert.That(messages).Contains(ErrorMessages.Notifications.NoAttributesWiped)
 			.Because("a zero-match @wipe must still report the tally, not go completely silent");
@@ -391,13 +391,13 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizGuard");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WZ{uid}G me=wizvalue"));
-		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WZ{uid}OK me=okvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}/WZ{uid}G=WIZARD"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"&WZ{uid}G me=wizvalue"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"&WZ{uid}OK me=okvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}/WZ{uid}G=WIZARD"));
 
-		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"@wipe me/WZ{uid}*"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WZ{uid}*"));
 
 		// Control: the unflagged sibling matched the same wildcard and IS gone, so the survivor
 		// below is the AF_WIZARD guard and not a @wipe that silently no-op'd on the whole pattern.
@@ -429,17 +429,17 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizLiteral");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"&WL{uid}G me=wizvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wiz.DbRef}/WL{uid}G=WIZARD"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"&WL{uid}G me=wizvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}/WL{uid}G=WIZARD"));
 
 		var before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(before.IsAttribute).IsTrue()
 			.Because("the wizard-flagged attribute exists before the wipe");
 
-		await Parser.CommandParse(wiz.Handle, ConnectionService, MModule.single($"@wipe me/WL{uid}G"));
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WL{uid}G"));
 
 		var after = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
 			IAttributeService.AttributeMode.Read, false);
@@ -462,12 +462,12 @@ public class AttributeTreeWriteGateTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeSafeMsg");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&SF{uid}S me=safevalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&SF{uid}OK me=okvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}/SF{uid}S=safe"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&SF{uid}S me=safevalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&SF{uid}OK me=okvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}/SF{uid}S=safe"));
 
 		var messages = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@wipe me/SF{uid}*")).AsTask());
+			Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/SF{uid}*")).AsTask());
 
 		// Control: the unflagged sibling matched the same wildcard and was wiped, so the report
 		// below belongs to a wipe that actually ran rather than one that matched nothing.

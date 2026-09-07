@@ -35,7 +35,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("[add(1,2)] (3)", "3 (3)")]
 	public async Task SpaceAfterLeadingFunctionSurvives(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -50,7 +50,7 @@ public class ParserBehaviorUnitTests
 	[Arguments(" add(1,2)", "add(1,2)")]
 	public async Task LeadingWhitespaceIsStillStripped(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -70,7 +70,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("lit(;)", ";")]
 	public async Task Lit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -83,16 +83,16 @@ public class ParserBehaviorUnitTests
 	[Test]
 	public async Task LitPreservesMarkup()
 	{
-		var coloured = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
-		await Assert.That(coloured.ToString()).Contains("[");
+		var coloured = (await Parser.FunctionParse(MarkupText.Plain("ansi(+red,test)")))?.Message!;
+		await Assert.That(coloured.Render(MarkupFormat.Ansi)).Contains("[");
 
 		// Equivalent to lit(<coloured text>) arriving from a stored attribute value.
-		var source = MModule.multiple([MModule.single("lit("), coloured, MModule.single(")")]);
+		var source = MarkupText.Concat([MarkupText.Plain("lit("), coloured, MarkupText.Plain(")")]);
 
 		var result = (await Parser.FunctionParse(source))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("test");
-		await Assert.That(result.ToString()).Contains("[");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("[");
 	}
 
 	// Penn fn.1-fn.3: fn() calls functions by name
@@ -105,7 +105,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("fn(add,1,2,3)", "6")]
 	public async Task Fn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -114,7 +114,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("fn(notafunction)", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
 	public async Task FnError(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -133,7 +133,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("[strcat(notafunction(1))]", "notafunction(1)")]
 	public async Task UnknownFunctionStaysLiteralOutsideBrackets(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -143,7 +143,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("strcat([notafunction(1)])", "#-1 FUNCTION (NOTAFUNCTION) NOT FOUND")]
 	public async Task UnknownFunctionErrorsInsideBrackets(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -157,7 +157,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("[xyzzyplughqq(1)]", "#-1 FUNCTION (XYZZYPLUGHQQ) NOT FOUND")]
 	public async Task UnknownFunctionSuggestsClosestName(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -177,7 +177,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("notafunction(add(%#,2))", "notafunction(add(#1,2))")]
 	public async Task NonCallContentsEvaluateWithoutFunctionRecognition(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -193,7 +193,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("strcat({[strlen(%#)]})", "2")]
 	public async Task FunctionArgumentBracesEvaluateWithoutFunctionRecognition(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -206,7 +206,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("space(5)", "     ")]
 	public async Task CompressAndSpaces(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -215,7 +215,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("cat(setr(0,test),lit(%q0))", "test %q0")]
 	public async Task QregNoparse(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -232,7 +232,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("insert(a b c,-4,X)", "a b c")]
 	public async Task InsertAlias(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -242,7 +242,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("cat(add(1,2),mul(3,4))", "3 12")]
 	public async Task NestedFunctions(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -252,7 +252,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("aDd(1,2)", "3")]
 	public async Task FunctionCaseInsensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -263,7 +263,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("cat({[add(1,2)]},done)", "3 done")]
 	public async Task BraceHandling(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -273,7 +273,7 @@ public class ParserBehaviorUnitTests
 	[Arguments(@"strlen(\])", "1")]
 	public async Task EscapeSequences(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -287,7 +287,7 @@ public class ParserBehaviorUnitTests
 	[Arguments("trim()", "")]
 	public async Task EmptyArgHandling(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

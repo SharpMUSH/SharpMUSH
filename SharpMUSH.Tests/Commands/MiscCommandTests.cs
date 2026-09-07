@@ -23,7 +23,7 @@ public class MiscCommandTests
 	public async ValueTask VerbCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@verb #1=greet,greets,greeting"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@verb #1=greet,greets,greeting"));
 
 		await NotifyService
 			.Received(1)
@@ -36,7 +36,7 @@ public class MiscCommandTests
 	public async ValueTask SweepCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sweep"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@sweep"));
 
 		await NotifyService
 			.Received(1)
@@ -49,7 +49,7 @@ public class MiscCommandTests
 	public async ValueTask EditCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@edit #1/DESC=old=new"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@edit #1/DESC=old=new"));
 
 		await NotifyService
 			.Received(1)
@@ -60,7 +60,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1=pattern"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep #1=pattern"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -69,7 +69,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithPrintSwitch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/print #1=pattern"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep/print #1=pattern"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -78,7 +78,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithWildSwitch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/wild #1=*pattern*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep/wild #1=*pattern*"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -87,7 +87,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithRegexpSwitch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/regexp #1=.*pattern.*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep/regexp #1=.*pattern.*"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -96,7 +96,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithNocaseSwitch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep/nocase #1=PATTERN"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep/nocase #1=PATTERN"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -105,7 +105,7 @@ public class MiscCommandTests
 	public async ValueTask GrepCommand_WithAttributePattern()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@grep #1/DESC*=pattern"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@grep #1/DESC*=pattern"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -116,7 +116,7 @@ public class MiscCommandTests
 	public async ValueTask BriefCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("brief"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("brief"));
 
 		await NotifyService
 			.Received(1)
@@ -130,7 +130,7 @@ public class MiscCommandTests
 	public async ValueTask WhoCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("who"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("who"));
 
 		await NotifyService
 			.Received(1)
@@ -144,7 +144,7 @@ public class MiscCommandTests
 	public async ValueTask SessionCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("session"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("session"));
 
 		await NotifyService
 			.Received(1)
@@ -158,7 +158,7 @@ public class MiscCommandTests
 	public async ValueTask QuitCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("quit"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("quit"));
 
 		await NotifyService
 			.Received(1)
@@ -172,7 +172,7 @@ public class MiscCommandTests
 	public async ValueTask ConnectCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("connect player password"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("connect player password"));
 
 		await NotifyService
 			.Received(1)
@@ -185,7 +185,7 @@ public class MiscCommandTests
 	public async ValueTask PromptCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@prompt #1=Enter value:"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@prompt #1=Enter value:"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -198,7 +198,7 @@ public class MiscCommandTests
 	public async ValueTask NspromptCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@nsprompt #1=Enter value:"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@nsprompt #1=Enter value:"));
 
 		await NotifyService
 			.DidNotReceive()

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Utilities;
 using System.Diagnostics;
@@ -121,7 +122,7 @@ public class WildcardParityTests
 	[Test]
 	public async Task TheListFunctionTransformationIsTheSameOne()
 	{
-		await Assert.That("tes*".GlobToRegex()).IsEqualTo(MModule.getWildcardMatchAsRegex2("tes*"));
+		await Assert.That("tes*".GlobToRegex()).IsEqualTo(MushText.Glob.ToRegex("tes*"));
 		await Assert.That(Regex.IsMatch("attest", "tes*".GlobToRegex())).IsFalse();
 	}
 
@@ -134,7 +135,7 @@ public class WildcardParityTests
 	[Test]
 	public async Task CaseIsTheCallersChoiceAndDefaultsToInsensitive()
 	{
-		await Assert.That(MModule.getWildcardMatchAsRegex2("tes*")).DoesNotContain("(?i");
+		await Assert.That(MushText.Glob.ToRegex("tes*")).DoesNotContain("(?i");
 
 		await Assert.That(SoftcodeRegex.Wildcard("tes*").IsMatch("TEST")).IsTrue()
 			.Because("quick_wild passes cs = 0, and $-commands, @listen and grab() all go through it");

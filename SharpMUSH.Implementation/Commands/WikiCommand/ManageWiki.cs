@@ -44,7 +44,7 @@ public static class ManageWiki
 		if (RequiresWizard(op) && !await executor.IsWizard())
 		{
 			await notifyService.Notify(executor, "WIKI: Permission denied. That operation is wizard-only.", executor);
-			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var (ns, lookupCategory, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
@@ -52,7 +52,7 @@ public static class ManageWiki
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
@@ -61,7 +61,7 @@ public static class ManageWiki
 		if (op is Operation.Category or Operation.Tag && !await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		switch (op)
@@ -69,7 +69,7 @@ public static class ManageWiki
 			case Operation.Delete:
 				await wikiService.DeleteAsync(page.Id, WikiCommandHelper.EditorDbref(executor));
 				await notifyService.Notify(executor, $"WIKI: Deleted '{page.Title}' and its revision history.", executor);
-				return MModule.single(page.Slug);
+				return MarkupText.Plain(page.Slug);
 
 			case Operation.Protect or Operation.Unprotect:
 				{
@@ -77,7 +77,7 @@ public static class ManageWiki
 					await wikiService.SetProtectionAsync(page.Id, protect);
 					await notifyService.Notify(executor,
 						$"WIKI: '{page.Title}' is now {(protect ? "protected (wizard-only edits)" : "unprotected")}.", executor);
-					return MModule.single(page.Slug);
+					return MarkupText.Plain(page.Slug);
 				}
 
 			case Operation.Publish or Operation.Unpublish:
@@ -87,11 +87,11 @@ public static class ManageWiki
 					if (publishResult.IsT1)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 					}
 					await notifyService.Notify(executor,
 						$"WIKI: '{page.Title}' is now {(publish ? "published" : "an unpublished draft")}.", executor);
-					return MModule.single(page.Slug);
+					return MarkupText.Plain(page.Slug);
 				}
 
 			case Operation.Category:
@@ -101,13 +101,13 @@ public static class ManageWiki
 					if (categoryResult.IsT1)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 					}
 					await notifyService.Notify(executor,
 						string.IsNullOrWhiteSpace(category)
 							? $"WIKI: Cleared the category on '{page.Title}'."
 							: $"WIKI: '{page.Title}' is now in category '{category.ToLowerInvariant()}'.", executor);
-					return MModule.single(page.Slug);
+					return MarkupText.Plain(page.Slug);
 				}
 
 			case Operation.Tag:
@@ -119,17 +119,17 @@ public static class ManageWiki
 					if (result.IsT1)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
-						return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 					}
 					var stored = result.AsT0.Tags.Count > 0
 						? string.Join(", ", result.AsT0.Tags)
 						: "(none)";
 					await notifyService.Notify(executor, $"WIKI: Tags on '{page.Title}' set to: {stored}.", executor);
-					return MModule.single(page.Slug);
+					return MarkupText.Plain(page.Slug);
 				}
 
 			default:
-				return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 	}
 }

@@ -22,13 +22,13 @@ public class AttributeTreeLattrTests
 
 	private async Task<string> Eval(string expr)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		return result?.Message?.ToPlainText() ?? "";
 	}
 
 	private async Task Cmd(string cmd)
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single(cmd));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(cmd));
 	}
 
 	/// <summary>

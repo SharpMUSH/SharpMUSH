@@ -1,4 +1,5 @@
-﻿using DotNext.Collections.Generic;
+using SharpMUSH.Library.Markup;
+using DotNext.Collections.Generic;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -197,7 +198,7 @@ public partial class Functions
 				}
 			}
 
-			parser.CurrentState.AddRegister(qRegister, MModule.single(value));
+			parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(value));
 		}
 	}
 
@@ -223,17 +224,17 @@ public partial class Functions
 			}
 
 			var regex = SoftcodeRegex.Create(pattern, options);
-			var splitList = MModule.splitList(delimiter, list) ?? [];
+			var splitList = MushText.SplitList(delimiter, list) ?? [];
 
 			if (all)
 			{
 				var matches = splitList.Where(x => regex.IsMatch(x.ToPlainText()));
-				return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, matches));
+				return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, matches));
 			}
 			else
 			{
 				var firstMatch = splitList.FirstOrDefault(x => regex.IsMatch(x.ToPlainText()));
-				return ValueTask.FromResult<CallState>(firstMatch ?? MModule.empty());
+				return ValueTask.FromResult<CallState>(firstMatch ?? MarkupText.Empty);
 			}
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
@@ -269,7 +270,7 @@ public partial class Functions
 			}
 
 			var regex = SoftcodeRegex.Create(pattern, options);
-			var splitList = MModule.splitList(delimiter, list) ?? [];
+			var splitList = MushText.SplitList(delimiter, list) ?? [];
 
 			if (all)
 			{
@@ -277,9 +278,9 @@ public partial class Functions
 				var positions = splitList
 					.Select((item, index) => new { item, index })
 					.Where(x => regex.IsMatch(x.item.ToPlainText()))
-					.Select(x => MModule.single((x.index + 1).ToString()));
+					.Select(x => MarkupText.Plain((x.index + 1).ToString()));
 
-				return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
+				return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, positions));
 			}
 			else
 			{
@@ -360,8 +361,8 @@ public partial class Functions
 							}
 						}
 
-						var evaluated = (await parser.FunctionParse(MModule.single(list))) ?? new CallState(MModule.empty());
-						var evaluatedMsg = evaluated.Message ?? MModule.empty();
+						var evaluated = (await parser.FunctionParse(MarkupText.Plain(list))) ?? new CallState(MarkupText.Empty);
+						var evaluatedMsg = evaluated.Message ?? MarkupText.Empty;
 						results.Add(evaluatedMsg);
 
 						if (!all)
@@ -380,7 +381,7 @@ public partial class Functions
 			if (results.Any())
 			{
 				// PennMUSH concatenates results with no separator (like appending to a buffer)
-				return new CallState(MModule.multipleWithDelimiter(MModule.empty(), results));
+				return new CallState(MarkupText.Join(MarkupText.Empty, results));
 			}
 
 			if (defaultValue != null)
@@ -389,7 +390,7 @@ public partial class Functions
 				return new CallState(defaultEvaluated!);
 			}
 
-			return new CallState(MModule.empty());
+			return new CallState(MarkupText.Empty);
 		}
 		finally
 		{

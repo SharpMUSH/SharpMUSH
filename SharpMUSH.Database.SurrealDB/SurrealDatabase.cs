@@ -720,7 +720,7 @@ public partial class SurrealDatabase(
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
-			Value = MModule.deserialize(record.value)
+			Value = MarkupTextSerializer.Deserialize(record.value)
 		});
 	}
 
@@ -741,7 +741,7 @@ public partial class SurrealDatabase(
 			new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 			new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 			Value: new AsyncLazy<MString>(innerCt =>
-				Task.FromResult(MModule.deserialize(record.value)))));
+				Task.FromResult(MarkupTextSerializer.Deserialize(record.value)))));
 	}
 
 	private async IAsyncEnumerable<SharpAttribute> GetTopLevelAttributesAsync(string parentId, [EnumeratorCancellation] CancellationToken ct = default)

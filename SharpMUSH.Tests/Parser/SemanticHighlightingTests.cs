@@ -13,7 +13,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_SimpleFunction_ReturnsTokens()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("add(1,2)"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("add(1,2)"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -27,13 +27,13 @@ public class SemanticHighlightingTests
 		// %# is the substitution for the current object's dbref.
 		// The '#' token (DBREF) is a child of SubstitutionSymbolContext → Substitution.
 		// Literal object references like #1234 (OTHER token starting with '#') remain ObjectReference.
-		var subTokens = Parser.GetSemanticTokens(MModule.single("%#"), ParseType.Function);
+		var subTokens = Parser.GetSemanticTokens(MarkupText.Plain("%#"), ParseType.Function);
 		await Assert.That(subTokens).IsNotEmpty();
 		var subToken = subTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Substitution);
 		await Assert.That(subToken).IsNotNull();
 
 		// A literal dbref in an expression is still ObjectReference
-		var litTokens = Parser.GetSemanticTokens(MModule.single("get(#1/ATTR)"), ParseType.Function);
+		var litTokens = Parser.GetSemanticTokens(MarkupText.Plain("get(#1/ATTR)"), ParseType.Function);
 		var litObjToken = litTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.ObjectReference);
 		await Assert.That(litObjToken).IsNotNull();
 	}
@@ -41,7 +41,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_Substitution_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("%0 test %1"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("%0 test %1"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -53,7 +53,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_BracketSubstitution_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("test[value]"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("test[value]"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -65,7 +65,7 @@ public class SemanticHighlightingTests
 	public async Task GetSemanticTokens_ComplexExpression_IdentifiesMultipleTypes()
 	{
 		var input = "add(1,[get(%#)])%0";
-		var tokens = Parser.GetSemanticTokens(MModule.single(input), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain(input), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -76,7 +76,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_HasRanges()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("test[abc]"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("test[abc]"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -93,7 +93,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokensData_ReturnsLspFormat()
 	{
-		var data = Parser.GetSemanticTokensData(MModule.single("add(1,2)"), ParseType.Function);
+		var data = Parser.GetSemanticTokensData(MarkupText.Plain("add(1,2)"), ParseType.Function);
 
 		await Assert.That(data).IsNotNull();
 		await Assert.That(data.TokenTypes).IsNotEmpty();
@@ -107,7 +107,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_Numbers_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("123"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("123"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -118,7 +118,7 @@ public class SemanticHighlightingTests
 	[Test]
 	public async Task GetSemanticTokens_EscapeSequence_IdentifiesCorrectly()
 	{
-		var tokens = Parser.GetSemanticTokens(MModule.single("\\n test"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("\\n test"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -131,18 +131,18 @@ public class SemanticHighlightingTests
 	{
 		// Use CommandEqSplit parse type so that the '=' is the actual command split operator,
 		// and CommandCommaArgs so that ',' is a real argument separator — not literal text.
-		var eqTokens = Parser.GetSemanticTokens(MModule.single("a=b"), ParseType.CommandEqSplit);
+		var eqTokens = Parser.GetSemanticTokens(MarkupText.Plain("a=b"), ParseType.CommandEqSplit);
 		await Assert.That(eqTokens).IsNotEmpty();
 		var eqOp = eqTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == "=");
 		await Assert.That(eqOp).IsNotNull();
 
 		// With CommandCommaArgs the comma IS an argument separator → Operator
-		var commaTokens = Parser.GetSemanticTokens(MModule.single("a,b"), ParseType.CommandCommaArgs);
+		var commaTokens = Parser.GetSemanticTokens(MarkupText.Plain("a,b"), ParseType.CommandCommaArgs);
 		var commaOp = commaTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == ",");
 		await Assert.That(commaOp).IsNotNull();
 
 		// With CommandList the semicolon is a command separator → Operator
-		var semiTokens = Parser.GetSemanticTokens(MModule.single("a;b"), ParseType.CommandList);
+		var semiTokens = Parser.GetSemanticTokens(MarkupText.Plain("a;b"), ParseType.CommandList);
 		var semiOp = semiTokens.FirstOrDefault(t => t.TokenType == SemanticTokenType.Operator && t.Text.Trim() == ";");
 		await Assert.That(semiOp).IsNotNull();
 	}
@@ -152,7 +152,7 @@ public class SemanticHighlightingTests
 	{
 		// %q<myvar>: the closing '>' should be Register (part of the %q<...> syntax),
 		// not Operator (a standalone '>' comparison).
-		var tokens = Parser.GetSemanticTokens(MModule.single("%q<myvar>"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("%q<myvar>"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -169,7 +169,7 @@ public class SemanticHighlightingTests
 	{
 		// A bare '>' that is NOT part of %q<...> lives in BeginGenericTextContext → Text.
 		// It is a literal character in MUSH code, not a language operator.
-		var tokens = Parser.GetSemanticTokens(MModule.single("a>b"), ParseType.Function);
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("a>b"), ParseType.Function);
 
 		await Assert.That(tokens).IsNotEmpty();
 

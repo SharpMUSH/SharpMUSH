@@ -18,13 +18,13 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var attrListStr = MModule.plainText(parser.CurrentState.Arguments["0"].Message!)!;
+		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		// jiter fans ONE input across every attribute: each is evaluated with the same %0,
 		// side by side (contrast chain(), which threads each result into the next step).
-		var input = parser.CurrentState.Arguments["1"].Message ?? MModule.empty();
-		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var input = parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty;
+		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 
 		if (tokens.Length == 0)
 		{
@@ -77,6 +77,6 @@ public partial class Functions
 			results.Add((await stepParser.FunctionParse(attrValue))!.Message!);
 		}
 
-		return new CallState(MModule.multipleWithDelimiter(osep, results));
+		return new CallState(MarkupText.Join(osep, results));
 	}
 }

@@ -24,12 +24,11 @@ public static class ChannelWho
 		var memberArray = await members.ToArrayAsync();
 
 
-		var delimitedMembers = MModule.multipleWithDelimiter(MModule.single(", "),
-			memberArray.Select(x => MModule.single(x.Member.Object().Name)));
+		var delimitedMembers = MarkupText.Join(MarkupText.Plain(", "), memberArray.Select(x => MarkupText.Plain(x.Member.Object().Name)));
 
 		var memberOutput =
-			MModule.multiple([
-				MModule.single("Members of channel <"), channel.Name, MModule.single("> are:\n"),
+			MarkupText.Concat([
+				MarkupText.Plain("Members of channel <"), channel.Name, MarkupText.Plain("> are:\n"),
 				delimitedMembers
 			]);
 

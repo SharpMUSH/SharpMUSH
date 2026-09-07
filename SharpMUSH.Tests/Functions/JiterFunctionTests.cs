@@ -21,16 +21,16 @@ public class JiterFunctionTests
 	private async Task<int> CreateObjectWithAttribute(string objectName, string attrName, string attrValue)
 	{
 		var createResult = await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {objectName}"));
+			MarkupText.Plain($"@create {objectName}"));
 		var dbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&{attrName} #{dbRef.Number}={attrValue}"));
+			MarkupText.Plain($"&{attrName} #{dbRef.Number}={attrValue}"));
 		return dbRef.Number;
 	}
 
 	private async Task Check(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
@@ -38,8 +38,8 @@ public class JiterFunctionTests
 	public async Task Jiter()
 	{
 		var objNum = await CreateObjectWithAttribute("jiter_obj", "F1", "add(%0,1)");
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&F2 #{objNum}=mul(%0,2)"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&F3 #{objNum}=sub(%0,3)"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&F2 #{objNum}=mul(%0,2)"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&F3 #{objNum}=sub(%0,3)"));
 
 		// Every attribute receives the SAME input as %0; results are juxtaposed.
 		await Check($"jiter(#{objNum}/F1 #{objNum}/F2 #{objNum}/F3, 10)", "11 20 7");
@@ -53,7 +53,7 @@ public class JiterFunctionTests
 	public async Task JiterStrings()
 	{
 		var objNum = await CreateObjectWithAttribute("jiter_str_obj", "W", "ucstr(%0)");
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&L #{objNum}=strlen(%0)"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&L #{objNum}=strlen(%0)"));
 
 		await Check($"jiter(#{objNum}/W #{objNum}/L, abc)", "ABC 3");
 	}

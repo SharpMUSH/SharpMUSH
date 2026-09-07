@@ -43,14 +43,14 @@ This is **bold** and *italic* text.
 		await Assert.That(plainText.Contains("Left aligned")).IsTrue();
 		await Assert.That(plainText.Contains("Right aligned")).IsTrue();
 
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Faint) || fullString.Contains(Bold)).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.Sets(fullString, 2) || AnsiStream.Sets(fullString, 1)).IsTrue();
 
 		await Assert.That(plainText.Contains("|")).IsTrue();
 	}
 
 	[Test]
-	public async Task ProofOfConcept_TableColumnAlignment_UsesTextAlignerModule()
+	public async Task ProofOfConcept_TableColumnAlignment_UsesTextAligner()
 	{
 		var markdown = @"| Short | Medium Text | Very Long Content Here |
 | --- | --- | --- |
@@ -82,9 +82,9 @@ This is **bold** and *italic* text.
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("Simple text");
 
-		var fullString = result.ToString();
-		await Assert.That(fullString.Contains(Foreground(255, 255, 255))).IsTrue();
-		await Assert.That(fullString.Contains(Bold)).IsTrue();
+		var fullString = result.Render(MarkupFormat.Ansi);
+		await Assert.That(AnsiStream.SetsForeground(fullString, 255, 255, 255)).IsTrue();
+		await Assert.That(AnsiStream.Sets(fullString, 1)).IsTrue();
 
 		await Assert.That(result.Length).IsGreaterThan(0);
 	}

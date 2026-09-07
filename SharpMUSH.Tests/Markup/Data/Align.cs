@@ -1,4 +1,3 @@
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Markup.Data;
 
@@ -16,170 +15,170 @@ public static class Align
 	{
 		yield return () => new(
 			"30 30",
-			[A.single("a"), A.single("b")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a                              b                             ")
+			[MarkupText.Plain("a"), MarkupText.Plain("b")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a                              b                             ")
 		);
 
 		yield return () => new(
 			"5 5",
-			[A.single("a1\na2"), A.single("b1")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a1    b1   \na2         ")
+			[MarkupText.Plain("a1\na2"), MarkupText.Plain("b1")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a1    b1   \na2         ")
 		);
 
 		yield return () => new(
 			"5 5",
-			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a1    b1   \na2    b2   \n      b3   ")
+			[MarkupText.Plain("a1\na2"), MarkupText.Plain("b1\nb2\nb3")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a1    b1   \na2    b2   \n      b3   ")
 		);
 
 		yield return () => new(
 			"1. 5 1.",
-			[A.single("|"), A.single("this is a test"), A.single("|")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("| this  |\n| is a  |\n| test  |")
+			[MarkupText.Plain("|"), MarkupText.Plain("this is a test"), MarkupText.Plain("|")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("| this  |\n| is a  |\n| test  |")
 		);
 
 		yield return () => new(
 			"5 >5",
-			[A.single("a1\na2"), A.single("b1\nb2\nb3")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a1       b1\na2       b2\n         b3")
+			[MarkupText.Plain("a1\na2"), MarkupText.Plain("b1\nb2\nb3")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a1       b1\na2       b2\n         b3")
 		);
 
 		yield return () => new(
 			"5. >5",
-			[A.single("a1"), A.single("b1\nb2\nb3")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a1       b1\na1       b2\na1       b3")
+			[MarkupText.Plain("a1"), MarkupText.Plain("b1\nb2\nb3")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a1       b1\na1       b2\na1       b3")
 		);
 
 		yield return () => new(
 			"5 >5.",
-			[A.single("a1\na2\na3"), A.single("b1")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a1       b1\na2       b1\na3       b1")
+			[MarkupText.Plain("a1\na2\na3"), MarkupText.Plain("b1")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a1       b1\na2       b1\na3       b1")
 		);
 
 		yield return () => new(
 			">30 30",
-			[A.single("a"), A.single("b")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("                             a b                             ")
+			[MarkupText.Plain("a"), MarkupText.Plain("b")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("                             a b                             ")
 		);
 
 		yield return () => new(
 			">30 >30",
-			[A.single("a"), A.single("b")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("                             a                              b")
+			[MarkupText.Plain("a"), MarkupText.Plain("b")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("                             a                              b")
 		);
 
 		// Center justification (- prefix means center)
 		yield return () => new(
 			"-10",
-			[A.single("test")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("   test   ")
+			[MarkupText.Plain("test")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("   test   ")
 		);
 
 		// NoFill option ($)
 		yield return () => new(
 			">15 60$",
-			[A.single("Walker"), A.single("Staff & Developer")],
-			A.single("x"),
-			A.single("x"),
-			A.single("\n"),
-			A.single("xxxxxxxxxWalkerxStaff & Developer")
+			[MarkupText.Plain("Walker"), MarkupText.Plain("Staff & Developer")],
+			MarkupText.Plain("x"),
+			MarkupText.Plain("x"),
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("xxxxxxxxxWalkerxStaff & Developer")
 		);
 
 		yield return () => new(
 			"10 10",
-			[A.single("abc"), A.single("def")],
-			A.single("-"),
-			A.single(" "),
-			A.single("\n"),
-			A.single("abc------- def-------")
+			[MarkupText.Plain("abc"), MarkupText.Plain("def")],
+			MarkupText.Plain("-"),
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("abc------- def-------")
 		);
 
 		yield return () => new(
 			"5 5",
-			[A.single("aa"), A.single("bb")],
-			A.single(" "),
-			A.single("|"),
-			A.single("\n"),
-			A.single("aa   |bb   ")
+			[MarkupText.Plain("aa"), MarkupText.Plain("bb")],
+			MarkupText.Space,
+			MarkupText.Plain("|"),
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("aa   |bb   ")
 		);
 
 		yield return () => new(
 			"5 5",
-			[A.single("a1\na2"), A.single("b1\nb2")],
-			A.single(" "),
-			A.single(" "),
-			A.single(" / "),
-			A.single("a1    b1    / a2    b2   ")
+			[MarkupText.Plain("a1\na2"), MarkupText.Plain("b1\nb2")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain(" / "),
+			MarkupText.Plain("a1    b1    / a2    b2   ")
 		);
 
 		// Truncate option (x) - truncates each row
 		yield return () => new(
 			"5x 5x",
-			[A.single("This is a very long text"), A.single("Another long text here")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("This  Anoth")
+			[MarkupText.Plain("This is a very long text"), MarkupText.Plain("Another long text here")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("This  Anoth")
 		);
 
 		// TruncateV2 option (X) - truncates entire column after first row
 		yield return () => new(
 			"10X 10X",
-			[A.single("This is a very long text that wraps"), A.single("Another very long text")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("This is a  Another ve")
+			[MarkupText.Plain("This is a very long text that wraps"), MarkupText.Plain("Another very long text")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("This is a  Another ve")
 		);
 
 		// NoColSep option (#) - no separator after column
 		yield return () => new(
 			"5# 5",
-			[A.single("abc"), A.single("def")],
-			A.single(" "),
-			A.single("|"),
-			A.single("\n"),
-			A.single("abc  def  ")
+			[MarkupText.Plain("abc"), MarkupText.Plain("def")],
+			MarkupText.Space,
+			MarkupText.Plain("|"),
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("abc  def  ")
 		);
 
 		// Full justification (_)
 		yield return () => new(
 			"_20",
-			[A.single("hello world test")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("hello   world   test")
+			[MarkupText.Plain("hello world test")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("hello   world   test")
 		);
 
 		// MergeToLeft option (`) - empty column merges left, adding its width to left column
@@ -187,11 +186,11 @@ public static class Align
 		/* TODO: Failing Test
 		yield return () => new(
 			"5 5` 10",
-			[A.single("aaa"), A.single(""), A.single("bbb")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("aaa            bbb       ")
+			[MarkupText.Plain("aaa"), MarkupText.Empty, MarkupText.Plain("bbb")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("aaa            bbb       ")
 		);
 		*/
 
@@ -200,76 +199,76 @@ public static class Align
 		/* TODO: FAILING TEST
 		yield return () => new(
 			"10 5' 5",
-			[A.single("aaa"), A.single(""), A.single("bbb")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("aaa              bbb       ")
+			[MarkupText.Plain("aaa"), MarkupText.Empty, MarkupText.Plain("bbb")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("aaa              bbb       ")
 		);
 		*/
 
 		yield return () => new(
 			"1.$ 8 1.$",
-			[A.single("+"), A.single("Header"), A.single("+")],
-			A.single("-"),
-			A.single(""),
-			A.single("\n"),
-			A.single("+Header--+")
+			[MarkupText.Plain("+"), MarkupText.Plain("Header"), MarkupText.Plain("+")],
+			MarkupText.Plain("-"),
+			MarkupText.Empty,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("+Header--+")
 		);
 
 		yield return () => new(
 			"10",
-			[A.single("This is a test of word wrapping")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("This is a \ntest of   \nword      \nwrapping  ")
+			[MarkupText.Plain("This is a test of word wrapping")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("This is a \ntest of   \nword      \nwrapping  ")
 		);
 
 		yield return () => new(
 			"10 10",
-			[A.single(""), A.single("text")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("           text      ")
+			[MarkupText.Empty, MarkupText.Plain("text")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("           text      ")
 		);
 
 		yield return () => new(
 			"1 1 1",
-			[A.single("a"), A.single("b"), A.single("c")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("a b c")
+			[MarkupText.Plain("a"), MarkupText.Plain("b"), MarkupText.Plain("c")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("a b c")
 		);
 
 		yield return () => new(
 			"2. 12 2.",
-			[A.single(">>"), A.single("The quick brown fox jumps"), A.single("<<")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single(">> The quick    <<\n>> brown fox    <<\n>> jumps        <<")
+			[MarkupText.Plain(">>"), MarkupText.Plain("The quick brown fox jumps"), MarkupText.Plain("<<")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain(">> The quick    <<\n>> brown fox    <<\n>> jumps        <<")
 		);
 
 		yield return () => new(
 			"<10 -10 >10",
-			[A.single("left"), A.single("center"), A.single("right")],
-			A.single(" "),
-			A.single("|"),
-			A.single("\n"),
-			A.single("left      |  center  |     right")
+			[MarkupText.Plain("left"), MarkupText.Plain("center"), MarkupText.Plain("right")],
+			MarkupText.Space,
+			MarkupText.Plain("|"),
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("left      |  center  |     right")
 		);
 
 		// Paragraph justification (same as right for this implementation)
 		yield return () => new(
 			"=15",
-			[A.single("text")],
-			A.single(" "),
-			A.single(" "),
-			A.single("\n"),
-			A.single("           text")
+			[MarkupText.Plain("text")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("           text")
 		);
 	}
 }

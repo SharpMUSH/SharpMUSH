@@ -49,11 +49,11 @@ public class HookOverrideBehaviorTests
 		{
 			// No re-emit in the override body ⇒ no recursion.
 			await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/OVR=regexp"));
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override @EMIT={obj},OVR"));
+				MarkupText.Plain($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override @EMIT={obj},OVR"));
 
-			await Parser.CommandParse(1, ConnectionService, MModule.single("@emit hello world"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello world"));
 
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("hello world")
 				.Because("the @EMIT override should capture the command's argument");
@@ -79,15 +79,15 @@ public class HookOverrideBehaviorTests
 		try
 		{
 			await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/OVR=regexp"));
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override @EMIT={obj},OVR"));
+				MarkupText.Plain($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override @EMIT={obj},OVR"));
 
 			// A wildcard $-command whose body @emits using %0. Fire it so @emit is dispatched with a
 			// substitution in scope; %0 should be "hello" by the time @emit runs.
 			await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"&WRAP {obj}=${token} *:@emit payload=%0"));
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} hello"));
+				MarkupText.Plain($"&WRAP {obj}=${token} *:@emit payload=%0"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} hello"));
 
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("payload=hello")
 				.Because("the override must receive the EVALUATED @emit argument, not the raw pre-substitution text");

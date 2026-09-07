@@ -325,7 +325,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		parser ??= this;
 
-		StringSpanInputStream inputStream = new(MModule.plainText(text), methodName);
+		StringSpanInputStream inputStream = new(text.ToPlainText(), methodName);
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -337,14 +337,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// call_limit, which is the same guard against the same crash.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return (new CallState(MModule.single(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
 		}
 
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
 		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, MModule.plainText(text).ToString(), lenient);
+			bufferedTokenSpanStream, entryPoint, text.ToPlainText(), lenient);
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
@@ -352,7 +352,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MModule.single(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
@@ -499,7 +499,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
 			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
-			await notifyService.Notify(owner, MModule.single($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
+			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
 		}
 	}
 
@@ -507,7 +507,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		// Short-circuit: empty input (e.g. trailing comma in allof(1,2,3,)) → empty result.
 		// startPlainString requires a non-empty evaluationString; passing "" would trigger PARSER FAILURE.
-		if (string.IsNullOrEmpty(MModule.plainText(text)))
+		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
 		var parser = ResolveTrackingParser(preserveActors: false);
@@ -522,13 +522,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (!emitSubstDebug)
 			return await FunctionParse(text);
 
-		if (string.IsNullOrEmpty(MModule.plainText(text).ToString()))
+		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
 		var parser = ResolveTrackingParser(preserveActors: true);
 
 		// Capture raw text BEFORE evaluation for substitution-only debug
-		var rawText = MModule.plainText(text).ToString();
+		var rawText = text.ToPlainText();
 		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
 		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
@@ -552,7 +552,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 	public Func<ValueTask<CallState?>> CommandListParseVisitor(MString text)
 	{
-		var plaintext = MModule.plainText(text);
+		var plaintext = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plaintext, nameof(CommandListParseVisitor));
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
@@ -562,15 +562,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return () => ValueTask.FromResult<CallState?>(new CallState(MModule.single(ErrorMessages.Returns.Call)));
+			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)));
 		}
 
 		var (chatContext, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, p => p.startCommandString(), plaintext.ToString(), lenient: false);
+			bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
 
 		if (errorListener.HasErrors)
 		{
-			var failureText = MModule.single(errorListener.Errors[0].ToMushFailureString());
+			var failureText = MarkupText.Plain(errorListener.Errors[0].ToMushFailureString());
 			return () => ValueTask.FromResult<CallState?>(new CallState(failureText));
 		}
 
@@ -610,7 +610,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ExecutionStack: [],
 			ParserFunctionDepth: 0,
 			Function: null,
-			Command: MModule.plainText(text),
+			Command: text.ToPlainText(),
 			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
@@ -676,7 +676,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IReadOnlyList<TokenInfo> Tokenize(MString text)
 	{
-		var plaintext = MModule.plainText(text);
+		var plaintext = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plaintext, nameof(Tokenize));
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
@@ -715,7 +715,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IReadOnlyList<ParseError> ValidateAndGetErrors(MString text, ParseType parseType = ParseType.Function)
 	{
-		var plaintext = MModule.plainText(text);
+		var plaintext = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plaintext, nameof(ValidateAndGetErrors));
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
@@ -735,7 +735,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					Column = offending?.Column ?? 0,
 					OffendingToken = offending?.Text,
 					Message = $"Expression nests brackets, braces or function calls more than {MaxParseNestingDepth} levels deep.",
-					InputText = plaintext.ToString(),
+					InputText = plaintext,
 				}
 			];
 		}
@@ -749,7 +749,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Trace = false
 		};
 
-		var errorListener = new ParserErrorListener(plaintext.ToString());
+		var errorListener = new ParserErrorListener(plaintext);
 
 		sharpParser.RemoveErrorListeners();
 		sharpParser.AddErrorListener(errorListener);
@@ -816,7 +816,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// </summary>
 	public IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function)
 	{
-		var plaintext = MModule.plainText(text);
+		var plaintext = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plaintext, nameof(GetSemanticTokens));
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
@@ -877,7 +877,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 					break;
 			}
 
-			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream, plaintext.ToString());
+			return AnalyzeSemanticTokens(context, bufferedTokenSpanStream, plaintext);
 		}
 		catch (RecognitionException)
 		{

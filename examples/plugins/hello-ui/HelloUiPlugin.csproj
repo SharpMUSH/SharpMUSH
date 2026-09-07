@@ -45,10 +45,9 @@
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
 		<!-- MarkupString (MString used by command bodies). Host-owned at runtime. -->
-		<ProjectReference Include="..\..\..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj">
-			<Private>false</Private>
-			<ExcludeAssets>runtime</ExcludeAssets>
-		</ProjectReference>
+		<PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
+		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
+		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" ExcludeAssets="runtime" />
 		<!-- The source generator referenced AS AN ANALYZER: any [SharpCommand]/[SharpFunction] methods in
 		     THIS assembly produce SharpMUSH.Implementation.Generated.CommandLibrary/FunctionLibrary that
 		     PluginBase reflects. Authoring is identical to in-tree engine code. -->

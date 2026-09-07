@@ -46,10 +46,10 @@ public class SceneApprovalIntegrationTests
 	private const string NotApproved = "You are not approved to take part in scenes.";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private static string Num(string dbref)
 	{
@@ -94,7 +94,7 @@ public class SceneApprovalIntegrationTests
 	private async Task<string> RunAs(long handle, string command)
 	{
 		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		var all = NotifyService.ReceivedCalls().Where(IsNotification).ToList();
 		return string.Join("\n", all.Skip(before).Select(ExtractMessageText).OfType<string>());
 	}
@@ -282,12 +282,12 @@ public class SceneApprovalIntegrationTests
 
 		foreach (var name in switches)
 		{
-			var result = await Parser.CommandParse(61L, ConnectionService, MModule.single($"@scene/{name} something=else"));
+			var result = await Parser.CommandParse(61L, ConnectionService, MarkupText.Plain($"@scene/{name} something=else"));
 			await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 				.Because($"@scene/{name} is wizard-only — players drive the system through +scene");
 		}
 
-		var bareResult = await Parser.CommandParse(61L, ConnectionService, MModule.single("@scene something"));
+		var bareResult = await Parser.CommandParse(61L, ConnectionService, MarkupText.Plain("@scene something"));
 		await Assert.That(bareResult.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 			.Because("the bare display form is gated by the same check");
 

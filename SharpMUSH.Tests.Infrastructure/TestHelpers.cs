@@ -22,7 +22,7 @@ public static class TestHelpers
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessageContains(OneOf<MString, string> msg, string expected) =>
 		msg.Match(
-			ms => ms.ToString().Contains(expected),
+			ms => ms.Render(MarkupFormat.Ansi).Contains(expected),
 			s => s.Contains(expected));
 
 	/// <summary>
@@ -395,7 +395,7 @@ public static class TestHelpers
 			{
 				// The markup overload's params array is MString[]; flatten each to its text so the
 				// formatted sentence compares the same as the string overload's.
-				MString[] markupArgs => markupArgs.Select(m => (object)MModule.plainText(m)).ToArray(),
+				MString[] markupArgs => markupArgs.Select(m => (object)m.ToPlainText()).ToArray(),
 				object[] objectArgs => objectArgs,
 				_ => []
 			})

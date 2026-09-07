@@ -4,7 +4,7 @@ public static class Predicates
 {
 	public static bool Truthy(MString text)
 	{
-		var plainText = MModule.plainText(text);
+		var plainText = text.ToPlainText();
 		return !string.IsNullOrEmpty(plainText)
 					 && !plainText.StartsWith("#-")
 					 && plainText is not "0";

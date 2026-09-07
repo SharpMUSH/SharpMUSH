@@ -121,8 +121,8 @@ content: $content, subject: $subject})
 			forwarded = mail.Forwarded,
 			cleared = mail.Cleared,
 			folder = mail.Folder,
-			content = MModule.serialize(mail.Content),
-			subject = MModule.serialize(mail.Subject)
+			content = MarkupTextSerializer.Serialize(mail.Content),
+			subject = MarkupTextSerializer.Serialize(mail.Subject)
 		}, cancellationToken);
 
 		await ExecuteWithRetryAsync("""
@@ -198,8 +198,8 @@ SET m.folder = $newFolder
 			Forwarded = node["forwarded"].As<bool>(),
 			Cleared = node["cleared"].As<bool>(),
 			Folder = node["folder"].As<string>(),
-			Content = MModule.deserialize(node["content"].As<string>()),
-			Subject = MModule.deserialize(node["subject"].As<string>()),
+			Content = MarkupTextSerializer.Deserialize(node["content"].As<string>()),
+			Subject = MarkupTextSerializer.Deserialize(node["subject"].As<string>()),
 			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(mailKey, ct))
 		};
 	}

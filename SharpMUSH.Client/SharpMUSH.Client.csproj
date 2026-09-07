@@ -40,7 +40,9 @@
 		<TrimmerRootAssembly Include="Microsoft.JSInterop" />
 		<TrimmerRootAssembly Include="MudBlazor" />
 		<TrimmerRootAssembly Include="SharpMUSH.Contracts" />
-		<TrimmerRootAssembly Include="SharpMUSH.MarkupString" />
+		<TrimmerRootAssembly Include="MarkupString" />
+		<TrimmerRootAssembly Include="MarkupString.Ansi" />
+		<TrimmerRootAssembly Include="MarkupString.Html" />
 
 		<!-- Widget config models: reflected over by JsonSerializer and WidgetConfigSchema, including
 		     list element types the trimmer cannot follow. See the file's own comment. -->
@@ -75,7 +77,9 @@
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
-		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+		<PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
+		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
+		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
 	</ItemGroup>
 
 </Project>

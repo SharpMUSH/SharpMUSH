@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Library.Utilities;
 
@@ -137,7 +138,7 @@ public static class SoftcodeRegex
 	public static Regex Wildcard(string wildcardPattern, RegexOptions options = RegexOptions.None,
 		bool caseSensitive = false)
 	{
-		var pattern = MModule.getWildcardMatchAsRegex2(wildcardPattern);
+		var pattern = MushText.Glob.ToRegex(wildcardPattern);
 
 		if (!caseSensitive)
 		{

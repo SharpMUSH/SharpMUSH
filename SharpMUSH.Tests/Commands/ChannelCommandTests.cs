@@ -50,7 +50,7 @@ public class ChannelCommandTests
 		}
 
 		await Mediator.Send(new CreateChannelCommand(
-			MModule.single(TestChannelName),
+			MarkupText.Plain(TestChannelName),
 			TestChannelPrivileges,
 			_testPlayer
 		));
@@ -68,7 +68,7 @@ public class ChannelCommandTests
 	public async ValueTask ChatCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chat {TestChannelName}=ChatCommand: Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chat {TestChannelName}=ChatCommand: Test message"));
 
 		// sharpchat.md:39 — `@chat pub=Hello` renders as `<Public> Mike says, "Hello"`. This test used to
 		// assert the un-attributed emit form, which is what @chat produced when it published every
@@ -84,7 +84,7 @@ public class ChannelCommandTests
 	public async ValueTask ChannelCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@channel/list"));
 
 		await NotifyService
 			.Received()
@@ -96,7 +96,7 @@ public class ChannelCommandTests
 	public async ValueTask CemitCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cemit {TestChannelName}=CemitCommand: Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cemit {TestChannelName}=CemitCommand: Test message"));
 
 		await NotifyService
 			.Received()
@@ -109,7 +109,7 @@ public class ChannelCommandTests
 	public async ValueTask NscemitCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nscemit {TestChannelName}=NscemitCommand: Test message"));
 
 		await NotifyService
 			.Received()
@@ -133,9 +133,9 @@ public class ChannelCommandTests
 		var before = $"Ren{switchName}{suffix}";
 		var after = $"Post{switchName}{suffix}";
 
-		await Mediator.Send(new CreateChannelCommand(MModule.single(before), TestChannelPrivileges, _testPlayer!));
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(before), TestChannelPrivileges, _testPlayer!));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@channel/{switchName} {before}={after}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/{switchName} {before}={after}"));
 
 		await NotifyService
 			.Received()
@@ -152,7 +152,7 @@ public class ChannelCommandTests
 	public async ValueTask AddcomCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom pub=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom pub=Public"));
 
 		await NotifyService
 			.Received(1)
@@ -166,7 +166,7 @@ public class ChannelCommandTests
 	public async ValueTask DelcomCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("delcom pub"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("delcom pub"));
 
 		await NotifyService
 			.Received(1)
@@ -179,7 +179,7 @@ public class ChannelCommandTests
 	public async ValueTask ClistCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@clist"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@clist"));
 
 		await NotifyService
 			.Received(1)
@@ -193,7 +193,7 @@ public class ChannelCommandTests
 	public async ValueTask ComlistCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("comlist"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("comlist"));
 
 		await NotifyService
 			.Received(1)
@@ -206,7 +206,7 @@ public class ChannelCommandTests
 	public async ValueTask ComtitleCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"comtitle {TestChannelName}=Title"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"comtitle {TestChannelName}=Title"));
 
 		await NotifyService
 			.Received(1)

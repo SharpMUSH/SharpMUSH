@@ -31,13 +31,13 @@ public class DebugVerboseTests
 		// Create a unique player as executor: the owned object's debug output goes to its owner.
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgEval");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugEvalObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugEvalObj=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugEvalObj=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugEvalObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugEvalObj=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugEvalObj=!no_command"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugEvalObj=test1command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugEvalObj=test1command"));
 
 		await NotifyService
 			.Received(1)
@@ -55,7 +55,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(123,456\)\] => 579$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(123,456\)\] => 579$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugEvalObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugEvalObj"));
 	}
 
 	[Test]
@@ -63,13 +63,13 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNest");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugNestObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestObj=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestObj=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugNestObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNestObj=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNestObj=!no_command"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugNestObj=test2command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestObj=test2command"));
 
 		await NotifyService
 			.Received(1)
@@ -96,7 +96,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[mul\(add\(11,22\),3\)\] => 99$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNestObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNestObj"));
 	}
 
 	[Test]
@@ -104,10 +104,10 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbExec");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseObj=VERBOSE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create VerboseObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set VerboseObj=VERBOSE"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseObj=@pemit me=UniqueTestMessage789"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseObj=@pemit me=UniqueTestMessage789"));
 
 		await NotifyService
 			.Received(1)
@@ -117,7 +117,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=UniqueTestMessage789$"),
 						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=UniqueTestMessage789$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseObj"));
 	}
 
 	[Test]
@@ -125,10 +125,10 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoDup");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseNoDupObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseNoDupObj=VERBOSE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create VerboseNoDupObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set VerboseNoDupObj=VERBOSE"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseNoDupObj=think UniqueNoDup777"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseNoDupObj=think UniqueNoDup777"));
 
 		await NotifyService
 			.Received(1)
@@ -146,7 +146,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("] think think"),
 						str => str.Contains("] think think"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseNoDupObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseNoDupObj"));
 	}
 
 	[Test]
@@ -154,10 +154,10 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbNoDupSw");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseNoDupSwitchObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseNoDupSwitchObj=VERBOSE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create VerboseNoDupSwitchObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set VerboseNoDupSwitchObj=VERBOSE"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseNoDupSwitchObj=@emit/noeval UniqueNoDupSwitch555"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseNoDupSwitchObj=@emit/noeval UniqueNoDupSwitch555"));
 
 		await NotifyService
 			.Received(1)
@@ -175,7 +175,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("@emit/noeval @emit/noeval"),
 						str => str.Contains("@emit/noeval @emit/noeval"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseNoDupSwitchObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseNoDupSwitchObj"));
 	}
 
 	[Test]
@@ -183,9 +183,9 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DiagDbg");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DiagDebugThing"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DiagDebugThing"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
 
 		var createCall = NotifyService.ReceivedCalls()
 			.FirstOrDefault(c =>
@@ -240,7 +240,7 @@ public class DebugVerboseTests
 		await Assert.That(hasDebugNew).IsTrue()
 			.Because($"GetAttributeWithInheritanceQuery must also return DEBUG flag (old flags: {string.Join(",", flagsOld.Select(f => f.Name))}, new flags: {string.Join(",", flagsNew.Select(f => f.Name))})");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DiagDebugThing"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DiagDebugThing"));
 	}
 
 	[Test]
@@ -250,11 +250,11 @@ public class DebugVerboseTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AttrDbgForce");
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
 		// Using @emit [add(88,77)] ensures the bracket pattern is evaluated as a command argument.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create AttrDebugForceTest"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&TESTFUNC_ATTRDBG_UNIQUE AttrDebugForceTest=@emit [add(88,77)]"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create AttrDebugForceTest"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&TESTFUNC_ATTRDBG_UNIQUE AttrDebugForceTest=@emit [add(88,77)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE=DEBUG"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@trigger AttrDebugForceTest/TESTFUNC_ATTRDBG_UNIQUE"));
 
 		await NotifyService
 			.Received(1)
@@ -264,7 +264,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(88,77\)\] => 165$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(88,77\)\] => 165$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy AttrDebugForceTest"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy AttrDebugForceTest"));
 	}
 
 	[Test]
@@ -273,12 +273,12 @@ public class DebugVerboseTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AttrNoDbg");
 		// The attribute must contain a command with a function argument so that VisitFunction is called.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create AttrNoDebugSuppressTest"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)]"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=no_debug"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create AttrNoDebugSuppressTest"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set AttrNoDebugSuppressTest=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&TESTFUNC2_NODEBG_UNIQUE AttrNoDebugSuppressTest=@emit [add(55,44)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE=no_debug"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@trigger AttrNoDebugSuppressTest/TESTFUNC2_NODEBG_UNIQUE"));
 
 		// NODEBUG takes precedence over object DEBUG
 		await NotifyService
@@ -289,7 +289,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! add(55,44)"),
 						str => str.Contains("! add(55,44)"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy AttrNoDebugSuppressTest"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy AttrNoDebugSuppressTest"));
 	}
 
 	[Test]
@@ -297,13 +297,13 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoReg");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugNoRegObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNoRegObj=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNoRegObj=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugNoRegObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNoRegObj=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNoRegObj=!no_command"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&test_cmd_noreg DebugNoRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][strlen(%qa)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_noreg DebugNoRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][strlen(%qa)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugNoRegObj=test3command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNoRegObj=test3command"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -329,7 +329,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("[Iter-Registers:"),
 						str => str.Contains("[Iter-Registers:"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNoRegObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNoRegObj"));
 	}
 
 	[Test]
@@ -337,12 +337,12 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFmtPre");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugFmtPre"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugFmtPre=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugFmtPre=!no_command"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&dbg_fmt_pre DebugFmtPre=$dbgfmtprecmd:@pemit me=[add(7,8)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugFmtPre"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugFmtPre=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugFmtPre=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_pre DebugFmtPre=$dbgfmtprecmd:@pemit me=[add(7,8)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugFmtPre=dbgfmtprecmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPre=dbgfmtprecmd"));
 
 		await NotifyService
 			.Received(1)
@@ -352,7 +352,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(7,8\)\] :$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(7,8\)\] :$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPre"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugFmtPre"));
 	}
 
 	[Test]
@@ -360,12 +360,12 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFmtPost");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugFmtPost"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugFmtPost=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugFmtPost=!no_command"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&dbg_fmt_post DebugFmtPost=$dbgfmtpostcmd:@pemit me=[add(7,8)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugFmtPost"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugFmtPost=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugFmtPost=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_post DebugFmtPost=$dbgfmtpostcmd:@pemit me=[add(7,8)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugFmtPost=dbgfmtpostcmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPost=dbgfmtpostcmd"));
 
 		await NotifyService
 			.Received(1)
@@ -375,7 +375,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[add\(7,8\)\] => 15$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[add\(7,8\)\] => 15$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugFmtPost"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugFmtPost"));
 	}
 
 	[Test]
@@ -383,12 +383,12 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNestFmt");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugNestFmt"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestFmt=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugNestFmt=!no_command"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&dbg_nest_fmt DebugNestFmt=$dbgnestfmtcmd:@pemit me=[strlen(add(2,3))]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugNestFmt"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNestFmt=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugNestFmt=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_nest_fmt DebugNestFmt=$dbgnestfmtcmd:@pemit me=[strlen(add(2,3))]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugNestFmt=dbgnestfmtcmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestFmt=dbgnestfmtcmd"));
 
 		await NotifyService
 			.Received(1)
@@ -422,7 +422,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$"),
 							str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(add\(2,3\)\)\] => 1$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugNestFmt"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugNestFmt"));
 	}
 
 	[Test]
@@ -430,10 +430,10 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbFmt");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerboseFmtObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerboseFmtObj=VERBOSE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create VerboseFmtObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set VerboseFmtObj=VERBOSE"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force VerboseFmtObj=@pemit me=VerbFmtTest444"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force VerboseFmtObj=@pemit me=VerbFmtTest444"));
 
 		await NotifyService
 			.Received(1)
@@ -443,7 +443,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] @pemit me=VerbFmtTest444$"),
 						str => Regex.IsMatch(str, @"^#\d+\] @pemit me=VerbFmtTest444$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerboseFmtObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerboseFmtObj"));
 	}
 
 	[Test]
@@ -453,7 +453,7 @@ public class DebugVerboseTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PuppetNoSet");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set me=PUPPET"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set me=PUPPET"));
 
 		await NotifyService
 			.Received(1)
@@ -467,8 +467,8 @@ public class DebugVerboseTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PupSet");
 		// Pattern B: unique object name is embedded in the flag-set message, making it globally unique.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("PuppetThing");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@create {uniqueName}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {uniqueName}=PUPPET"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@set {uniqueName}=PUPPET"));
 
 		await NotifyService
 			.Received(1)
@@ -477,7 +477,7 @@ public class DebugVerboseTests
 					TestHelpers.MessagePlainTextEquals(msg, $"{uniqueName} - PUPPET set.")),
 				(AnySharpObject?)null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@destroy {uniqueName}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@destroy {uniqueName}"));
 	}
 
 	[Test]
@@ -485,12 +485,12 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgOwner");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugOwnerObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugOwnerObj=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugOwnerObj=!no_command"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("&dbg_owner DebugOwnerObj=$dbgownercmd:@pemit me=[add(1,1)]"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugOwnerObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugOwnerObj=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_owner DebugOwnerObj=$dbgownercmd:@pemit me=[add(1,1)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugOwnerObj=dbgownercmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugOwnerObj=dbgownercmd"));
 
 		var debugCalls = NotifyService.ReceivedCalls()
 			.Where(c =>
@@ -510,7 +510,7 @@ public class DebugVerboseTests
 		await Assert.That(firstArg!.Object().DBRef.Number).IsEqualTo(testPlayer.DbRef.Number)
 			.Because("Debug output should go to owner (testPlayer), not executor object");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugOwnerObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugOwnerObj"));
 	}
 
 	[Test]
@@ -518,14 +518,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgPctQ");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugPctQ"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPctQ=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPctQ=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugPctQ"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPctQ=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPctQ=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
+			MarkupText.Plain("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugPctQ=pctqcmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctQ=pctqcmd"));
 
 		await NotifyService
 			.Received(1)
@@ -543,7 +543,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%qa\)\] => \d+$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%qa\)\] => \d+$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugPctQ"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPctQ"));
 	}
 
 	[Test]
@@ -551,14 +551,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgPct0");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugPct0"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPct0=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPct0=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugPct0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPct0=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPct0=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("&pct0_cmd DebugPct0=$pct0testcmd *:@pemit me=[strlen(%0)]"));
+			MarkupText.Plain("&pct0_cmd DebugPct0=$pct0testcmd *:@pemit me=[strlen(%0)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugPct0=pct0testcmd World"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPct0=pct0testcmd World"));
 
 		await NotifyService
 			.Received(1)
@@ -576,7 +576,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[strlen\(%0\)\] => 5$"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[strlen\(%0\)\] => 5$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugPct0"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPct0"));
 	}
 
 	[Test]
@@ -584,14 +584,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgIter");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugPctIter"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPctIter=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugPctIter=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugPctIter"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPctIter=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugPctIter=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("&pctiter_cmd DebugPctIter=$pctitercmd:@pemit me=[iter(Hello,strlen(##))]"));
+			MarkupText.Plain("&pctiter_cmd DebugPctIter=$pctitercmd:@pemit me=[iter(Hello,strlen(##))]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugPctIter=pctitercmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctIter=pctitercmd"));
 
 		await NotifyService
 			.Received(1)
@@ -617,7 +617,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +strlen\(%iL\) => 5$"),
 						str => Regex.IsMatch(str, @"^#\d+! +strlen\(%iL\) => 5$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugPctIter"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugPctIter"));
 	}
 
 	[Test]
@@ -625,14 +625,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgSetq");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugSetq"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugSetq=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugSetq=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugSetq"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugSetq=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugSetq=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("&setq_cmd DebugSetq=$setqcmd:@pemit me=[setq(a,TestVal123)]"));
+			MarkupText.Plain("&setq_cmd DebugSetq=$setqcmd:@pemit me=[setq(a,TestVal123)]"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugSetq=setqcmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSetq=setqcmd"));
 
 		await NotifyService
 			.Received(1)
@@ -650,7 +650,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! +\[setq\(a,TestVal123\)\] => $"),
 						str => Regex.IsMatch(str, @"^#\d+! +\[setq\(a,TestVal123\)\] => $"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugSetq"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugSetq"));
 	}
 
 	[Test]
@@ -658,11 +658,11 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VerbPct");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create VerbosePctObj"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set VerbosePctObj=VERBOSE"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create VerbosePctObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set VerbosePctObj=VERBOSE"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("@force VerbosePctObj=think [add(10,20)]"));
+			MarkupText.Plain("@force VerbosePctObj=think [add(10,20)]"));
 
 		await NotifyService
 			.Received(1)
@@ -672,7 +672,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+\] think 30$"),
 						str => Regex.IsMatch(str, @"^#\d+\] think 30$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy VerbosePctObj"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy VerbosePctObj"));
 	}
 
 	[Test]
@@ -680,14 +680,14 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgSubst");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@create DebugSubst"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugSubst=DEBUG"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@set DebugSubst=!no_command"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DebugSubst"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugSubst=DEBUG"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DebugSubst=!no_command"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("&subst_cmd DebugSubst=$substcmd:@pemit me=%# and %#"));
+			MarkupText.Plain("&subst_cmd DebugSubst=$substcmd:@pemit me=%# and %#"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@force DebugSubst=substcmd"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSubst=substcmd"));
 
 		// PennMUSH substitution-only debug format: "#dbref! %# and %# => #<dbref> and #<dbref>"
 		// Single line, no colon — fires when argument has substitutions but no function calls.
@@ -699,7 +699,7 @@ public class DebugVerboseTests
 						mstr => Regex.IsMatch(mstr.ToString(), @"^#\d+! %# and %# => #\d+ and #\d+$"),
 						str => Regex.IsMatch(str, @"^#\d+! %# and %# => #\d+ and #\d+$"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@destroy DebugSubst"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DebugSubst"));
 	}
 
 	[Test]
@@ -710,16 +710,16 @@ public class DebugVerboseTests
 		var forwardPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgFwdTarget");
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgFwdObj"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgFwdObj=DEBUG"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@create DbgFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgFwdObj=!no_command"));
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single("&test_fwd DbgFwdObj=$dbgfwdcmd:@pemit me=[add(10,20)]"));
+			MarkupText.Plain("&test_fwd DbgFwdObj=$dbgfwdcmd:@pemit me=[add(10,20)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
+			MarkupText.Plain($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgFwdObj=dbgfwdcmd"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgFwdObj=dbgfwdcmd"));
 
 		await NotifyService
 			.Received()
@@ -737,7 +737,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [add(10,20)]"),
 						str => str.Contains("! [add(10,20)]"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgFwdObj"));
 	}
 
 	[Test]
@@ -750,16 +750,16 @@ public class DebugVerboseTests
 		var target2 = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgMFwdT2");
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgMFwdObj"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgMFwdObj=DEBUG"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgMFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@create DbgMFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgMFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgMFwdObj=!no_command"));
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single("&test_mfwd DbgMFwdObj=$dbgmfwdcmd:@pemit me=[mul(3,7)]"));
+			MarkupText.Plain("&test_mfwd DbgMFwdObj=$dbgmfwdcmd:@pemit me=[mul(3,7)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
+			MarkupText.Plain($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgMFwdObj=dbgmfwdcmd"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgMFwdObj=dbgmfwdcmd"));
 
 		await NotifyService
 			.Received()
@@ -777,7 +777,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [mul(3,7)]"),
 						str => str.Contains("! [mul(3,7)]"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgMFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgMFwdObj"));
 	}
 
 	[Test]
@@ -788,13 +788,13 @@ public class DebugVerboseTests
 		var otherPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgNoFwdOth");
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgNoFwdObj"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgNoFwdObj=DEBUG"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgNoFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@create DbgNoFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgNoFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgNoFwdObj=!no_command"));
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
+			MarkupText.Plain("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgNoFwdObj=dbgnofwdcmd"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgNoFwdObj=dbgnofwdcmd"));
 
 		await NotifyService
 			.Received()
@@ -812,7 +812,7 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [sub(9,4)]"),
 						str => str.Contains("! [sub(9,4)]"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgNoFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgNoFwdObj"));
 	}
 
 	[Test]
@@ -821,16 +821,16 @@ public class DebugVerboseTests
 		var ownerPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DbgBadFwdOwn");
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@create DbgBadFwdObj"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgBadFwdObj=DEBUG"));
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@set DbgBadFwdObj=!no_command"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@create DbgBadFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgBadFwdObj=DEBUG"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgBadFwdObj=!no_command"));
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single("&test_badfwd DbgBadFwdObj=$dbgbadfwdcmd:@pemit me=[add(5,5)]"));
+			MarkupText.Plain("&test_badfwd DbgBadFwdObj=$dbgbadfwdcmd:@pemit me=[add(5,5)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
-			MModule.single("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
+			MarkupText.Plain("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@force DbgBadFwdObj=dbgbadfwdcmd"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgBadFwdObj=dbgbadfwdcmd"));
 
 		await NotifyService
 			.Received()
@@ -840,6 +840,6 @@ public class DebugVerboseTests
 						mstr => mstr.ToString().Contains("! [add(5,5)]"),
 						str => str.Contains("! [add(5,5)]"))), null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MModule.single("@destroy DbgBadFwdObj"));
+		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@destroy DbgBadFwdObj"));
 	}
 }

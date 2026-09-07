@@ -45,7 +45,7 @@ public static class FolderMail
 
 			default:
 				await notifyService!.Notify(executor, "Invalid arguments for @mail folder command.");
-				return MModule.single(ErrorMessages.Returns.InvalidMailFolderArguments);
+				return MarkupText.Plain(ErrorMessages.Returns.InvalidMailFolderArguments);
 		}
 	}
 
@@ -56,7 +56,7 @@ public static class FolderMail
 		if (maybeList.IsError)
 		{
 			await notifyService!.Notify(executor, maybeList.AsError);
-			return MModule.single(maybeList.AsError);
+			return MarkupText.Plain(maybeList.AsError);
 		}
 
 		var list = maybeList.AsMailList;
@@ -93,7 +93,7 @@ public static class FolderMail
 				.ToArray()),
 			executor.Object(),
 			ignoreNull: true);
-		return MModule.single("");
+		return MarkupText.Plain("");
 	}
 
 	private static async Task<MString> RenameMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString folder,
@@ -102,7 +102,7 @@ public static class FolderMail
 		if (folder.ToPlainText().Equals("INBOX", StringComparison.InvariantCultureIgnoreCase))
 		{
 			await notifyService!.Notify(executor, "MAIL: You cannot rename the INBOX folder.");
-			return MModule.single(ErrorMessages.Returns.CannotRenameInbox);
+			return MarkupText.Plain(ErrorMessages.Returns.CannotRenameInbox);
 		}
 
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), newName.ToPlainText()));
@@ -117,7 +117,7 @@ public static class FolderMail
 			executor.Object(),
 			ignoreNull: true);
 
-		return MModule.single("");
+		return MarkupText.Plain("");
 	}
 
 	private static async Task<MString> SetCurrentMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ExpandedMailData? folderInfo, MString folder,
@@ -126,7 +126,7 @@ public static class FolderMail
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(Folders: folderInfo?.Folders ?? [], ActiveFolder: folder.ToPlainText()),
 			executor.Object());
-		return MModule.single(folder.ToPlainText());
+		return MarkupText.Plain(folder.ToPlainText());
 	}
 
 	private static async Task<MString> GetMailFolderInfo(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, AnySharpObject executor, SharpPlayer executorPlayer, ExpandedMailData? folderInfo)
@@ -143,6 +143,6 @@ public static class FolderMail
 			$"MAIL: {totalMail} messages in folder {currentFolder} ({unread} unread, {cleared} cleared).");
 		await notifyService.Notify(executor,
 			$"MAIL: Current folder is {currentFolder}.", executor);
-		return MModule.single(unread.ToString());
+		return MarkupText.Plain(unread.ToString());
 	}
 }

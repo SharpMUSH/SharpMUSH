@@ -28,8 +28,8 @@ public class SystemCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "SysFlagCmd");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@flag/list"));
 
 		await NotifyService
 			.Received(1)
@@ -45,8 +45,8 @@ public class SystemCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "SysPowerCmd");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@power/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@power/list"));
 
 		await NotifyService
 			.Received(1)
@@ -61,7 +61,7 @@ public class SystemCommandTests
 	public async ValueTask HookCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@hook/list @emit"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@hook/list @emit"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat))).IsTrue();
 	}
@@ -72,7 +72,7 @@ public class SystemCommandTests
 	public async ValueTask FunctionCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader))).IsTrue();
 	}
@@ -83,7 +83,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask CommandCommand()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@command/list"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@command/list"));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: list");
 	}
@@ -97,7 +97,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask UnknownSwitchIsAnnounced()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/what"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown/what"));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: what");
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
@@ -111,7 +111,7 @@ public class SystemCommandTests
 	[Test]
 	public async ValueTask UnknownWikiSwitchIsAnnounced()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@wiki/get home"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wiki/get home"));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 INVALID SWITCH: get");
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
@@ -128,14 +128,14 @@ public class SystemCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideCmd");
 		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho))).IsTrue();
 
 		// Restore to visible state.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 	}
 
 	// PennMUSH reference: cmd_kick calls do_kick(executor, arg_left).
@@ -147,7 +147,7 @@ public class SystemCommandTests
 		var testPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "SystemTestKick");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@kick {testPlayerDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@kick {testPlayerDbRef}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor, executor)).IsTrue();
 	}
@@ -161,7 +161,7 @@ public class SystemCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var uniqueAttr = TestIsolationHelpers.GenerateUniqueName("SYSCMD_ATTRTEST").ToUpperInvariant();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@attribute/access {uniqueAttr}=wizard"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@attribute/access {uniqueAttr}=wizard"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat))).IsTrue();
 	}
@@ -177,10 +177,10 @@ public class SystemCommandTests
 
 		// Create the attribute first so it exists on the object.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{uniqueAttr} {testDbRef}=atrlock_test_value"));
+			MarkupText.Plain($"&{uniqueAttr} {testDbRef}=atrlock_test_value"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@atrlock {testDbRef}/{uniqueAttr}=on"));
+			MarkupText.Plain($"@atrlock {testDbRef}/{uniqueAttr}=on"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked))).IsTrue();
 	}
@@ -197,10 +197,10 @@ public class SystemCommandTests
 
 		// Create the attribute first so it exists on the object.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{uniqueAttr} {sourceDbRef}=atrchown_test_value"));
+			MarkupText.Plain($"&{uniqueAttr} {sourceDbRef}=atrchown_test_value"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
+			MarkupText.Plain($"@atrchown {sourceDbRef}/{uniqueAttr}={targetPlayerDbRef}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeOwnerChanged))).IsTrue();
 	}
@@ -212,7 +212,7 @@ public class SystemCommandTests
 	{
 		var exitName = TestIsolationHelpers.GenerateUniqueName("SystemTestFirstexitExit");
 		var exitResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@open {exitName}"));
+			MarkupText.Plain($"@open {exitName}"));
 		var exitMessage = exitResult.Message?.ToPlainText()
 			?? throw new InvalidOperationException($"@open {exitName} returned a null message.");
 		var exitDbRef = DBRef.Parse(exitMessage);
@@ -220,7 +220,7 @@ public class SystemCommandTests
 		// @firstexit is silent on success (PennMUSH: do_firstexit produces no notify).
 		// Pass just the exit dbref as a space-separated argument (not room=exit).
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@firstexit {exitDbRef}"));
+			MarkupText.Plain($"@firstexit {exitDbRef}"));
 
 		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsEqualTo(string.Empty);
 	}

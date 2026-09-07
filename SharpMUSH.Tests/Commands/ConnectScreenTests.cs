@@ -39,7 +39,7 @@ public class ConnectScreenTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WhoVisible");
 
 		var anonymous = await AnonymousHandleAsync();
-		await Parser.CommandParse(anonymous, ConnectionService, MModule.single("WHO"));
+		await Parser.CommandParse(anonymous, ConnectionService, MarkupText.Plain("WHO"));
 
 		var listing = LastNotificationTo(anonymous);
 
@@ -57,7 +57,7 @@ public class ConnectScreenTests
 	public async Task WhoAtTheConnectScreenUsesTheMortalHeaderNotTheWizardOne()
 	{
 		var anonymous = await AnonymousHandleAsync();
-		await Parser.CommandParse(anonymous, ConnectionService, MModule.single("WHO"));
+		await Parser.CommandParse(anonymous, ConnectionService, MarkupText.Plain("WHO"));
 
 		var header = LastNotificationTo(anonymous)!.Split('\n')[0];
 
@@ -77,7 +77,7 @@ public class ConnectScreenTests
 	public async Task QuitAtTheConnectScreenSaysGoodbyeAndDropsTheConnection()
 	{
 		var anonymous = await AnonymousHandleAsync();
-		await Parser.CommandParse(anonymous, ConnectionService, MModule.single("QUIT"));
+		await Parser.CommandParse(anonymous, ConnectionService, MarkupText.Plain("QUIT"));
 
 		var messages = NotificationsTo(WebAppFactoryArg, anonymous);
 

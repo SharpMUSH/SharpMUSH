@@ -42,7 +42,7 @@ public static class EditWiki
 		if (title.Length == 0)
 		{
 			await notifyService.Notify(executor, "WIKI: A page needs a title.", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		// Stamped at birth, exactly as the API create path is: SourceLocale is materialised once and never
@@ -58,12 +58,12 @@ public static class EditWiki
 			{
 				await notifyService.Notify(executor,
 					$"WIKI: Created page '{page.Title}' ({WikiCommandHelper.DisplayReference(page)}).", executor);
-				return MModule.single(page.Slug);
+				return MarkupText.Plain(page.Slug);
 			},
 			async err =>
 			{
 				await notifyService.Notify(executor, $"WIKI: {err.Value}", executor);
-				return MModule.single($"#-1 {err.Value.ToUpperInvariant()}");
+				return MarkupText.Plain($"#-1 {err.Value.ToUpperInvariant()}");
 			});
 	}
 
@@ -81,28 +81,28 @@ public static class EditWiki
 		if (!int.TryParse(revisionArg.ToPlainText().Trim(), out var revisionNumber) || revisionNumber < 1)
 		{
 			await notifyService.Notify(executor, "WIKI: Rollback needs a revision number (see @wiki/history).", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
 		if (!await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, revisionNumber);
 		if (revisionLookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' has no revision r{revisionNumber}.", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		// A rollback is a normal edit — it creates a NEW revision, so history
@@ -116,12 +116,12 @@ public static class EditWiki
 			{
 				await notifyService.Notify(executor,
 					$"WIKI: Restored '{updated.Title}' to r{revisionNumber} (now rev {updated.RevisionNumber}).", executor);
-				return MModule.single(updated.Slug);
+				return MarkupText.Plain(updated.Slug);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-				return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+				return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 			});
 	}
 
@@ -141,14 +141,14 @@ public static class EditWiki
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
 		if (!await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var newContent = append
@@ -164,12 +164,12 @@ public static class EditWiki
 			{
 				await notifyService.Notify(executor,
 					$"WIKI: {(append ? "Appended to" : "Updated")} '{updated.Title}' (now rev {updated.RevisionNumber}).", executor);
-				return MModule.single(updated.Slug);
+				return MarkupText.Plain(updated.Slug);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-				return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+				return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 			});
 	}
 
@@ -197,7 +197,7 @@ public static class EditWiki
 		if (split.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: {split.AsT1.Value}", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		var (pageTarget, locale) = split.AsT0;
@@ -207,7 +207,7 @@ public static class EditWiki
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {pageTarget}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
@@ -217,7 +217,7 @@ public static class EditWiki
 		if (!await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
-			return MModule.single(ErrorMessages.Returns.PermissionDenied);
+			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		// The store refuses this too ("no row may shadow the source"), but only as a raw Error<string>
@@ -226,7 +226,7 @@ public static class EditWiki
 		{
 			await notifyService.Notify(executor,
 				$"WIKI: '{page.Title}' is written in {locale}; use @wiki/edit to change the page itself.", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		// The compare-and-swap baseline is the row as it stands right now, which is the closest thing a
@@ -253,7 +253,7 @@ public static class EditWiki
 				await notifyService.Notify(executor,
 					$"WIKI: Wrote the {translation.Locale} translation of '{page.Title}' (now rev {translation.RevisionNumber}).",
 					executor);
-				return MModule.single(page.Slug);
+				return MarkupText.Plain(page.Slug);
 			},
 			async conflict =>
 			{
@@ -261,12 +261,12 @@ public static class EditWiki
 				// this translator's stale prose on top of theirs, which is the loss the compare-and-swap
 				// exists to prevent. The text stays in the player's scrollback to be re-applied by hand.
 				await notifyService.Notify(executor, $"WIKI: {ConflictMessage(conflict, locale, page.Title)}", executor);
-				return MModule.single(ErrorMessages.Returns.WikiWriteConflict);
+				return MarkupText.Plain(ErrorMessages.Returns.WikiWriteConflict);
 			},
 			async err =>
 			{
 				await notifyService.Notify(executor, $"WIKI: {err.Value}", executor);
-				return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 			});
 	}
 

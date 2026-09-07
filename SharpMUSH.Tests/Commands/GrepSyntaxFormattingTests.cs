@@ -65,11 +65,11 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnOn");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BAD {obj}=placeholder"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/BAD=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}=placeholder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/BAD=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BAD {obj}={BrokenCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
 
 		// ErrorMessages.Returns.ParserFailure is "#-1 PARSER FAILURE: {0}" -- ParseError.ToMushFailureString()
 		// formats through it, so this fragment is the exact wording the advisory notify emits.
@@ -85,7 +85,7 @@ public class GrepSyntaxFormattingTests
 		// never-written attribute and using a mid-expression BrokenCode value: the assertion passed
 		// with only one ClearReceivedCalls() and correctly failed once this second one was restored.
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"think [get({obj}/BAD)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think [get({obj}/BAD)]"));
 		await ExpectPlainText(BrokenCode);
 	}
 
@@ -99,14 +99,14 @@ public class GrepSyntaxFormattingTests
 		// so on the very first write `existing` comes back empty -- but SetAttributeCommand applies
 		// this DefaultFlags entry (funsyntax) to the brand-new node during that same call, so only a
 		// post-set re-fetch can see it in time to validate.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DEFAULTFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access DEFAULTFN=funsyntax"));
 
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnDefault");
 
 		NotifyService.ClearReceivedCalls();
 		// First-ever write to DEFAULTFN on this object -- the attribute node does not exist before
 		// this call.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&DEFAULTFN {obj}={BrokenCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DEFAULTFN {obj}={BrokenCode}"));
 
 		await ExpectPlainText("PARSER FAILURE");
 	}
@@ -117,7 +117,7 @@ public class GrepSyntaxFormattingTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnOff");
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BAD {obj}={BrokenCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
 
 		await NotifyService.DidNotReceive().Notify(
 			Arg.Any<AnySharpObject>(),
@@ -131,11 +131,11 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmt");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}=words"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
 		// words() alone on an indented line and expanding it over its own argument in turn -- the same
@@ -151,10 +151,10 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtOff");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}=words"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// Byte-identical regression contract: unflagged output stays a single unbroken line, so this
 		// exact single-line fragment (which the formatted, wrapped block would never produce whole)
@@ -167,11 +167,11 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtColor");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}=words"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// "38;2;220;220;170" is the literal 24-bit ANSI foreground sequence
 		// (ANSI.SGR(38, 2, 0xDC, 0xDC, 0xAA)) SemanticTokenAnsiPalette assigns SemanticTokenType.Function
@@ -187,11 +187,11 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtWild");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/wild/print {obj}=*words*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*words*"));
 
 		// The isWild branch assigns displayValue = formatted directly, skipping the highlight-slice
 		// path entirely -- a separate code path from GrepPrintOnFlaggedAttribute_IsFormatted's literal
@@ -204,13 +204,13 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&EMPTYFN {obj}="));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/EMPTYFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
 		// "*" as a WILD pattern matches the empty attribute value too, reaching the print loop
 		// without ever going through the literal-match path (which an empty value can't match).
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/wild/print {obj}=*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*"));
 
 		// The empty-value guard skips the formatter entirely for an empty attribute -- an empty
 		// funsyntax body is itself a parse error and would otherwise surface a stray parser-failure
@@ -243,11 +243,11 @@ public class GrepSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtSummary");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BADFN {obj}={ErrorWithExcerptCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/BADFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BADFN {obj}={ErrorWithExcerptCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/BADFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@grep/print {obj}={StraddlesABreak}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}={StraddlesABreak}"));
 
 		var messages = NotifyService.ReceivedCalls()
 			.Select(c => c.GetArguments())

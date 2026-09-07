@@ -1,4 +1,5 @@
 using Core.Arango;
+using MarkupString;
 using Core.Arango.Serialization.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
@@ -32,6 +33,13 @@ public class BaseBenchmark
 	[GlobalSetup]
 	public virtual async ValueTask Setup()
 	{
+		// Rendering and serialisation resolve their emitters through MarkupRegistry.Default, whose
+		// getter throws until something assigns it.
+		if (!MarkupRegistry.IsConfigured)
+		{
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+		}
+
 		_arangoContainer = new ArangoDbBuilder("arangodb:latest")
 			.WithPassword("password")
 			.Build();

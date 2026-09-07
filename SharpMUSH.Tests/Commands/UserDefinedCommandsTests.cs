@@ -25,9 +25,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcWildEq");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_WILDEQ {obj}=${token} *=*:@emit {token} Boo! %0 - %1"));
+			MarkupText.Plain($"&UTEST_WILDEQ {obj}=${token} *=*:@emit {token} Boo! %0 - %1"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} a=b"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} a=b"));
 
 		await NotifyService
 			.Received(1)
@@ -46,9 +46,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSingle");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SINGLE {obj}=${token} *:@emit {token} Hello, %0!"));
+			MarkupText.Plain($"&UTEST_SINGLE {obj}=${token} *:@emit {token} Hello, %0!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} World"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} World"));
 
 		await NotifyService
 			.Received(1)
@@ -67,9 +67,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTwo");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_TWO {obj}=${token} * to *:@emit {token}: Message from %0 to %1"));
+			MarkupText.Plain($"&UTEST_TWO {obj}=${token} * to *:@emit {token}: Message from %0 to %1"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice to Bob"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice to Bob"));
 
 		await NotifyService
 			.Received(1)
@@ -88,9 +88,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcExact");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_EXACT {obj}=${token}:@emit {token} Pong!"));
+			MarkupText.Plain($"&UTEST_EXACT {obj}=${token}:@emit {token} Pong!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 
 		await NotifyService
 			.Received(1)
@@ -109,9 +109,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcThree");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_THREE {obj}=${token} * * *:@emit {token}: A=%0 B=%1 C=%2"));
+			MarkupText.Plain($"&UTEST_THREE {obj}=${token} * * *:@emit {token}: A=%0 B=%1 C=%2"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} foo bar baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} foo bar baz"));
 
 		await NotifyService
 			.Received(1)
@@ -130,11 +130,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx1");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($@"&UTEST_RX1 {obj}=${token} (.+):@emit {token}: You said: %1"));
+			MarkupText.Plain($@"&UTEST_RX1 {obj}=${token} (.+):@emit {token}: You said: %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RX1=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RX1=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} hello world"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} hello world"));
 
 		await NotifyService
 			.Received(1)
@@ -154,11 +154,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx2");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_RX2 {obj}=${token} prefix_([0-9]+):@emit Full: %0, Part: %1"));
+			MarkupText.Plain($"&UTEST_RX2 {obj}=${token} prefix_([0-9]+):@emit Full: %0, Part: %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RX2=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RX2=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} prefix_42"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} prefix_42"));
 
 		// %0 is the full match which includes the command token: "{token} prefix_42"
 		await NotifyService
@@ -179,11 +179,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx3");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_RX3 {obj}=${token} ([A-Za-z]+) ([A-Za-z]+):@emit {token}: %1 messaged %2"));
+			MarkupText.Plain($"&UTEST_RX3 {obj}=${token} ([A-Za-z]+) ([A-Za-z]+):@emit {token}: %1 messaged %2"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RX3=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RX3=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} Alice Bob"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice Bob"));
 
 		await NotifyService
 			.Received(1)
@@ -203,11 +203,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRx4");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_RX4 {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling %1d%2"));
+			MarkupText.Plain($"&UTEST_RX4 {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling %1d%2"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RX4=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RX4=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} 3d6"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} 3d6"));
 
 		await NotifyService
 			.Received(1)
@@ -228,11 +228,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxName");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucn");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_RXNAME {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling [r(num,args)]d[r(sides,args)]"));
+			MarkupText.Plain($"&UTEST_RXNAME {obj}=${token} (?<num>[0-9]+)d(?<sides>[0-9]+):@emit {token}: Rolling [r(num,args)]d[r(sides,args)]"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RXNAME=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RXNAME=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} 3d6"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} 3d6"));
 
 		await NotifyService
 			.Received(1)
@@ -259,11 +259,11 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxNoCap");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucnc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($@"&UTEST_RXNOCAP {obj}=${token} (?\\:at|toward) ([A-Za-z]+):@emit {token}: %1"));
+			MarkupText.Plain($@"&UTEST_RXNOCAP {obj}=${token} (?\\:at|toward) ([A-Za-z]+):@emit {token}: %1"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {obj}/UTEST_RXNOCAP=regexp"));
+			MarkupText.Plain($"@set {obj}/UTEST_RXNOCAP=regexp"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} toward door"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} toward door"));
 
 		// %1 is "door", not "toward": the alternation is a group that does not capture.
 		await NotifyService
@@ -284,9 +284,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcColon");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($@"&UTEST_COLON {obj}=${token}\\:go *:@emit {token}: %0"));
+			MarkupText.Plain($@"&UTEST_COLON {obj}=${token}\\:go *:@emit {token}: %0"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}:go north"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}:go north"));
 
 		await NotifyService
 			.Received(1)
@@ -302,12 +302,12 @@ public class UserDefinedCommandsTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("test"));
+			MarkupText.Plain("&cmd`setandresetcache #1=$test:@pemit #1=Value 1 received"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("test2"));
+			MarkupText.Plain("&cmd`setandresetcache #1=$test2:@pemit #1=Value 2 received"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("test2"));
 
 		await NotifyService
 			.Received(1)
@@ -334,16 +334,16 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdParent_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"CmdChild_{token}");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
 
 		// Child does NOT have NO_COMMAND but parent DOES, so only the child fires the inherited command
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentObj}=no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Inherited {token}"));
+			MarkupText.Plain($"&CMD_{token} {parentObj}=${token}:@pemit %#=Inherited {token}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
 
 		await NotifyService
 			.Received(1)
@@ -365,18 +365,18 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NcParent_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NcChild_{token}");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf fired"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {childObj}=$dummy:say dummy"));
+			MarkupText.Plain($"&CMD_{token} {childObj}=$dummy:say dummy"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {childObj}/CMD_{token}=no_command"));
+			MarkupText.Plain($"@set {childObj}/CMD_{token}=no_command"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -398,26 +398,26 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"MskPar_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"MskChi_{token}");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentObj}=no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent {token}"));
+			MarkupText.Plain($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent {token}"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {childObj}=${token}:@pemit %#=Child {token}"));
+			MarkupText.Plain($"&CMD_{token} {childObj}=${token}:@pemit %#=Child {token}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(token));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(token));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Child {token}")),
 				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -439,24 +439,24 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiPar_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"NiChi_{token}");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {parentObj}={grandObj}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {grandObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {parentObj}={grandObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {grandObj}=no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token}`LEAF {grandObj}=${token}leaf:@pemit %#=Grand leaf"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {grandObj}=${token}leaf:@pemit %#=Grand leaf"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent root"));
+			MarkupText.Plain($"&CMD_{token} {parentObj}=${token}:@pemit %#=Parent root"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Parent leaf"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {parentObj}/CMD_{token}=no_inherit"));
+			MarkupText.Plain($"@set {parentObj}/CMD_{token}=no_inherit"));
 
 		// parent's CMD_token has no_inherit so entire branch skipped, falls to grand
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
 		await NotifyService
 			.Received(1)
@@ -478,19 +478,19 @@ public class UserDefinedCommandsTests
 		var parentObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"PncPar_{token}");
 		var childObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"PncChi_{token}");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent {childObj}={parentObj}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {childObj}=!no_command"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {parentObj}=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childObj}={parentObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {childObj}=!no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentObj}=no_command"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token} {parentObj}=${token}:@pemit %#=Root {token}"));
+			MarkupText.Plain($"&CMD_{token} {parentObj}=${token}:@pemit %#=Root {token}"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf {token}"));
+			MarkupText.Plain($"&CMD_{token}`LEAF {parentObj}=${token}leaf:@pemit %#=Leaf {token}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {parentObj}/CMD_{token}=no_command"));
+			MarkupText.Plain($"@set {parentObj}/CMD_{token}=no_command"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}leaf"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -513,9 +513,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcNoLeadSpace");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_NOLEAD {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_NOLEAD {obj}=${token}:@emit {token} Matched"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 
 		await NotifyService
 			.Received(1)
@@ -535,9 +535,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceTerm");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_LEAD_TERM {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_LEAD_TERM {obj}=${token}:@emit {token} Matched"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($" {token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($" {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -558,9 +558,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceList");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
 
-		await listParser.CommandListParse(MModule.single($" {token}"));
+		await listParser.CommandListParse(MarkupText.Plain($" {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -581,9 +581,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcLeadSpaceSemi");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
 
-		await listParser.CommandListParse(MModule.single($"@@ ignore;  {token}"));
+		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;  {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -608,9 +608,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiNoSpace");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
 
-		await listParser.CommandListParse(MModule.single($"@@ ignore;{token}"));
+		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;{token}"));
 
 		await NotifyService
 			.Received(1)
@@ -630,9 +630,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceTerm");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_TRAIL_TERM {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_TRAIL_TERM {obj}=${token}:@emit {token} Matched"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token} "));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} "));
 
 		await NotifyService
 			.Received(1)
@@ -652,9 +652,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcTrailSpaceList");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
 
-		await listParser.CommandListParse(MModule.single($"{token} "));
+		await listParser.CommandListParse(MarkupText.Plain($"{token} "));
 
 		await NotifyService
 			.Received(1)
@@ -675,9 +675,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiFirst");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_FIRST {obj}=${token}:@emit {token} Matched"));
+			MarkupText.Plain($"&UTEST_SEMI_FIRST {obj}=${token}:@emit {token} Matched"));
 
-		await listParser.CommandListParse(MModule.single($"{token};@emit TAIL"));
+		await listParser.CommandListParse(MarkupText.Plain($"{token};@emit TAIL"));
 
 		await NotifyService
 			.Received(1)
@@ -699,11 +699,11 @@ public class UserDefinedCommandsTests
 		var mid = TestIsolationHelpers.GenerateUniqueName("ucmid");
 		var last = TestIsolationHelpers.GenerateUniqueName("uclast");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_MID {obj}=${mid}:@emit {mid} MidMatched"));
+			MarkupText.Plain($"&UTEST_SEMI_MID {obj}=${mid}:@emit {mid} MidMatched"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_LAST {obj}=${last}:@emit {last} LastMatched"));
+			MarkupText.Plain($"&UTEST_SEMI_LAST {obj}=${last}:@emit {last} LastMatched"));
 
-		await listParser.CommandListParse(MModule.single($"@emit HEAD;{mid};{last}"));
+		await listParser.CommandListParse(MarkupText.Plain($"@emit HEAD;{mid};{last}"));
 
 		await NotifyService
 			.Received(1)
@@ -730,9 +730,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_ARG {obj}=${token} *:@emit GREET=<%0>"));
+			MarkupText.Plain($"&UTEST_SEMI_ARG {obj}=${token} *:@emit GREET=<%0>"));
 
-		await listParser.CommandListParse(MModule.single($"@emit AAAAAAAAAA;{token} Bob"));
+		await listParser.CommandListParse(MarkupText.Plain($"@emit AAAAAAAAAA;{token} Bob"));
 
 		await NotifyService
 			.Received(1)
@@ -753,9 +753,9 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcSemiArg2");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_SEMI_ARG2 {obj}=${token} * to *:@emit MSG=<%0>-<%1>"));
+			MarkupText.Plain($"&UTEST_SEMI_ARG2 {obj}=${token} * to *:@emit MSG=<%0>-<%1>"));
 
-		await listParser.CommandListParse(MModule.single($"@emit IGNORE;{token} Alice to Bob"));
+		await listParser.CommandListParse(MarkupText.Plain($"@emit IGNORE;{token} Alice to Bob"));
 
 		await NotifyService
 			.Received(1)
@@ -777,10 +777,10 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcHalt");
 		var token = TestIsolationHelpers.GenerateUniqueName("uc");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_HALT {obj}=${token}:@emit {token} fired"));
+			MarkupText.Plain($"&UTEST_HALT {obj}=${token}:@emit {token} fired"));
 
 		// Not halted: the $-command fires.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -788,8 +788,8 @@ public class UserDefinedCommandsTests
 				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
 
 		// Halt the object, then trigger again: the emit count must stay at exactly one.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}=HALT"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}=HALT"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}"));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
@@ -811,10 +811,10 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DollarEval");
 		var token = TestIsolationHelpers.GenerateUniqueName("de");
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&UTEST_EVAL {obj}=${token}:@emit {token} evaluated"));
+			MarkupText.Plain($"&UTEST_EVAL {obj}=${token}:@emit {token} evaluated"));
 
 		// The command name only exists after the strcat evaluates.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"[strcat({token})]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"[strcat({token})]"));
 
 		await NotifyService
 			.Received(1)

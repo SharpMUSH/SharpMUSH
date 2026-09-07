@@ -32,12 +32,12 @@ public class FlagAliasTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string expr)
-		=> (await FunctionParser.FunctionParse(MModule.single(expr)))?.Message!.ToPlainText() ?? "<null>";
+		=> (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))?.Message!.ToPlainText() ?? "<null>";
 
 	private async Task<DBRef> ThingFlagged(string label, string flag)
 	{
 		var dbref = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, label);
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@set {dbref}={flag}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {dbref}={flag}"));
 		return dbref;
 	}
 
@@ -67,7 +67,7 @@ public class FlagAliasTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AliasColour");
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@set #{player.DbRef.Number}=COLOR"));
+			MarkupText.Plain($"@set #{player.DbRef.Number}=COLOR"));
 
 		await Assert.That(await Eval($"hasflag(#{player.DbRef.Number},COLOR)"))
 			.IsEqualTo("1")

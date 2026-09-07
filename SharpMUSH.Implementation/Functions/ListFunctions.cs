@@ -1,4 +1,5 @@
-﻿using MoreLinq.Extensions;
+using SharpMUSH.Library.Markup;
+using MoreLinq.Extensions;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -23,46 +24,42 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var numbersArg = args["1"].Message!.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var numbers = numbersArg.Split(" ");
 
 		var result = list.Where((_, i) => numbers.Contains(i.ToString()));
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	[SharpFunction(Name = "elist", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "conjunction", "delim", "osep", "punctuation"])]
 	public ValueTask<CallState> SeperatedList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var space = MModule.single(" ");
+		var space = MarkupText.Space;
 		var list = parser.CurrentState.ArgumentsOrdered["0"].Message!;
 		var conjunction = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "and");
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, space);
 		var outSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delim);
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, ",");
-		var splitList = MModule.splitList(delim, list) ?? [];
+		var splitList = MushText.SplitList(delim, list);
 
 		if (splitList.Length == 2)
 		{
 			return ValueTask.FromResult<CallState>(
-				MModule.multipleWithDelimiter(
-					outSeparator,
-					[splitList[0], MModule.concat(conjunction, MModule.concat(outSeparator, splitList[1]))]));
+				MarkupText.Join(outSeparator, [splitList[0], MarkupText.Concat(conjunction, MarkupText.Concat(outSeparator, splitList[1]))]));
 		}
 
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MModule.concat(conjunction, MModule.concat(outSeparator, splitList[^1]));
+			splitList[^1] = MarkupText.Concat(conjunction, MarkupText.Concat(outSeparator, splitList[^1]));
 		}
 
 		return ValueTask.FromResult<CallState>(
-			MModule.multipleWithDelimiter(
-				MModule.concat(punctuation, outSeparator),
-				splitList));
+			MarkupText.Join(MarkupText.Concat(punctuation, outSeparator), splitList));
 	}
 
 	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "start", "length", "delimiter"])]
@@ -72,9 +69,9 @@ public partial class Functions
 
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var first = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single("1")).ToPlainText();
-		var length = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single("1")).ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var first = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MushText.One).ToPlainText();
+		var length = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MushText.One).ToPlainText();
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
 		if (!int.TryParse(first, out var firstNumber))
 		{
@@ -86,7 +83,7 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var range = firstNumber > 0
 			? list.Skip(firstNumber - 1)
 			: Enumerable.TakeLast(list, Math.Abs(firstNumber));
@@ -94,7 +91,7 @@ public partial class Functions
 			? range.Take(lengthNumber)
 			: Enumerable.TakeLast(range, Math.Abs(lengthNumber));
 
-		return new CallState(MModule.multipleWithDelimiter(delimiter, result));
+		return new CallState(MarkupText.Join(delimiter, result));
 	}
 
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
@@ -102,11 +99,11 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -114,7 +111,7 @@ public partial class Functions
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.ToPlainText() == "1")
 				.Select(pair => pair.item);
-			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
+			return new CallState(MarkupText.Join(sep, filteredItems));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -183,7 +180,7 @@ public partial class Functions
 			})
 			.ToListAsync();
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	// (attribute, list, delimiter, outsep) — arg 0 is the boolean predicate attribute, read below
@@ -194,11 +191,11 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -207,7 +204,7 @@ public partial class Functions
 				.Where(pair => pair.boolResult.Truthy())
 				.Select(pair => pair.item);
 
-			return new CallState(MModule.multipleWithDelimiter(sep, filteredItems));
+			return new CallState(MarkupText.Join(sep, filteredItems));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -276,17 +273,17 @@ public partial class Functions
 			})
 			.ToListAsync();
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	[SharpFunction(Name = "first", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public ValueTask<CallState> FirstInList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Space);
 		var listArg = parser.CurrentState.Arguments["0"].Message;
-		var list = MModule.splitList(delim, listArg);
-		var first = list.FirstOrDefault() ?? MModule.empty();
+		var list = MushText.SplitList(delim, listArg ?? MarkupText.Empty);
+		var first = list.FirstOrDefault() ?? MarkupText.Empty;
 
 		return ValueTask.FromResult(new CallState(first));
 	}
@@ -319,13 +316,13 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var baseCase = parser.CurrentState.ArgumentsOrdered.TryGetValue("2", out var baseCaseArg)
 			? baseCaseArg.Message
 			: null;
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (list.Length == 0)
 		{
@@ -457,15 +454,15 @@ public partial class Functions
 	public ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
+		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(globPattern);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.splitList(delimiter, list) ?? [];
+		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
 
 		try
 		{
 			return ValueTask.FromResult<CallState>(splitList
-				.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
+				.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MarkupText.Empty);
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
@@ -477,16 +474,16 @@ public partial class Functions
 	public ValueTask<CallState> GrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
+		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(globPattern);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MModule.splitList(delimiter, list) ?? [];
+		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
 
 		try
 		{
 			return ValueTask.FromResult<CallState>(
-				MModule.multipleWithDelimiter(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
+				MarkupText.Join(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
@@ -513,7 +510,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var range = first > 0
 			? list.Skip(first - 1)
 			: Enumerable.TakeLast(list, Math.Abs(first));
@@ -521,7 +518,7 @@ public partial class Functions
 			? range.Take(length)
 			: Enumerable.TakeLast(range, Math.Abs(length));
 
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delimiter, result)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, result)));
 	}
 
 	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
@@ -529,18 +526,18 @@ public partial class Functions
 	{
 		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(delim, listArg);
+		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
-		{ Value = MModule.empty(), Break = false, NoBreak = false, Iteration = 0 };
+		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
 		var result = new List<MString>();
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var patternParts = MModule.split("##", patternArg.Message!);
+		var patternParts = patternArg.Message!.Split("##");
 		MString? modifiedPattern = patternParts.Length > 1
-			? MModule.multipleWithDelimiter(MModule.single("%iL"), patternParts)
+			? MarkupText.Join(MarkupText.Plain("%iL"), patternParts)
 			: null;
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
@@ -562,7 +559,7 @@ public partial class Functions
 
 		parser.CurrentState.IterationRegisters.TryPop(out _);
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "delimiter"])]
@@ -595,30 +592,26 @@ public partial class Functions
 	public ValueTask<CallState> Itemize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var space = MModule.single(" ");
+		var space = MarkupText.Space;
 		var list = parser.CurrentState.ArgumentsOrdered["0"].Message!;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, space);
 		var conjunction = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "and");
 		var punctuation = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, ",");
-		var splitList = MModule.splitList(delim, list) ?? [];
+		var splitList = MushText.SplitList(delim, list);
 
 		if (splitList.Length == 2)
 		{
 			return ValueTask.FromResult<CallState>(
-				MModule.multipleWithDelimiter(
-					space,
-					[splitList[0], MModule.concat(conjunction, MModule.concat(space, splitList[1]))]));
+				MarkupText.Join(space, [splitList[0], MarkupText.Concat(conjunction, MarkupText.Concat(space, splitList[1]))]));
 		}
 
 		if (splitList.Length > 2)
 		{
-			splitList[^1] = MModule.concat(conjunction, MModule.concat(space, splitList[^1]));
+			splitList[^1] = MarkupText.Concat(conjunction, MarkupText.Concat(space, splitList[^1]));
 		}
 
 		return ValueTask.FromResult<CallState>(
-			MModule.multipleWithDelimiter(
-				MModule.concat(punctuation, space),
-				splitList));
+			MarkupText.Join(MarkupText.Concat(punctuation, space), splitList));
 	}
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
@@ -626,7 +619,7 @@ public partial class Functions
 	public ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var iterDepth = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.single("0"));
+		var iterDepth = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MushText.Zero);
 		var iterNumber = int.Parse(iterDepth.ToString());
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 
@@ -683,10 +676,10 @@ public partial class Functions
 	public ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Space);
 		var listArg = parser.CurrentState.Arguments["0"].Message;
-		var list = MModule.splitList(delim, listArg);
-		var last = list.LastOrDefault() ?? MModule.empty();
+		var list = MushText.SplitList(delim, listArg ?? MarkupText.Empty);
+		var last = list.LastOrDefault() ?? MarkupText.Empty;
 
 		return ValueTask.FromResult(new CallState(last));
 	}
@@ -697,10 +690,10 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var positionsArg = args["1"].Message!.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
 			.Where(p => p.HasValue)
@@ -719,7 +712,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, result));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
 	}
 
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
@@ -727,16 +720,16 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
-			return new CallState(MModule.multipleWithDelimiter(sep, lambdaResults));
+			return new CallState(MarkupText.Join(sep, lambdaResults));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -796,17 +789,17 @@ public partial class Functions
 			.Select(cs => cs!.Message!)
 			.ToListAsync();
 
-		return new CallState(MModule.multipleWithDelimiter(sep, mapResult));
+		return new CallState(MarkupText.Join(sep, mapResult));
 	}
 
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
 	public ValueTask<CallState> Match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
+		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(globPattern);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.splitList(delimiter, list) ?? [];
+		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
 
 		try
 		{
@@ -826,20 +819,20 @@ public partial class Functions
 	public ValueTask<CallState> MatchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
+		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(globPattern);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MModule.splitList(delimiter, list) ?? [];
+		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
 
 		try
 		{
 			var positions = splitList
 				.Select((item, i) => (item, pos: i + 1))
 				.Where(pair => regex.IsMatch(pair.item.ToPlainText()))
-				.Select(pair => MModule.single(pair.pos.ToString()));
+				.Select(pair => MarkupText.Plain(pair.pos.ToString()));
 
-			return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
+			return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, positions));
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
@@ -854,7 +847,7 @@ public partial class Functions
 		var list = args["0"].Message!;
 		var word = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MModule.splitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
+		var splitList = MushText.SplitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
 
 		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
 	}
@@ -864,7 +857,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var argCount = parser.CurrentState.ArgumentsOrdered.Count;
 		MString delimiter;
@@ -878,14 +871,14 @@ public partial class Functions
 		}
 		else
 		{
-			delimiter = MModule.single(" ");
+			delimiter = MarkupText.Space;
 		}
 
 		var lists = new List<MString[]>();
 		var maxLength = 0;
 		for (var i = 1; i <= listCount; i++)
 		{
-			var list = MModule.splitList(delimiter, parser.CurrentState.ArgumentsOrdered[i.ToString()].Message!);
+			var list = MushText.SplitList(delimiter, parser.CurrentState.ArgumentsOrdered[i.ToString()].Message!);
 			lists.Add(list);
 			maxLength = Math.Max(maxLength, list.Length);
 		}
@@ -898,11 +891,11 @@ public partial class Functions
 				var args = new Dictionary<string, CallState>();
 				for (var j = 0; j < lists.Count; j++)
 				{
-					args[j.ToString()] = new CallState(i < lists[j].Length ? lists[j][i] : MModule.empty());
+					args[j.ToString()] = new CallState(i < lists[j].Length ? lists[j][i] : MarkupText.Empty);
 				}
 				result.Add(await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, args));
 			}
-			return new CallState(MModule.multipleWithDelimiter(delimiter, result));
+			return new CallState(MarkupText.Join(delimiter, result));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -958,7 +951,7 @@ public partial class Functions
 
 			for (var j = 0; j < lists.Count; j++)
 			{
-				var value = i < lists[j].Length ? lists[j][i] : MModule.empty();
+				var value = i < lists[j].Length ? lists[j][i] : MarkupText.Empty;
 				args[j.ToString()] = new CallState(value);
 				envRegs[j.ToString()] = new CallState(value);
 			}
@@ -971,7 +964,7 @@ public partial class Functions
 			attrResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
 		}
 
-		return new CallState(MModule.multipleWithDelimiter(delimiter, attrResult));
+		return new CallState(MarkupText.Join(delimiter, attrResult));
 	}
 
 	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
@@ -979,18 +972,18 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
 
-		var list1 = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
-		var list2 = MModule.splitList(delim, parser.CurrentState.Arguments["2"].Message!);
+		var list1 = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list2 = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
 
 		// Build args for the transformation call: %0 = whole list1, %1 = delimiter
 		var mungeArgs = new Dictionary<string, CallState>
 		{
-			{ "0", new CallState(MModule.multipleWithDelimiter(delim, list1)) },
+			{ "0", new CallState(MarkupText.Join(delim, list1)) },
 			{ "1", new CallState(delim) }
 		};
 
@@ -1056,7 +1049,7 @@ public partial class Functions
 			transformedList1Str = (await newParser.FunctionParse(attrValue))!.Message!;
 		}
 
-		var transformedList1 = MModule.splitList(delim, transformedList1Str);
+		var transformedList1 = MushText.SplitList(delim, transformedList1Str);
 
 		// Create mapping from original list1 to list2
 		var mapping = new Dictionary<string, MString>();
@@ -1075,7 +1068,7 @@ public partial class Functions
 			}
 		}
 
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	[SharpFunction(Name = "namegrab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
@@ -1166,9 +1159,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var countArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single("1")).ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
-		var typeArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("R")).ToPlainText().ToUpper();
+		var countArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MushText.One).ToPlainText();
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
+		var typeArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("R")).ToPlainText().ToUpper();
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
 		if (!int.TryParse(countArg, out var count))
@@ -1176,7 +1169,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		if (list.Length == 0)
 		{
 			return ValueTask.FromResult(CallState.Empty);
@@ -1202,7 +1195,7 @@ public partial class Functions
 			result = list.OrderBy(_ => random.Next()).Take(count);
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, result));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
 	}
 
 	[SharpFunction(Name = "randword", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1212,7 +1205,7 @@ public partial class Functions
 		var list = orderedArgs["0"].Message!;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, " ");
 		return ValueTask.FromResult<CallState>(
-			MModule.splitList(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MModule.empty());
+			MushText.SplitList(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MarkupText.Empty);
 	}
 
 	[SharpFunction(Name = "remove", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "words", "delimiter"])]
@@ -1223,8 +1216,8 @@ public partial class Functions
 		var words = parser.CurrentState.Arguments["1"].Message!;
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, " ");
 
-		var splitList = MModule.splitList(delimiter, list).ToList();
-		var splitWords = MModule.splitList(delimiter, words);
+		var splitList = MushText.SplitList(delimiter, list).ToList();
+		var splitWords = MushText.SplitList(delimiter, words);
 
 		foreach (var word in splitWords)
 		{
@@ -1235,7 +1228,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(delimiter, splitList));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(delimiter, splitList));
 	}
 
 	[SharpFunction(Name = "lreplace", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "positions", "new-item", "delimiter", "osep"])]
@@ -1245,10 +1238,10 @@ public partial class Functions
 		var listArg = args["0"].Message;
 		var positionsArg = args["1"].Message!.ToPlainText();
 		var newItem = args["2"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var list = MModule.splitList(delimiter, listArg).ToList();
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty).ToList();
 		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
 			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
 			.Where(p => p.HasValue)
@@ -1262,11 +1255,11 @@ public partial class Functions
 
 			if (positionsSet.Contains(index) || positionsSet.Contains(negativeIndex))
 			{
-				list[i] = newItem ?? MModule.Empty();
+				list[i] = newItem ?? MarkupText.Empty;
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, list));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, list));
 	}
 
 	[SharpFunction(Name = "rest", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1274,9 +1267,9 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, " ");
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["0"].Message);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty);
 
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delim, list.Skip(1))));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(delim, list.Skip(1))));
 	}
 
 	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1284,11 +1277,9 @@ public partial class Functions
 	{
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(
-			delim,
-			(await parser.CurrentState.Arguments["0"].ParsedMessage())!) ?? [];
+		var list = MushText.SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
-		return new CallState(MModule.multipleWithDelimiter(sep, list.Reverse()));
+		return new CallState(MarkupText.Join(sep, list.Reverse()));
 	}
 
 	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1296,12 +1287,12 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Space);
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, delimiter);
 
-		var list = MModule.splitList(delimiter, listArg) ?? [];
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var shuffled = ShuffleExtension.Shuffle(list);
-		var result = MModule.multipleWithDelimiter(sep, shuffled);
+		var result = MarkupText.Join(sep, shuffled);
 
 		return ValueTask.FromResult<CallState>(result);
 	}
@@ -1311,15 +1302,15 @@ public partial class Functions
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 		var list = orderedArgs["0"].Message!;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, MModule.single("")).ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, MModule.single(" "));
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 1, MarkupText.Plain("")).ToPlainText();
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 2, MarkupText.Space);
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter);
-		var listItems = MModule.splitList(delimiter, list);
+		var listItems = MushText.SplitList(delimiter, list);
 
 		var sorted = SortService.Sort(listItems, (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser,
 			SortService.StringToSortType(sortType));
 
-		return MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync());
+		return MarkupText.Join(outputSeparator, await sorted.ToArrayAsync());
 	}
 
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
@@ -1327,11 +1318,11 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!).ToList();
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!).ToList();
 
 		async Task<int> CompareViaLambda(MString a, MString b)
 		{
@@ -1366,7 +1357,7 @@ public partial class Functions
 			}
 			var results = await Task.WhenAll(comparisonTasks);
 			var sorted = results.OrderBy(r => r.order).Select(r => r.value);
-			return new CallState(MModule.multipleWithDelimiter(sep, sorted));
+			return new CallState(MarkupText.Join(sep, sorted));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1452,7 +1443,7 @@ public partial class Functions
 		var attrResults = await Task.WhenAll(attrComparisonTasks);
 		var attrSorted = attrResults.OrderBy(r => r.order).Select(r => r.value);
 
-		return new CallState(MModule.multipleWithDelimiter(sep, attrSorted));
+		return new CallState(MarkupText.Join(sep, attrSorted));
 	}
 
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]
@@ -1460,13 +1451,13 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var sortType = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(""));
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
+		var sortType = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Plain(""));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
 
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		IEnumerable<string> keys;
 
@@ -1558,7 +1549,7 @@ public partial class Functions
 		};
 
 		var result = sortedIndices.Select(i => list[i]);
-		return new CallState(MModule.multipleWithDelimiter(sep, result));
+		return new CallState(MarkupText.Join(sep, result));
 	}
 
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
@@ -1567,10 +1558,10 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
 		var list2Arg = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 
-		var list = MModule.splitList(delimiter, listArg);
-		var list2 = MModule.splitList(delimiter, list2Arg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
+		var list2 = MushText.SplitList(delimiter, list2Arg ?? MarkupText.Empty);
 
 		if (list.Length != list2.Length)
 		{
@@ -1581,9 +1572,9 @@ public partial class Functions
 		// Pairs themselves are separated by delimiter + delimiter (double separator)
 		// to clearly distinguish pair boundaries in the output.
 		var pairs = list.Zip(list2)
-			.Select(pair => MModule.concat(pair.First, MModule.concat(delimiter, pair.Second)));
-		var betweenPairSep = MModule.concat(delimiter, delimiter);
-		var result = MModule.multipleWithDelimiter(betweenPairSep, pairs);
+			.Select(pair => MarkupText.Concat(pair.First, MarkupText.Concat(delimiter, pair.Second)));
+		var betweenPairSep = MarkupText.Concat(delimiter, delimiter);
+		var result = MarkupText.Join(betweenPairSep, pairs);
 
 		return ValueTask.FromResult(new CallState(result));
 	}
@@ -1597,7 +1588,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
@@ -1605,9 +1596,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
@@ -1621,7 +1612,7 @@ public partial class Functions
 				}
 				result.Add(await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, args));
 			}
-			return new CallState(MModule.multipleWithDelimiter(sep, result));
+			return new CallState(MarkupText.Join(sep, result));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1689,7 +1680,7 @@ public partial class Functions
 			attrResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
 		}
 
-		return new CallState(MModule.multipleWithDelimiter(sep, attrResult));
+		return new CallState(MarkupText.Join(sep, attrResult));
 	}
 
 	[SharpFunction(Name = "strfirstof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...", "default"])]
@@ -1702,7 +1693,7 @@ public partial class Functions
 			var singleArg = await parser.FunctionParse(orderedArgs["0"].Message!);
 			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			return elements.Length > 0
-				? new CallState(MModule.single(elements[0]))
+				? new CallState(MarkupText.Plain(elements[0]))
 				: CallState.Empty;
 		}
 
@@ -1730,11 +1721,11 @@ public partial class Functions
 			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		var delimiter = MModule.plainText(args[(args.Count - 1).ToString()].Message);
+		var delimiter = (args[(args.Count - 1).ToString()].Message ?? MarkupText.Empty).ToPlainText();
 		var nonEmptyValues = new List<string>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
-			var value = MModule.plainText(args[i.ToString()].Message);
+			var value = (args[i.ToString()].Message ?? MarkupText.Empty).ToPlainText();
 			if (!string.IsNullOrEmpty(value))
 			{
 				nonEmptyValues.Add(value);
@@ -1778,21 +1769,18 @@ public partial class Functions
 		{
 			return new CallState(ErrorMessages.Returns.FieldWidthExceedsLineWidth);
 		}
-		var list = MModule.splitList(delimiterArg, listArg);
+		var list = MushText.SplitList(delimiterArg, listArg ?? MarkupText.Empty);
 		var resultFields = list.Select(x =>
-			MModule.pad(x,
-				MModule.single(" "),
-				fieldWidth,
-				fieldAlignment switch
-				{
-					">" => global::MarkupString.PadType.Right,
-					"-" => global::MarkupString.PadType.Center,
-					_ => global::MarkupString.PadType.Left
-				}, global::MarkupString.TruncationType.Truncate));
+			x.Pad(MarkupText.Space, fieldWidth, fieldAlignment switch
+			{
+				">" => global::MarkupString.PadType.Right,
+				"-" => global::MarkupString.PadType.Center,
+				_ => global::MarkupString.PadType.Left
+			}, global::MarkupString.TruncationType.Truncate));
 
 		var lines = resultFields.Chunk(fieldsPerLine);
-		var linesWithSeparators = lines.Select(x => MModule.multipleWithDelimiter(separatorArg, x));
-		var result = MModule.multipleWithDelimiter(MModule.single("\n"), linesWithSeparators);
+		var linesWithSeparators = lines.Select(x => MarkupText.Join(separatorArg, x));
+		var result = MarkupText.Join(MarkupText.NewLine, linesWithSeparators);
 
 		return new CallState(result);
 	}
@@ -1802,11 +1790,11 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.single(""));
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Plain(""));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 
 		// Remove consecutive duplicates based on sort type comparison
 		var result = new List<MString>();
@@ -1837,7 +1825,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, result));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
 	}
 
 	[SharpFunction(Name = "wordpos", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "number", "delimiter"])]
@@ -1855,7 +1843,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		var list = MModule.splitList(delimiter, listArg);
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var lengths = list.Select(x => x.Length).ToList();
 
 		if (number > lengths.Sum())
@@ -1871,8 +1859,11 @@ public partial class Functions
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "delimiter"])]
 	public async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var list = MModule.splitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		// Argument indexes are 0-based, and words() takes two arguments: the delimiter is 1. Reading
+		// it from 2 meant a delimiter was never seen and words(a|b|c,|) always counted space-separated
+		// words.
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
+		var list = MushText.SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());
 	}
@@ -1893,7 +1884,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var listItems = MModule.splitList(delimiter, listArg).ToList();
+		var listItems = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty).ToList();
 		var count = listItems.Count;
 
 		// PennMUSH find_list_position logic with insert=true
@@ -1949,8 +1940,8 @@ public partial class Functions
 			return new CallState(listArg);
 		}
 
-		listItems.Insert(insertIndex, newItemArg ?? MModule.Empty());
-		return new CallState(MModule.multipleWithDelimiter(delimiter, listItems));
+		listItems.Insert(insertIndex, newItemArg ?? MarkupText.Empty);
+		return new CallState(MarkupText.Join(delimiter, listItems));
 	}
 
 	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
@@ -1959,21 +1950,21 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.splitList(delimiter, list1);
-		var aList2 = MModule.splitList(delimiter, list2);
+		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
+		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
 
 		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
-			.Concat(aList2), MModule.plainText, comparer), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
+			.Concat(aList2), x => x.ToPlainText(), comparer), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
+		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
@@ -1982,25 +1973,25 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.splitList(delimiter, list1);
-		var aList2 = MModule.splitList(delimiter, list2);
+		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
+		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
 
 		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
+		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
 
-		var difference = aList1.Where(x => !set2.Contains(MModule.plainText(x)));
+		var difference = aList1.Where(x => !set2.Contains(x.ToPlainText()));
 
-		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, MModule.plainText, comparer),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, x => x.ToPlainText(), comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
+		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
@@ -2009,25 +2000,25 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.splitList(delimiter, list1);
-		var aList2 = MModule.splitList(delimiter, list2);
+		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
+		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
 
 		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
+		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
 
-		var intersection = aList1.Where(x => set2.Contains(MModule.plainText(x)));
+		var intersection = aList1.Where(x => set2.Contains(x.ToPlainText()));
 
-		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, MModule.plainText, comparer),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, x => x.ToPlainText(), comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
+		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "setsymdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
@@ -2036,27 +2027,27 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var list1 = args["0"].Message;
 		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MModule.single(" "));
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MModule.single(" ");
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MModule.single("m"));
+		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
+		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var aList1 = MModule.splitList(delimiter, list1);
-		var aList2 = MModule.splitList(delimiter, list2);
+		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
+		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
 
 		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var set1 = new HashSet<string>(aList1.Select(MModule.plainText), comparer);
-		var set2 = new HashSet<string>(aList2.Select(MModule.plainText), comparer);
+		var set1 = new HashSet<string>(aList1.Select(x => x.ToPlainText()), comparer);
+		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
 
-		var symdiff = aList1.Where(x => !set2.Contains(MModule.plainText(x)))
-			.Concat(aList2.Where(x => !set1.Contains(MModule.plainText(x))));
+		var symdiff = aList1.Where(x => !set2.Contains(x.ToPlainText()))
+			.Concat(aList2.Where(x => !set1.Contains(x.ToPlainText())));
 
-		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, MModule.plainText, comparer),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, x => x.ToPlainText(), comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
-		return new CallState(MModule.multipleWithDelimiter(outputSeparator, await sorted.ToArrayAsync()));
+		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
 	}
 
 	/// <summary>

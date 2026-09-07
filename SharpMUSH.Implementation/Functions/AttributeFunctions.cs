@@ -1,4 +1,5 @@
-﻿using OneOf;
+using SharpMUSH.Library.Markup;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -72,7 +73,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
+		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
 		if (!split.TryPickT0(out var details, out _))
@@ -87,7 +88,7 @@ public partial class Functions
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!
-					: MModule.empty();
+					: MarkupText.Empty;
 
 				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
 
@@ -108,7 +109,7 @@ public partial class Functions
 		}
 
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitObjectAndAttr(MModule.plainText(args["0"].Message!));
+		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -123,7 +124,7 @@ public partial class Functions
 			{
 				var contents = args.TryGetValue("1", out var tmpContents)
 					? tmpContents.Message!
-					: MModule.empty();
+					: MarkupText.Empty;
 
 				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
 
@@ -271,7 +272,7 @@ public partial class Functions
 		}
 
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -306,7 +307,7 @@ public partial class Functions
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 
 		if (dbrefAndAttr is { IsT1: true })
 		{
@@ -342,7 +343,7 @@ public partial class Functions
 	public async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 
 		if (dbrefAndAttr.IsT1) // IsNone
 		{
@@ -594,7 +595,7 @@ public partial class Functions
 	public async ValueTask<CallState> ListAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -625,7 +626,7 @@ public partial class Functions
 	public async ValueTask<CallState> ListAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -662,7 +663,7 @@ public partial class Functions
 		}
 
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -696,7 +697,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberAttributes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -727,7 +728,7 @@ public partial class Functions
 	public async ValueTask<CallState> NumberAttributesParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -823,7 +824,7 @@ public partial class Functions
 	public async ValueTask<CallState> Owner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndMaybeArg =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
 		if (dbrefAndMaybeArg is { IsT1: true, AsT1: false })
@@ -954,9 +955,9 @@ public partial class Functions
 					foreach (var match in matches)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						var before = MModule.substring(0, match.Index, mstr);
-						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
-						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						var before = mstr.Substring(0, match.Index);
+						var after = mstr.Substring(match.Index + match.Length, mstr.Length - match.Index - match.Length);
+						mstr = MarkupText.Concat(MarkupText.Concat(before, MarkupText.Plain(replacement)), after);
 						str = mstr.ToPlainText();
 					}
 				}
@@ -966,9 +967,9 @@ public partial class Functions
 					if (match.Success)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						var before = MModule.substring(0, match.Index, mstr);
-						var after = MModule.substring(match.Index + match.Length, mstr.Length - match.Index - match.Length, mstr);
-						mstr = MModule.concat(MModule.concat(before, MModule.single(replacement)), after);
+						var before = mstr.Substring(0, match.Index);
+						var after = mstr.Substring(match.Index + match.Length, mstr.Length - match.Index - match.Length);
+						mstr = MarkupText.Concat(MarkupText.Concat(before, MarkupText.Plain(replacement)), after);
 						str = mstr.ToPlainText();
 					}
 				}
@@ -1008,7 +1009,7 @@ public partial class Functions
 			}
 		}
 
-		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
+		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
 		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
 	}
 
@@ -1078,7 +1079,7 @@ public partial class Functions
 	public async ValueTask<CallState> RegularExpressionListAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1114,7 +1115,7 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1150,7 +1151,7 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1182,7 +1183,7 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1214,9 +1215,9 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
-		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var start = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1264,9 +1265,9 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
-		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var start = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1331,7 +1332,7 @@ public partial class Functions
 			(_, _) when HelperFunctions.SplitObjectAndAttr(arg0) is { IsT0: true } split =>
 				await SetAttributeFlag(split),
 
-			(_, _) when MModule.indexOf(arg1, ":") > 1
+			(_, _) when arg1.IndexOf(":") > 1
 				=> await SetAttributeValue(),
 
 			_ => await SetObjectFlag()
@@ -1349,8 +1350,8 @@ public partial class Functions
 					// through do_set -> do_attrib_flags, which parses the whole list) - so this
 					// must batch through SetAttributeFlagsAsync, not treat the whole string as
 					// one flag name (Task 6 fix round 2, M3).
-					var flagTokens = MModule.splitList(MModule.single(" "), arg1)
-						.Select(MModule.plainText)
+					var flagTokens = MushText.SplitList(MarkupText.Space, arg1)
+						.Select(x => x.ToPlainText())
 						.ToList();
 
 					var result =
@@ -1370,9 +1371,9 @@ public partial class Functions
 				arg0, LocateFlags.All,
 				async found =>
 				{
-					var splitIndex = MModule.indexOf(arg1, ":");
-					var attribute = MModule.substring(0, splitIndex, arg1);
-					var value = MModule.substring(splitIndex + 1, arg1.Length - (splitIndex + 1), arg1);
+					var splitIndex = arg1.IndexOf(":");
+					var attribute = arg1.Substring(0, splitIndex);
+					var value = arg1.Substring(splitIndex + 1, arg1.Length - (splitIndex + 1));
 
 					var result = await AttributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), value);
 
@@ -1425,7 +1426,7 @@ public partial class Functions
 	public async ValueTask<CallState> UserAttributeDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true })
@@ -1480,7 +1481,7 @@ public partial class Functions
 		SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
+			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true })
@@ -1829,7 +1830,7 @@ public partial class Functions
 						var valueToMatch = caseInsensitive ? value.ToLower() : value;
 						var patternToMatch = caseInsensitive ? valuePattern!.ToLower() : valuePattern;
 
-						if (MModule.isWildcardMatch(MModule.single(valueToMatch), MModule.single(patternToMatch!)))
+						if (MushText.IsWildcardMatch(MarkupText.Plain(valueToMatch), MarkupText.Plain(patternToMatch!)))
 						{
 							matchingAttrs.Add(attr.LongName!);
 						}
@@ -1844,9 +1845,9 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
-		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var start = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1893,9 +1894,9 @@ public partial class Functions
 	public async ValueTask<CallState> NumberRangeAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(parser.CurrentState.Arguments["0"].Message));
-		var start = MModule.plainText(parser.CurrentState.Arguments["1"].Message!)!;
-		var count = MModule.plainText(parser.CurrentState.Arguments["2"].Message!)!;
+			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var start = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
+		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -1941,8 +1942,8 @@ public partial class Functions
 	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public async ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbref = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
-		var attribute = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
+		var dbref = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var attribute = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,

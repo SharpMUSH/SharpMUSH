@@ -72,9 +72,9 @@ public class WikiSyntaxInGameRenderingTests
 	[Test]
 	public async Task WikiLink_IsUnderlinedInAnsiOutput()
 	{
-		var rendered = RecursiveMarkdownHelper.RenderMarkdown("[[Getting Started]]").ToString();
+		var rendered = RecursiveMarkdownHelper.RenderMarkdown("[[Getting Started]]").Render(MarkupFormat.Ansi);
 
-		await Assert.That(rendered).Contains("[4m");
+		await Assert.That(AnsiStream.Sets(rendered, 4)).IsTrue();
 	}
 
 	[Test]

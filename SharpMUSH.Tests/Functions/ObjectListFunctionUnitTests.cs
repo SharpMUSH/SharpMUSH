@@ -13,7 +13,7 @@ public class ObjectListFunctionUnitTests
 	[Arguments("lvcon(#0)", "")]
 	public async Task Lvcon(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -21,7 +21,7 @@ public class ObjectListFunctionUnitTests
 	[Arguments("lvexits(#0)", "")]
 	public async Task Lvexits(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -29,7 +29,7 @@ public class ObjectListFunctionUnitTests
 	[Arguments("lvplayers(#0)", "")]
 	public async Task Lvplayers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -37,7 +37,7 @@ public class ObjectListFunctionUnitTests
 	[Arguments("lvthings(#0)", "")]
 	public async Task Lvthings(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -45,7 +45,7 @@ public class ObjectListFunctionUnitTests
 	[Arguments("nlsearch(all,type,player)", "")]
 	public async Task Nlsearch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

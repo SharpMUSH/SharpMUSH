@@ -16,6 +16,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -34,9 +35,9 @@ public partial class Functions
 
 	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
 	public async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> JsonFunctions.TryGetValue(MModule.plainText(parser.CurrentState.Arguments["0"].Message!).ToLower(), out var jsonFunction)
+		=> JsonFunctions.TryGetValue(parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
-			: new CallState(MModule.single(ErrorMessages.Returns.InvalidType));
+			: new CallState(MarkupText.Plain(ErrorMessages.Returns.InvalidType));
 
 
 	/// <summary>
@@ -59,7 +60,7 @@ public partial class Functions
 		}
 
 		var delimiter = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
-		var list = MModule.splitList(delimiter, (await listArg.ParsedMessage())!);
+		var list = MushText.SplitList(delimiter, (await listArg.ParsedMessage())!);
 
 		try
 		{
@@ -68,7 +69,7 @@ public partial class Functions
 			var elements = new List<JsonElement>(list.Length);
 			foreach (var element in list)
 			{
-				using var document = JsonDocument.Parse(MModule.plainText(element));
+				using var document = JsonDocument.Parse(element.ToPlainText());
 				elements.Add(document.RootElement.Clone());
 			}
 
@@ -86,7 +87,7 @@ public partial class Functions
 	{
 		try
 		{
-			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message!.ToString());
+			using var jsonDoc = JsonDocument.Parse(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 			return ValueTask.FromResult(new CallState("1"));
 		}
 		catch (JsonException)
@@ -100,10 +101,10 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToString();
-		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
+		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 
 		var userArgs = new Dictionary<string, CallState>();
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
@@ -112,7 +113,7 @@ public partial class Functions
 		}
 
 		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
-		MString attrValue = MModule.empty();
+		MString attrValue = MarkupText.Empty;
 
 		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
 		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
@@ -224,7 +225,7 @@ public partial class Functions
 					throw new JsonException();
 			}
 
-			return new CallState(MModule.multipleWithDelimiter(osep, result));
+			return new CallState(MarkupText.Join(osep, result));
 		}
 		catch (JsonException ex)
 		{
@@ -238,10 +239,10 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var json = args["0"].Message!.ToString();
+		var json = args["0"].Message!.ToPlainText();
 		var action = args["1"].Message!.ToPlainText().ToLower();
 		var arg2 = args["2"].Message!.ToPlainText();
-		var json2 = args.Count > 3 ? args["3"].Message?.ToString() : null;
+		var json2 = args.Count > 3 ? args["3"].Message?.ToPlainText() : null;
 
 		try
 		{
@@ -543,10 +544,10 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
-		var playersArg = MModule.plainText(parser.CurrentState.Arguments["0"].Message!);
-		var package = MModule.plainText(parser.CurrentState.Arguments["1"].Message!);
+		var playersArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var package = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments.TryGetValue("2", out var msgState)
-			? msgState.Message?.ToString() ?? ""
+			? msgState.Message?.ToPlainText() ?? ""
 			: "";
 
 		var players = ArgHelpers.NameListString(playersArg);

@@ -21,7 +21,7 @@ public class SourcePortSubstitutionTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var parser = WebAppFactoryArg.CommandParserFor(executor, handle);
 
-		await parser.CommandParse(MModule.single(code));
+		await parser.CommandParse(MarkupText.Plain(code));
 
 		await NotifyService
 			.Received(1)
@@ -32,9 +32,9 @@ public class SourcePortSubstitutionTests
 	[Test]
 	public async Task ResolvesEmptyWhenNoHandle()
 	{
-		var result = await Parser.FunctionParse(MModule.single("%d"));
+		var result = await Parser.FunctionParse(MarkupText.Plain("%d"));
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(MModule.plainText(result!.Message!)).IsEqualTo(string.Empty);
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(string.Empty);
 	}
 }

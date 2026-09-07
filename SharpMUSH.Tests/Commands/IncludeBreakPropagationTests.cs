@@ -33,10 +33,10 @@ public class IncludeBreakPropagationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private async ValueTask<string> Eval(string expression)
-		=> (await Parser.CommandParse(1, ConnectionService, MModule.single($"think {expression}"))).Message?.ToPlainText()?.Trim() ?? "";
+		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think {expression}"))).Message?.ToPlainText()?.Trim() ?? "";
 
 	private async ValueTask Cmd(string command)
-		=> await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>Runs <paramref name="caller"/> on a fresh object and returns what it recorded.</summary>
 	private async ValueTask<(string Gate, string Reached)> RunAsync(string name, string guard, string caller)

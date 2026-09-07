@@ -33,18 +33,18 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PM{uid} me=baz"));
-		var g1 = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PM{uid})"));
+			MarkupText.Plain($"&PM{uid} me=baz"));
+		var g1 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid})"));
 		await Assert.That(g1!.Message!.ToPlainText()).IsEqualTo("baz");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PM{uid}`BAR me=baz"));
-		var g2 = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PM{uid}`BAR)"));
+			MarkupText.Plain($"&PM{uid}`BAR me=baz"));
+		var g2 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid}`BAR)"));
 		await Assert.That(g2!.Message!.ToPlainText()).IsEqualTo("baz");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PM{uid}`BAR`DEEP me=baz"));
-		var g3 = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PM{uid}`BAR`DEEP)"));
+			MarkupText.Plain($"&PM{uid}`BAR`DEEP me=baz"));
+		var g3 = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PM{uid}`BAR`DEEP)"));
 		await Assert.That(g3!.Message!.ToPlainText()).IsEqualTo("baz");
 	}
 
@@ -60,19 +60,19 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PW{uid} me=baz"));
+			MarkupText.Plain($"&PW{uid} me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PW{uid}`BAR me=baz"));
+			MarkupText.Plain($"&PW{uid}`BAR me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PW{uid}`BAR`DEEP me=baz"));
+			MarkupText.Plain($"&PW{uid}`BAR`DEEP me=baz"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PW{uid}`BAR=wizard"));
+			MarkupText.Plain($"@set {mortalDbRef}/PW{uid}`BAR=wizard"));
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PW{uid}`BAR me=newval"));
+			MarkupText.Plain($"&PW{uid}`BAR me=newval"));
 
-		var getResult = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PW{uid}`BAR)"));
+		var getResult = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PW{uid}`BAR)"));
 		await Assert.That(getResult!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to overwrite wiz-flagged attribute");
 	}
@@ -89,24 +89,24 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PC{uid} me=baz"));
+			MarkupText.Plain($"&PC{uid} me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PC{uid}`BAR me=baz"));
+			MarkupText.Plain($"&PC{uid}`BAR me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PC{uid}`BAR`DEEP me=baz"));
+			MarkupText.Plain($"&PC{uid}`BAR`DEEP me=baz"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PC{uid}`BAR=wizard"));
+			MarkupText.Plain($"@set {mortalDbRef}/PC{uid}`BAR=wizard"));
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PC{uid}`BAR`DEEP me=newval"));
-		var getDeep = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PC{uid}`BAR`DEEP)"));
+			MarkupText.Plain($"&PC{uid}`BAR`DEEP me=newval"));
+		var getDeep = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PC{uid}`BAR`DEEP)"));
 		await Assert.That(getDeep!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("mortal should not be able to modify child of wiz-flagged attribute");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PC{uid}`BAR`NEWCHILD me=val"));
-		var getNew = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PC{uid}`BAR`NEWCHILD)"));
+			MarkupText.Plain($"&PC{uid}`BAR`NEWCHILD me=val"));
+		var getNew = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PC{uid}`BAR`NEWCHILD)"));
 		await Assert.That(getNew!.Message!.ToPlainText()).IsEqualTo("")
 			.Because("mortal should not be able to create child under wiz-flagged attribute");
 	}
@@ -124,22 +124,22 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PD{uid} {mortalDbRef}=parent"));
+			MarkupText.Plain($"&PD{uid} {mortalDbRef}=parent"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PD{uid}`BAR {mortalDbRef}=secret"));
+			MarkupText.Plain($"&PD{uid}`BAR {mortalDbRef}=secret"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PD{uid}`BAR`DEEP {mortalDbRef}=deeper"));
+			MarkupText.Plain($"&PD{uid}`BAR`DEEP {mortalDbRef}=deeper"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PD{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PD{uid}`BAR=mortal_dark"));
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think get(me/PD{uid}`BAR)"));
+			MarkupText.Plain($"think get(me/PD{uid}`BAR)"));
 		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("secret")
 			.Because("mortal should not see mortal_dark attribute");
 
 		var r2 = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"think get({mortalDbRef}/PD{uid}`BAR)"));
+			MarkupText.Plain($"think get({mortalDbRef}/PD{uid}`BAR)"));
 		await Assert.That(r2.Message!.ToPlainText()).Contains("secret");
 	}
 
@@ -155,17 +155,17 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDC{uid} {mortalDbRef}=parent"));
+			MarkupText.Plain($"&PDC{uid} {mortalDbRef}=parent"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDC{uid}`BAR {mortalDbRef}=branch"));
+			MarkupText.Plain($"&PDC{uid}`BAR {mortalDbRef}=branch"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDC{uid}`BAR`DEEP {mortalDbRef}=hidden"));
+			MarkupText.Plain($"&PDC{uid}`BAR`DEEP {mortalDbRef}=hidden"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PDC{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PDC{uid}`BAR=mortal_dark"));
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think get(me/PDC{uid}`BAR`DEEP)"));
+			MarkupText.Plain($"think get(me/PDC{uid}`BAR`DEEP)"));
 		await Assert.That(r1.Message!.ToPlainText()).DoesNotContain("hidden")
 			.Because("mortal should not see children of mortal_dark attribute");
 	}
@@ -182,17 +182,17 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDL{uid} {mortalDbRef}=parent"));
+			MarkupText.Plain($"&PDL{uid} {mortalDbRef}=parent"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDL{uid}`BAR {mortalDbRef}=branch"));
+			MarkupText.Plain($"&PDL{uid}`BAR {mortalDbRef}=branch"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
+			MarkupText.Plain($"&PDL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PDL{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PDL{uid}`BAR=mortal_dark"));
 
 		var r1 = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think lattr(me/**)"));
+			MarkupText.Plain($"think lattr(me/**)"));
 		var text = r1.Message!.ToPlainText();
 
 		await Assert.That(text).Contains($"PDL{uid}")
@@ -216,27 +216,27 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDLL{uid} {mortalDbRef}=parent"));
+			MarkupText.Plain($"&PDLL{uid} {mortalDbRef}=parent"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDLL{uid}`BAR {mortalDbRef}=branch"));
+			MarkupText.Plain($"&PDLL{uid}`BAR {mortalDbRef}=branch"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PDLL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
+			MarkupText.Plain($"&PDLL{uid}`BAR`DEEP {mortalDbRef}=hidden"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PDLL{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PDLL{uid}`BAR=mortal_dark"));
 
 		var visible = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think lattr(me/PDLL{uid})"));
+			MarkupText.Plain($"think lattr(me/PDLL{uid})"));
 		await Assert.That(visible.Message!.ToPlainText()).Contains($"PDLL{uid}")
 			.Because("the unflagged root is still listed by a leaf-only pattern");
 
 		var branch = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think lattr(me/PDLL{uid}`BAR)"));
+			MarkupText.Plain($"think lattr(me/PDLL{uid}`BAR)"));
 		await Assert.That(branch.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR")
 			.Because("a pattern naming the dark branch itself must not list it");
 
 		var deep = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think lattr(me/PDLL{uid}`BAR`DEEP)"));
+			MarkupText.Plain($"think lattr(me/PDLL{uid}`BAR`DEEP)"));
 		await Assert.That(deep.Message!.ToPlainText()).DoesNotContain($"PDLL{uid}`BAR`DEEP")
 			.Because("a pattern naming only the leaf must still consult the dark branch above it");
 	}
@@ -253,27 +253,27 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PX{uid} me=baz"));
+			MarkupText.Plain($"&PX{uid} me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PX{uid}`BAR me=baz"));
+			MarkupText.Plain($"&PX{uid}`BAR me=baz"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=wizard"));
+			MarkupText.Plain($"@set {mortalDbRef}/PX{uid}`BAR=wizard"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PX{uid}`BAR=mortal_dark"));
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PX{uid}`BAR me=newval"));
-		var getBlocked = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PX{uid}`BAR)"));
+			MarkupText.Plain($"&PX{uid}`BAR me=newval"));
+		var getBlocked = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PX{uid}`BAR)"));
 		await Assert.That(getBlocked!.Message!.ToPlainText()).IsEqualTo("baz")
 			.Because("wiz flag should block mortal write");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PX{uid}`BAR=!wizard"));
+			MarkupText.Plain($"@set {mortalDbRef}/PX{uid}`BAR=!wizard"));
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PX{uid}`BAR me=newval"));
-		var getUnblocked = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PX{uid}`BAR)"));
+			MarkupText.Plain($"&PX{uid}`BAR me=newval"));
+		var getUnblocked = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PX{uid}`BAR)"));
 		await Assert.That(getUnblocked!.Message!.ToPlainText()).IsEqualTo("newval")
 			.Because("mortal_dark only blocks reading, not writing — removing wiz restores write access");
 	}
@@ -290,22 +290,22 @@ public class AttributeTreePermissionTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PDW{uid} me=baz"));
+			MarkupText.Plain($"&PDW{uid} me=baz"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PDW{uid}`BAR me=baz"));
+			MarkupText.Plain($"&PDW{uid}`BAR me=baz"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/PDW{uid}`BAR=mortal_dark"));
+			MarkupText.Plain($"@set {mortalDbRef}/PDW{uid}`BAR=mortal_dark"));
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PDW{uid}`BAR me=newval"));
-		var getWrite = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PDW{uid}`BAR)"));
+			MarkupText.Plain($"&PDW{uid}`BAR me=newval"));
+		var getWrite = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PDW{uid}`BAR)"));
 		await Assert.That(getWrite!.Message!.ToPlainText()).IsEqualTo("newval")
 			.Because("mortal_dark does not prevent writing, only reading");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PDW{uid}`BAR`CHILD me=val"));
-		var getChild = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/PDW{uid}`BAR`CHILD)"));
+			MarkupText.Plain($"&PDW{uid}`BAR`CHILD me=val"));
+		var getChild = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/PDW{uid}`BAR`CHILD)"));
 		await Assert.That(getChild!.Message!.ToPlainText()).IsEqualTo("val")
 			.Because("mortal_dark does not prevent creating children");
 	}

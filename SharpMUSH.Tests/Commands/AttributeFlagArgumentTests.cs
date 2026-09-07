@@ -66,8 +66,8 @@ public class AttributeFlagArgumentTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgWiz");
 
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MModule.single($"&FW{uid} me=value"));
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MModule.single($"@set me/FW{uid}=wizard"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FW{uid} me=value"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FW{uid}=wizard"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FW{uid}", "wizard")).IsFalse()
 			.Because("a player without See_All may not name the wizard flag in either direction");
@@ -75,7 +75,7 @@ public class AttributeFlagArgumentTests
 		// Control: the same command from God does set it, so the assertion above is about the
 		// privilege check and not about @set silently failing for everyone.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortal.DbRef}/FW{uid}=wizard"));
+			MarkupText.Plain($"@set {mortal.DbRef}/FW{uid}=wizard"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FW{uid}", "wizard")).IsTrue()
 			.Because("the flag itself is settable - only the mortal's naming of it was refused");
@@ -92,21 +92,21 @@ public class AttributeFlagArgumentTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgMDark");
 
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MModule.single($"&FM{uid} me=value"));
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MModule.single($"@set me/FM{uid}=mortal_dark"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FM{uid} me=value"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FM{uid}=mortal_dark"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FM{uid}", "mortal_dark")).IsFalse()
 			.Because("a player without Hasprivs may not name mortal_dark in either direction");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortal.DbRef}/FM{uid}=mortal_dark"));
+			MarkupText.Plain($"@set {mortal.DbRef}/FM{uid}=mortal_dark"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FM{uid}", "mortal_dark")).IsTrue()
 			.Because("the flag itself is settable - only the mortal's naming of it was refused");
 	}
 
 	/// <summary>
-	/// A bare <c>!</c> survives <c>MModule.splitList</c> (which only drops empty items) with an
+	/// A bare <c>!</c> survives <c>MushText.SplitList</c> (which only drops empty items) with an
 	/// empty flag name. Both fallbacks then match something: the symbol comparison matches any
 	/// flag whose symbol is the empty string (<c>prefixmatch</c>, where it is seeded), and failing
 	/// that <c>StartsWith("")</c> matches the shortest flag name in the list. Either way
@@ -125,15 +125,15 @@ public class AttributeFlagArgumentTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgBang");
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FB{uid} me=value"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/FB{uid}=case"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FB{uid} me=value"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FB{uid}=case"));
 
 		await Assert.That(await HasFlag(owner.DbRef, $"FB{uid}", "case")).IsTrue()
 			.Because("precondition: `case` is the shortest flag name, so it is what StartsWith(\"\") selects");
 
 		var messages = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
-				MModule.single($"@set me/FB{uid}=!")).AsTask());
+				MarkupText.Plain($"@set me/FB{uid}=!")).AsTask());
 
 		await Assert.That(messages).Contains(ErrorMessages.Returns.UnrecognizedAttributeFlag)
 			.Because("a bare ! names no flag, so the whole argument is refused before anything is applied");
@@ -156,13 +156,13 @@ public class AttributeFlagArgumentTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgReport");
 		var ownerName = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Known.Object().Name;
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FR{uid} me=value"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/FR{uid}=case"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FR{uid} me=value"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FR{uid}=case"));
 
 		// `nospace` is not set, `case` is: Penn reports both in one "reset." line regardless.
 		var messages = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
-				MModule.single($"@set me/FR{uid}=!case !nospace regexp")).AsTask());
+				MarkupText.Plain($"@set me/FR{uid}=!case !nospace regexp")).AsTask());
 
 		await Assert.That(messages).Contains($"{ownerName}/FR{uid} - case nospace reset.")
 			.Because("one line per half, naming the whole requested list in flag-table order");
@@ -187,22 +187,22 @@ public class AttributeFlagArgumentTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgQuiet");
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&FQ{uid} me=value"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FQ{uid} me=value"));
 
 		// Control: without QUIET the same command does report, so the silence below is the flag's
 		// doing and not the command failing.
 		var loud = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
-				MModule.single($"@set me/FQ{uid}=regexp")).AsTask());
+				MarkupText.Plain($"@set me/FQ{uid}=regexp")).AsTask());
 
 		await Assert.That(loud).IsNotEmpty()
 			.Because("precondition: a non-quiet player is told what the batch did");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=QUIET"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=QUIET"));
 
 		var quiet = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
-				MModule.single($"@set me/FQ{uid}=!regexp")).AsTask());
+				MarkupText.Plain($"@set me/FQ{uid}=!regexp")).AsTask());
 
 		await Assert.That(quiet).IsEmpty()
 			.Because("AreQuiet(player, thing) suppresses both halves of the report");
@@ -221,13 +221,13 @@ public class AttributeFlagArgumentTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagArgBoth");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FD{uid} {obj}=value"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/FD{uid}=wizard"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FD{uid} {obj}=value"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/FD{uid}=wizard"));
 
 		await Assert.That(await HasFlag(obj, $"FD{uid}", "wizard")).IsTrue()
 			.Because("precondition: the clear half of the batch needs something to clear");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/FD{uid}=!wizard wizard"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/FD{uid}=!wizard wizard"));
 
 		await Assert.That(await HasFlag(obj, $"FD{uid}", "wizard")).IsTrue()
 			.Because("clrf is applied before setf, so a flag in both halves survives the batch");

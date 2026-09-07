@@ -2,24 +2,26 @@
 
 ## Overview
 
-Content rendering in SharpMUSH uses a shared library approach. MString already
-provides `ToAnsi()` and `ToHtml()` conversion methods. Markdown rendering uses
-Markdig (same library on server and client). No duplication — one path per format.
+Content rendering in SharpMUSH uses a shared library approach. MString (`MarkupText`
+from the `MarkupString` package, plus the `MarkupString.Ansi`/`.Html` kind
+packages) renders to any registered format via `Render(MarkupFormat)`. Markdown
+rendering uses Markdig (same library on server and client). No duplication — one
+path per format.
 
 ## Rendering Paths
 
 ```
-                    ┌──────────────┐
-                    │   MString    │  (game output, poses, descriptions)
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-         .ToAnsi()    .ToHtml()    .ToPlainText()
-              │            │            │
-              ▼            ▼            ▼
-         Telnet/SSH    Web portal    Search index
-         clients       rendering     full-text
+                          ┌──────────────┐
+                          │   MString    │  (game output, poses, descriptions)
+                          └──────┬───────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              ▼                  ▼                   ▼
+  .Render(MarkupFormat.Ansi)  .Render(MarkupFormat.Html)  .ToPlainText()
+              │                  │                   │
+              ▼                  ▼                   ▼
+         Telnet/SSH          Web portal          Search index
+         clients             rendering           full-text
 
 
                     ┌──────────────┐
@@ -41,21 +43,38 @@ Markdig (same library on server and client). No duplication — one path per for
 
 ## Shared Library: MString
 
-MString is the game's native rich text type. It already lives in a shared
-project accessible to both server and client code.
+MString (`MarkupText`, aliased via `global using MString = global::MarkupString.MarkupText;`)
+is the game's native rich text type: a plain string plus a set of coalesced,
+non-overlapping runs of markup layers. It is not built in this repository: it comes
+from [SharpMUSH/MarkupString](https://github.com/SharpMUSH/MarkupString) as three
+NuGet packages — `MarkupString` (the core type, the registry, the renderer) plus the
+`MarkupString.Ansi` and `MarkupString.Html` kind packages, which supply the actual
+emitters — all referenced by both server and client code at `$(MarkupStringVersion)`.
 
-**Existing methods (already implemented):**
-- `MString.ToAnsi()` → ANSI escape sequences (for telnet/terminal)
-- `MString.ToHtml()` → HTML spans with inline styles or CSS classes
-- `MString.ToPlainText()` → stripped plain text (for search, logging)
+Every host process (`SharpMUSH.Server`, `ConnectionServer`, `Client`) sets
+`MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();` once at
+startup. Rendering then dispatches through that registry:
+
+- `text.Render(MarkupFormat.Ansi)` → ANSI escape sequences (telnet/terminal)
+- `text.Render(MarkupFormat.Html)` → HTML spans with inline styles or CSS classes
+- `text.Render(MarkupFormat.Pueblo)` / `.Render(MarkupFormat.Mxp)` → Pueblo/MXP tags
+- `text.Render(MarkupFormat.BBCode)` → BBCode markup
+- `text.ToPlainText()` → stripped plain text (for search, logging); `ToString()`
+  is equivalent — it is never format-specific, so it is never the way to
+  produce client output
+- `MarkupTextSerializer.Serialize`/`.Deserialize` → the JSON wire form used to
+  persist and transmit MString (poses, scene events, stored attributes)
+
+There is no `ToAnsi()`/`ToHtml()` — those methods don't exist; format is always
+an explicit `MarkupFormat` argument to `Render`.
 
 **Web portal usage:**
-- Scene panel: receives MString from SignalR → calls `.ToHtml()` client-side
-- Scene archive: server renders `.ToHtml()` for SSR/SEO
-- Profile structured fields (format: "mstring"): same `.ToHtml()` path
+- Scene panel: receives MString from SignalR → calls `.Render(MarkupFormat.Html)` client-side
+- Scene archive: server renders `.Render(MarkupFormat.Html)` for SSR/SEO
+- Profile structured fields (format: "mstring"): same `.Render(MarkupFormat.Html)` path
 
 **No client-side ANSI parsing library needed.** MString handles it natively.
-The Blazor WASM client references the same shared library the server uses.
+The Blazor WASM client references the same markup packages the server uses.
 
 ## Markdown Rendering: Markdig
 
@@ -116,8 +135,8 @@ the AST) that emits MString segments instead of HTML.
 
 ```
 Storage:  MString (raw, with ANSI markup codes)
-Web:      MString.ToHtml() → HTML in scene panel
-In-game:  MString.ToAnsi() → native terminal output
+Web:      MString.Render(MarkupFormat.Html) → HTML in scene panel
+In-game:  MString.Render(MarkupFormat.Ansi) → native terminal output
 Search:   MString.ToPlainText() → indexed text
 ```
 
@@ -136,7 +155,7 @@ Search:   Markdig → plain text (strip all formatting)
 
 ```
 Default:     Plain text (no processing, rendered as-is)
-format=mstring:  MString.ToHtml() for web, MString.ToAnsi() for game
+format=mstring:  MString.Render(MarkupFormat.Html) for web, MString.Render(MarkupFormat.Ansi) for game
 format=markdown: Markdig → HTML for web, Markdig → MString for game
 ```
 
@@ -152,7 +171,7 @@ In-game:  Markdig → MString (same as wiki)
 
 ```
 Source:   MString (game engine output)
-Web:      MString.ToHtml() → terminal panel
+Web:      MString.Render(MarkupFormat.Html) → terminal panel
 ```
 
 The terminal panel renders ALL game output as HTML-from-MString. It doesn't
@@ -193,11 +212,11 @@ click to lightbox, drag to reorder (admin/owner only).
 | Poses             | MString      | None needed (MString is safe)  |
 | Wiki pages        | Markdown     | DisableHtml() — no raw HTML    |
 | Profile freeform  | Markdown     | DisableHtml() — no raw HTML    |
-| Profile fields    | Plain/MString| MString.ToHtml() is safe       |
+| Profile fields    | Plain/MString| MString.Render(MarkupFormat.Html) is safe |
 | Help files        | Markdown     | DisableHtml() — no raw HTML    |
 | Admin pages       | Markdown+HTML| AllowHtml flag (trusted only)  |
 
-**Why MString is safe:** MString.ToHtml() produces escaped output. ANSI codes
+**Why MString is safe:** MString.Render(MarkupFormat.Html) produces escaped output. ANSI codes
 map to specific CSS classes/spans — there's no path from ANSI input to arbitrary
 HTML injection. The conversion is a closed function.
 
@@ -209,7 +228,7 @@ user-generated content.
 
 - **Wiki rendering is cached:** rendered HTML stored alongside Markdown source.
   Invalidated on edit. No re-render on every page view.
-- **Scene poses rendered client-side:** MString.ToHtml() runs in WASM. Keeps
+- **Scene poses rendered client-side:** MString.Render(MarkupFormat.Html) runs in WASM. Keeps
   server load low for real-time scene streaming.
 - **Scene archives rendered server-side:** for SSR/SEO. Cached after first render.
 - **Search indexing:** plain text extraction runs once on write (stored in

@@ -12,7 +12,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task SimpleText_ShouldTokenize()
 	{
-		var tokens = Parser.Tokenize(MModule.single("hello world"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("hello world"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -24,7 +24,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task FunctionCall_ShouldIdentifyTokens()
 	{
-		var tokens = Parser.Tokenize(MModule.single("add(1,2)"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("add(1,2)"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -36,7 +36,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task Brackets_ShouldBeIdentified()
 	{
-		var tokens = Parser.Tokenize(MModule.single("test[inner]"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("test[inner]"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -50,7 +50,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task Braces_ShouldBeIdentified()
 	{
-		var tokens = Parser.Tokenize(MModule.single("test{inner}"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("test{inner}"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -65,7 +65,7 @@ public class SyntaxHighlightingTests
 	public async Task TokenPositions_ShouldBeCorrect()
 	{
 		var input = "abc[def]";
-		var tokens = Parser.Tokenize(MModule.single(input));
+		var tokens = Parser.Tokenize(MarkupText.Plain(input));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -80,7 +80,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task Substitution_ShouldBeIdentified()
 	{
-		var tokens = Parser.Tokenize(MModule.single("%0 test"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("%0 test"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -91,7 +91,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task Escape_ShouldBeIdentified()
 	{
-		var tokens = Parser.Tokenize(MModule.single("\\n test"));
+		var tokens = Parser.Tokenize(MarkupText.Plain("\\n test"));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -103,7 +103,7 @@ public class SyntaxHighlightingTests
 	public async Task ComplexInput_ShouldTokenizeCompletely()
 	{
 		var input = "add(1,2)[sub(3,4)]{test}%0";
-		var tokens = Parser.Tokenize(MModule.single(input));
+		var tokens = Parser.Tokenize(MarkupText.Plain(input));
 
 		await Assert.That(tokens).IsNotEmpty();
 
@@ -114,7 +114,7 @@ public class SyntaxHighlightingTests
 	[Test]
 	public async Task EmptyInput_ShouldReturnEmptyList()
 	{
-		var tokens = Parser.Tokenize(MModule.single(""));
+		var tokens = Parser.Tokenize(MarkupText.Empty);
 
 		await Assert.That(tokens).IsEmpty();
 	}
@@ -123,7 +123,7 @@ public class SyntaxHighlightingTests
 	public async Task TokenText_ShouldMatchInput()
 	{
 		var input = "hello";
-		var tokens = Parser.Tokenize(MModule.single(input));
+		var tokens = Parser.Tokenize(MarkupText.Plain(input));
 
 		await Assert.That(tokens).IsNotEmpty();
 

@@ -48,7 +48,7 @@ public static class SendMail
 			{
 				if (position + 1 < text.Length && text[position + 1] == SubjectCookie)
 				{
-					segments.Add(MModule.substring(position, 1, subjectAndMessage));
+					segments.Add(subjectAndMessage.Substring(position, 1));
 					position += 2;
 					taken++;
 					continue;
@@ -57,16 +57,16 @@ public static class SendMail
 				break;
 			}
 
-			segments.Add(MModule.substring(position, 1, subjectAndMessage));
+			segments.Add(subjectAndMessage.Substring(position, 1));
 			position++;
 			taken++;
 		}
 
-		var subject = segments.Count > 0 ? MModule.concatMany(segments) : MModule.empty();
+		var subject = segments.Count > 0 ? MarkupText.Concat(segments) : MarkupText.Empty;
 
 		// extmail.c:1350 — given only if the scan stopped on a cookie, the cap included.
 		return position < text.Length && text[position] == SubjectCookie
-			? (subject, MModule.substring(position + 1, text.Length - position - 1, subjectAndMessage))
+			? (subject, subjectAndMessage.Substring(position + 1, text.Length - position - 1))
 			: (subject, subjectAndMessage);
 	}
 
@@ -83,7 +83,7 @@ public static class SendMail
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 
 		var knownPlayerList = new List<SharpPlayer>();
-		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()!))
+		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()))
 		{
 			var located = await locateService.Locate(parser, sender, sender, name, RecipientMatchFlags);
 
@@ -110,7 +110,7 @@ public static class SendMail
 				var attributeValue = attributeOpportunity.Value;
 				if (attributeValue.Length > 0)
 				{
-					message = MModule.concatMany(new[] { message, MModule.single("\n"), attributeValue });
+					message = MarkupText.Concat(new[] { message, MarkupText.NewLine, attributeValue });
 				}
 			}
 		}
@@ -188,16 +188,14 @@ public static class SendMail
 		// caller only ever sees this return value — the notifications above go to the sender.
 		if (delivered.Count == 0)
 		{
-			return MModule.single(knownPlayerList.Count == 0
+			return MarkupText.Plain(knownPlayerList.Count == 0
 				? ErrorMessages.Returns.NoSuchPlayer
 				: ErrorMessages.Returns.RecipientDoesNotAcceptMail);
 		}
 
-		return MModule.multipleWithDelimiter(
-			MModule.single(" "),
-			delivered
+		return MarkupText.Join(MarkupText.Space, delivered
 				.Select(x => x.Object.DBRef)
 				.Select(x => x.ToString())
-				.Select(MModule.single));
+				.Select(MarkupText.Plain));
 	}
 }

@@ -36,7 +36,7 @@ public class AttributeService(
 	{
 		var attributePath = attribute.Split('`');
 
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
@@ -267,7 +267,7 @@ public class AttributeService(
 		AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool checkParent = true)
 	{
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
 		{
 			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
 		}
@@ -383,9 +383,9 @@ public class AttributeService(
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
-		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MModule.single(attribute), obj))
+		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
 		{
-			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
+			return MarkupText.Plain(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -400,12 +400,12 @@ public class AttributeService(
 			evalParent);
 		if (attr.IsError)
 		{
-			return MModule.single(attr.AsError.Value);
+			return MarkupText.Plain(attr.AsError.Value);
 		}
 
 		if (attr.IsNone)
 		{
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 
 		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns
@@ -441,7 +441,7 @@ public class AttributeService(
 		{
 			limitExceeded.IsExceeded = true;
 			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
-			return MModule.single(ErrorMessages.Returns.Recursion);
+			return MarkupText.Plain(ErrorMessages.Returns.Recursion);
 		}
 
 		try
@@ -503,9 +503,9 @@ public class AttributeService(
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false,
 		bool ignoreLambda = false)
 	{
-		var split = MModule.split("/", objAndAttribute);
+		var split = objAndAttribute.Split("/");
 		var obj = split.First();
-		var attribute = MModule.multiple(split.Skip(1))!;
+		var attribute = MarkupText.Concat(split.Skip(1));
 		var objPlainText = obj.ToPlainText();
 		var applyPredicate = objPlainText.StartsWith("#apply", StringComparison.OrdinalIgnoreCase);
 		var lambdaPredicate = objPlainText.StartsWith("#lambda", StringComparison.OrdinalIgnoreCase);
@@ -522,7 +522,7 @@ public class AttributeService(
 		if (!applyPredicate && !lambdaPredicate &&
 				!await validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None()))
 		{
-			return MModule.single(ErrorMessages.Returns.ObjectAttributeString);
+			return MarkupText.Plain(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -541,7 +541,7 @@ public class AttributeService(
 			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
 			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
-				return MModule.single(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
+				return MarkupText.Plain(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
@@ -555,19 +555,19 @@ public class AttributeService(
 
 				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
+					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
 				{
-					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
+					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
 				{
-					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
+					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
 				{
-					return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
+					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
 				}
 
 				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
@@ -576,7 +576,7 @@ public class AttributeService(
 						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
 					if (!hasRestriction)
 					{
-						return MModule.single(ErrorMessages.Returns.AttrEvalPermissions);
+						return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
 					}
 				}
 
@@ -1073,7 +1073,7 @@ public class AttributeService(
 			var unset = token.StartsWith('!');
 			var name = unset ? token[1..] : token;
 
-			// A bare "!" survives MModule.splitList (which only drops empty items), leaving an
+			// A bare "!" survives MushText.SplitList (which only drops empty items), leaving an
 			// empty name. Without this guard the symbol comparison below matches `prefixmatch`
 			// (whose symbol is the empty string) and, failing that, StartsWith("") matches the
 			// shortest flag in the list - so `@set obj/attr=!` silently unset an arbitrary flag.

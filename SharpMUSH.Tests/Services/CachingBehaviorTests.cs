@@ -70,7 +70,7 @@ public class CachingBehaviorTests
 
 		// Create a unique object so no other parallel test can invalidate its specific cache key
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create QueryCachingBehavior Test Object"));
+			MarkupText.Plain("@create QueryCachingBehavior Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -98,15 +98,15 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig FlagThroughContents Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughContents Room"))).Message!.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create FlagThroughContents Thing"))).Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+			MarkupText.Plain("@create FlagThroughContents Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		// Populate the contents cache, then change a flag through the normal command path.
 		var before = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
 		await Assert.That(before.Select(c => c.Object().DBRef.Number)).Contains(thing.Number);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{thing.Number}=DARK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{thing.Number}=DARK"));
 
 		var after = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
 		var embedded = after.Single(c => c.Object().DBRef.Number == thing.Number);
@@ -125,10 +125,10 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig OneInstance Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig OneInstance Room"))).Message!.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create OneInstance Thing"))).Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+			MarkupText.Plain("@create OneInstance Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		var listed = (await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync())
 			.Single(c => c.Object().DBRef.Number == thing.Number);
@@ -154,17 +154,17 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig FlagThroughLocation Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughLocation Room"))).Message!.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel #{thing.Number}=#{room.Number}"));
+			MarkupText.Plain("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
 		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Known();
 		var before = await occupant.Where();
 		await Assert.That(before.Object().DBRef.Number).IsEqualTo(room.Number);
 		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{room.Number}=DARK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{room.Number}=DARK"));
 
 		var after = await (await mediator.Send(new GetObjectNodeQuery(thing))).Known().Where();
 		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
@@ -181,17 +181,17 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var parent = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create FlagThroughParent Parent"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@create FlagThroughParent Parent"))).Message!.ToPlainText()!);
 		var child = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@parent #{child.Number}=#{parent.Number}"));
+			MarkupText.Plain("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent #{child.Number}=#{parent.Number}"));
 
 		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Known();
 		var before = await node.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(before.Known().Object().DBRef.Number).IsEqualTo(parent.Number);
 		await Assert.That(await before.Known().Object().HasFlag("DARK")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{parent.Number}=DARK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{parent.Number}=DARK"));
 
 		var after = await node.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(await after.Known().Object().HasFlag("DARK")).IsTrue()
@@ -208,17 +208,17 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var home = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig FlagThroughHome Room"))).Message!.ToPlainText()!);
+			MarkupText.Plain("@dig FlagThroughHome Room"))).Message!.ToPlainText()!);
 		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link #{thing.Number}=#{home.Number}"));
+			MarkupText.Plain("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link #{thing.Number}=#{home.Number}"));
 
 		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known().AsThing;
 		var before = await node.Home.WithCancellation(CancellationToken.None);
 		await Assert.That(before.Object().DBRef.Number).IsEqualTo(home.Number);
 		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{home.Number}=DARK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{home.Number}=DARK"));
 
 		var after = await node.Home.WithCancellation(CancellationToken.None);
 		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
@@ -240,7 +240,7 @@ public class CachingBehaviorTests
 		var before = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
 		await Assert.That(await before.Single().Object.HasFlag("DARK")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set #{player.DbRef.Number}=DARK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{player.DbRef.Number}=DARK"));
 
 		var after = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
 		await Assert.That(await after.Single().Object.HasFlag("DARK")).IsTrue()
@@ -290,7 +290,7 @@ public class CachingBehaviorTests
 
 		// Dig a unique room so no other parallel test can invalidate its specific cache key
 		var digResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig StreamCachingBehavior Test Room"));
+			MarkupText.Plain("@dig StreamCachingBehavior Test Room"));
 		var dbRef = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
 		var result1 = new List<AnySharpContent>();
@@ -339,7 +339,7 @@ public class CachingBehaviorTests
 
 		// Create a unique object to avoid interference from parallel tests
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create CacheInvalidation Test Object"));
+			MarkupText.Plain("@create CacheInvalidation Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var before = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -347,7 +347,7 @@ public class CachingBehaviorTests
 
 		// Rename via command — SetNameCommand invalidates object:{dbRef} cache key
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@name {dbRef}=CacheInvalidation Renamed Object"));
+			MarkupText.Plain($"@name {dbRef}=CacheInvalidation Renamed Object"));
 
 		var after = await mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(after.Object()!.Name).IsEqualTo("CacheInvalidation Renamed Object");
@@ -363,7 +363,7 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create CacheInvalidation Visibility Test"));
+			MarkupText.Plain("@create CacheInvalidation Visibility Test"));
 		var newDbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
@@ -387,7 +387,7 @@ public class CachingBehaviorTests
 		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 		var digResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
 		var room = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
 		async Task<Library.Models.DBRef> Populate() => await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
@@ -446,7 +446,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 
@@ -491,7 +491,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 
@@ -535,7 +535,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 

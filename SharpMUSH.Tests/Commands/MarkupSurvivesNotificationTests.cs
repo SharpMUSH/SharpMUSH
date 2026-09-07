@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Coloured output reaches a player as MARKUP, not as escape characters baked into the text.
 ///
-/// <para><c>ansi()</c> builds a real <see cref="MarkupString.MarkupImplementation.AnsiMarkup"/> node
+/// <para><c>ansi()</c> builds a real <see cref="MarkupString.Ansi.AnsiMarkup"/> node
 /// and the wire format carries it — <c>@emit</c> proves both, arriving as
 /// <c>{"t":"Redtail","p":[null,[{"f":[31]}]]}</c> and rendering styled in the browser. But
 /// <c>think</c>, <c>@pemit</c> and <c>@prompt</c> called <c>.ToString()</c> on the MString at the
@@ -50,12 +50,12 @@ public class MarkupSurvivesNotificationTests
 	private async Task<IReadOnlyList<OneOf<MString, string>>> NotifiedByAsync(string command)
 	{
 		var before = Notifications.RawCountFor(God);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		return [.. Notifications.RawFor(God).Skip(before)];
 	}
 
 	private static bool CarriesEscapes(OneOf<MString, string> message) =>
-		message.Match(markup => MModule.plainText(markup).Contains(Escape), text => text.Contains(Escape));
+		message.Match(markup => markup.ToPlainText().Contains(Escape), text => text.Contains(Escape));
 
 	/// <summary>True when the message kept its markup rather than being flattened to a string.</summary>
 	private static bool IsMarkup(OneOf<MString, string> message) => message.IsT0;

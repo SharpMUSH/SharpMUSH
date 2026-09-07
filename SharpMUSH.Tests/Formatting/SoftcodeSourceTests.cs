@@ -65,10 +65,10 @@ public class SoftcodeSourceTests
 	{
 		const string source = "$give [a,b} to *:@pemit %#=ok";
 
-		await Assert.That(Parser.ValidateAndGetErrors(MModule.single(source), ParseType.CommandList))
+		await Assert.That(Parser.ValidateAndGetErrors(MarkupText.Plain(source), ParseType.CommandList))
 			.IsNotEmpty().Because("if the whole value parsed cleanly there would be no spurious warning to suppress");
 
-		await Assert.That(SoftcodeSource.Validate(Parser, MModule.single(source), ParseType.CommandList))
+		await Assert.That(SoftcodeSource.Validate(Parser, MarkupText.Plain(source), ParseType.CommandList))
 			.IsEmpty().Because("only the text from the command-list index onward is ever parsed");
 	}
 
@@ -87,9 +87,9 @@ public class SoftcodeSourceTests
 		var prefixLength = SoftcodeSource.MatchPatternPrefixLength(source, ParseType.CommandList);
 
 		var sliceErrors = Parser.ValidateAndGetErrors(
-			MModule.single(source[prefixLength..]), ParseType.CommandList);
-		var wholeErrors = Parser.ValidateAndGetErrors(MModule.single(source), ParseType.CommandList);
-		var errors = SoftcodeSource.Validate(Parser, MModule.single(source), ParseType.CommandList);
+			MarkupText.Plain(source[prefixLength..]), ParseType.CommandList);
+		var wholeErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(source), ParseType.CommandList);
+		var errors = SoftcodeSource.Validate(Parser, MarkupText.Plain(source), ParseType.CommandList);
 
 		await Assert.That(sliceErrors).IsNotEmpty().Because("the code half must actually be broken here");
 		await Assert.That(sliceErrors.All(e => e.Column < prefixLength)).IsTrue()

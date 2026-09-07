@@ -27,7 +27,7 @@ public class TwoStagePredictionTests
 	[Arguments("[setr(0,hi)]%q0", "hihi")]
 	public async Task ValidInputParsesCorrectly(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -39,7 +39,7 @@ public class TwoStagePredictionTests
 	[Arguments("strcat(strcat(dog)")]
 	public async Task SyntaxErrorSurfacesAsFailureAfterFallback(string input)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 PARSER FAILURE");
 	}
 
@@ -55,7 +55,7 @@ public class TwoStagePredictionTests
 	{
 		for (var i = 0; i < 25; i++)
 		{
-			var result = (await Parser.FunctionParse(MModule.single(input)))?.Message!;
+			var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message!;
 			await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 		}
 	}

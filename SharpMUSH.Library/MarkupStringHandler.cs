@@ -1,28 +1,27 @@
-using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using MarkupString.MarkupImplementation;
+using System.Runtime.InteropServices;
 
 namespace MarkupString;
 
 /// <summary>
 /// Custom interpolated string handler for <see cref="MString"/>.
 ///
-/// Because <see cref="MString"/> is an F# class that cannot receive new C# constructors,
-/// the handler is invoked via the <see cref="MStringInterpolation.Format"/> factory method:
+/// <see cref="MString"/> does not expose the constructor that would let <c>MString r = $"..."</c>
+/// route through this handler on its own, so it is invoked via the
+/// <see cref="MStringInterpolation.Format"/> factory method:
 ///
 /// <code>
-/// MString bold  = MModule.markupSingle(Ansi.Create(bold: true), "world");
+/// MString bold  = MarkupText.Wrap(AnsiMarkup.Create(bold: true), "world");
 /// MString plain = MStringInterpolation.Format($"Hello, {bold}! Count: {42}.");
 /// // → plain "Hello, " + bold "world" + plain "! Count: 42."
 /// </code>
 ///
-/// Each literal segment becomes a plain <c>MModule.single(...)</c> run.
+/// Each literal segment becomes a plain <c>MarkupText.Plain(...)</c> run.
 /// Each formatted hole accepts either an <see cref="MString"/> (markup runs are preserved
 /// intact) or any other type (converted via <c>.ToString()</c> to a plain run).
 ///
-/// The result is assembled via <c>MModule.concatMany</c> — a single O(n) pass, avoiding
-/// the O(n²) intermediate allocations of chained binary <c>MModule.concat</c> calls.
+/// The result is assembled via <c>MarkupText.Concat</c> — a single O(n) pass, avoiding
+/// the O(n²) intermediate allocations of chained binary concatenations.
 ///
 /// <para>
 /// <b>Format specifiers for <see cref="MString"/> holes</b>
@@ -86,7 +85,7 @@ public ref struct MarkupStringHandler
 	public void AppendLiteral(string value)
 	{
 		if (value.Length > 0)
-			Push(MModule.single(value));
+			Push(MarkupText.Plain(value));
 	}
 
 	/// <summary>
@@ -118,7 +117,7 @@ public ref struct MarkupStringHandler
 	public void AppendFormatted(string? value)
 	{
 		if (!string.IsNullOrEmpty(value))
-			Push(MModule.single(value));
+			Push(MarkupText.Plain(value));
 	}
 
 	/// <summary>
@@ -129,7 +128,7 @@ public ref struct MarkupStringHandler
 	{
 		var s = value?.ToString();
 		if (!string.IsNullOrEmpty(s))
-			Push(MModule.single(s));
+			Push(MarkupText.Plain(s));
 	}
 
 	/// <summary>
@@ -139,7 +138,7 @@ public ref struct MarkupStringHandler
 	{
 		var s = value?.ToString(format, null);
 		if (!string.IsNullOrEmpty(s))
-			Push(MModule.single(s));
+			Push(MarkupText.Plain(s));
 	}
 
 	/// <summary>
@@ -154,22 +153,22 @@ public ref struct MarkupStringHandler
 		{
 			var s = formattable.ToString(format, null);
 			if (!string.IsNullOrEmpty(s))
-				Push(MModule.single(s));
+				Push(MarkupText.Plain(s));
 		}
 		else
 		{
 			var s = value?.ToString();
 			if (!string.IsNullOrEmpty(s))
-				Push(MModule.single(s));
+				Push(MarkupText.Plain(s));
 		}
 	}
 
 	/// <summary>
 	/// Materialises the accumulated segments into a single <see cref="MString"/>
-	/// via <c>MModule.concatMany</c>.
+	/// via <c>MarkupText.Concat</c>.
 	/// </summary>
 	public MString ToMarkupString()
-		=> MModule.concatMany(_parts);
+		=> MarkupText.Concat(CollectionsMarshal.AsSpan(_parts));
 
 	private void Push(MString value)
 	{
@@ -188,7 +187,7 @@ public ref struct MarkupStringHandler
 			int width = Math.Abs(alignment);
 			// Positive = right-justify (pad left); negative = left-justify (pad right).
 			PadType padType = alignment > 0 ? PadType.Left : PadType.Right;
-			result = MModule.Pad(result, MModule.single(" "), width, padType, TruncationType.Truncate);
+			result = result.Pad(MarkupText.Space, width, padType, TruncationType.Truncate);
 		}
 
 		return result;
@@ -221,7 +220,7 @@ public ref struct MarkupStringHandler
 	private static MString ApplyTrim(MString value, string args)
 	{
 		if (string.IsNullOrEmpty(args))
-			return MModule.Trim(value, " ", TrimType.TrimBoth);
+			return value.Trim(TrimType.TrimBoth);
 
 		int sep = args.IndexOf(':');
 		string dir = sep < 0 ? args : args[..sep];
@@ -235,7 +234,7 @@ public ref struct MarkupStringHandler
 			_ => TrimType.TrimBoth, // includes "both" and empty
 		};
 
-		return MModule.Trim(value, chars, trimType);
+		return value.Trim(trimType, chars);
 	}
 
 	/// <summary>
@@ -257,7 +256,7 @@ public ref struct MarkupStringHandler
 		if (!int.TryParse(parts[1], out int width) || width <= 0) return value;
 
 		string fillStr = parts.Length >= 3 && parts[2].Length > 0 ? parts[2][..1] : " ";
-		MString fill = MModule.single(fillStr);
+		MString fill = MarkupText.Plain(fillStr);
 
 		PadType padType = dir switch
 		{
@@ -268,7 +267,7 @@ public ref struct MarkupStringHandler
 			_ => PadType.Right, // default to left-justify
 		};
 
-		return MModule.Pad(value, fill, width, padType, TruncationType.Truncate);
+		return value.Pad(fill, width, padType, TruncationType.Truncate);
 	}
 
 	/// <summary>
@@ -279,8 +278,8 @@ public ref struct MarkupStringHandler
 	private static MString ApplyColor(MString value, string codes)
 	{
 		if (string.IsNullOrEmpty(codes)) return value;
-		var markup = AnsiCodeParser.ParseCodes(codes);
-		return MModule.MarkupSingle2(markup, value);
+		var markup = AnsiCodeParser.Parse(codes);
+		return MarkupText.Wrap(markup, value);
 	}
 }
 
@@ -288,13 +287,13 @@ public ref struct MarkupStringHandler
 /// Static factory for building <see cref="MString"/> values from interpolated strings.
 ///
 /// <para>
-/// Because <see cref="MString"/> is an immutable F# class, it cannot expose the constructor
-/// required to make <c>MString r = $"..."</c> route through <see cref="MarkupStringHandler"/>
-/// directly. Instead, pass the interpolated string to <see cref="Format"/>:
+/// <see cref="MString"/> does not expose the constructor required to make
+/// <c>MString r = $"..."</c> route through <see cref="MarkupStringHandler"/> directly. Instead,
+/// pass the interpolated string to <see cref="Format"/>:
 /// </para>
 ///
 /// <code>
-/// MString bold   = MModule.markupSingle(Ansi.Create(bold: true), "world");
+/// MString bold   = MarkupText.Wrap(AnsiMarkup.Create(bold: true), "world");
 /// MString result = MStringInterpolation.Format($"Hello, {bold}! Count: {42}.");
 /// </code>
 ///

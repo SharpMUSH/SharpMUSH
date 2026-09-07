@@ -42,7 +42,7 @@ public class AttributeReadParentCycleTests
 
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
-		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
 		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
 		return node.Known;
@@ -67,7 +67,7 @@ public class AttributeReadParentCycleTests
 	public async ValueTask GetAttributePatternAsync_WithParentCycle_Terminates(CancellationToken ct)
 	{
 		var (a, _) = await BuildDirectParentCycleAsync("AttrCycle");
-		await AttributeService.SetAttributeAsync(a, a, "CYCLETEST", MModule.single("hello"));
+		await AttributeService.SetAttributeAsync(a, a, "CYCLETEST", MarkupText.Plain("hello"));
 
 		var result = await AttributeService.GetAttributePatternAsync(
 			a, a, "*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);

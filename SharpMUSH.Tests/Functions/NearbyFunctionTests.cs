@@ -25,11 +25,11 @@ public class NearbyFunctionTests
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
-		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MModule.single(expr)))
+		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
 			?.Message!.ToPlainText() ?? "<null>";
 
 	private async Task<string> God(string command)
-		=> (await GodParser.CommandParse(1, ConnectionService, MModule.single(command)))?.Message?.ToPlainText() ?? "";
+		=> (await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)))?.Message?.ToPlainText() ?? "";
 
 	[Test]
 	[NotInParallel]

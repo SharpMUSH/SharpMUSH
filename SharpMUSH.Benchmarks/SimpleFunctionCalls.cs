@@ -21,6 +21,6 @@ public class SimpleFunctionCalls : BaseBenchmark
 		foreach (var _ in Enumerable.Range(0, depth))
 			sb.Append(")]");
 
-		await FreshParser().FunctionParse(MModule.single(sb.ToString()));
+		await FreshParser().FunctionParse(MarkupText.Plain(sb.ToString()));
 	}
 }

@@ -1,7 +1,8 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using Ansi = MarkupString.MarkupImplementation.AnsiMarkup;
+using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,7 +21,7 @@ public static class SoftcodeFormatter
 	/// inverse video plus a red foreground, so a syntax error reads as a highlighted block rather than
 	/// blending into ordinary syntax colouring.
 	/// </summary>
-	private static readonly Ansi ErrorStyle = AnsiCodeParser.ParseCodes("i r");
+	private static readonly Ansi ErrorStyle = AnsiCodeParser.Parse("i r");
 
 	/// <summary>
 	/// Formats <paramref name="source"/> for display: colours it by <paramref name="semanticTokens"/>
@@ -30,7 +31,7 @@ public static class SoftcodeFormatter
 	/// </summary>
 	/// <param name="source">
 	/// The full source text. May already carry author markup — spans are sliced out of it by offset
-	/// (via <see cref="SemanticTokenRenderer"/> and <see cref="MModule.substring"/>) rather than
+	/// (via <see cref="SemanticTokenRenderer"/> and <c>MarkupText.Substring</c>) rather than
 	/// reconstructed from token text, so that markup survives alongside the new colouring and breaks.
 	/// </param>
 	/// <param name="tokens">
@@ -95,7 +96,7 @@ public static class SoftcodeFormatter
 		var breaks = SoftcodeLayout.Compute(tokens, width, classifyFunction: classifyFunction, parseType: parseType);
 
 		var laidOut = ApplyBreaks(colored, tokens, breaks);
-		plainCodeLength = MModule.getLength(laidOut);
+		plainCodeLength = laidOut.Length;
 
 		return errors.Count == 0 ? laidOut : AppendErrorSummary(laidOut, errors);
 	}
@@ -166,7 +167,7 @@ public static class SoftcodeFormatter
 			return null;
 		}
 
-		var lineStarts = SemanticTokenRenderer.BuildLineStartTable(MModule.plainText(source));
+		var lineStarts = SemanticTokenRenderer.BuildLineStartTable(source.ToPlainText());
 		var spans = errors
 			.Select(error =>
 			{
@@ -251,22 +252,22 @@ public static class SoftcodeFormatter
 
 			if (!indentByTokenIndex.TryGetValue(i, out var indent))
 			{
-				parts.Add(MModule.substring(token.StartIndex, token.Length, colored));
+				parts.Add(colored.Substring(token.StartIndex, token.Length));
 				continue;
 			}
 
 			var trimmedLength = token.Text.TrimEnd().Length;
 			if (trimmedLength > 0)
 			{
-				parts.Add(MModule.substring(token.StartIndex, trimmedLength, colored));
+				parts.Add(colored.Substring(token.StartIndex, trimmedLength));
 			}
 
-			parts.Add(MModule.single("\n" + new string(' ', indent)));
+			parts.Add(MarkupText.Plain("\n" + new string(' ', indent)));
 		}
 
-		// ConcatMany (a single StringBuilder pass) via MModule.multiple — never MModule.concat in a
+		// MarkupText.Concat (a single pass) over the whole list — never a binary concat in a
 		// loop, which is O(n) per call and quadratic over a token list.
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	/// <summary>
@@ -278,6 +279,6 @@ public static class SoftcodeFormatter
 	private static MString AppendErrorSummary(MString laidOut, IReadOnlyList<ParseError> errors)
 	{
 		var summary = string.Join('\n', errors.Select(error => error.ToMushFailureString()));
-		return MModule.multiple([laidOut, MModule.single("\n" + summary)]);
+		return MarkupText.Concat([laidOut, MarkupText.Plain("\n" + summary)]);
 	}
 }

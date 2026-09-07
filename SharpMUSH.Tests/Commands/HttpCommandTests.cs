@@ -53,7 +53,7 @@ public class HttpCommandTests
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag()));
 
-		await httpParser.CommandListParse(MModule.single(commandList));
+		await httpParser.CommandListParse(MarkupText.Plain(commandList));
 		return context;
 	}
 
@@ -109,7 +109,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_StatusCode()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 200 OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond 200 OK"));
 
 		await NotifyService
 			.Received(1)
@@ -120,7 +120,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_StatusCode_404()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond 404 Not Found"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond 404 Not Found"));
 
 		await NotifyService
 			.Received(1)
@@ -135,7 +135,7 @@ public class HttpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondNoText");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@respond 500"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 500"));
 
 		await NotifyService
 			.Received(1)
@@ -149,7 +149,7 @@ public class HttpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondQuoted");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@respond 200 \"TEST RESPONSE\""));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 200 \"TEST RESPONSE\""));
 
 		await NotifyService
 			.Received(1)
@@ -161,7 +161,7 @@ public class HttpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondInvalid");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@respond abc"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond abc"));
 
 		await NotifyService
 			.Received(1)
@@ -173,7 +173,7 @@ public class HttpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "RespondRange");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@respond 99 test_string_RESPOND_out_of_range"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@respond 99 test_string_RESPOND_out_of_range"));
 
 		await NotifyService
 			.Received(1)
@@ -185,7 +185,7 @@ public class HttpCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@respond 200 test_string_RESPOND_status_line_that_is_way_too_long_and_exceeds_40_chars"));
+			MarkupText.Plain("@respond 200 test_string_RESPOND_status_line_that_is_way_too_long_and_exceeds_40_chars"));
 
 		await NotifyService
 			.Received(1)
@@ -196,7 +196,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Type_ApplicationJson()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type application/json"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type application/json"));
 
 		await NotifyService
 			.Received(1)
@@ -207,7 +207,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Type_TextHtml()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type text/html"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type text/html"));
 
 		await NotifyService
 			.Received(1)
@@ -218,7 +218,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Type_Empty()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/type"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/type"));
 
 		await NotifyService
 			.Received(1)
@@ -229,7 +229,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Header_CustomHeader()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header X-Powered-By=MUSHCode"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header X-Powered-By=MUSHCode"));
 
 		await NotifyService
 			.Received(1)
@@ -241,7 +241,7 @@ public class HttpCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@respond/header Set-Cookie=name=Bob; Max-Age=3600; Version=1"));
+			MarkupText.Plain("@respond/header Set-Cookie=name=Bob; Max-Age=3600; Version=1"));
 
 		await NotifyService
 			.Received(1)
@@ -252,7 +252,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Header_ContentLength_Forbidden()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header Content-Length=1234"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header Content-Length=1234"));
 
 		await NotifyService
 			.Received(1)
@@ -263,7 +263,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Header_EmptyName()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header =value"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header =value"));
 
 		await NotifyService
 			.Received(1)
@@ -274,7 +274,7 @@ public class HttpCommandTests
 	public async ValueTask Test_Respond_Header_WithoutEquals()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond/header X-Custom-Header"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond/header X-Custom-Header"));
 
 		await NotifyService
 			.Received(1)
@@ -284,7 +284,7 @@ public class HttpCommandTests
 	[Test]
 	public async ValueTask Test_Respond_NoArguments()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond"));
 
 		// With MinArgs = 1, the parser will reject the command before it executes
 		// Just verify some notification was sent (any notification indicates an error)

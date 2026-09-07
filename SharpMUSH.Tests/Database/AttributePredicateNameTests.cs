@@ -29,7 +29,7 @@ public class AttributePredicateNameTests
 		Owner: new AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(null)),
 		SharpAttributeEntry: new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult<SharpAttributeEntry?>(null)))
 	{
-		Value = MModule.single(value)
+		Value = MarkupText.Plain(value)
 	};
 
 	private static SharpAttribute WithFlags(params string[] flagNames) => With("say hi", flagNames);

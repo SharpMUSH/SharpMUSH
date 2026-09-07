@@ -19,7 +19,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Version_ReturnsNonEmptyString()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("version()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;
 		var versionText = result.ToPlainText();
 
 		await Assert.That(versionText).IsNotEmpty();
@@ -29,8 +29,8 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Version_ReturnsConsistentValue()
 	{
-		var result1 = (await Parser.FunctionParse(MModule.single("version()")))?.Message!;
-		var result2 = (await Parser.FunctionParse(MModule.single("version()")))?.Message!;
+		var result1 = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;
+		var result2 = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;
 
 		await Assert.That(result1.ToPlainText()).IsEqualTo(result2.ToPlainText());
 	}
@@ -38,7 +38,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Version_UsesGeneratedCode()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("version()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("version()")))?.Message!;
 		var versionText = result.ToPlainText();
 
 		var generatedVersion = SharpMUSH.Implementation.Generated.VersionInfo.Version;
@@ -52,7 +52,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_NoArgs_ReturnsListOfOptions()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config()")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsNotEmpty();
@@ -64,7 +64,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_ValidOption_ReturnsValue()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config(mud_name)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(mud_name)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsNotEmpty();
@@ -74,7 +74,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_InvalidOption_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config(invalid_option_xyz_123)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(invalid_option_xyz_123)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).Contains("#-1 NO SUCH OPTION");
@@ -83,9 +83,9 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_CaseInsensitive_ReturnsValue()
 	{
-		var result1 = (await Parser.FunctionParse(MModule.single("config(mud_name)")))?.Message!;
-		var result2 = (await Parser.FunctionParse(MModule.single("config(MUD_NAME)")))?.Message!;
-		var result3 = (await Parser.FunctionParse(MModule.single("config(Mud_Name)")))?.Message!;
+		var result1 = (await Parser.FunctionParse(MarkupText.Plain("config(mud_name)")))?.Message!;
+		var result2 = (await Parser.FunctionParse(MarkupText.Plain("config(MUD_NAME)")))?.Message!;
+		var result3 = (await Parser.FunctionParse(MarkupText.Plain("config(Mud_Name)")))?.Message!;
 
 		await Assert.That(result1.ToPlainText()).IsEqualTo(result2.ToPlainText());
 		await Assert.That(result1.ToPlainText()).IsEqualTo(result3.ToPlainText());
@@ -94,7 +94,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_BooleanOption_ReturnsCorrectValue()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config(noisy_whisper)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(noisy_whisper)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(resultText).IsIn("True", "False");
@@ -103,7 +103,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_NumericOption_ReturnsCorrectValue()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config(player_start)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(player_start)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(uint.TryParse(resultText, out _)).IsTrue();
@@ -112,14 +112,14 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_AllOptionsListed_CanBeQueried()
 	{
-		var listResult = (await Parser.FunctionParse(MModule.single("config()")))?.Message!;
+		var listResult = (await Parser.FunctionParse(MarkupText.Plain("config()")))?.Message!;
 		var optionsList = listResult.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		var optionsToTest = optionsList.Take(5);
 
 		foreach (var option in optionsToTest)
 		{
-			var result = (await Parser.FunctionParse(MModule.single($"config({option})")))?.Message!;
+			var result = (await Parser.FunctionParse(MarkupText.Plain($"config({option})")))?.Message!;
 			var resultText = result.ToPlainText();
 
 			await Assert.That(resultText).DoesNotContain("#-1 NO SUCH OPTION");
@@ -129,7 +129,7 @@ public class GeneratedFunctionTests
 	[Test]
 	public async Task Config_UsesGeneratedAccessor()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("config(mud_name)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(mud_name)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		var options = WebAppFactoryArg.Services.GetRequiredService<

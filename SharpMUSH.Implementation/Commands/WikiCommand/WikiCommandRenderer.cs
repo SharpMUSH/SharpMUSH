@@ -1,4 +1,5 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -31,7 +32,7 @@ public sealed class WikiCommandRenderer(int maxWidth = 78, IMUSHCodeParser? mush
 	protected override MString RenderWikiLink(WikiLinkInline wikiLink)
 	{
 		var text = wikiLink.DisplayText ?? wikiLink.Title;
-		if (string.IsNullOrWhiteSpace(text)) return MModule.empty();
+		if (string.IsNullOrWhiteSpace(text)) return MarkupText.Empty;
 
 		var reference = WikiCommandHelper.ReferenceForWikiLink(wikiLink);
 		// No usable target: fall back to the base renderer's styled prose rather than emitting a
@@ -42,8 +43,6 @@ public sealed class WikiCommandRenderer(int maxWidth = 78, IMUSHCodeParser? mush
 		// command link — OSC 8 can only navigate — so a plain telnet client's bytes are unchanged,
 		// and only Pueblo (XCH_CMD), MXP (SEND) and the web terminal (xch_cmd) gain the click.
 		var command = $"@wiki {reference}";
-		return MModule.MarkupSingle(
-			Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: command, underlined: true),
-			text);
+		return MarkupText.Wrap(Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: command, underlined: true), text);
 	}
 }

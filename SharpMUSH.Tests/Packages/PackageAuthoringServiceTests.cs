@@ -33,9 +33,9 @@ public class PackageAuthoringServiceTests
 		var core = (await Database.GetObjectNodeAsync(coreDbref)).Known().Object();
 		var global = (await Database.GetObjectNodeAsync(globalDbref)).Known().Object();
 
-		await Database.SetAttributeAsync(coreDbref, ["FN_FMT"], MModule.single("formatted output"), pm);
+		await Database.SetAttributeAsync(coreDbref, ["FN_FMT"], MarkupText.Plain("formatted output"), pm);
 		await Database.SetAttributeAsync(globalDbref, ["CMD_+AUTH"],
-			MModule.single($"$+auth:@pemit %#=[u(#{coreDbref.Number}/FN_FMT)] near #0"), pm);
+			MarkupText.Plain($"$+auth:@pemit %#=[u(#{coreDbref.Number}/FN_FMT)] near #0"), pm);
 
 		var coreObjid = core.DBRef.ToString();
 		var globalObjid = global.DBRef.ToString();
@@ -79,7 +79,7 @@ public class PackageAuthoringServiceTests
 
 		var sourceDbref = await Database.CreateThingAsync("Roundtrip Source", location, pm, location);
 		await Database.SetAttributeAsync(sourceDbref, ["FN_GREET"],
-			MModule.single($"Hello from #{sourceDbref.Number} near #0"), pm);
+			MarkupText.Plain($"Hello from #{sourceDbref.Number} near #0"), pm);
 		var sourceObjid = (await Database.GetObjectNodeAsync(sourceDbref)).Known().Object().DBRef.ToString();
 
 		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
@@ -123,7 +123,7 @@ public class PackageAuthoringServiceTests
 		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
 
 		var dbref = await Database.CreateThingAsync("Author Loner", location, pm, location);
-		await Database.SetAttributeAsync(dbref, ["FN_X"], MModule.single("points at #4242 mysteriously"), pm);
+		await Database.SetAttributeAsync(dbref, ["FN_X"], MarkupText.Plain("points at #4242 mysteriously"), pm);
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Known().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
@@ -147,9 +147,9 @@ public class PackageAuthoringServiceTests
 		// A whitespace-only value is the regression: emitted as a block scalar whose
 		// only line is blank, YamlDotNet rejected it with "extra spaces in first line"
 		// before the explicit indentation indicator was added.
-		await Database.SetAttributeAsync(dbref, ["WS_ONLY"], MModule.single("   "), pm);
-		await Database.SetAttributeAsync(dbref, ["LEADING"], MModule.single("  indented body"), pm);
-		await Database.SetAttributeAsync(dbref, ["NORMAL"], MModule.single("plain value"), pm);
+		await Database.SetAttributeAsync(dbref, ["WS_ONLY"], MarkupText.Plain("   "), pm);
+		await Database.SetAttributeAsync(dbref, ["LEADING"], MarkupText.Plain("  indented body"), pm);
+		await Database.SetAttributeAsync(dbref, ["NORMAL"], MarkupText.Plain("plain value"), pm);
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Known().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(

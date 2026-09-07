@@ -85,7 +85,7 @@ public partial class Functions
 	{
 		if (args.Count == 1)
 		{
-			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText()!);
+			return PlayerMessageResult.Success(executor, args["0"].Message!.ToPlainText());
 		}
 
 		if (!await executor.IsWizard())
@@ -107,7 +107,7 @@ public partial class Functions
 			return PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		return PlayerMessageResult.Success(locateResult.AsPlayer, args["1"].Message!.ToPlainText()!);
+		return PlayerMessageResult.Success(locateResult.AsPlayer, args["1"].Message!.ToPlainText());
 	}
 
 	/// <summary>
@@ -131,7 +131,7 @@ public partial class Functions
 			return new CallState(count.ToString());
 		}
 
-		var arg0 = args["0"].Message!.ToPlainText()!;
+		var arg0 = args["0"].Message!.ToPlainText();
 
 		var isMsgNumber = IsMessageNumber(arg0);
 
@@ -169,10 +169,10 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.NoSuchMail);
 			}
 
-			return new CallState(mail.Content.ToString());
+			return new CallState(mail.Content);
 		}
 
-		var arg1 = args["1"].Message!.ToPlainText()!;
+		var arg1 = args["1"].Message!.ToPlainText();
 
 		if (!await CanViewOtherPlayerMail(executor))
 		{
@@ -195,7 +195,7 @@ public partial class Functions
 					return new CallState(ErrorMessages.Returns.NoSuchMail);
 				}
 
-				return new CallState(mail.Content.ToString());
+				return new CallState(mail.Content);
 			});
 	}
 
@@ -255,7 +255,7 @@ public partial class Functions
 			messageListSpec = args["1"].Message?.ToPlainText();
 		}
 
-		var msgListArg = messageListSpec != null ? MModule.single(messageListSpec) : null;
+		var msgListArg = messageListSpec != null ? MarkupText.Plain(messageListSpec) : null;
 		var filteredList = await MessageListHelper.Handle(
 			parser, ObjectDataService, Mediator, NotifyService, msgListArg, targetPlayer);
 
@@ -338,7 +338,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var playerArg = args["0"].Message!.ToPlainText()!;
+		var playerArg = args["0"].Message!.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -377,7 +377,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var playerArg = args["0"].Message!.ToPlainText()!;
+		var playerArg = args["0"].Message!.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -421,7 +421,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var playerArg = args["0"].Message!.ToPlainText()!;
+		var playerArg = args["0"].Message!.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -518,7 +518,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		return new CallState(mail.Subject.ToString());
+		return new CallState(mail.Subject);
 	}
 	[SharpFunction(Name = "mailtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailtime(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -14,7 +14,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("condall(1 0 1,YES,NO)", "NO")]
 	public async Task Condall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -23,7 +23,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("ncond(0,a,1,b,c)", "b")]
 	public async Task Ncond(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -31,7 +31,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("ncondall(1 1,a,0 1,b,c)", "a")]
 	public async Task Ncondall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -43,7 +43,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("firstof(1,2,3)", "1")]
 	public async Task Firstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("allof(1,2,3,@)", "1@2@3")]
 	public async Task Allof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -72,7 +72,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("strfirstof(bar,baz,foo)", "bar")]
 	public async Task Strfirstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -88,7 +88,7 @@ public class ConditionalFunctionUnitTests
 	[Arguments("strallof(foo,bar,,@)", "foo@bar")]
 	public async Task Strallof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

@@ -44,7 +44,7 @@ public class MovementCommandTests
 	{
 		var player = await CreateTestPlayerAsync("GotoNonExit");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("goto #0"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("goto #0"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
@@ -61,14 +61,14 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("NoDestWalker");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("NoDestRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("NoDestExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
@@ -84,16 +84,16 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("NoDestFailAttr");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("FailAttrRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("FailAttrExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&FAILURE {exitName}=The door is bricked up."));
+			MarkupText.Plain($"&FAILURE {exitName}=The door is bricked up."));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		await NotifyService
 			.Received(1)
@@ -112,20 +112,20 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("UnlinkWalker");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("UnlinkSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("UnlinkDest");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExitWalk");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}={destDbRef}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@unlink {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}={destDbRef}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
@@ -140,19 +140,19 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("LinkedWalker");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("LinkedSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("LinkedDest");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("LinkedExitWalk");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}={destDbRef}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}={destDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -165,17 +165,17 @@ public class MovementCommandTests
 		var boxName = TestIsolationHelpers.GenerateUniqueName("TelBox");
 		var itemName = TestIsolationHelpers.GenerateUniqueName("TelItem");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {itemName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"get {boxName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"get {itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"get {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"get {itemName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"give {boxName}={itemName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"give {boxName}={itemName}"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@teleport {boxName}={itemName}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {boxName}={itemName}"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -190,12 +190,12 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("TeleportSelf");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelSelfRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		await Assert.That(roomDbRef).StartsWith("#");
 
-		var telResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel {roomDbRef}"));
+		var telResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel {roomDbRef}"));
 
 		await Assert.That(telResult).IsNotNull();
 	}
@@ -210,16 +210,16 @@ public class MovementCommandTests
 		var objName = TestIsolationHelpers.GenerateUniqueName("TelObj");
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelObjDest");
 
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
 		var objDbRef = createResult.Message!.ToPlainText()!.Trim();
 
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		await Assert.That(objDbRef).StartsWith("#");
 		await Assert.That(roomDbRef).StartsWith("#");
 
-		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {objDbRef}={roomDbRef}"));
+		var telResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {objDbRef}={roomDbRef}"));
 
 		await Assert.That(telResult).IsNotNull();
 	}
@@ -234,11 +234,11 @@ public class MovementCommandTests
 		var objName = TestIsolationHelpers.GenerateUniqueName("TelByNObj");
 		var roomName = TestIsolationHelpers.GenerateUniqueName("TelByNRoom");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 
 		// Teleport using names (this exercises the name-based locate path)
-		var telResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {objName}={roomName}"));
+		var telResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {objName}={roomName}"));
 
 		await Assert.That(telResult).IsNotNull();
 	}
@@ -251,7 +251,7 @@ public class MovementCommandTests
 	public async ValueTask TeleportToInvalidDestination()
 	{
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@tel #99999"));
+			MarkupText.Plain("@tel #99999"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -262,11 +262,11 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("HomeCmd");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("HomeRoom");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link me={roomName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link me={roomName}"));
 
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("home"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("home"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -276,7 +276,7 @@ public class MovementCommandTests
 	{
 		var player = await CreateTestPlayerAsync("HomeAlready");
 
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("home"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("home"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -287,7 +287,7 @@ public class MovementCommandTests
 	public async ValueTask EnterCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("enter #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("enter #1"));
 
 		await NotifyService
 			.Received(1)
@@ -300,14 +300,14 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("LeaveCmd");
 
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LeaveBox");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
 		var boxDbRef = createResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={boxDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={boxDbRef}"));
 
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("leave"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("leave"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -317,7 +317,7 @@ public class MovementCommandTests
 	{
 		var player = await CreateTestPlayerAsync("LeaveRoom");
 
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("leave"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("leave"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -333,22 +333,22 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("VarDestPlain");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarDestSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarDestTarget");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarDestExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&DESTINATION {exitName}={destDbRef}"));
+			MarkupText.Plain($"&DESTINATION {exitName}={destDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -365,22 +365,22 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("VarDestEval");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarEvalSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarEvalTarget");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarEvalExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&DESTINATION {exitName}=[first({destDbRef} {sourceDbRef})]"));
+			MarkupText.Plain($"&DESTINATION {exitName}=[first({destDbRef} {sourceDbRef})]"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -397,22 +397,22 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("VarDestExitTo");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarExitToSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("VarExitToTarget");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarExitToExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&EXITTO {exitName}={destDbRef}"));
+			MarkupText.Plain($"&EXITTO {exitName}={destDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -429,27 +429,27 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("VarDestArg");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarArgSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var northName = TestIsolationHelpers.GenerateUniqueName("VarArgNorth");
-		var northResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {northName}"));
+		var northResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {northName}"));
 		var northDbRef = northResult.Message!.ToPlainText()!.Trim();
 
 		var southName = TestIsolationHelpers.GenerateUniqueName("VarArgSouth");
-		var southResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {southName}"));
+		var southResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {southName}"));
 		var southDbRef = southResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarArgExit");
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {exitName};{exitName}North;{exitName}South"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+			MarkupText.Plain($"@open {exitName};{exitName}North;{exitName}South"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&DESTINATION {exitName}=[switch(%0,*South,{southDbRef},{northDbRef})]"));
+			MarkupText.Plain($"&DESTINATION {exitName}=[switch(%0,*South,{southDbRef},{northDbRef})]"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"{exitName}South"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"{exitName}South"));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -466,20 +466,20 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("HomeLinkWalker");
 
 		var homeName = TestIsolationHelpers.GenerateUniqueName("HomeLinkHome");
-		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {homeName}"));
+		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {homeName}"));
 		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link me={homeDbRef}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link me={homeDbRef}"));
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("HomeLinkSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("HomeLinkExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=home"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=home"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -495,15 +495,15 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("VarDestMissing");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("VarMissingSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("VarMissingExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single(exitName));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat),
@@ -520,22 +520,22 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("TelVarDest");
 
 		var sourceName = TestIsolationHelpers.GenerateUniqueName("TelVarSource");
-		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {sourceName}"));
+		var sourceResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {sourceName}"));
 		var sourceDbRef = sourceResult.Message!.ToPlainText()!.Trim();
 
 		var destName = TestIsolationHelpers.GenerateUniqueName("TelVarTarget");
-		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {destName}"));
+		var destResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = destResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("TelVarExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link {exitName}=variable"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"&DESTINATION {exitName}={destDbRef}"));
+			MarkupText.Plain($"&DESTINATION {exitName}={destDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@tel {exitName}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel {exitName}"));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
@@ -552,16 +552,16 @@ public class MovementCommandTests
 		var player = await CreateTestPlayerAsync("TelHomeTarget");
 
 		var homeName = TestIsolationHelpers.GenerateUniqueName("TelHomeTargetHome");
-		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {homeName}"));
+		var homeResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {homeName}"));
 		var homeDbRef = homeResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@link me={homeDbRef}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@link me={homeDbRef}"));
 
 		// Opened where God stands, so God can see it to teleport the player through it.
 		var exitName = TestIsolationHelpers.GenerateUniqueName("TelHomeExit");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@link {exitName}=home"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {exitName}=home"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={exitName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={exitName}"));
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 

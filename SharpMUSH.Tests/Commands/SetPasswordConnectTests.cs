@@ -71,7 +71,7 @@ public class SetPasswordConnectTests
 
 		// A WRONG password must NOT bind (guards against a vacuous pass).
 		var wrongHandle = await RegisterConnectionAsync(6101L);
-		var wrongResult = await Parser.CommandParse(wrongHandle, ConnectionService, MModule.single($"connect {name} definitely-not-it"));
+		var wrongResult = await Parser.CommandParse(wrongHandle, ConnectionService, MarkupText.Plain($"connect {name} definitely-not-it"));
 		await Assert.That(PlainMessage(wrongResult)).IsEqualTo(ErrorMessages.Returns.InvalidPassword);
 		await Assert.That(ConnectionService.Get(wrongHandle)?.Ref).IsNull();
 
@@ -79,7 +79,7 @@ public class SetPasswordConnectTests
 		// Hash(preHashed), PasswordIsValid hashes the plaintext once, they never match, and the
 		// handle stays unbound (INVALID PASSWORD).
 		var rightHandle = await RegisterConnectionAsync(6102L);
-		var rightResult = await Parser.CommandParse(rightHandle, ConnectionService, MModule.single($"connect {name} {plaintext}"));
+		var rightResult = await Parser.CommandParse(rightHandle, ConnectionService, MarkupText.Plain($"connect {name} {plaintext}"));
 		await Assert.That(PlainMessage(rightResult).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(rightHandle)?.Ref).IsNotNull();
 	}

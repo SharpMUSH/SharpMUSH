@@ -22,10 +22,10 @@ public class NewLockCommandTests
 	[Test]
 	public async ValueTask ELOCK_CommandExecutes()
 	{
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ELockTestObject"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ELockTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@elock #{newDb.Number}=#TRUE"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@elock #{newDb.Number}=#TRUE"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -33,10 +33,10 @@ public class NewLockCommandTests
 	[Test]
 	public async ValueTask EUNLOCK_CommandExecutes()
 	{
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create EUnlockTestObject"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EUnlockTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@eunlock #{newDb.Number}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@eunlock #{newDb.Number}"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -44,10 +44,10 @@ public class NewLockCommandTests
 	[Test]
 	public async ValueTask ULOCK_CommandExecutes()
 	{
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create ULockTestObject"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ULockTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@ulock #{newDb.Number}=#TRUE"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@ulock #{newDb.Number}=#TRUE"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -55,10 +55,10 @@ public class NewLockCommandTests
 	[Test]
 	public async ValueTask UUNLOCK_CommandExecutes()
 	{
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create UUnlockTestObject"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create UUnlockTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@uunlock #{newDb.Number}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@uunlock #{newDb.Number}"));
 
 		await Assert.That(result).IsNotNull();
 	}

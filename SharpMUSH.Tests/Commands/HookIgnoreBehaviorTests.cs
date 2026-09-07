@@ -39,11 +39,11 @@ public class HookIgnoreBehaviorTests
 	/// <summary>Sets up an @EMIT override that writes <c>RAN=yes</c>, plus an @EMIT /ignore reading GATE.</summary>
 	private async Task ArmAsync(DBRef obj, string gateValue)
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OVR {obj}=$(?i)^@emit (.*)$:&RAN {obj}=yes"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/OVR=regexp"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override @EMIT={obj},OVR"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&GATE {obj}={gateValue}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/ignore @EMIT={obj},GATE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OVR {obj}=$(?i)^@emit (.*)$:&RAN {obj}=yes"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override @EMIT={obj},OVR"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&GATE {obj}={gateValue}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/ignore @EMIT={obj},GATE"));
 	}
 
 	[Test]
@@ -54,7 +54,7 @@ public class HookIgnoreBehaviorTests
 		{
 			await ArmAsync(obj, "1");
 
-			await Parser.CommandParse(1, ConnectionService, MModule.single("@emit hello"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
 
 			await Assert.That(await ReadAttributeAsync(obj, "RAN")).IsEqualTo("yes")
 				.Because("a TRUE /ignore lets @emit proceed — execution reaches the downstream override");
@@ -74,7 +74,7 @@ public class HookIgnoreBehaviorTests
 		{
 			await ArmAsync(obj, "0");
 
-			await Parser.CommandParse(1, ConnectionService, MModule.single("@emit hello"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
 
 			await Assert.That(await ReadAttributeAsync(obj, "RAN")).IsEqualTo("")
 				.Because("a FALSE /ignore SKIPS @emit entirely — execution never reaches the override or built-in");

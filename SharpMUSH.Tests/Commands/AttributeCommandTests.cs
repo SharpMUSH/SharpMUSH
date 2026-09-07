@@ -11,7 +11,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -35,7 +34,7 @@ public class AttributeCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objName = obj.Known.Object().Name;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received(1)
@@ -57,7 +56,7 @@ public class AttributeCommandTests
 		var objName = obj.Known.Object().Name;
 
 		// With empty_attrs=yes (test config), &attr obj= sets to empty (not clear)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
 		await NotifyService
 			.Received(1)
@@ -73,7 +72,7 @@ public class AttributeCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objName = obj.Known.Object().Name;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received(1)
@@ -96,7 +95,7 @@ public class AttributeCommandTests
 		var attrName = $"CMD_BRACE_{uniqueId}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{attrName} {objDbRef}=$+test_{uniqueId} *:@switch hasflag(%#,wizard)=1,{{@pemit %#=yes}},{{@pemit %#=no}}"));
+			MarkupText.Plain($"&{attrName} {objDbRef}=$+test_{uniqueId} *:@switch hasflag(%#,wizard)=1,{{@pemit %#=yes}},{{@pemit %#=no}}"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
@@ -119,13 +118,13 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrDirect");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["SOURCE_DIRECT_CPATTR"], A.single("test_string_CPATTR_direct"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["SOURCE_DIRECT_CPATTR"], MarkupText.Plain("test_string_CPATTR_direct"), owner);
 
 		var sourceAttr = Database.GetAttributeAsync(objDbRef, ["SOURCE_DIRECT_CPATTR"]);
 		var sourceList = await sourceAttr!.ToListAsync();
 		await Assert.That(sourceList).Count().IsEqualTo(1);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_DIRECT_CPATTR={objDbRef}/DEST_DIRECT_CPATTR"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cpattr {objDbRef}/SOURCE_DIRECT_CPATTR={objDbRef}/DEST_DIRECT_CPATTR"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
@@ -145,9 +144,9 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrBasic");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&SOURCE_CPATTR_BASIC {objDbRef}=test_string_CPATTR_basic_unique"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SOURCE_CPATTR_BASIC {objDbRef}=test_string_CPATTR_basic_unique"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_BASIC={objDbRef}/DEST_CPATTR_BASIC"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cpattr {objDbRef}/SOURCE_CPATTR_BASIC={objDbRef}/DEST_CPATTR_BASIC"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
@@ -156,7 +155,7 @@ public class AttributeCommandTests
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_basic_unique");
+		await Assert.That(destAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_basic_unique");
 
 		var sourceAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "SOURCE_CPATTR_BASIC",
 			IAttributeService.AttributeMode.Read, false);
@@ -169,9 +168,9 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrMulti");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&SOURCE_CPATTR_MULTI_UNIQUE {objDbRef}=test_string_CPATTR_multi_value"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SOURCE_CPATTR_MULTI_UNIQUE {objDbRef}=test_string_CPATTR_multi_value"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/SOURCE_CPATTR_MULTI_UNIQUE={objDbRef}/DEST1_CPATTR_MULTI,{objDbRef}/DEST2_CPATTR_MULTI"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cpattr {objDbRef}/SOURCE_CPATTR_MULTI_UNIQUE={objDbRef}/DEST1_CPATTR_MULTI,{objDbRef}/DEST2_CPATTR_MULTI"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
@@ -180,12 +179,12 @@ public class AttributeCommandTests
 		var dest1Attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "DEST1_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest1Attr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(dest1Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi_value");
+		await Assert.That(dest1Attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
 
 		var dest2Attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "DEST2_CPATTR_MULTI",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(dest2Attr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(dest2Attr.AsAttribute.Last().Value)).IsEqualTo("test_string_CPATTR_multi_value");
+		await Assert.That(dest2Attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
 	}
 
 	[Test]
@@ -194,9 +193,9 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrBasic");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&MOVESOURCE_UNIQUE {objDbRef}=test_string_MVATTR_basic_moved"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MOVESOURCE_UNIQUE {objDbRef}=test_string_MVATTR_basic_moved"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/MOVESOURCE_UNIQUE={objDbRef}/MOVEDEST_UNIQUE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@mvattr {objDbRef}/MOVESOURCE_UNIQUE={objDbRef}/MOVEDEST_UNIQUE"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, executor)).IsTrue();
 
@@ -205,7 +204,7 @@ public class AttributeCommandTests
 		var destAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "MOVEDEST_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(MModule.plainText(destAttr.AsAttribute.Last().Value)).IsEqualTo("test_string_MVATTR_basic_moved");
+		await Assert.That(destAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_MVATTR_basic_moved");
 
 		var sourceAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "MOVESOURCE_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
@@ -218,15 +217,15 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WipeAttrs");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WIPE1_UNIQUE {objDbRef}=test_string_WIPE_val1_unique"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WIPE2_UNIQUE {objDbRef}=test_string_WIPE_val2_unique"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WIPE1_UNIQUE {objDbRef}=test_string_WIPE_val1_unique"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WIPE2_UNIQUE {objDbRef}=test_string_WIPE_val2_unique"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr1Before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1Before.IsAttribute).IsTrue();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wipe {objDbRef}/WIPE*_UNIQUE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wipe {objDbRef}/WIPE*_UNIQUE"));
 
 		// Task 6 fix round 3: @wipe's reporting now always ends with PennMUSH's own tally
 		// (do_wipe, set.c:1568-1577) instead of the old unconditional WipedAttributes/
@@ -249,9 +248,9 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLock");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LOCKTEST_UNIQUE_ATTR {objDbRef}=test_string_ATRLOCK_value_unique"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LOCKTEST_UNIQUE_ATTR {objDbRef}=test_string_ATRLOCK_value_unique"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=on"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=on"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked), executor, executor)).IsTrue();
 
@@ -264,7 +263,7 @@ public class AttributeCommandTests
 		var isLocked = attr.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(isLocked).IsTrue();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor, executor)).IsTrue();
 
@@ -280,9 +279,9 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrLockQuery");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&QUERYLOCK_UNIQUE_ATTR {objDbRef}=test_value_unique_query"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&QUERYLOCK_UNIQUE_ATTR {objDbRef}=test_value_unique_query"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrlock {objDbRef}/QUERYLOCK_UNIQUE_ATTR"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@atrlock {objDbRef}/QUERYLOCK_UNIQUE_ATTR"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeIsUnlocked), executor, executor)).IsTrue();
 	}
@@ -293,7 +292,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AtrChownInvalid");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@atrchown {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@atrchown {objDbRef}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor, executor)).IsTrue();
 	}
@@ -304,7 +303,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrInvalid");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@cpattr {objDbRef}/NONEXISTENT_ATTR_TEST={objDbRef}/DEST"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cpattr {objDbRef}/NONEXISTENT_ATTR_TEST={objDbRef}/DEST"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, executor)).IsTrue();
 	}
@@ -315,7 +314,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MvAttrInvalid");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@mvattr {objDbRef}/NONEXISTENT_MOVE_TEST={objDbRef}/DEST"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@mvattr {objDbRef}/NONEXISTENT_MOVE_TEST={objDbRef}/DEST"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, executor)).IsTrue();
 	}
@@ -325,9 +324,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditSimple");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_TEST"], A.single("Hello World"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_TEST"], MarkupText.Plain("Hello World"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_TEST=World,Universe"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_TEST=World,Universe"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -339,10 +338,10 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAppend");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_APPEND_TEST"], A.single("Start"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_APPEND_TEST"], MarkupText.Plain("Start"), owner);
 
 		// Edit it - append " End" (use braces to preserve leading space)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_APPEND_TEST=$,{{ End}}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_APPEND_TEST=$,{{ End}}"));
 
 		// Note: RSArgs parser trims whitespace from arguments, so " End" becomes "End"
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_APPEND_TEST"]);
@@ -355,9 +354,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditPrepend");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"], A.single("End"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"], MarkupText.Plain("End"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_PREPEND_TEST=^,Start "));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_PREPEND_TEST=^,Start "));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -369,9 +368,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditFirst");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"], A.single("foo bar foo baz"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"], MarkupText.Plain("foo bar foo baz"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/first {objDbRef}/EDIT_FIRST_TEST=foo,qux"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/first {objDbRef}/EDIT_FIRST_TEST=foo,qux"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -383,9 +382,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAll");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"], A.single("foo bar foo baz"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"], MarkupText.Plain("foo bar foo baz"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/EDIT_ALL_TEST=foo,qux"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_ALL_TEST=foo,qux"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -397,9 +396,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditCheck");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"], A.single("Original"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"], MarkupText.Plain("Original"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/check {objDbRef}/EDIT_CHECK_TEST=Original,Changed"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/check {objDbRef}/EDIT_CHECK_TEST=Original,Changed"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -411,9 +410,9 @@ public class AttributeCommandTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegex");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
-		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"], A.single("foo123bar"), owner);
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"], MarkupText.Plain("foo123bar"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\\\d+,XXX"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\\\d+,XXX"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"]);
 		var attrList = await attr!.ToListAsync();
@@ -426,7 +425,7 @@ public class AttributeCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditNoMatch");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@edit {objDbRef}/NONEXISTENT_EDIT_TEST=foo,bar"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/NONEXISTENT_EDIT_TEST=foo,bar"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
@@ -441,7 +440,7 @@ public class AttributeCommandTests
 
 		// Missing closing ')' — lenient (ANTLR-recovery) command parsing should store the
 		// best-effort value rather than silently dropping or rejecting the input.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNCLOSED_PAREN_ATTR {objDbRef}=ansi(hr,fun"));
 
 		await NotifyService
 			.Received(1)
@@ -468,7 +467,7 @@ public class AttributeCommandTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
 		// The ~ prefix opts into strict parsing — an unclosed ')' must surface as #-1 PARSER FAILURE.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
 
 		await NotifyService
 			.Received(1)

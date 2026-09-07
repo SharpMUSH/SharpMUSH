@@ -19,7 +19,7 @@ public class HookCommandTests
 	{
 		// Unique command name avoids test interference.
 		var uniqueCmd = $"hooktest_list_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/list {uniqueCmd}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/list {uniqueCmd}"));
 	}
 
 	[Test]
@@ -28,7 +28,7 @@ public class HookCommandTests
 		// @hook requires the attribute to exist on the object; this only verifies the command
 		// executes without exception, since test_attr doesn't exist on #1.
 		var uniqueCmd = $"hooktest_set_{Guid.NewGuid():N}";
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before {uniqueCmd}=#1,test_attr"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before {uniqueCmd}=#1,test_attr"));
 	}
 
 	[Test]
@@ -43,8 +43,8 @@ public class HookCommandTests
 		var attr = $"HOOKATTR{token}".ToUpperInvariant();
 
 		// The attribute must exist on the target object for @hook to accept it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&{attr} #1=think captured"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/override {cmd}=#1,{attr}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attr} #1=think captured"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override {cmd}=#1,{attr}"));
 
 		var hook = await HookService.GetHookAsync(cmd, "OVERRIDE");
 		await Assert.That(hook.IsSome()).IsTrue();
@@ -55,14 +55,14 @@ public class HookCommandTests
 	public async ValueTask HookClear_ExistingHook_RemovesHook()
 	{
 		var uniqueCmd = $"hooktest_clear_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before {uniqueCmd}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before {uniqueCmd}"));
 	}
 
 	[Test]
 	public async ValueTask HookSet_WithInlineModifier_CreatesInlineHook()
 	{
 		var uniqueCmd = $"hooktest_inline_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before/inline {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before/inline {uniqueCmd}=#1"));
 	}
 
 	[Test]
@@ -70,23 +70,23 @@ public class HookCommandTests
 	{
 		// inplace = inline + localize + clearregs + nobreak.
 		var uniqueCmd = $"hooktest_inplace_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before/inplace {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before/inplace {uniqueCmd}=#1"));
 	}
 
 	[Test]
 	public async ValueTask HookSet_MultipleHookTypes_AllPersist()
 	{
 		var uniqueCmd = $"hooktest_multi_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before {uniqueCmd}=#1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/after {uniqueCmd}=#1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/ignore {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/after {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/ignore {uniqueCmd}=#1"));
 	}
 
 	[Test]
 	public async ValueTask HookSet_DefaultAttribute_UsesCorrectDefaultName()
 	{
 		var uniqueCmd = $"hooktest_default_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/before {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/before {uniqueCmd}=#1"));
 
 		// With no attribute specified, the command uses cmd.before as the default attribute name.
 	}
@@ -95,7 +95,7 @@ public class HookCommandTests
 	public async ValueTask HookSet_ExtendType_CreatesExtendHook()
 	{
 		var uniqueCmd = $"hooktest_extend_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/extend {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/extend {uniqueCmd}=#1"));
 	}
 
 	[Test]
@@ -103,6 +103,6 @@ public class HookCommandTests
 	{
 		// igswitch is an alias for extend.
 		var uniqueCmd = $"hooktest_igswitch_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@hook/igswitch {uniqueCmd}=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/igswitch {uniqueCmd}=#1"));
 	}
 }

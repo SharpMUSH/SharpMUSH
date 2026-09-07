@@ -23,7 +23,7 @@ public class NetworkCommandTests
 	public async ValueTask HttpCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@http https://example.com"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@http https://example.com"));
 
 		await NotifyService
 			.Received(1)
@@ -36,7 +36,7 @@ public class NetworkCommandTests
 	public async ValueTask SqlCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sql SELECT * FROM test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@sql SELECT * FROM test"));
 
 		await NotifyService
 			.Received(1)
@@ -49,7 +49,7 @@ public class NetworkCommandTests
 	public async ValueTask MapsqlCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mapsql SELECT * FROM test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@mapsql SELECT * FROM test"));
 
 		await NotifyService
 			.Received(1)
@@ -61,8 +61,8 @@ public class NetworkCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "SitelockCmd");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@sitelock/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@sitelock/list"));
 
 		await NotifyService
 			.Received(1)
@@ -76,7 +76,7 @@ public class NetworkCommandTests
 	public async ValueTask SocksetCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@sockset #1=option"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@sockset #1=option"));
 
 		await NotifyService
 			.Received(1)
@@ -89,7 +89,7 @@ public class NetworkCommandTests
 	public async ValueTask SlaveCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@slave"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@slave"));
 
 		await NotifyService
 			.Received(1)

@@ -236,7 +236,7 @@ public partial class ArangoDatabase
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
 		{
-			Value = MModule.deserialize(x.Value)
+			Value = MarkupTextSerializer.Deserialize(x.Value)
 		};
 
 	private IAsyncEnumerable<LazySharpAttribute> GetTopLevelLazyAttributesAsync(string id,
@@ -273,7 +273,7 @@ public partial class ArangoDatabase
 					new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 					new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 					Value: new AsyncLazy<MString>(async ct =>
-						MModule.deserialize(await GetAttributeValue(x.Key, ct)))));
+						MarkupTextSerializer.Deserialize(await GetAttributeValue(x.Key, ct)))));
 	}
 
 	public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributesAsync(DBRef dbref,
@@ -470,7 +470,7 @@ public partial class ArangoDatabase
 			new AsyncLazy<SharpPlayer?>(async ct => await GetObjectOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 			new AsyncLazy<MString>(async ct =>
-				MModule.deserialize(await GetAttributeValue(x.Key, ct))));
+				MarkupTextSerializer.Deserialize(await GetAttributeValue(x.Key, ct))));
 
 	private async ValueTask<string> GetAttributeValue(string key, CancellationToken ct = default)
 	{
@@ -672,7 +672,7 @@ public partial class ArangoDatabase
 				transactionHandle, DatabaseConstants.Attributes,
 				new SharpAttributeCreateRequest(nextAttr.value.ToUpper(),
 					nextAttr.i == remaining.Length - 1
-						? MModule.serialize(value)
+						? MarkupTextSerializer.Serialize(value)
 						: string.Empty,
 					longName),
 				cancellationToken: ct, returnNew: true);
@@ -717,7 +717,7 @@ public partial class ArangoDatabase
 		if (remaining.Length == 0)
 		{
 			await arangoDb.Document.UpdateAsync(transactionHandle, DatabaseConstants.Attributes,
-				new { Key = lastId.Split('/')[1], Value = MModule.serialize(value) },
+				new { Key = lastId.Split('/')[1], Value = MarkupTextSerializer.Serialize(value) },
 				mergeObjects: true, cancellationToken: ct);
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
@@ -863,7 +863,7 @@ public partial class ArangoDatabase
 		if (children.Any())
 		{
 			await arangoDb.Document.UpdateAsync(handle, DatabaseConstants.Attributes,
-				new { Key = targetAttr.Key, Value = MModule.serialize(MModule.empty()) },
+				new { Key = targetAttr.Key, Value = MarkupTextSerializer.Serialize(MarkupText.Empty) },
 				mergeObjects: true, cancellationToken: ct);
 		}
 		else
@@ -1077,7 +1077,7 @@ public partial class ArangoDatabase
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)))
 		{
-			Value = MModule.deserialize(x.Value)
+			Value = MarkupTextSerializer.Deserialize(x.Value)
 		};
 	}
 
@@ -1286,7 +1286,7 @@ public partial class ArangoDatabase
 			new AsyncLazy<SharpPlayer?>(async ct => await GetAttributeOwnerAsync(x.Id, ct)),
 			new AsyncLazy<SharpAttributeEntry?>(async ct => await GetRelatedAttributeEntry(x.Id, ct)),
 			new AsyncLazy<MString>(ct =>
-				Task.FromResult(MModule.deserialize(x.Value))));
+				Task.FromResult(MarkupTextSerializer.Deserialize(x.Value))));
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

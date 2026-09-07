@@ -33,12 +33,12 @@ public class SemaphoreCommandTests
 		var testMessage = $"TaskExecuted_{uniqueId}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait {semObj}/{uniqueAttr}=think {testMessage}"));
+			MarkupText.Plain($"@wait {semObj}/{uniqueAttr}=think {testMessage}"));
 
 		await Task.Delay(200);
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify {semObj}/{uniqueAttr}"));
+			MarkupText.Plain($"@notify {semObj}/{uniqueAttr}"));
 
 		await Task.Delay(2000);
 
@@ -54,7 +54,7 @@ public class SemaphoreCommandTests
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@dolist/inline a b c=@pemit #1=Inline{uniqueId}"));
+			MarkupText.Plain($"@dolist/inline a b c=@pemit #1=Inline{uniqueId}"));
 
 		// @dolist/inline a b c fires 3 iterations, each @pemit emits the same unique string.
 		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
@@ -70,7 +70,7 @@ public class SemaphoreCommandTests
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
+			MarkupText.Plain($"@dolist a b c=@pemit #1=Queued{uniqueId}"));
 
 		// @dolist (without /inline) queues commands; they must NOT execute synchronously.
 		await NotifyService
@@ -91,7 +91,7 @@ public class SemaphoreCommandTests
 		var uniqueAttr = $"SEM_{uniqueId}";
 
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
+			MarkupText.Plain($"@notify/setq {semObj}/{uniqueAttr}=0,TestValue"));
 
 		// The command should not generate a parsing error about pairs.
 		// It might say "no queue entry" but must NOT say the pairs-error message.
@@ -112,12 +112,12 @@ public class SemaphoreCommandTests
 		var testValue = $"TestValue_{uniqueId.Substring(0, 8)}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait {semObj}/{uniqueAttr}=think QRegValue:%q0"));
+			MarkupText.Plain($"@wait {semObj}/{uniqueAttr}=think QRegValue:%q0"));
 
 		await Task.Delay(200);
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
+			MarkupText.Plain($"@notify/setq {semObj}/{uniqueAttr}=0,{testValue}"));
 
 		await Task.Delay(2000);
 
@@ -135,7 +135,7 @@ public class SemaphoreCommandTests
 
 		// drain (with nothing queued) - should not throw exception
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@drain {semObj}/{uniqueAttr}"));
+			MarkupText.Plain($"@drain {semObj}/{uniqueAttr}"));
 
 		// No assertion - just verify no exceptions
 	}
@@ -146,7 +146,7 @@ public class SemaphoreCommandTests
 		var uniqueId = Guid.NewGuid().ToString("N");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait 1=@pemit #1=Wait{uniqueId}"));
+			MarkupText.Plain($"@wait 1=@pemit #1=Wait{uniqueId}"));
 
 		// No assertion - just verify no exceptions and command parses.
 		// We don't wait for execution as this tests command parsing, not scheduler execution.
@@ -165,7 +165,7 @@ public class SemaphoreCommandTests
 		var attrB = $"WAITMULTI_B_{uniqueId}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
+			MarkupText.Plain($"@wait 1={{&{attrA} {testObj}=valueA; &{attrB} {testObj}=valueB}}"));
 
 		await Task.Delay(3000);
 
@@ -251,7 +251,7 @@ public class SemaphoreCommandTests
 
 		// Unix timestamp "1" is in the far past, so Quartz fires the job immediately.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
+			MarkupText.Plain($"@wait 1={{&{uniqueAttr} {testObj}=[add(1,1)]}}"));
 
 		await Task.Delay(2000);
 
@@ -280,11 +280,11 @@ public class SemaphoreCommandTests
 
 		var cmdPattern = $"$+waitstore_{uniqueId.ToLower()} *:@create %0; @wait 1={{&{uniqueAttr} {storeObj}=[num(%0)]}}";
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
+			MarkupText.Plain($"&{cmdAttr} {storeObj}={cmdPattern}"));
 
 		var targetName = $"WaitTgt_{uniqueId}";
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"+waitstore_{uniqueId.ToLower()} {targetName}"));
+			MarkupText.Plain($"+waitstore_{uniqueId.ToLower()} {targetName}"));
 
 		await Task.Delay(3000);
 
@@ -316,11 +316,11 @@ public class SemaphoreCommandTests
 
 		var cmdPattern = $"$+bbsflow_{uniqueId.ToLower()} *:@switch hasflag(%#,wizard)=1,{{@create %0; @wait 1={{@switch [setr(0,num(%0))]=#-1,{{@pemit %#=Bad name}},{{&{grpAttr} {storeObj}=%q0}}}}}}";
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{cmdAttr} {storeObj}={cmdPattern}"));
+			MarkupText.Plain($"&{cmdAttr} {storeObj}={cmdPattern}"));
 
 		var targetName = $"BBSTgt_{uniqueId}";
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
+			MarkupText.Plain($"+bbsflow_{uniqueId.ToLower()} {targetName}"));
 
 		await Task.Delay(3000);
 

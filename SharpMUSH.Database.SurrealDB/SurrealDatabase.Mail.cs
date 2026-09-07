@@ -148,8 +148,8 @@ public partial class SurrealDatabase
 			["forwarded"] = mail.Forwarded,
 			["cleared"] = mail.Cleared,
 			["folder"] = mail.Folder,
-			["content"] = MModule.serialize(mail.Content),
-			["subject"] = MModule.serialize(mail.Subject),
+			["content"] = MarkupTextSerializer.Serialize(mail.Content),
+			["subject"] = MarkupTextSerializer.Serialize(mail.Subject),
 			["fromKey"] = fromKey,
 			["toKey"] = toKey
 		};
@@ -255,8 +255,8 @@ public partial class SurrealDatabase
 			Forwarded = record.forwarded,
 			Cleared = record.cleared,
 			Folder = record.folder,
-			Content = MModule.deserialize(record.content),
-			Subject = MModule.deserialize(record.subject),
+			Content = MarkupTextSerializer.Deserialize(record.content),
+			Subject = MarkupTextSerializer.Deserialize(record.subject),
 			From = new AsyncLazy<AnyOptionalSharpObject>(async ct => await MailFromAsync(mailKey, ct))
 		};
 	}

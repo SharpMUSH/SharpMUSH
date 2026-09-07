@@ -100,7 +100,7 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 				.CurrentValue.Database.PackageManager ?? 7;
 			var owner = (await Database.GetObjectNodeAsync(new DBRef((int)packageManager)))
 				.Known.Match(player => player, _ => null!, _ => null!, _ => null!);
-			await Database.SetAttributeAsync(probe, ["PROBE", "ORIGINAL"], MModule.single("admin-edit"), owner);
+			await Database.SetAttributeAsync(probe, ["PROBE", "ORIGINAL"], MarkupText.Plain("admin-edit"), owner);
 
 			// v1.1.0: adds a route AND changes the value the admin edited, so the upgrade produces both
 			// an Add and a ModifyModify conflict — exactly what profile-handler 1.1.0 did when it gained

@@ -30,12 +30,12 @@ public static class ScenePoseHandlers
 		var originDbref = await SceneLocate.ObjectOrSelf(parser, fields[2]);
 		var source = fields[3];
 		var tagsRaw = fields[4];
-		var content = MModule.serialize(contentMarkup);
+		var content = MarkupTextSerializer.Serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(authorDbref))
 		{
 			await notifyService.Notify(executor, "SCENE: /addpose needs an author dbref.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var tags = tagsRaw.Length == 0
@@ -49,17 +49,17 @@ public static class ScenePoseHandlers
 			{
 				await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
 				await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
-				return MModule.single(pose.Id);
+				return MarkupText.Plain(pose.Id);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			},
 			async err =>
 			{
 				await notifyService.Notify(executor, $"SCENE: {err.Value}");
-				return MModule.single($"#-1 {err.Value}");
+				return MarkupText.Plain($"#-1 {err.Value}");
 			});
 	}
 
@@ -76,7 +76,7 @@ public static class ScenePoseHandlers
 		if (string.IsNullOrEmpty(key))
 		{
 			await notifyService.Notify(executor, "SCENE: /setpose needs <poseId>/<key>=<value>.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var result = await sceneService.SetPoseMetaAsync(poseId, key!, value.ToPlainText());
@@ -95,12 +95,12 @@ public static class ScenePoseHandlers
 		var poseId = SceneCommandHelper.Plain(poseIdArg);
 		var (fields, contentMarkup) = SceneCommandHelper.SplitFieldsKeepingMarkup(rest, 2);
 		var editorDbref = await SceneLocate.PlayerOrSelf(parser, fields[0]);
-		var content = MModule.serialize(contentMarkup);
+		var content = MarkupTextSerializer.Serialize(contentMarkup);
 
 		if (string.IsNullOrEmpty(editorDbref))
 		{
 			await notifyService.Notify(executor, "SCENE: /editpose needs an editor dbref.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var result = await sceneService.EditPoseAsync(poseId, editorDbref, content);
@@ -176,12 +176,12 @@ public static class ScenePoseHandlers
 				await notifyService.Notify(executor, $"SCENE: {successMessage}");
 				if (parser is not null && eventType is not null)
 					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
-				return MModule.single(pose.Id);
+				return MarkupText.Plain(pose.Id);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 
 	private static async ValueTask<MString> PoseResultWithError(
@@ -198,16 +198,16 @@ public static class ScenePoseHandlers
 				await notifyService.Notify(executor, $"SCENE: {successMessage}");
 				if (parser is not null && eventType is not null)
 					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
-				return MModule.single(pose.Id);
+				return MarkupText.Plain(pose.Id);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			},
 			async err =>
 			{
 				await notifyService.Notify(executor, $"SCENE: {err.Value}");
-				return MModule.single($"#-1 {err.Value}");
+				return MarkupText.Plain($"#-1 {err.Value}");
 			});
 }

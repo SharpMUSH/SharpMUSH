@@ -23,8 +23,23 @@ namespace SharpMUSH.Server;
 
 public class Program
 {
+	/// <summary>
+	/// Installs the markup layers this process can render and serialise. <see cref="MarkupText"/>
+	/// resolves emitters and codecs through <see cref="MarkupRegistry.Default"/>, which throws until
+	/// something sets it, so this has to run before the first render or deserialise.
+	/// </summary>
+	private static void ConfigureMarkup()
+	{
+		if (!MarkupRegistry.IsConfigured)
+		{
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+		}
+	}
+
 	public static async Task Main(params string[] args)
 	{
+		ConfigureMarkup();
+
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
 			? DatabaseProvider.Memgraph

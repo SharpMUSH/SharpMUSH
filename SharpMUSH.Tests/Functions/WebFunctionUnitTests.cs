@@ -21,7 +21,7 @@ public class WebFunctionUnitTests
 	[Arguments(@"urlencode(100\%)", "100%25")]
 	public async Task Urlencode(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -36,7 +36,7 @@ public class WebFunctionUnitTests
 	[Arguments(@"urldecode(a\%09b)", "a?b")]
 	public async Task Urldecode(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -44,7 +44,7 @@ public class WebFunctionUnitTests
 	[Arguments("wshtml(<b>test</b>)", "")]
 	public async Task Wshtml(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -52,7 +52,7 @@ public class WebFunctionUnitTests
 	[Arguments("wsjson({\"test\":\"value\"})", "")]
 	public async Task Wsjson(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class WebFunctionUnitTests
 	[Arguments("oob(test)", "")]
 	public async Task Oob(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -68,7 +68,7 @@ public class WebFunctionUnitTests
 	[Arguments("oob(me, room.contents)", "0")]
 	public async Task OobNoConnectionReturnsZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -76,7 +76,7 @@ public class WebFunctionUnitTests
 	[Arguments("pueblo()", "0")]
 	public async Task Pueblo(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -84,7 +84,7 @@ public class WebFunctionUnitTests
 	[Arguments("ssl(%#)", "0")]
 	public async Task Ssl(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -92,7 +92,7 @@ public class WebFunctionUnitTests
 	[Arguments("terminfo(%#)", "")]
 	public async Task Terminfo(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -100,7 +100,7 @@ public class WebFunctionUnitTests
 	[Arguments("width(%#)", "78")]
 	public async Task Width(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

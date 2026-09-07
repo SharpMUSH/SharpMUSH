@@ -29,7 +29,7 @@ public class SceneLocateArgumentTests
 	private const string God = "#1";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	[Test]
 	public async Task SceneCreate_ResolvesOwner_FromMeKeyword()

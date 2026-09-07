@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -33,7 +32,7 @@ public class StagingDatabaseTests
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 
 		var liveMarker = $"LIVE_MARKER_{Guid.NewGuid():N}";
-		await db.SetAttributeAsync(new DBRef(1), ["STAGING_TEST_LIVE"], A.single(liveMarker), playerOne);
+		await db.SetAttributeAsync(new DBRef(1), ["STAGING_TEST_LIVE"], MarkupText.Plain(liveMarker), playerOne);
 
 		await using var staging = await db.CreateStagingAsync();
 
@@ -57,7 +56,7 @@ public class StagingDatabaseTests
 		await Assert.That(stagingPlayerOne.Object.Name).IsEqualTo("God");
 
 		var stagingMarker = $"STAGING_ONLY_{Guid.NewGuid():N}";
-		await staging.SetAttributeAsync(new DBRef(1), ["STAGING_ONLY_ATTR"], A.single(stagingMarker), stagingPlayerOne);
+		await staging.SetAttributeAsync(new DBRef(1), ["STAGING_ONLY_ATTR"], MarkupText.Plain(stagingMarker), stagingPlayerOne);
 
 		var stagingAttr = await staging.GetAttributeAsync(new DBRef(1), ["STAGING_ONLY_ATTR"])!.ToListAsync();
 		await Assert.That(stagingAttr.Last().Value.ToString()).IsEqualTo(stagingMarker);
@@ -84,7 +83,7 @@ public class StagingDatabaseTests
 		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 		var liveOnlyMarker = $"BEFORE_PROMOTE_{Guid.NewGuid():N}";
-		await db.SetAttributeAsync(new DBRef(1), ["BEFORE_PROMOTE"], A.single(liveOnlyMarker), playerOne);
+		await db.SetAttributeAsync(new DBRef(1), ["BEFORE_PROMOTE"], MarkupText.Plain(liveOnlyMarker), playerOne);
 
 		var prePromoteAttr = await db.GetAttributeAsync(new DBRef(1), ["BEFORE_PROMOTE"])!.ToListAsync();
 		await Assert.That(prePromoteAttr.Last().Value.ToString()).IsEqualTo(liveOnlyMarker);
@@ -93,7 +92,7 @@ public class StagingDatabaseTests
 		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 		var stagingMarker = $"AFTER_PROMOTE_{Guid.NewGuid():N}";
-		await staging.SetAttributeAsync(new DBRef(1), ["PROMOTED_MARKER"], A.single(stagingMarker), stagingPlayer);
+		await staging.SetAttributeAsync(new DBRef(1), ["PROMOTED_MARKER"], MarkupText.Plain(stagingMarker), stagingPlayer);
 
 		await staging.PromoteToLiveAsync();
 
@@ -132,7 +131,7 @@ public class StagingDatabaseTests
 		await Assert.That(newRoom.Object.Name).IsEqualTo("PostPromoteRoom");
 
 		var continuityMarker = $"CONTINUITY_{Guid.NewGuid():N}";
-		await db.SetAttributeAsync(new DBRef(1), ["CONTINUITY_CHECK"], A.single(continuityMarker), playerOne);
+		await db.SetAttributeAsync(new DBRef(1), ["CONTINUITY_CHECK"], MarkupText.Plain(continuityMarker), playerOne);
 		var attr = await db.GetAttributeAsync(new DBRef(1), ["CONTINUITY_CHECK"])!.ToListAsync();
 		await Assert.That(attr.Last().Value.ToString()).IsEqualTo(continuityMarker);
 	}
@@ -160,11 +159,11 @@ public class StagingDatabaseTests
 		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
 		var liveMarker = $"ABORT_TEST_{Guid.NewGuid():N}";
-		await db.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], A.single(liveMarker), playerOne);
+		await db.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], MarkupText.Plain(liveMarker), playerOne);
 
 		await using var staging = await db.CreateStagingAsync();
 		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		await staging.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], A.single("SHOULD_NOT_APPEAR"), stagingPlayer);
+		await staging.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], MarkupText.Plain("SHOULD_NOT_APPEAR"), stagingPlayer);
 
 		await staging.AbortAsync();
 
@@ -207,7 +206,7 @@ public class StagingDatabaseTests
 		{
 			await using var staging = await db.CreateStagingAsync();
 			var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-			await staging.SetAttributeAsync(new DBRef(1), ["DISPOSE_TEST"], A.single("dispose_test_value"), stagingPlayer);
+			await staging.SetAttributeAsync(new DBRef(1), ["DISPOSE_TEST"], MarkupText.Plain("dispose_test_value"), stagingPlayer);
 		}
 
 		var liveAttr = db.GetAttributeAsync(new DBRef(1), ["DISPOSE_TEST"]);

@@ -1,6 +1,7 @@
 using Markdig.Extensions.TaskLists;
 using Markdig.Syntax.Inlines;
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -11,13 +12,13 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var text = literal.Content.ToString();
 		return string.IsNullOrEmpty(text)
-			? MModule.empty()
-			: MModule.single(text);
+			? MarkupText.Empty
+			: MarkupText.Plain(text);
 	}
 
 	private MString RenderCodeInline(CodeInline code)
 		=> string.IsNullOrEmpty(code.Content)
-			? MModule.empty()
+			? MarkupText.Empty
 			: RenderInlineCode(code);
 
 	private MString RenderEmphasis(EmphasisInline emphasis)
@@ -39,25 +40,25 @@ public partial class RecursiveMarkdownRenderer
 	/// Render bold text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderBold(MString content)
-		=> MModule.MarkupSingle(_boldStyle, content.ToPlainText());
+		=> MarkupText.Wrap(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render italic text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderItalic(MString content)
-		=> MModule.MarkupSingle(_boldStyle, content.ToPlainText());
+		=> MarkupText.Wrap(_boldStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render underlined text. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderUnderline(MString content)
-		=> MModule.MarkupSingle(_underlineStyle, content.ToPlainText());
+		=> MarkupText.Wrap(_underlineStyle, content.ToPlainText());
 
 	/// <summary>
 	/// Render inline code. Can be overridden for custom rendering.
 	/// </summary>
 	protected virtual MString RenderInlineCode(CodeInline code)
-		=> MModule.MarkupSingle(InlineCodeStyle, code.Content);
+		=> MarkupText.Wrap(InlineCodeStyle, code.Content);
 
 	protected virtual MString RenderLink(LinkInline link, MString content)
 	{
@@ -89,7 +90,7 @@ public partial class RecursiveMarkdownRenderer
 			linkUrl: url,
 			linkKind: isCommand ? LinkKind.Command : LinkKind.Url,
 			linkText: hint);
-		return MModule.MarkupSingle(linkMarkup, contentText);
+		return MarkupText.Wrap(linkMarkup, contentText);
 	}
 
 	/// <summary>
@@ -103,7 +104,7 @@ public partial class RecursiveMarkdownRenderer
 		var placeholder = string.IsNullOrWhiteSpace(alt)
 			? "[image]"
 			: $"[image: {alt}]";
-		return MModule.MarkupSingle(_dimStyle, placeholder);
+		return MarkupText.Wrap(_dimStyle, placeholder);
 	}
 
 	/// <summary>
@@ -120,8 +121,8 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var text = wikiLink.DisplayText ?? wikiLink.Title;
 		return string.IsNullOrWhiteSpace(text)
-			? MModule.empty()
-			: RenderUnderline(MModule.single(text));
+			? MarkupText.Empty
+			: RenderUnderline(MarkupText.Plain(text));
 	}
 
 	/// <summary>
@@ -129,24 +130,24 @@ public partial class RecursiveMarkdownRenderer
 	/// bracket notation, which reads naturally in a terminal.
 	/// </summary>
 	protected virtual MString RenderTaskList(TaskList task)
-		=> MModule.single(task.Checked ? "[x]" : "[ ]");
+		=> MarkupText.Plain(task.Checked ? "[x]" : "[ ]");
 
 	protected virtual MString RenderAutolink(AutolinkInline autolink)
 	{
 		if (string.IsNullOrEmpty(autolink.Url))
 		{
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 
 		var linkMarkup = Ansi.Create(linkUrl: autolink.Url);
-		return MModule.MarkupSingle(linkMarkup, autolink.Url);
+		return MarkupText.Wrap(linkMarkup, autolink.Url);
 	}
 
 	private MString RenderHtmlInline(HtmlInline html)
 	{
 		var tag = html.Tag;
 		if (string.IsNullOrWhiteSpace(tag) || tag.StartsWith("</"))
-			return MModule.empty();
+			return MarkupText.Empty;
 
 		var tagName = ExtractTagName(tag);
 
@@ -158,12 +159,12 @@ public partial class RecursiveMarkdownRenderer
 		{
 			if (html.NextSibling is LineBreakInline { IsHard: false } softBreak)
 				softBreak.Remove();
-			return MModule.single("\n");
+			return MarkupText.Plain("\n");
 		}
 
 		var ansi = ConvertHtmlTagToAnsi(tag, tagName);
 		if (ansi is null)
-			return MModule.empty();
+			return MarkupText.Empty;
 
 		var closingTag = $"</{tagName}>";
 		var contentParts = new List<MString>();
@@ -182,7 +183,7 @@ public partial class RecursiveMarkdownRenderer
 		}
 
 		if (closingNode is null)
-			return MModule.empty();
+			return MarkupText.Empty;
 
 		// Remove rendered siblings from the inline chain so they are not rendered again.
 		// Walk from html.NextSibling up to and including closingNode, unlinking each.
@@ -196,15 +197,15 @@ public partial class RecursiveMarkdownRenderer
 			toRemove = next;
 		}
 
-		return MModule.MarkupMultiple(ansi, contentParts);
+		return MarkupText.Wrap(ansi, MarkupText.Concat(contentParts));
 	}
 
 	private MString RenderHtmlEntity(HtmlEntityInline entity)
 	{
 		var text = entity.Transcoded.ToString();
 		return string.IsNullOrEmpty(text)
-			? MModule.empty()
-			: MModule.single(text);
+			? MarkupText.Empty
+			: MarkupText.Plain(text);
 	}
 
 	private MString RenderDelimiter(DelimiterInline delimiter)

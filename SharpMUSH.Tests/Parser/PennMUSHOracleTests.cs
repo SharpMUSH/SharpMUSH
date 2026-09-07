@@ -209,7 +209,7 @@ public class PennMUSHOracleTests
 	[Arguments("tr.7", "tr(test STRING,te,et)", "etse STRING")]
 	public async Task OracleTest(string testName, string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToPlainText();
 		// PennMUSH tests use regex matching — bare "#-1" means "starts with #-1"
 		if (expected == "#-1")
 			await Assert.That(result).StartsWith("#-1");

@@ -30,29 +30,29 @@ public static class ForwardMail
 
 		if (!maybeLocate.AsSharpObject.IsPlayer)
 		{
-			return MModule.single("MAIL: Cannot forward to non-player.");
+			return MarkupText.Plain("MAIL: Cannot forward to non-player.");
 		}
 
 		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
 
 		if (!permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
 		{
-			return MModule.single($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
+			return MarkupText.Plain($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
 		}
 
 		var mail = await mediator!.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
 
 		if (mail is null)
 		{
-			return MModule.single(ErrorMessages.Returns.MailNotFound);
+			return MarkupText.Plain(ErrorMessages.Returns.MailNotFound);
 		}
 
 		mail.Forwarded = true;
-		mail.Subject = MModule.concat(MModule.single("Fwd: "), mail.Subject);
+		mail.Subject = MarkupText.Concat(MarkupText.Plain("Fwd: "), mail.Subject);
 		mail.DateSent = DateTimeOffset.UtcNow;
 
 		await mediator.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
 
-		return MModule.single(targetPlayer.Object.DBRef.ToString());
+		return MarkupText.Plain(targetPlayer.Object.DBRef.ToString());
 	}
 }

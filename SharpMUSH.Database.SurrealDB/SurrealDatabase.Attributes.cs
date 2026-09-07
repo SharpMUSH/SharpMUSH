@@ -247,7 +247,7 @@ public partial class SurrealDatabase
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 		var ownerKey = ExtractKey(owner.Id!);
-		var serializedValue = MModule.serialize(value);
+		var serializedValue = MarkupTextSerializer.Serialize(value);
 
 		var objParams = new Dictionary<string, object?> { ["key"] = objKey };
 		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
@@ -436,7 +436,7 @@ public partial class SurrealDatabase
 			var clearParams = new Dictionary<string, object?>
 			{
 				["key"] = attrKey,
-				["value"] = MModule.serialize(MModule.empty())
+				["value"] = MarkupTextSerializer.Serialize(MarkupText.Empty)
 			};
 			await ExecuteAsync(
 				"UPDATE attribute:⟨$key⟩ SET value = $value",

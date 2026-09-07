@@ -49,7 +49,7 @@ public class IncludeFromDollarCommandTests
 	}
 
 	private async ValueTask Cmd(string command)
-		=> await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>Trigger <paramref name="command"/> and return all notification texts it produced.</summary>
 	private async ValueTask<List<string>> TriggerAndCollect(string command)
@@ -132,7 +132,7 @@ public class IncludeFromDollarCommandTests
 		//
 		// '%#' appears as '#1' because @set evaluates its RHS — the same evaluation that turns the
 		// %r into the real newline this test is about. The enactor is #1 (God) via Cmd's handle.
-		var stored = (await Parser.FunctionParse(MModule.single($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
+		var stored = (await Parser.FunctionParse(MarkupText.Plain($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
 		await Assert.That(stored).IsEqualTo($"${token}:@pemit #1=FIRST_{tag};\n@pemit #1=SECOND_{tag}")
 			.Because($"a real newline must follow the ';' and nothing else may have been rewritten; stored: [{stored}]");
 

@@ -23,7 +23,7 @@ public class LambdaUnitTests
 	[Arguments("ulambda(lit(#lambda/add(1,2)))))", "#-1 PARSER FAILURE: Expected ) or , at end of expression)))")]
 	public async Task BasicLambdaTest(string call, string expected)
 	{
-		var res = (await Parser.FunctionParse(MModule.single(call)))!.Message!;
+		var res = (await Parser.FunctionParse(MarkupText.Plain(call)))!.Message!;
 		await Assert.That(res.ToPlainText()).IsEqualTo(expected);
 	}
 }

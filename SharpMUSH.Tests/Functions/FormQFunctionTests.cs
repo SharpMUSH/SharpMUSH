@@ -15,7 +15,7 @@ public class FormQFunctionTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> Eval(string code) =>
-		(await Parser.FunctionParse(MModule.single(code)))?.Message?.ToPlainText() ?? string.Empty;
+		(await Parser.FunctionParse(MarkupText.Plain(code)))?.Message?.ToPlainText() ?? string.Empty;
 
 	[Test]
 	public async Task FormQ_SetsRegistersAndReturnsNames()

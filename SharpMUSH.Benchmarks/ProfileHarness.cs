@@ -96,10 +96,10 @@ public sealed class ProfileHarness : BaseBenchmark
 		var god = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer!;
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
-		await _database!.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MModule.single("[mul(%0,2)]"), god);
+		await _database!.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
 		for (var i = 0; i < 50; i++)
 		{
-			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MModule.single($"@create Profile Thing {i}"));
+			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
 		}
 
 		using var http = new HttpClient { BaseAddress = new Uri(ArangoBaseAddress!) };
@@ -114,7 +114,7 @@ public sealed class ProfileHarness : BaseBenchmark
 
 		foreach (var scenario in scenarios)
 		{
-			var input = MModule.single(scenario.Input);
+			var input = MarkupText.Plain(scenario.Input);
 			for (var i = 0; i < 200; i++) await RunOnce(baseParser, one, scenario, input);
 		}
 
@@ -128,7 +128,7 @@ public sealed class ProfileHarness : BaseBenchmark
 		Console.WriteLine($"{"scenario",-12} {"ops/s",10} {"us/op",10} {"KB/op",9} {"arango req/op",14} {"gen0/kop",9}");
 		foreach (var scenario in scenarios)
 		{
-			var input = MModule.single(scenario.Input);
+			var input = MarkupText.Plain(scenario.Input);
 			var reqBefore = await ArangoRequestsAsync();
 			var allocBefore = GC.GetTotalAllocatedBytes(precise: true);
 			var gen0Before = GC.CollectionCount(0);

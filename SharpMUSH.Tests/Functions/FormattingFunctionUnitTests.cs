@@ -13,7 +13,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("render(test %r newline)", "")]
 	public async Task Render(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -21,7 +21,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("tag(b,text)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Tag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -32,7 +32,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("tagwrap(a,xch_cmd=\"+help scene\",Read it)", "<a xch_cmd=\"+help scene\">Read it</a>")]
 	public async Task Tagwrap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -40,7 +40,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("endtag(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Endtag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -48,7 +48,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("wrap(test,5)", "")]
 	public async Task Wrap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -61,7 +61,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("ljust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Ljust(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -75,7 +75,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("rjust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Rjust(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -89,7 +89,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("center(foo,5,=,~)", "=foo~")]
 	public async Task Center(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -97,7 +97,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("table(a b c,10,2)", "")]
 	public async Task Table(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

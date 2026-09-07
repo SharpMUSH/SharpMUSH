@@ -53,7 +53,7 @@ public class ChargenSchemaTests
 		var body = AttributeBody(yaml, "GET`CHARGEN`SCHEMA");
 		var jsonExpression = body[(body.IndexOf("think ", StringComparison.Ordinal) + "think ".Length)..];
 
-		var result = (await Parser.FunctionParse(MModule.single(jsonExpression)))?.Message?.ToString() ?? string.Empty;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(jsonExpression)))?.Message?.ToString() ?? string.Empty;
 
 		await Assert.That(result).DoesNotContain("#-1");
 		using var doc = System.Text.Json.JsonDocument.Parse(result);

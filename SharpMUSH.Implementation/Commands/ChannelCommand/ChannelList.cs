@@ -43,16 +43,16 @@ public static class ChannelList
 				.AnyAsync(m => m.Member.Object().Id == executor.Object().Id, ct))
 			.Select((channel, _) => quietSwitch
 				? channel.Name
-				: MModule.concat(MModule.single("Name: "), channel.Name))
+				: MarkupText.Concat(MarkupText.Plain("Name: "), channel.Name))
 			.ToArrayAsync();
 
 		if (channelList.Length == 0)
 		{
 			await NotifyService.Notify(executor, "CHAT: No channels match that.", executor);
-			return new CallState(MModule.empty());
+			return new CallState(MarkupText.Empty);
 		}
 
-		var result = MModule.multipleWithDelimiter(MModule.single("\n"), channelList);
+		var result = MarkupText.Join(MarkupText.NewLine, channelList);
 		await NotifyService.Notify(executor, result, executor);
 		return new CallState(result);
 	}

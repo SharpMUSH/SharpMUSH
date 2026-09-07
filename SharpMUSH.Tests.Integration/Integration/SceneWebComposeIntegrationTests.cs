@@ -38,10 +38,10 @@ public class SceneWebComposeIntegrationTests
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	private async Task<CallState> God1(string command) =>
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private static string Num(string dbref)
 	{
@@ -71,7 +71,7 @@ public class SceneWebComposeIntegrationTests
 	{
 		var actor = _actors[handle];
 		var before = Notifications.CountFor(actor);
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		return HeardBy(actor, before);
 	}
 

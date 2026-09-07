@@ -24,10 +24,10 @@ public class RoomContentsEventTests
 	private IEventService EventService => WebAppFactoryArg.Services.GetRequiredService<IEventService>();
 
 	private Task Cmd(string command) =>
-		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single(command)).AsTask();
+		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await WebAppFactoryArg.FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	[Test]
 	public async ValueTask DirectEventServiceTriggerSetsAttribute()
@@ -71,11 +71,11 @@ public class RoomContentsEventTests
 		var thingName = $"RCEThing_{token}";
 
 		// @dig returns the room dbref.
-		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbref = digResult.Message!.ToPlainText()!.Trim();
 
 		// @create returns the thing dbref.
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 		var thingDbref = createResult.Message!.ToPlainText()!.Trim();
 
 		// Sanity: both must look like dbrefs.
@@ -115,10 +115,10 @@ public class RoomContentsEventTests
 		var roomName = $"EncRoom_{token}";
 		var thingName = $"EncThing_{token}";
 
-		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbref = digResult.Message!.ToPlainText()!.Trim();
 
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 		var thingDbref = createResult.Message!.ToPlainText()!.Trim();
 
 		await Assert.That(roomDbref).StartsWith("#");
@@ -167,7 +167,7 @@ public class RoomContentsEventTests
 
 		// Issue "connect God" — God has no password, so an empty password is accepted.
 		await WebAppFactoryArg.CommandParser.CommandParse(
-			connectHandle, ConnectionService, MModule.single("connect God"));
+			connectHandle, ConnectionService, MarkupText.Plain("connect God"));
 
 		// ROOM`CONTENTS should have fired with %1="connect" and %0=godRoom.
 		var recorded = await Eval("get(#9/LAST_CONN_connect)");

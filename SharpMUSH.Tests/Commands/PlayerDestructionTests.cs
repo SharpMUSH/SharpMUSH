@@ -8,7 +8,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -73,12 +72,12 @@ public class PlayerDestructionTests
 	{
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_DestroyThing_NonPlayerTest"));
+			MarkupText.Plain("@create PDT_DestroyThing_NonPlayerTest"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@destroy {thingDbRef}"));
+			MarkupText.Plain($"@destroy {thingDbRef}"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		await Assert.That(obj.IsNone).IsFalse();
@@ -94,7 +93,7 @@ public class PlayerDestructionTests
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@destroy {playerDbRef}"));
+			MarkupText.Plain($"@destroy {playerDbRef}"));
 
 		await NotifyService
 			.Received() // Weak check
@@ -110,7 +109,7 @@ public class PlayerDestructionTests
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var playerAfterNuke = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
 		var goingAfterNuke = await playerAfterNuke.Known.HasFlag("GOING");
@@ -124,7 +123,7 @@ public class PlayerDestructionTests
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var player = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
 		await Assert.That(player.IsNone).IsFalse();
@@ -140,7 +139,7 @@ public class PlayerDestructionTests
 		var testPlayer = playerNode.Known.AsPlayer;
 
 		await Mediator.Send(new CreateChannelCommand(
-			MModule.single("PDT_ChannelChown"),
+			MarkupText.Plain("PDT_ChannelChown"),
 			["Open"],
 			testPlayer));
 
@@ -151,7 +150,7 @@ public class PlayerDestructionTests
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var channelAfter = await Mediator.Send(new GetChannelQuery("PDT_ChannelChown"));
 		await Assert.That(channelAfter).IsNotNull();
@@ -166,12 +165,12 @@ public class PlayerDestructionTests
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_NonSafeThing_PossessionTest"));
+			MarkupText.Plain("@create PDT_NonSafeThing_PossessionTest"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@chown {thingDbRef}={playerDbRef}"));
+			MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
 
 		var thingBeforeNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var ownerBefore = await thingBeforeNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
@@ -180,7 +179,7 @@ public class PlayerDestructionTests
 		// nuke the player  (destroy_possessions=yes)
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var thingAfterNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var isGoing = await thingAfterNuke.Known.HasFlag("GOING");
@@ -194,21 +193,21 @@ public class PlayerDestructionTests
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_SafeThing_PossessionTest"));
+			MarkupText.Plain("@create PDT_SafeThing_PossessionTest"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@set {thingDbRef}=SAFE"));
+			MarkupText.Plain($"@set {thingDbRef}=SAFE"));
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@chown {thingDbRef}={playerDbRef}"));
+			MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
 
 		// nuke the player  (really_safe=yes → SAFE things survive)
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var thingAfterNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var isGoing = await thingAfterNuke.Known.HasFlag("GOING");
@@ -230,7 +229,7 @@ public class PlayerDestructionTests
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_AttrOwnerThing_ReassignTest"));
+			MarkupText.Plain("@create PDT_AttrOwnerThing_ReassignTest"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		// Set an attribute with the test player as attribute owner, simulating the test
@@ -239,7 +238,7 @@ public class PlayerDestructionTests
 		await Database.SetAttributeAsync(
 			thingDbRef,
 			[attrName],
-			A.single("PDT attribute value for owner reassign test"),
+			MarkupText.Plain("PDT attribute value for owner reassign test"),
 			testPlayer);
 
 		var attrBefore = await Database.GetAttributeAsync(thingDbRef, [attrName]).LastOrDefaultAsync();
@@ -250,7 +249,7 @@ public class PlayerDestructionTests
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var attrAfter = await Database.GetAttributeAsync(thingDbRef, [attrName]).LastOrDefaultAsync();
 		await Assert.That(attrAfter).IsNotNull();
@@ -270,40 +269,40 @@ public class PlayerDestructionTests
 		var testPlayer = playerNode.Known.AsPlayer;
 
 		await Mediator.Send(new CreateChannelCommand(
-			MModule.single("PDT_CombinedChannel"),
+			MarkupText.Plain("PDT_CombinedChannel"),
 			["Open"],
 			testPlayer));
 
 		var nonSafeResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_Combined_NonSafeThing"));
+			MarkupText.Plain("@create PDT_Combined_NonSafeThing"));
 		var nonSafeDbRef = DBRef.Parse(nonSafeResult.Message!.ToPlainText()!);
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@chown {nonSafeDbRef}={playerDbRef}"));
+			MarkupText.Plain($"@chown {nonSafeDbRef}={playerDbRef}"));
 
 		var safeResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single("@create PDT_Combined_SafeThing"));
+			MarkupText.Plain("@create PDT_Combined_SafeThing"));
 		var safeDbRef = DBRef.Parse(safeResult.Message!.ToPlainText()!);
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@set {safeDbRef}=SAFE"));
+			MarkupText.Plain($"@set {safeDbRef}=SAFE"));
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@chown {safeDbRef}={playerDbRef}"));
+			MarkupText.Plain($"@chown {safeDbRef}={playerDbRef}"));
 
 		var probateNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(ProbateJudgeDbRefNumber)));
 		var attrName = "PDT_COMBINED_ATTR_TEST";
 		await Database.SetAttributeAsync(
 			probateNode.Known.Object().DBRef,
 			[attrName],
-			A.single("PDT combined test attribute value"),
+			MarkupText.Plain("PDT combined test attribute value"),
 			testPlayer);
 
 		await Parser.CommandParse(
 			1, ConnectionService,
-			MModule.single($"@nuke {playerDbRef}"));
+			MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var playerObj = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
 		await Assert.That(await playerObj.Known.HasFlag("GOING")).IsTrue();

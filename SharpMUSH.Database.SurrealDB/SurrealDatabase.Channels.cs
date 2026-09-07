@@ -99,7 +99,7 @@ public partial class SurrealDatabase
 	private async ValueTask<ChannelCreationResult> CreateChannelCoreAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken)
 	{
 		var channelName = name.ToPlainText();
-		var serializedName = MModule.serialize(name);
+		var serializedName = MarkupTextSerializer.Serialize(name);
 		var ownerObjKey = owner.Object.Key;
 
 		var parameters = new Dictionary<string, object?>
@@ -169,8 +169,8 @@ public partial class SurrealDatabase
 	{
 		var channelName = channel.Name.ToPlainText();
 		var newName = name is not null ? name.ToPlainText() : channelName;
-		var newMarkedUpName = name is not null ? MModule.serialize(name) : MModule.serialize(channel.Name);
-		var newDescription = description is not null ? MModule.serialize(description) : MModule.serialize(channel.Description);
+		var newMarkedUpName = name is not null ? MarkupTextSerializer.Serialize(name) : MarkupTextSerializer.Serialize(channel.Name);
+		var newDescription = description is not null ? MarkupTextSerializer.Serialize(description) : MarkupTextSerializer.Serialize(channel.Description);
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -296,7 +296,7 @@ public partial class SurrealDatabase
 		if (status.Title is { } title)
 		{
 			setClauses.Add("title = $title");
-			parameters["title"] = MModule.serialize(title);
+			parameters["title"] = MarkupTextSerializer.Serialize(title);
 		}
 
 		if (setClauses.Count == 0) return;
@@ -316,8 +316,8 @@ public partial class SurrealDatabase
 		return new SharpChannel
 		{
 			Id = ChannelId(channelName),
-			Name = MModule.deserialize(markedUpName),
-			Description = MModule.deserialize(description),
+			Name = MarkupTextSerializer.Deserialize(markedUpName),
+			Description = MarkupTextSerializer.Deserialize(description),
 			Privs = record.privs,
 			JoinLock = record.joinLock,
 			SpeakLock = record.speakLock,
@@ -367,7 +367,7 @@ public partial class SurrealDatabase
 				Gagged: record.gagged,
 				Hide: record.hide,
 				Mute: record.mute,
-				Title: MModule.deserialize(record.title));
+				Title: MarkupTextSerializer.Deserialize(record.title));
 
 			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);
 		}

@@ -16,10 +16,10 @@ public class CallStateTests
 	[Test]
 	public async ValueTask AggregatedCallState_ParsedMessageReturnsFullConcatenatedMessage()
 	{
-		var first = new CallState(MModule.single("Boo! "));
-		var second = new CallState(MModule.single("a"));
+		var first = new CallState(MarkupText.Plain("Boo! "));
+		var second = new CallState(MarkupText.Plain("a"));
 
-		var concatenated = MModule.concat(first.Message!, second.Message!);
+		var concatenated = MarkupText.Concat(first.Message!, second.Message!);
 
 		// The correct approach: new CallState keeps ParsedMessage consistent with Message.
 		var correct = new CallState(concatenated, first.Depth);
@@ -40,7 +40,7 @@ public class CallStateTests
 	[Test]
 	public async ValueTask NewCallState_MessageAndParsedMessageAreConsistent()
 	{
-		var msg = MModule.single("hello world");
+		var msg = MarkupText.Plain("hello world");
 		var state = new CallState(msg);
 
 		await Assert.That(state.Message?.ToPlainText()).IsEqualTo("hello world");

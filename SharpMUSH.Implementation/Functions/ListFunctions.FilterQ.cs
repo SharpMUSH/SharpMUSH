@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -23,18 +24,18 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var registerName = MModule.plainText(parser.CurrentState.Arguments["0"].Message!)!;
+		var registerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (string.IsNullOrWhiteSpace(registerName))
 		{
 			return new CallState(ErrorMessages.Returns.BadRegName);
 		}
 
 		var rawAttrArg = parser.CurrentState.Arguments["1"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MModule.single(" "));
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["2"].Message!);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
 
 		var matches = new List<MString>();
 		var rejects = new List<MString>();
@@ -118,11 +119,11 @@ public partial class Functions
 			}
 		}
 
-		if (!parser.CurrentState.AddRegister(registerName.ToUpper(), MModule.multipleWithDelimiter(sep, rejects)))
+		if (!parser.CurrentState.AddRegister(registerName.ToUpper(), MarkupText.Join(sep, rejects)))
 		{
 			return new CallState(ErrorMessages.Returns.BadRegName);
 		}
 
-		return new CallState(MModule.multipleWithDelimiter(sep, matches));
+		return new CallState(MarkupText.Join(sep, matches));
 	}
 }

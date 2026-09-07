@@ -18,8 +18,8 @@ public static partial class ArgHelpers
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
 		MString defaultValue)
 	{
-		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToString()) ||
-				args[item.ToString()].Message?.ToString() is null)
+		if (args.Count - 1 < item || item == 0 && string.IsNullOrEmpty(args[item.ToString()]?.Message?.ToPlainText()) ||
+				args[item.ToString()].Message?.ToPlainText() is null)
 		{
 			return defaultValue;
 		}
@@ -29,13 +29,13 @@ public static partial class ArgHelpers
 
 	public static MString NoParseDefaultNoParseArgument(ImmutableSortedDictionary<string, CallState> args, int item,
 		string defaultValue)
-		=> NoParseDefaultNoParseArgument(args, item, MModule.single(defaultValue));
+		=> NoParseDefaultNoParseArgument(args, item, MarkupText.Plain(defaultValue));
 
 	public static async ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		MString defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count - 1 < item || MModule.getLength(args[item.ToString()].Message!) == 0)
+		if (args.Count - 1 < item || args[item.ToString()].Message!.Length == 0)
 		{
 			return defaultValue;
 		}
@@ -45,14 +45,14 @@ public static partial class ArgHelpers
 
 	public static ValueTask<MString> NoParseDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		string defaultValue)
-		=> NoParseDefaultEvaluatedArgument(parser, item, MModule.single(defaultValue));
+		=> NoParseDefaultEvaluatedArgument(parser, item, MarkupText.Plain(defaultValue));
 
 	public static async ValueTask<MString> EvaluatedDefaultEvaluatedArgument(IMUSHCodeParser parser, int item,
 		CallState defaultValue)
 	{
 		var args = parser.CurrentState.Arguments;
 		var parsedValue = (await args[item.ToString()].ParsedMessage())!;
-		if (args.Count - 1 < item || MModule.getLength(parsedValue) == 0)
+		if (args.Count - 1 < item || parsedValue.Length == 0)
 		{
 			return (await defaultValue.ParsedMessage())!;
 		}
@@ -67,7 +67,7 @@ public static partial class ArgHelpers
 
 		foreach (var arg in args)
 		{
-			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
+			var text = EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText());
 			if (!decimal.TryParse(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
@@ -100,7 +100,7 @@ public static partial class ArgHelpers
 
 		foreach (var arg in args)
 		{
-			var text = EmptyStringToZero(MModule.plainText(arg.Value.Message));
+			var text = EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText());
 			if (!ulong.TryParse(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
@@ -116,7 +116,7 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> EvaluateUnsignedInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<ulong, ulong> func)
 	{
-		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!ulong.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
@@ -128,7 +128,7 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, decimal> func)
 	{
-		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!decimal.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -141,7 +141,7 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
 		Func<decimal, long> func)
 	{
-		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!decimal.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -153,7 +153,7 @@ public static partial class ArgHelpers
 	public static ValueTask<CallState> EvaluateDouble(ImmutableSortedDictionary<string, CallState> args,
 		Func<double, double> func)
 	{
-		var text = EmptyStringToZero(MModule.plainText(args["0"].Message));
+		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!double.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -176,7 +176,7 @@ public static partial class ArgHelpers
 
 		var doubles = args.Select(x =>
 		(
-			IsDouble: decimal.TryParse(string.Join("", EmptyStringToZero(MModule.plainText(x.Value.Message))), out var b),
+			IsDouble: decimal.TryParse(string.Join("", EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText())), out var b),
 			Double: b
 		)).ToList();
 
@@ -216,7 +216,7 @@ public static partial class ArgHelpers
 		Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var valueText = MModule.plainText(value.Message);
+		var valueText = (value.Message ?? MarkupText.Empty).ToPlainText();
 
 		var isHandle = long.TryParse(valueText, out var handle);
 

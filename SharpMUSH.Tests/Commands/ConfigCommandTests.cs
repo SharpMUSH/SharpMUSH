@@ -23,7 +23,7 @@ public class ConfigCommandTests
 	public async ValueTask ConfigCommand_NoArgs_ListsCategories()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@config"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor, executor)).IsTrue();
 	}
@@ -32,7 +32,7 @@ public class ConfigCommandTests
 	public async ValueTask ConfigCommand_CategoryArg_ShowsCategoryOptions()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@config Net"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config Net"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -41,7 +41,7 @@ public class ConfigCommandTests
 	public async ValueTask ConfigCommand_OptionArg_ShowsOptionValue()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@config mud_name"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config mud_name"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
 	}
@@ -50,7 +50,7 @@ public class ConfigCommandTests
 	public async ValueTask ConfigCommand_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@config test_string_CONFIG_invalid_option"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@config test_string_CONFIG_invalid_option"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, executor)).IsTrue();
 	}
@@ -61,7 +61,7 @@ public class ConfigCommandTests
 	public async ValueTask MonikerCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@moniker #1=Test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@moniker #1=Test"));
 
 		await NotifyService
 			.Received(1)
@@ -74,7 +74,7 @@ public class ConfigCommandTests
 	public async ValueTask MotdCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@motd"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@motd"));
 
 		await NotifyService
 			.Received(1)
@@ -86,7 +86,7 @@ public class ConfigCommandTests
 	public async ValueTask ListmotdCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@listmotd"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@listmotd"));
 
 		// Should notify with MOTD settings header
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ListMotdCurrentSettingsHeader), executor, executor)).IsTrue();
@@ -98,7 +98,7 @@ public class ConfigCommandTests
 	public async ValueTask WizmotdCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wizmotd"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wizmotd"));
 
 		await NotifyService
 			.Received(1)
@@ -111,7 +111,7 @@ public class ConfigCommandTests
 	public async ValueTask RejectmotdCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@rejectmotd"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@rejectmotd"));
 
 		await NotifyService
 			.Received(1)
@@ -124,7 +124,7 @@ public class ConfigCommandTests
 	public async ValueTask DoingCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@doing #1=Test activity"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@doing #1=Test activity"));
 
 		await NotifyService
 			.Received(1)
@@ -136,7 +136,7 @@ public class ConfigCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPoll");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("doing"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("doing"));
 
 		await NotifyService
 			.Received(1)
@@ -148,7 +148,7 @@ public class ConfigCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DoingPollPat");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("doing Wiz*"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("doing Wiz*"));
 
 		await NotifyService
 			.Received(1)
@@ -159,7 +159,7 @@ public class ConfigCommandTests
 	public async ValueTask Enable_BooleanOption_ShowsImplementationMessage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable noisy_whisper"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable noisy_whisper"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
@@ -168,7 +168,7 @@ public class ConfigCommandTests
 	public async ValueTask Disable_BooleanOption_ShowsImplementationMessage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable noisy_whisper"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable noisy_whisper"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
 	}
@@ -177,7 +177,7 @@ public class ConfigCommandTests
 	public async ValueTask Enable_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable test_string_ENABLE_invalid_option_xyz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable test_string_ENABLE_invalid_option_xyz"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
@@ -186,7 +186,7 @@ public class ConfigCommandTests
 	public async ValueTask Disable_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable test_string_DISABLE_invalid_option_xyz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable test_string_DISABLE_invalid_option_xyz"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
@@ -195,7 +195,7 @@ public class ConfigCommandTests
 	public async ValueTask Enable_NonBooleanOption_ReturnsInvalidType()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable mud_name"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable mud_name"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
@@ -204,7 +204,7 @@ public class ConfigCommandTests
 	public async ValueTask Disable_NonBooleanOption_ReturnsInvalidType()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable probate_judge"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable probate_judge"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, executor)).IsTrue();
 	}
@@ -213,7 +213,7 @@ public class ConfigCommandTests
 	public async ValueTask Enable_NoArguments_ShowsUsage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@enable"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}
@@ -222,7 +222,7 @@ public class ConfigCommandTests
 	public async ValueTask Disable_NoArguments_ShowsUsage()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@disable"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, executor)).IsTrue();
 	}

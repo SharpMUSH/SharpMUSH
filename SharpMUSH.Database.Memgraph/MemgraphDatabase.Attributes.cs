@@ -226,7 +226,7 @@ RETURN child ORDER BY child.longName
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 		var objKey = dbref.Number;
 		var ownerKey = ExtractKey(owner.Id!);
-		var serializedValue = MModule.serialize(value);
+		var serializedValue = MarkupTextSerializer.Serialize(value);
 		var emptyValue = "";
 
 		// Build a single atomic MERGE query for the entire attribute path.
@@ -394,7 +394,7 @@ RETURN count(child) AS cnt
 
 		if (hasChildren)
 		{
-			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = attrKey, value = MModule.serialize(MModule.empty()) }, cancellationToken);
+			await ExecuteWithRetryAsync("MATCH (a:Attribute {key: $key}) SET a.value = $value", new { key = attrKey, value = MarkupTextSerializer.Serialize(MarkupText.Empty) }, cancellationToken);
 		}
 		else
 		{

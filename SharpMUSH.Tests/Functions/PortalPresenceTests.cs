@@ -49,12 +49,12 @@ public class PortalPresenceTests
 
 	private async Task<string[]> WhoAsync(string function)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))!.Message!.ToPlainText();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))!.Message!.ToPlainText();
 		return result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	}
 
 	private async Task<string> FnAsync(string function) =>
-		(await Parser.FunctionParse(MModule.single(function)))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain(function)))!.Message!.ToPlainText();
 
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
 	public async Task PortalConnection_ExcludedFromMwho_ButListedByLwho()

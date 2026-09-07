@@ -18,7 +18,7 @@ public class SoundFunctionUnitTests
 	[Arguments("soundex(foobar)", "F160")]
 	public async Task Soundex(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -32,7 +32,7 @@ public class SoundFunctionUnitTests
 	[Arguments("soundslike(foobar,fubar)", "1")]
 	public async Task Soundslike(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -43,7 +43,7 @@ public class SoundFunctionUnitTests
 	[Arguments("soundex(afford,phone)", "ABRD")]
 	public async Task SoundexPhone(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -53,7 +53,7 @@ public class SoundFunctionUnitTests
 	[Arguments("soundslike(foo,bar,bad hash)", "#-1 INVALID HASH TYPE")]
 	public async Task SoundexInvalidHash(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -66,7 +66,7 @@ public class SoundFunctionUnitTests
 	[Arguments("soundslike(rutabega,rototiller,phone)", "0")]
 	public async Task SoundslikePhone(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

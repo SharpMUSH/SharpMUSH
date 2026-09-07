@@ -62,7 +62,7 @@ public class PackageCommandTests
 	{
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known()
 			.Match(p => p, _ => null!, _ => null!, _ => null!);
-		await Database.SetAttributeAsync(target, [attr], MModule.single(value), pm);
+		await Database.SetAttributeAsync(target, [attr], MarkupText.Plain(value), pm);
 	}
 
 	[Test]
@@ -77,7 +77,7 @@ public class PackageCommandTests
 		await SetAttrAsync(global, "CMD_SELF", $"$+self:@pemit %#=[u(#{core.Number}/FN_FMT)]");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@package #{core.Number} #{global.Number}=test-pkg,2.0.0,A self-contained test"));
+			MarkupText.Plain($"@package #{core.Number} #{global.Number}=test-pkg,2.0.0,A self-contained test"));
 
 		// The whole manifest comes back in one pemit: header markers, metadata, and
 		// the cross-reference rewritten to a symbolic {{ref}} (no raw dbref survives).
@@ -94,7 +94,7 @@ public class PackageCommandTests
 		await SetAttrAsync(thing, "FN_GREET", $"Hello from here, near #0");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@package/scan #{thing.Number}"));
+			MarkupText.Plain($"@package/scan #{thing.Number}"));
 
 		await ExpectNotifyAll(god, "PACKAGE SCAN: 1 object(s) selected", "pkgscanthing", "#0");
 	}
@@ -108,7 +108,7 @@ public class PackageCommandTests
 		await SetAttrAsync(thing, "FN_GREET", $"References the outside world: #0");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@package #{thing.Number}=ext-pkg"));
+			MarkupText.Plain($"@package #{thing.Number}=ext-pkg"));
 
 		// No manifest — the external dbref must be classified in the web panel.
 		await ExpectNotifyAll(god, "Unclassified", "/admin/packages/author");
@@ -122,14 +122,14 @@ public class PackageCommandTests
 		var thing = await CreateThingAsync("PkgVeiledThing");
 		// A public attribute (exported) and a VEILED one (@decompile hides it, so must we).
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&PUBLICATTR #{thing.Number}=public shown value"));
+			MarkupText.Plain($"&PUBLICATTR #{thing.Number}=public shown value"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&SECRETATTR #{thing.Number}=veiled secret value"));
+			MarkupText.Plain($"&SECRETATTR #{thing.Number}=veiled secret value"));
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set #{thing.Number}/SECRETATTR=VEILED"));
+			MarkupText.Plain($"@set #{thing.Number}/SECRETATTR=VEILED"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@package #{thing.Number}=veil-pkg"));
+			MarkupText.Plain($"@package #{thing.Number}=veil-pkg"));
 
 		// The manifest is produced, includes the public attribute, and omits the
 		// VEILED one entirely — matching what @decompile would show.
@@ -156,7 +156,7 @@ public class PackageCommandTests
 		await SetAttrAsync(thing, "FN_X", "self-contained value");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@package #{thing.Number}=Not A Valid Id"));
+			MarkupText.Plain($"@package #{thing.Number}=Not A Valid Id"));
 
 		await ExpectNotify(god, "is not a valid package id");
 	}
@@ -168,7 +168,7 @@ public class PackageCommandTests
 			WebAppFactoryArg.Services, Mediator, "NonWizPackage");
 		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
 
-		var result = await nonWizParser.CommandParse(MModule.single("@package #1"));
+		var result = await nonWizParser.CommandParse(MarkupText.Plain("@package #1"));
 		var resultText = result.Message?.ToPlainText() ?? "";
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");

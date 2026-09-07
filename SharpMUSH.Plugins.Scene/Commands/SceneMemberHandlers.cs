@@ -22,7 +22,7 @@ public static class SceneMemberHandlers
 		if (string.IsNullOrEmpty(role))
 		{
 			await notifyService.Notify(executor, "SCENE: /member needs <sceneId>/<role>=<playerDbref>.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
@@ -33,12 +33,12 @@ public static class SceneMemberHandlers
 			{
 				await notifyService.Notify(executor,
 					$"SCENE: {member.MemberName} is now '{member.Role}' in scene #{sceneId}.");
-				return MModule.single(sceneId);
+				return MarkupText.Plain(sceneId);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 
@@ -59,12 +59,12 @@ public static class SceneMemberHandlers
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: Removed {playerDbref} from scene #{sceneId}.");
-				return MModule.single(sceneId);
+				return MarkupText.Plain(sceneId);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 
@@ -87,12 +87,12 @@ public static class SceneMemberHandlers
 				await notifyService.Notify(executor, string.IsNullOrEmpty(sceneId)
 					? $"SCENE: Cleared focus for {playerDbref}."
 					: $"SCENE: {playerDbref} now focused on scene #{sceneId}.");
-				return MModule.single(sceneId);
+				return MarkupText.Plain(sceneId);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 
@@ -109,7 +109,7 @@ public static class SceneMemberHandlers
 		if (string.IsNullOrEmpty(playerDbref))
 		{
 			await notifyService.Notify(executor, "SCENE: /showas needs <sceneId>/<playerDbref>=<name>.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var resolvedPlayer = await SceneLocate.PlayerOrSelf(parser, playerDbref!);
@@ -120,12 +120,12 @@ public static class SceneMemberHandlers
 			{
 				await notifyService.Notify(executor,
 					$"SCENE: {member.MemberName} now shown as '{member.ShowAs}' in scene #{sceneId}.");
-				return MModule.single(sceneId);
+				return MarkupText.Plain(sceneId);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No such scene or member.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 }

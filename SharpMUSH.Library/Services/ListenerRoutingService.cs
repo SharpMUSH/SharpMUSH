@@ -4,6 +4,7 @@ using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -97,7 +98,7 @@ public class ListenerRoutingService(
 			return;
 
 		var messageText = message.Match(
-			markupString => markupString.ToString(),
+			markupString => markupString.ToPlainText(),
 			str => str
 		);
 
@@ -264,8 +265,11 @@ public class ListenerRoutingService(
 			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
 			: $"{puppet.Object().Name}> ";
 
+		// This relay writes bytes straight onto the telnet stream rather than going through
+		// NotifyService (which hands the ConnectionServer a serialized MString and lets it pick the
+		// wire format), so the markup has to be rendered here — ANSI, the telnet wire format.
 		var relayedText = message.Match(
-			markupString => prefix + markupString.ToString(),
+			markupString => prefix + markupString.Render(MarkupFormat.Ansi),
 			str => prefix + str
 		);
 

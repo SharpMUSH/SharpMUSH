@@ -40,7 +40,7 @@ public class ChannelMessageRequestHandler(
 			_ => throw new ArgumentOutOfRangeException()
 		};
 
-		var mogrifiedChanName = MModule.multiple([MModule.single("<"), chanName, MModule.single(">")]);
+		var mogrifiedChanName = MarkupText.Concat([MarkupText.Plain("<"), chanName, MarkupText.Plain(">")]);
 		var mogrifiedTitle = notification.Title;
 		var mogrifiedPlayerName = notification.PlayerName;
 		var mogrifiedSays = notification.Says;
@@ -65,7 +65,7 @@ public class ChannelMessageRequestHandler(
 					// Common arguments for control mogrifiers (BLOCK, OVERRIDE, NOBUFFER)
 					var controlArgs = new Dictionary<string, CallState>
 					{
-						["0"] = new CallState(MModule.single(chatType)),
+						["0"] = new CallState(MarkupText.Plain(chatType)),
 						["1"] = new CallState(chanName),
 						["2"] = new CallState(notification.Message),
 						["3"] = new CallState(notification.PlayerName),
@@ -73,7 +73,7 @@ public class ChannelMessageRequestHandler(
 					};
 
 					var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
-					if (MModule.getLength(blockResult) > 0)
+					if (blockResult.Length > 0)
 					{
 						blockMessage = blockResult;
 					}
@@ -81,13 +81,13 @@ public class ChannelMessageRequestHandler(
 					if (blockMessage == null)
 					{
 						var overrideResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`OVERRIDE", controlArgs);
-						if (MModule.getLength(overrideResult) > 0 && !IsEmpty(overrideResult.ToPlainText()))
+						if (overrideResult.Length > 0 && !IsEmpty(overrideResult.ToPlainText()))
 						{
 							skipChatFormat = true;
 						}
 
 						var nobufferResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`NOBUFFER", controlArgs);
-						if (MModule.getLength(nobufferResult) > 0 && !IsEmpty(nobufferResult.ToPlainText()))
+						if (nobufferResult.Length > 0 && !IsEmpty(nobufferResult.ToPlainText()))
 						{
 							skipBuffer = true;
 						}
@@ -97,45 +97,45 @@ public class ChannelMessageRequestHandler(
 						{
 							// %0 varies by mogrifier (set individually)
 							["1"] = new CallState(chanName),
-							["2"] = new CallState(MModule.single(chatType)),
+							["2"] = new CallState(MarkupText.Plain(chatType)),
 							["3"] = new CallState(notification.Message),
 							["4"] = new CallState(notification.Title),
 							["5"] = new CallState(notification.PlayerName),
 							["6"] = new CallState(notification.Says),
-							["7"] = new CallState(MModule.single(string.Join(" ", notification.Options)))
+							["7"] = new CallState(MarkupText.Plain(string.Join(" ", notification.Options)))
 						};
 
 						partArgs["0"] = new CallState(mogrifiedChanName);
 						var chanNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`CHANNAME", partArgs);
-						if (MModule.getLength(chanNameResult) > 0)
+						if (chanNameResult.Length > 0)
 						{
 							mogrifiedChanName = chanNameResult;
 						}
 
 						partArgs["0"] = new CallState(mogrifiedTitle);
 						var titleResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`TITLE", partArgs);
-						if (MModule.getLength(titleResult) > 0)
+						if (titleResult.Length > 0)
 						{
 							mogrifiedTitle = titleResult;
 						}
 
 						partArgs["0"] = new CallState(mogrifiedPlayerName);
 						var playerNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`PLAYERNAME", partArgs);
-						if (MModule.getLength(playerNameResult) > 0)
+						if (playerNameResult.Length > 0)
 						{
 							mogrifiedPlayerName = playerNameResult;
 						}
 
 						partArgs["0"] = new CallState(mogrifiedSays);
 						var saysResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`SPEECHTEXT", partArgs);
-						if (MModule.getLength(saysResult) > 0)
+						if (saysResult.Length > 0)
 						{
 							mogrifiedSays = saysResult;
 						}
 
 						partArgs["0"] = new CallState(mogrifiedMessage);
 						var messageResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`MESSAGE", partArgs);
-						if (MModule.getLength(messageResult) > 0)
+						if (messageResult.Length > 0)
 						{
 							mogrifiedMessage = messageResult;
 						}
@@ -145,17 +145,17 @@ public class ChannelMessageRequestHandler(
 						var defaultMessage = BuildDefaultMessage(chatType, mogrifiedChanName, mogrifiedPlayerName, mogrifiedTitle, mogrifiedSays, mogrifiedMessage);
 						var formatArgs = new Dictionary<string, CallState>
 						{
-							["0"] = new CallState(MModule.single(chatType)),
+							["0"] = new CallState(MarkupText.Plain(chatType)),
 							["1"] = new CallState(chanName),
 							["2"] = new CallState(mogrifiedMessage),
 							["3"] = new CallState(mogrifiedPlayerName),
 							["4"] = new CallState(mogrifiedTitle),
 							["5"] = new CallState(defaultMessage),
 							["6"] = new CallState(mogrifiedSays),
-							["7"] = new CallState(MModule.single(string.Join(" ", notification.Options)))
+							["7"] = new CallState(MarkupText.Plain(string.Join(" ", notification.Options)))
 						};
 						var formatResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`FORMAT", formatArgs);
-						if (MModule.getLength(formatResult) > 0)
+						if (formatResult.Length > 0)
 						{
 							formatOverride = formatResult;
 						}
@@ -211,7 +211,7 @@ public class ChannelMessageRequestHandler(
 
 			if (!skipBuffer)
 			{
-				logger.LogInformation("{ChannelMessage}", MModule.serialize(message));
+				logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
 
 				// Add to channel recall buffer - only if there's an actual source
 				if (!notification.Source.IsNone)
@@ -266,14 +266,14 @@ public class ChannelMessageRequestHandler(
 		// %7 = options (space-separated)
 		var formatArgs = new Dictionary<string, CallState>
 		{
-			["0"] = new CallState(MModule.single(chatType)),
+			["0"] = new CallState(MarkupText.Plain(chatType)),
 			["1"] = new CallState(channelName),
 			["2"] = new CallState(message),
 			["3"] = new CallState(playerName),
 			["4"] = new CallState(title),
 			["5"] = new CallState(defaultFormat),
 			["6"] = new CallState(says),
-			["7"] = new CallState(MModule.single(string.Join(" ", options)))
+			["7"] = new CallState(MarkupText.Plain(string.Join(" ", options)))
 		};
 
 		var sourceObj = source.IsNone ? player : source.Known();
@@ -309,7 +309,7 @@ public class ChannelMessageRequestHandler(
 		catch
 		{
 			// If attribute doesn't exist or evaluation fails, return empty
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 	}
 
@@ -328,10 +328,10 @@ public class ChannelMessageRequestHandler(
 	{
 		return chatType switch
 		{
-			"@" or "|" => MModule.multiple([chanName, MModule.single(" "), message]),
-			":" => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, MModule.single(" "), message]),
-			";" => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, message]),
-			_ => MModule.multiple([chanName, MModule.single(" "), MModule.getLength(title) > 0 ? MModule.multiple([title, MModule.single(" ")]) : MModule.empty(), playerName, MModule.single(" "), says, MModule.single(", \""), message, MModule.single("\"")])
+			"@" or "|" => MarkupText.Concat([chanName, MarkupText.Space, message]),
+			":" => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, message]),
+			";" => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, message]),
+			_ => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, says, MarkupText.Plain(", \""), message, MarkupText.Plain("\"")])
 		};
 	}
 }

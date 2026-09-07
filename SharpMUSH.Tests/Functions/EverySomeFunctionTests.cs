@@ -21,16 +21,16 @@ public class EverySomeFunctionTests
 	private async Task<int> CreateObjectWithAttribute(string objectName, string attrName, string attrValue)
 	{
 		var createResult = await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {objectName}"));
+			MarkupText.Plain($"@create {objectName}"));
 		var dbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&{attrName} #{dbRef.Number}={attrValue}"));
+			MarkupText.Plain($"&{attrName} #{dbRef.Number}={attrValue}"));
 		return dbRef.Number;
 	}
 
 	private async Task Check(string function, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(function)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 

@@ -24,7 +24,7 @@ public class AccountAdminCommandTests
 		var accountId = createResult.AsT0.Id!;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "0.0.0.0");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/newpassword cmd-reset-user=temp-password-9"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/newpassword cmd-reset-user=temp-password-9"));
 		await Task.Delay(200);
 
 		var authenticated = await accountService.AuthenticateAsync("cmd-reset-user", "temp-password-9");
@@ -41,11 +41,11 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		await accountService.CreateAccountAsync("cmd-disable-user", null, "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/disable cmd-disable-user"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/disable cmd-disable-user"));
 		await Task.Delay(200);
 		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNull();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/enable cmd-disable-user"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/enable cmd-disable-user"));
 		await Task.Delay(200);
 		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNotNull();
 	}
@@ -56,7 +56,7 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		await accountService.CreateAccountAsync("cmd-close-user", "close@example.com", "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/close cmd-close-user"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/close cmd-close-user"));
 		await Task.Delay(200);
 
 		await Assert.That(await accountService.AuthenticateAsync("cmd-close-user", "some-password-1")).IsNull();
@@ -74,7 +74,7 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		await accountService.CreateAccountAsync("cmd-delete-user", "delete@example.com", "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/delete cmd-delete-user"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/delete cmd-delete-user"));
 		await Task.Delay(200);
 
 		await Assert.That(await accountService.AuthenticateAsync("cmd-delete-user", "some-password-1")).IsNull();
@@ -92,7 +92,7 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		var system = await accountService.GetOrCreateSystemAccountAsync();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@account/close {SystemAccount.Username}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@account/close {SystemAccount.Username}"));
 		await Task.Delay(200);
 
 		var reloaded = await accountService.GetByIdAsync(system.Id!);
@@ -105,7 +105,7 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		await accountService.CreateAccountAsync("cmd-shortpw-user", null, "old-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@account/newpassword cmd-shortpw-user=short"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/newpassword cmd-shortpw-user=short"));
 		await Task.Delay(200);
 
 		// The refusal must not change the password.

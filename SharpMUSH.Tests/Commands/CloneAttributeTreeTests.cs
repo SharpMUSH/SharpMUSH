@@ -38,7 +38,7 @@ public class CloneAttributeTreeTests
 
 	private async Task<string> Eval(long handle, string expr)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expr}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expr}"));
 		return result?.Message?.ToPlainText() ?? "";
 	}
 
@@ -49,7 +49,7 @@ public class CloneAttributeTreeTests
 	/// </summary>
 	private async Task<string> Cmd(long handle, string cmd)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single(cmd));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(cmd));
 		return result?.Message?.ToPlainText() ?? "";
 	}
 

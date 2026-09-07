@@ -23,7 +23,9 @@
     <!-- MarkupString used directly across the providers. Referenced explicitly because SharpMUSH.Library
          marks its SharpMUSH.* ProjectReferences PrivateAssets="all" (to keep them out of its NuGet
          package), so they no longer flow transitively through Library. -->
-    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+    <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
   </ItemGroup>
 
 </Project>

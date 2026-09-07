@@ -47,7 +47,7 @@ public class AccountSocketArgSplitTests
 		var username = TestIsolationHelpers.GenerateUniqueName("regtwo");
 		var handle = await RegisterConnectionAsync(4001L);
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single($"register {username} some-password-1"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 
 		var account = await AccountService.GetByUsernameAsync(username);
 		await Assert.That(account).IsNotNull();
@@ -64,7 +64,7 @@ public class AccountSocketArgSplitTests
 		var email = $"{username}@example.test";
 		var handle = await RegisterConnectionAsync(4002L);
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single($"register {username} {email} some-password-1"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} {email} some-password-1"));
 
 		var account = await AccountService.GetByUsernameAsync(username);
 		await Assert.That(account).IsNotNull();
@@ -79,7 +79,7 @@ public class AccountSocketArgSplitTests
 	{
 		var handle = await RegisterConnectionAsync(4003L);
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single("register soloname"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register soloname"));
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
@@ -96,10 +96,10 @@ public class AccountSocketArgSplitTests
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("loginok");
 		var registerHandle = await RegisterConnectionAsync(4004L);
-		await Parser.CommandParse(registerHandle, ConnectionService, MModule.single($"register {username} some-password-1"));
+		await Parser.CommandParse(registerHandle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 
 		var loginHandle = await RegisterConnectionAsync(4005L);
-		await Parser.CommandParse(loginHandle, ConnectionService, MModule.single($"login {username} some-password-1"));
+		await Parser.CommandParse(loginHandle, ConnectionService, MarkupText.Plain($"login {username} some-password-1"));
 
 		var state = ConnectionService.Get(loginHandle)?.State;
 		await Assert.That(state).IsEqualTo(IConnectionService.ConnectionState.AccountMode);

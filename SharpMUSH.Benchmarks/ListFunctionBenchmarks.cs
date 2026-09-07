@@ -7,31 +7,31 @@ namespace SharpMUSH.Benchmarks;
 [BenchmarkCategory("List Functions")]
 public class ListFunctionBenchmarks : BaseBenchmark
 {
-	private static readonly MString Lnum10 = MModule.single("lnum(10)");
-	private static readonly MString Lnum100 = MModule.single("lnum(100)");
-	private static readonly MString Lnum1000 = MModule.single("lnum(1000)");
+	private static readonly MString Lnum10 = MarkupText.Plain("lnum(10)");
+	private static readonly MString Lnum100 = MarkupText.Plain("lnum(100)");
+	private static readonly MString Lnum1000 = MarkupText.Plain("lnum(1000)");
 
-	private static readonly MString Iter10 = MModule.single("iter(lnum(10),%i0)");
-	private static readonly MString Iter100 = MModule.single("iter(lnum(100),%i0)");
-	private static readonly MString Iter1000 = MModule.single("iter(lnum(1000),%i0)");
+	private static readonly MString Iter10 = MarkupText.Plain("iter(lnum(10),%i0)");
+	private static readonly MString Iter100 = MarkupText.Plain("iter(lnum(100),%i0)");
+	private static readonly MString Iter1000 = MarkupText.Plain("iter(lnum(1000),%i0)");
 
-	private static readonly MString Words10 = MModule.single(
+	private static readonly MString Words10 = MarkupText.Plain(
 		$"words({string.Join(" ", Enumerable.Range(1, 10))})");
-	private static readonly MString Words100 = MModule.single(
+	private static readonly MString Words100 = MarkupText.Plain(
 		$"words({string.Join(" ", Enumerable.Range(1, 100))})");
 
-	private static readonly MString Member10 = MModule.single(
+	private static readonly MString Member10 = MarkupText.Plain(
 		$"member({string.Join(" ", Enumerable.Range(1, 10))},5)");
-	private static readonly MString Member100 = MModule.single(
+	private static readonly MString Member100 = MarkupText.Plain(
 		$"member({string.Join(" ", Enumerable.Range(1, 100))},50)");
 
-	private static readonly MString Sort10 = MModule.single(
+	private static readonly MString Sort10 = MarkupText.Plain(
 		$"sort({string.Join(" ", Enumerable.Range(1, 10).Select(i => (11 - i).ToString()))})");
-	private static readonly MString Sort100 = MModule.single(
+	private static readonly MString Sort100 = MarkupText.Plain(
 		$"sort({string.Join(" ", Enumerable.Range(1, 100).Select(i => (101 - i).ToString()))})");
 
-	private static readonly MString MapInput10 = MModule.single("map(upcase,lnum(10))");
-	private static readonly MString MapInput100 = MModule.single("map(upcase,lnum(100))");
+	private static readonly MString MapInput10 = MarkupText.Plain("map(upcase,lnum(10))");
+	private static readonly MString MapInput100 = MarkupText.Plain("map(upcase,lnum(100))");
 
 
 	[Benchmark(Description = "lnum(N) — generate N-element list")]

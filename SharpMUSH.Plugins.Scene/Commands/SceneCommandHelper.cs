@@ -73,7 +73,7 @@ public static class SceneCommandHelper
 			var next = plain.IndexOf(',', start);
 			if (next < 0)
 			{
-				return (fields, MModule.empty());
+				return (fields, MarkupText.Empty);
 			}
 
 			start = next + 1;
@@ -85,7 +85,7 @@ public static class SceneCommandHelper
 		while (start < end && char.IsWhiteSpace(plain[start])) start++;
 		while (end > start && char.IsWhiteSpace(plain[end - 1])) end--;
 
-		return (fields, MModule.substring(start, end - start, arg));
+		return (fields, arg.Substring(start, end - start));
 	}
 
 	/// <summary>Plain-text, trimmed view of an optional argument (null/empty → "").</summary>

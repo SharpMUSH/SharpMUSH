@@ -40,7 +40,7 @@ public static class StatsMail
 
 			if (maybeTarget.IsError)
 			{
-				return MModule.single(maybeTarget.AsError.Value);
+				return MarkupText.Plain(maybeTarget.AsError.Value);
 			}
 
 			if (maybeTarget.IsNone)
@@ -71,7 +71,7 @@ public static class StatsMail
 			["STATS"] => await Stats(notifyService, executor, targetName, allSentMail, allReceivedMail),
 			["DSTATS"] => await DStats(notifyService, executor, targetName, allSentMail, allReceivedMail),
 			["FSTATS"] => await FStats(notifyService, executor, targetName, allSentMail, allReceivedMail),
-			_ => MModule.empty()
+			_ => MarkupText.Empty
 		};
 	}
 
@@ -88,7 +88,7 @@ public static class StatsMail
 		await notifyService.Notify(executor,
 			$"MAIL: {stats.Length} messages in folder [{currentFolder}] ({unread} unread, {cleared} cleared).", executor);
 
-		return MModule.empty();
+		return MarkupText.Empty;
 	}
 
 	private static async Task<MString> FStats(
@@ -115,7 +115,7 @@ public static class StatsMail
 		if (allReceivedMail.Length > 0)
 			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
 
-		return MModule.empty();
+		return MarkupText.Empty;
 	}
 
 	private static async Task<MString> DStats(
@@ -138,7 +138,7 @@ public static class StatsMail
 		if (allReceivedMail.Length > 0)
 			await notifyService.Notify(executor, $"Last is dated {allReceivedMail.Max(x => x.DateSent)}", executor);
 
-		return MModule.empty();
+		return MarkupText.Empty;
 	}
 
 	private static async Task<MString> Stats(
@@ -148,6 +148,6 @@ public static class StatsMail
 		await notifyService.Notify(executor, $"{targetName} sent {await allSentMailIe.CountAsync()} messages.", executor);
 		await notifyService.Notify(executor, $"{targetName} received {await allReceivedMailIe.CountAsync()} messages.", executor);
 
-		return MModule.empty();
+		return MarkupText.Empty;
 	}
 }

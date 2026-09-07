@@ -23,11 +23,11 @@ public class ZoneDatabaseTests
 	[Test]
 	public async ValueTask SetObjectZone()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBZoneMaster"));
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBZonedObject"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBZonedObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -44,11 +44,11 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(SetObjectZone))]
 	public async ValueTask UnsetObjectZone()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUnsetZoneMaster"));
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBUnsetZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUnsetZonedObject"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBUnsetZonedObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -70,15 +70,15 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(UnsetObjectZone))]
 	public async ValueTask UpdateObjectZone()
 	{
-		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUpdateZone1"));
+		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBUpdateZone1"));
 		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 		var zone1Object = await Mediator.Send(new GetObjectNodeQuery(zone1DbRef));
 
-		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUpdateZone2"));
+		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBUpdateZone2"));
 		var zone2DbRef = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
 		var zone2Object = await Mediator.Send(new GetObjectNodeQuery(zone2DbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBUpdateZonedObject"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBUpdateZonedObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -99,7 +99,7 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(UpdateObjectZone))]
 	public async ValueTask SetObjectZoneToNull()
 	{
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBNullZoneObject"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBNullZoneObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -116,15 +116,15 @@ public class ZoneDatabaseTests
 	[DependsOn(nameof(SetObjectZoneToNull))]
 	public async ValueTask MultipleObjectsSameZone()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBSharedZone"));
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBSharedZone"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 
-		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBSharedZoneObj1"));
+		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBSharedZoneObj1"));
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 
-		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBSharedZoneObj2"));
+		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBSharedZoneObj2"));
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 
@@ -146,15 +146,15 @@ public class ZoneDatabaseTests
 	public async ValueTask ObjectCanBeZone()
 	{
 		// An object can be both a zone master and be zoned to another zone
-		var topZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBTopZone"));
+		var topZoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBTopZone"));
 		var topZoneDbRef = DBRef.Parse(topZoneResult.Message!.ToPlainText()!);
 		var topZone = await Mediator.Send(new GetObjectNodeQuery(topZoneDbRef));
 
-		var midZoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBMidZone"));
+		var midZoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBMidZone"));
 		var midZoneDbRef = DBRef.Parse(midZoneResult.Message!.ToPlainText()!);
 		var midZone = await Mediator.Send(new GetObjectNodeQuery(midZoneDbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DBNestedZonedObj"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DBNestedZonedObj"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 

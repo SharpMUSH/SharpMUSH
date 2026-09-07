@@ -30,7 +30,7 @@ public static class AdminMail
 			case [.., "DEBUG"]:
 				// At this time, this serves no purpose in SharpMUSH.
 				await notifyService!.Notify(executor, "MAIL: NOTHING TO DEBUG");
-				return MModule.single("MAIL: NOTHING TO DEBUG");
+				return MarkupText.Plain("MAIL: NOTHING TO DEBUG");
 			case [.., "NUKE"] when executor.IsGod():
 				var allMailList = mediator!.CreateStream(new GetAllSystemMailQuery());
 				var totalCount = 0;
@@ -45,10 +45,10 @@ public static class AdminMail
 					}
 				}
 				await notifyService!.Notify(executor, $"MAIL: All mail deleted from system. Total: {totalCount}");
-				return MModule.single(totalCount.ToString());
+				return MarkupText.Plain(totalCount.ToString());
 			default:
 				await notifyService!.Notify(executor, "Invalid arguments for @mail admin command.");
-				return MModule.single(ErrorMessages.Returns.InvalidMailArguments);
+				return MarkupText.Plain(ErrorMessages.Returns.InvalidMailArguments);
 		}
 	}
 }

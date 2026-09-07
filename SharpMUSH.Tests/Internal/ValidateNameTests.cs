@@ -29,7 +29,7 @@ public class ValidateNameTests
 		Substitute.For<ILockService>());
 
 	private static async ValueTask<bool> IsValid(string name)
-		=> await Service().Valid(IValidateService.ValidationType.Name, MModule.single(name), new None());
+		=> await Service().Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None());
 
 	[Test]
 	[Arguments("TestName")]

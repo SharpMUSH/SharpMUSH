@@ -32,7 +32,7 @@ public class GeneralCommandTests
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await NotifyService
@@ -48,14 +48,14 @@ public class GeneralCommandTests
 	public async ValueTask CommandAliasRuns(string str)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 	}
 
 	[Test]
 	public async ValueTask DoListSimple()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=3 This is a test"));
 
 		// @dolist/inline iterates 3 times (elements: 1, 2, 3) → 3 identical notifications
 		await NotifyService
@@ -68,7 +68,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListSimple2()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1={4 This is, a test};"));
 
 		// @dolist/inline iterates 3 times (elements: 1, 2, 3) → 3 identical notifications
 		await NotifyService
@@ -81,7 +81,7 @@ public class GeneralCommandTests
 	public async ValueTask DolistDoubleHashReplacement()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=dolist-hash-##"));
 
 		await NotifyService
 			.Received(1)
@@ -103,7 +103,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
+			MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=5 This is a test; @pemit #1=6 This is also a test}"));
 
 		// @dolist/inline iterates 3 times → both @pemit commands fire 3 times each
 		await NotifyService
@@ -122,7 +122,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
+			MarkupText.Plain(
 				"@dolist/inline 1 2 3={@pemit #1=7 This is a test; @pemit #1=8 This is also a test}; @pemit #1=9 Repeat 3 times in this mode."));
 
 		await NotifyService
@@ -145,7 +145,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
+			MarkupText.Plain(
 				"@dolist/inline 1={@dolist/inline 1 2 3=@pemit #1=10 This is a test}; @pemit #1=11 Repeat 1 times in this mode."));
 
 		// outer 1 element × inner 3 elements = 3 for "10"; @pemit 11 is outside = 1×
@@ -164,7 +164,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
+			MarkupText.Plain(
 				"@dolist/inline 1 2={@dolist/inline 1 2 3=@pemit #1=12 This is a test}; @pemit #1=13 Repeat 2 times in this mode."));
 
 		// outer 2 elements × inner 3 elements = 6 for "12"; @pemit 13 is outside = 2×
@@ -183,7 +183,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
+			MarkupText.Plain(
 				"@dolist/inline a b={@dolist/inline 1 2 3=@pemit #1=14 This is a test %i0}; @pemit #1=15 Repeat 1 times in this mode %i0"));
 
 		// outer 2 elements (a,b) × inner 3 elements (1,2,3) → each distinct inner msg fires 2×
@@ -215,7 +215,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single(
+			MarkupText.Plain(
 				"@dolist/inline a b={@dolist/inline 1 2 3={@ifelse eq(%i0,1)=think %i0 is 1; @ifelse eq(%i0,2)=think %i0 is 2,think {%i0 is 1, or 3}}}"));
 
 		// outer 2 elements (a,b) × inner 3 elements (1,2,3) → each branch fires 2× (once per outer iter)
@@ -237,8 +237,8 @@ public class GeneralCommandTests
 	public async ValueTask DoBreakSimpleCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MModule.single("think assert 1a; @assert; think assert 2a; think assert 3a"));
-		await Parser.CommandListParse(MModule.single("think break 1a; @break; think break 2a; think break 3a"));
+		await Parser.CommandListParse(MarkupText.Plain("think assert 1a; @assert; think assert 2a; think assert 3a"));
+		await Parser.CommandListParse(MarkupText.Plain("think break 1a; @break; think break 2a; think break 3a"));
 
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2a"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -252,8 +252,8 @@ public class GeneralCommandTests
 	public async ValueTask DoBreakSimpleTruthyCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MModule.single("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
-		await Parser.CommandListParse(MModule.single("think break 1b; @break 1; think break 2b; think break 3b"));
+		await Parser.CommandListParse(MarkupText.Plain("think assert 1b; @assert 1; think assert 2b; think assert 3b"));
+		await Parser.CommandListParse(MarkupText.Plain("think break 1b; @break 1; think break 2b; think break 3b"));
 
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 1b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("assert 2b"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -267,8 +267,8 @@ public class GeneralCommandTests
 	public async ValueTask DoBreakSimpleFalsyCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandListParse(MModule.single("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
-		await Parser.CommandListParse(MModule.single("think break 1c; @break 0; think break 2c; think break 3c"));
+		await Parser.CommandListParse(MarkupText.Plain("think assert 1c; @assert 0; think assert 2c; think assert 3c"));
+		await Parser.CommandListParse(MarkupText.Plain("think break 1c; @break 0; think break 2c; think break 3c"));
 
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2c"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -283,7 +283,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
-			MModule.single("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
+			MarkupText.Plain("think break 1d; @break 1=think broken 1d; think break 2d; think break 3d"));
 
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2d"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -296,7 +296,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandListParse(
-			MModule.single("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
+			MarkupText.Plain("think break 1e; @break 1={think broken 1e; think broken 2e}; think break 2e; think break 3e"));
 
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 1e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 		await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("break 2e"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -310,7 +310,7 @@ public class GeneralCommandTests
 	{
 		// Create a unique thing to set the flag on, instead of modifying shared God (#1).
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagSetTest");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=DEBUG"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=DEBUG"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var thingObj = thing.AsThing;
@@ -324,7 +324,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @whereis #1 → "One is in Room Zero." — pattern B: object name "One" and room "Room Zero" make this globally unique.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@whereis #1"));
 
 		await NotifyService
 			.Received(1)
@@ -337,9 +337,9 @@ public class GeneralCommandTests
 	public async ValueTask WhereIs_NonPlayer_ReturnsError()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create test_object_whereis"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create test_object_whereis"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis test_object_whereis"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@whereis test_object_whereis"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor, executor)).IsTrue();
 	}
@@ -348,7 +348,7 @@ public class GeneralCommandTests
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@restart #1"));
 
 		// @restart #1 targets the God player (#1 is a player) → RestartedPlayerAndObjectsFormat is always sent.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, executor)).IsTrue();
@@ -358,7 +358,7 @@ public class GeneralCommandTests
 	public async ValueTask Find_SearchesForObjects()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@find test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@find test"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, executor)).IsTrue();
 	}
@@ -367,7 +367,7 @@ public class GeneralCommandTests
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@stats"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor, executor)).IsTrue();
 	}
@@ -376,7 +376,7 @@ public class GeneralCommandTests
 	public async ValueTask Search_PerformsDatabaseSearch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor, executor)).IsTrue();
 	}
@@ -385,7 +385,7 @@ public class GeneralCommandTests
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@entrances"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EntrancesToFormat), executor, executor)).IsTrue();
 	}
@@ -394,7 +394,7 @@ public class GeneralCommandTests
 	public async ValueTask Command_ShowsCommandInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@command @emit"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@command @emit"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, executor)).IsTrue();
 	}
@@ -403,7 +403,7 @@ public class GeneralCommandTests
 	public async ValueTask Function_ListsGlobalFunctions()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor, executor)).IsTrue();
 	}
@@ -412,7 +412,7 @@ public class GeneralCommandTests
 	public async ValueTask Function_ShowsFunctionInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@function name"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function name"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, executor)).IsTrue();
 	}
@@ -423,7 +423,7 @@ public class GeneralCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var mapObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapTest");
 		var uniqueAttr = $"MAPATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@map {mapObj}/{uniqueAttr}=foo bar baz"));
 
 		// MapWouldIterateFormat is always sent before attribute lookup (before the try/get attribute).
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, executor)).IsTrue();
@@ -435,7 +435,7 @@ public class GeneralCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var trigObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TrigTest");
 		var uniqueAttr = $"TRIGATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@trigger {trigObj}/{uniqueAttr}=arg1,arg2"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.TriggerNoSuchAttributeFormat), executor, executor)).IsTrue();
 	}
@@ -446,7 +446,7 @@ public class GeneralCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var inclObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclTest");
 		var uniqueAttr = $"INCLATTR_{Guid.NewGuid():N}";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@include {inclObj}/{uniqueAttr}=arg1,arg2"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.IncludeAttributeIsEmptyFormat), executor, executor)).IsTrue();
 	}
@@ -459,7 +459,7 @@ public class GeneralCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique thing to halt, instead of halting shared God (#1).
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltQueueTest");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@halt {thingDbRef}"));
 
 		await NotifyService
 			.Received(1)
@@ -471,7 +471,7 @@ public class GeneralCommandTests
 	public async ValueTask PS_ShowsQueueStatus()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ps"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PsQueueForTargetFormat), executor, executor)).IsTrue();
 	}
@@ -480,7 +480,7 @@ public class GeneralCommandTests
 	public async ValueTask Select_MatchesFirstExpression()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@select test=foo,:action1,bar,:action2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@select test=foo,:action1,bar,:action2"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, executor)).IsTrue();
 	}
@@ -489,9 +489,9 @@ public class GeneralCommandTests
 	public async ValueTask Attribute_DisplaysAttributeInfo()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access DESCRIPTION="));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access DESCRIPTION="));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute DESCRIPTION"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute DESCRIPTION"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCommandInfoFormat), executor, executor)).IsTrue();
 	}
@@ -499,7 +499,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessCreatesAttributeEntry()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access MYATTR=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access MYATTR=no_command"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
@@ -512,7 +512,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_AccessValidatesFlags()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR=INVALIDFLAG"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access TESTATTR=INVALIDFLAG"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
@@ -524,7 +524,7 @@ public class GeneralCommandTests
 	[Test]
 	public async ValueTask Attribute_EntryFlagsAreAppliedWhenAttributeCreated()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@attribute/access TESTATTR2=no_command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access TESTATTR2=no_command"));
 
 		var entries = await Mediator.CreateStream(new Library.Queries.Database.GetAllAttributeEntriesQuery())
 			.ToArrayAsync();
@@ -537,7 +537,7 @@ public class GeneralCommandTests
 		var success = await Mediator.Send(new Library.Commands.Database.SetAttributeCommand(
 			new DBRef(1),
 			["TESTATTR2"],
-			MModule.single("test value"),
+			MarkupText.Plain("test value"),
 			player.AsPlayer));
 
 		await Assert.That(success).IsTrue();
@@ -557,7 +557,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithDBRefNotificationBatching()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=Batched test message"));
 
 		await NotifyService
 			.Received(3)
@@ -570,7 +570,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListBatchesToOtherPlayers()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@dolist/inline a b c=@pemit {executor}=DoListBatchesToOtherPlayers: Message to other player"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dolist/inline a b c=@pemit {executor}=DoListBatchesToOtherPlayers: Message to other player"));
 
 		await NotifyService
 			.Received(3)
@@ -585,7 +585,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Nested @dolist: outer has 2 items, inner has 2 items = 4 total pemits
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2={@dolist/inline a b=@pemit #1=Nested message}"));
 
 		await NotifyService
 			.Received(4)
@@ -598,7 +598,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithoutBreak_AllMessagesReceived()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3=@pemit #1=DoListWithoutBreak_AllMessagesReceived"));
 
 		await NotifyService
 			.Received(3)
@@ -611,7 +611,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithBreakAfterFirst_OnlyFirstMessageReceived()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived %iL;@break}"));
 
 		// With {@pemit; @break}, @pemit runs in each iteration then @break happens, so all 3
 		// messages fire — this is the actual MUSH behavior: @break affects the next iteration, not current.
@@ -636,7 +636,7 @@ public class GeneralCommandTests
 	public async ValueTask DoListWithBreakFlushesMessages()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2 3={@pemit #1=Message before break; @break}"));
 
 		await NotifyService
 			.Received(3)
@@ -650,7 +650,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// With {@pemit; @break}, @pemit runs in each inner iteration: 2 outer * 3 inner = 6 messages.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist/inline 1 2={@dolist/inline a b c={@pemit #1=Inner message; @break}}"));
 
 		await NotifyService
 			.Received(6)
@@ -663,7 +663,7 @@ public class GeneralCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
+			MarkupText.Plain("@dolist/inline/delimit , apple,banana,orange=@pemit #1=Fruit: %i0"));
 
 		await NotifyService
 			.Received(1)
@@ -690,11 +690,11 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookOutsideRoom");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideRoomDest");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("look/outside"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look/outside"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.CantSeeThroughThat), player.DbRef, player.DbRef)).IsTrue();
@@ -711,17 +711,17 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookOutsideBox");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("LookOutsideOuter");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LookOutsideContainer");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
 		var boxDbRef = createResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {boxDbRef}={roomDbRef}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={boxDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {boxDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={boxDbRef}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("look/outside"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look/outside"));
 
 		await NotifyService
 			.Received(1)
@@ -740,7 +740,7 @@ public class GeneralCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ThinkEmpty");
 
-		var result = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("think"));
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("think"));
 
 		await NotifyService
 			.Received(1)
@@ -768,18 +768,18 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenBadDest");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var decoyName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestDecoy");
 		var decoyResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {decoyName}={roomDbRef}"));
+			MarkupText.Plain($"@open {decoyName}={roomDbRef}"));
 		var decoyDbRef = decoyResult.Message!.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenBadDestExit");
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {exitName}={decoyDbRef}"));
+			MarkupText.Plain($"@open {exitName}={decoyDbRef}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.CantLinkToThat), player.DbRef, player.DbRef)).IsTrue();
@@ -796,18 +796,18 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenThingDest");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestThing");
 		var thingResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@create {thingName}"));
+			MarkupText.Plain($"@create {thingName}"));
 		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenThingDestExit");
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {exitName}={thingDbRef}"));
+			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
 		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
@@ -829,19 +829,19 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenNoLinkPerm");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		// God's thing, not LINK_OK, brought within reach so the locate succeeds and only permission decides.
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermThing");
-		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {thingDbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenNoLinkPermExit");
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {exitName}={thingDbRef}"));
+			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
 		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
@@ -861,19 +861,19 @@ public class GeneralCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "OpenLinkOk");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkRoom");
-		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkThing");
-		var thingResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {thingName}"));
+		var thingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 		var thingDbRef = thingResult.Message!.ToPlainText()!.Trim();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {thingDbRef}={roomDbRef}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=LINK_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {thingDbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=LINK_OK"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("OpenLinkOkExit");
 		var exitResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@open {exitName}={thingDbRef}"));
+			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
 		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));

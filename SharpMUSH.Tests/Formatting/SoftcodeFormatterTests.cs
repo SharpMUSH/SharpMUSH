@@ -1,4 +1,5 @@
-using MarkupString.MarkupImplementation;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -27,28 +28,28 @@ public class SoftcodeFormatterTests
 
 	private MString Format(string src, IReadOnlyList<SemanticToken>? sem = null,
 		IReadOnlyList<ParseError>? errors = null, int width = 78)
-		=> SoftcodeFormatter.Format(MModule.single(src), TestLexer.Lex(src),
+		=> SoftcodeFormatter.Format(MarkupText.Plain(src), TestLexer.Lex(src),
 			sem ?? [], errors ?? [], width, Parser);
 
 	[Test]
 	public async Task PlainText_RoundTripsUnchanged()
 	{
 		var result = Format("add(1,2)");
-		await Assert.That(MModule.plainText(result)).IsEqualTo("add(1,2)");
+		await Assert.That(result.ToPlainText()).IsEqualTo("add(1,2)");
 	}
 
 	[Test]
 	public async Task LongInput_GainsNewlines()
 	{
 		var result = Format("switch(words(%0),0,nothing at all,1,just one,many here)", width: 30);
-		await Assert.That(MModule.plainText(result)).Contains("\n");
+		await Assert.That(result.ToPlainText()).Contains("\n");
 	}
 
 	[Test]
 	public async Task NoCharactersAreLost_EvenWithoutSemanticTokens()
 	{
 		const string src = "switch(words(%0),0,nothing at all,1,just one,many here)";
-		var result = MModule.plainText(Format(src, width: 30));
+		var result = Format(src, width: 30).ToPlainText();
 
 		static string Strip(string s) => new(s.Where(c => !char.IsWhiteSpace(c)).ToArray());
 		await Assert.That(Strip(result)).IsEqualTo(Strip(src));
@@ -75,7 +76,7 @@ public class SoftcodeFormatterTests
 			}
 		};
 
-		var result = MModule.plainText(Format("add(1,2", errors: errors));
+		var result = Format("add(1,2", errors: errors).ToPlainText();
 
 		// Pins both placement (the summary starts on the line right after the code, not merely
 		// "somewhere in the output") and content (byte-identical to ToMushFailureString(), never a
@@ -95,14 +96,14 @@ public class SoftcodeFormatterTests
 	/// wider than it is. The behaviour under test never changed; the proxy for it did.
 	/// </para>
 	/// </summary>
-	private static readonly AnsiStructure ErrorStyleDetails = AnsiCodeParser.ParseCodes("i r").Details;
+	private static readonly AnsiStyle ErrorStyleDetails = AnsiCodeParser.Parse("i r").Style;
 
 	/// <summary>
 	/// Whether <paramref name="offset"/> carries the error highlight — the same walk as
 	/// <c>SemanticTokenRendererTests.StyleDetailsAt</c>, compared against
 	/// <see cref="ErrorStyleDetails"/>. A run covering the offset is not by itself proof of an override
 	/// hit: <c>MString</c> carries a run over every character (e.g. the default/absent markup
-	/// <c>MModule.single</c> assigns), so the check has to look inside the run's <c>Markups</c> for an
+	/// <c>MarkupText.Plain</c> assigns), so the check has to look inside the run's <c>Markups</c> for an
 	/// actual <see cref="AnsiMarkup"/> rather than merely finding a run.
 	/// </summary>
 	private static bool IsErrorStyled(MString ms, int offset)
@@ -114,7 +115,7 @@ public class SoftcodeFormatterTests
 				continue;
 			}
 
-			return run.Markups.Any(markup => markup is AnsiMarkup ansi && Equals(ansi.Details, ErrorStyleDetails));
+			return run.Markups.Any(markup => markup is AnsiMarkup ansi && Equals(ansi.Style, ErrorStyleDetails));
 		}
 
 		return false;
@@ -206,14 +207,14 @@ public class SoftcodeFormatterTests
 	[Test]
 	public async Task NoErrors_AppendsNoSummary()
 	{
-		var result = MModule.plainText(Format("add(1,2)"));
+		var result = Format("add(1,2)").ToPlainText();
 		await Assert.That(result.Split('\n')).Count().IsEqualTo(1);
 	}
 
 	[Test]
 	public async Task EmptyInput_ReturnsEmpty()
 	{
-		var result = SoftcodeFormatter.Format(MModule.empty(), [], [], [], 78, Parser);
-		await Assert.That(MModule.plainText(result)).IsEqualTo("");
+		var result = SoftcodeFormatter.Format(MarkupText.Empty, [], [], [], 78, Parser);
+		await Assert.That(result.ToPlainText()).IsEqualTo("");
 	}
 }

@@ -18,7 +18,7 @@ public class WikiFunctionUnitTests
 	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
 
 	private async Task<string> Eval(string expression) =>
-		(await Parser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	[Test]
 	public async Task Wiki_Title_ReturnsSeededHomeTitle()
@@ -320,12 +320,12 @@ public class WikiFunctionUnitTests
 		await Assert.That(created.IsT0).IsTrue();
 		var page = created.AsT0;
 
-		var text = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug})")))!.Message!;
-		var markdown = (await Parser.FunctionParse(MModule.single($"wiki({page.Slug},markdown)")))!.Message!;
+		var text = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug})")))!.Message!;
+		var markdown = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug},markdown)")))!.Message!;
 
-		await Assert.That(text.Render("html")).DoesNotContain("xch_cmd");
-		await Assert.That(text.Render("pueblo")).DoesNotContain("XCH_CMD");
-		await Assert.That(markdown.Render("html")).DoesNotContain("xch_cmd");
+		await Assert.That(text.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
+		await Assert.That(text.Render(MarkupFormat.Pueblo)).DoesNotContain("XCH_CMD");
+		await Assert.That(markdown.Render(MarkupFormat.Html)).DoesNotContain("xch_cmd");
 		await Assert.That(markdown.ToPlainText())
 			.Contains("[[Getting Started]]")
 			.Because("the markdown field is the source as authored, not a rendering of it");

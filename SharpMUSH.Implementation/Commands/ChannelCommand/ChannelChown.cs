@@ -51,7 +51,7 @@ public static class ChannelChown
 
 		await Mediator.Send(new UpdateChannelOwnerCommand(channel, newOwnerObject));
 
-		var output = MModule.multiple([MModule.single("CHAT: "), MModule.single(newOwnerObject.Object.Name), MModule.single(" is the new owner of "), channel.Name]);
+		var output = MarkupText.Concat([MarkupText.Plain("CHAT: "), MarkupText.Plain(newOwnerObject.Object.Name), MarkupText.Plain(" is the new owner of "), channel.Name]);
 		await NotifyService.Notify(executor, output, executor);
 		return new CallState(string.Empty);
 	}

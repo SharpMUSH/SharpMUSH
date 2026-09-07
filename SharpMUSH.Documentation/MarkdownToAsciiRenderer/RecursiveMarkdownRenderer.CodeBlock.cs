@@ -1,12 +1,12 @@
-using ANSILibrary;
 using ColorCode;
 using ColorCode.Common;
 using ColorCode.Parsing;
 using Markdig.Syntax;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using SharpMUSH.MarkupString;
-using SharpMUSH.MarkupString.TextAlignerModule;
+using MarkupString;
+using SharpMUSH.Library.Markup;
 using System.Drawing;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -31,7 +31,7 @@ public partial class RecursiveMarkdownRenderer
 			!string.Equals(fencedStd.Info, "sharp", StringComparison.OrdinalIgnoreCase))
 		{
 			var colored = TryRenderColorCodeBlock(fencedStd);
-			if (colored is not null) return MModule.MarkupSingle2(CodeBackgroundStyle, colored);
+			if (colored is not null) return MarkupText.Wrap(CodeBackgroundStyle, colored);
 		}
 
 		// Apply background styling to every fenced code block that was not syntax-highlighted
@@ -43,18 +43,18 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var bgLines = fencedPlain.Lines.Lines?
 				.Where(line => line.Slice.Text != null)
-				.Select(line => MModule.single(line.Slice.ToString()))
+				.Select(line => MarkupText.Plain(line.Slice.ToString()))
 				.ToList() ?? new List<MString>();
-			if (bgLines.Count == 0) return MModule.empty();
-			return MModule.MarkupSingle2(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
+			if (bgLines.Count == 0) return MarkupText.Empty;
+			return MarkupText.Wrap(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
 		}
 
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
-			.Select(line => MModule.single("  " + line.Slice.ToString()))
+			.Select(line => MarkupText.Plain("  " + line.Slice.ToString()))
 			.ToList() ?? new List<MString>();
 
-		return MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		return MarkupText.Join(MarkupText.Plain("\n"), lines);
 	}
 
 	/// <summary>
@@ -68,13 +68,13 @@ public partial class RecursiveMarkdownRenderer
 	private MString AlignAllCodeLines(IEnumerable<MString> lineContents)
 	{
 		var contentWidth = Math.Max(1, _maxWidth - 2); // 1 (gutter col) + 1 (separator)
-		var allContent = MModule.multipleWithDelimiter(MModule.single("\n"), lineContents);
-		return TextAlignerModule.align(
+		var allContent = MarkupText.Join(MarkupText.Plain("\n"), lineContents);
+		return TextAligner.Align(
 			$"1 <{contentWidth}",
-			[MModule.empty(), allContent],
-			MModule.single(" "),    // filler = space
-			MModule.single(" "),    // column separator = 1 space → total 2-char indent
-			MModule.single("\n")    // row separator used when a long line wraps
+			[MarkupText.Empty, allContent],
+			MarkupText.Plain(" "),    // filler = space
+			MarkupText.Plain(" "),    // column separator = 1 space → total 2-char indent
+			MarkupText.Plain("\n")    // row separator used when a long line wraps
 		);
 	}
 
@@ -94,14 +94,14 @@ public partial class RecursiveMarkdownRenderer
 			.Select(l => l.Slice.ToString())
 			.ToList() ?? [];
 
-		if (sourceLines.Count == 0) return MModule.empty();
+		if (sourceLines.Count == 0) return MarkupText.Empty;
 
 		var coloredLines = sourceLines.Select(line =>
 		{
 			var parts = new List<MString>();
 			ColorCodeParser.Value.Parse(line, language, (text, scopes) =>
 				WriteColorCodeScopes(text, scopes, parts));
-			return MModule.multiple(parts);
+			return MarkupText.Concat(parts);
 		});
 
 		return AlignAllCodeLines(coloredLines);
@@ -123,7 +123,7 @@ public partial class RecursiveMarkdownRenderer
 		foreach (var scope in ordered)
 		{
 			if (scope.Index > offset)
-				parts.Add(MModule.single(text[offset..scope.Index]));
+				parts.Add(MarkupText.Plain(text[offset..scope.Index]));
 
 			var scopeText = text[scope.Index..(scope.Index + scope.Length)];
 
@@ -139,12 +139,12 @@ public partial class RecursiveMarkdownRenderer
 				var color = style?.Foreground is not null ? ParseArgbHex(style.Foreground) : null;
 				if (color is not null && scope.Name != ScopeName.PlainText)
 				{
-					var ansiStyle = Ansi.Create(foreground: new AnsiColor.RGB(color.Value), bold: style!.Bold);
-					parts.Add(MModule.MarkupSingle(ansiStyle, scopeText));
+					var ansiStyle = Ansi.Create(foreground: color.Value.ToAnsiColor(), bold: style!.Bold);
+					parts.Add(MarkupText.Wrap(ansiStyle, scopeText));
 				}
 				else
 				{
-					parts.Add(MModule.single(scopeText));
+					parts.Add(MarkupText.Plain(scopeText));
 				}
 			}
 
@@ -152,7 +152,7 @@ public partial class RecursiveMarkdownRenderer
 		}
 
 		if (offset < text.Length)
-			parts.Add(MModule.single(text[offset..]));
+			parts.Add(MarkupText.Plain(text[offset..]));
 	}
 
 	/// <summary>
@@ -201,23 +201,23 @@ public partial class RecursiveMarkdownRenderer
 			.ToList() ?? [];
 
 		if (sourceLines.Count == 0)
-			return MModule.empty();
+			return MarkupText.Empty;
 
 		var contentWidth = Math.Max(1, _maxWidth - 2);
 		var styledLines = sourceLines.Select(line =>
 		{
 			var content = BuildSharpLineContent(line);
-			var aligned = TextAlignerModule.align(
+			var aligned = TextAligner.Align(
 				$"1 <{contentWidth}",
-				[MModule.empty(), content],
-				MModule.single(" "),
-				MModule.single(" "),
-				MModule.single("\n")
+				[MarkupText.Empty, content],
+				MarkupText.Plain(" "),
+				MarkupText.Plain(" "),
+				MarkupText.Plain("\n")
 			);
-			return MModule.MarkupSingle2(CodeBackgroundStyle, aligned);
+			return MarkupText.Wrap(CodeBackgroundStyle, aligned);
 		});
 
-		return MModule.multipleWithDelimiter(MModule.single("\n"), styledLines);
+		return MarkupText.Join(MarkupText.Plain("\n"), styledLines);
 	}
 
 	/// <summary>
@@ -249,7 +249,7 @@ public partial class RecursiveMarkdownRenderer
 		var parseType = trimmed.Length > 0 && (trimmed[0] == '&' || trimmed[0] == '@' || trimmed[0] == '$')
 			? ParseType.CommandList
 			: ParseType.Function;
-		var source = MModule.single(line);
+		var source = MarkupText.Plain(line);
 		var tokens = _mushParser!.GetSemanticTokens(source, parseType);
 		var sortedTokens = tokens
 			.OrderBy(t => t.Range.Start.Line)
@@ -258,12 +258,12 @@ public partial class RecursiveMarkdownRenderer
 
 		if (sortedTokens.Count == 0)
 			return promptPrefix.Length > 0
-				? MModule.concat(MModule.single(promptPrefix), source)
+				? MarkupText.Concat(MarkupText.Plain(promptPrefix), source)
 				: source;
 
 		var styled = SemanticTokenRenderer.Render(source, sortedTokens);
 		return promptPrefix.Length > 0
-			? MModule.concat(MModule.single(promptPrefix), styled)
+			? MarkupText.Concat(MarkupText.Plain(promptPrefix), styled)
 			: styled;
 	}
 }

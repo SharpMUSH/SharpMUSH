@@ -97,7 +97,7 @@ public class AntlrParserErrorAnalysis
 
 			foreach (var parseType in parseTypes)
 			{
-				var errors = Parser.ValidateAndGetErrors(MModule.single(line), parseType);
+				var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(line), parseType);
 				if (errors.Count > 0)
 				{
 					lineErrors[parseType] = errors.Select(e => (e.Column, e.Message, e.OffendingToken, e.ExpectedTokens)).ToList();

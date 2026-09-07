@@ -131,7 +131,7 @@ One document type, `kind: "form" | "view"`, generalizing the profile schema's
 switch in `DynamicConfig.razor:346-429` — which already covers `switch`→boolean,
 `numeric`→number, `text`→text — with `select`/`radio`/`multiselect`/`slider`/`date`/
 `textarea`/`mstring`. The `mstring` type reuses the existing markup render path
-(`WrapAsHtmlClass` / the output-rendering pipeline) so ANSI/MXP styling survives.
+(`MarkupText.Render(MarkupFormat.Html)` / the output-rendering pipeline) so ANSI/MXP styling survives.
 `hidden` carries a value without a visible control; `computed` is display-only.
 
 **No client-side conditional logic.** There is deliberately **no `show_if` predicate**.

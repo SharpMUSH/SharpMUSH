@@ -299,7 +299,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		try
 		{
 			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MModule.single($"connect {playerName} pleb-password-1"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
@@ -324,7 +324,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		try
 		{
 			var handle = await RegisterTelnetHandleAsync("192.0.2.9"); // RFC 5737 TEST-NET-1, does not match NonMatchingHost
-			await Parser.CommandParse(handle, ConnectionService, MModule.single($"connect {playerName} pleb-password-1"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
 
 			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 		}
@@ -342,7 +342,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		try
 		{
 			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("connect guest"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("connect guest"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
@@ -373,7 +373,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		try
 		{
 			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("register SitelockedAcct somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register SitelockedAcct somepassword"));
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),

@@ -293,7 +293,7 @@ public partial class ArangoDatabase
 			new
 			{
 				_key = obj.Object().Key.ToString(),
-				Name = MModule.plainText(value)
+				Name = value.ToPlainText()
 			}, cancellationToken: ct);
 
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken ct = default)

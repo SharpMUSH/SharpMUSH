@@ -31,7 +31,7 @@ public class AdminCommandTests
 	public async ValueTask PcreateCommand()
 	{
 		var name = $"PcreateTarget{Guid.NewGuid():N}"[..24];
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@pcreate {name}=passwordPcreate"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=passwordPcreate"));
 
 		var created = result.Message!.ToPlainText();
 		var dbrefNumber = created.TrimStart('#').Split(':')[0];
@@ -47,7 +47,7 @@ public class AdminCommandTests
 	public async ValueTask NewpasswordCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@newpassword #1=newpassNewpassword"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@newpassword #1=newpassNewpassword"));
 
 		await NotifyService
 			.Received(1)
@@ -61,7 +61,7 @@ public class AdminCommandTests
 	public async ValueTask PasswordCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@password oldpassPassword=newpassPassword"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@password oldpassPassword=newpassPassword"));
 
 		await NotifyService
 			.Received(1)
@@ -75,7 +75,7 @@ public class AdminCommandTests
 	public async ValueTask ShutdownCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown"));
 
 		await NotifyService
 			.Received(1)
@@ -88,7 +88,7 @@ public class AdminCommandTests
 	public async ValueTask RestartCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@restart"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@restart"));
 
 		await NotifyService
 			.Received(1)
@@ -101,7 +101,7 @@ public class AdminCommandTests
 	public async ValueTask PurgeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@purge"));
 
 		await NotifyService
 			.Received(1)
@@ -115,7 +115,7 @@ public class AdminCommandTests
 	public async ValueTask PoorCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poor #1001"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poor #1001"));
 
 		await NotifyService
 			.Received(1)
@@ -130,7 +130,7 @@ public class AdminCommandTests
 	public async ValueTask ReadcacheCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@readcache"));
 
 		await NotifyService
 			.Received(1)
@@ -144,7 +144,7 @@ public class AdminCommandTests
 	public async ValueTask ChownallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chownall #1002=#2002"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chownall #1002=#2002"));
 
 		await NotifyService
 			.Received(1)
@@ -158,7 +158,7 @@ public class AdminCommandTests
 	public async ValueTask ChzoneallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzoneall #1003=#2003"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzoneall #1003=#2003"));
 
 		await NotifyService
 			.Received(1)

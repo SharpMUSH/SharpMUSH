@@ -144,7 +144,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		if (!body.TrimStart().StartsWith('['))
 		{
 			async Task<string> Probe(string expression) =>
-				(await factory.FunctionParser.FunctionParse(MModule.single(expression)))!
+				(await factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!
 					.Message!.ToPlainText().Replace("\n", "\\n");
 
 			var players = await Probe("lsearch(all,type,player)");

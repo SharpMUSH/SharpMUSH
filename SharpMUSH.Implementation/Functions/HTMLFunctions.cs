@@ -1,10 +1,12 @@
-﻿using SharpMUSH.Library;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
-using MarkupString.MarkupImplementation;
+using MarkupString;
+using MarkupString.Ansi;
+using MarkupString.Html;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -15,11 +17,9 @@ public partial class Functions
 	public ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return new ValueTask<CallState>(new CallState(
-			MModule.concat(
-				MModule.concat(
-					MModule.single("<"),
-					parser.CurrentState.Arguments["0"].Message),
-				MModule.single(">"))));
+			MarkupText.Concat(
+				MarkupText.Concat(MarkupText.Plain("<"), parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty),
+				MarkupText.Plain(">"))));
 	}
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]
@@ -54,12 +54,11 @@ public partial class Functions
 
 		var htmlMarkup = HtmlMarkup.Create(tagName, attributes);
 
-		// Return a MarkupString that contains both the HTML markup structure
-		// and the actual HTML text (so it appears in both ToString() and ToPlainText())
-		var wrappedContent = MModule.MarkupSingle2(htmlMarkup, content);
+		// tagwrap() hands the caller literal HTML text, not markup: PennMUSH's tagwrap returns a
+		// string the game can go on manipulating, so the tags have to be in the text itself.
+		var wrappedContent = MarkupText.Wrap(htmlMarkup, content);
 
-		// But for now, return the plain HTML string since tests expect it
-		return ValueTask.FromResult<CallState>(wrappedContent.ToString());
+		return ValueTask.FromResult<CallState>(wrappedContent.Render(MarkupFormat.Html));
 	}
 
 	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]

@@ -44,10 +44,10 @@ public static class ChannelTitle
 		}
 
 		var (_, status) = memberStatus;
-		var cleared = MModule.getLength(title) == 0;
+		var cleared = title.Length == 0;
 
 		await Mediator.Send(new UpdateChannelUserStatusCommand(channel, executor,
-			status with { Title = cleared ? MModule.empty() : title }));
+			status with { Title = cleared ? MarkupText.Empty : title }));
 
 		var response = cleared
 			? $"CHAT: Title cleared on {channel.Name.ToPlainText()}."

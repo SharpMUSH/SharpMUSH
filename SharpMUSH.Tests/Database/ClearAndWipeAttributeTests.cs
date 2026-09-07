@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Database;
 
@@ -19,7 +18,7 @@ public class ClearAndWipeAttributeTests
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"CLEAR_LEAF_TEST_{Guid.NewGuid():N}";
 
-		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], A.single("TestValue"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], MarkupText.Plain("TestValue"), playerOne);
 
 		var beforeClear = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		await Assert.That(beforeClear).IsNotNull();
@@ -40,9 +39,9 @@ public class ClearAndWipeAttributeTests
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"CLEAR_PARENT_TEST_{Guid.NewGuid():N}";
 
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName], A.single("ParentValue"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"], A.single("ChildValue1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], A.single("ChildValue2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName], MarkupText.Plain("ParentValue"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"], MarkupText.Plain("ChildValue1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], MarkupText.Plain("ChildValue2"), playerOne);
 
 		var beforeClear = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		var beforeList = await beforeClear!.ToListAsync()!;
@@ -88,7 +87,7 @@ public class ClearAndWipeAttributeTests
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"WIPE_LEAF_TEST_{Guid.NewGuid():N}";
 
-		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], A.single("TestValue"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [attributeName], MarkupText.Plain("TestValue"), playerOne);
 
 		var beforeWipe = Database.GetAttributeAsync(playerOneDBRef, [attributeName]);
 		await Assert.That(beforeWipe).IsNotNull();
@@ -114,11 +113,11 @@ public class ClearAndWipeAttributeTests
 		//   |    |- GRANDCHILD1 -> "GrandChild1"
 		//   |    |- GRANDCHILD2 -> "GrandChild2"
 		//   |- CHILD2 -> "Child2"
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName], A.single("Root"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"], A.single("Child1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD1"], A.single("GrandChild1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD2"], A.single("GrandChild2"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], A.single("Child2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName], MarkupText.Plain("Root"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1"], MarkupText.Plain("Child1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD1"], MarkupText.Plain("GrandChild1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD1", "GRANDCHILD2"], MarkupText.Plain("GrandChild2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "CHILD2"], MarkupText.Plain("Child2"), playerOne);
 
 		var root = Database.GetAttributeAsync(playerOneDBRef, [baseName]);
 		await Assert.That(root).IsNotNull();
@@ -156,11 +155,11 @@ public class ClearAndWipeAttributeTests
 		var baseName = $"WIPE_SUBTREE_TEST_{Guid.NewGuid():N}";
 
 		// Build a tree: ROOT -> BRANCH1 -> LEAF1, ROOT -> BRANCH2 -> LEAF2
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName], A.single("Root"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1"], A.single("Branch1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1", "LEAF1"], A.single("Leaf1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2"], A.single("Branch2"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2", "LEAF2"], A.single("Leaf2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName], MarkupText.Plain("Root"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1"], MarkupText.Plain("Branch1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH1", "LEAF1"], MarkupText.Plain("Leaf1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2"], MarkupText.Plain("Branch2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "BRANCH2", "LEAF2"], MarkupText.Plain("Leaf2"), playerOne);
 
 		var result = await Database.WipeAttributeAsync(playerOneDBRef, [baseName, "BRANCH1"]);
 
@@ -207,11 +206,11 @@ public class ClearAndWipeAttributeTests
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_DEEP_TEST_{Guid.NewGuid():N}";
 
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName], A.single("L1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2"], A.single("L2"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3"], A.single("L3"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4"], A.single("L4"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"], A.single("L5"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName], MarkupText.Plain("L1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2"], MarkupText.Plain("L2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3"], MarkupText.Plain("L3"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4"], MarkupText.Plain("L4"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"], MarkupText.Plain("L5"), playerOne);
 
 		var deepest = Database.GetAttributeAsync(playerOneDBRef, [baseName, "L2", "L3", "L4", "L5"]);
 		await Assert.That(deepest).IsNotNull();
@@ -237,10 +236,10 @@ public class ClearAndWipeAttributeTests
 		var clearAttr = $"CONFLICT_CLEAR_{Guid.NewGuid():N}";
 		var wipeAttr = $"CONFLICT_WIPE_{Guid.NewGuid():N}";
 
-		await Database.SetAttributeAsync(playerOneDBRef, [clearAttr], A.single("ClearValue"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [clearAttr, "CHILD"], A.single("ClearChild"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr], A.single("WipeValue"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr, "CHILD"], A.single("WipeChild"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [clearAttr], MarkupText.Plain("ClearValue"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [clearAttr, "CHILD"], MarkupText.Plain("ClearChild"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr], MarkupText.Plain("WipeValue"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, [wipeAttr, "CHILD"], MarkupText.Plain("WipeChild"), playerOne);
 
 		var clearResult = await Database.ClearAttributeAsync(playerOneDBRef, [clearAttr]);
 		var wipeResult = await Database.WipeAttributeAsync(playerOneDBRef, [wipeAttr]);

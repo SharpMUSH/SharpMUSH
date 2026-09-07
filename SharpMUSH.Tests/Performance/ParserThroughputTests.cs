@@ -19,13 +19,13 @@ public class ParserThroughputTests
 	private IMUSHCodeParser Parser => WebAppFactory.FunctionParser;
 	private IMUSHCodeParser CommandParser => WebAppFactory.CommandParser;
 
-	private static readonly MString SimpleAdd = MModule.single("[add(1,1)]");
-	private static readonly MString NestedAdd10 = MModule.single(BuildNestedAdd(10));
-	private static readonly MString NestedAdd50 = MModule.single(BuildNestedAdd(50));
-	private static readonly MString Lnum100 = MModule.single("lnum(100)");
-	private static readonly MString Iter100 = MModule.single("iter(lnum(100),%i0)");
-	private static readonly MString ThinkCmd = MModule.single("think hello");
-	private static readonly MString ThinkSubst = MModule.single("think %#");
+	private static readonly MString SimpleAdd = MarkupText.Plain("[add(1,1)]");
+	private static readonly MString NestedAdd10 = MarkupText.Plain(BuildNestedAdd(10));
+	private static readonly MString NestedAdd50 = MarkupText.Plain(BuildNestedAdd(50));
+	private static readonly MString Lnum100 = MarkupText.Plain("lnum(100)");
+	private static readonly MString Iter100 = MarkupText.Plain("iter(lnum(100),%i0)");
+	private static readonly MString ThinkCmd = MarkupText.Plain("think hello");
+	private static readonly MString ThinkSubst = MarkupText.Plain("think %#");
 
 	private static string BuildNestedAdd(int depth)
 	{

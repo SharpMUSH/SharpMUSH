@@ -65,11 +65,11 @@ public class ExamineSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtOn");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
 		// words() alone on an indented line — and, because a call that breaks expands everything nested
@@ -84,10 +84,10 @@ public class ExamineSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtOff");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		await Expect(LongCode);
 	}
@@ -97,11 +97,11 @@ public class ExamineSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtIntact");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		// The formatter's last break for this input puts the closing argument on its own indented line.
 		// Unlike a bare "many words indeed here)" substring (which the raw, unformatted single line would
@@ -115,11 +115,11 @@ public class ExamineSyntaxFormattingTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&EMPTYFN {obj}="));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/EMPTYFN=funsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/EMPTYFN"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/EMPTYFN"));
 
 		// Every Notify call's plain text, in the order they were sent this command.
 		var texts = NotifyService.ReceivedCalls()
@@ -158,15 +158,15 @@ public class ExamineSyntaxFormattingTests
 		// A fresh mortal can't @set or examine an object it doesn't own; God's WIZARD bit lets this
 		// player create, flag and examine its own attribute in one identity, keeping the connection
 		// (and its WIDTH=0 metadata) tied to the same executor throughout.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtWidth0Obj");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single($"examine {obj}/LONGFN"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		// Same break as the no-connection fallback case: proves WIDTH=0 was rejected and 78 was used,
 		// not that width silently became 1 (which would break after nearly every character instead).

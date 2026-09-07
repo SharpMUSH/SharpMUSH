@@ -10,6 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -96,7 +97,7 @@ public partial class Commands
 			}
 
 			await NotifyService.Notify(executor, result, executor);
-			return new CallState(MModule.single(result));
+			return new CallState(MarkupText.Plain(result));
 		}
 		catch (DbException ex)
 		{
@@ -232,10 +233,10 @@ public partial class Commands
 								{
 									var remainder = columnNames
 										.Select((x, i)
-												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MModule.single(x)))
+												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
 										.ToDictionary();
 
-									remainder.TryAdd("0", MModule.single("0"));
+									remainder.TryAdd("0", MushText.Zero);
 
 									var newState = parser.CurrentState with
 									{
@@ -255,13 +256,13 @@ public partial class Commands
 							{
 								var values = row.Values.ToList();
 
-								parser.CurrentState.AddRegister("0", MModule.single(currentRow.ToString()));
+								parser.CurrentState.AddRegister("0", MarkupText.Plain(currentRow.ToString()));
 
 								var dict = values.Select((x, i) =>
 										new KeyValuePair<string, CallState>((i + 1).ToString(),
-											MModule.single(x?.ToString() ?? string.Empty)))
+											MarkupText.Plain(x?.ToString() ?? string.Empty)))
 									.ToDictionary();
-								dict.TryAdd("0", MModule.single(currentRow.ToString()));
+								dict.TryAdd("0", MarkupText.Plain(currentRow.ToString()));
 
 								return ValueTask.FromResult(parser.CurrentState with
 								{
@@ -277,7 +278,7 @@ public partial class Commands
 					if (notifySwitch)
 					{
 						await Mediator.Send(new QueueCommandListRequest(
-							MModule.single("@notify me"),
+							MarkupText.Plain("@notify me"),
 							parser.CurrentState,
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
 							-1));
@@ -291,7 +292,7 @@ public partial class Commands
 						? "No rows returned."
 						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
 					await NotifyService.Notify(executor, message, executor);
-					return new CallState(MModule.single(message));
+					return new CallState(MarkupText.Plain(message));
 				}
 				catch (DbException ex)
 				{

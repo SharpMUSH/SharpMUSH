@@ -18,7 +18,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regmatch(test,.*)", "1")]
 	public async Task Regmatch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -28,7 +28,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regmatchi(test,tes)", "0")]
 	public async Task Regmatchi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -39,7 +39,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regrab(one two three,t.*)", "two")]
 	public async Task Regrab(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -47,7 +47,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regrabi(This is testing a test,TEST)", "testing")]
 	public async Task Regrabi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -57,7 +57,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regraball(This is testing a test,s$)", "This is")] // All words ending in 's'
 	public async Task Regraball(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -65,7 +65,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regraballi(This is testing a TEST,test)", "testing TEST")]
 	public async Task Regraballi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -76,7 +76,7 @@ public class RegexFunctionUnitTests
 	[Arguments("reglmatch(I am testing a test,notfound)", "0")]
 	public async Task Reglmatch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -84,7 +84,7 @@ public class RegexFunctionUnitTests
 	[Arguments("reglmatchi(I am testing a TEST,test$)", "5")]
 	public async Task Reglmatchi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -92,7 +92,7 @@ public class RegexFunctionUnitTests
 	[Arguments("reglmatchall(I am testing a test,test,%b,|)", "3|5")]
 	public async Task Reglmatchall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -100,7 +100,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regmatchalli(I am testing a TEST,test,%b,|)", "3|5")]
 	public async Task Regmatchalli(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -110,7 +110,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regedit(test,e,a)", "tast")] // Simple replacement
 	public async Task Regedit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -118,7 +118,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regediti(test,T,X)", "Xest")] // Case insensitive
 	public async Task Regediti(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -127,7 +127,7 @@ public class RegexFunctionUnitTests
 																							// Note: The capstr function would need to be implemented for this test to work fully
 	public async Task Regeditall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -135,7 +135,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regeditalli(TesT,t,X)", "XesX")] // Case insensitive, all matches
 	public async Task Regeditalli(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -152,7 +152,7 @@ public class RegexFunctionUnitTests
 	// so {4}, [A-Z], {6} get consumed by the parser. PennMUSH passes them raw.
 	public async Task Reswitch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -165,7 +165,7 @@ public class RegexFunctionUnitTests
 	// Penn reswitchi.12 — complex regex (same NoParse issue as reswitch.4)
 	public async Task Reswitchi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -178,7 +178,7 @@ public class RegexFunctionUnitTests
 	// Penn reswitchall.8 — complex regex (same NoParse issue as reswitch.4)
 	public async Task Reswitchall(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -191,7 +191,7 @@ public class RegexFunctionUnitTests
 	// Penn reswitchalli.16 — complex regex (same NoParse issue as reswitch.4)
 	public async Task Reswitchalli(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -201,7 +201,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regrep(#0,*,pattern)", "")]
 	public async Task Regrep(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -211,7 +211,7 @@ public class RegexFunctionUnitTests
 	[Arguments("regrepi(#0,*,pattern)", "")]
 	public async Task Regrepi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

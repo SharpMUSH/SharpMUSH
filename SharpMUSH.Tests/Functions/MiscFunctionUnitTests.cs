@@ -15,7 +15,7 @@ public class MiscFunctionUnitTests
 	[Arguments("list(locks)", "basic")] // lock type names are lowercased
 	public async Task List(string str, string expectedContains)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).Contains(expectedContains);
 	}
 
@@ -25,7 +25,7 @@ public class MiscFunctionUnitTests
 	[Arguments("foreach(a b c,##)", "a b c")]
 	public async Task Foreach(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -33,7 +33,7 @@ public class MiscFunctionUnitTests
 	[Arguments("match(a b c,b)", "2")]
 	public async Task Match(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -43,7 +43,7 @@ public class MiscFunctionUnitTests
 	[Arguments("json_map(obj/attr,{\"a\":1})", "")]
 	public async Task JsonMap(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -51,7 +51,7 @@ public class MiscFunctionUnitTests
 	[Arguments("malias(%#)", "")]
 	public async Task Malias(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -59,7 +59,7 @@ public class MiscFunctionUnitTests
 	[Arguments("message(test)", "")]
 	public async Task Message(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -67,7 +67,7 @@ public class MiscFunctionUnitTests
 	[Arguments("prompt(%#,test)", "")]
 	public async Task Prompt(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -75,7 +75,7 @@ public class MiscFunctionUnitTests
 	[Arguments("mwhoid()", "")]
 	public async Task Mwhoid(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -83,7 +83,7 @@ public class MiscFunctionUnitTests
 	[Arguments("nmwho()", "")]
 	public async Task Nmwho(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -91,7 +91,7 @@ public class MiscFunctionUnitTests
 	[Arguments("zwho()", "")]
 	public async Task Zwho(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -99,7 +99,7 @@ public class MiscFunctionUnitTests
 	[Arguments("ceil(3.14)", "4")]
 	public async Task Ceil(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -107,7 +107,7 @@ public class MiscFunctionUnitTests
 	[Arguments("atan2(1,1)", "")]
 	public async Task Atan2(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -115,7 +115,7 @@ public class MiscFunctionUnitTests
 	[Arguments("power(2,3)", "8")]
 	public async Task Power(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -123,7 +123,7 @@ public class MiscFunctionUnitTests
 	[Arguments("remainder(10,3)", "1")]
 	public async Task Remainder(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -133,7 +133,7 @@ public class MiscFunctionUnitTests
 	[Arguments("ctu(3.5,5)", "4")]
 	public async Task Ctu(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -141,7 +141,7 @@ public class MiscFunctionUnitTests
 	[Arguments("dec(100)", "99")]
 	public async Task Dec(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -149,7 +149,7 @@ public class MiscFunctionUnitTests
 	[Arguments("folderstats()", "")]
 	public async Task Folderstats(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -157,7 +157,7 @@ public class MiscFunctionUnitTests
 	[Arguments("open(exit,#0)", "")]
 	public async Task Open(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -165,7 +165,7 @@ public class MiscFunctionUnitTests
 	[Arguments("tel(%#,#0)", "")]
 	public async Task Tel(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -173,7 +173,7 @@ public class MiscFunctionUnitTests
 	[Arguments("wipe(%#/testattr)", "")]
 	public async Task Wipe(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -181,7 +181,7 @@ public class MiscFunctionUnitTests
 	[Arguments("fullalias(%#)", "")]
 	public async Task Fullalias(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -189,7 +189,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cmsgs(channelname)", "")]
 	public async Task Cmsgs(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -197,7 +197,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cbuffer(channelname)", "")]
 	public async Task Cbuffer(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -205,7 +205,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cbufferadd(channelname,msg)", "")]
 	public async Task Cbufferadd(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -213,7 +213,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cdesc(channelname)", "")]
 	public async Task Cdesc(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -221,7 +221,7 @@ public class MiscFunctionUnitTests
 	[Arguments("clflags(channelname)", "")]
 	public async Task Clflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -229,7 +229,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cmogrifier(channelname)", "")]
 	public async Task Cmogrifier(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -237,7 +237,7 @@ public class MiscFunctionUnitTests
 	[Arguments("ctitle(channelname,%#)", "")]
 	public async Task Ctitle(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -245,7 +245,7 @@ public class MiscFunctionUnitTests
 	[Arguments("cusers(channelname)", "")]
 	public async Task Cusers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -254,7 +254,7 @@ public class MiscFunctionUnitTests
 	public async Task Zfun(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -263,7 +263,7 @@ public class MiscFunctionUnitTests
 	public async Task Zmwho(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -272,7 +272,7 @@ public class MiscFunctionUnitTests
 	public async Task Zone(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

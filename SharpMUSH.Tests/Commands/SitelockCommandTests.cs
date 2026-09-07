@@ -87,7 +87,7 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@sitelock/ban {pattern}"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/ban {pattern}"));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsTrue();
@@ -106,7 +106,7 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@sitelock/register {pattern}"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/register {pattern}"));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsTrue();
@@ -126,7 +126,7 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@sitelock/remove {pattern}"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/remove {pattern}"));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsFalse();
@@ -144,7 +144,7 @@ public class SitelockCommandTests
 
 		try
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single($"@sitelock {pattern}=!connect suspect"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock {pattern}=!connect suspect"));
 
 			var rules = Configuration.CurrentValue.SitelockRules.Rules;
 			await Assert.That(rules.ContainsKey(pattern)).IsTrue();

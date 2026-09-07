@@ -20,10 +20,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public static implicit operator CallState(Error<string> m) => new(m.Value);
 
 	public CallState(MString? Message, int Depth)
-		: this(Message ?? MModule.empty(), Depth, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message ?? MarkupText.Empty, Depth, null, () => ValueTask.FromResult(Message)) { }
 
 	public CallState(MString? Message)
-		: this(Message ?? MModule.empty(), 0, null, () => ValueTask.FromResult(Message)) { }
+		: this(Message ?? MarkupText.Empty, 0, null, () => ValueTask.FromResult(Message)) { }
 
 	public CallState(int Message) : this(Message.ToString()) { }
 
@@ -42,32 +42,32 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	public CallState(string Message)
 		: this(
 			!string.IsNullOrEmpty(Message)
-				? MModule.single(Message)
-				: MModule.empty(),
+				? MarkupText.Plain(Message)
+				: MarkupText.Empty,
 			0, null,
 			!string.IsNullOrEmpty(Message)
-				? () => ValueTask.FromResult(MModule.single(Message))!
-				: () => ValueTask.FromResult(MModule.empty())!)
+				? () => ValueTask.FromResult(MarkupText.Plain(Message))!
+				: () => ValueTask.FromResult(MarkupText.Empty)!)
 	{
 	}
 
 	public CallState(bool result, string errorIfFalse = "0") :
-		this(MModule.single(result ? "1" : errorIfFalse), 0, null,
-			() => ValueTask.FromResult(MModule.single(result ? "1" : errorIfFalse))!)
+		this(MarkupText.Plain(result ? "1" : errorIfFalse), 0, null,
+			() => ValueTask.FromResult(MarkupText.Plain(result ? "1" : errorIfFalse))!)
 	{
 	}
 
 	public CallState(string Message, int Depth)
 		: this(!string.IsNullOrEmpty(Message)
-				? MModule.single(Message)
-				: MModule.empty(), Depth, null,
+				? MarkupText.Plain(Message)
+				: MarkupText.Empty, Depth, null,
 			!string.IsNullOrEmpty(Message)
-				? () => ValueTask.FromResult(MModule.single(Message))!
-				: () => ValueTask.FromResult(MModule.empty())!)
+				? () => ValueTask.FromResult(MarkupText.Plain(Message))!
+				: () => ValueTask.FromResult(MarkupText.Empty)!)
 	{
 	}
 
-	private static readonly MString _emptyMString = MModule.empty();
+	private static readonly MString _emptyMString = MarkupText.Empty;
 	private static readonly Func<ValueTask<MString?>> _emptyParsedMessage = () => ValueTask.FromResult<MString?>(_emptyMString);
 
 	public static readonly CallState EmptyArgument = new(_emptyMString, 0, [], _emptyParsedMessage);

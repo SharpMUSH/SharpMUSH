@@ -18,7 +18,9 @@
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
-		<ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+		<PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
+		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
+		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
 	</ItemGroup>
 
 </Project>

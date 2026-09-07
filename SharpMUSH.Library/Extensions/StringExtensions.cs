@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Markup;
+
 namespace SharpMUSH.Library.Extensions;
 
 public static class StringExtensions
@@ -14,5 +16,5 @@ public static class StringExtensions
 	/// </remarks>
 	/// <param name="str">Wildcard pattern</param>
 	/// <returns>Regex pattern</returns>
-	public static string GlobToRegex(this string str) => MModule.getWildcardMatchAsRegex2(str);
+	public static string GlobToRegex(this string str) => MushText.Glob.ToRegex(str);
 }

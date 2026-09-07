@@ -75,6 +75,6 @@ public class SurrealDBWriteBenchmarks : SurrealBaseBenchmark
 		await _database!.SetAttributeAsync(
 			new DBRef(1),
 			["BENCH_ATTR"],
-			MModule.single($"v{Interlocked.Increment(ref _counter)}"),
+			MarkupText.Plain($"v{Interlocked.Increment(ref _counter)}"),
 			_godPlayer!);
 }

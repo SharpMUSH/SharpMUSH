@@ -56,7 +56,7 @@ the standard `node_*` / `edge_*` role prefixes.
 `Status` is a **free string** (defaults `new` → `active` → `paused` →
 `finished`, custom allowed). All timestamps are **UTC Unix-millis**. `Content`
 is never pre-rendered to HTML — the wire carries `Content` + raw `Markup`, the
-portal renders client-side via `WrapAsHtmlClass` (`output-rendering-pipeline`).
+portal renders client-side via `MarkupText.Render(MarkupFormat.Html)` (`output-rendering-pipeline`).
 
 ### Structural edges (within the scene graph)
 

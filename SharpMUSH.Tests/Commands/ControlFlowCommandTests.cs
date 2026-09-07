@@ -46,7 +46,7 @@ public class ControlFlowCommandTests
 	public async ValueTask SelectCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@select 1=1,@pemit #1=One,@pemit #1=Other"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@select 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
 			.Received(1)
@@ -57,7 +57,7 @@ public class ControlFlowCommandTests
 	public async ValueTask SwitchCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
 
 		await NotifyService
 			.Received(1)
@@ -70,7 +70,7 @@ public class ControlFlowCommandTests
 	public async ValueTask BreakCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@break"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@break"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -83,7 +83,7 @@ public class ControlFlowCommandTests
 	public async ValueTask AssertCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@assert 1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@assert 1"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -96,7 +96,7 @@ public class ControlFlowCommandTests
 	public async ValueTask RetryCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@retry 1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@retry 1"));
 
 		await NotifyService
 			.Received(1)
@@ -107,7 +107,7 @@ public class ControlFlowCommandTests
 	public async ValueTask SkipCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@skip 0=@pemit #1=SkipCommand False; @pemit #1=SkipCommand Rest"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@skip 0=@pemit #1=SkipCommand False; @pemit #1=SkipCommand Rest"));
 
 		await NotifyService
 			.Received(1)
@@ -124,7 +124,7 @@ public class ControlFlowCommandTests
 	public async ValueTask IncludeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@include #1/ATTRIBUTE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@include #1/ATTRIBUTE"));
 
 		await NotifyService
 			.Received(1)
@@ -135,7 +135,7 @@ public class ControlFlowCommandTests
 	public async ValueTask IfElseCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@ifelse 1=@pemit #1=IfElseCommand True,@pemit #1=IfElseCommand False"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ifelse 1=@pemit #1=IfElseCommand True,@pemit #1=IfElseCommand False"));
 
 		await NotifyService
 			.Received(1)
@@ -149,11 +149,11 @@ public class ControlFlowCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclDollar");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCL_DOLLAR_TEST {objDbRef}=$testcmd *:@pemit #1=IncludeDollarPrefix_Executed_71934"));
+			MarkupText.Plain($"&INCL_DOLLAR_TEST {objDbRef}=$testcmd *:@pemit #1=IncludeDollarPrefix_Executed_71934"));
 
 		// @include should strip the $testcmd *: prefix and execute the remainder
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/INCL_DOLLAR_TEST"));
+			MarkupText.Plain($"@include {objDbRef}/INCL_DOLLAR_TEST"));
 
 		await NotifyService
 			.Received(1)
@@ -168,11 +168,11 @@ public class ControlFlowCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclCaret");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCL_CARET_TEST {objDbRef}=^*says*:@pemit #1=IncludeCaretPrefix_Executed_82045"));
+			MarkupText.Plain($"&INCL_CARET_TEST {objDbRef}=^*says*:@pemit #1=IncludeCaretPrefix_Executed_82045"));
 
 		// @include should strip the ^*says*: prefix and execute the remainder
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/INCL_CARET_TEST"));
+			MarkupText.Plain($"@include {objDbRef}/INCL_CARET_TEST"));
 
 		await NotifyService
 			.Received(1)
@@ -187,11 +187,11 @@ public class ControlFlowCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclNoPrefix");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCL_NOPREFIX_TEST {objDbRef}=@pemit #1=IncludeNoPrefix_Executed_93156"));
+			MarkupText.Plain($"&INCL_NOPREFIX_TEST {objDbRef}=@pemit #1=IncludeNoPrefix_Executed_93156"));
 
 		// @include should execute the attribute content as-is
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/INCL_NOPREFIX_TEST"));
+			MarkupText.Plain($"@include {objDbRef}/INCL_NOPREFIX_TEST"));
 
 		await NotifyService
 			.Received(1)
@@ -206,11 +206,11 @@ public class ControlFlowCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclNobreak");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCL_NOBRK_TEST {objDbRef}=@pemit #1=IncludeNobreak_Before_14267;@break 1"));
+			MarkupText.Plain($"&INCL_NOBRK_TEST {objDbRef}=@pemit #1=IncludeNobreak_Before_14267;@break 1"));
 
 		// Use @include/nobreak so @break doesn't propagate, then execute next command
 		await Parser.CommandListParse(
-			MModule.single($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit #1=IncludeNobreak_After_14267"));
+			MarkupText.Plain($"@include/nobreak {objDbRef}/INCL_NOBRK_TEST;@pemit #1=IncludeNobreak_After_14267"));
 
 		await NotifyService
 			.Received(1)
@@ -230,11 +230,11 @@ public class ControlFlowCommandTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "InclDollarArg");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCL_DOLLARARG_TEST {objDbRef}=$testarg *:@pemit #1=IncludeDollarArg_%0_25378"));
+			MarkupText.Plain($"&INCL_DOLLARARG_TEST {objDbRef}=$testarg *:@pemit #1=IncludeDollarArg_%0_25378"));
 
 		// @include with arguments should strip prefix and substitute %0
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/INCL_DOLLARARG_TEST=Hello"));
+			MarkupText.Plain($"@include {objDbRef}/INCL_DOLLARARG_TEST=Hello"));
 
 		await NotifyService
 			.Received(1)
@@ -248,7 +248,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var baselineNotificationCount = NotifyService.ReceivedCalls().Count();
 		await Parser.CommandListParse(
-			MModule.single("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
+			MarkupText.Plain("@pemit #1=BreakQueued_Before_36489;@break/queued 1=@pemit #1=BreakQueued_Action_36489;@pemit #1=BreakQueued_After_36489"));
 
 		var newCalls = NotifyService.ReceivedCalls().Skip(baselineNotificationCount).ToList();
 		var newMessages = newCalls
@@ -269,7 +269,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/first: only the first matching action fires, second match should not run.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch/first 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
+			MarkupText.Plain("@switch/first 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
 
 		await NotifyService
 			.Received(1)
@@ -288,7 +288,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch (default) / @switch/all: all matching actions run.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch/all 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
+			MarkupText.Plain("@switch/all 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
 
 		await NotifyService
 			.Received(1)
@@ -307,7 +307,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/regexp: patterns are treated as case-insensitive regular expressions.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch/regexp hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
+			MarkupText.Plain("@switch/regexp hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
 
 		await NotifyService
 			.Received(1)
@@ -326,7 +326,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/regexp: per helpfile, matches are case-insensitive.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch/regexp HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
+			MarkupText.Plain("@switch/regexp HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
 
 		await NotifyService
 			.Received(1)
@@ -345,7 +345,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// #$ in action text should be replaced with the test string before execution.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
+			MarkupText.Plain("@switch hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
 
 		await NotifyService
 			.Received(1)
@@ -359,7 +359,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// #$ in default action text should also be replaced with the test string.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
+			MarkupText.Plain("@switch goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
 
 		await NotifyService
 			.Received(1)
@@ -374,7 +374,7 @@ public class ControlFlowCommandTests
 		// @switch/notify: action fires normally; @notify me is also queued.
 		// Verify the action itself executes correctly.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@switch/notify 1=1,@pemit #1=SwNotify_Match_93158,@pemit #1=SwNotify_Default_93158"));
+			MarkupText.Plain("@switch/notify 1=1,@pemit #1=SwNotify_Match_93158,@pemit #1=SwNotify_Default_93158"));
 
 		await NotifyService
 			.Received(1)
@@ -393,13 +393,13 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainAll");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP1 {obj}=think setq(acc, a)"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP2 {obj}=think setq(acc, %q<acc>b)"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&STEP3 {obj}=@pemit #1=ChainAll_%q<acc>c_71204"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&STEP1 {obj}=think setq(acc, a)"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&STEP2 {obj}=think setq(acc, %q<acc>b)"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&STEP3 {obj}=@pemit #1=ChainAll_%q<acc>c_71204"));
 
 		// All three links run in order, and q-registers are shared between them (STEP2 sees STEP1's setq).
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include/chain {obj}/STEP1 {obj}/STEP2 {obj}/STEP3"));
+			MarkupText.Plain($"@include/chain {obj}/STEP1 {obj}/STEP2 {obj}/STEP3"));
 
 		await NotifyService
 			.Received(1)
@@ -413,11 +413,11 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainBrk");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainBrk_S1_55019;@break 1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@pemit #1=ChainBrk_S2_55019"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S1 {obj}=@pemit #1=ChainBrk_S1_55019;@break 1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S2 {obj}=@pemit #1=ChainBrk_S2_55019"));
 
 		// Default (no /nobreak): the @break in S1 short-circuits the chain, so S2 never runs.
-		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+		await Parser.CommandListParse(MarkupText.Plain($"@include/chain {obj}/S1 {obj}/S2"));
 
 		await NotifyService
 			.Received(1)
@@ -436,12 +436,12 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainArg");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&P1 {obj}=@pemit #1=ChainArg_P1_%0_88431"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&P2 {obj}=@pemit #1=ChainArg_P2_%0_88431"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&P1 {obj}=@pemit #1=ChainArg_P1_%0_88431"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&P2 {obj}=@pemit #1=ChainArg_P2_%0_88431"));
 
 		// The =HELLO argument reaches every link as %0.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@include/chain {obj}/P1 {obj}/P2=HELLO"));
+			MarkupText.Plain($"@include/chain {obj}/P1 {obj}/P2=HELLO"));
 
 		await NotifyService
 			.Received(1)
@@ -460,11 +460,11 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ChainNB");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&N1 {obj}=@pemit #1=ChainNB_N1_31776;@break 1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&N2 {obj}=@pemit #1=ChainNB_N2_31776"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&N1 {obj}=@pemit #1=ChainNB_N1_31776;@break 1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&N2 {obj}=@pemit #1=ChainNB_N2_31776"));
 
 		// /nobreak confines the @break to N1, so the chain carries on to N2.
-		await Parser.CommandListParse(MModule.single($"@include/chain/nobreak {obj}/N1 {obj}/N2"));
+		await Parser.CommandListParse(MarkupText.Plain($"@include/chain/nobreak {obj}/N1 {obj}/N2"));
 
 		await NotifyService
 			.Received(1)
@@ -486,11 +486,11 @@ public class ControlFlowCommandTests
 		// The recursion originates in ONE link of the group: S2 includes ITSELF. That nested single-target
 		// @include runs through RunOne, tracked under S2's own LongName — independent of the chain key — so
 		// it hits the recursion limit and the chain RETURNS instead of looping forever.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainRecSelf_S1_88011"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@pemit #1=ChainRecSelf_S2_88011;@include {obj}/S2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S1 {obj}=@pemit #1=ChainRecSelf_S1_88011"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S2 {obj}=@pemit #1=ChainRecSelf_S2_88011;@include {obj}/S2"));
 
 		// If single-link recursion were NOT caught, this call would never return (stack overflow / hang).
-		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+		await Parser.CommandListParse(MarkupText.Plain($"@include/chain {obj}/S1 {obj}/S2"));
 
 		// S1 ran once (the chain executed) ...
 		await NotifyService.Received(1).Notify(
@@ -513,10 +513,10 @@ public class ControlFlowCommandTests
 		// The recursion again originates in ONE link, but this time S2 re-runs the WHOLE chain (the same
 		// target list). That is tracked under the chain's target-list key, which is identical on every
 		// re-entry, so the counter climbs and the recursion limit fires — the chain RETURNS.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S1 {obj}=@pemit #1=ChainRecWhole_S1_43307"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&S2 {obj}=@include/chain {obj}/S1 {obj}/S2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S1 {obj}=@pemit #1=ChainRecWhole_S1_43307"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&S2 {obj}=@include/chain {obj}/S1 {obj}/S2"));
 
-		await Parser.CommandListParse(MModule.single($"@include/chain {obj}/S1 {obj}/S2"));
+		await Parser.CommandListParse(MarkupText.Plain($"@include/chain {obj}/S1 {obj}/S2"));
 
 		// S1 fired (the chain ran, repeatedly) and the call returned — proving whole-chain recursion driven
 		// by a single link is bounded/caught, not infinite.
