@@ -1,4 +1,5 @@
-﻿using DotNext.Threading;
+﻿using SharpMUSH.Library.Extensions;
+using DotNext.Threading;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using System.Collections.Immutable;
@@ -6,7 +7,7 @@ using System.Text.Json.Serialization;
 
 namespace SharpMUSH.Library.Models;
 
-public class SharpObject
+public class SharpObject : IObjectShaped<SharpObject>
 {
 	[JsonIgnore]
 	public string? Id { get; set; }
@@ -107,4 +108,12 @@ public class SharpObject
 	public void WithLock(string lockName, SharpLockData data) => Locks = Locks.SetItem(lockName, data);
 
 	public void WithoutLock(string lockName) => Locks = Locks.Remove(lockName);
+
+	public static DBRef? RefOf(SharpObject value) => value.DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out SharpObject value)
+	{
+		value = node.IsNone ? null! : node.Known.Object();
+		return !node.IsNone;
+	}
 }

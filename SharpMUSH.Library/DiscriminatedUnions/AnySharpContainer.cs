@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using SharpMUSH.Library.Extensions;
+using Mediator;
 using OneOf;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -7,7 +8,7 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
 public class AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input)
-	: OneOfBase<SharpPlayer, SharpRoom, SharpThing>(input)
+	: OneOfBase<SharpPlayer, SharpRoom, SharpThing>(input), IObjectShaped<AnySharpContainer>
 {
 	public static implicit operator AnySharpContainer(SharpPlayer x) => new(x);
 	public static implicit operator AnySharpContainer(SharpRoom x) => new(x);
@@ -50,4 +51,13 @@ public class AnySharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing> input)
 	public SharpPlayer AsPlayer => AsT0;
 	public SharpRoom AsRoom => AsT1;
 	public SharpThing AsThing => AsT2;
+
+	public static DBRef? RefOf(AnySharpContainer value) => value.Object().DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContainer value)
+	{
+		var container = !node.IsNone && node.Known.IsContainer;
+		value = container ? node.Known.AsContainer : null!;
+		return container;
+	}
 }

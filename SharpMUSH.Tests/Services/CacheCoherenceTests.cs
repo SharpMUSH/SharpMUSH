@@ -1,8 +1,13 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
+using NSubstitute;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;
@@ -37,7 +42,7 @@ public class CacheCoherenceTests
 	{
 		using var cache = NewCache();
 		var versions = new ObjectVersions();
-		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, versions);
+		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, versions, Substitute.For<IMediator>());
 
 		var served = await behaviour.Handle(new ObjectProbeQuery(7), (_, _) =>
 		{
@@ -56,11 +61,48 @@ public class CacheCoherenceTests
 	public async Task AnUndisturbedFactoryKeepsItsEntry()
 	{
 		using var cache = NewCache();
-		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, new ObjectVersions());
+		var behaviour = new QueryCachingBehavior<ObjectProbeQuery, string>(cache, new ObjectVersions(), Substitute.For<IMediator>());
 
 		await behaviour.Handle(new ObjectProbeQuery(7), (_, _) => ValueTask.FromResult("current"), CancellationToken.None);
 
 		await Assert.That((await cache.TryGetAsync<string>(CacheKeys.Object(7))).Value).IsEqualTo("current");
+	}
+
+	private sealed record ContentsProbeQuery : IStreamQuery<AnySharpContent>, ICacheable
+	{
+		public string CacheKey => "contents-probe";
+		public string[] CacheTags => [];
+	}
+
+	/// <summary>
+	/// A contents list is stored as full object ids, so the lookup on read carries the creation
+	/// milliseconds of the object the list named. A number recycled since then resolves to nothing:
+	/// the object that took its place is not in the list.
+	/// </summary>
+	[Test]
+	public async Task AStoredListLooksItsObjectsUpByFullObjectId()
+	{
+		using var cache = NewCache();
+		var factory = new TestObjectFactory();
+		var thing = factory.CreateThing(7, "Probe Thing");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds == thing.Object().CreationTime), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(thing.AsThing));
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds != thing.Object().CreationTime), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new OneOf.Types.None()));
+		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, mediator);
+
+		var listed = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => new[] { thing.AsContent }.ToAsyncEnumerable(), CancellationToken.None).ToListAsync();
+
+		await Assert.That(listed).Count().IsEqualTo(1);
+		await Assert.That(ReferenceEquals(listed[0].Object(), thing.Object())).IsTrue();
+		await mediator.Received(1).Send(
+			Arg.Is<GetObjectNodeQuery>(q => q.DBRef.CreationMilliseconds == thing.Object().CreationTime), Arg.Any<CancellationToken>());
+
+		// The same list, with the number recycled: the stored id no longer matches, so the list is empty.
+		await cache.SetAsync("contents-probe", new CachedObjectRefs([new DBRef(7, thing.Object().CreationTime + 1)]), CacheEntryProfiles.Tagged);
+		var recycled = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => throw new InvalidOperationException("served from cache"), CancellationToken.None).ToListAsync();
+		await Assert.That(recycled).IsEmpty();
 	}
 
 	[Test]

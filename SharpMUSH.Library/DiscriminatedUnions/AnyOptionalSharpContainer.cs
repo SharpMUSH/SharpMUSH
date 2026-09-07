@@ -1,11 +1,12 @@
-﻿using OneOf;
+﻿using SharpMUSH.Library.Extensions;
+using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, None>
+public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, None>, IObjectShaped<AnyOptionalSharpContainer>
 {
 	public AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, None> input) : base(input) { }
 	public static implicit operator AnyOptionalSharpContainer(SharpPlayer x) => new(x);
@@ -37,4 +38,19 @@ public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, Sharp
 			thing => thing,
 			none => throw new Exception("Cannot convert None to a valid object.")
 		);
+
+	public static DBRef? RefOf(AnyOptionalSharpContainer value) => value.IsNone ? null : value.WithoutNone().Object().DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out AnyOptionalSharpContainer value)
+	{
+		if (node.IsNone)
+		{
+			value = new None();
+			return true;
+		}
+
+		var container = node.Known.IsContainer;
+		value = container ? node.Known.AsContainer.Match<AnyOptionalSharpContainer>(p => p, r => r, t => t) : null!;
+		return container;
+	}
 }
