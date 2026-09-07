@@ -7,14 +7,19 @@ namespace MarkupString.Html;
 /// </summary>
 public static class HtmlCss
 {
-	/// <summary>One rule per <c>ms-*</c> class this package's HTML emitters can write.</summary>
+	/// <summary>
+	/// One rule per <c>ms-*</c> class this package's HTML emitters can write, plus the keyframes
+	/// <c>.ms-blink</c> animates against. Every name here is <c>ms-</c>-prefixed so dropping the
+	/// sheet into a page cannot collide with the page's own rules.
+	/// </summary>
 	public const string Fixed =
 		".ms-bold { font-weight: bold; }\n" +
-		".ms-faint { opacity: 0.5; }\n" +
+		".ms-faint { opacity: 0.6; }\n" +
 		".ms-italic { font-style: italic; }\n" +
 		".ms-underline { text-decoration: underline; }\n" +
 		".ms-strike { text-decoration: line-through; }\n" +
 		".ms-overline { text-decoration: overline; }\n" +
-		".ms-blink { animation: blink 1s step-start infinite; }\n" +
-		".ms-invert { color: var(--ms-bg, #000); background-color: var(--ms-fg, #fff); }\n";
+		".ms-blink { animation: ms-blink 1s step-start infinite; }\n" +
+		".ms-invert { color: var(--ms-bg, #000); background-color: var(--ms-fg, #fff); }\n" +
+		"@keyframes ms-blink { 50% { opacity: 0; } }\n";
 }
