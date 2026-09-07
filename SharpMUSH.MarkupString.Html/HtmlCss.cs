@@ -26,5 +26,6 @@ public static class HtmlCss
 		".ms-overline { text-decoration: overline; }\n" +
 		".ms-blink { animation: ms-blink 1s step-start infinite; }\n" +
 		".ms-invert { color: var(--ms-bg, #000); background-color: var(--ms-fg, #fff); }\n" +
+		".ms-cmd-link { cursor: pointer; text-decoration: underline dotted; }\n" +
 		"@keyframes ms-blink { 50% { opacity: 0; } }\n";
 }

@@ -43,6 +43,7 @@ jobs:
       # This job, not `build`: it is a fast standalone publish that needs no database, and the
       # format job is already the cheap "does the tree hold together" gate.
       - name: AOT smoke test
+        shell: bash
         run: |
           dotnet publish SharpMUSH.MarkupString.AotSmoke -c Release -r linux-x64 \
             -p:SkipFormatVerification=true 2>&1 | tee aot.log

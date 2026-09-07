@@ -43,10 +43,10 @@ MarkupFormat[] formats =
 
 var failures = new List<string>();
 
-var rendered = new string[formats.Length];
-for (var i = 0; i < formats.Length; i++)
+var rendered = new Dictionary<string, string>();
+foreach (var format in formats)
 {
-	rendered[i] = text.Render(formats[i]);
+	rendered[format.Name] = text.Render(format);
 }
 
 // Both serialiser paths: the string one and the UTF-8 buffer one, read back through both readers.
@@ -60,22 +60,27 @@ foreach (var (label, roundTripped) in new[]
 	("utf8", MarkupTextSerializer.Deserialize(buffer.WrittenSpan))
 })
 {
-	for (var i = 0; i < formats.Length; i++)
+	foreach (var format in formats)
 	{
-		var after = roundTripped.Render(formats[i]);
-		if (!string.Equals(after, rendered[i], StringComparison.Ordinal))
+		var after = roundTripped.Render(format);
+		if (!string.Equals(after, rendered[format.Name], StringComparison.Ordinal))
 		{
-			failures.Add($"{formats[i].Name} differs after the {label} round trip:\n  before: {Escape(rendered[i])}\n  after:  {Escape(after)}");
+			failures.Add($"{format.Name} differs after the {label} round trip:\n  before: {Escape(rendered[format.Name])}\n  after:  {Escape(after)}");
 		}
 	}
 }
 
 // The renders have to contain the real thing, not merely be stable: a registry that silently
-// dropped every emitter would round-trip perfectly and render nothing.
-Expect(rendered[1], "\e[1;31m", "ansi");
-Expect(rendered[2], "<send href=\"n\">", "html");
-Expect(rendered[2], "color: #ff5555", "html");
-Expect(rendered[0], "日本語テキスト", "plain");
+// dropped every emitter would round-trip perfectly and render nothing. One substring per format,
+// so a format whose emitter silently regressed to a neighbour's output (e.g. Mxp falling back to
+// Pueblo's escape-code path) still trips a distinct check.
+Expect(rendered["plain"], "日本語テキスト", "plain");
+Expect(rendered["ansi"], "\e[1;31m", "ansi");
+Expect(rendered["html"], "<send href=\"n\">", "html");
+Expect(rendered["html"], "color: #ff5555", "html");
+Expect(rendered["pueblo"], "<send href=\"n\">", "pueblo");
+Expect(rendered["mxp"], "<send href=\"n\">", "mxp");
+Expect(rendered["bbcode"], "[color=#ff5555]", "bbcode");
 
 if (failures.Count > 0)
 {
