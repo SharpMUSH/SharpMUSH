@@ -16,6 +16,6 @@ public record GetAncestorListenAttributesQuery(DBRef Ancestor) : IQuery<ListenAt
 {
 	// Keyed by dbref NUMBER only (see GetAncestorCommandAttributesQuery): must match the number-only
 	// invalidation key carried by the attribute-mutating commands.
-	public string CacheKey => $"ancestor-listens:#{Ancestor.Number}";
+	public string CacheKey => Definitions.CacheKeys.AncestorListens(Ancestor.Number);
 	public string[] CacheTags => [];
 }

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -214,7 +215,7 @@ public class AncestorInheritanceTests
 			MModule.single($"&CMD`CACHEGUARD {AncestorThing}=$cacheguardcmd:@pemit %#=OK"));
 
 		// Touch the derived-ancestor query directly; this must populate the per-ancestor cache key.
-		var cacheKey = $"ancestor-commands:#{AncestorThing.Number}";
+		var cacheKey = CacheKeys.AncestorCommands(AncestorThing.Number);
 		await Cache.RemoveAsync(cacheKey);
 		_ = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
 
@@ -243,7 +244,7 @@ public class AncestorInheritanceTests
 		// A @set on the ancestor must remain visible: the per-ancestor derived cache is invalidated by
 		// the attribute-mutating commands (they carry the ancestor-commands:{dbref} key), so a fresh
 		// scan picks up the newly defined $command.
-		var cacheKey = $"ancestor-commands:#{AncestorThing.Number}";
+		var cacheKey = CacheKeys.AncestorCommands(AncestorThing.Number);
 
 		// Populate the cache without the new command present.
 		_ = await Mediator.Send(new GetAncestorCommandAttributesQuery(AncestorThing));
