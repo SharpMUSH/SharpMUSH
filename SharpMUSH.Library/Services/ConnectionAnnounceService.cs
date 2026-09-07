@@ -1,3 +1,4 @@
+using Mediator;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -5,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -18,7 +20,8 @@ public class ConnectionAnnounceService(
 	ICommunicationService communicationService,
 	IGameBroadcastService gameBroadcastService,
 	IAttributeService attributeService,
-	IOptionsWrapper<SharpMUSHOptions> configuration) : IConnectionAnnounceService
+	IOptionsWrapper<SharpMUSHOptions> configuration,
+	IMediator mediator) : IConnectionAnnounceService
 {
 	/// <inheritdoc />
 	public async ValueTask AnnounceConnectAsync(IMUSHCodeParser parser, AnySharpObject player, int connectionCount)
@@ -80,12 +83,41 @@ public class ConnectionAnnounceService(
 		=> throw new NotImplementedException("Implemented in Task 5");
 
 	/// <summary>
-	/// Zone and master-room ACONNECT/ADISCONNECT dispatch. Stub in this task; implemented in Task 4.
+	/// Ports the zone (src/bsd.c:5994-6011) and master-room (src/bsd.c:6012-6015) traversal from
+	/// announce_connect; announce_disconnect (:6085-6127) does the same walk. If the player's zone is
+	/// set and is a Thing, the hook runs once on the zone itself; if it's a Room, the hook runs on
+	/// every object in the zone's contents. The hook then always runs on every object in the master
+	/// room's contents.
 	/// </summary>
 	private async ValueTask DispatchZoneAndMasterRoomHooksAsync(
 		IMUSHCodeParser parser, AnySharpObject player, string attrName, string countArg)
 	{
-		await ValueTask.CompletedTask;
+		var zoneRelation = await player.Object().Zone.WithCancellation(CancellationToken.None);
+		if (!zoneRelation.IsNone)
+		{
+			var zone = zoneRelation.Known;
+			if (zone.IsThing)
+			{
+				await QueueHookAsync(parser, zone, player, attrName, countArg);
+			}
+			else if (zone.IsRoom)
+			{
+				await foreach (var content in zone.AsContainer.Content(mediator))
+				{
+					await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
+				}
+			}
+		}
+
+		var masterRoomDbref = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
+		var masterRoomResult = await mediator.Send(new GetObjectNodeQuery(masterRoomDbref));
+		if (!masterRoomResult.IsNone)
+		{
+			await foreach (var content in masterRoomResult.Known.AsContainer.Content(mediator))
+			{
+				await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
+			}
+		}
 	}
 
 	/// <summary>

@@ -1,20 +1,22 @@
+using Mediator;
 using NSubstitute;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// Unit tests for the connect-side of <see cref="ConnectionAnnounceService"/> (Task 3): room/
-/// inventory broadcasts, the HEAR_CONNECT-flagged broadcast, and the connect/reconnect wording.
-/// Zone/master-room hook dispatch (Task 4) and disconnect (Task 5) are stubs and are not exercised here.
+/// Unit tests for <see cref="ConnectionAnnounceService"/>'s connect-side broadcasts (Task 3) and
+/// zone/master-room ACONNECT dispatch (Task 4). Disconnect (Task 5) is a stub and is not exercised here.
 /// </summary>
 public class ConnectionAnnounceServiceTests
 {
@@ -129,6 +131,19 @@ public class ConnectionAnnounceServiceTests
 				Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
 			.Returns(new ValueTask<OptionalSharpAttributeOrError>(new None()));
 
+	/// <summary>
+	/// Builds an <see cref="IMediator"/> substitute whose <c>GetObjectNodeQuery</c> answers "no such
+	/// object" for everything, so <c>DispatchZoneAndMasterRoomHooksAsync</c>'s unconditional master-room
+	/// lookup (test config's <c>master_room</c> is <c>#2</c>) is a no-op for tests that don't care about it.
+	/// </summary>
+	private static IMediator FakeMediatorWithNoMasterRoom()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		return mediator;
+	}
+
 	[Test]
 	public async Task AnnounceConnectAsync_FirstConnection_BroadcastsHasConnected()
 	{
@@ -138,7 +153,8 @@ public class ConnectionAnnounceServiceTests
 		StubNoAconnectAttribute(attributeService);
 		var configuration = FakeOptionsWrapper();
 
-		var service = new ConnectionAnnounceService(communicationService, gameBroadcastService, attributeService, configuration);
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -164,7 +180,8 @@ public class ConnectionAnnounceServiceTests
 		StubNoAconnectAttribute(attributeService);
 		var configuration = FakeOptionsWrapper();
 
-		var service = new ConnectionAnnounceService(communicationService, gameBroadcastService, attributeService, configuration);
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
@@ -172,5 +189,46 @@ public class ConnectionAnnounceServiceTests
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has reconnected.");
+	}
+
+	[Test]
+	public async Task AnnounceConnectAsync_MasterRoomObjectsWithAconnect_AreQueued()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+
+		// Test config's master_room is #2 (SharpMUSH.Tests/Configuration/Testfile/mushcnf.dst).
+		var factory = new TestObjectFactory();
+		var masterRoom = factory.CreateRoom(2, "Master Room");
+		var hookTarget = factory.CreateThing(50, "Hookable Thing", location: masterRoom);
+
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		mediator.Send(
+				Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == masterRoom.Object.Key),
+				Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(masterRoom));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
+		mediator.CreateStream(
+				Arg.Is<GetContentsQuery>(q =>
+					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+				Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator);
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1);
+
+		await attributeService.Received(1).GetAttributeAsync(
+			player, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
 	}
 }
