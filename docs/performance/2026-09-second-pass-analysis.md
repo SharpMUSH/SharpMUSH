@@ -17,11 +17,11 @@ fixed, in a place it did not look.
 > needs the providers to project the objects a read visited — the same prerequisite as the
 > `commands:`/`listens:` parent-chain gap recorded on those queries.
 >
-> **Deliberately not done here**, each for a stated reason: **6** (`WaitForSync`) is a durability
-> policy decision, not a defect — it needs an owner's call, not a patch. **7** (channel N+1 and
-> uncached channels) is a design change of the same size as #871's work on objects, and wants the
-> harness scenario before the change, not after. **15** (sync-over-async lock evaluation) needs an ADR.
-> **8** and **10** were re-examined and are not worth doing: see their sections.
+> **6** (`WaitForSync`): durability is unchanged and stays on. What went was the per-operation flags
+> *inside* a stream transaction, which cannot sync anything — see that section. **7**: the Arango
+> member N+1 is fixed; caching the channel document itself is still open. **15**: the DotNext route was
+> tried and measured, and it miscompiles the boolean operators — see that section for the result and
+> the route that does work. **8** and **10** were re-examined and are not worth doing.
 
 ---
 
@@ -182,63 +182,49 @@ of the whole room's, which is what it always should have done.
 **Still open here:** `ProcessListenAttributeAsync` builds a fresh `Regex` per call instead of using the
 compiled one `GetListenAttributesQuery` already caches in `ListenAttributeCache.CompiledRegex`.
 
-## 6. Every ArangoDB write fsyncs — twice over
+## 6. `waitForSync` inside a stream transaction does nothing — *fixed, durability unchanged*
 
-`WaitForSync = true` on **all 31 collections** in `Migration_CreateDatabase` (`WaitForSync = false`
-appears zero times), *and* `waitForSync: true` passed explicitly on every individual document/edge write
-in `ArangoDatabase.Attributes.cs`, `.Objects.cs`, `.ExpandedData.cs`, *and* on the `ArangoTransaction`
-in `SetAttributeAsync`.
+`WaitForSync = true` is set on all 31 collections in `Migration_CreateDatabase` (`false` appears zero
+times), on the `ArangoTransaction` in `SetAttributeAsync`, **and** on every individual document and edge
+operation inside that transaction.
 
-With the RocksDB engine that is a WAL sync per operation. `SetAttributeAsync` performs a lookup query,
-then per path segment a document create + flag edges + a `HasAttribute` edge + a branch-flag probe + a
-`HasAttributeOwner` edge — each one fsynced, inside a transaction that is itself `WaitForSync`. This is
-the ~6.5 ms / ~6 round trips the first pass measured and left open; the round trips are only half the
-story, the fsyncs are the other half.
+The per-operation flags cannot do anything. ArangoDB's own documentation is explicit: with the RocksDB
+engine, *"the actual data modification operations of a transaction are only written to the write-ahead
+log on commit"*, and operations are applied in main memory until then. There is nothing written for a
+per-operation sync to flush. The transaction's own `WaitForSync` is the durability point.
 
-ArangoDB's default `--rocksdb.sync-interval` is 100 ms, so dropping `waitForSync` bounds the crash
-window at ~100 ms of writes. For a MUSH that is a generous durability guarantee — PennMUSH itself
-checkpoints on a timer and loses minutes.
+**Fixed** by removing the flags that were no-ops, inside the transaction only. Every collection keeps
+`WaitForSync = true`, the transaction keeps it, and the standalone writes keep theirs. No durability
+guarantee changes.
 
-**Fix:** decide durability once, deliberately, and state it in `docs/design/engine-data-trunk.md`.
-Suggested: `WaitForSync = false` on collections, no per-call `waitForSync`, keep it only on the
-migration/seed writes and on `@dump`-equivalent operations. Then re-run the `profile` harness — the
-first pass's `attr` scenario should move a long way.
+**What this does not fix, and where the time actually goes.** `SetAttributeAsync` is ~6 sequential HTTP
+round trips to ArangoDB — a lookup, then per path segment a document create, its flag edges, a
+`HasAttribute` edge, a branch-flag probe and a `HasAttributeOwner` edge. That, not fsync, is the ~6.5 ms
+the first pass measured. Collapsing it into one AQL statement inside the same transaction would keep the
+durability guarantee exactly as it is and remove five round trips; that is the change worth making here.
 
-Check Memgraph and SurrealDB for the equivalent knob at the same time, so durability is a stated policy
-rather than three accidents.
+## 7. ArangoDB fetched channel members one object at a time — *fixed*
 
-## 7. ArangoDB fetches channel members one object at a time; Memgraph does not
+`GetChannelMembersAsync` ran one query for the membership edges and then one `GetObjectNodeAsync` **per
+member**, uncached (provider-internal, so it never reaches FusionCache). Memgraph already returned the
+member nodes and their relations in a single Cypher query; Arango was the outlier, as it was for the
+attribute readers the first pass fixed.
 
-`ArangoDatabase.Channels.cs`:
+The multiplier is what made it matter: `SharpChannel.Members` is a `Lazy<FreshAsyncEnumerable<…>>` that
+re-runs on every enumeration by design, and `GetChannelQuery` is not `ICacheable`, so nothing amortised
+it. `ChannelMessageRequestHandler` enumerates the whole member list per message. A hundred-member
+channel meant a hundred round trips per line of chat.
 
-```csharp
-var stream = arangoDb.Query.ExecuteStreamAsync<SharpChannelMemberListQueryResult>(handle,
-    "FOR v,e IN 1..1 INBOUND @startVertex GRAPH … RETURN {Id: v._id, Status: e}", …);
+**Fixed:** the membership edge points at the member's `Objects` document and its typed vertex is one
+inbound hop away, so the traversal projects both and hands them to the same builder the single-object
+load uses (extracted as `BuildObjectNode`). One round trip for the list.
 
-return stream.Select(async (x, ct) =>
-    new SharpChannel.MemberAndStatus((await GetObjectNodeAsync(x.Id, ct)).Known(), …));
-```
+**Still open, deliberately:** the channel document itself is not cached, so a lookup by name is still a
+read per `@chat`; `ChannelHelper.IsMemberOfChannel` answers a boolean by enumerating every member; and
+the write side already emits `channel:{name}` invalidation keys that match no read key, because there
+is no cached read to match. Making `SharpChannel` object-shaped and cached is the same shape of work
+#871 did for objects, and it wants a harness scenario written first.
 
-One DB round trip **per member**, uncached (this is provider-internal, so it never reaches the mediator
-or FusionCache). Memgraph returns the member nodes and their relations in the single Cypher query
-(`MATCH (o:Object)-[r:ON_CHANNEL]->(c:Channel {name: $name}) RETURN o, r` + `RelationColumns("o")`).
-SurrealDB is also per-member, but it is embedded and in-process, so the cost is small.
-
-This is the same shape as the N+1 the first pass fixed for Arango attribute readers, in the collection
-it did not visit. The multiplier is worse here:
-
-- `SharpChannel.Members` is a `Lazy<FreshAsyncEnumerable<…>>` — **every enumeration re-runs the whole
-  thing**, by design (so it cannot go stale), so nothing amortises it.
-- `GetChannelQuery` is **not** `ICacheable`, so the channel document is re-read on every lookup too.
-- `ChannelHelper.IsMemberOfChannel` answers a *boolean* by enumerating all members — O(members) round
-  trips to decide one membership, and it is called from `CanSeeChannel`, i.e. on every channel name
-  resolution.
-- `ChannelMessageRequestHandler` does `Members.Value.ToArrayAsync()` per message.
-
-**Fix:** project the member objects and their relations in the one AQL query (a `MERGE` sub-query, the
-shape `RETURN {AttributeWithFlags}` already uses); make `GetChannelQuery` `ICacheable` with a
-`channel:{name}` key — the write side *already emits* `channel:{Channel.Name}` invalidation keys that
-currently match nothing; add a membership-test query instead of enumerating.
 
 ## 8. `ConnectionService.Get(DBRef)` is a linear scan, called once per delivered line — *not worth fixing*
 
@@ -411,16 +397,64 @@ guarantee the queue exists to provide. The third blocks a thread on a write.
 
 `SharpMUSHBooleanExpressionVisitor` has ~30 `GetAwaiter().GetResult()` calls on database-touching
 awaitables, because the visitor builds `Expression` trees and the tree body must be synchronous. Every
-`@lock` check — movement, speech, `CanInteract`, the N² of finding #5 — blocks a thread pool thread for
-however long those reads take.
+`@lock` check — movement, speech, `CanInteract` — blocks a thread pool thread for however long those
+reads take, and `Startup` gives the command queue exactly one thread.
 
-The first pass made most of those reads cache hits, which is why this has not bitten yet. It is still
-the largest remaining structural risk: with the compiled-expression cache cold, or a slow DB, this is a
-thread-pool starvation path, and `Startup` gives the command queue exactly one thread.
+### DotNext's async lambda cannot express this — measured, 2026-09-06
 
-**Not a quick fix** — it needs the lock expression compiled to a `Func<…, ValueTask<bool>>` rather than a
-sync `Func`. Worth an ADR before anyone attempts it. Recording it here so the next pass does not
-rediscover it.
+The obvious route is `DotNext.Metaprogramming`'s `CodeGenerator.AsyncLambda`, which does support a
+`ValueTask<T>` return type and an `AwaitExpression` inside arbitrary statements. **It miscompiles the
+short-circuiting boolean operators**, which is the entire structure of a lock expression.
+
+Reproduced against `DotNext.Metaprogramming` 6.6.2 with this leaf, where each operand is an awaited
+`ValueTask<bool>`:
+
+```csharp
+static Expression Answers(bool value)
+{
+    Func<ValueTask<bool>> f = async () => { await Task.Yield(); return value; };
+    return Expression.Invoke(Expression.Constant(f)).Await();
+}
+
+var compiled = CodeGenerator
+    .AsyncLambda<Func<ValueTask<bool>>>((_, result) => CodeGenerator.Assign(result, body))
+    .Compile();
+```
+
+| `body` | expected | DotNext |
+|---|---|---|
+| `AndAlso(Answers(false), Answers(true))` | `false` | **`true`** |
+| `OrElse(Answers(true), Answers(false))` | `true` | **`false`** |
+| `AndAlso(Answers(true), Answers(false))` | `false` | `false` |
+| `AndAlso(Answers(false), Answers(false))` | `false` | `false` |
+
+Only the asymmetric cases are wrong, and the right-hand operand runs even when the left has already
+decided — so the operands are being transposed, and `a&b` reads the database for `b` regardless. The
+documented `(fun, result)` form and `Return(expression)` behave identically. Every compound lock in
+the game would have silently inverted.
+
+### The route that does work: drop the expression trees
+
+The visitor already builds each leaf as an ordinary C# `Func<...>` and only wraps it in
+`Expression.Constant` to put it in a tree — there are fifteen such sites and every one of them is
+`Expression.Invoke(Expression.Constant(func), …)`. Nothing needs a tree. Changing the visitor's type
+parameter from `Expression` to `Func<AnySharpObject, AnySharpObject, ValueTask<bool>>` makes the leaves
+async lambdas and the combinators ordinary C#:
+
+```csharp
+// AndAlso, with the short-circuit the language already guarantees
+(g, u) => await left(g, u) && await right(g, u);
+```
+
+That is correct by construction, needs no third-party rewriter, and drops `Expression.Lambda().Compile()`
+— runtime IL generation, which is both a per-lock cost and the reason the lock path can never be
+AOT-compatible.
+
+**Remaining work, and why it is not in this branch:** the visitor rewrite is self-contained (686 lines,
+fifteen leaf sites), but `IBooleanExpressionParser.Compile`, `ILockService.Evaluate` and
+`IPermissionService.PassesLock` all become async, and that reaches about sixty call sites — most already
+inside `async` methods, but `PermissionService` alone has sixteen. It is a single coherent change and
+wants its own review, not a tail on this one.
 
 ---
 
