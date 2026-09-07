@@ -8,6 +8,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -122,6 +123,21 @@ public class ConnectionAnnounceServiceTests
 	}
 
 	/// <summary>
+	/// Builds a minimal <see cref="SharpChannel"/> with the given <paramref name="privs"/>. Owner/Members
+	/// are never touched by <c>AnnounceOnChannelsAsync</c> (which only reads <c>Privs</c> and passes the
+	/// channel through to <c>ChannelMessageNotification</c>), so they get trivial stub values matching the
+	/// idiom used for <c>AsyncLazy</c>/<c>Lazy</c> fields elsewhere in this file.
+	/// </summary>
+	private static SharpChannel FakeChannel(string name, string[] privs) =>
+		new()
+		{
+			Name = MarkupText.Plain(name),
+			Owner = new(async _ => { await Task.CompletedTask; return null!; }),
+			Members = new(() => AsyncEnumerable.Empty<SharpChannel.MemberAndStatus>()),
+			Privs = privs
+		};
+
+	/// <summary>
 	/// Configures the given <see cref="IAttributeService"/> substitute to report "no such attribute"
 	/// for every <c>GetAttributeAsync</c> call, so <c>QueueHookAsync</c> takes its early-return path
 	/// instead of dereferencing an unconfigured (null) result.
@@ -136,12 +152,18 @@ public class ConnectionAnnounceServiceTests
 	/// Builds an <see cref="IMediator"/> substitute whose <c>GetObjectNodeQuery</c> answers "no such
 	/// object" for everything, so <c>DispatchZoneAndMasterRoomHooksAsync</c>'s unconditional master-room
 	/// lookup (test config's <c>master_room</c> is <c>#2</c>) is a no-op for tests that don't care about it.
+	/// Also stubs <c>GetOnChannelQuery</c> to an empty stream, since NSubstitute has no built-in default
+	/// for <see cref="IAsyncEnumerable{T}"/> — an unconfigured call returns <see langword="null"/>, and
+	/// <c>AnnounceOnChannelsAsync</c>'s <c>await foreach</c> over that would NRE inside the caller's
+	/// try/catch and silently truncate everything after it.
 	/// </summary>
 	private static IMediator FakeMediatorWithNoMasterRoom()
 	{
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 		return mediator;
 	}
 
@@ -229,6 +251,8 @@ public class ConnectionAnnounceServiceTests
 					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
@@ -411,5 +435,63 @@ public class ConnectionAnnounceServiceTests
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-disconnected.");
+	}
+
+	/// <summary>
+	/// Task 13: the connect line is published to every channel the player belongs to that lacks the
+	/// "Quiet" privilege, ported from chat_player_announce (src/extchat.c:3164-3202).
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_PlayerOnNonQuietChannel_PublishesChannelMessage()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var mediator = Substitute.For<IMediator>();
+
+		var channel = FakeChannel("Public", privs: []);
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+
+		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
+			n.Channel == channel && n.Message.ToPlainText() == "Bob has connected."), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// Task 13: a channel with the "Quiet" privilege is skipped entirely.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_PlayerOnQuietChannel_DoesNotPublish()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var mediator = Substitute.For<IMediator>();
+
+		var channel = FakeChannel("Quiet Channel", privs: ["Quiet"]);
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+
+		await mediator.DidNotReceive().Publish(Arg.Any<ChannelMessageNotification>(), Arg.Any<CancellationToken>());
 	}
 }

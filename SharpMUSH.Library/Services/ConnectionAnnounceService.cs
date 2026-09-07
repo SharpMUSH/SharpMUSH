@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -70,6 +71,8 @@ public class ConnectionAnnounceService(
 						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
 						excludeObjects: [player]);
 				}
+
+				await AnnounceOnChannelsAsync(player, fullMessage);
 			}
 
 			await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
@@ -139,6 +142,8 @@ public class ConnectionAnnounceService(
 						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
 						excludeObjects: [player]);
 				}
+
+				await AnnounceOnChannelsAsync(player, fullMessage);
 			}
 
 			await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
@@ -206,6 +211,33 @@ public class ConnectionAnnounceService(
 			{
 				await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
 			}
+		}
+	}
+
+	/// <summary>
+	/// Ports the channel-broadcast portion of chat_player_announce (src/extchat.c:3164-3202): the
+	/// connect/disconnect line is published to every channel the player belongs to, skipping channels
+	/// with the "Quiet" privilege. Per-viewer CHATFORMAT/combine formatting and the CB_SEEALL
+	/// hidden-viewer gate are out of scope for this port (see the plan's Global Constraints).
+	/// </summary>
+	private async ValueTask AnnounceOnChannelsAsync(AnySharpObject player, string fullMessage)
+	{
+		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
+		{
+			if (channel.HasPriv("Quiet"))
+			{
+				continue;
+			}
+
+			await mediator.Publish(new ChannelMessageNotification(
+				channel,
+				player.WithNoneOption(),
+				INotifyService.NotificationType.Announce,
+				MarkupText.Plain(fullMessage),
+				MarkupText.Empty,
+				MarkupText.Plain(player.Object().Name),
+				MarkupText.Empty,
+				[]));
 		}
 	}
 
