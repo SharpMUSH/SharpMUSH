@@ -839,7 +839,7 @@ public partial class Commands
 
 		if (!await executor.CanHide())
 		{
-			await NotifyService.Notify(executor, "Permission denied.");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -870,8 +870,8 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalized(executor,
 			shouldBeHidden
-				? nameof(ErrorMessages.Notifications.NowHiddenFromWho)
-				: nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho),
+				? nameof(ErrorMessages.Notifications.NoLongerAppearOnWho)
+				: nameof(ErrorMessages.Notifications.NowAppearOnWho),
 			executor);
 
 		return CallState.Empty;

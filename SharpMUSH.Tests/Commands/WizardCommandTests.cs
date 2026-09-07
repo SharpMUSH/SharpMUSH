@@ -395,13 +395,13 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -417,7 +417,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/yes"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -433,7 +433,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -449,7 +449,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/no"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -465,7 +465,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	// PennMUSH's hide_player has no "already hidden/visible" branch for the no-target case: it
@@ -484,7 +484,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsTrue();
 	}
 
@@ -501,7 +501,7 @@ public class WizardCommandTests
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsFalse();
 	}
 

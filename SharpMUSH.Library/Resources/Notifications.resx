@@ -1136,10 +1136,10 @@
   <data name="NotSupportedForSharpMUSH" xml:space="preserve">
     <value>Not Supported for SharpMUSH.</value>
   </data>
-  <data name="NowHiddenFromWho" xml:space="preserve">
+  <data name="NoLongerAppearOnWho" xml:space="preserve">
     <value>You no longer appear on the WHO list.</value>
   </data>
-  <data name="NoLongerHiddenFromWho" xml:space="preserve">
+  <data name="NowAppearOnWho" xml:space="preserve">
     <value>You now appear on the WHO list.</value>
   </data>
   <data name="NeedAnnouncePower" xml:space="preserve">
