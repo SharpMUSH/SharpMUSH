@@ -13,7 +13,7 @@ public class SessionSinkTests
 		public bool IsSecure => false;
 		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct) => Task.CompletedTask;
 		public Task<string?> ReceiveTextAsync(CancellationToken ct) => Task.FromResult<string?>(null);
-		public Task CloseAsync() => Task.CompletedTask;
+		public Task CloseAsync(CancellationToken ct = default) => Task.CompletedTask;
 	}
 
 	[Test]

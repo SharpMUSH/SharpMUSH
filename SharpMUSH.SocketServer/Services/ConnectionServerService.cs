@@ -144,8 +144,10 @@ public class ConnectionServerService(
 			throw new InvalidOperationException("A live connection already owns the restored descriptor.");
 	}
 
-	public async Task DisconnectAsync(long handle)
+	public async Task DisconnectAsync(long handle, CancellationToken cancellationToken = default)
 	{
+		using var teardown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		teardown.CancelAfter(TimeSpan.FromSeconds(2));
 		logger.LogInformation("Disconnecting handle {Handle}", handle);
 		if (_sessionState.TryRemove(handle, out var data))
 		{
@@ -154,7 +156,7 @@ public class ConnectionServerService(
 			{
 				try
 				{
-					await stateStore.RemoveConnectionAsync(handle);
+					await stateStore.RemoveConnectionAsync(handle, teardown.Token).WaitAsync(teardown.Token);
 				}
 				catch (Exception ex)
 				{
@@ -167,7 +169,7 @@ public class ConnectionServerService(
 
 			try
 			{
-				await publishEndpoint.Publish(new ConnectionClosedMessage(handle, DateTimeOffset.UtcNow, data.SessionId));
+				await publishEndpoint.Publish(new ConnectionClosedMessage(handle, DateTimeOffset.UtcNow, data.SessionId), teardown.Token).WaitAsync(teardown.Token);
 			}
 			catch (Exception ex)
 			{
@@ -272,7 +274,7 @@ public interface IConnectionServerService
 
 	void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect);
 
-	Task DisconnectAsync(long handle);
+	Task DisconnectAsync(long handle, CancellationToken cancellationToken = default);
 
 	ConnectionServerService.ConnectionData? Get(long handle);
 

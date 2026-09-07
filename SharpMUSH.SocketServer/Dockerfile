@@ -8,6 +8,8 @@ RUN dotnet restore && dotnet publish SharpMUSH.SocketServer/SharpMUSH.SocketServ
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
+RUN mkdir -p /run/sharpmush && chown 1654:1654 /run/sharpmush
+USER 1654:1654
 EXPOSE 4201 4202 4203
 ENV ASPNETCORE_URLS=http://+:4202
 ENTRYPOINT ["dotnet", "SharpMUSH.SocketServer.dll"]

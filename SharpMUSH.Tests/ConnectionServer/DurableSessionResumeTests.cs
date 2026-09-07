@@ -137,7 +137,7 @@ public class DurableSessionResumeTests
 			if (Encoding.UTF8.GetString(data.Span).Contains("resumeToken")) Registered.TrySetResult();
 			return Task.CompletedTask;
 		}
-		public Task CloseAsync()
+		public Task CloseAsync(CancellationToken ct = default)
 		{
 			Closed = true;
 			_closed.TrySetResult(null);
@@ -164,6 +164,6 @@ public class DurableSessionResumeTests
 			Sent.Add(Encoding.UTF8.GetString(data.Span));
 			return Task.CompletedTask;
 		}
-		public Task CloseAsync() => Task.CompletedTask;
+		public Task CloseAsync(CancellationToken ct = default) => Task.CompletedTask;
 	}
 }

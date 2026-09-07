@@ -47,6 +47,16 @@ class ImageImpactTests(unittest.TestCase):
         result = analyze(["Shared/Deleted.cs"], [self.files.__getitem__, after.__getitem__])
         self.assertTrue(all(result.values()))
 
+    def test_deleted_image_never_publishes_even_for_global_changes(self):
+        after = {k: v for k, v in self.files.items() if not k.startswith("SharpMUSH.SocketServer/")}
+        removed = []
+        result = analyze(["SharpMUSH.SocketServer/Dockerfile", "Directory.Build.props"],
+                         [self.files.__getitem__, after.__getitem__], removed)
+        self.assertEqual(result["socketserver"], [])
+        self.assertEqual(removed, ["socketserver"])
+        self.assertIn("socketserver: removed (no publish)", report(result, removed))
+        self.assertTrue(result["server"])
+
     def test_new_dependency_discovered_automatically(self):
         self.files["Shared/Shared.csproj"] = '<Project><ProjectReference Include="..\\New\\New.csproj"/></Project>'
         self.files["New/New.csproj"] = '<Project/>'

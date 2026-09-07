@@ -19,6 +19,7 @@ services:
       retries: 5
 
   connectionserver:
+    restart: unless-stopped
     image: sharpmush/sharpmush-socketserver:dev
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -30,7 +31,7 @@ services:
       - NATS_URL=nats://nats:4222
     depends_on:
       renderer:
-        condition: service_started
+        condition: service_healthy
       nats:
         condition: service_healthy
     ports:
@@ -53,6 +54,7 @@ services:
     restart: unless-stopped
 
   sharpmush-server:
+    restart: unless-stopped
     stop_grace_period: 60s
     image: sharpmush/sharpmush-server:dev
     environment:

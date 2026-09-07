@@ -34,10 +34,14 @@ public class MarkupOutputConsumer(
 		{
 			var rendered = await renderer.RenderAsync(message.Markup, connection, cancellationToken);
 			var data = rendered.ApplyOutputTransform
-				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences)
+				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
 				: rendered.Data;
 
 			await connection.OutputFunction(data);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{
@@ -74,10 +78,14 @@ public class MarkupPromptConsumer(
 		{
 			var rendered = await renderer.RenderAsync(message.Markup, connection, cancellationToken);
 			var data = rendered.ApplyOutputTransform
-				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences)
+				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
 				: rendered.Data;
 
 			await connection.PromptOutputFunction(data);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{

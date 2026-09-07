@@ -45,20 +45,14 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 		};
 	}
 
-	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection) =>
-		RenderAsync(markup, connection).AsTask().GetAwaiter().GetResult();
-
 	public async ValueTask<RenderedOutput> RenderAsync(string markup,
 		ConnectionServerService.ConnectionData connection, CancellationToken ct = default) =>
 		new(await SendAsync(new RenderRequest(markup, null,
 			new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences)), ct), false);
 
 	public ValueTask<byte[]> TransformAsync(byte[] rawOutput, ProtocolCapabilities capabilities,
-		PlayerOutputPreferences? preferences) =>
-		SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, preferences)), default);
-
-	public byte[] Transform(byte[] rawOutput, ProtocolCapabilities capabilities, PlayerOutputPreferences? preferences) =>
-		TransformAsync(rawOutput, capabilities, preferences).AsTask().GetAwaiter().GetResult();
+		PlayerOutputPreferences? preferences, CancellationToken ct = default) =>
+		SendAsync(new RenderRequest(null, rawOutput, new RenderContext("telnet", capabilities, preferences)), ct);
 
 	private async ValueTask<byte[]> SendAsync(RenderRequest payload, CancellationToken ct)
 	{

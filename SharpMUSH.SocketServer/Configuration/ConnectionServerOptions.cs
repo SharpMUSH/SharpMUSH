@@ -6,6 +6,12 @@ namespace SharpMUSH.ConnectionServer.Configuration;
 public class ConnectionServerOptions
 {
 	/// <summary>
+	/// Maximum concurrent upgraded HTTP connections (WebSockets). Must be positive.
+	/// Override with ConnectionServer:MaxConcurrentUpgradedConnections.
+	/// </summary>
+	public long MaxConcurrentUpgradedConnections { get; set; } = 10000;
+
+	/// <summary>
 	/// Port for Telnet connections
 	/// </summary>
 	public int TelnetPort { get; set; } = 4201;

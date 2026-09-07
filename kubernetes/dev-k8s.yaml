@@ -249,6 +249,13 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: render-socket
           emptyDir: {}
@@ -256,6 +263,10 @@ spec:
         - name: socketserver
           image: docker.io/sharpmush/sharpmush-socketserver:dev
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           volumeMounts:
             - name: render-socket
               mountPath: /run/sharpmush
@@ -283,6 +294,10 @@ spec:
         - name: renderer
           image: docker.io/sharpmush/sharpmush-connectionserver:dev
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: Rendering__SocketPath
               value: /run/sharpmush/render.sock

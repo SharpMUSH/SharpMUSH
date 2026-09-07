@@ -68,12 +68,14 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	/// <inheritdoc/>
 	public async Task Publish<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		deadline.CancelAfter(TimeSpan.FromSeconds(2));
 		var subject = GetSubjectForMessageType<T>();
 
 		_logger.LogTrace("[NATS-SEND] Publishing message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
 
-		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, cancellationToken: cancellationToken);
+		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, cancellationToken: deadline.Token);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
@@ -82,13 +84,15 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	/// <inheritdoc/>
 	public async Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage
 	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		deadline.CancelAfter(TimeSpan.FromSeconds(2));
 		var subject = GetSubjectForMessageType<T>();
 
 		_logger.LogTrace("[NATS-SEND] Publishing handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);
 
 		var headers = new NatsHeaders { { "X-Handle", message.Handle.ToString() } };
-		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, headers: headers, cancellationToken: cancellationToken);
+		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, headers: headers, cancellationToken: deadline.Token);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);

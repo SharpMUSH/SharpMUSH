@@ -175,11 +175,11 @@ public class ConnectionIncarnationTests
 		await service.Bind(Handle, new DBRef(7, 1000));
 		await Assert.That(service.Get(Handle)!.Metadata.ContainsKey("ResumeRevoked")).IsFalse();
 
-		var revocation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		store.UpdateMetadataAsync(Handle, "ResumeRevoked", "1", Arg.Any<CancellationToken>()).Returns(revocation.Task);
+		var revocation = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		store.TryRevokeResumeAsync(Handle, "current", Arg.Any<CancellationToken>()).Returns(revocation.Task);
 		var switching = service.Bind(Handle, new DBRef(8, 1000)).AsTask();
 		await Assert.That(service.Get(Handle)!.Ref).IsEqualTo(new DBRef(7, 1000));
-		revocation.SetResult();
+		revocation.SetResult(true);
 		await switching;
 		await Assert.That(service.Get(Handle)!.Metadata["ResumeRevoked"]).IsEqualTo("1");
 		await service.Unbind(Handle);
@@ -193,13 +193,42 @@ public class ConnectionIncarnationTests
 		var service = new ConnectionService(Substitute.For<IPublisher>(), store);
 		await Register(service, "current", 100);
 		await service.Bind(Handle, new DBRef(7, 1000));
-		store.UpdateMetadataAsync(Handle, "ResumeRevoked", "1", Arg.Any<CancellationToken>())
-			.Returns(Task.FromException(new IOException("NATS unavailable")));
+		store.TryRevokeResumeAsync(Handle, "current", Arg.Any<CancellationToken>())
+			.Returns(Task.FromException<bool>(new IOException("NATS unavailable")));
 
 		await Assert.That(async () => await service.Unbind(Handle)).Throws<IOException>();
 
 		await Assert.That(service.Get(Handle)!.Ref).IsEqualTo(new DBRef(7, 1000));
 		await Assert.That(service.Get(Handle)!.Metadata.ContainsKey("ResumeRevoked")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("bind")]
+	[Arguments("unbind")]
+	[Arguments("account")]
+	public async Task StaleAuthenticationChangeCannotRevokeOrModifyReplacement(string operation)
+	{
+		var store = Substitute.For<IConnectionStateStore>();
+		var service = new ConnectionService(Substitute.For<IPublisher>(), store);
+		await Register(service, "old", 100);
+		await service.Bind(Handle, new DBRef(7, 1000));
+		var revoked = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		store.TryRevokeResumeAsync(Handle, "old", Arg.Any<CancellationToken>()).Returns(revoked.Task);
+		var pending = operation switch
+		{
+			"bind" => service.Bind(Handle, new DBRef(8, 1000)).AsTask(),
+			"unbind" => service.Unbind(Handle).AsTask(),
+			_ => service.BindAccount(Handle, "other").AsTask()
+		};
+		await Register(service, "replacement", 200);
+		store.ClearReceivedCalls();
+		revoked.SetResult(false);
+		await pending;
+
+		await Assert.That(service.Get(Handle)!.Metadata["SessionId"]).IsEqualTo("replacement");
+		await Assert.That(service.Get(Handle)!.Metadata.ContainsKey("ResumeRevoked")).IsFalse();
+		await Assert.That(service.Get(Handle)!.Ref).IsNull();
+		await Assert.That(store.ReceivedCalls().Any()).IsFalse();
 	}
 
 	[Test]

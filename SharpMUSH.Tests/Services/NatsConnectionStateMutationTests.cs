@@ -88,6 +88,62 @@ public class NatsConnectionStateMutationTests
 		await Assert.That(writes[0].Data.Metadata["PresenceClass"]).IsEqualTo("portal");
 	}
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RevocationNeverWritesReplacementSession(bool replacementDuringRetry)
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		var original = Data();
+		original.Metadata["SessionId"] = "old";
+		var replacement = Data(); // Even identical timestamps cannot bypass the session fence.
+		replacement.Metadata["SessionId"] = "replacement";
+		Reads(kv, replacementDuringRetry ? Entry(original, 1) : Entry(replacement, 2), Entry(replacement, 2));
+		var writes = Writes(kv, Conflict());
+		await using var store = Create(kv);
+
+		await Assert.That(await store.TryRevokeResumeAsync(42, "old")).IsFalse();
+		await Assert.That(writes.Count).IsEqualTo(replacementDuringRetry ? 1 : 0);
+	}
+
+	[Test]
+	public async Task RevocationRetryPreservesConcurrentMetadata()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		var original = Data();
+		original.Metadata["SessionId"] = "current";
+		var concurrent = Data();
+		concurrent.Metadata["SessionId"] = "current";
+		concurrent.Metadata["Width"] = "120";
+		Reads(kv, Entry(original, 1), Entry(concurrent, 2));
+		var writes = Writes(kv, Conflict(), new NatsResult<ulong>(3));
+		await using var store = Create(kv);
+
+		await Assert.That(await store.TryRevokeResumeAsync(42, "current")).IsTrue();
+		await Assert.That(writes[1].Revision).IsEqualTo(2UL);
+		await Assert.That(writes[1].Data.Metadata["Width"]).IsEqualTo("120");
+		await Assert.That(writes[1].Data.Metadata["ResumeRevoked"]).IsEqualTo("1");
+	}
+
+	[Test]
+	[Arguments("null")]
+	[Arguments(null)]
+	public async Task NullKvValueIsTreatedAsAbsentByEveryMutation(string? json)
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		Reads(kv, new NatsResult<NatsKVEntry<string>>(new NatsKVEntry<string>("sharpmush-connections", "conn.42")
+		{
+			Value = json!, Revision = 1
+		}));
+		await using var store = Create(kv);
+
+		await store.SetPlayerBindingAsync(42, "#5:1234");
+		await store.UpdateMetadataAsync(42, "State", "AccountMode");
+		await Assert.That(await store.TryRevokeResumeAsync(42, "current")).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "current", null, "Connected", "127.0.0.1", "localhost", true)).IsFalse();
+		await Assert.That(kv.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "TryUpdateAsync")).IsFalse();
+	}
+
 	private static NatsConnectionStateStore Create(INatsKVStore kv) =>
 		new(new NatsConnection(), kv, NullLogger<NatsConnectionStateStore>.Instance);
 

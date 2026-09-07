@@ -88,9 +88,16 @@ def is_global(path):
             or path.startswith(".config/dotnet-tools"))
 
 
-def analyze(changed, readers):
+def analyze(changed, readers, removed=None):
     result = {}
     for image, dockerfile in IMAGES.items():
+        try:
+            readers[-1](dockerfile)  # Only images present in the head revision can publish.
+        except (FileNotFoundError, KeyError):
+            result[image] = []
+            if removed is not None and any(source_patterns(read, dockerfile) for read in readers[:-1]):
+                removed.append(image)
+            continue
         patterns = set()
         for read in readers:
             patterns.update(source_patterns(read, dockerfile))
@@ -99,7 +106,7 @@ def analyze(changed, readers):
     return result
 
 
-def report(result):
+def report(result, removed=()):
     drops = bool(result["socketserver"])
     lines = ["## Deployment impact", "",
              "**SocketServer restart / live connection drops: " + ("YES" if drops else "NO") + "**", "",
@@ -108,7 +115,7 @@ def report(result):
              ("SocketServer replacement disconnects its TCP and WebSocket clients. "
              "Game-server and ConnectionServer rendering-worker updates retain client sockets in SocketServer."), ""]
     for image, paths in result.items():
-        lines.extend([f"### {image}: {'publish' if paths else 'unchanged'}", ""])
+        lines.extend([f"### {image}: {'removed (no publish)' if image in removed else 'publish' if paths else 'unchanged'}", ""])
         lines.extend(f"- <code>{html.escape(path)}</code>" for path in paths)
         lines.append("")
     lines.append("This is source-input impact, not a promise about image digests or deployment success. "
@@ -138,8 +145,9 @@ def main():
             raise FileNotFoundError(f"{ref}:{path}")
         return value.stdout.decode("utf-8")
     readers = [lambda path, ref=ref: read_revision(ref, path) for ref in (base, head) if ref]
-    result = analyze(set(changed) - {""}, readers)
-    summary = report(result)
+    removed = []
+    result = analyze(set(changed) - {""}, readers, removed)
+    summary = report(result, removed)
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
@@ -148,6 +156,7 @@ def main():
         with open(os.environ["GITHUB_OUTPUT"], "a") as output:
             for image, paths in result.items():
                 output.write(f"{image}={str(bool(paths)).lower()}\n")
+                output.write(f"{image}_removed={str(image in removed).lower()}\n")
 
 
 if __name__ == "__main__":

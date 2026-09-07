@@ -25,8 +25,5 @@ public readonly record struct RenderedOutput(byte[] Data, bool ApplyOutputTransf
 /// </summary>
 public interface IMarkupOutputRenderer
 {
-	RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection);
-
-	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, CancellationToken ct = default) =>
-		ValueTask.FromResult(Render(markup, connection));
+	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, CancellationToken ct = default);
 }

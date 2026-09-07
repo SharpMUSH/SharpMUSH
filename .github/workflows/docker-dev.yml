@@ -65,7 +65,7 @@ jobs:
           steps.changes.outputs.server == 'true' ||
           (github.event_name == 'workflow_dispatch' &&
            (inputs.publish == 'all' || inputs.publish == 'server'))
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -86,7 +86,7 @@ jobs:
           steps.changes.outputs.connectionserver == 'true' ||
           (github.event_name == 'workflow_dispatch' &&
            (inputs.publish == 'all' || inputs.publish == 'connectionserver'))
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./SharpMUSH.ConnectionServer/Dockerfile
@@ -107,7 +107,7 @@ jobs:
           steps.changes.outputs.socketserver == 'true' ||
           (github.event_name == 'workflow_dispatch' &&
            (inputs.publish == 'all' || inputs.publish == 'socketserver'))
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./SharpMUSH.SocketServer/Dockerfile

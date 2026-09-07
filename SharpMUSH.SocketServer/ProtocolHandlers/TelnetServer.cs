@@ -346,8 +346,10 @@ public class TelnetServer : ConnectionHandler
 			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
 		}
 
-		await _connectionService.DisconnectAsync(nextPort);
-		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
+		using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+		try { await _connectionService.DisconnectAsync(nextPort, teardown.Token).WaitAsync(teardown.Token); }
+		catch (OperationCanceledException) { _logger.LogDebug("Connection {Handle} teardown timed out", nextPort); }
+		finally { _descriptorGenerator.ReleaseTelnetDescriptor(nextPort); }
 	}
 
 	/// <summary>

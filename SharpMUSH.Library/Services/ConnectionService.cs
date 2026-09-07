@@ -65,7 +65,7 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null) return;
 
-		if (get.Ref is not null && get.Ref != player) await RevokeResumeAsync(get);
+		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return;
 		if (!_sessionState.TryUpdate(handle, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, get)) return;
 
 		if (stateStore != null)
@@ -90,7 +90,7 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null || get.Ref is null) return;
 
-		await RevokeResumeAsync(get);
+		if (!await RevokeResumeAsync(get)) return;
 		var formerRef = get.Ref;
 
 		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
@@ -122,8 +122,8 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null) return;
 
-		if (get.Ref is not null || (get.State == IConnectionService.ConnectionState.AccountMode &&
-			get.Metadata.GetValueOrDefault("AccountId") != accountId)) await RevokeResumeAsync(get);
+		if ((get.Ref is not null || (get.State == IConnectionService.ConnectionState.AccountMode &&
+			get.Metadata.GetValueOrDefault("AccountId") != accountId)) && !await RevokeResumeAsync(get)) return;
 		var oldState = get.State;
 		if (!_sessionState.TryUpdate(handle, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode }, get)) return;
 		get.Metadata["AccountId"] = accountId;
@@ -147,12 +147,16 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 	}
 
-	private async Task RevokeResumeAsync(IConnectionService.ConnectionData connection)
+	private async Task<bool> RevokeResumeAsync(IConnectionService.ConnectionData connection)
 	{
-		if (connection.Metadata.GetValueOrDefault("ResumeRevoked") == "1") return;
-		if (stateStore is not null)
-			await stateStore.UpdateMetadataAsync(connection.Handle, "ResumeRevoked", "1");
+		if (connection.Metadata.GetValueOrDefault("ResumeRevoked") == "1") return true;
+		// Legacy connections have no resumable session identity. For resumable connections,
+		// fence the first KV read as well as every CAS retry to the caller's session.
+		var sessionId = connection.Metadata.GetValueOrDefault("SessionId");
+		if (stateStore is not null && !string.IsNullOrEmpty(sessionId)
+			&& !await stateStore.TryRevokeResumeAsync(connection.Handle, sessionId)) return false;
 		connection.Metadata["ResumeRevoked"] = "1";
+		return true;
 	}
 
 	public void Update(long handle, string key, string value)
@@ -168,7 +172,7 @@ public class ConnectionService(
 				return y;
 			});
 
-		// Update Redis if available (fire and forget for performance)
+		// Persist noncritical metadata asynchronously; authentication changes are awaited above.
 		if (stateStore != null)
 		{
 			_ = Task.Run(async () =>
@@ -179,7 +183,7 @@ public class ConnectionService(
 				}
 				catch
 				{
-					// Ignore errors in background update
+					// Best-effort metadata must not fault the detached task; durable binding changes propagate failures.
 				}
 			});
 		}
@@ -204,7 +208,7 @@ public class ConnectionService(
 				return y;
 			});
 
-		// Update Redis if available (fire and forget for performance)
+		// Persist noncritical metadata asynchronously; authentication changes are awaited above.
 		if (stateStore != null && newValue != null)
 		{
 			var captured = newValue;
@@ -216,7 +220,7 @@ public class ConnectionService(
 				}
 				catch
 				{
-					// Ignore errors in background update
+					// Best-effort metadata must not fault the detached task; durable binding changes propagate failures.
 				}
 			});
 		}

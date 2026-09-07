@@ -18,6 +18,12 @@ public class WebSocketOutputConsumer(
 {
 	public async Task HandleAsync(WebSocketOutputMessage message, CancellationToken cancellationToken = default)
 	{
+		if (message.Data is null)
+		{
+			logger.LogWarning("Received WebSocket message with null data for handle {Handle}", message.Handle);
+			return;
+		}
+
 		var connection = connectionService.Get(message.Handle);
 
 		if (connection == null)
@@ -47,6 +53,12 @@ public class WebSocketPromptConsumer(
 {
 	public async Task HandleAsync(WebSocketPromptMessage message, CancellationToken cancellationToken = default)
 	{
+		if (message.Data is null)
+		{
+			logger.LogWarning("Received WebSocket message with null data for handle {Handle}", message.Handle);
+			return;
+		}
+
 		var connection = connectionService.Get(message.Handle);
 
 		if (connection == null)

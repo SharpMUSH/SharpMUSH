@@ -47,7 +47,7 @@ services:
       - NATS_URL=nats://nats:4222
     depends_on:
       renderer:
-        condition: service_started
+        condition: service_healthy
       nats:
         condition: service_healthy
     ports:

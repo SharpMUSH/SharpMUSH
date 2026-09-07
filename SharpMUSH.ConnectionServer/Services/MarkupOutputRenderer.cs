@@ -10,6 +10,13 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// <summary>Connection type value used by the WebSocket gateway when registering connections.</summary>
 	public const string WebSocketConnectionType = "websocket";
 
+	public ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection,
+		CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		return ValueTask.FromResult(Render(markup, connection));
+	}
+
 	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection) =>
 		Render(markup, new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences));
 

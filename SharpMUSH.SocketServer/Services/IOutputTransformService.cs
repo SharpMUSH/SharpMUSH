@@ -13,19 +13,12 @@ public interface IOutputTransformService
 	/// <param name="rawOutput">The raw UTF-8 output bytes from the server</param>
 	/// <param name="capabilities">The client's protocol capabilities</param>
 	/// <param name="preferences">The player's output preferences (null if not logged in)</param>
+	/// <param name="ct">Cancels rendering, including waiting for a remote worker.</param>
 	/// <returns>Transformed output bytes suitable for the client</returns>
 	ValueTask<byte[]> TransformAsync(
 		byte[] rawOutput,
 		ProtocolCapabilities capabilities,
-		PlayerOutputPreferences? preferences
-	);
-
-	/// <summary>
-	/// Synchronous version of TransformAsync for use in synchronous contexts
-	/// </summary>
-	byte[] Transform(
-		byte[] rawOutput,
-		ProtocolCapabilities capabilities,
-		PlayerOutputPreferences? preferences
+		PlayerOutputPreferences? preferences,
+		CancellationToken ct = default
 	);
 }

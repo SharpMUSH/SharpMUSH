@@ -46,6 +46,8 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 
 		builder.ConfigureTestServices(sc =>
 		{
+			// This TestServer fixture isolates in-process gateway behavior. TCP/Pueblo/MXP integration
+			// uses TelnetIntegrationFixture, which starts the real Unix-socket rendering worker.
 			sc.AddSingleton<IMarkupOutputRenderer, MarkupOutputRenderer>();
 			sc.AddSingleton<IOutputTransformService, OutputTransformService>();
 		});

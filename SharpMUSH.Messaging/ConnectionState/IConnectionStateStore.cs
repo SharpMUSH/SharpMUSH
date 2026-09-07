@@ -43,6 +43,9 @@ public interface IConnectionStateStore
 	/// </summary>
 	Task UpdateMetadataAsync(long handle, string key, string value, CancellationToken ct = default);
 
+	/// <summary>Revokes resume only if the original transport session still owns the handle.</summary>
+	Task<bool> TryRevokeResumeAsync(long handle, string sessionId, CancellationToken ct = default) => Task.FromResult(false);
+
 	/// <summary>Updates resumed transport metadata only while the authorized session and binding still match.</summary>
 	Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
 		string ip, string host, bool secure, CancellationToken ct = default) => Task.FromResult(false);

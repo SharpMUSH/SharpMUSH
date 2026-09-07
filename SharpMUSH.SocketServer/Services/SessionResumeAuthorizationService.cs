@@ -18,6 +18,9 @@ public sealed class SessionResumeAuthorizationService(IMessageBus bus, NatsConsu
 
 	public async Task<bool> AuthorizeAsync(long handle, string session, IDuplexTransport transport, CancellationToken ct)
 	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(TimeSpan.FromSeconds(15));
+		ct = deadline.Token;
 		await consumers.WaitUntilReadyAsync(ct);
 		var id = Guid.NewGuid();
 		var completion = new TaskCompletionSource<SessionResumeResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);

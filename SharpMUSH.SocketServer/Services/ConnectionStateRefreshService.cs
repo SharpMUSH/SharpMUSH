@@ -23,10 +23,9 @@ public sealed class ConnectionStateRefreshService(
 
 	public async Task RefreshAsync(CancellationToken ct)
 	{
-		foreach (var connection in connections.GetAll())
+		foreach (var connection in connections.GetAll().Where(connection =>
+			connection.ConnectionType != "websocket" || sinks is null || sinks.Get(connection.Handle)?.Current is not null))
 		{
-			if (connection.ConnectionType == "websocket" && sinks is not null
-				&& sinks.Get(connection.Handle)?.Current is null) continue;
 			try
 			{
 				await store.UpdateMetadataAsync(connection.Handle, "GatewayLastSeen",

@@ -50,8 +50,8 @@ public class SessionResumeConsumerTests
 				NullLogger<SessionResumeConsumer>.Instance, lifetime);
 		}
 
-		public Task AssertResponse(bool accepted) => Bus.Received(1).Publish(
-			Arg.Is<SessionResumeResponseMessage>(m => m.Accepted == accepted && m.RequestId == Request.RequestId
+		public Task AssertResponse(bool accepted, bool retryable = false) => Bus.Received(1).Publish(
+			Arg.Is<SessionResumeResponseMessage>(m => m.Accepted == accepted && m.Retryable == retryable && m.RequestId == Request.RequestId
 				&& m.Handle == 42 && m.SessionId == "session"), Arg.Any<CancellationToken>());
 	}
 
@@ -222,6 +222,6 @@ public class SessionResumeConsumerTests
 		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
 			.Returns(Task.FromException<bool>(new IOException("store unavailable")));
 		await h.Consumer.HandleAsync(h.Request);
-		await h.AssertResponse(false);
+		await h.AssertResponse(false, retryable: true);
 	}
 }

@@ -82,7 +82,7 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 					result.Add(SeqEnvelope.Wrap(checked((long)metadata.Sequence.Stream), msg.Data));
 				}
 				if (fetched == 0)
-					throw new InvalidDataException("Replay history expired while it was being read.");
+					throw new IncompleteReplayException();
 			}
 			return result;
 		}
@@ -93,7 +93,18 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		}
 	}
 
-	public ValueTask DropAsync(string session, CancellationToken ct = default) => ValueTask.CompletedTask;
+	public async ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default)
+	{
+		try { return new(true, await AfterAsync(session, lastSeq, ct)); }
+		catch (IncompleteReplayException) { return new(false, []); }
+	}
+
+	private sealed class IncompleteReplayException : Exception { }
+
+	public async ValueTask DropAsync(string session, CancellationToken ct = default)
+	{
+		await _js.PurgeStreamAsync(StreamName, new StreamPurgeRequest { Filter = $"{SubjectPrefix}.{session}" }, ct);
+	}
 
 	public async ValueTask DisposeAsync() => await _nats.DisposeAsync();
 }

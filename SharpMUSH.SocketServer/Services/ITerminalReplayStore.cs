@@ -11,6 +11,8 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// (recycled by <c>DescriptorGeneratorService</c>), so keying replay on the handle would let a new
 /// occupant replay a prior session's output — a cross-session leak. A fresh session mints a new id.
 /// </summary>
+public record ReplayReadResult(bool Complete, IReadOnlyList<byte[]> Frames);
+
 public interface ITerminalReplayStore
 {
 	/// <summary>Assigns the next seq for the session, wraps + records the frame, returns both.</summary>
@@ -18,6 +20,9 @@ public interface ITerminalReplayStore
 
 	/// <summary>Wrapped frames with seq greater than <paramref name="lastSeq"/>, oldest first.</summary>
 	ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default);
+
+	async ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default) =>
+		new(true, await AfterAsync(session, lastSeq, ct));
 
 	/// <summary>Releases a session's replay resources once it has ended for good.</summary>
 	ValueTask DropAsync(string session, CancellationToken ct = default);

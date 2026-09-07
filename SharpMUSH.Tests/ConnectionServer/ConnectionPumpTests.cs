@@ -29,7 +29,7 @@ public class ConnectionPumpTests
 		public Task<string?> ReceiveTextAsync(CancellationToken ct)
 			=> Task.FromResult(_frames.Count > 0 ? _frames.Dequeue() : null);
 
-		public Task CloseAsync()
+		public Task CloseAsync(CancellationToken ct = default)
 		{
 			Closed = true;
 			return Task.CompletedTask;
@@ -63,7 +63,7 @@ public class ConnectionPumpTests
 			return null;
 		}
 
-		public Task CloseAsync()
+		public Task CloseAsync(CancellationToken ct = default)
 		{
 			Closed = true;
 			return Task.CompletedTask;
@@ -276,7 +276,7 @@ public class ConnectionPumpTests
 	public async Task Grace_expiry_releases_the_sessions_replay_state()
 	{
 		var bus = Substitute.For<IMessageBus>();
-		var conn = Substitute.For<IConnectionServerService>();
+		var conn = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus);
 		var desc = Substitute.For<IDescriptorGeneratorService>();
 		var replay = new DropRecordingReplayStore();
 		var scheduler = new ManualScheduler();

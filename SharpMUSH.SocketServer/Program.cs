@@ -43,7 +43,7 @@ public class Program
 			app.MapPrometheusScrapingEndpoint();
 
 			var logger = app.Services.GetRequiredService<ILogger<Program>>();
-			logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
+			logger.LogTrace("[NATS] Connected to NATS host {NatsHost}", new Uri(natsUrl).Host);
 
 			await app.RunAsync();
 		}
@@ -71,6 +71,7 @@ public class Program
 
 		var connectionServerOptions = new ConnectionServerOptions();
 		builder.Configuration.GetSection("ConnectionServer").Bind(connectionServerOptions);
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(connectionServerOptions.MaxConcurrentUpgradedConnections);
 		builder.Services.AddSingleton(connectionServerOptions);
 
 		builder.Services.AddLogging(logging =>
@@ -189,6 +190,7 @@ public class Program
 		builder.WebHost.ConfigureKestrel((context, options) =>
 		{
 			options.AddServerHeader = true;
+			options.Limits.MaxConcurrentUpgradedConnections = connectionServerOptions.MaxConcurrentUpgradedConnections;
 
 			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
 			{

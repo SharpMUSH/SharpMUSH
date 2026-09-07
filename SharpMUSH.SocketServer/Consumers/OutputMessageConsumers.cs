@@ -37,9 +37,13 @@ public class TelnetPromptConsumer(
 			var transformedData = await transformService.TransformAsync(
 				message.Data,
 				connection.Capabilities,
-				connection.Preferences);
+				connection.Preferences, cancellationToken);
 
 			await connection.PromptOutputFunction(transformedData);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{
@@ -70,20 +74,40 @@ public class BroadcastConsumer(
 			return;
 		}
 
-		foreach (var connection in connections)
+		foreach (var group in connections.GroupBy(connection => (connection.Capabilities, connection.Preferences)))
 		{
+			cancellationToken.ThrowIfCancellationRequested();
+			byte[] transformedData;
 			try
 			{
-				var transformedData = await transformService.TransformAsync(
-					message.Data,
-					connection.Capabilities,
-					connection.Preferences);
-
-				await connection.OutputFunction(transformedData);
+				transformedData = await transformService.TransformAsync(message.Data,
+					group.Key.Capabilities, group.Key.Preferences, cancellationToken);
+			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{
+				throw;
 			}
 			catch (Exception ex)
 			{
-				logger.LogError(ex, "Error broadcasting to connection {Handle}", connection.Handle);
+				logger.LogError(ex, "Error rendering broadcast for a capability group");
+				continue;
+			}
+
+			foreach (var connection in group)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				try
+				{
+					await connection.OutputFunction(transformedData);
+				}
+				catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+				{
+					throw;
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Error broadcasting to connection {Handle}", connection.Handle);
+				}
 			}
 		}
 	}

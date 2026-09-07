@@ -23,5 +23,5 @@ public interface IDuplexTransport
 	/// <summary>Returns one complete decoded UTF-8 frame, or null when the peer closed.</summary>
 	Task<string?> ReceiveTextAsync(CancellationToken ct);
 
-	Task CloseAsync();
+	Task CloseAsync(CancellationToken ct = default);
 }

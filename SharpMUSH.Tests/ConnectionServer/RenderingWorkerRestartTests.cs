@@ -13,8 +13,8 @@ public class RenderingWorkerRestartTests
 	[Test]
 	public async Task PendingOutputResumesAfterWorkerReplacement()
 	{
-		var directory = Path.Combine(Path.GetTempPath(), "sm-render-" + Guid.NewGuid().ToString("N"));
-		var socketPath = Path.Combine(directory, "render.sock");
+		var directory = Path.Join(Path.GetTempPath(), "sm-render-" + Guid.NewGuid().ToString("N"));
+		var socketPath = Path.Join(directory, "render.sock");
 		var worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
 		using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 		var lifetime = Substitute.For<IHostApplicationLifetime>();
@@ -47,6 +47,22 @@ public class RenderingWorkerRestartTests
 			await worker.DisposeAsync();
 			if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
 		}
+	}
+
+	[Test]
+	public async Task CallerCancellationStopsUnavailableWorkerRetryWithoutStoppingOwner()
+	{
+		var lifetime = Substitute.For<IHostApplicationLifetime>();
+		var configuration = new ConfigurationBuilder().AddInMemoryCollection(
+			new Dictionary<string, string?> { ["Rendering:SocketPath"] = "/tmp/sm-missing-" + Guid.NewGuid().ToString("N") }).Build();
+		var logger = new RetryLogger();
+		using var renderer = new RemoteOutputRenderer(configuration, lifetime, logger);
+		using var caller = new CancellationTokenSource();
+		var pending = renderer.TransformAsync("hello"u8.ToArray(), new ProtocolCapabilities(), null, caller.Token).AsTask();
+		await logger.Unavailable.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		caller.Cancel();
+		await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();
+		await Assert.That(lifetime.ApplicationStopping.IsCancellationRequested).IsFalse();
 	}
 
 	[Test]

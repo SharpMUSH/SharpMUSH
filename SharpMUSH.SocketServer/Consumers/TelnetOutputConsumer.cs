@@ -36,9 +36,13 @@ public class TelnetOutputConsumer(
 			var transformedData = await transformService.TransformAsync(
 				message.Data,
 				connection.Capabilities,
-				connection.Preferences);
+				connection.Preferences, cancellationToken);
 
 			await connection.OutputFunction(transformedData);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{

@@ -91,6 +91,12 @@ public class JetStreamReplayIntegrationTests
 			await Assert.That((await tokens2.TryResolveAsync(revocable)).Found).IsFalse();
 			await Assert.That((await tokens2.TryConsumeAsync(revocable)).Found).IsFalse();
 
+			var otherSession = Guid.NewGuid().ToString("N");
+			await replay2.AppendAsync(otherSession, "other-session"u8.ToArray());
+			await replay2.DropAsync(session);
+			await Assert.That((await replay2.AfterAsync(session, 0)).Count).IsEqualTo(0);
+			await Assert.That((await replay2.AfterAsync(otherSession, 0)).Count).IsEqualTo(1);
+			await replay2.DropAsync(otherSession);
 			await replay2.DisposeAsync();
 			await tokens2.DisposeAsync();
 		}

@@ -162,6 +162,10 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			if (key == "State") data.State = value;
 		}, ct);
 
+	public Task<bool> TryRevokeResumeAsync(long handle, string sessionId, CancellationToken ct = default) =>
+		string.IsNullOrWhiteSpace(sessionId) ? Task.FromResult(false)
+			: MutateAsync(handle, data => data.Metadata["ResumeRevoked"] = "1", ct, sessionId);
+
 	public async Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
 		string ip, string host, bool secure, CancellationToken ct = default)
 	{
@@ -174,8 +178,8 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return false;
 				throw entry.Error;
 			}
-			var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value.Value!)!;
-			if (data.Handle != handle || data.Metadata.GetValueOrDefault("SessionId") != sessionId
+			var data = entry.Value.Value is { } json ? JsonSerializer.Deserialize<ConnectionStateData>(json) : null;
+			if (data is null || data.Handle != handle || data.Metadata.GetValueOrDefault("SessionId") != sessionId
 				|| data.Metadata.GetValueOrDefault("ResumeRevoked") == "1"
 				|| data.PlayerObjid != playerObjid || data.State != state || data.ConnectionType != "websocket"
 				|| (!secure && data.Metadata.GetValueOrDefault("SSL") == "1")) return false;
@@ -197,7 +201,8 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		throw new InvalidOperationException($"Connection {handle} changed repeatedly while resuming transport.");
 	}
 
-	private async Task MutateAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct)
+	private async Task<bool> MutateAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct,
+		string? sessionId = null)
 	{
 		DateTimeOffset? incarnation = null;
 		for (var attempt = 0; attempt < 16; attempt++)
@@ -205,18 +210,20 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			var entry = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
 			if (!entry.Success)
 			{
-				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return;
+				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return false;
 				throw entry.Error;
 			}
-			var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value.Value!)!;
+			var data = entry.Value.Value is { } json ? JsonSerializer.Deserialize<ConnectionStateData>(json) : null;
+			if (data is null || data.Handle != handle
+				|| (sessionId is not null && data.Metadata.GetValueOrDefault("SessionId") != sessionId)) return false;
 			// Never apply a retry to a later occupant of a recycled descriptor.
-			if (incarnation is not null && incarnation != data.ConnectedAt) return;
+			if (incarnation is not null && incarnation != data.ConnectedAt) return false;
 			incarnation = data.ConnectedAt;
 			mutate(data);
 			data.LastSeen = DateTimeOffset.UtcNow;
 			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),
 				entry.Value.Revision, cancellationToken: ct);
-			if (result.Success) return;
+			if (result.Success) return true;
 			if (result.Error is not NatsKVWrongLastRevisionException) throw result.Error;
 			await Task.Delay(SharpMUSH.Library.Utilities.ConnectionRetryPolicy.Delay, ct);
 		}

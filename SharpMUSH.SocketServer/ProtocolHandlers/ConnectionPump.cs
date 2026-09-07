@@ -38,7 +38,7 @@ public sealed class ConnectionPump(
 			}
 			else if (connectionService.Get(candidateHandle) is null)
 				descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
-			await transport.CloseAsync();
+			await CloseTransportAsync(transport);
 		}
 	}
 
@@ -103,17 +103,22 @@ public sealed class ConnectionPump(
 			{
 				// Detach (hold the session) instead of disconnecting; the grace timer does the real
 				// disconnect if the client does not come back.
-				await sink.OutputGate.WaitAsync(CancellationToken.None);
-				try
+				using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+				var acquired = await sink.OutputGate.WaitAsync(TimeSpan.FromSeconds(5));
+				if (!acquired)
 				{
-					if (ReferenceEquals(sink.Current, transport))
-					{
-						sink.Detach();
-						try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), CancellationToken.None); }
-						finally { ScheduleExpiry(handle, session, grace); }
-					}
+					if (sink.Detach(transport)) ScheduleExpiry(handle, session, grace);
 				}
-				finally { sink.OutputGate.Release(); }
+				else try
+					{
+						if (ReferenceEquals(sink.Current, transport))
+						{
+							sink.Detach();
+							try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), teardown.Token); }
+							finally { ScheduleExpiry(handle, session, grace); }
+						}
+					}
+					finally { sink.OutputGate.Release(); }
 			}
 		}
 	}
@@ -135,22 +140,26 @@ public sealed class ConnectionPump(
 				var persisted = await stateStore.GetConnectionAsync(oldHandle, ct);
 				if (persisted?.Metadata.GetValueOrDefault("SessionId") != oldSession) return null;
 			}
-			await sink.OutputGate.WaitAsync(ct);
+			using var attachDeadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			attachDeadline.CancelAfter(TimeSpan.FromSeconds(5));
+			await sink.OutputGate.WaitAsync(attachDeadline.Token);
 			try
 			{
 				if (connectionService.Get(oldHandle) is null) return null;
-				var frames = await replayStore.AfterAsync(oldSession, lastSeq, ct);
+				var history = await replayStore.ReadAsync(oldSession, lastSeq, ct);
+				if (!history.Complete) return null;
+				var frames = history.Frames;
 				var consumed = await resumeTokens.TryConsumeAsync(token, ct);
 				if (!consumed.Found || consumed.Handle != oldHandle || consumed.Session != oldSession) return null;
 				detachedTracker.Reattach(oldHandle);
 				var previous = sink.Current;
 				sink.Detach();
-				if (previous is not null) await previous.CloseAsync();
-				await transport.SendAsync(SeqEnvelope.Reattached(), ct);
+				if (previous is not null) await CloseTransportAsync(previous, ct);
+				await SendTransportAsync(transport, SeqEnvelope.Reattached(), ct);
 				foreach (var frame in frames)
-					await transport.SendAsync(frame, ct);
+					await SendTransportAsync(transport, frame, ct);
 				var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
-				await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
+				await SendTransportAsync(transport, SeqEnvelope.ResumeToken(newToken), ct);
 				sink.TokenIssuedAt = DateTimeOffset.UtcNow;
 				await SetExpiryAsync(oldHandle, null, ct);
 				sink.Attach(transport);
@@ -186,7 +195,6 @@ public sealed class ConnectionPump(
 				{
 					descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 					sinkRegistry.Remove(handle);
-					await replayStore.DropAsync(session, CancellationToken.None);
 				}
 			}
 			finally { sink.ResumeGate.Release(); }
@@ -199,18 +207,53 @@ public sealed class ConnectionPump(
 		descriptorGenerator.ReserveWebSocketDescriptor(data.Handle);
 		var sink = sinkRegistry.GetOrCreate(data.Handle);
 		sink.SessionId = session;
-		connectionService.RestoreDormant(data, CreateOutput(session, sink), CreateDisconnect(data.Handle, session, sink));
+		connectionService.RestoreDormant(data, CreateOutput(data.Handle, session, sink), CreateDisconnect(data.Handle, session, sink));
 		await SetExpiryAsync(data.Handle, expiry, ct);
 		ScheduleExpiry(data.Handle, session, expiry - DateTimeOffset.UtcNow);
 	}
 
-	private Func<byte[], ValueTask> CreateOutput(string session, SessionSink sink) => async data =>
+	private static async Task SendTransportAsync(IDuplexTransport transport, ReadOnlyMemory<byte> data, CancellationToken ct = default)
+	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(TimeSpan.FromSeconds(5));
+		await transport.SendAsync(data, deadline.Token).WaitAsync(deadline.Token);
+	}
+
+	private async Task CloseTransportAsync(IDuplexTransport transport, CancellationToken ct = default)
+	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(TimeSpan.FromSeconds(5));
+		try { await transport.CloseAsync(deadline.Token).WaitAsync(deadline.Token); }
+		catch (Exception ex) { logger.LogDebug(ex, "Transport close did not complete cleanly"); }
+	}
+
+	private Func<byte[], ValueTask> CreateOutput(long handle, string session, SessionSink sink) => async data =>
 	{
 		await sink.OutputGate.WaitAsync();
 		try
 		{
+			if (sink.Ended) return;
 			var (_, wrapped) = await replayStore.AppendAsync(session, data, CancellationToken.None);
-			if (sink.Current is { } current) await current.SendAsync(wrapped, CancellationToken.None);
+			if (sink.Ended)
+			{
+				using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+				await replayStore.DropAsync(session, cleanup.Token);
+				return;
+			}
+			if (sink.Current is not { } current) return;
+			try { await SendTransportAsync(current, wrapped); }
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Socket output failed for {Handle}; preserving replay and detaching transport", handle);
+				if (sink.Detach(current))
+				{
+					using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+					try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), deadline.Token); }
+					catch (Exception expiryError) { logger.LogWarning(expiryError, "Could not persist detached expiry for {Handle}", handle); }
+					finally { ScheduleExpiry(handle, session, grace); }
+					await CloseTransportAsync(current);
+				}
+			}
 		}
 		finally { sink.OutputGate.Release(); }
 	};
@@ -218,25 +261,35 @@ public sealed class ConnectionPump(
 	private Action CreateDisconnect(long handle, string session, SessionSink sink) => () =>
 	{
 		var current = sink.Current;
+		sink.Ended = true;
 		sink.Detach();
 		sinkRegistry.Remove(handle);
 		descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 		detachedTracker.Reattach(handle);
 		TimerGraceScheduler.Fire(async () =>
 		{
+			using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			try
+			{
+				await sink.OutputGate.WaitAsync(cleanup.Token);
+				try { await replayStore.DropAsync(session, cleanup.Token); }
+				finally { sink.OutputGate.Release(); }
+			}
+			catch (Exception ex) { logger.LogWarning(ex, "Could not purge replay for ended session {Handle}", handle); }
 			try
 			{
 				if (current is not null)
 				{
-					try { await current.SendAsync(SeqEnvelope.Bye(), CancellationToken.None); }
-					finally { await current.CloseAsync(); }
+					try { await SendTransportAsync(current, SeqEnvelope.Bye()); }
+					finally { await CloseTransportAsync(current); }
 				}
 			}
 			finally
 			{
 				for (var attempt = 0; attempt < 5; attempt++)
 				{
-					try { await resumeTokens.RevokeSessionAsync(session, CancellationToken.None); break; }
+					using var revokeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+					try { await resumeTokens.RevokeSessionAsync(session, revokeDeadline.Token).AsTask().WaitAsync(revokeDeadline.Token); break; }
 					catch (Exception ex)
 					{
 						logger.LogWarning(ex, "Session revocation failed for {Handle}; attempt {Attempt}", handle, attempt + 1);
@@ -273,13 +326,13 @@ public sealed class ConnectionPump(
 		sink.Attach(transport);
 
 		sink.SessionId = session;
-		var output = CreateOutput(session, sink);
+		var output = CreateOutput(handle, session, sink);
 		await connectionService.RegisterAsync(handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			output, output, () => Encoding.UTF8, CreateDisconnect(handle, session, sink),
 			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, cancellationToken: ct);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
-		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);
+		await SendTransportAsync(transport, SeqEnvelope.ResumeToken(token), ct);
 		sink.TokenIssuedAt = DateTimeOffset.UtcNow;
 		return session;
 	}

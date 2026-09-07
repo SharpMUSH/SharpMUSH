@@ -44,7 +44,7 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 
 			if (result.MessageType == WebSocketMessageType.Close)
 			{
-				await CloseOutputAsync(ct);
+				await CloseAsync(ct);
 				return null;
 			}
 
@@ -55,7 +55,13 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 		return messageBuffer.Length > 0 ? Encoding.UTF8.GetString(messageBuffer.ToArray()) : string.Empty;
 	}
 
-	public Task CloseAsync() => CloseOutputAsync(CancellationToken.None);
+	public async Task CloseAsync(CancellationToken ct = default)
+	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(TimeSpan.FromSeconds(5));
+		try { await CloseOutputAsync(deadline.Token); }
+		catch (OperationCanceledException) { socket.Abort(); throw; }
+	}
 
 	private async Task CloseOutputAsync(CancellationToken ct)
 	{
