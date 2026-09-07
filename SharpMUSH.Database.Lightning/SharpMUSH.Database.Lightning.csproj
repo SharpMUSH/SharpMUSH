@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>default</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LightningDB" Version="0.23.0" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
