@@ -34,7 +34,7 @@ public enum SoftcodeCallKind
 	/// <summary>
 	/// Copies the source between its parentheses instead of evaluating it — <c>Literal</c> via
 	/// <c>LiteralArgumentText</c>, or <c>NoParse</c> with one argument via the whole-context
-	/// <c>MModule.substring</c>. <b>Nothing</b> inside such a call may be broken at, not even a
+	/// <c>MarkupText.Substring</c>. <b>Nothing</b> inside such a call may be broken at, not even a
 	/// bracket, because no visitor ever runs over that span to discard the whitespace.
 	/// </summary>
 	CopiesArgumentSource
@@ -108,7 +108,7 @@ public readonly record struct SoftcodeDelimiter(int Offset, int Depth);
 /// <item><description>
 /// After an <c>OBRACE</c>, on the same grounds. <c>VisitBracePattern</c>
 /// (<c>SharpMUSHParserVisitor.cs:2572</c>) emits its <c>VisitChildren</c> result — stripping the braces,
-/// or re-adding them as fresh <c>MModule.single</c> literals under <c>PreserveBraces</c> — so the
+/// or re-adding them as fresh <c>MarkupText.Plain</c> literals under <c>PreserveBraces</c> — so the
 /// <c>OBRACE</c> token and the whitespace it absorbed never reach the output. The one path that would
 /// carry them, <c>GetContextText</c> over the whole <c>bracePattern</c>, is reached only when
 /// <c>VisitChildren</c> returns null, which a non-empty brace cannot do:
@@ -411,7 +411,7 @@ public static class SoftcodeLayout
 	/// <c>Literal</c> (<c>:795-803</c>), whose single argument is <c>LiteralArgumentText</c> — the raw
 	/// span from just past the <c>(</c> to the <c>)</c>, so every delimiter's absorbed whitespace is
 	/// inside it — and <c>NoParse</c> with <c>MaxArgs == 1</c> (<c>:818-826</c>), which returns
-	/// <c>MModule.substring</c> over the whole function context.
+	/// <c>MarkupText.Substring</c> over the whole function context.
 	/// </para>
 	/// <para>
 	/// <c>NoParse</c> with more than one argument is <b>not</b> in that set (<c>:827-839</c>): each

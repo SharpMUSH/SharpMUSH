@@ -43,7 +43,7 @@ public static class SemanticTokenRenderer
 		if (tokens.Count == 0 && overrideAt is null)
 			return source;
 
-		var lineStarts = BuildLineStartTable(MModule.plainText(source));
+		var lineStarts = BuildLineStartTable(source.ToPlainText());
 
 		var sortedTokens = tokens
 			.OrderBy(t => t.Range.Start.Line)
@@ -79,13 +79,13 @@ public static class SemanticTokenRenderer
 			cursor = tokenEnd;
 		}
 
-		var totalLength = MModule.getLength(source);
+		var totalLength = source.Length;
 		if (cursor < totalLength)
 			EmitStyledRuns(source, cursor, totalLength, null, overrideAt, parts);
 
-		// ConcatMany (a single StringBuilder pass) — never MModule.concat in a loop, which is
+		// MarkupText.Concat (a single pass) — never a binary concat in a loop, which is
 		// O(n) per call and quadratic over a token list.
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	/// <summary>
@@ -141,8 +141,8 @@ public static class SemanticTokenRenderer
 
 	private static void EmitRun(MString source, int start, int end, Ansi? style, List<MString> parts)
 	{
-		var span = MModule.substring(start, end - start, source);
-		parts.Add(style is null ? span : MModule.MarkupSingle2(style, span));
+		var span = source.Substring(start, end - start);
+		parts.Add(style is null ? span : MarkupText.Wrap(style, span));
 	}
 
 	/// <summary>

@@ -149,7 +149,7 @@ public class EventService(
 			// markup encoding in the stored MString does not interfere with ANTLR parsing.
 			var attributeText = attributeResult.AsAttribute.Last().Value.ToPlainText();
 
-			await evalParser.CommandListParse(MModule.single(attributeText));
+			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
 
 			logger.LogDebug(
 				"Triggered event {EventName} with {ArgCount} arguments",

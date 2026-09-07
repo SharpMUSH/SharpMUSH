@@ -14,7 +14,7 @@ public record SharpAttribute(
 	[property: JsonIgnore] AsyncLazy<SharpPlayer?> Owner,
 	[property: JsonIgnore] AsyncLazy<SharpAttributeEntry?> SharpAttributeEntry)
 {
-	public MString Value { get; set; } = MModule.empty();
+	public MString Value { get; set; } = MarkupText.Empty;
 }
 
 public record LazySharpAttribute(

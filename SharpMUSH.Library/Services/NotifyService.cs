@@ -32,9 +32,9 @@ public class NotifyService(
 	/// </summary>
 	private async ValueTask PublishMarkup(long handle, OneOf<MString, string> what)
 	{
-		var ms = what.Match(markup => markup, MModule.single);
+		var ms = what.Match(markup => markup, MarkupText.Plain);
 		ms = ApplyOutputPrefixSuffix(handle, ms);
-		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MModule.serialize(ms)));
+		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MarkupTextSerializer.Serialize(ms)));
 	}
 
 	/// <summary>
@@ -43,8 +43,8 @@ public class NotifyService(
 	/// </summary>
 	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what)
 	{
-		var ms = what.Match(markup => markup, MModule.single);
-		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MModule.serialize(ms)));
+		var ms = what.Match(markup => markup, MarkupText.Plain);
+		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)));
 	}
 
 	/// <summary>
@@ -72,22 +72,22 @@ public class NotifyService(
 		var parts = new List<MString>();
 		if (hasPrefix && !string.IsNullOrEmpty(prefix))
 		{
-			parts.Add(MModule.single(prefix));
-			parts.Add(MModule.single("\n"));
+			parts.Add(MarkupText.Plain(prefix));
+			parts.Add(MarkupText.Plain("\n"));
 		}
 		parts.Add(text);
 		if (hasSuffix && !string.IsNullOrEmpty(suffix))
 		{
-			parts.Add(MModule.single("\n"));
-			parts.Add(MModule.single(suffix));
+			parts.Add(MarkupText.Plain("\n"));
+			parts.Add(MarkupText.Plain(suffix));
 		}
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -98,7 +98,7 @@ public class NotifyService(
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
 		if (httpOutputCapture?.TryCapture(who.Number,
-				what.Match(markupString => MModule.plainText(markupString), str => str)) == true)
+				what.Match(markupString => markupString.ToPlainText(), str => str)) == true)
 		{
 			return;
 		}
@@ -141,7 +141,7 @@ public class NotifyService(
 	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -154,7 +154,7 @@ public class NotifyService(
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -170,7 +170,7 @@ public class NotifyService(
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -192,7 +192,7 @@ public class NotifyService(
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -208,7 +208,7 @@ public class NotifyService(
 	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (what.Match(
-			markupString => MModule.getLength(markupString) == 0,
+			markupString => markupString.Length == 0,
 			str => str.Length == 0
 		))
 		{
@@ -326,7 +326,7 @@ public class NotifyService(
 		if (httpOutputCapture is not null)
 		{
 			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
-			if (httpOutputCapture.TryCapture(who.Number, MModule.plainText(neutral)))
+			if (httpOutputCapture.TryCapture(who.Number, neutral.ToPlainText()))
 			{
 				return;
 			}

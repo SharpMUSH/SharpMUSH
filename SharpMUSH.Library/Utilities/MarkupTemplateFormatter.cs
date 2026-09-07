@@ -1,4 +1,4 @@
-using MarkupString;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Utilities;
@@ -13,7 +13,7 @@ public static partial class MarkupTemplateFormatter
 	{
 		if (args.Length == 0)
 		{
-			return MModule.single(UnescapeCompositeFormatLiteral(template));
+			return MarkupText.Plain(UnescapeCompositeFormatLiteral(template));
 		}
 
 		var parts = new List<MString>();
@@ -23,7 +23,7 @@ public static partial class MarkupTemplateFormatter
 		{
 			if (match.Index > cursor)
 			{
-				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..match.Index])));
+				parts.Add(MarkupText.Plain(UnescapeCompositeFormatLiteral(template[cursor..match.Index])));
 			}
 
 			if (int.TryParse(match.Groups[1].Value, out var index) && index >= 0 && index < args.Length)
@@ -32,7 +32,7 @@ public static partial class MarkupTemplateFormatter
 			}
 			else
 			{
-				parts.Add(MModule.single(UnescapeCompositeFormatLiteral(match.Value)));
+				parts.Add(MarkupText.Plain(UnescapeCompositeFormatLiteral(match.Value)));
 			}
 
 			cursor = match.Index + match.Length;
@@ -40,10 +40,10 @@ public static partial class MarkupTemplateFormatter
 
 		if (cursor < template.Length)
 		{
-			parts.Add(MModule.single(UnescapeCompositeFormatLiteral(template[cursor..])));
+			parts.Add(MarkupText.Plain(UnescapeCompositeFormatLiteral(template[cursor..])));
 		}
 
-		return MModule.ConcatMany(parts.ToArray());
+		return MarkupText.Concat(CollectionsMarshal.AsSpan(parts));
 	}
 
 	private static string UnescapeCompositeFormatLiteral(string text) =>

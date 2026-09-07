@@ -116,16 +116,16 @@ public class HttpHandlerCommandService(
 			var key = $"HDR.{normalized}";
 			if (registers.TryGetValue(key, out var existing))
 			{
-				registers[key] = MModule.multiple([existing, MModule.single("\n"), MModule.single(value)]);
+				registers[key] = MarkupText.Concat([existing, MarkupText.Plain("\n"), MarkupText.Plain(value)]);
 			}
 			else
 			{
-				registers[key] = MModule.single(value);
+				registers[key] = MarkupText.Plain(value);
 				names.Add(normalized);
 			}
 		}
 
-		registers["HEADERS"] = MModule.single(string.Join(' ', names));
+		registers["HEADERS"] = MarkupText.Plain(string.Join(' ', names));
 		return registers;
 	}
 

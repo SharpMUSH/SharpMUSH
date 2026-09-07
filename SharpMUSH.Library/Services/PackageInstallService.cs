@@ -757,7 +757,7 @@ public class PackageInstallService(
 			c.Ref == spec.Ref && c.Action == PackageObjectAction.UpdateMetadata);
 		if (metadataChange is not null)
 		{
-			await database.SetObjectName(node, MModule.single(spec.Name), cancellationToken);
+			await database.SetObjectName(node, MarkupText.Plain(spec.Name), cancellationToken);
 		}
 
 		// Parent.
@@ -805,7 +805,7 @@ public class PackageInstallService(
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue));
 			}
 
-			await database.SetAttributeAsync(dbref.Value, path, MModule.single(value), pmWizard, cancellationToken);
+			await database.SetAttributeAsync(dbref.Value, path, MarkupText.Plain(value), pmWizard, cancellationToken);
 		}
 
 		async Task BaselineAsync(string packageValue, string? effectiveValue)
@@ -1191,7 +1191,7 @@ public class PackageInstallService(
 			}
 
 			await database.SetAttributeAsync(
-				dbref.Value, attribute.Attribute.Split('`'), MModule.single(attribute.Value), pmWizard, cancellationToken);
+				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard, cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
 				attribute.Value, Hash(attribute.Value), snapshot.Version));

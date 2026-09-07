@@ -35,7 +35,7 @@ public record WebSocketPromptMessage(long Handle, string Data) : IHandleMessage;
 /// for a specific connection. The ConnectionServer owns the wire format: it renders the markup to
 /// ANSI/Pueblo/MXP for terminal connections, or forwards it as a markup envelope for WebSocket
 /// (portal) connections so the browser can render it natively. <see cref="Markup"/> is the output of
-/// <c>MModule.serialize</c>.
+/// <c>MarkupTextSerializer.Serialize</c>.
 /// </summary>
 public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage;
 

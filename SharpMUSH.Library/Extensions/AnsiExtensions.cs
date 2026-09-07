@@ -19,8 +19,8 @@ public static class AnsiExtensions
 	public static AnsiColor.Rgb ToAnsiColor(this Color color) => new(color.R, color.G, color.B);
 
 	public static MString Hilight(this MString str) =>
-		MModule.MarkupSingle2(HILIGHT, str);
+		MarkupText.Wrap(HILIGHT, str);
 
 	public static MString Hilight(this string str) =>
-		MModule.MarkupSingle2(HILIGHT, MModule.single(str));
+		MarkupText.Wrap(HILIGHT, MarkupText.Plain(str));
 }

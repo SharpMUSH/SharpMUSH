@@ -96,7 +96,7 @@ public static class SoftcodeSource
 	/// </summary>
 	public static IReadOnlyList<ParseError> Validate(IMUSHCodeParser parser, MString source, ParseType parseType)
 	{
-		var plain = MModule.plainText(source);
+		var plain = source.ToPlainText();
 		var offset = MatchPatternPrefixLength(plain, parseType);
 
 		if (offset == 0)
@@ -105,7 +105,7 @@ public static class SoftcodeSource
 		}
 
 		var errors = parser.ValidateAndGetErrors(
-			MModule.substring(offset, plain.Length - offset, source), parseType);
+			source.Substring(offset, plain.Length - offset), parseType);
 
 		if (errors.Count == 0)
 		{

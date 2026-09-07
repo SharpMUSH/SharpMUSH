@@ -590,9 +590,9 @@ public static partial class HelperFunctions
 	/// </summary>
 	public static MString StripOuterBraces(MString input)
 	{
-		var text = MModule.plainText(input);
+		var text = input.ToPlainText();
 		if (text.Length >= 2 && text[0] == '{' && text[^1] == '}')
-			return MModule.substring(1, MModule.getLength(input) - 2, input);
+			return input.Substring(1, input.Length - 2);
 		return input;
 	}
 }

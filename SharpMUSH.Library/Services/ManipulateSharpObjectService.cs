@@ -65,7 +65,7 @@ public class ManipulateSharpObjectService(
 					return "#-1 PLAYER NAME ALREADY IN USE.";
 				}
 
-				var playerSplit = MModule.split(";", name);
+				var playerSplit = name.Split(";");
 
 				await mediator.Send(new SetNameCommand(obj, playerSplit.First()));
 
@@ -90,17 +90,17 @@ public class ManipulateSharpObjectService(
 				}
 
 				await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-					MModule.multipleWithDelimiter(MModule.single(";"), aliases.Select(MModule.single)));
+					MarkupText.Join(MarkupText.Plain(";"), aliases.Select(MarkupText.Plain)));
 
 				return obj.Object().DBRef;
 
 			default:
-				var split = MModule.split(";", name);
+				var split = name.Split(";");
 				await mediator.Send(new SetNameCommand(obj, split.First()));
 				if (split.Length > 1)
 				{
 					await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-						MModule.multipleWithDelimiter(MModule.single(";"), split.Skip(1)));
+						MarkupText.Join(MarkupText.Plain(";"), split.Skip(1)));
 				}
 
 				return obj.Object().DBRef;
@@ -120,7 +120,7 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		if (!await validateService.Valid(IValidateService.ValidationType.Password, MModule.single(newPassword), new None()))
+		if (!await validateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(newPassword), new None()))
 		{
 			if (notify)
 			{
