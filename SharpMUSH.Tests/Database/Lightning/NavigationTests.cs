@@ -72,6 +72,56 @@ public class NavigationTests
 	}
 
 	[Test]
+	public async Task ReachabilityFindsTargetThroughZoneWhenParentIsADeadEnd()
+	{
+		// A.parent = X (dead end), A.zone = Y, Y.parent = Z (target). A single-path walk that
+		// follows parent-over-zone from A dead-ends at X and misses Z; a true BFS over both
+		// edges from every node still finds it via A -> zone Y -> parent Z.
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
+
+		var aRef = await _db.CreateThingAsync("A", room, god, room);
+		var xRef = await _db.CreateThingAsync("X", room, god, room);
+		var yRef = await _db.CreateThingAsync("Y", room, god, room);
+		var zRef = await _db.CreateThingAsync("Z", room, god, room);
+
+		var a = (await _db.GetObjectNodeAsync(aRef)).Known;
+		var x = (await _db.GetObjectNodeAsync(xRef)).Known;
+		var y = (await _db.GetObjectNodeAsync(yRef)).Known;
+		var z = (await _db.GetObjectNodeAsync(zRef)).Known;
+
+		await _db.SetObjectParent(a, x);
+		await _db.SetObjectZone(a, y);
+		await _db.SetObjectParent(y, z);
+
+		await Assert.That(await _db.IsReachableViaParentOrZoneAsync(a, z, 100)).IsTrue();
+	}
+
+	[Test]
+	public async Task ReachabilityFindsTargetThroughParentWhenZoneIsADeadEnd()
+	{
+		// Mirrored: A.zone = X (dead end), A.parent = Y, Y.zone = Z (target).
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
+
+		var aRef = await _db.CreateThingAsync("A", room, god, room);
+		var xRef = await _db.CreateThingAsync("X", room, god, room);
+		var yRef = await _db.CreateThingAsync("Y", room, god, room);
+		var zRef = await _db.CreateThingAsync("Z", room, god, room);
+
+		var a = (await _db.GetObjectNodeAsync(aRef)).Known;
+		var x = (await _db.GetObjectNodeAsync(xRef)).Known;
+		var y = (await _db.GetObjectNodeAsync(yRef)).Known;
+		var z = (await _db.GetObjectNodeAsync(zRef)).Known;
+
+		await _db.SetObjectZone(a, x);
+		await _db.SetObjectParent(a, y);
+		await _db.SetObjectZone(y, z);
+
+		await Assert.That(await _db.IsReachableViaParentOrZoneAsync(a, z, 100)).IsTrue();
+	}
+
+	[Test]
 	public async Task ContentsAndExitsListWhatWasCreatedInARoom()
 	{
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
@@ -119,6 +169,12 @@ public class NavigationTests
 
 		var thingRef = await _db.CreateThingAsync("Wanderer", room, god, home);
 
+		// An exit's destination reuses the same home edge (Task 7's LinkExitAsync), same as a
+		// room's drop-to — it must show up here, unlike the room case below.
+		var exitRef = await _db.CreateExitAsync("Out", ["O"], room, god);
+		var exit = (await _db.GetObjectNodeAsync(exitRef)).Known.AsExit;
+		await _db.LinkExitAsync(exit, home);
+
 		// A room's own drop-to also reuses the home edge — must not show up as "homed at" the target.
 		var dropRoomRef = await _db.CreateRoomAsync("Drops Here", god);
 		var dropRoom = (await _db.GetObjectNodeAsync(dropRoomRef)).Known.AsRoom;
@@ -127,6 +183,7 @@ public class NavigationTests
 		var homedKeys = (await _db.GetHomedAtAsync(homeRef).ToListAsync())
 			.Select(c => c.Object().DBRef.Number).ToList();
 		await Assert.That(homedKeys).Contains(thingRef.Number);
+		await Assert.That(homedKeys).Contains(exitRef.Number);
 		await Assert.That(homedKeys).DoesNotContain(dropRoomRef.Number);
 	}
 

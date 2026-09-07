@@ -646,38 +646,49 @@ public sealed partial class LightningDatabase
 
 		var result = Store.Read(tx =>
 		{
-			var current = start;
-			var visited = new HashSet<long>();
-			var depth = 0;
-
-			while (depth < maxDepth)
+			// maxDepth <= 0 leaves no traversal budget, not even the zero-hop start == target
+			// check below — matching the SurrealDB walk this ports, which never enters its
+			// depth-guarded loop in that case either.
+			if (maxDepth <= 0)
 			{
+				return false;
+			}
+
+			// True BFS over both edge types with one global visited set, matching the ArangoDB
+			// reference traversal (`uniqueVertices: 'global', order: 'bfs'` over has_parent and
+			// has_zone). A single-path parent-precedence walk can dead-end down the parent chain
+			// and miss a target that's only reachable by branching through a zone somewhere
+			// along the way.
+			var visited = new HashSet<long> { start };
+			var queue = new Queue<(long Key, int Depth)>();
+			queue.Enqueue((start, 0));
+
+			while (queue.Count > 0)
+			{
+				var (current, depth) = queue.Dequeue();
+
 				if (current == target)
 				{
 					return true;
 				}
 
-				if (!visited.Add(current))
+				if (depth >= maxDepth)
 				{
-					return false;
+					continue;
 				}
 
 				var parentKey = GetSingleEdge(tx, Tables.Parent.Forward, current);
 				var zoneKey = GetSingleEdge(tx, Tables.Zone.Forward, current);
 
-				if (parentKey is null && zoneKey is null)
+				if (parentKey is long p && visited.Add(p))
 				{
-					return false;
+					queue.Enqueue((p, depth + 1));
 				}
 
-				if (parentKey == target || zoneKey == target)
+				if (zoneKey is long z && visited.Add(z))
 				{
-					return true;
+					queue.Enqueue((z, depth + 1));
 				}
-
-				// Follow the first path (parent takes precedence), same as the SurrealDB walk.
-				current = parentKey ?? zoneKey!.Value;
-				depth++;
 			}
 
 			return false;
