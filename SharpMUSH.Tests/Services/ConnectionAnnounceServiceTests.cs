@@ -262,8 +262,11 @@ public class ConnectionAnnounceServiceTests
 
 		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
+		// The permission check reads as the hook OWNER evaluating its own attribute (self-eval always
+		// passes CanEval, regardless of the owner's own privilege level), not as the connecting PLAYER -
+		// see the comment in ConnectionAnnounceService.QueueHookAsync.
 		await attributeService.Received(1).GetAttributeAsync(
-			player, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+			hookTarget, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
 	}
 
 	/// <summary>
@@ -309,7 +312,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 
 		attributeService.GetAttributeAsync(
-				player, throwingHookTarget, "ACONNECT", Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+				throwingHookTarget, throwingHookTarget, "ACONNECT", Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
 			.Returns<OptionalSharpAttributeOrError>(_ => throw new InvalidOperationException("boom"));
 
 		var service = new ConnectionAnnounceService(
@@ -320,7 +323,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
 		await attributeService.Received(1).GetAttributeAsync(
-			player, laterHookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+			laterHookTarget, laterHookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
 		logger.Received(1).Log(
 			LogLevel.Error,
 			Arg.Any<EventId>(),
@@ -493,6 +496,78 @@ public class ConnectionAnnounceServiceTests
 			Arg.Any<object>(),
 			Arg.Any<Exception>(),
 			Arg.Any<Func<object, Exception?, string>>());
+	}
+
+	/// <summary>
+	/// Finding 3 of the Codex review on PR #902: the broadcast section (room/inventory/channel) used to
+	/// run inside the SAME try block as the ACONNECT hook dispatch that follows it, so a broadcast
+	/// failure jumped straight to <c>AnnounceConnectAsync</c>'s outer catch and skipped the hook
+	/// dispatch entirely. <c>BroadcastAnnouncementAsync</c> now isolates the broadcast in its own
+	/// try/catch, so a <c>SendToRoomAsync</c> failure here must not prevent the player's own ACONNECT
+	/// lookup from still running.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_BroadcastThrows_AconnectHookStillDispatched()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		communicationService.SendToRoomAsync(
+				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
+				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<INotifyService.NotificationType>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), logger);
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+
+		await attributeService.Received(1).GetAttributeAsync(
+			player, player, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+	}
+
+	/// <summary>
+	/// Finding 3, disconnect side: same isolation guarantee, proven against both the ADISCONNECT hook
+	/// dispatch and LASTLOGOUT - both of which used to be skipped entirely when the broadcast section
+	/// threw, since they ran after it inside the same outer try.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_BroadcastThrows_HookAndLastLogoutStillRun()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		communicationService.SendToRoomAsync(
+				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
+				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<INotifyService.NotificationType>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), logger);
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+
+		await attributeService.Received(1).GetAttributeAsync(
+			player, player, "ADISCONNECT", IAttributeService.AttributeMode.Execute, true);
+		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
 	}
 
 	/// <summary>

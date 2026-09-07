@@ -447,4 +447,104 @@ public class ConnectionAnnounceIntegrationTests
 				"actually executes hook attributes and that DispatchZoneAndMasterRoomHooksAsync reads " +
 				"the player's LOCATION's zone rather than the player's own (almost always unset) zone");
 	}
+
+	// --- Test 11: a WIZARD-flagged hook object's ACONNECT still fires for a mortal connect (Finding 1) ---
+
+	/// <summary>
+	/// Regression test for the Codex review's Finding 1 on PR #902: <c>QueueHookAsync</c> used to check
+	/// the ACONNECT/ADISCONNECT read/execute permission as the CONNECTING PLAYER evaluating the hook
+	/// OWNER's attribute (<c>GetAttributeAsync(player, owner, ...)</c>), rather than as the owner
+	/// evaluating its own attribute. ACONNECT/ADISCONNECT attributes are seeded without the "public"
+	/// flag, so for a WIZARD- or ROYALTY-flagged hook object - not a contrived case; <c>#8</c> "HTTP
+	/// Handler" and <c>#9</c> "Event Handler" in <c>InitialObjectSeed</c> both ship WIZARD-flagged by
+	/// default - a mortal connecting player would fail <c>PermissionService.CanEvalAttr</c> and the
+	/// hook would silently never fire.
+	///
+	/// <para>Reuses the zoned-room end-to-end fixture from Test 10, but the hook Thing itself is set
+	/// WIZARD (the connecting player is left an ordinary mortal - no <c>@set ... =WIZARD</c>). Before
+	/// the fix this test fails (the witness sees nothing); after the fix it passes, because the
+	/// permission check now runs as the hook owner reading its own attribute, which always satisfies
+	/// <c>PermissionService.CanEval</c>'s self-evaluation case regardless of the owner's own privilege
+	/// level.</para>
+	/// </summary>
+	[Test]
+	public async ValueTask Connect_MortalPlayer_WizardOwnedZoneHookStillFires()
+	{
+		var zoneRoom = await DigRoomAsync("AnnounceWizZoneRoom11");
+		var playerRoom = await DigRoomAsync("AnnounceWizRoom11");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {playerRoom}={zoneRoom}"));
+
+		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWizWitness11");
+		await TeleportAsync(witness.DbRef, zoneRoom);
+
+		var hookThingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create AnnounceWizHookThing11"));
+		var hookThing = DBRef.Parse(hookThingResult.Message!.ToPlainText());
+		await TeleportAsync(hookThing, zoneRoom);
+		// The HOOK OBJECT itself carries WIZARD, not the connecting player. Setting the flag requires
+		// a trusted/wizard executor, so this runs as God (handle 1).
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {hookThing}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&ACONNECT {hookThing}=@emit Wizard zone hook fired for connection %1"));
+
+		// An ordinary mortal - no WIZARD, no ROYALTY, no Hide/See_All power.
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnounceWizConn11");
+		await TeleportAsync(playerRef, playerRoom);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+
+		var messages = MessagesTo(witness.DbRef, before);
+
+		await Assert.That(messages).Contains("Wizard zone hook fired for connection 1")
+			.Because("QueueHookAsync must check the hook OWNER's own permission to read/execute its " +
+				"ACONNECT attribute, not the connecting mortal player's - a WIZARD-flagged hook object's " +
+				"ACONNECT must still fire for an ordinary mortal connect");
+	}
+
+	// --- Test 12: @hide, then LOGOUT (not QUIT) - Finding 2 ----------------------------------------
+
+	/// <summary>
+	/// Regression test for the Codex review's Finding 2 on PR #902: <c>ConnectionService.Unbind</c>
+	/// used to clear the "Hidden" metadata key INSIDE the same state mutation that nulls <c>Ref</c>,
+	/// before publishing <c>ConnectionStateChangeNotification</c> - so
+	/// <c>ConnectionStateEventHandler</c>'s disconnect branch, which re-fetches connection data via
+	/// <c>IConnectionService.Get</c> to read <c>IsHidden</c> for the disconnect wording, always saw it
+	/// already cleared. A hidden player who LOGOUTs (as opposed to QUITs -
+	/// <c>ConnectionService.Disconnect</c> removes its state AFTER publishing, so QUIT never had this
+	/// bug, per <see cref="Hide_ThenQuit_BroadcastsHiddenDisconnected"/>) got ordinary "has
+	/// disconnected." wording instead of "has HIDDEN-disconnected."
+	/// </summary>
+	[Test]
+	public async ValueTask Hide_ThenLogout_BroadcastsHiddenDisconnected()
+	{
+		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWitness12");
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceHideLogout12");
+		// @hide is permission-gated (wizard/royalty or the Hide power) - grant WIZARD.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+
+		var room = await DigRoomAsync("AnnounceRoom12");
+		await TeleportAsync(witness.DbRef, room);
+		await TeleportAsync(testPlayer.DbRef, room);
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
+
+		var playerName = (await KnownObjectAsync(testPlayer.DbRef)).Object().Name;
+		var before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("LOGOUT"));
+
+		var messages = MessagesTo(witness.DbRef, before);
+		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasHiddenDisconnected}")
+			.Because("Unbind must not clear the Hidden metadata key before the disconnect notification is " +
+				"published, or ConnectionStateEventHandler's re-fetch of IsHidden for the disconnect " +
+				"wording always sees it already cleared, producing the ordinary (non-hidden) wording " +
+				"instead");
+	}
 }

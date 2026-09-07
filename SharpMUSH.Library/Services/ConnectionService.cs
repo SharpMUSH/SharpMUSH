@@ -111,14 +111,7 @@ public class ConnectionService(
 		// for the player's remaining connections does not count the one that is leaving.
 		_sessionState.AddOrUpdate(handle,
 			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
-			(_, y) =>
-			{
-				// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a
-				// wizard who @hides then LOGOUTs would leave the socket hidden for whoever connects
-				// next on it, including a mortal with no permission to hide themselves.
-				y.Metadata.TryRemove("Hidden", out var removedHiddenValue);
-				return y with { Ref = null, State = IConnectionService.ConnectionState.Connected };
-			});
+			(_, y) => y with { Ref = null, State = IConnectionService.ConnectionState.Connected });
 
 		if (stateStore != null)
 		{
@@ -126,7 +119,6 @@ public class ConnectionService(
 			// with it, or a restart would restore a handle that claims to be logged in with no player.
 			await stateStore.SetPlayerBindingAsync(handle, null);
 			await stateStore.UpdateMetadataAsync(handle, "State", nameof(IConnectionService.ConnectionState.Connected));
-			await stateStore.UpdateMetadataAsync(handle, "Hidden", "0");
 		}
 
 		foreach (var handler in _handlers)
@@ -139,6 +131,27 @@ public class ConnectionService(
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, formerRef, get.State,
 			IConnectionService.ConnectionState.Connected));
+
+		// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a wizard who
+		// @hides then LOGOUTs would leave the socket hidden for whoever connects next on it, including a
+		// mortal with no permission to hide themselves. This clear runs AFTER the notification publish
+		// (rather than folded into the AddOrUpdate above) so a PLAYER`DISCONNECT handler reading
+		// Get(handle).IsHidden while handling that notification still observes the pre-logout Hidden
+		// value for its "hidden?" argument and for ConnectionAnnounceService's disconnect wording -
+		// clearing it beforehand made every LOGOUT (as opposed to QUIT) report as an ordinary,
+		// non-hidden disconnect regardless of the player's actual Hidden state.
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
+			(_, y) =>
+			{
+				y.Metadata.TryRemove("Hidden", out var removedHiddenValue);
+				return y;
+			});
+
+		if (stateStore != null)
+		{
+			await stateStore.UpdateMetadataAsync(handle, "Hidden", "0");
+		}
 	}
 
 	public async ValueTask BindAccount(long handle, string accountId)

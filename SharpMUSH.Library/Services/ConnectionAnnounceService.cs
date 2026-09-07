@@ -59,21 +59,7 @@ public class ConnectionAnnounceService(
 				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
 			}
 
-			if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
-			{
-				await communicationService.SendToRoomAsync(
-					player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
-
-				if (!isDark)
-				{
-					var loc = await player.Where();
-					await communicationService.SendToRoomAsync(
-						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
-						excludeObjects: [player]);
-				}
-
-				await AnnounceOnChannelsAsync(player, fullMessage);
-			}
+			await BroadcastAnnouncementAsync(player, fullMessage, isDark);
 
 			await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
 
@@ -130,21 +116,7 @@ public class ConnectionAnnounceService(
 				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
 			}
 
-			if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
-			{
-				await communicationService.SendToRoomAsync(
-					player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
-
-				if (!isDark)
-				{
-					var loc = await player.Where();
-					await communicationService.SendToRoomAsync(
-						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
-						excludeObjects: [player]);
-				}
-
-				await AnnounceOnChannelsAsync(player, fullMessage);
-			}
+			await BroadcastAnnouncementAsync(player, fullMessage, isDark);
 
 			await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
 
@@ -173,6 +145,46 @@ public class ConnectionAnnounceService(
 			// resolving the player's zone/master room) shouldn't skip whatever the caller runs
 			// after this, most concretely the room-contents refresh other players depend on.
 			logger.LogError(ex, "Error announcing disconnect for player {Player}", player.Object().DBRef);
+		}
+	}
+
+	/// <summary>
+	/// Isolates the room/inventory/channel broadcast (gated on <c>Cosmetic.AnnounceConnects</c>) with
+	/// its own try/catch, mirroring <see cref="QueueHookAsync"/>'s. Without this, a broadcast failure
+	/// (a bad room reference, a permission-check exception, any other transient failure inside
+	/// <see cref="ICommunicationService.SendToRoomAsync"/> or <see cref="AnnounceOnChannelsAsync"/>)
+	/// would jump straight to the caller's outer catch, skipping the ACONNECT/ADISCONNECT hook
+	/// dispatch and (on disconnect) LASTLOGOUT that are meant to run regardless. Shared between
+	/// <see cref="AnnounceConnectAsync"/> and <see cref="AnnounceDisconnectAsync"/>, whose broadcast
+	/// sections are otherwise identical.
+	/// </summary>
+	private async ValueTask BroadcastAnnouncementAsync(AnySharpObject player, string fullMessage, bool isDark)
+	{
+		if (!configuration.CurrentValue.Cosmetic.AnnounceConnects)
+		{
+			return;
+		}
+
+		try
+		{
+			await communicationService.SendToRoomAsync(
+				player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+
+			if (!isDark)
+			{
+				var loc = await player.Where();
+				await communicationService.SendToRoomAsync(
+					player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
+					excludeObjects: [player]);
+			}
+
+			await AnnounceOnChannelsAsync(player, fullMessage);
+		}
+		catch (Exception ex)
+		{
+			// Log error but don't propagate - a broadcast failure must not prevent the caller from
+			// reaching the hook dispatch (and, on disconnect, LASTLOGOUT) that follow it.
+			logger.LogError(ex, "Error broadcasting connect/disconnect announcement for player {Player}", player.Object().DBRef);
 		}
 	}
 
@@ -263,8 +275,16 @@ public class ConnectionAnnounceService(
 	{
 		try
 		{
+			// The read/execute permission check is whether OWNER may run its own attribute, not whether
+			// the connecting/disconnecting PLAYER may - queue_attribute_base (src/bsd.c) is an automatic,
+			// system-triggered execution that runs with the hook owner's own authority. Passing `player`
+			// here as the executor made this check PermissionService.CanEvalAttr(player, owner, ...), which
+			// fails whenever owner is a WIZARD/ROYALTY-flagged object (common for master-room utility
+			// objects) and player is an ordinary mortal - silently skipping the hook for the single most
+			// common real-world configuration. Self-evaluation (owner reading its own attribute) always
+			// satisfies PermissionService.CanEval regardless of owner's own privilege level.
 			var attrResult = await attributeService.GetAttributeAsync(
-				player, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
+				owner, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
 
 			if (!attrResult.IsAttribute || attrResult.AsAttribute.Length == 0)
 			{
