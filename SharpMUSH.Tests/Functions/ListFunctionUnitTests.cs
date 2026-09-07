@@ -142,6 +142,9 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("words(1 2 3)", "3")]
 	[Arguments("words(single)", "1")]
+	// The delimiter is the second argument, index 1: words() has only two.
+	[Arguments("words(a|b|c,|)", "3")]
+	[Arguments("words(a|b|c)", "1")]
 	public async Task Words(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;

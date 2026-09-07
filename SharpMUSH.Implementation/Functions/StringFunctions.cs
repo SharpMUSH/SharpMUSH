@@ -1249,9 +1249,12 @@ public partial class Functions
 	{
 		null => string.Empty,
 		AnsiColor.Default => isBackground ? "D" : "d",
+		// The leading '#' is what makes this an ansi() hex code; without it the code came back as a
+		// letter sequence ("FF0000" reads as bright white, bright magenta, …), so decompose() did not
+		// round-trip through ansi(). Lower case to match the syntax help and ansi()'s own output.
 		AnsiColor.Rgb rgb => isBackground
-			? $"/{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"
-			: $"{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}",
+			? $"/#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}"
+			: $"#{rgb.R:x2}{rgb.G:x2}{rgb.B:x2}",
 		AnsiColor.Standard standard =>
 			(standard.Bright ? "h" : string.Empty)
 			+ (isBackground ? BackgroundLetters[standard.Index] : ForegroundLetters[standard.Index]),

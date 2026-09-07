@@ -1830,7 +1830,10 @@ public partial class Functions
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "delimiter"])]
 	public static async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
+		// Argument indexes are 0-based, and words() takes two arguments: the delimiter is 1. Reading
+		// it from 2 meant a delimiter was never seen and words(a|b|c,|) always counted space-separated
+		// words.
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
 		var list = MushText.SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
 
 		return new CallState(list.Length.ToString());

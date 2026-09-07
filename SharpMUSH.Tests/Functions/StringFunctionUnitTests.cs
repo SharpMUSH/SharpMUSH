@@ -274,6 +274,10 @@ public class StringFunctionUnitTests
 	// AnsiColor.Default round-trips through its letter code rather than being dropped silently.
 	[Arguments("decompose(ansi(d,x))", @"ansi\(d\,x\)")]
 	[Arguments("decompose(ansi(D,x))", @"ansi\(D\,x\)")]
+	// A 24-bit colour reconstructs as an ansi() hex code, '#' included: without it the code reads
+	// back as the letter sequence F, F, 0, 0, 0, 0 and the round trip loses the colour.
+	[Arguments("decompose(ansi(#ff0000,x))", @"ansi\(#ff0000\,x\)")]
+	[Arguments("decompose(ansi(/#ff0000,x))", @"ansi\(/#ff0000\,x\)")]
 	public async Task Decompose(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
