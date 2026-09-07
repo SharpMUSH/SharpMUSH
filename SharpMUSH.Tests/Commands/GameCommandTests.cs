@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -15,6 +16,7 @@ public class GameCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	[Test]
 	[Category("NotImplemented")]
@@ -43,9 +45,11 @@ public class GameCommandTests
 	}
 
 	[Test]
-	public async ValueTask TeachCommandEchoesToExecutorAndExecutesOnce()
+	public async ValueTask TeachCommandEchoesToRoomAndExecutesOnce()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var observer = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "TeachObserver");
 		var marker = $"TeachSelf_{Guid.NewGuid():N}";
 		var taughtCommand = $"think {marker}";
 
@@ -59,16 +63,37 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(1)
+			.Notify(TestHelpers.MatchingObject(observer), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+
+		await NotifyService
+			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(marker),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
-	public async ValueTask TeachListEchoesToExecutorAndExecutesOnce()
+	public async ValueTask TeachCommandEchoesReportedSetFormToExecutor()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var marker = $"TeachListSelf_{Guid.NewGuid():N}";
-		var taughtActionList = $"think {marker}";
+		const string taughtCommand = "@set me=color";
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+	}
+
+	[Test]
+	public async ValueTask TeachListEchoesToExecutorAndExecutesEveryCommandOnce()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var firstMarker = $"TeachListFirst_{Guid.NewGuid():N}";
+		var secondMarker = $"TeachListSecond_{Guid.NewGuid():N}";
+		var taughtActionList = $"think {firstMarker};think {secondMarker}";
 
 		NotifyService.ClearReceivedCalls();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach/list {taughtActionList}"));
@@ -80,7 +105,12 @@ public class GameCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(marker),
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(firstMarker),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(secondMarker),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
