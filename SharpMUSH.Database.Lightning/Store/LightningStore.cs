@@ -24,6 +24,26 @@ public sealed partial class LightningStore : IDisposable
 
 	private bool _disposed;
 
+	/// <summary>Forces a sync every <see cref="LightningStoreOptions.FlushInterval"/> under
+	/// <see cref="LightningSyncMode.Periodic"/>; null in the other modes, where every commit syncs itself.</summary>
+	private readonly Timer? _flushTimer;
+	private long _commits;
+	private long _flushes;
+	/// <summary>Non-zero while a commit has landed since the last forced flush. The timer skips its sync
+	/// when nothing is dirty, so an idle world costs no disk traffic.</summary>
+	private int _unflushed;
+	/// <summary>Set when a periodic flush fails. A timer callback has no caller to throw to, and an
+	/// unhandled exception there is process death; instead every write from then on fails with this, so
+	/// the failure surfaces where someone is listening and no further commit lands on a disk that could
+	/// not take the last one.</summary>
+	private volatile Exception? _flushFailure;
+
+	/// <summary>Top-level write transactions committed so far. Observable batching: a burst of N jobs that
+	/// queued behind one in-flight commit shows up here as one commit, not N.</summary>
+	internal long CommitCount => Interlocked.Read(ref _commits);
+	/// <summary>Forced syncs the periodic timer has run.</summary>
+	internal long FlushCount => Interlocked.Read(ref _flushes);
+
 	/// <summary>Tables opened through <see cref="OpenTable"/> rather than declared in <see cref="Tables"/>
 	/// — a plugin's own. Kept across <see cref="Close"/> so <see cref="Open"/> reopens them too: after a
 	/// directory swap a plugin still holds the <see cref="TableDef"/> it was handed, and that definition
@@ -37,8 +57,50 @@ public sealed partial class LightningStore : IDisposable
 	{
 		_options = options;
 		Open();
-		_writer = new LightningWriter(work => Write(work), rawWork => WriteRawInternal(rawWork));
+		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch);
+		if (options.Sync == LightningSyncMode.Periodic)
+		{
+			if (options.FlushInterval <= TimeSpan.Zero)
+			{
+				throw new ArgumentOutOfRangeException(nameof(options), options.FlushInterval, "FlushInterval must be positive under Periodic sync.");
+			}
+
+			_flushTimer = new Timer(_ => FlushIfDirty(), null, options.FlushInterval, options.FlushInterval);
+		}
 	}
+
+	/// <summary>The timer's tick. Skips when nothing has been committed since the last flush, and skips
+	/// rather than blocks when the environment is mid-swap: <see cref="Close"/> flushes on its own way
+	/// out, so a tick that cannot get the read lock has nothing left to do.</summary>
+	private void FlushIfDirty()
+	{
+		if (_disposed || Interlocked.Exchange(ref _unflushed, 0) == 0) return;
+		if (!_gate.TryEnterReadLock(0)) { Interlocked.Exchange(ref _unflushed, 1); return; }
+		try
+		{
+			if (_disposed) return;
+			var code = _env.Flush(force: true);
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "flush");
+			Interlocked.Increment(ref _flushes);
+		}
+		catch (Exception ex)
+		{
+			_flushFailure = ex;
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
+	private static EnvironmentOpenFlags FlagsFor(LightningSyncMode sync) => sync switch
+	{
+		LightningSyncMode.Full => EnvironmentOpenFlags.NoThreadLocalStorage,
+		LightningSyncMode.NoMetaSync => EnvironmentOpenFlags.NoThreadLocalStorage | EnvironmentOpenFlags.NoMetaSync,
+		// NoSync, never WriteMap|MapAsync: that pair is the one LMDB documents as able to corrupt the file.
+		LightningSyncMode.Periodic => EnvironmentOpenFlags.NoThreadLocalStorage | EnvironmentOpenFlags.NoSync,
+		_ => throw new ArgumentOutOfRangeException(nameof(sync), sync, "Unknown sync mode.")
+	};
 
 	private void Open()
 	{
@@ -50,7 +112,7 @@ public sealed partial class LightningStore : IDisposable
 			MaxReaders = _options.MaxReaders,
 			PageSize = _options.PageSize
 		});
-		_env.Open(EnvironmentOpenFlags.NoThreadLocalStorage);
+		_env.Open(FlagsFor(_options.Sync));
 
 		using var tx = _env.BeginTransaction();
 		var tables = new Dictionary<TableDef, LmdbDb>();
@@ -71,6 +133,13 @@ public sealed partial class LightningStore : IDisposable
 	{
 		foreach (var db in _tables.Values) db.Dispose();
 		_tables = new();
+		if (_options.Sync != LightningSyncMode.Full)
+		{
+			// Whatever the relaxed mode left in the page cache goes to disk before the directory is
+			// closed, moved or deleted. Under Full there is nothing unflushed to sync.
+			_env.Flush(force: true);
+			Interlocked.Exchange(ref _unflushed, 0);
+		}
 		_env.Dispose();
 	}
 
@@ -128,22 +197,74 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
-	/// <summary>Direct write on the calling thread. Only <see cref="LightningWriter"/>'s thread may call this.</summary>
-	private T Write<T>(Func<ITx, T> write)
+	/// <summary>
+	/// Runs one group commit on the calling thread; only <see cref="LightningWriter"/>'s thread may call
+	/// this. A single item runs directly in the top-level transaction, exactly as a lone write always has.
+	/// Several items each get a nested transaction under one parent: an item that throws (its own code,
+	/// or a failed put) has its child aborted and its <see cref="LightningWriter.BatchItem.Error"/> set,
+	/// and the parent carries on with the rest. The parent then commits once — one sync for the whole
+	/// batch. If that commit fails, this throws and the writer faults every item that had not already
+	/// failed on its own; nothing from the batch reached the disk.
+	/// </summary>
+	private void WriteBatch(IReadOnlyList<LightningWriter.BatchItem> items)
 	{
+		if (_flushFailure is { } failure)
+		{
+			throw new InvalidOperationException("A periodic flush failed; the store refuses further writes until it is reopened.", failure);
+		}
+
 		_gate.EnterReadLock();
 		try
 		{
-			using var tx = _env.BeginTransaction();
-			var result = write(new Tx(tx, _tables));
-			var code = tx.Commit();
-			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
-			return result;
+			using var parent = _env.BeginTransaction();
+			if (items.Count == 1)
+			{
+				var only = items[0];
+				try
+				{
+					only.Result = only.Work(new Tx(parent, _tables));
+				}
+				catch (Exception ex)
+				{
+					// Disposing the uncommitted parent aborts it.
+					only.Error = ex;
+					return;
+				}
+
+				Commit(parent);
+				return;
+			}
+
+			foreach (var item in items)
+			{
+				using var child = _env.BeginTransaction(parent);
+				try
+				{
+					item.Result = item.Work(new Tx(child, _tables));
+					var code = child.Commit();
+					if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
+				}
+				catch (Exception ex)
+				{
+					// Disposing the uncommitted child aborts it; the parent is untouched by this item.
+					item.Error = ex;
+				}
+			}
+
+			Commit(parent);
 		}
 		finally
 		{
 			_gate.ExitReadLock();
 		}
+	}
+
+	private void Commit(LightningTransaction tx)
+	{
+		var code = tx.Commit();
+		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
+		Interlocked.Increment(ref _commits);
+		Interlocked.Exchange(ref _unflushed, 1);
 	}
 
 	/// <summary>Direct raw write on the calling thread, same read-gate discipline as <see cref="Write{T}"/> but
@@ -284,6 +405,13 @@ public sealed partial class LightningStore : IDisposable
 	{
 		if (_disposed) return;
 		_disposed = true;
+		if (_flushTimer is not null)
+		{
+			// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
+			// closed underneath a flush in flight.
+			using var ticked = new ManualResetEvent(false);
+			if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
+		}
 		_writer.Dispose();
 		Close();
 		_gate.Dispose();

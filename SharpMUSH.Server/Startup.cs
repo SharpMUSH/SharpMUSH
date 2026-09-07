@@ -125,6 +125,32 @@ public class Startup(
 		return defaultMapSize;
 	}
 
+	/// <summary>Unset means durable. A typo here must not quietly relax durability, and must not quietly
+	/// keep it either when the operator meant to relax it — so the fallback is logged either way.</summary>
+	private static LightningSyncMode ResolveLightningSyncMode(string? setting, ILogger<LightningDatabase> logger)
+	{
+		if (string.IsNullOrWhiteSpace(setting)) return LightningSyncMode.Full;
+		if (LightningStoreOptions.TryParseSyncMode(setting, out var mode)) return mode;
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_SYNC is set to '{Setting}', which is not one of full, nometasync or periodic; using full",
+			setting);
+		return LightningSyncMode.Full;
+	}
+
+	/// <summary>Milliseconds between forced syncs under periodic mode; the most a power failure can lose.</summary>
+	private static TimeSpan ResolveLightningFlushInterval(string? setting, ILogger<LightningDatabase> logger)
+	{
+		var defaultInterval = TimeSpan.FromSeconds(1);
+		if (string.IsNullOrWhiteSpace(setting)) return defaultInterval;
+		if (int.TryParse(setting, out var ms) && ms > 0) return TimeSpan.FromMilliseconds(ms);
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_FLUSH_MS is set to '{Setting}', which is not a positive millisecond count; using {DefaultMs} ms",
+			setting, defaultInterval.TotalMilliseconds);
+		return defaultInterval;
+	}
+
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
@@ -290,18 +316,27 @@ public class Startup(
 		{
 			// Config-driven path/map-size so production picks a durable location while tests default to a
 			// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
-			// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB.
+			// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB;
+			// SHARPMUSH_LIGHTNING_SYNC (full|nometasync|periodic) → full; SHARPMUSH_LIGHTNING_FLUSH_MS → 1000.
 			var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
 				?? configuration["Lightning:Path"]
 				?? "lightning-data";
 			var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
+			var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
+			var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
 			services.AddSingleton<LightningDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
 				var password = x.GetRequiredService<IPasswordService>();
 				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var db = new LightningDatabase(dbLogger,
-					new LightningStoreOptions { Path = lightningPath, MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger) },
+					new LightningStoreOptions
+					{
+						Path = lightningPath,
+						MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
+						Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
+						FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
+					},
 					password, relations, pluginMigrationSources, pluginFlags);
 				return db;
 			});
