@@ -6,7 +6,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -28,10 +27,9 @@ public class PageCommandTests
 		{
 			var messages = await PageSelfAsync(player, "Test");
 
-			await Assert.That(messages).IsEquivalentTo([
-				$"You paged {player.Name} with 'Test'",
-				$"{player.Name} pages: Test"
-			], CollectionOrdering.Matching);
+			await Assert.That(messages.Length).IsEqualTo(2);
+			await Assert.That(messages[0]).IsEqualTo($"You paged {player.Name} with 'Test'");
+			await Assert.That(messages[1]).IsEqualTo($"{player.Name} pages: Test");
 		}
 		finally
 		{
@@ -47,10 +45,9 @@ public class PageCommandTests
 		{
 			var messages = await PageSelfAsync(player, ":Test");
 
-			await Assert.That(messages).IsEquivalentTo([
-				$"Long distance to {player.Name}: {player.Name} Test",
-				$"From afar, {player.Name} Test"
-			], CollectionOrdering.Matching);
+			await Assert.That(messages.Length).IsEqualTo(2);
+			await Assert.That(messages[0]).IsEqualTo($"Long distance to {player.Name}: {player.Name} Test");
+			await Assert.That(messages[1]).IsEqualTo($"From afar, {player.Name} Test");
 		}
 		finally
 		{
@@ -66,10 +63,9 @@ public class PageCommandTests
 		{
 			var messages = await PageSelfAsync(player, ";Test");
 
-			await Assert.That(messages).IsEquivalentTo([
-				$"Long distance to {player.Name}: {player.Name}Test",
-				$"From afar, {player.Name}Test"
-			], CollectionOrdering.Matching);
+			await Assert.That(messages.Length).IsEqualTo(2);
+			await Assert.That(messages[0]).IsEqualTo($"Long distance to {player.Name}: {player.Name}Test");
+			await Assert.That(messages[1]).IsEqualTo($"From afar, {player.Name}Test");
 		}
 		finally
 		{
@@ -138,6 +134,29 @@ public class PageCommandTests
 			await ConnectionService.Disconnect(sender.Handle);
 			await ConnectionService.Disconnect(first.Handle);
 			await ConnectionService.Disconnect(second.Handle);
+		}
+	}
+
+	[Test]
+	public async ValueTask PageFormats_SeeCurrentLastPagedRecipients()
+	{
+		var player = await CreatePlayerAsync("PageFormatLastPaged");
+		try
+		{
+			await AttributeService.SetAttributeAsync(player.Object, player.Object, "PAGEFORMAT",
+				MarkupText.Plain("IN:[get(me/LASTPAGED)]"));
+			await AttributeService.SetAttributeAsync(player.Object, player.Object, "OUTPAGEFORMAT",
+				MarkupText.Plain("OUT:[get(me/LASTPAGED)]"));
+
+			var messages = await PageSelfAsync(player, "Test");
+
+			await Assert.That(messages.Length).IsEqualTo(2);
+			await Assert.That(messages[0]).IsEqualTo($"OUT:{player.DbRef}");
+			await Assert.That(messages[1]).IsEqualTo($"IN:{player.DbRef}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
 		}
 	}
 

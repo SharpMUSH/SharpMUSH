@@ -2530,6 +2530,8 @@ public partial class Commands
 				PageMessageType.SemiPose => ";",
 				_ => "\""
 			};
+			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
+			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
 
 			var outPageFormatArgs = PageFormatArguments(
 				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
@@ -2547,9 +2549,6 @@ public partial class Commands
 					pageFormatArgs, incomingDefault, checkParents: true);
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
-
-			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
 		}
 		else if (recipientNames.Length > 0)
 		{
