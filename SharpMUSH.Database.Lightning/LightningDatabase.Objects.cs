@@ -581,23 +581,27 @@ public sealed partial class LightningDatabase
 			// Expanded per-object data (dbref + 0x00 + type).
 			tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));
 
-			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge). Mail
-			// it sent to others survives with a dangling sender, so only the recipient's own box entry,
-			// the mail row itself, and that mail's sent-index entry (wherever it landed) are removed.
+			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
+			// mail row, its sent-index entry (found directly via the row's own Sender field rather than
+			// a full-table scan), and the box entry itself. Mail it sent to others survives with a
+			// dangling sender (MapRecordToMail resolves that to None), so only that mail's now-meaningless
+			// "sent by n" index rows are dropped, not the mail row or the recipient's box entry.
 			foreach (var (mailBoxKey, _) in tx.Range(Tables.MailBox, key).ToList())
 			{
 				var mailId = Keys.ReadDbref(mailBoxKey.AsSpan(mailBoxKey.Length - 8, 8));
 				var mailIdKey = Keys.Dbref(mailId);
 
-				tx.Delete(Tables.Mail, mailIdKey);
-				foreach (var (sentKey, _) in tx.Range(Tables.MailSent, [])
-					.Where(entry => Keys.ReadDbref(entry.Key.AsSpan(entry.Key.Length - 8, 8)) == mailId).ToList())
+				if (tx.TryGet(Tables.Mail, mailIdKey, out var mailBytes))
 				{
-					tx.Delete(Tables.MailSent, sentKey);
+					var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
+					tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
 				}
 
+				tx.Delete(Tables.Mail, mailIdKey);
 				tx.Delete(Tables.MailBox, mailBoxKey);
 			}
+
+			tx.DeletePrefix(Tables.MailSent, key);
 
 			// Channel membership.
 			foreach (var (_, chanNameBytes) in tx.Range(Tables.RevChanMember, key).ToList())
