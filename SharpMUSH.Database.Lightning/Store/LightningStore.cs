@@ -69,8 +69,6 @@ public sealed partial class LightningStore : IDisposable
 		_env.Dispose();
 	}
 
-	internal void Reopen() => Open();
-
 	/// <summary>
 	/// Opens (creating if needed) a table this environment's own <see cref="Tables"/> catalogue does not
 	/// know about — a plugin's own tables, opened on the plugin's first use rather than baked into the
@@ -176,7 +174,6 @@ public sealed partial class LightningStore : IDisposable
 	internal T WriteRaw<T>(Func<LightningTransaction, T> job)
 		=> _writer.EnqueueRawAsync(job, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
-	internal Task DrainAsync() => _writer.DrainAsync();
 	internal void PauseWriter() => _writer.Pause();
 	internal void ResumeWriter() => _writer.Resume();
 
@@ -223,7 +220,10 @@ public sealed partial class LightningStore : IDisposable
 
 	/// <summary>Runs <paramref name="onDisk"/> with no writer running, no reader inside a transaction and
 	/// the environment closed, then reopens it. The writer is drained and parked first so no committed
-	/// write is left behind in the directory being moved away.</summary>
+	/// write is left behind in the directory being moved away. <see cref="Open"/> runs whether or not
+	/// <paramref name="onDisk"/> succeeded: a throw there costs the caller its operation, not the store —
+	/// leaving the environment closed while the gate is released and the writer resumed would fail every
+	/// read and write that follows.</summary>
 	private void WhileClosed(Action onDisk)
 	{
 		_writer.PauseAndDrainAsync().GetAwaiter().GetResult();
@@ -233,8 +233,14 @@ public sealed partial class LightningStore : IDisposable
 			try
 			{
 				Close();
-				onDisk();
-				Open();
+				try
+				{
+					onDisk();
+				}
+				finally
+				{
+					Open();
+				}
 			}
 			finally
 			{

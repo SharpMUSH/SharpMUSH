@@ -89,6 +89,50 @@ public class StagingTests
 		}
 	}
 
+	/// <summary>
+	/// Objects are not the only thing a world allocates ids for. Promotion inherits the staged world's
+	/// <c>Meta</c> rows along with its data, so a staging database built through the provider needs no
+	/// help — but an importer that bulk-loads rows and never maintains the allocators leaves counters
+	/// behind their own data, which is exactly what recomputing them on promotion is for. Here the staged
+	/// counters are reset to 0 under rows that already exist: unless every allocator is recomputed, the
+	/// live world's next account and next wiki page silently overwrite imported ones (neither write
+	/// checks whether the key is free).
+	/// </summary>
+	[Test]
+	public async Task PromoteRecomputesEveryCounterOverStagedData()
+	{
+		var path = TempPath();
+		var live = Create(path);
+		try
+		{
+			await live.Migrate();
+			var staging = (LightningStagingDatabase)await live.CreateStagingAsync();
+			var stagedAccount = await staging.CreateAccountAsync("staged", "staged@example.com", "hash");
+			var stagedPage = (await staging.CreateAsync("Staged Page", "body", "#1")).AsT0;
+			await staging.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.Meta, Keys.Str("next_account_id"), Keys.Dbref(0));
+				tx.Put(Tables.Meta, Keys.Str("next_wiki"), Keys.Dbref(0));
+			});
+
+			await staging.PromoteToLiveAsync();
+
+			var laterAccount = await live.CreateAccountAsync("later", "later@example.com", "hash");
+			var laterPage = (await live.CreateAsync("Later Page", "body", "#1")).AsT0;
+
+			await Assert.That(laterAccount.Id).IsNotEqualTo(stagedAccount.Id);
+			await Assert.That(laterPage.Id).IsNotEqualTo(stagedPage.Id);
+			await Assert.That((await live.GetAccountByUsernameAsync("staged"))?.Id).IsEqualTo(stagedAccount.Id);
+			await Assert.That((await live.GetByIdAsync(stagedPage.Id)).AsT0.Title).IsEqualTo("Staged Page");
+			await Assert.That(live.Store.Count(Tables.Account)).IsEqualTo(2L);
+			await Assert.That(live.Store.Count(Tables.WikiPage)).IsEqualTo(2L);
+		}
+		finally
+		{
+			Cleanup(live, path);
+		}
+	}
+
 	[Test]
 	public async Task AbortLeavesLiveUntouchedAndRemovesTheStagingDirectory()
 	{
@@ -145,10 +189,14 @@ public class StagingTests
 
 	/// <summary>
 	/// A read that arrives while the directory is being swapped must block on the store's gate and then
-	/// answer from the promoted environment — never fail, and never read a closed one. The test holds the
-	/// gate itself to make the overlap deterministic: promotion parks waiting for the write lock, a reader
-	/// queues behind it, and only when the test releases its own read lock does either proceed. Both run on
-	/// dedicated threads, not the thread pool, so a busy pool cannot be mistaken for a blocked participant.
+	/// answer from the promoted environment — never fail, and never read a closed one. A holder thread
+	/// takes the gate's read lock to make the overlap deterministic: promotion parks waiting for the write
+	/// lock, a reader queues behind it, and only when the holder is released does either proceed. All three
+	/// participants run on dedicated threads, not the thread pool, so a busy pool cannot be mistaken for a
+	/// blocked one — and the holder is a thread rather than this method precisely because
+	/// <see cref="ReaderWriterLockSlim"/> is thread-affine: an <c>await</c> between
+	/// <c>EnterReadLock</c> and <c>ExitReadLock</c> can resume on another thread, and the exit then throws
+	/// while the gate stays held forever.
 	/// </summary>
 	[Test]
 	[NotInParallel]
@@ -156,6 +204,9 @@ public class StagingTests
 	{
 		var path = TempPath();
 		var live = Create(path);
+		var holding = new ManualResetEventSlim(false);
+		var release = new ManualResetEventSlim(false);
+		Thread? holder = null;
 		Thread? promote = null;
 		Thread? read = null;
 		try
@@ -164,46 +215,70 @@ public class StagingTests
 			var staging = await live.CreateStagingAsync();
 			await staging.CreateRoomAsync("Staged", await GodAsync(staging));
 
+			Exception? holderFailure = null;
 			Exception? promoteFailure = null;
 			long? readResult = null;
 
-			live.Store.Gate.EnterReadLock();
-			try
+			holder = Run(() =>
 			{
-				promote = Run(() =>
+				try
 				{
+					live.Store.Gate.EnterReadLock();
 					try
 					{
-						staging.PromoteToLiveAsync().GetAwaiter().GetResult();
+						holding.Set();
+						release.Wait();
 					}
-					catch (Exception ex)
+					finally
 					{
-						promoteFailure = ex;
+						live.Store.Gate.ExitReadLock();
 					}
-				});
-				await WaitFor(() => live.Store.Gate.WaitingWriteCount > 0, "promotion to reach the write lock");
+				}
+				catch (Exception ex)
+				{
+					holderFailure = ex;
+					holding.Set();
+				}
+			});
+			await WaitFor(() => holding.IsSet, "the holder to take the read lock");
 
-				read = Run(() => readResult = DbrefNamed(live, "Staged"));
-				await WaitFor(() => live.Store.Gate.WaitingReadCount > 0, "the read to queue behind the swap");
-
-				await Assert.That(promote.IsAlive).IsTrue();
-				await Assert.That(read.IsAlive).IsTrue();
-			}
-			finally
+			promote = Run(() =>
 			{
-				live.Store.Gate.ExitReadLock();
-			}
+				try
+				{
+					staging.PromoteToLiveAsync().GetAwaiter().GetResult();
+				}
+				catch (Exception ex)
+				{
+					promoteFailure = ex;
+				}
+			});
+			await WaitFor(() => live.Store.Gate.WaitingWriteCount > 0, "promotion to reach the write lock");
 
+			read = Run(() => readResult = DbrefNamed(live, "Staged"));
+			await WaitFor(() => live.Store.Gate.WaitingReadCount > 0, "the read to queue behind the swap");
+
+			await Assert.That(promote.IsAlive).IsTrue();
+			await Assert.That(read.IsAlive).IsTrue();
+
+			release.Set();
+
+			await Assert.That(holder.Join(TimeSpan.FromSeconds(30))).IsTrue();
 			await Assert.That(promote.Join(TimeSpan.FromSeconds(30))).IsTrue();
 			await Assert.That(read.Join(TimeSpan.FromSeconds(30))).IsTrue();
+			await Assert.That(holderFailure).IsNull();
 			await Assert.That(promoteFailure).IsNull();
 			await Assert.That(readResult).IsNotNull();
 		}
 		finally
 		{
 			// Never delete the directories out from under a participant that is still running.
+			release.Set();
+			holder?.Join(TimeSpan.FromSeconds(30));
 			promote?.Join(TimeSpan.FromSeconds(30));
 			read?.Join(TimeSpan.FromSeconds(30));
+			holding.Dispose();
+			release.Dispose();
 			Cleanup(live, path);
 		}
 	}

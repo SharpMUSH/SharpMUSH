@@ -99,7 +99,19 @@ public partial class LightningDatabase(
 
 		var staging = new LightningStagingDatabase(_logger, _options with { Path = stagingPath }, _passwordService,
 			live: this, stagingId: stagingId, migrationSources: _migrationSources, pluginFlags: _pluginFlags);
-		await staging.Migrate(ct);
+		try
+		{
+			await staging.Migrate(ct);
+		}
+		catch
+		{
+			// The caller never receives this instance, so nothing else will ever close its store or delete
+			// its directory: a failed migration must not leave a writer thread and an LMDB environment
+			// running on a directory no one owns.
+			await staging.AbortAsync(CancellationToken.None);
+			throw;
+		}
+
 		return staging;
 	}
 
@@ -110,19 +122,25 @@ public partial class LightningDatabase(
 		=> await Task.Run(() => Store.CopyTo(path, compact), ct);
 
 	/// <summary>
-	/// Rebuilds the allocators from the data actually on disk. A promoted world's counters were written
-	/// by whoever built it, so the live instance — which is about to hand out the next dbref and the next
-	/// mail id — has to be told where that data ends before it allocates over the top of it.
+	/// Rebuilds every allocator from the data actually on disk. A promoted world's counters were written
+	/// by whoever built it, so the live instance — which is about to hand out the next dbref, mail id,
+	/// wiki id and account id — has to be told where that data ends before it allocates over the top of it.
+	/// Every <c>next_*</c> key in <see cref="Tables.Meta"/> belongs here; one left out is an allocator
+	/// handing back ids a staged world already used.
 	/// </summary>
 	internal async ValueTask RecomputeCountersAsync(CancellationToken ct = default)
 		=> await Store.WriteAsync(tx =>
 		{
 			RecomputeNextDbref(tx);
 			RecomputeCounter(tx, "next_mail", Tables.Mail);
+			RecomputeCounter(tx, "next_wiki", Tables.WikiPage);
+			RecomputeAccountCounter(tx);
 		}, ct);
 
 	/// <summary>Raises <paramref name="counterKey"/> to (highest key in <paramref name="table"/>) + 1 when
-	/// that is larger than what is stored — a floor, never a ceiling this lowers.</summary>
+	/// that is larger than what is stored — a floor, never a ceiling this lowers. For tables whose keys are
+	/// <see cref="Keys.Dbref"/> blobs; <see cref="Tables.Account"/> is keyed by decimal string instead and
+	/// has <see cref="RecomputeAccountCounter"/>.</summary>
 	private static void RecomputeCounter(ITx tx, string counterKey, TableDef table)
 	{
 		var highest = -1L;
@@ -132,10 +150,28 @@ public partial class LightningDatabase(
 			if (id > highest) highest = id;
 		}
 
-		var current = tx.TryGet(Tables.Meta, Keys.Str(counterKey), out var v) ? Keys.ReadDbref(v) : 0;
-		if (highest + 1 > current)
+		RaiseCounter(tx, counterKey, highest);
+	}
+
+	/// <summary>The account table's keys are the decimal strings <see cref="AllocateAccountId"/> hands out,
+	/// so they sort and decode as text rather than as fixed-width dbrefs and need their own scan.</summary>
+	private static void RecomputeAccountCounter(ITx tx)
+	{
+		var highest = -1L;
+		foreach (var (key, _) in tx.Range(Tables.Account, []))
 		{
-			tx.Put(Tables.Meta, Keys.Str(counterKey), Keys.Dbref(highest + 1));
+			if (long.TryParse(Keys.ReadStr(key), out var id) && id > highest) highest = id;
+		}
+
+		RaiseCounter(tx, "next_account_id", highest);
+	}
+
+	private static void RaiseCounter(ITx tx, string counterKey, long highestUsedId)
+	{
+		var current = tx.TryGet(Tables.Meta, Keys.Str(counterKey), out var v) ? Keys.ReadDbref(v) : 0;
+		if (highestUsedId + 1 > current)
+		{
+			tx.Put(Tables.Meta, Keys.Str(counterKey), Keys.Dbref(highestUsedId + 1));
 		}
 	}
 }

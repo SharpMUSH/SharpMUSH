@@ -55,9 +55,6 @@ internal sealed class LightningWriter : IDisposable
 		return (T)(await completion.Task.ConfigureAwait(false))!;
 	}
 
-	/// <summary>Completes once every job queued before the call has finished.</summary>
-	public Task DrainAsync() => EnqueueAsync(_ => 0, CancellationToken.None).AsTask();
-
 	public void Pause() => _resume.Reset();
 	public void Resume() => _resume.Set();
 

@@ -158,4 +158,53 @@ public class LightningStoreTests
 		var values = store.Read(tx => tx.Dups(first, Keys.Dbref(1)).Select(v => Keys.ReadDbref(v)).ToArray());
 		await Assert.That(values).IsEquivalentTo(new long[] { 100, 200 });
 	}
+
+	/// <summary>A swap that never starts — nothing to swap in — must cost the caller its call and nothing
+	/// else. The environment is not even closed for this one, so the store keeps serving.</summary>
+	[Test]
+	public async Task SwapDirectoryRejectsAMissingIncomingPathAndKeepsServing()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("before"), "1"u8));
+
+		await Assert.That(() => store.SwapDirectory(store.Path + ".nonexistent", store.Path + ".previous"))
+			.Throws<DirectoryNotFoundException>();
+
+		await AssertStillServesAsync(store, "after-missing");
+	}
+
+	/// <summary>
+	/// A swap whose on-disk step throws after the environment is closed must still reopen it. The failure
+	/// is forced by parking a plain file where the outgoing directory has to be moved to, so the very
+	/// first <c>Directory.Move</c> fails with the live directory still in place — pre-fix the store stays
+	/// closed for good while the gate is released and the writer resumed, and every later read throws
+	/// <c>ObjectDisposedException</c> on the disposed environment.
+	/// </summary>
+	[Test]
+	public async Task AFailedSwapReopensTheEnvironmentAndKeepsServing()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("before"), "1"u8));
+
+		var incoming = store.Path + ".incoming";
+		Directory.CreateDirectory(incoming);
+		var previous = store.Path + ".previous";
+		await File.WriteAllTextAsync(previous, "not a directory");
+
+		await Assert.That(() => store.SwapDirectory(incoming, previous)).Throws<IOException>();
+
+		await AssertStillServesAsync(store, "after-failure");
+		await Assert.That(store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("before"), out _))).IsTrue();
+
+		File.Delete(previous);
+		Directory.Delete(incoming, recursive: true);
+	}
+
+	/// <summary>Both halves of "the store still works": a read on the calling thread and a write through
+	/// the writer thread, which a failed swap must have resumed.</summary>
+	private static async Task AssertStillServesAsync(LightningStore store, string key)
+	{
+		await store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str(key), "1"u8));
+		await Assert.That(store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str(key), out _))).IsTrue();
+	}
 }
