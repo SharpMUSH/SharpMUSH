@@ -1,5 +1,4 @@
 using Mediator;
-using MarkupString;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -68,7 +67,7 @@ public static class StartupAttributeRunner
 		}
 
 		var value = attr.AsAttribute.Last().Value;
-		if (MarkupStringModule.getLength(value) == 0)
+		if (value.Length == 0)
 		{
 			return false;
 		}

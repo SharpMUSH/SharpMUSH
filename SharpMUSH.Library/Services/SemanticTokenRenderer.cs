@@ -127,17 +127,13 @@ public static class SemanticTokenRenderer
 	}
 
 	/// <summary>
-	/// Structural equality for run-merging. <see cref="Ansi"/> (<c>AnsiMarkup</c>) is a plain class
-	/// with no <c>Equals</c> override (<c>SharpMUSH.MarkupString.Ansi/AnsiMarkup.cs</c>), so comparing
-	/// the markup instances themselves would be reference equality — which happens to hold today
-	/// because <see cref="SemanticTokenAnsiPalette.GetStyle"/> is called once per token and the same
-	/// instance is reused across its characters, but a caller-supplied <c>overrideAt</c> is not
-	/// obligated to do the same, and an <c>overrideAt</c> that allocates a fresh style per offset (the
-	/// natural way to write one) would otherwise re-fragment into one run per character. Comparing
-	/// <see cref="AnsiMarkup.Style"/> (a <c>readonly record struct</c>) instead makes run-merging
-	/// depend on content, not identity, so it holds regardless of how a caller's override is written.
+	/// Structural equality for run-merging. <see cref="Ansi"/> (<c>AnsiMarkup</c>) is a
+	/// <c>sealed record</c> over <see cref="AnsiMarkup.Style"/> (a <c>readonly record struct</c>), so
+	/// its compiler-generated <c>Equals</c> already compares content, not identity — a caller-supplied
+	/// <c>overrideAt</c> that allocates a fresh style per offset (the natural way to write one) still
+	/// merges into runs correctly, rather than re-fragmenting into one run per character.
 	/// </summary>
-	private static bool StylesEqual(Ansi? a, Ansi? b) => Equals(a?.Style, b?.Style);
+	private static bool StylesEqual(Ansi? a, Ansi? b) => Equals(a, b);
 
 	private static void EmitRun(MString source, int start, int end, Ansi? style, List<MString> parts)
 	{
