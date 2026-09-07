@@ -447,7 +447,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found => ValueTask.FromResult(new CallState(MarkupText.Plain(found.Object().Name).ToPlainText())));
+			found => ValueTask.FromResult(new CallState(found.Object().Name)));
 	}
 
 	[SharpFunction(Name = "lpids", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
