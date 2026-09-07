@@ -41,9 +41,12 @@ public sealed partial class MarkupText
 	/// requested range reaches the end of the text, in which case the end always stays at
 	/// <see cref="Length"/> — the end, measured as <c>snapped start + <paramref name="length"/></c>
 	/// so the count is always taken from where the result actually begins, moves back as well. The
-	/// result therefore never splits a cluster and never exceeds <paramref name="length"/> code
-	/// units; it may be shorter, and is empty when the whole requested window sits inside one
-	/// cluster. Edits (<see cref="Splice"/> and the operations built on it) snap outward instead.
+	/// result therefore never splits a cluster: for an interior range it never exceeds
+	/// <paramref name="length"/> code units and may be shorter, and is empty when the whole
+	/// requested window sits inside one cluster; a range that reaches the end instead keeps the
+	/// whole tail from the snapped start, which may exceed <paramref name="length"/> by the start's
+	/// snap-back distance. Edits (<see cref="Splice"/> and the operations built on it) snap outward
+	/// instead.
 	/// </remarks>
 	public MarkupText Substring(int start, int length)
 	{
