@@ -41,8 +41,8 @@ public partial class LightningDatabase
 		return new SharpChannel
 		{
 			Id = $"Channel/{channelName}",
-			Name = MModule.deserialize(record.MarkedUpName),
-			Description = MModule.deserialize(record.Description),
+			Name = MarkupTextSerializer.Deserialize(record.MarkedUpName),
+			Description = MarkupTextSerializer.Deserialize(record.Description),
 			Privs = record.Privs,
 			JoinLock = record.JoinLock,
 			SpeakLock = record.SpeakLock,
@@ -85,7 +85,7 @@ public partial class LightningDatabase
 					Gagged: memberRecord.Gagged,
 					Hide: memberRecord.Hide,
 					Mute: memberRecord.Mute,
-					Title: MModule.deserialize(memberRecord.Title));
+					Title: MarkupTextSerializer.Deserialize(memberRecord.Title));
 
 				return new SharpChannel.MemberAndStatus(Hydrate(found.Value.Dbref, found.Value.Record), status);
 			})
@@ -160,7 +160,7 @@ public partial class LightningDatabase
 		CancellationToken cancellationToken = default)
 	{
 		var channelName = name.ToPlainText();
-		var markedUpName = MModule.serialize(name);
+		var markedUpName = MarkupTextSerializer.Serialize(name);
 		var ownerKey = (long)owner.Object.Key;
 		var upperName = channelName.ToUpperInvariant();
 		var key = ChanKey(channelName);
@@ -213,8 +213,8 @@ public partial class LightningDatabase
 		var oldKey = ChanKey(oldName);
 		var newName = name is not null ? name.ToPlainText() : oldName;
 		var newKey = ChanKey(newName);
-		var newMarkedUpName = name is not null ? MModule.serialize(name) : MModule.serialize(channel.Name);
-		var newDescription = description is not null ? MModule.serialize(description) : MModule.serialize(channel.Description);
+		var newMarkedUpName = name is not null ? MarkupTextSerializer.Serialize(name) : MarkupTextSerializer.Serialize(channel.Name);
+		var newDescription = description is not null ? MarkupTextSerializer.Serialize(description) : MarkupTextSerializer.Serialize(channel.Description);
 
 		await Store.WriteAsync(tx =>
 		{
@@ -344,7 +344,7 @@ public partial class LightningDatabase
 				Gagged = status.Gagged ?? record.Gagged,
 				Hide = status.Hide ?? record.Hide,
 				Mute = status.Mute ?? record.Mute,
-				Title = status.Title is not null ? MModule.serialize(status.Title) : record.Title
+				Title = status.Title is not null ? MarkupTextSerializer.Serialize(status.Title) : record.Title
 			};
 			tx.Put(Tables.ChanMember, memberKey, Codec.Serialize(updated));
 		}, cancellationToken);

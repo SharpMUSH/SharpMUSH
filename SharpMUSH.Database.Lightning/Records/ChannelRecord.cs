@@ -2,7 +2,7 @@ namespace SharpMUSH.Database.Lightning.Records;
 
 /// <summary>
 /// Mirrors <c>SurrealDatabase.ChannelDbRecord</c>. <c>Name</c> is the plain-text name used for lookup;
-/// <c>MarkedUpName</c> and <c>Description</c> are <c>MModule.serialize</c> output. Unlike SurrealDB and
+/// <c>MarkedUpName</c> and <c>Description</c> are <c>MarkupTextSerializer.Serialize</c> output. Unlike SurrealDB and
 /// the graph providers, there is no <c>owner_of_channel</c> edge here — <c>Owner</c> is a plain dbref
 /// field on the record, since a channel has exactly one owner and Lightning has no graph to hold it in.
 /// </summary>
@@ -24,7 +24,7 @@ public sealed record ChannelRecord
 
 /// <summary>
 /// Mirrors <c>SurrealDatabase.ChannelMemberEdgeRecord</c>; the member's dbref is part of the LMDB key,
-/// not a field here. <c>Title</c> is <c>MModule.serialize</c> output.
+/// not a field here. <c>Title</c> is <c>MarkupTextSerializer.Serialize</c> output.
 /// </summary>
 public sealed record ChannelMemberRecord
 {

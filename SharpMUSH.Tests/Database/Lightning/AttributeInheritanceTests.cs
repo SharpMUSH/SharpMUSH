@@ -66,7 +66,7 @@ public class AttributeInheritanceTests
 		=> await _db.SetObjectZone(await Node(obj), await Node(zone));
 
 	private async Task Set(DBRef target, string[] path, string value)
-		=> await _db.SetAttributeAsync(target, path, MModule.single(value), await God());
+		=> await _db.SetAttributeAsync(target, path, MarkupText.Plain(value), await God());
 
 	[Test]
 	public async Task SelfBeatsParent()
@@ -81,7 +81,7 @@ public class AttributeInheritanceTests
 
 		await Assert.That(found.Source).IsEqualTo(AttributeSource.Self);
 		await Assert.That(found.SourceObject.Number).IsEqualTo(child.Number);
-		await Assert.That(MModule.plainText(found.Attributes[^1].Value)).IsEqualTo("from self");
+		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from self");
 	}
 
 	[Test]
@@ -99,7 +99,7 @@ public class AttributeInheritanceTests
 
 		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(found.SourceObject.Number).IsEqualTo(parent.Number);
-		await Assert.That(MModule.plainText(found.Attributes[^1].Value)).IsEqualTo("from parent");
+		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from parent");
 	}
 
 	[Test]
@@ -143,7 +143,7 @@ public class AttributeInheritanceTests
 
 		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(found.SourceObject.Number).IsEqualTo(b.Number);
-		await Assert.That(MModule.plainText(found.Attributes[^1].Value)).IsEqualTo("from the grandparent");
+		await Assert.That(found.Attributes[^1].Value.ToPlainText()).IsEqualTo("from the grandparent");
 	}
 
 	[Test]
@@ -248,7 +248,7 @@ public class AttributeInheritanceTests
 
 		await Assert.That(found.Source).IsEqualTo(AttributeSource.Zone);
 		await Assert.That(found.SourceObject.Number).IsEqualTo(zone.Number);
-		await Assert.That(MModule.plainText(await found.Attributes[^1].Value.WithCancellation(CancellationToken.None)))
+		await Assert.That((await found.Attributes[^1].Value.WithCancellation(CancellationToken.None)).ToPlainText())
 			.IsEqualTo("from zone");
 	}
 }

@@ -244,8 +244,8 @@ public partial class LightningDatabase
 
 		var n = (long)dbref.Number;
 		var ownerDbref = (long)owner.Object.Key;
-		var serialized = Keys.Str(MModule.serialize(value));
-		var empty = Keys.Str(MModule.serialize(MModule.empty()));
+		var serialized = Keys.Str(MarkupTextSerializer.Serialize(value));
+		var empty = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
 		return await Store.WriteAsync(tx =>
 		{
@@ -369,7 +369,7 @@ public partial class LightningDatabase
 	{
 		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
 		var n = (long)dbref.Number;
-		var empty = Keys.Str(MModule.serialize(MModule.empty()));
+		var empty = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
 
 		return await Store.WriteAsync(tx =>
 		{
@@ -613,7 +613,7 @@ public partial class LightningDatabase
 		=> tx.TryGet(Tables.AttrVal, Keys.Attr(dbref, longName), out var bytes) ? bytes : null;
 
 	private static MString DeserializeValue(byte[]? value)
-		=> value is null ? MModule.empty() : MModule.deserialize(Keys.ReadStr(value));
+		=> value is null ? MarkupText.Empty : MarkupTextSerializer.Deserialize(Keys.ReadStr(value));
 
 	/// <summary>Resolves stored flag names through <see cref="Tables.AttrFlag"/>; a name whose definition
 	/// has since been deleted is dropped rather than surfaced as null, matching <c>ReadObjectFlags</c>.</summary>
