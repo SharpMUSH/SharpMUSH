@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using SharpMUSH.Library.Markup;
 
@@ -1504,9 +1505,12 @@ public partial class Functions
 	/// </summary>
 	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
 	{
+		// The RFC 1091 terminal type, which is where PennMUSH gets the client name too — set by TTYPE
+		// negotiation, by MSDP's TERMINAL_TYPE, or by hand with "@sockset terminaltype". The same key
+		// SocketOptions reads, so SOCKSET and terminfo() cannot disagree about who the client is.
 		var terminfo = new List<string>
 		{
-			metadata.GetValueOrDefault("CLIENT", "unknown")
+			metadata.GetValueOrDefault("TerminalType", "unknown")
 		};
 
 		if (!includeDetails)
@@ -1524,6 +1528,8 @@ public partial class Functions
 			terminfo.Add("mxp");
 		}
 
+		// Set once the client genuinely answers a telnet option, not merely because it arrived on the
+		// telnet port — PennMUSH's CONN_TELNET means the same thing, and a raw socket must not claim it.
 		if (metadata.GetValueOrDefault("TELNET", "0") == "1")
 		{
 			terminfo.Add("telnet");
@@ -1559,11 +1565,10 @@ public partial class Functions
 			terminfo.Add("stripaccents");
 		}
 
-		var colorStyle = metadata.GetValueOrDefault("COLORSTYLE", "");
-		if (!string.IsNullOrEmpty(colorStyle))
-		{
-			terminfo.Add(colorStyle);
-		}
+		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
+		// client that pinned nothing still reports what it is being rendered at. An explicit
+		// "SOCKSET colorstyle" wins; otherwise it is read back out of the client's own MTTS claims.
+		terminfo.Add(TerminalCapabilityReader.ColorStyleFor(metadata));
 
 		return string.Join(" ", terminfo);
 	}

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections.Features;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Utilities;
@@ -69,10 +70,79 @@ public class TelnetServer : ConnectionHandler
 	{
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
+
+		// Assigned once BuildAndStartAsync returns; the callbacks below only run after that, since the
+		// interpreter has to exist before it can hand any of them anything.
+		TelnetInterpreter? telnetInterpreter = null;
+		var telnetAnnounced = 0;
+
+		// Anything that writes connection metadata in the main process has to arrive after the handle
+		// is registered there, because every one of those consumers gives up on an unregistered handle
+		// after ConnectionRetryPolicy's five 50ms attempts. The read loop starts at BuildAndStartAsync,
+		// which is before the RegisterAsync below, so a client that answers TTYPE within one round trip
+		// can outrun its own registration and have its terminal type silently dropped. Widening the
+		// consumers' retry window would only make that less likely; holding the messages here makes the
+		// ordering a fact. Null once registration has happened, after which publishing is direct.
+		var pendingLock = new object();
+		List<Func<Task>>? pendingPublishes = [];
+
+		async ValueTask PublishAfterRegistrationAsync(Func<Task> publish)
+		{
+			lock (pendingLock)
+			{
+				if (pendingPublishes is not null)
+				{
+					pendingPublishes.Add(publish);
+					return;
+				}
+			}
+
+			await publish();
+		}
+
+		async ValueTask FlushPendingPublishesAsync()
+		{
+			Func<Task>[] queued;
+			lock (pendingLock)
+			{
+				queued = [.. pendingPublishes ?? []];
+				pendingPublishes = null;
+			}
+
+			// In the order they were produced: a client's terminal-type list is reported once per entry,
+			// and the last report is the complete one.
+			foreach (var publish in queued)
+			{
+				await publish();
+			}
+		}
+
+		// Reports the client as speaking telnet the first time any option has genuinely negotiated.
+		// TelnetNegotiationCore tracks that per plugin as ITelnetProtocolPlugin.IsNegotiated — set at
+		// the state where a WILL/DO exchange resolves, so it is an answer from the client rather than
+		// an option we merely offered. Sampling beats subscribing here: the library raises no event for
+		// "some option settled", and the flag is monotonic, so one publish per connection is enough.
+		async ValueTask AnnounceTelnetIfNegotiatedAsync()
+		{
+			if (Volatile.Read(ref telnetAnnounced) != 0
+					|| telnetInterpreter?.PluginManager?.GetAllPlugins().Any(plugin => plugin.IsNegotiated) != true
+					|| Interlocked.Exchange(ref telnetAnnounced, 1) != 0)
+			{
+				return;
+			}
+
+			_logger.LogDebug("Telnet negotiation confirmed on handle {Handle}", nextPort);
+			await PublishAfterRegistrationAsync(
+				() => _publishEndpoint.Publish(new TelnetNegotiatedMessage(nextPort), ct));
+		}
+
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
+
+				// By the time a client has sent a line, whatever it was going to negotiate has settled.
+				await AnnounceTelnetIfNegotiatedAsync();
 
 				// PUEBLOCLIENT is a socket command, not a one-shot greeting: PennMUSH answers it in
 				// do_command (src/bsd.c) on any line, at any point in the session, and a client whose
@@ -96,8 +166,8 @@ public class TelnetServer : ConnectionHandler
 						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
 					}
 
-					await _publishEndpoint.Publish(
-						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct);
+					await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
+						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct));
 
 					// Suppress this line from reaching the command parser
 					return;
@@ -105,16 +175,49 @@ public class TelnetServer : ConnectionHandler
 
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
 			})
+			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
+			// which asks every plugin rather than just the one that fired: reaching any of them means
+			// some option settled, and a client that answers only NAWS still speaks telnet.
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
-				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct))
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct));
+			})
 			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _msspConfig).OnMSSP(async _ =>
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
 				// Not Yet Implemented. Need to turn config into a dictionary
-				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct))
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct));
+			})
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
-				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct))
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct));
+			})
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
-			.AddPlugin<MCCPProtocol>();
+			.AddPlugin<MCCPProtocol>()
+			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
+			// terminfo() reports as the client. Without it every connection is "unknown".
+			.AddPlugin(new ObservableTerminalTypeProtocol(
+				async terminalTypes =>
+				{
+					// MTTS is the only thing that ever tells us a client can render more than 16 colours.
+					// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of
+					// false for every telnet connection, and OutputTransformService dutifully downgraded
+					// every xterm256 sequence the game produced — for clients that had said, in the one
+					// place there is to say it, that they could display them.
+					TryApplyTerminalCapabilities(nextPort, terminalTypes);
+
+					await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
+						new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct));
+				},
+				// A client that agreed to TTYPE has proved it speaks telnet, and it may never send a
+				// line — a crawler reads the login screen and leaves — so do not wait for OnSubmit.
+				async _ => await AnnounceTelnetIfNegotiatedAsync()));
 
 		if (_options.MxpEnabled)
 		{
@@ -124,6 +227,8 @@ public class TelnetServer : ConnectionHandler
 
 				async ValueTask DoMxpSetup()
 				{
+					await AnnounceTelnetIfNegotiatedAsync();
+
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Mxp, ct))
 					{
 						_logger.LogDebug("Updated MXP capabilities for handle {Handle}", nextPort);
@@ -133,7 +238,8 @@ public class TelnetServer : ConnectionHandler
 						_logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", nextPort);
 					}
 
-					await _publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct);
+					await PublishAfterRegistrationAsync(
+						() => _publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct));
 				}
 
 				return DoMxpSetup();
@@ -141,6 +247,11 @@ public class TelnetServer : ConnectionHandler
 		}
 
 		var (telnet, readTask) = await builder.BuildAndStartAsync(connection.Transport, ct);
+		telnetInterpreter = telnet;
+
+		// The read loop is already running by now, so a fast client could have negotiated in the gap
+		// above and found nothing to sample. Re-sampling here closes it without needing a lock.
+		await AnnounceTelnetIfNegotiatedAsync();
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
@@ -152,6 +263,11 @@ public class TelnetServer : ConnectionHandler
 		{
 			await telnet.SendAsync(PuebloHelloBytes);
 		}
+
+		// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
+		// terminated TLS, so this is the handshake that happened rather than anything the client says
+		// about itself — and it is false, correctly, on the plaintext listener.
+		var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
 
 		await _connectionService.RegisterAsync(
 			nextPort,
@@ -203,7 +319,12 @@ public class TelnetServer : ConnectionHandler
 		async (module, message) =>
 		{
 			await telnet.SendGMCPCommand(module, message);
-		});
+		},
+		isSecure: isSecure);
+
+		// The handle exists in the main process from here on, so everything negotiation produced before
+		// now can go out and land on a connection that is there to receive it.
+		await FlushPendingPublishesAsync();
 
 		try
 		{
@@ -226,6 +347,47 @@ public class TelnetServer : ConnectionHandler
 
 		await _connectionService.DisconnectAsync(nextPort);
 		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
+	}
+
+	/// <summary>
+	/// Records what the client's terminal types say it can display, so <see cref="OutputTransformService"/>
+	/// stops downgrading what it can in fact render.
+	/// <para>
+	/// Unlike the format updates, this does not wait for registration: TTYPE is answered in the
+	/// opening burst, usually before the main process has registered the connection, and the types
+	/// are reported again for every entry in the client's list — so the next one lands after
+	/// registration and carries the same conclusion. Missing the first is harmless; blocking the
+	/// negotiation read loop on a retry loop would not be.
+	/// </para>
+	/// </summary>
+	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes)
+	{
+		var connection = _connectionService.Get(handle);
+		if (connection is null)
+		{
+			return;
+		}
+
+		var reported = TerminalCapabilityReader.Read(terminalTypes);
+		var updated = connection.Capabilities with
+		{
+			SupportsAnsi = reported.Ansi && !reported.ScreenReader,
+			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
+			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
+			SupportsUtf8 = reported.Utf8
+		};
+
+		if (updated == connection.Capabilities)
+		{
+			return;
+		}
+
+		if (_connectionService.UpdateCapabilities(handle, updated))
+		{
+			_logger.LogDebug(
+				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}",
+				handle, updated.SupportsAnsi, updated.SupportsXterm256, updated.SupportsTruecolor, updated.SupportsUtf8);
+		}
 	}
 
 	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)

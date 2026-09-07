@@ -16,6 +16,19 @@ public class ConnectionServerOptions
 	public int HttpPort { get; set; } = 4202;
 
 	/// <summary>
+	/// Port for TLS-encrypted Telnet connections (PennMUSH's <c>ssl_port</c>), or 0 to open no such
+	/// listener. Defaults to 0: opening it needs a certificate, and Kestrel fails to start rather
+	/// than serving an endpoint without one, so it stays opt-in.
+	/// <para>
+	/// The certificate comes from Kestrel's own configuration — <c>Kestrel:Certificates:Default</c>
+	/// in appsettings.json, or the ASPNETCORE_Kestrel__Certificates__Default__* environment
+	/// variables — rather than a SharpMUSH-specific setting, so it is configured the same way as any
+	/// other .NET service and can be rotated without a code change.
+	/// </para>
+	/// </summary>
+	public int TelnetSslPort { get; set; } = 0;
+
+	/// <summary>
 	/// Starting descriptor number for Telnet connections
 	/// </summary>
 	public long TelnetDescriptorStart { get; set; } = 0;
@@ -39,9 +52,16 @@ public class ConnectionServerOptions
 	/// Enable MXP (MUD eXtension Protocol) telnet negotiation.
 	/// When true, the server offers MXP via telnet option 91.
 	/// Can be enabled independently of Pueblo.
-	/// Defaults to false; override via appsettings.json "ConnectionServer:MxpEnabled".
+	/// <para>
+	/// Defaults to true, unlike <see cref="PuebloEnabled"/>: MXP is a negotiated telnet option, so a
+	/// client that does not want it answers IAC DONT and sees nothing, whereas the Pueblo handshake
+	/// is unsolicited plain text that a non-Pueblo client renders as junk on its first screen.
+	/// Leaving it off meant the MXP plugin was never registered at all, so the server never sent
+	/// IAC WILL MXP and no client — however capable — could negotiate it.
+	/// </para>
+	/// Override via appsettings.json "ConnectionServer:MxpEnabled".
 	/// The main server's NetOptions.Mxp (mushcnf) is a separate toggle for
 	/// MXP feature handling at the application layer.
 	/// </summary>
-	public bool MxpEnabled { get; set; } = false;
+	public bool MxpEnabled { get; set; } = true;
 }

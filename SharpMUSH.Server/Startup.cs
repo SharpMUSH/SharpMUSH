@@ -657,6 +657,8 @@ public class Startup(
 				x.AddConsumer<Consumers.ConnectionClosedConsumer, ConnectionClosedMessage>();
 				x.AddConsumer<Consumers.PuebloNegotiatedConsumer, PuebloNegotiatedMessage>();
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
+				x.AddConsumer<Consumers.TerminalTypeNegotiatedConsumer, TerminalTypeNegotiatedMessage>();
+				x.AddConsumer<Consumers.TelnetNegotiatedConsumer, TelnetNegotiatedMessage>();
 			});
 
 		// The engine cache. Its own bounded memory cache rather than the registered one (which the

@@ -225,7 +225,10 @@ public class ConnectionEstablishedConsumer(
 				{ "InternetProtocolAddress", message.IpAddress },
 				{ "HostName", message.Hostname },
 				{ "ConnectionType", message.ConnectionType },
-				{ "PresenceClass", message.PresenceClass }
+				{ "PresenceClass", message.PresenceClass },
+				// PennMUSH's CONN_SSL: what ssl() answers and terminfo()'s "ssl" token. Established at
+				// accept time from the transport, so it is known before the connection can ask.
+				{ "SSL", message.IsSecure ? "1" : "0" }
 			}));
 	}
 }
@@ -305,6 +308,63 @@ public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConne
 		connectionService.Update(message.Handle, "OUTPUT_FORMAT", "mxp");
 		// MXP clients also understand Pueblo tags, so set PUEBLO=1 for pueblo() compat
 		connectionService.Update(message.Handle, "PUEBLO", "1");
+	}
+}
+
+/// <summary>
+/// Consumes the "this client speaks telnet" signal — PennMUSH's CONN_TELNET, reported by
+/// <c>terminfo()</c> as the "telnet" token.
+/// </summary>
+public class TelnetNegotiatedConsumer(ILogger<TelnetNegotiatedConsumer> logger, IConnectionService connectionService)
+	: IMessageConsumer<TelnetNegotiatedMessage>
+{
+	public async Task HandleAsync(TelnetNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] TelnetNegotiatedMessage - Handle: {Handle}", message.Handle);
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping telnet negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		connectionService.Update(message.Handle, "TELNET", "1");
+	}
+}
+
+/// <summary>
+/// Consumes RFC 1091 terminal type negotiation results — the client name <c>terminfo()</c> reports.
+/// </summary>
+public class TerminalTypeNegotiatedConsumer(
+	ILogger<TerminalTypeNegotiatedConsumer> logger,
+	IConnectionService connectionService)
+	: IMessageConsumer<TerminalTypeNegotiatedMessage>
+{
+	public async Task HandleAsync(TerminalTypeNegotiatedMessage message, CancellationToken cancellationToken = default)
+	{
+		logger.LogTrace("[NATS-RECV] TerminalTypeNegotiatedMessage - Handle: {Handle}, Types: {TerminalTypes}",
+			message.Handle, string.Join(", ", message.TerminalTypes));
+
+		if (message.TerminalTypes.Count == 0)
+		{
+			return;
+		}
+
+		if (!await PuebloNegotiatedConsumer.WaitForConnectionRegistration(connectionService, message.Handle, cancellationToken))
+		{
+			logger.LogDebug("Dropping terminal type negotiation for unregistered handle {Handle}", message.Handle);
+			return;
+		}
+
+		// MTTS orders the responses client name, terminal type, then "MTTS <bitvector>", and RFC 1091
+		// clients that know nothing of MTTS send a single terminal name. Either way the first entry is
+		// what PennMUSH's terminfo() calls the client, so that is the one @sockset and terminfo() read.
+		connectionService.Update(message.Handle, "TerminalType", message.TerminalTypes[0]);
+
+		// The whole list, for the capability claims rather than the name: TelnetNegotiationCore has
+		// already expanded an MTTS bitvector into names by this point, so this is where "256 COLORS",
+		// "TRUECOLOR" and "SCREEN_READER" arrive. Tab-separated because those names contain spaces.
+		connectionService.Update(message.Handle, "TerminalTypes", string.Join("\t", message.TerminalTypes));
 	}
 }
 

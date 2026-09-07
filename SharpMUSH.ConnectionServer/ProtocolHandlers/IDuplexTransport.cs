@@ -14,6 +14,9 @@ public interface IDuplexTransport
 
 	string Hostname { get; }
 
+	/// <summary>Whether this transport is TLS-encrypted (wss:// rather than ws://).</summary>
+	bool IsSecure { get; }
+
 	/// <summary>Sends one UTF-8 frame to the client.</summary>
 	Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct);
 

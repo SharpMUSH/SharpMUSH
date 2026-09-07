@@ -199,6 +199,23 @@ public class Program
 				listenOptions.UseConnectionHandler<TelnetServer>();
 			});
 
+			// TLS telnet, when a port is configured. Kestrel terminates the handshake and attaches
+			// ITlsHandshakeFeature, which is what TelnetServer reads to report ssl() and terminfo()'s
+			// "ssl" token — so a connection is secure because a handshake happened on this endpoint,
+			// not because of which port number it came in on. UseHttps() with no argument takes the
+			// certificate from Kestrel:Certificates:Default and throws at startup if there is none,
+			// which is why the port is opt-in: a misconfigured cert fails loudly rather than quietly
+			// serving plaintext on a port players believe is encrypted.
+			if (connectionServerOptions.TelnetSslPort > 0)
+			{
+				options.ListenAnyIP(connectionServerOptions.TelnetSslPort, listenOptions =>
+				{
+					listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
+					listenOptions.UseHttps();
+					listenOptions.UseConnectionHandler<TelnetServer>();
+				});
+			}
+
 			options.ListenAnyIP(connectionServerOptions.HttpPort, listenOptions =>
 			{
 				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);

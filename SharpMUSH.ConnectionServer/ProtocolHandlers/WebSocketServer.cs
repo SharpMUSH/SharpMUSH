@@ -30,7 +30,11 @@ public class WebSocketServer(
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
 
-		var transport = new WebSocketTransport(webSocket, remoteIp, hostname);
+		// Request.IsHttps, so a wss:// connection reports SSL. Behind a TLS-terminating proxy this is
+		// only true once the proxy's X-Forwarded-Proto is honoured (UseForwardedHeaders with the proxy
+		// in KnownProxies); without that it under-reports rather than over-reports, which is the right
+		// way round for a security claim.
+		var transport = new WebSocketTransport(webSocket, remoteIp, hostname, context.Request.IsHttps);
 		await pump.RunAsync(transport, handle, context.RequestAborted);
 	}
 }
