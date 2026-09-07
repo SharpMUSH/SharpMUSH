@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -120,7 +121,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var match = regex.Match(str);
 
 			// Check if the entire string matches (not just a substring)
@@ -216,7 +217,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
@@ -257,7 +258,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
@@ -321,7 +322,7 @@ public partial class Functions
 
 				try
 				{
-					var regex = new Regex(patternStr, options);
+					var regex = SoftcodeRegex.Create(patternStr, options);
 					var match = regex.Match(str!);
 
 					if (match.Success)

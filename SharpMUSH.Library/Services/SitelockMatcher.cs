@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -91,7 +92,6 @@ public static class SitelockMatcher
 	/// and small, and every caller passes a rule as the pattern, so its keys are bounded by the rule set
 	/// and this never grows unbounded.
 	/// </summary>
-	private static readonly ConcurrentDictionary<string, Regex> GlobCache = new();
 
 	/// <summary>
 	/// Simple wildcard matching for sitelock patterns (<c>*</c> and <c>?</c> wildcards), lifted
@@ -99,8 +99,8 @@ public static class SitelockMatcher
 	/// connect-time check and ban-enforcement matchers.
 	/// </summary>
 	private static bool WildcardMatch(string text, string pattern)
-		=> GlobCache.GetOrAdd(pattern, static p => new Regex(
-				"^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
-				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+		=> SoftcodeRegex.Create(
+				"^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
 			.IsMatch(text);
 }

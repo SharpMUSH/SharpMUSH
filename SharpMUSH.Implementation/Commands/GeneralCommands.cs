@@ -3860,7 +3860,7 @@ public partial class Commands
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 
 			if (all)
 			{
@@ -4757,7 +4757,7 @@ public partial class Commands
 				{
 					try
 					{
-						var regex = new Regex(pattern, RegexOptions.None);
+						var regex = SoftcodeRegex.Create(pattern, RegexOptions.None);
 						matches = regex.IsMatch(testString);
 					}
 					catch (ArgumentException)
@@ -4769,7 +4769,7 @@ public partial class Commands
 				else
 				{
 					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-					var regex = new Regex(regexPattern, RegexOptions.None);
+					var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
 					matches = regex.IsMatch(testString);
 				}
 
@@ -4967,7 +4967,7 @@ public partial class Commands
 				if (string.IsNullOrEmpty(trimmedPattern)) continue;
 
 				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
-				var regex = new Regex(regexPattern, RegexOptions.None);
+				var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
 
 				if (regex.IsMatch(testString))
 				{

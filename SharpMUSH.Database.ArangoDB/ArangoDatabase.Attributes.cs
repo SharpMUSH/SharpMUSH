@@ -628,7 +628,12 @@ public partial class ArangoDatabase
 			$"LET foundAttributes = (FOR v,e,p IN 1..@max OUTBOUND FIRST(start) GRAPH {DatabaseConstants.GraphAttributes} PRUNE condition = NTH(@attr,LENGTH(p.edges)-1) != v.Name FILTER !condition RETURN v._id)";
 		const string query = $"{let1} {let2} RETURN APPEND(start, foundAttributes)";
 
-		var result = await arangoDb.Query.ExecuteAsync<string[]>(handle, query, new Dictionary<string, object>
+		// On the transaction handle, not the plain one. This query decides which attribute nodes already
+		// exist, and every create below is made from its answer; run outside the transaction it is not
+		// serialised against a concurrent writer, so two `&A`B obj=` could both find no A and both make
+		// one. The Read scope declared above lists exactly the collections it traverses, which is what
+		// it was written for.
+		var result = await arangoDb.Query.ExecuteAsync<string[]>(transactionHandle, query, new Dictionary<string, object>
 		{
 			{ "attr", attribute },
 			{ StartVertex, startVertex },

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Buffers;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -168,7 +169,7 @@ public class TextFileService : ITextFileService
 
 		var category = ResolveEntryCategory(fileReference);
 		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 		lock (_indexLock)
 		{

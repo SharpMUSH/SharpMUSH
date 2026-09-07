@@ -11,11 +11,17 @@ assemblies.
 Nothing here contradicts the first pass. Several findings are the *same class of bug* the first pass
 fixed, in a place it did not look.
 
-> **Status.** Findings 1, 2, 3, 4, 5, 11 and 12 are fixed on `claude/attribute-cache-tags-and-gc`, with
-> tests. Finding 2 is fixed for the attribute reads that consult one object; the inherited reads keep
-> a game-wide tag deliberately (see `CacheKeys.AttributesTag`), and closing that needs the providers
-> to project the objects a read visited — the same prerequisite as the `commands:`/`listens:`
-> parent-chain gap recorded on those queries. Everything else below is unstarted.
+> **Status.** Fixed on `claude/attribute-cache-tags-and-gc`, with tests: findings 1, 3, 4, 5, 9, 11,
+> 12, 13, 14, and 2 in part. Finding 2 is fixed for the attribute reads that consult one object; the
+> inherited reads keep a game-wide tag deliberately (see `CacheKeys.AttributesTag`), and closing that
+> needs the providers to project the objects a read visited — the same prerequisite as the
+> `commands:`/`listens:` parent-chain gap recorded on those queries.
+>
+> **Deliberately not done here**, each for a stated reason: **6** (`WaitForSync`) is a durability
+> policy decision, not a defect — it needs an owner's call, not a patch. **7** (channel N+1 and
+> uncached channels) is a design change of the same size as #871's work on objects, and wants the
+> harness scenario before the change, not after. **15** (sync-over-async lock evaluation) needs an ADR.
+> **8** and **10** were re-examined and are not worth doing: see their sections.
 
 ---
 
@@ -234,7 +240,15 @@ shape `RETURN {AttributeWithFlags}` already uses); make `GetChannelQuery` `ICach
 `channel:{name}` key — the write side *already emits* `channel:{Channel.Name}` invalidation keys that
 currently match nothing; add a membership-test query instead of enumerating.
 
-## 8. `ConnectionService.Get(DBRef)` is a linear scan, called once per delivered line
+## 8. `ConnectionService.Get(DBRef)` is a linear scan, called once per delivered line — *not worth fixing*
+
+**Re-examined and left alone.** With the listener pass no longer quadratic (finding 5), this is O(N·C)
+per broadcast — a few thousand dictionary iterations for a busy room on a busy server, which is
+microseconds. A reverse index would have to be kept in step across `Register`, `Bind`, `Unbind`,
+`Disconnect` and the reconciliation service, and a stale entry there hands a message to the wrong
+connection. That is a bad trade for the time it saves. Recorded so the next pass does not re-derive it.
+
+
 
 ```csharp
 public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
@@ -269,7 +283,14 @@ concurrent `&A\`B obj=…` can both observe "`A` does not exist" and both create
 
 **Fix:** one character — pass `transactionHandle`. Worth a concurrency test.
 
-## 10. `GetAttributeFlagAsync` defeats its own index, and runs at least twice per attribute write
+## 10. `GetAttributeFlagAsync` defeats its own index — *not worth fixing*
+
+**Re-examined and left alone.** `UPPER()` on the indexed field does force a scan, but `AttributeFlags`
+holds about twenty documents; the scan is a rounding error next to the fsync the same write pays
+(finding 6). Making it index-using needs a normalised stored field and a migration across three
+providers. Not a defect, and not where the time is.
+
+
 
 ```csharp
 "FOR v in @@C1 FILTER UPPER(v.Name) == UPPER(@flag) RETURN v"

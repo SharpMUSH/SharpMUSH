@@ -15,8 +15,6 @@ public interface ILockService
 
 	bool Evaluate(LockType standardType, AnySharpObject gated, AnySharpObject unlocker);
 
-	bool Set(LockType standardType, string lockString, AnySharpObject lockee);
-
 	bool Validate(string lockString, AnySharpObject lockee);
 
 	/// <summary>

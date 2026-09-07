@@ -122,9 +122,12 @@ public class NotifyService(
 
 				await listenerRoutingService.ProcessNotificationAsync(notificationContext, what, sender, type);
 			}
-			catch
+			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
-				// Silently ignore errors in listener routing to not block notifications
+				// A listener that fails must not stop the message reaching the people it was sent to,
+				// which is why this is swallowed at all. A cancellation is not that: it means the caller
+				// is gone, and reading it as "routing failed, carry on delivering" hides a shutdown or an
+				// abandoned request behind a message nobody is waiting for.
 			}
 		}
 

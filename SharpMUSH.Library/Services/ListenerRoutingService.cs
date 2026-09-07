@@ -11,6 +11,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using static SharpMUSH.Library.Services.Interfaces.INotifyService;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -113,7 +114,7 @@ public class ListenerRoutingService(
 		if (!passesListenLock)
 			return;
 
-		var regex = new System.Text.RegularExpressions.Regex(
+		var regex = SoftcodeRegex.Create(
 			MModule.getWildcardMatchAsRegex(MModule.single(listenPattern)),
 			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
@@ -144,12 +145,17 @@ public class ListenerRoutingService(
 			["!"] = new CallState(listener.Object().DBRef.ToString())
 		};
 
+		// Deliberately not awaited: the listener's own action is a reaction to a message that has
+		// already been delivered, and its handler evaluates softcode inline, so awaiting it here would
+		// run the reaction inside the notification that caused it — and let a listener that speaks
+		// recurse into this pass. AsTask() because discarding a ValueTask is invalid: its backing
+		// source may be pooled and handed to someone else while this one is still running.
 		_ = mediator.Send(new ExecuteListenPatternCommand(
 			listener,
 			speaker,
 			triggerAttrName,
 			registers
-		));
+		)).AsTask();
 	}
 
 	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
@@ -190,12 +196,13 @@ public class ListenerRoutingService(
 			registers["#"] = new CallState(speaker.Object().DBRef.ToString());
 			registers["!"] = new CallState(listener.Object().DBRef.ToString());
 
+			// Not awaited, for the reason given in ProcessListenAttributeAsync.
 			_ = mediator.Send(new ExecuteListenPatternCommand(
 				listener,
 				speaker,
 				match.Attribute.Name,
 				registers
-			));
+			)).AsTask();
 		}
 	}
 
