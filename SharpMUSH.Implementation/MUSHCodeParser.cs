@@ -395,13 +395,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c>) can reuse the exact same
 	/// "needsTracking" decision.
 	/// </summary>
-	/// <param name="preserveActors">
-	/// When true, Executor/Enactor/Caller are copied from <see cref="CurrentState"/> into the
-	/// fresh <see cref="ParserState"/> (matches <c>FunctionParse(text, emitSubstDebug: true)</c>).
-	/// When false, they are left null (matches the no-debug <see cref="FunctionParse(MString)"/>
-	/// overload) — this asymmetry already existed between the two overloads before extraction.
-	/// </param>
-	internal IMUSHCodeParser ResolveTrackingParser(bool preserveActors)
+	/// <remarks>
+	/// Executor/Enactor/Caller are always carried over from <see cref="CurrentState"/>. The no-debug
+	/// <see cref="FunctionParse(MString)"/> overload used to drop them, so a top-level parse entered
+	/// with actors but without tracking counters evaluated every function against a null executor —
+	/// <c>CallFunction</c>'s permission gate then threw out of <c>KnownExecutorObject</c> on every
+	/// single call, was caught, logged with a full stack trace, and returned an empty result. The
+	/// nightly benchmark run that flushed this out logged two million of those stack traces.
+	/// </remarks>
+	internal IMUSHCodeParser ResolveTrackingParser()
 	{
 		var needsTracking = State.IsEmpty || CurrentState.TotalInvocations == null;
 		if (!needsTracking)
@@ -409,12 +411,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return this;
 		}
 
-		// Pre-existing gap (byte-identical in FunctionParse before this method was extracted from
-		// it, not introduced here): CurrentState => State.Peek() throws on an empty stack, so
-		// unconditionally reading CurrentState.Executor/Enactor/Caller below would crash whenever
-		// State.IsEmpty is the reason needsTracking fired. Closing it here while it's in view —
-		// only copy actors from CurrentState when there IS a CurrentState to read.
-		var preserveCallerActors = preserveActors && !State.IsEmpty;
+		// CurrentState => State.Peek() throws on an empty stack, so only read the actors when there
+		// IS a frame to read them from.
+		var preserveCallerActors = !State.IsEmpty;
 
 		return Push(new ParserState(
 			Registers: new([[]]),
@@ -510,7 +509,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser(preserveActors: false);
+		var parser = ResolveTrackingParser();
 
 		var (result, _) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
@@ -525,7 +524,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser(preserveActors: true);
+		var parser = ResolveTrackingParser();
 
 		// Capture raw text BEFORE evaluation for substitution-only debug
 		var rawText = text.ToPlainText();

@@ -689,7 +689,19 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			// Every gate below is a permission check against the executor, so there is nothing to
+			// evaluate without one — the connect screen being the ordinary case. KnownExecutorObject
+			// threw here instead, which the catch below turned into an Error-level log with a full
+			// stack trace on every call while still returning the same empty result. Answer the
+			// question the gates are actually asking rather than raising an exception to say "no".
+			var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
+			if (executorOption.IsNone)
+			{
+				success = false;
+				return CallState.Empty;
+			}
+
+			var executor = executorOption.Known();
 
 			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
 			{
@@ -2471,7 +2483,7 @@ public class SharpMUSHParserVisitor(
 			return await prs.FunctionParse(argument, emitSubstDebug);
 		}
 
-		var evalParser = mushParser.ResolveTrackingParser(preserveActors: emitSubstDebug);
+		var evalParser = mushParser.ResolveTrackingParser();
 
 		// A fresh visitor per call mirrors ParseInternalCore's "new SharpMUSHParserVisitor(...)
 		// per parse": its DidEmitFunctionDebug flag must start false for THIS argument alone, not

@@ -1,7 +1,6 @@
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
-using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Validators;
@@ -31,7 +30,6 @@ public class AdaptiveBenchmarkConfig : ManualConfig
 
 		AddLogger(ConsoleLogger.Default);
 		AddColumnProvider(DefaultColumnProviders.Instance);
-		AddExporter(MarkdownExporter.GitHub);
 
 		AddValidator(JitOptimizationsValidator.FailOnError);
 		AddValidator(RunModeValidator.FailOnError);

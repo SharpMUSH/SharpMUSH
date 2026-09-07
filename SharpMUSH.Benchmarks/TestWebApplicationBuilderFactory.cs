@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
-using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
@@ -59,13 +58,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", acnf.ConnectionString);
 		}
 
-		var log = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.WriteTo.Console(theme: AnsiConsoleTheme.Code)
-			.MinimumLevel.Verbose()
-			.CreateLogger();
-
-		Log.Logger = log;
+		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
 
 		// Only override services that benchmarks specifically need to differ from production.
 		builder.ConfigureTestServices(sc =>
