@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class ReassignAttributeOwnerCommandHandler(ISharpDatabase database)
+public class ReassignAttributeOwnerCommandHandler(IAttributeStore database)
 	: ICommandHandler<ReassignAttributeOwnerCommand>
 {
 	public async ValueTask<Unit> Handle(ReassignAttributeOwnerCommand request, CancellationToken cancellationToken)

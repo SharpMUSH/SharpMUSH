@@ -24,7 +24,7 @@ public class AccountClaimsInvalidationTests
 	{
 		var database = Substitute.For<ISharpDatabase>();
 		var invalidator = Substitute.For<IAccountClaimsInvalidator>();
-		var service = new AccountService(database, Substitute.For<IPasswordService>(),
+		var service = new AccountService(database, database, Substitute.For<IPasswordService>(),
 			Substitute.For<IAccountSessionStore>(), banEnforcer: null, claimsInvalidator: invalidator);
 
 		return (service, database, invalidator);
@@ -71,7 +71,7 @@ public class AccountClaimsInvalidationTests
 		// The declaration, the one implementation allowed to call it, and the providers that define it.
 		string[] permitted =
 		[
-			Path.Combine("SharpMUSH.Library", "ISharpDatabase.cs"),
+			Path.Combine("SharpMUSH.Library", "Stores", "IAccountStore.cs"),
 			Path.Combine("SharpMUSH.Library", "Services", "AccountService.cs"),
 		];
 

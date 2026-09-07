@@ -228,8 +228,6 @@ p.typeRestrictions = $typeRestrictions
 		return true;
 	}
 
-	public IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(string id, string type, CancellationToken cancellationToken = default)
-	=> GetObjectFlagsForIdAsync(id, type, cancellationToken);
 
 	#endregion
 }

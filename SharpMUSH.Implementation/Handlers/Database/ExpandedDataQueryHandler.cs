@@ -4,7 +4,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class ExpandedDataQueryHandler(ISharpDatabase database) : IQueryHandler<ExpandedDataQuery, object?>, IQueryHandler<ExpandedServerDataQuery, object?>
+public class ExpandedDataQueryHandler(IExpandedDataStore database) : IQueryHandler<ExpandedDataQuery, object?>, IQueryHandler<ExpandedServerDataQuery, object?>
 {
 	public async ValueTask<object?> Handle(ExpandedDataQuery query, CancellationToken cancellationToken)
 		=> await database.GetExpandedObjectData<object?>(query.SharpObject.Id!, query.TypeName, cancellationToken);

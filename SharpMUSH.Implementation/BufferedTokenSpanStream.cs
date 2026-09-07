@@ -1,5 +1,6 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SharpMUSH.Implementation
@@ -20,14 +21,16 @@ namespace SharpMUSH.Implementation
 		//     A collection of all tokens fetched from the token source. The list is considered
 		//     a complete view of the input once Antlr4.Runtime.BufferedTokenStream.fetchedEOF
 		//     is set to true .
-		// Initial capacity increased from 100 to 256 to reduce list resizing for typical MUSH commands/functions
-		protected internal List<IToken> tokens = new(256);
+		// Sized from the input: a token spans at least one character, and typical softcode runs
+		// three to five characters per token. A fixed 256-slot list was 2 KB per parse of a
+		// ten-character command, and was then copied into an array on top.
+		protected internal List<IToken> tokens = new(InitialCapacity(tokenSource));
 
-		protected internal IToken[]? TokenArray;
+		private static int InitialCapacity(ITokenSource source)
+			=> Math.Clamp((source.InputStream?.Size ?? 0) / 2 + 4, 8, 256);
 
-		protected internal Span<IToken> Tokens => fetchedEOF
-			? TokenArray.AsSpan()
-			: tokens.ToArray().AsSpan();
+		// A view over the list's own storage; nothing here holds it across a mutation of the list.
+		protected internal Span<IToken> Tokens => CollectionsMarshal.AsSpan(tokens);
 
 		//
 		// Summary:
@@ -57,7 +60,7 @@ namespace SharpMUSH.Implementation
 
 		public virtual int Index => p;
 
-		public virtual int Size => Tokens.Length;
+		public virtual int Size => tokens.Count;
 
 		public virtual string SourceName => _tokenSource.SourceName;
 
@@ -141,7 +144,6 @@ namespace SharpMUSH.Implementation
 				}
 
 				fetchedEOF = true;
-				TokenArray = [.. tokens];
 				return i + 1;
 			}
 

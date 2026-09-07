@@ -58,14 +58,14 @@ public partial class Functions
 	/// <c>validloc</c> ahead of it. Every form answers <c>#-1</c> when this fails, which is the whole
 	/// reason it exists — see the class remarks.
 	/// </summary>
-	private static async ValueTask<bool> WalkGate(AnySharpObject executor, AnySharpObject enactor,
+	private async ValueTask<bool> WalkGate(AnySharpObject executor, AnySharpObject enactor,
 		AnySharpObject loc, WalkType types)
 	{
 		// validloc: a room for exits, anything that is not an exit for contents.
 		var validLoc = types.HasFlag(WalkType.Exit) ? loc.IsRoom : !loc.IsExit;
 		if (!validLoc) return false;
 
-		if (await PermissionService!.CanExamine(executor, loc)) return true;
+		if (await PermissionService.CanExamine(executor, loc)) return true;
 
 		var executorLocation = await executor.Where();
 		if (executorLocation.Object().DBRef == loc.Object().DBRef) return true;
@@ -91,10 +91,10 @@ public partial class Functions
 	/// else, and the location half is asked about the container, not the candidate.
 	/// </para>
 	/// </remarks>
-	private static async ValueTask<bool> FirstVisible(AnySharpObject executor, AnySharpObject loc,
+	private async ValueTask<bool> FirstVisible(AnySharpObject executor, AnySharpObject loc,
 		AnySharpObject thing, bool locIsDark)
 	{
-		if (!await PermissionService!.CanInteract(executor, thing, IPermissionService.InteractType.See))
+		if (!await PermissionService.CanInteract(executor, thing, IPermissionService.InteractType.See))
 		{
 			return false;
 		}
@@ -115,7 +115,7 @@ public partial class Functions
 	/// The matching contents in order, or <c>null</c> when the gate refused — which every caller renders
 	/// as <c>#-1</c>, exactly as <c>dbwalk</c>'s <c>else</c> branch does.
 	/// </returns>
-	private static async ValueTask<List<AnySharpContent>?> DbWalk(AnySharpObject executor,
+	private async ValueTask<List<AnySharpContent>?> DbWalk(AnySharpObject executor,
 		AnySharpObject enactor, AnySharpObject loc, WalkSpec spec)
 	{
 		if (!await WalkGate(executor, enactor, loc, spec.Types)) return null;
@@ -128,7 +128,7 @@ public partial class Functions
 		var matched = new List<AnySharpContent>();
 		var seen = 0;
 
-		await foreach (var item in loc.AsContainer.Content(Mediator!))
+		await foreach (var item in loc.AsContainer.Content(Mediator))
 		{
 			var thing = item.WithRoomOption();
 
@@ -139,7 +139,7 @@ public partial class Functions
 			if (spec.SkipDark)
 			{
 				if (await thing.IsDark() && !await thing.IsLight() && !locIsLight) continue;
-				if (spec.Types == WalkType.Player && !await ConnectionService!.IsConnected(thing)) continue;
+				if (spec.Types == WalkType.Player && !await ConnectionService.IsConnected(thing)) continue;
 			}
 
 			switch (spec.Listening)
@@ -147,7 +147,7 @@ public partial class Functions
 				case WalkListening.Puppet when !await thing.IsPuppet():
 					continue;
 				case WalkListening.Listen when !(
-					(await thing.IsHearer(ConnectionService!, AttributeService!) || await thing.IsListener())
+					(await thing.IsHearer(ConnectionService, AttributeService) || await thing.IsListener())
 					&& (privWho || !await thing.IsDark())):
 					continue;
 			}
@@ -165,7 +165,7 @@ public partial class Functions
 		return matched;
 	}
 
-	private static bool TypeMatches(AnySharpContent item, WalkType types)
+	private bool TypeMatches(AnySharpContent item, WalkType types)
 		=> (item.IsExit && types.HasFlag(WalkType.Exit))
 			 || (item.IsPlayer && types.HasFlag(WalkType.Player))
 			 || (item.IsThing && types.HasFlag(WalkType.Thing));
@@ -176,25 +176,25 @@ public partial class Functions
 	/// <c>dbwalk</c>'s <c>!GoodObject(loc)</c> branch writes exactly that, the reason having already
 	/// gone to the executor.
 	/// </summary>
-	private static async ValueTask<(AnySharpObject Executor, AnySharpObject Enactor, AnySharpObject? Loc)>
+	private async ValueTask<(AnySharpObject Executor, AnySharpObject Enactor, AnySharpObject? Loc)>
 		WalkTarget(IMUSHCodeParser parser, string name)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
-		var located = await LocateService!.LocateAndNotifyIfInvalidWithCallState(
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		var located = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, name, LocateFlags.All);
 
 		return (executor, enactor, located.IsError ? null : located.AsSharpObject);
 	}
 
-	private static string Arg(IMUSHCodeParser parser, string index)
+	private string Arg(IMUSHCodeParser parser, string index)
 		=> parser.CurrentState.Arguments[index].Message!.ToPlainText();
 
-	private static string Render(IEnumerable<AnySharpContent> contents)
+	private string Render(IEnumerable<AnySharpContent> contents)
 		=> string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
 
 	/// <summary>The <c>l*</c> and <c>lv*</c> forms: the whole matching list.</summary>
-	private static async ValueTask<CallState> WalkList(IMUSHCodeParser parser, WalkType types, bool skipDark,
+	private async ValueTask<CallState> WalkList(IMUSHCodeParser parser, WalkType types, bool skipDark,
 		WalkListening listening = WalkListening.None)
 	{
 		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
@@ -205,7 +205,7 @@ public partial class Functions
 	}
 
 	/// <summary>The <c>n*</c> and <c>nv*</c> forms: how many matched, ignoring any window.</summary>
-	private static async ValueTask<CallState> WalkCount(IMUSHCodeParser parser, WalkType types, bool skipDark)
+	private async ValueTask<CallState> WalkCount(IMUSHCodeParser parser, WalkType types, bool skipDark)
 	{
 		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
 		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
@@ -219,7 +219,7 @@ public partial class Functions
 	/// non-integer with <c>#-1 ARGUMENT MUST BE INTEGER</c> and a start or count below 1 with
 	/// <c>#-1 ARGUMENT OUT OF RANGE</c>, both before it matches anything.
 	/// </summary>
-	private static async ValueTask<CallState> WalkWindow(IMUSHCodeParser parser, WalkType types, bool skipDark)
+	private async ValueTask<CallState> WalkWindow(IMUSHCodeParser parser, WalkType types, bool skipDark)
 	{
 		if (!int.TryParse(Arg(parser, "1"), out var start) || !int.TryParse(Arg(parser, "2"), out var count))
 		{
@@ -243,7 +243,7 @@ public partial class Functions
 	/// prints <c>safe_dbref</c> of its result, which is <c>#-1</c> for <c>NOTHING</c> — so a refused
 	/// gate and an empty container are the same answer here, as they are there.
 	/// </summary>
-	private static async ValueTask<CallState> WalkFirst(IMUSHCodeParser parser, WalkType types)
+	private async ValueTask<CallState> WalkFirst(IMUSHCodeParser parser, WalkType types)
 	{
 		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
 		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
@@ -263,7 +263,7 @@ public partial class Functions
 	/// The argument was declared (<c>MaxArgs = 2</c>) and then ignored, so <c>lcon(here,players)</c>
 	/// listed everything.
 	/// </remarks>
-	private static async ValueTask<CallState> WalkContentsWithFilter(IMUSHCodeParser parser)
+	private async ValueTask<CallState> WalkContentsWithFilter(IMUSHCodeParser parser)
 	{
 		if (!parser.CurrentState.Arguments.ContainsKey("1"))
 		{
@@ -304,7 +304,7 @@ public partial class Functions
 	/// Penn only starts filling <c>result</c> once it has passed <c>after</c> in the visible list.
 	/// </para>
 	/// </remarks>
-	private static async ValueTask<CallState> WalkNext(IMUSHCodeParser parser)
+	private async ValueTask<CallState> WalkNext(IMUSHCodeParser parser)
 	{
 		var (executor, enactor, it) = await WalkTarget(parser, Arg(parser, "0"));
 		if (it is null || it.IsRoom) return new CallState(ErrorMessages.Returns.Nothing);
@@ -325,7 +325,7 @@ public partial class Functions
 	/// The whole count of matches, which is what the <c>n*</c> forms report — <c>dbwalk</c>'s
 	/// <c>retcount</c>, not the size of any window.
 	/// </summary>
-	private static async ValueTask<int?> DbWalkCount(AnySharpObject executor, AnySharpObject enactor,
+	private async ValueTask<int?> DbWalkCount(AnySharpObject executor, AnySharpObject enactor,
 		AnySharpObject loc, WalkSpec spec)
 		=> (await DbWalk(executor, enactor, loc, spec with { Start = 0, Count = 0 }))?.Count;
 }

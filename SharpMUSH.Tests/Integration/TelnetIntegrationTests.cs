@@ -168,9 +168,6 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		// (including NatsJetStreamConsumerService that listens for ConnectionEstablishedMessage).
 		var serverServices = _serverFactory.Services;
 
-		var databaseService = serverServices.GetRequiredService<ISharpDatabase>();
-		await databaseService.Migrate();
-
 		var schedulerFactory = serverServices.GetRequiredService<ISchedulerFactory>();
 		var scheduler = await schedulerFactory.GetScheduler();
 		if (!scheduler.IsStarted) await scheduler.Start();

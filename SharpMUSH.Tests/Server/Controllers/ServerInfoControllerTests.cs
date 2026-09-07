@@ -16,7 +16,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 public class ServerInfoControllerTests
 {
 	private static SharpMUSHOptions DefaultOptions()
-		=> new OptionsService(Substitute.For<ISharpDatabase>()).Create(string.Empty);
+		=> new OptionsService(Substitute.For<ISharpDatabase>(), []).Create(string.Empty);
 
 	private static ServerInfoController MakeController(bool guestsEnabled, string mudName = "SharpMUSH")
 	{

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class DeleteAttributeEntryCommandHandler(ISharpDatabase database) : ICommandHandler<DeleteAttributeEntryCommand, bool>
+public class DeleteAttributeEntryCommandHandler(IAttributeStore database) : ICommandHandler<DeleteAttributeEntryCommand, bool>
 {
 	public async ValueTask<bool> Handle(DeleteAttributeEntryCommand request, CancellationToken cancellationToken)
 	{

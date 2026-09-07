@@ -20,7 +20,6 @@ public class ListenerRoutingServiceTests
 		var context = new NotificationContext(
 			Target: new DBRef(1, null),
 			Location: null,
-			IsRoomBroadcast: false,
 			ExcludedObjects: []
 		);
 
@@ -39,7 +38,6 @@ public class ListenerRoutingServiceTests
 		var context = new NotificationContext(
 			Target: new DBRef(1, null),
 			Location: new DBRef(0, null),
-			IsRoomBroadcast: false,
 			ExcludedObjects: []
 		);
 

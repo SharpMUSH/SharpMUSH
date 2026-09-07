@@ -20,9 +20,9 @@ public partial class Functions
 	/// (%1, %2, ...), so a register could not be appended without breaking ported softcode.
 	/// </summary>
 	[SharpFunction(Name = "filterq", MinArgs = 3, MaxArgs = 36, Flags = FunctionFlags.Regular, ParameterNames = ["register", "attribute", "list", "delimiter", "osep"])]
-	public static async ValueTask<CallState> FilterQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> FilterQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var registerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (string.IsNullOrWhiteSpace(registerName))
@@ -66,7 +66,7 @@ public partial class Functions
 			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.ToString();
 
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
@@ -75,7 +75,7 @@ public partial class Functions
 
 			var located = locate.WithoutError().WithoutNone();
 
-			var maybeAttr = await AttributeService!.GetAttributeAsync(
+			var maybeAttr = await AttributeService.GetAttributeAsync(
 				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 			if (maybeAttr.IsNone)
 			{

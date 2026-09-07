@@ -8,10 +8,10 @@ namespace SharpMUSH.Implementation.Services;
 /// Single, pre-build catalog of loaded plugins and their contributions. This is the heart of the
 /// Phase 2a two-phase boot.
 ///
-/// <para><b>The two-phase problem.</b> DI registration, <c>db.Migrate()</c> (run inside the
-/// <c>ISharpDatabase</c> singleton factory) and flag seeding all happen <i>during container
-/// construction</i> — before any post-build hosted service (the Phase 1 <see cref="PluginManager"/>)
-/// runs. So plugins must be discovered in a <i>pre-build</i> pass.</para>
+/// <para><b>The two-phase problem.</b> DI registration happens during container construction, and
+/// <c>Migrate()</c> with its flag seeding is awaited by <c>Program</c> right after the host is built,
+/// before any hosted service runs — so before the post-build Phase 1 <see cref="PluginManager"/>.
+/// Plugins must therefore be discovered in a <i>pre-build</i> pass.</para>
 ///
 /// <para><b>Load once.</b> <see cref="Build"/> is called once from <c>Startup.ConfigureServices</c>,
 /// before the engine's services and the <c>ISharpDatabase</c> registration. It runs

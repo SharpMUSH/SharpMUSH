@@ -22,11 +22,10 @@ namespace SharpMUSH.Tests.Integration.Packages;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class BundledCatalogueTests(ServerWebAppFactory factory)
 {
-	private IPackageRegistryService Registry =>
-		(IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
+	private IPackageRegistryService Registry => factory.Services.GetRequiredService<IPackageRegistryService>();
 
 	private PackagesController Controller() => new(
-		factory.Services.GetRequiredService<ISharpDatabase>(),
+		Registry,
 		factory.Services.GetRequiredService<IPackageSourceService>(),
 		factory.Services.GetRequiredService<IPackageManifestService>(),
 		factory.Services.GetRequiredService<IPackageInstallService>(),

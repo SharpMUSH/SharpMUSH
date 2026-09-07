@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetExitsQueryHandler(ISharpDatabase database)
+public class GetExitsQueryHandler(INavigationStore database)
 	: IStreamQueryHandler<GetExitsQuery, SharpExit>
 {
 	public IAsyncEnumerable<SharpExit> Handle(GetExitsQuery request, CancellationToken cancellationToken)

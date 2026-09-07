@@ -3,7 +3,6 @@ using Core.Arango.Migration;
 using Core.Arango.Protocol;
 using DotNext.Threading;
 using MarkupString;
-using Mediator;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Database.Models;
@@ -26,11 +25,14 @@ public partial class ArangoDatabase
 	#region Navigation
 
 	public IAsyncEnumerable<SharpObject> GetParentsAsync(string id, CancellationToken ct = default)
+		// Bound start vertex rather than an interpolation: the FormattableString overload would bind
+		// the projection as well, and the rows would come back as its text.
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle,
-				$"FOR v IN 1..999 OUTBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
+				$"FOR v IN 1..999 OUTBOUND @start GRAPH {DatabaseConstants.GraphParents} RETURN {ObjectWithRelations("v")}",
+				new Dictionary<string, object> { { "start", id } }, cache: true,
 				cancellationToken: ct)
 			.Select(SharpObjectQueryToSharpObject);
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken ct = default)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string id, CancellationToken ct = default)
 	{
 		var owner = (await arangoDb.Query.ExecuteAsync<string>(handle,
 				$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphObjectOwners} RETURN v._id", cancellationToken: ct))
@@ -87,10 +89,11 @@ public partial class ArangoDatabase
 
 	private IAsyncEnumerable<SharpObject>? GetChildrenAsync(string id, CancellationToken ct = default)
 		=> arangoDb.Query.ExecuteStreamAsync<SharpObjectQueryResult>(handle,
-			$"FOR v IN 1..1 INBOUND {id} GRAPH {DatabaseConstants.GraphParents} RETURN v", cache: true,
+			$"FOR v IN 1..1 INBOUND @start GRAPH {DatabaseConstants.GraphParents} RETURN {ObjectWithRelations("v")}",
+			new Dictionary<string, object> { { "start", id } }, cache: true,
 			cancellationToken: ct)
 		.Select(SharpObjectQueryToSharpObject);
-	private async ValueTask<AnySharpContainer> GetHomeAsync(string id, CancellationToken ct = default)
+	public async ValueTask<AnySharpContainer> GetHomeAsync(string id, CancellationToken ct = default)
 	{
 		var homeId = (await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
@@ -109,7 +112,7 @@ public partial class ArangoDatabase
 	/// An exit's destination. Unlike every other type's home, this edge is absent on a freshly
 	/// <c>@open</c>ed or an <c>@unlink</c>ed exit, so the result is optional.
 	/// </summary>
-	private async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string id, CancellationToken ct = default)
+	public async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string id, CancellationToken ct = default)
 	{
 		var destinationResult = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
@@ -130,7 +133,7 @@ public partial class ArangoDatabase
 			_ => new None());
 	}
 
-	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string id, CancellationToken ct = default)
+	public async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string id, CancellationToken ct = default)
 	{
 		var dropToResult = await arangoDb.Query.ExecuteAsync<string>(handle,
 			$"FOR v IN 1..1 OUTBOUND {id} GRAPH {DatabaseConstants.GraphHomes} RETURN v._id", cache: true,
@@ -292,7 +295,7 @@ public partial class ArangoDatabase
 	{
 		var results = arangoDb.Query.ExecuteStreamAsync<System.Text.Json.JsonElement>(handle,
 			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
-			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
+			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("o")}) " +
 			$"RETURN {{typed: typed, obj: obj}}",
 			new Dictionary<string, object> { { StartVertex, startVertex } },
 			cancellationToken: ct);
@@ -342,15 +345,15 @@ public partial class ArangoDatabase
 			DatabaseConstants.Things => new SharpThing
 			{
 				Id = id, Object = sharpObject,
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct))
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
+				Home = new(ct => relations.HomeOf(id, sharpObject.Id!, sharpObject.Key, ct))
 			},
 			DatabaseConstants.Players => new SharpPlayer
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
-				Home = new(async ct => await GetHomeAsync(id, ct)),
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
+				Home = new(ct => relations.HomeOf(id, sharpObject.Id!, sharpObject.Key, ct)),
 				PasswordHash = typedVertex.GetProperty("PasswordHash").GetString()!,
 				PasswordSalt = typedVertex.TryGetProperty("PasswordSalt", out var saltProp) ? saltProp.GetString() : null,
 				Quota = typedVertex.GetProperty("Quota").GetInt32()
@@ -359,14 +362,14 @@ public partial class ArangoDatabase
 			{
 				Id = id,
 				Object = sharpObject,
-				Location = new(async ct => await GetDropToAsync(id, ct))
+				Location = new(ct => relations.DropToOf(id, sharpObject.Id!, sharpObject.Key, ct))
 			},
 			DatabaseConstants.Exits => new SharpExit
 			{
 				Id = id, Object = sharpObject,
 				Aliases = typedVertex.GetProperty("Aliases").EnumerateArray().Select(x => x.GetString()!).ToArray(),
-				Location = new(async ct => await mediator.Send(new GetCertainLocationQuery(id, sharpObject.Id!), ct)),
-				Home = new(async ct => await GetExitDestinationAsync(id, ct))
+				Location = new(ct => relations.LocationOf(id, sharpObject.Id!, ct)),
+				Home = new(ct => relations.ExitDestinationOf(id, sharpObject.Id!, sharpObject.Key, ct))
 			},
 			_ => throw new ArgumentException($"Invalid Object Type found: '{objectVertex.GetProperty("Type").GetString()}'"),
 		};
@@ -406,7 +409,7 @@ public partial class ArangoDatabase
 		var results = arangoDb.Query.ExecuteStreamAsync<System.Text.Json.JsonElement>(handle,
 			$"FOR typed IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphLocations} " +
 			$"FILTER IS_SAME_COLLECTION('{DatabaseConstants.Exits}', typed) " +
-			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN o) " +
+			$"LET obj = FIRST(FOR o IN 1..1 OUTBOUND typed GRAPH {DatabaseConstants.GraphObjects} RETURN {ObjectWithRelations("o")}) " +
 			$"RETURN {{typed: typed, obj: obj}}",
 			new Dictionary<string, object> { { StartVertex, startVertex } },
 			cancellationToken: ct);

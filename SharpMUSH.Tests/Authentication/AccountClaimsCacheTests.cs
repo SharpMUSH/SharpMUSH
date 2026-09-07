@@ -30,8 +30,8 @@ public class AccountClaimsCacheTests
 
 		accountSvc.GetCharactersAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<IReadOnlyList<SharpPlayer>>((IReadOnlyList<SharpPlayer>)[]));
-		roleRegistry.GetRolesAsync().Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
-		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roleRegistry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		roleRegistry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
 		permissionResolver.Resolve(Arg.Any<IEnumerable<SharpRole>>()).Returns(new HashSet<string>());
 
 		var cache = new FusionCache(new Microsoft.Extensions.Options.OptionsWrapper<FusionCacheOptions>(new FusionCacheOptions()));
@@ -76,7 +76,7 @@ public class AccountClaimsCacheTests
 		await svc.ComputeAccountRoleAsync("accounts/1", PortalRole.Player);
 		await svc.ComputeGrantedScopesAsync("accounts/1", PortalRole.Player);
 		await accountSvc.Received(1).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
-		await roleRegistry.Received(1).GetRolesAsync();
+		await roleRegistry.Received(1).GetRolesAsync(Arg.Any<CancellationToken>());
 
 		await svc.InvalidateAsync("accounts/1");
 
@@ -84,7 +84,7 @@ public class AccountClaimsCacheTests
 		await svc.ComputeGrantedScopesAsync("accounts/1", PortalRole.Player);
 
 		await accountSvc.Received(2).GetCharactersAsync("accounts/1", Arg.Any<CancellationToken>());
-		await roleRegistry.Received(2).GetRolesAsync();
+		await roleRegistry.Received(2).GetRolesAsync(Arg.Any<CancellationToken>());
 	}
 
 	[Test]

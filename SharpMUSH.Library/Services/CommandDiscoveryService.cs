@@ -7,6 +7,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -43,7 +44,7 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		var trimmedCommandString = commandString.Trim(TrimType.TrimBoth);
 		var plainCommandString = trimmedCommandString.ToPlainText();
 		var matchedCommandPatternAttributes = await commandPatternAttributes
-			.Where(x => x.Regex.IsMatch(plainCommandString))
+			.Where(x => SoftcodeRegex.IsMatch(x.Regex, plainCommandString))
 			.ToArrayAsync();
 
 		if (matchedCommandPatternAttributes.Length == 0)

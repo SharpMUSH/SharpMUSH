@@ -38,7 +38,7 @@ public class AccountServiceTests
 		db.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new List<SharpPlayer>());
 
-		return (new AccountService(db, pw, sessions, banEnforcer), db, pw, sessions, banEnforcer);
+		return (new AccountService(db, db, pw, sessions, banEnforcer), db, pw, sessions, banEnforcer);
 	}
 
 	private static SharpAccount MakeAccount(string id = "accounts/1", string username = "TestUser",

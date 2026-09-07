@@ -5,13 +5,12 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using OneOf;
 using SharpMUSH.Implementation;
-using SharpMUSH.Implementation.Handlers;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -38,7 +37,7 @@ public class EvalLockEvaluationFailureTests
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
 	/// <summary>
-	/// The handler must report a failed evaluation as <see cref="LockEvaluationFailure"/>. Returning a
+	/// The evaluation seam must report a failed evaluation as <see cref="LockEvaluationFailure"/>. Returning a
 	/// string — any string, including the empty one — would put the failure back into the same channel
 	/// as a result, which is what let a broken evaluation reach the lock's comparison.
 	/// </summary>
@@ -56,10 +55,13 @@ public class EvalLockEvaluationFailureTests
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.Push(Arg.Any<ParserState>()).Returns(parser);
 
-		var handler = new EvaluateAttributeForLockQueryHandler(attributeService, parser,
-			NullLogger<EvaluateAttributeForLockQueryHandler>.Instance);
-
-		var result = await handler.Handle(new EvaluateAttributeForLockQuery(one, one, "BOOM"), CancellationToken.None);
+		var services = new LockEvaluationServices(
+			new Lazy<ILocateService>(() => Substitute.For<ILocateService>()),
+			new Lazy<IAttributeService>(() => attributeService),
+			new Lazy<ILockService>(() => Substitute.For<ILockService>()),
+			new Lazy<IMUSHCodeParser>(() => parser),
+			NullLogger<LockEvaluationServices>.Instance);
+		var result = await services.EvaluateAttributeAsync(one, one, "BOOM");
 
 		await Assert.That(result.IsT1)
 			.IsTrue()
@@ -77,12 +79,12 @@ public class EvalLockEvaluationFailureTests
 	{
 		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
-		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<EvaluateAttributeForLockQuery>(), Arg.Any<CancellationToken>())
+		var services = Substitute.For<ILockEvaluationServices>();
+		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
 			.Returns(new ValueTask<OneOf<string, LockEvaluationFailure>>(
 				new LockEvaluationFailure("FAILING", "evaluation exploded")));
 
-		var parser = new BooleanExpressionParser(mediator, new FusionCache(new FusionCacheOptions()));
+		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
 		await Assert.That(parser.Compile("FAILING/expected")(one, one))
 			.IsFalse()
@@ -98,11 +100,11 @@ public class EvalLockEvaluationFailureTests
 	{
 		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
-		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<EvaluateAttributeForLockQuery>(), Arg.Any<CancellationToken>())
+		var services = Substitute.For<ILockEvaluationServices>();
+		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
 			.Returns(new ValueTask<OneOf<string, LockEvaluationFailure>>("expected"));
 
-		var parser = new BooleanExpressionParser(mediator, new FusionCache(new FusionCacheOptions()));
+		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
 		await Assert.That(parser.Compile("MATCHING/expected")(one, one)).IsTrue();
 	}

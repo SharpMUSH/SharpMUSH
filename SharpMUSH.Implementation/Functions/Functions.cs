@@ -12,35 +12,37 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
-	private static IMediator? Mediator { get; set; }
-	private static ISharpDatabase? Database { get; set; }
-	private static ILocateService? LocateService { get; set; }
-	private static IAttributeService? AttributeService { get; set; }
-	private static INotifyService? NotifyService { get; set; }
-	private static IPermissionService? PermissionService { get; set; }
-	private static ICommandDiscoveryService? CommandDiscoveryService { get; set; }
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
-	private static IOptionsWrapper<ColorsOptions>? ColorConfiguration { get; set; }
-	private static IPasswordService? PasswordService { get; set; }
-	private static IConnectionService? ConnectionService { get; set; }
-	private static IExpandedObjectDataService? ObjectDataService { get; set; }
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
-	private static ICommunicationService? CommunicationService { get; set; }
-	private static IValidateService? ValidateService { get; set; }
-	private static ISortService? SortService { get; set; }
-	private static ILockService? LockService { get; set; }
-	private static ISqlService? SqlService { get; set; }
-	private static ITelemetryService? TelemetryService { get; set; }
-	private static IMoveService? MoveService { get; set; }
-	private static IEventService? EventService { get; set; }
-	private static IBooleanExpressionParser? BooleanExpressionParser { get; set; }
-	private static ITextFileService? TextFileService { get; set; }
-	private static ILogger<Functions>? Logger { get; set; }
-	private static IMessageBus? MessageBus { get; set; }
+	private IMediator Mediator { get; }
+	private ISharpDatabase Database { get; }
+	private ILocateService LocateService { get; }
+	private IAttributeService AttributeService { get; }
+	private INotifyService NotifyService { get; }
+	private IPermissionService PermissionService { get; }
+	private ICommandDiscoveryService CommandDiscoveryService { get; }
+	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
+	private IOptionsWrapper<ColorsOptions> ColorConfiguration { get; }
+	private IPasswordService PasswordService { get; }
+	private IConnectionService ConnectionService { get; }
+	private IExpandedObjectDataService ObjectDataService { get; }
+	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private ICommunicationService CommunicationService { get; }
+	private IValidateService ValidateService { get; }
+	private ISortService SortService { get; }
+	private ILockService LockService { get; }
+	private ISqlService SqlService { get; }
+	private ITelemetryService TelemetryService { get; }
+	private IMoveService MoveService { get; }
+	private IEventService EventService { get; }
+	private IBooleanExpressionParser BooleanExpressionParser { get; }
+	private ITextFileService TextFileService { get; }
+	private ILogger<Functions> Logger { get; }
+	private IMessageBus MessageBus { get; }
 
 	private readonly FunctionLibraryService _functionLibrary = [];
 
 	public LibraryService<string, FunctionDefinition> Get() => _functionLibrary;
+
+	public IReadOnlyDictionary<string, FunctionDefinition> Builtins { get; }
 
 	public Functions(
 		ILogger<Functions> logger,
@@ -95,7 +97,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		BooleanExpressionParser = booleanExpressionParser;
 		TextFileService = textFileService;
 
-		foreach (var command in Generated.FunctionLibrary.Functions)
+		Builtins = Generated.FunctionLibrary.Create(this);
+		foreach (var command in Builtins)
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
 

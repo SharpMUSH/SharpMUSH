@@ -64,11 +64,12 @@ public partial class ArangoDatabase : IRoleRegistryService
 		return result.Count == 0 ? new NotFound() : Map(result[0]);
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync()
+	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<RoleDbDoc>(handle,
 			"FOR d IN @@c SORT d.Priority DESC, d.Slug RETURN d",
-			bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Roles } });
+			bindVars: new Dictionary<string, object> { { "@c", DatabaseConstants.Roles } },
+			cancellationToken: cancellationToken);
 
 		return result.Select(Map).ToList();
 	}
@@ -113,7 +114,7 @@ public partial class ArangoDatabase : IRoleRegistryService
 			});
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId)
+	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default)
 	{
 		var result = await arangoDb.Query.ExecuteAsync<RoleDbDoc>(handle,
 			"FOR e IN @@edge FILTER e._from == @from FOR r IN @@roles FILTER r._id == e._to RETURN r",
@@ -122,7 +123,8 @@ public partial class ArangoDatabase : IRoleRegistryService
 				{ "@edge", DatabaseConstants.AccountHasRole },
 				{ "@roles", DatabaseConstants.Roles },
 				{ "from", accountId }
-			});
+			},
+			cancellationToken: cancellationToken);
 
 		return result.Select(Map).OrderByDescending(r => r.Priority).ThenBy(r => r.Slug).ToList();
 	}

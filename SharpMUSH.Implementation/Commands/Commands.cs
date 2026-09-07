@@ -15,65 +15,68 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands : ILibraryProvider<CommandDefinition>
 {
-	private static IMediator? Mediator { get; set; }
-	private static ISharpDatabase? Database { get; set; }
-	private static ILocateService? LocateService { get; set; }
-	private static IAttributeService? AttributeService { get; set; }
-	private static INotifyService? NotifyService { get; set; }
-	private static IPermissionService? PermissionService { get; set; }
-	private static ICommandDiscoveryService? CommandDiscoveryService { get; set; }
-	private static IOptionsWrapper<SharpMUSHOptions>? Configuration { get; set; }
-	private static IPasswordService? PasswordService { get; set; }
-	private static IConnectionService? ConnectionService { get; set; }
-	private static IOttStore? OttStore { get; set; }
-	private static IAccountService? AccountService { get; set; }
-	private static IAccountSessionStore? AccountSessionStore { get; set; }
-	private static IExpandedObjectDataService? ObjectDataService { get; set; }
-	private static IManipulateSharpObjectService? ManipulateSharpObjectService { get; set; }
-	private static IHttpClientFactory? HttpClientFactory { get; set; }
+	private IMediator Mediator { get; }
+	private ISharpDatabase Database { get; }
+	private ILocateService LocateService { get; }
+	private IAttributeService AttributeService { get; }
+	private INotifyService NotifyService { get; }
+	private IPermissionService PermissionService { get; }
+	private ICommandDiscoveryService CommandDiscoveryService { get; }
+	private IOptionsWrapper<SharpMUSHOptions> Configuration { get; }
+	private IPasswordService PasswordService { get; }
+	private IConnectionService ConnectionService { get; }
+	private IOttStore OttStore { get; }
+	private IAccountService AccountService { get; }
+	private IAccountSessionStore AccountSessionStore { get; }
+	private IExpandedObjectDataService ObjectDataService { get; }
+	private IManipulateSharpObjectService ManipulateSharpObjectService { get; }
+	private IHttpClientFactory HttpClientFactory { get; }
 
-	private static ICommunicationService? CommunicationService { get; set; }
+	private ICommunicationService CommunicationService { get; }
 
-	private static IValidateService? ValidateService { get; set; }
+	private IValidateService ValidateService { get; }
 
-	private static ISqlService? SqlService { get; set; }
+	private ISqlService SqlService { get; }
 
-	private static ILockService? LockService { get; set; }
+	private ILockService LockService { get; }
 
-	private static IMoveService? MoveService { get; set; }
+	private IMoveService MoveService { get; }
 
-	private static IObjectDestructionService? ObjectDestructionService { get; set; }
+	private IObjectDestructionService ObjectDestructionService { get; }
 
-	private static ILogger<Commands>? Logger { get; set; }
+	private ILogger<Commands> Logger { get; }
 
-	private static IHookService? HookService { get; set; }
+	private IHookService HookService { get; }
 
-	private static IEventService? EventService { get; set; }
+	private IEventService EventService { get; }
 
-	private static ITelemetryService? TelemetryService { get; set; }
+	private ITelemetryService TelemetryService { get; }
 
-	private static IWarningService? WarningService { get; set; }
+	private IWarningService WarningService { get; }
 
-	private static ITextFileService? TextFileService { get; set; }
+	private ITextFileService TextFileService { get; }
 
-	private static IHelpTopicResolver? HelpTopicResolver { get; set; }
+	private IHelpTopicResolver HelpTopicResolver { get; }
 
-	private static IMessageBus? MessageBus { get; set; }
+	private IMessageBus MessageBus { get; }
 
-	private static IGameBroadcastService? GameBroadcastService { get; set; }
+	private IGameBroadcastService GameBroadcastService { get; }
 
-	private static ILocalizationService? LocalizationService { get; set; }
+	private ILocalizationService LocalizationService { get; }
 
-	private static ConfigurationReloadService? ConfigReloadService { get; set; }
+	private ConfigurationReloadService ConfigReloadService { get; }
 
-	private static IBanEnforcer? BanEnforcer { get; set; }
+	private IBanEnforcer BanEnforcer { get; }
 
-	private static LibraryService<string, CommandDefinition>? CommandLibrary { get; set; }
-	private static LibraryService<string, FunctionDefinition>? FunctionLibrary { get; set; }
+	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
+	private ILibraryProvider<FunctionDefinition> Functions { get; }
+	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
 
 	private readonly CommandLibraryService _commandLibrary = [];
 
 	public LibraryService<string, CommandDefinition> Get() => _commandLibrary;
+
+	public IReadOnlyDictionary<string, CommandDefinition> Builtins { get; }
 
 	public Commands(IMediator mediator,
 		ISharpDatabase database,
@@ -109,7 +112,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IGameBroadcastService gameBroadcastService,
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
-		LibraryService<string, FunctionDefinition> functionLibrary)
+		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
 		Database = database;
@@ -145,9 +148,11 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		GameBroadcastService = gameBroadcastService;
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
-		FunctionLibrary = functionLibrary;
+		Functions = functions;
+		FunctionLibrary = functions.Get();
 
-		foreach (var command in Generated.CommandLibrary.Commands)
+		Builtins = Generated.CommandLibrary.Create(this);
+		foreach (var command in Builtins)
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
 
@@ -173,7 +178,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	/// index an argument they never checked for.</para>
 	/// </summary>
 	/// <returns>The rejection to return, or <c>null</c> when the arity is satisfied.</returns>
-	private static async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser,
+	private async ValueTask<CallState?> RejectIfTooFewArguments(IMUSHCodeParser parser,
 		SharpCommandAttribute attribute)
 	{
 		var count = parser.CurrentState.Arguments.Count;
@@ -184,8 +189,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 		var message = string.Format(ErrorMessages.Returns.TooFewCommandArguments,
 			attribute.Name, attribute.MinArgs, count);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.Notify(executor, message, executor);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.Notify(executor, message, executor);
 		return new CallState(message);
 	}
 }

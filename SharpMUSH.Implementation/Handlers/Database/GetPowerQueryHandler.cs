@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetPowerQueryHandler(ISharpDatabase database) : IQueryHandler<GetPowerQuery, SharpPower?>
+public class GetPowerQueryHandler(IFlagAndPowerStore database) : IQueryHandler<GetPowerQuery, SharpPower?>
 {
 	public async ValueTask<SharpPower?> Handle(GetPowerQuery query, CancellationToken cancellationToken)
 	{

@@ -6,7 +6,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetObjectsByZoneQueryHandler(ISharpDatabase database)
+public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStore objects)
 	: IStreamQueryHandler<GetObjectsByZoneQuery, SharpObject>
 {
 	public async IAsyncEnumerable<SharpObject> Handle(GetObjectsByZoneQuery request, CancellationToken cancellationToken)
@@ -15,7 +15,7 @@ public class GetObjectsByZoneQueryHandler(ISharpDatabase database)
 
 		if (request.Zone.IsT0)
 		{
-			var maybeZone = await database.GetObjectNodeAsync(request.Zone.AsT0, cancellationToken);
+			var maybeZone = await objects.GetObjectNodeAsync(request.Zone.AsT0, cancellationToken);
 			if (maybeZone.IsNone)
 			{
 				yield break;

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using System.Text.RegularExpressions;
-using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
@@ -103,8 +103,8 @@ public static class CommandAttributeScanner
 			try
 			{
 				var regex = isRegex
-					? new Regex(pattern, RegexOptions.Compiled)
-					: new Regex(MushText.Glob.ToRegex(MarkupText.Plain(pattern).ToPlainText()), RegexOptions.Compiled);
+					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
+					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
 
 				commandAttributes.Add(new CommandAttributeCache(
 					attr with { CommandListIndex = commandBodyStart },

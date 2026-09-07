@@ -38,15 +38,15 @@ public partial class Commands
 	/// "the executor's first connection": a player with two clients open must be able to set the
 	/// screen width of the one they are typing into.
 	/// </summary>
-	private static IConnectionService.ConnectionData? CurrentConnection(IMUSHCodeParser parser)
-		=> parser.CurrentState.Handle is { } handle ? ConnectionService!.Get(handle) : null;
+	private IConnectionService.ConnectionData? CurrentConnection(IMUSHCodeParser parser)
+		=> parser.CurrentState.Handle is { } handle ? ConnectionService.Get(handle) : null;
 
 	/// <summary>
 	/// The single unparsed argument of a <c>SOCKET | NoParse</c> command: everything after the
 	/// command word. PennMUSH reads these with <c>strncmp</c> and then takes the remainder verbatim,
 	/// so no evaluation, splitting or trimming happens on the way in.
 	/// </summary>
-	private static string SocketArgument(IMUSHCodeParser parser)
+	private string SocketArgument(IMUSHCodeParser parser)
 		=> parser.CurrentState.Arguments.TryGetValue("0", out var arg)
 			? arg.Message?.ToPlainText() ?? string.Empty
 			: string.Empty;
@@ -55,25 +55,25 @@ public partial class Commands
 	/// PennMUSH <c>show_tm()</c> (src/strutil.c): <c>asctime()</c> without its trailing newline, with
 	/// the day-of-month zero-padded rather than space-padded.
 	/// </summary>
-	private static string ShowTime(DateTimeOffset when)
+	private string ShowTime(DateTimeOffset when)
 		=> when.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 
 	/// <summary>
 	/// PennMUSH <c>count_players()</c> (src/bsd.c): connected descriptors that have a player behind
 	/// them, skipping hidden (DARK) ones unless <c>count_all</c> is set.
 	/// </summary>
-	private static async ValueTask<int> CountPlayers()
+	private async ValueTask<int> CountPlayers()
 	{
-		var countAll = Configuration!.CurrentValue.Cosmetic.CountAll;
+		var countAll = Configuration.CurrentValue.Cosmetic.CountAll;
 		var count = 0;
 
-		await foreach (var connection in ConnectionService!.GetAll())
+		await foreach (var connection in ConnectionService.GetAll())
 		{
 			if (connection.Ref is not { } reference) continue;
 
 			// GoodObject first, and unconditionally: a handle can outlive the object it is bound to, and
 			// such a descriptor is not a connected player under any counting rule.
-			var found = await Mediator!.Send(new GetObjectNodeQuery(reference));
+			var found = await Mediator.Send(new GetObjectNodeQuery(reference));
 			if (found.IsNone) continue;
 
 			if (!countAll && await found.Known.IsDark()) continue;
@@ -91,11 +91,11 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "INFO", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Info(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Info(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var net = Configuration!.CurrentValue.Net;
-		var uptime = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
-		var size = await Mediator!.Send(new GetObjectCountQuery());
+		var net = Configuration.CurrentValue.Net;
+		var uptime = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
+		var size = await Mediator.Send(new GetObjectCountQuery());
 
 		// PennMUSH prints "Address:" unconditionally, even when mud_url is unset — unlike @version,
 		// which omits the line. The block is a fixed-shape record for bots, so a field never vanishes.
@@ -111,7 +111,7 @@ public partial class Commands
 			"### End INFO"
 		};
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
+		await NotifyService.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
 
 		return new None();
 	}
@@ -123,10 +123,10 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "MSSP-REQUEST", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> MsspRequest(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> MsspRequest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var net = Configuration!.CurrentValue.Net;
-		var uptime = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		var net = Configuration.CurrentValue.Net;
+		var uptime = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
 
 		// Leading blank line and tab separators are PennMUSH's, and the MSSP spec's.
 		var lines = new List<string> { string.Empty, "MSSP-REPLY-START" };
@@ -154,7 +154,7 @@ public partial class Commands
 		// is unconditional here; the spec requires it.
 		lines.Add("MSSP-REPLY-END");
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
+		await NotifyService.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
 
 		return new None();
 	}
@@ -167,10 +167,10 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "VERSION", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> SocketVersion(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SocketVersion(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var net = Configuration!.CurrentValue.Net;
-		var uptime = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
+		var net = Configuration.CurrentValue.Net;
+		var uptime = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
 
 		var lines = new List<string> { $"You are connected to {net.MudName}" };
 
@@ -188,7 +188,7 @@ public partial class Commands
 
 		lines.Add(Implementation.Generated.VersionInfo.Version);
 
-		await NotifyService!.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
+		await NotifyService.Notify(parser.CurrentState.Handle!.Value, string.Join("\n", lines));
 
 		return new None();
 	}
@@ -202,13 +202,13 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "IDLE", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["echo"])]
-	public static async ValueTask<Option<CallState>> Idle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Idle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var echo = SocketArgument(parser);
 
 		if (!string.IsNullOrEmpty(echo))
 		{
-			await NotifyService!.Notify(parser.CurrentState.Handle!.Value, echo);
+			await NotifyService.Notify(parser.CurrentState.Handle!.Value, echo);
 		}
 
 		return new None();
@@ -221,7 +221,7 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "SCREENWIDTH", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["columns"])]
-	public static ValueTask<Option<CallState>> ScreenWidth(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> ScreenWidth(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> SetScreenDimension(parser, "WIDTH");
 
 	/// <summary>
@@ -229,10 +229,10 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "SCREENHEIGHT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["rows"])]
-	public static ValueTask<Option<CallState>> ScreenHeight(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> ScreenHeight(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> SetScreenDimension(parser, "HEIGHT");
 
-	private static ValueTask<Option<CallState>> SetScreenDimension(IMUSHCodeParser parser, string key)
+	private ValueTask<Option<CallState>> SetScreenDimension(IMUSHCodeParser parser, string key)
 	{
 		// PennMUSH parse_integer() on a non-numeric argument yields 0, and the descriptor is set to it
 		// silently. Storing the parsed value rather than the raw text keeps the metadata key in the
@@ -242,7 +242,7 @@ public partial class Commands
 			? parsed
 			: 0;
 
-		ConnectionService!.Update(parser.CurrentState.Handle!.Value, key, value.ToString(CultureInfo.InvariantCulture));
+		ConnectionService.Update(parser.CurrentState.Handle!.Value, key, value.ToString(CultureInfo.InvariantCulture));
 
 		return ValueTask.FromResult<Option<CallState>>(new None());
 	}
@@ -253,12 +253,12 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "PROMPT_NEWLINES", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["enabled"])]
-	public static ValueTask<Option<CallState>> PromptNewlines(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> PromptNewlines(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enabled = int.TryParse(SocketArgument(parser).Trim(), NumberStyles.Integer,
 			CultureInfo.InvariantCulture, out var parsed) && parsed != 0;
 
-		ConnectionService!.Update(parser.CurrentState.Handle!.Value,
+		ConnectionService.Update(parser.CurrentState.Handle!.Value,
 			SocketOptions.PromptNewlinesKey, enabled ? "1" : "0");
 
 		return ValueTask.FromResult<Option<CallState>>(new None());
@@ -278,7 +278,7 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "LOGOUT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Logout(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Logout(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var connection = CurrentConnection(parser);
@@ -297,10 +297,10 @@ public partial class Commands
 		}
 
 		// disconnect_player dumps the quit file for a logout exactly as it does for a quit.
-		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
+		var quitText = await ReadMessageFileAsync(Configuration.CurrentValue.Message.QuitFile);
 		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyService!.Notify(handle, quitText);
+			await NotifyService.Notify(handle, quitText);
 		}
 
 		// Cleared before the unbind so the connect screen, which the state change sends, is not itself
@@ -309,7 +309,7 @@ public partial class Commands
 		connection.Metadata.TryRemove("OutputSuffix", out _);
 		connection.Metadata["CommandCount"] = "0";
 
-		await ConnectionService!.Unbind(handle);
+		await ConnectionService.Unbind(handle);
 
 		Logger?.LogInformation("Logout by {Player} on handle {Handle} <Connection not dropped>",
 			connection.Ref, handle);
@@ -325,14 +325,14 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "SOCKSET", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["option"])]
-	public static async ValueTask<Option<CallState>> Sockset(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Sockset(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var connection = CurrentConnection(parser);
 
 		if (connection is null)
 		{
-			await NotifyService!.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.SocksetNotConnected));
+			await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.SocksetNotConnected));
 			return new None();
 		}
 
@@ -340,19 +340,19 @@ public partial class Commands
 
 		if (argument.Length == 0)
 		{
-			await NotifyService!.Notify(handle, SocketOptions.Show(connection, "\n"));
+			await NotifyService.Notify(handle, SocketOptions.Show(connection, "\n"));
 			return new None();
 		}
 
 		var separator = argument.IndexOf('=');
 		if (separator < 0)
 		{
-			await NotifyService!.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.SocksetNeedsOptionAndValue));
+			await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.SocksetNeedsOptionAndValue));
 			return new None();
 		}
 
 		var result = SocketOptions.Set(connection, argument[..separator], argument[(separator + 1)..]);
-		await NotifyService!.NotifyLocalized(handle, result.Key, result.Arguments);
+		await NotifyService.NotifyLocalized(handle, result.Key, result.Arguments);
 
 		return new None();
 	}

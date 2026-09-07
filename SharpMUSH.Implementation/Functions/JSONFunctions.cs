@@ -34,7 +34,7 @@ public partial class Functions
 	};
 
 	[SharpFunction(Name = "json", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
-	public static async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> JSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> JsonFunctions.TryGetValue(parser.CurrentState.Arguments["0"].Message!.ToPlainText().ToLower(), out var jsonFunction)
 			? await jsonFunction(parser.CurrentState.ArgumentsOrdered)
 			: new CallState(MarkupText.Plain(ErrorMessages.Returns.InvalidType));
@@ -51,7 +51,7 @@ public partial class Functions
 	/// ARGUMENT error if any element is not valid JSON.
 	/// </summary>
 	[SharpFunction(Name = "json_array", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
-	public static async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> json_array(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// No list argument at all → an empty array (the explicit argumentless form).
 		if (!parser.CurrentState.Arguments.TryGetValue("0", out var listArg))
@@ -83,7 +83,7 @@ public partial class Functions
 
 
 	[SharpFunction(Name = "isjson", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
-	public static ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> IsJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		try
 		{
@@ -97,9 +97,9 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "json_map", MinArgs = 2, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["attribute", "json", "path"])]
-	public static async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> json_map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
@@ -122,7 +122,7 @@ public partial class Functions
 		{
 			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 			{
-				return await AttributeService!.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, callArgs);
+				return await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, callArgs);
 			}
 
 			var callParser = parser.Push(parser.CurrentState with
@@ -135,7 +135,7 @@ public partial class Functions
 
 		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
@@ -145,14 +145,14 @@ public partial class Functions
 			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.Object().DBRef.ToString();
 
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
+			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
 				return CallState.Empty;
 			}
 
 			var located = locate.WithoutError().WithoutNone();
-			var maybeAttr = await AttributeService!.GetAttributeAsync(executor, located, attrName,
+			var maybeAttr = await AttributeService.GetAttributeAsync(executor, located, attrName,
 				mode: IAttributeService.AttributeMode.Execute, parent: true);
 
 			if (maybeAttr.IsNone)
@@ -234,7 +234,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "json_mod", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path", "value"])]
-	public static async ValueTask<CallState> json_mod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> json_mod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 
@@ -380,7 +380,7 @@ public partial class Functions
 		}
 	}
 
-	private static JsonNode? ApplyMergePatch(JsonNode? target, JsonNode patch)
+	private JsonNode? ApplyMergePatch(JsonNode? target, JsonNode patch)
 	{
 		if (patch is not JsonObject patchObj)
 		{
@@ -422,7 +422,7 @@ public partial class Functions
 	/// Converts a simple JSONPath like $.key, $.key.subkey, $.key[0] to a JSON Pointer like /key, /key/subkey, /key/0.
 	/// Returns null if the path is too complex to convert directly.
 	/// </summary>
-	private static JsonPointer? JsonPathToPointer(string jsonPath)
+	private JsonPointer? JsonPathToPointer(string jsonPath)
 	{
 		if (string.IsNullOrEmpty(jsonPath) || jsonPath == "$")
 			return JsonPointer.Parse("/");
@@ -470,7 +470,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "json_query", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["json", "path"])]
-	public static async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> json_query(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -539,10 +539,10 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "oob", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["command", "arguments..."])]
-	public static async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).Known;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playersArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var package = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -571,7 +571,7 @@ public partial class Functions
 
 		foreach (var playerStr in players)
 		{
-			var locate = await LocateService!.LocateAndNotifyIfInvalid(
+			var locate = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,
@@ -597,21 +597,21 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			await foreach (var connection in ConnectionService!.Get(located.Object().DBRef))
+			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
 			{
 				// WebSocket (portal) connections receive a structured OOB envelope the browser
 				// routes by package; GMCP-negotiated telnet connections receive a GMCP package.
 				// Any other connection (plain telnet without GMCP) is skipped.
 				if (connection.ConnectionType == "websocket")
 				{
-					await MessageBus!.Publish(new WebSocketOutputMessage(
+					await MessageBus.Publish(new WebSocketOutputMessage(
 						connection.Handle,
 						WebSocketOobEnvelope.Build(package, message)));
 					sentCount++;
 				}
 				else if (connection.Metadata.GetValueOrDefault("GMCP", "0") == "1")
 				{
-					await MessageBus!.Publish(new GMCPOutputMessage(
+					await MessageBus.Publish(new GMCPOutputMessage(
 						connection.Handle,
 						package,
 						message));
@@ -625,16 +625,16 @@ public partial class Functions
 
 	[SharpFunction(Name = "WEBSOCKET_JSON", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["json", "player"])]
-	public static async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> WebSocketJSON(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		AnySharpObject target;
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
 		{
 			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await LocateService!.LocateAndNotifyIfInvalid(
+			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser,
 				executor,
 				executor,

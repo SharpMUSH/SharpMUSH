@@ -16,24 +16,24 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
-	public static ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc + sub);
 
 	[SharpFunction(Name = "sub", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
-	public static ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc - sub);
 
 	[SharpFunction(Name = "mul", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
-	public static ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc * sub);
 
 	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
-	public static ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult(AggregateIntegerDivision(
 			Operands(parser.CurrentState.ArgumentsOrdered), (acc, sub) => acc / sub, DivisionOverflows));
 
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
-	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.ArgumentsOrdered.Skip(1).Any(x
 				=> decimal.TryParse(ArgHelpers.EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText()), out var num) && num == 0)
 			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero))
@@ -41,7 +41,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "floordiv", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
-	public static ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult(AggregateIntegerDivision(
 			Operands(parser.CurrentState.ArgumentsOrdered), FloorDivide, DivisionOverflows));
 
@@ -50,14 +50,14 @@ public partial class Functions
 	/// error; its floordiv() tests against INT_MIN rather than INT64_MIN and dies on SIGFPE instead,
 	/// so both report the domain error here.
 	/// </summary>
-	private static bool DivisionOverflows(long dividend, long divisor)
+	private bool DivisionOverflows(long dividend, long divisor)
 		=> dividend == long.MinValue && divisor == -1;
 
 	/// <summary>
 	/// Division rounded towards negative infinity, which is what floordiv() means and what pairs
 	/// with modulo(). C# rounds towards zero, so a negative quotient with a remainder loses one.
 	/// </summary>
-	private static long FloorDivide(long dividend, long divisor)
+	private long FloorDivide(long dividend, long divisor)
 	{
 		var quotient = dividend / divisor;
 		return dividend % divisor != 0 && (dividend < 0) != (divisor < 0)
@@ -68,7 +68,7 @@ public partial class Functions
 	/// <summary>
 	/// The argument values as plain text, in argument order, ready for one of the integer folds.
 	/// </summary>
-	private static IEnumerable<string> Operands(ImmutableSortedDictionary<string, CallState> args)
+	private IEnumerable<string> Operands(ImmutableSortedDictionary<string, CallState> args)
 		=> args.Select(arg => (arg.Value.Message ?? MarkupText.Empty).ToPlainText());
 
 	/// <summary>
@@ -77,7 +77,7 @@ public partial class Functions
 	/// #-1 DOMAIN ERROR. The checks are pairwise, so an intermediate result that is representable
 	/// keeps folding even when the first operand alone would overflow the final divisor.
 	/// </summary>
-	private static CallState AggregateIntegerDivision(
+	private CallState AggregateIntegerDivision(
 		IEnumerable<string> operands,
 		Func<long, long, long> operation,
 		Func<long, long, bool>? overflows = null)
@@ -125,7 +125,7 @@ public partial class Functions
 	/// PennMUSH negates the dividend instead, which overflows at long.MinValue: it answers 2 for
 	/// modulo(-9223372036854775808,3) where the floor-mod is 1.
 	/// </summary>
-	private static long FloorMod(long dividend, long divisor)
+	private long FloorMod(long dividend, long divisor)
 	{
 		// long.MinValue % -1 traps, and every dividend leaves 0 under a divisor of -1.
 		if (divisor == -1)
@@ -140,7 +140,7 @@ public partial class Functions
 	}
 
 	/// <inheritdoc cref="FloorMod"/>
-	private static long TruncatedRemainder(long dividend, long divisor)
+	private long TruncatedRemainder(long dividend, long divisor)
 		=> divisor == -1 ? 0 : dividend % divisor;
 
 	/// <summary>
@@ -148,7 +148,7 @@ public partial class Functions
 	/// for anything outside the long range. PennMUSH saturates instead -- its 32-bit trunc() answers
 	/// 2147483647 for trunc(100000000000000000000) -- so this saturates at the 64-bit bounds.
 	/// </summary>
-	private static long TruncateToInt64(decimal value)
+	private long TruncateToInt64(decimal value)
 		=> value >= long.MaxValue
 			? long.MaxValue
 			: value <= long.MinValue
@@ -156,20 +156,20 @@ public partial class Functions
 				: (long)Math.Truncate(value);
 
 	[SharpFunction(Name = "max", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
-	public static ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, Math.Max);
 
 	[SharpFunction(Name = "min", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
-	public static ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, Math.Min);
 
 	[SharpFunction(Name = "abs", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Abs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Abs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDecimal(parser.CurrentState.ArgumentsOrdered, Math.Abs);
 
 	[SharpFunction(Name = "bound", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["value", "min", "max"])]
-	public static ValueTask<CallState> Bound(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Bound(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -193,7 +193,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "dec", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Dec(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Dec(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
 
@@ -236,7 +236,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "decode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["encoded-string"])]
-	public static ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var input = parser.CurrentState.Arguments["0"].Message;
 		var inputText = (input ?? MarkupText.Empty).ToPlainText();
@@ -254,7 +254,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "decrypt", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "password", "encoded"])]
-	public static ValueTask<CallState> Decrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Decrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var encrypted = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
@@ -289,7 +289,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "dist2d", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["x1", "y1", "x2", "y2"])]
-	public static ValueTask<CallState> Distance2d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Distance2d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -306,7 +306,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "dist3d", MinArgs = 6, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["x1", "y1", "z1", "x2", "y2", "z2"])]
-	public static ValueTask<CallState> Distance3d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Distance3d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -325,7 +325,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "encode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
-	public static ValueTask<CallState> Encode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Encode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var input = parser.CurrentState.Arguments["0"].Message;
 		var inputText = (input ?? MarkupText.Empty).ToPlainText();
@@ -335,7 +335,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "encrypt", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "password", "encode"])]
-	public static ValueTask<CallState> Encrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Encrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var plaintext = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
@@ -364,7 +364,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "fraction", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "whole"])]
-	public static ValueTask<CallState> Fraction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Fraction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -421,7 +421,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["integer"])]
-	public static ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
 
@@ -464,7 +464,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "lmath", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["op", "list", "delim"])]
-	public static async ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -575,7 +575,7 @@ public partial class Functions
 		return new CallState(result);
 	}
 
-	private static decimal CalculateMedian(List<decimal> values)
+	private decimal CalculateMedian(List<decimal> values)
 	{
 		var sorted = values.OrderBy(x => x).ToList();
 		int count = sorted.Count;
@@ -589,7 +589,7 @@ public partial class Functions
 		}
 	}
 
-	private static decimal CalculateStdDev(List<decimal> values)
+	private decimal CalculateStdDev(List<decimal> values)
 	{
 		if (values.Count <= 1)
 		{
@@ -603,7 +603,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
-	public static async ValueTask<CallState> LNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> LNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -667,7 +667,7 @@ public partial class Functions
 		return new CallState(string.Join(delim, results));
 	}
 
-	private static string FormatDouble(double value)
+	private string FormatDouble(double value)
 	{
 		if (Math.Abs(value - Math.Floor(value)) < 1e-10)
 			return ((long)value).ToString();
@@ -676,7 +676,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
-	public static ValueTask<CallState> Mean(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Mean(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
@@ -696,7 +696,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "median", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
-	public static ValueTask<CallState> Median(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Median(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
@@ -731,18 +731,18 @@ public partial class Functions
 
 	[SharpFunction(Name = "modulo", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
-	public static ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(AggregateIntegerDivision(
 			Operands(parser.CurrentState.ArgumentsOrdered), FloorMod));
 
 	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
-	public static ValueTask<CallState> Remainder(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Remainder(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(AggregateIntegerDivision(
 			Operands(parser.CurrentState.ArgumentsOrdered), TruncatedRemainder));
 
 	[SharpFunction(Name = "root", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "n"])]
-	public static ValueTask<CallState> Root(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Root(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -774,15 +774,15 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sign", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => Math.Sign(x));
 
 	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, TruncateToInt64);
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["cosine", "angle-type"])]
-	public static async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -799,7 +799,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "asin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["sine", "angle-type"])]
-	public static async ValueTask<CallState> ASin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ASin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -816,7 +816,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "atan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["tangent", "angle-type"])]
-	public static async ValueTask<CallState> ATan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ATan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -833,7 +833,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "atan2", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number1", "number2", "angle-type"])]
-	public static async ValueTask<CallState> ATan2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ATan2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -850,11 +850,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ceil", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Ceil(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Ceil(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Ceiling);
 
 	[SharpFunction(Name = "cos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
-	public static async ValueTask<CallState> Cos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Cos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -871,7 +871,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ctu", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "from", "to"])]
-	public static ValueTask<CallState> CTU(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> CTU(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -903,7 +903,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
 		var arg1 = arguments["1"]?.Message?.ToPlainText();
@@ -914,7 +914,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "fmod", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "divisor"])]
-	public static ValueTask<CallState> FMod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> FMod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -933,11 +933,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Floor(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> Floor(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Floor);
 
 	[SharpFunction(Name = "log", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "base"])]
-	public static ValueTask<CallState> Log(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Log(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -978,7 +978,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "ln", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var text = ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
@@ -997,11 +997,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "pi", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
-	public static ValueTask<CallState> PI(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+	public ValueTask<CallState> PI(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(Math.PI);
 
 	[SharpFunction(Name = "power", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "exponent"])]
-	public static ValueTask<CallState> Power(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Power(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -1015,7 +1015,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "round", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "places", "pad"])]
-	public static ValueTask<CallState> Round(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Round(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -1044,7 +1044,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
-	public static async ValueTask<CallState> Sin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Sin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1061,7 +1061,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
-	public static ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var text = ArgHelpers.EmptyStringToZero((parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!double.TryParse(text, out var value))
@@ -1079,7 +1079,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "stddev", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
-	public static ValueTask<CallState> StdDev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> StdDev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
@@ -1108,7 +1108,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "tan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
-	public static async ValueTask<CallState> Tan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> Tan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -1124,7 +1124,7 @@ public partial class Functions
 		return AngleTypeMath(angleType, angle, Math.Tan);
 	}
 
-	private static ValueTask<CallState> VectorOperation(IMUSHCodeParser parser,
+	private ValueTask<CallState> VectorOperation(IMUSHCodeParser parser,
 		Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
 	{
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
@@ -1152,7 +1152,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
 	}
 
-	private static ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
+	private ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
 		Func<Vector<decimal>, Vector<decimal>, decimal> func)
 	{
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
@@ -1178,11 +1178,11 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Add);
 
 	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("2", out var tmpDelimiter)
@@ -1214,27 +1214,27 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vsub(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vsub(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Subtract);
 
 	[SharpFunction(Name = "vmax", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vmax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vmax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Max);
 
 	[SharpFunction(Name = "vmin", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vmin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vmin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Min);
 
 	[SharpFunction(Name = "vmul", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vmul(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vmul(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperation(parser, Vector.Multiply);
 
 	[SharpFunction(Name = "vdot", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
-	public static ValueTask<CallState> vdot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vdot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> VectorOperationToScalar(parser, Vector.Dot);
 
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
-	public static ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
@@ -1256,7 +1256,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
-	public static ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
@@ -1284,12 +1284,12 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
-	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
 			MushText.SplitList(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space), (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty)).Length.ToString()
 			));
 
-	private static CallState AngleTypeMath(string? angleType, double angle, Func<double, double> func)
+	private CallState AngleTypeMath(string? angleType, double angle, Func<double, double> func)
 	{
 		var radianAngle = angleType switch
 		{
@@ -1332,7 +1332,7 @@ public partial class Functions
 	/// For inverse trig functions (acos, asin, atan), the input is a ratio (not an angle),
 	/// and the output is an angle in radians that should be converted to the requested angle type.
 	/// </summary>
-	private static CallState InverseAngleTypeMath(string? angleType, double ratio, Func<double, double> func)
+	private CallState InverseAngleTypeMath(string? angleType, double ratio, Func<double, double> func)
 	{
 		// Apply the inverse trig function (always operates on the ratio directly)
 		var resultRadians = func(ratio);
@@ -1371,19 +1371,19 @@ public partial class Functions
 
 	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["container", "object"])]
-	public static async ValueTask<CallState> RNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> RNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// RNUM is deprecated - use locate() instead
 		// This implements basic functionality for backwards compatibility
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var containerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var objectArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, containerArg, All,
 			async container =>
 			{
-				if (!await PermissionService!.CanExamine(executor, container))
+				if (!await PermissionService.CanExamine(executor, container))
 				{
 					return new CallState("#-1");
 				}
@@ -1394,7 +1394,7 @@ public partial class Functions
 				}
 
 				var matches = new List<AnySharpContent>();
-				await foreach (var item in container.AsContainer.Content(Mediator!))
+				await foreach (var item in container.AsContainer.Content(Mediator))
 				{
 					var name = item.Object().Name;
 					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
@@ -1423,7 +1423,7 @@ public partial class Functions
 	/// Continued fraction approximation — finds the best rational approximation
 	/// with denominator not exceeding maxDenom. Matches PennMUSH's algorithm.
 	/// </summary>
-	private static (long Numerator, long Denominator) ContinuedFractionApprox(double value, long maxDenom)
+	private (long Numerator, long Denominator) ContinuedFractionApprox(double value, long maxDenom)
 	{
 		long p0 = 0, q0 = 1, p1 = 1, q1 = 0;
 		var x = value;

@@ -1,5 +1,4 @@
 using Core.Arango;
-using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services.Interfaces;
@@ -26,12 +25,12 @@ public sealed class ArangoStagingDatabase : ArangoDatabase, IStagingDatabase
 		ILogger<ArangoDatabase> logger,
 		IArangoContext arangoDb,
 		ArangoHandle stagingHandle,
-		IMediator mediator,
+		IObjectRelationLoader relations,
 		IPasswordService passwordService,
 		ArangoDatabase liveDatabase,
 		ArangoHandle originalHandle,
 		string stagingId)
-		: base(logger, arangoDb, stagingHandle, mediator, passwordService)
+		: base(logger, arangoDb, stagingHandle, relations, passwordService)
 	{
 		_liveDatabase = liveDatabase;
 		_arangoContext = arangoDb;

@@ -21,7 +21,7 @@ public partial class Functions
 	[SharpFunction(Name = "wiki", MinArgs = 1, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["page", "field", "locale"])]
-	public static async ValueTask<CallState> wiki(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> wiki(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var target = args["0"].Message!.ToPlainText();
@@ -48,7 +48,7 @@ public partial class Functions
 		}
 
 		var localization = parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Third argument wins; otherwise the executor's LOCALE, exactly as @wiki does. An unparseable tag is
 		// treated as absent by the localization service — a bad locale must not turn a read into #-1.
@@ -87,7 +87,7 @@ public partial class Functions
 	[SharpFunction(Name = "wikilist", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["namespace"])]
-	public static async ValueTask<CallState> wikilist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> wikilist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		WikiNamespace? ns = null;
@@ -122,7 +122,7 @@ public partial class Functions
 	[SharpFunction(Name = "wikisearch", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["text"])]
-	public static async ValueTask<CallState> wikisearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> wikisearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var needle = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		if (needle.Length == 0)
@@ -152,7 +152,7 @@ public partial class Functions
 	[SharpFunction(Name = "wikirecent", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["count"])]
-	public static async ValueTask<CallState> wikirecent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> wikirecent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var count = 10;
 		if (parser.CurrentState.Arguments.TryGetValue("0", out var countArg))

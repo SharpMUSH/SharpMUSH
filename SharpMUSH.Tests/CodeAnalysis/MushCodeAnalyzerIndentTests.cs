@@ -71,8 +71,8 @@ public class MushCodeAnalyzerIndentTests
 			}
 		};
 
-		// MUSHCodeParser's constructor eagerly resolves seven collaborator services from the
-		// provider (MUSHCodeParser.cs:46-52), none of which Tokenize (the only method
+		// MUSHCodeParser's constructor eagerly resolves eight collaborator services from the
+		// provider, none of which Tokenize (the only method
 		// FormatIndented drives) ever calls — Tokenize only builds an ANTLR lexer over the input
 		// text. Registered here purely to satisfy construction.
 		var serviceProvider = Substitute.For<IServiceProvider>();
@@ -83,6 +83,7 @@ public class MushCodeAnalyzerIndentTests
 		serviceProvider.GetService(typeof(ICommandDiscoveryService)).Returns(Substitute.For<ICommandDiscoveryService>());
 		serviceProvider.GetService(typeof(IAttributeService)).Returns(Substitute.For<IAttributeService>());
 		serviceProvider.GetService(typeof(IHookService)).Returns(Substitute.For<IHookService>());
+		serviceProvider.GetService(typeof(ILockService)).Returns(Substitute.For<ILockService>());
 
 		var parser = new MUSHCodeParser(
 			Substitute.For<ILogger<MUSHCodeParser>>(),

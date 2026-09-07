@@ -30,14 +30,14 @@ public class GetObjectNodeQueryHandler(IMediator mediator)
 	}
 }
 
-public class GetObjectNodeByNumberQueryHandler(ISharpDatabase database)
+public class GetObjectNodeByNumberQueryHandler(IObjectStore database)
 	: IQueryHandler<GetObjectNodeByNumberQuery, AnyOptionalSharpObject>
 {
 	public async ValueTask<AnyOptionalSharpObject> Handle(GetObjectNodeByNumberQuery request, CancellationToken cancellationToken)
 		=> await database.GetObjectNodeAsync(new DBRef(request.Number), cancellationToken);
 }
 
-public class GetBaseObjectNodeQueryHandler(ISharpDatabase database)
+public class GetBaseObjectNodeQueryHandler(IObjectStore database)
 	: IQueryHandler<GetBaseObjectNodeQuery, SharpObject?>
 {
 	public async ValueTask<SharpObject?> Handle(GetBaseObjectNodeQuery request, CancellationToken cancellationToken)

@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetServerSetupCompletedCommandHandler(ISharpDatabase database) : ICommandHandler<SetServerSetupCompletedCommand, Unit>
+public class SetServerSetupCompletedCommandHandler(IServerStateStore database) : ICommandHandler<SetServerSetupCompletedCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetServerSetupCompletedCommand command, CancellationToken cancellationToken)
 	{

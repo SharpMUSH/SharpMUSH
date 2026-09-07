@@ -22,10 +22,25 @@ public partial class MemgraphDatabase(
 ILogger<MemgraphDatabase> logger,
 IDriver driver,
 IPasswordService passwordService,
+IObjectRelationLoader relations,
 IReadOnlyList<IMigrationSource>? migrationSources = null,
 IReadOnlyList<PluginFlag>? pluginFlags = null
 ) : ISharpDatabase
 {
+	/// <summary>
+	/// Cypher: the columns that carry an object's flag and power nodes alongside the object node
+	/// <paramref name="variable"/>, so an object arrives with its relations in the round trip that
+	/// loads it and no <c>HasFlag</c> / <c>HasPower</c> re-reads storage through a loaded instance.
+	/// Append to a RETURN clause; read back with <see cref="RelationsOf"/>.
+	/// </summary>
+	private static string RelationColumns(string variable)
+		=> $", [({variable})-[:HAS_FLAG]->(relFlag:ObjectFlag) | relFlag] AS flags, [({variable})-[:HAS_POWER]->(relPower:Power) | relPower] AS powers";
+
+	private static (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) RelationsOf(IRecord record)
+		=> record.Keys.Contains("flags")
+			? (record["flags"].As<List<INode>>(), record["powers"].As<List<INode>>())
+			: (null, null);
+
 	private static readonly SemaphoreSlim MigrateLock = new(1, 1);
 	private static volatile bool _migrated;
 
@@ -188,10 +203,15 @@ RETURN c.value AS nextKey
 	private SharpObject MapRecordToSharpObject(IRecord record, string prefix = "o")
 	{
 		var node = record[prefix].As<INode>();
-		return MapNodeToSharpObject(node);
+		return MapNodeToSharpObject(node, RelationsOf(record));
 	}
 
-	private SharpObject MapNodeToSharpObject(INode node)
+	/// <summary>
+	/// Maps an object node. <paramref name="preloaded"/> comes from a query that returned
+	/// <see cref="RelationColumns"/>; a query that did not is a bug, and the object throws when
+	/// its flags or powers are first read.
+	/// </summary>
+	private SharpObject MapNodeToSharpObject(INode node, (IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded)
 	{
 		var key = node["key"].As<int>();
 		var name = node["name"].As<string>();
@@ -214,24 +234,48 @@ RETURN c.value AS nextKey
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
 			Locks = DeserializeLocks(locksJson),
-			Flags = new(() => new FreshAsyncEnumerable<SharpObjectFlag>(enumCt => GetObjectFlagsForIdAsync(id, type.ToUpper(), enumCt))),
-			Powers = new(() => new FreshAsyncEnumerable<SharpPower>(enumCt => GetPowersForIdAsync(id, enumCt))),
+			Flags = FlagsOf(id, type, preloaded.Flags),
+			Powers = PowersOf(id, preloaded.Powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetTopLevelLazyAttributesAsync(id, enumCt))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetAllAttributesForIdAsync(id, enumCt))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(enumCt => GetAllLazyAttributesForIdAsync(id, enumCt))),
-			Owner = new(async ct => await GetObjectOwnerAsync(id, ct)),
-			Parent = new(async ct => await GetParentAsync(id, ct)),
-			Zone = new(async ct => await GetZoneAsync(id, ct)),
+			Owner = new(ct => relations.OwnerOf(id, key, ct)),
+			Parent = new(ct => relations.ParentOf(id, key, ct)),
+			Zone = new(ct => relations.ZoneOf(id, key, ct)),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(enumCt => GetChildrenAsync(id, enumCt)!))
 		};
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectNode(INode objNode, CancellationToken ct)
+	private Lazy<IAsyncEnumerable<SharpObjectFlag>> FlagsOf(string id, string type, IReadOnlyList<INode>? flagNodes)
+	{
+		var upperType = type.ToUpper();
+		if (flagNodes is null)
+		{
+			throw new InvalidOperationException("Object loaded without its flags: every query that builds an object must return RelationColumns.");
+		}
+
+		var flags = flagNodes.Select(MapNodeToFlag).Append(ObjectTypeFlag.For(upperType)).ToArray();
+		return new(() => flags.ToAsyncEnumerable());
+	}
+
+	private Lazy<IAsyncEnumerable<SharpPower>> PowersOf(string id, IReadOnlyList<INode>? powerNodes)
+	{
+		if (powerNodes is null)
+		{
+			throw new InvalidOperationException("Object loaded without its powers: every query that builds an object must return RelationColumns.");
+		}
+
+		var powers = powerNodes.Select(MapNodeToPower).ToArray();
+		return new(() => powers.ToAsyncEnumerable());
+	}
+
+	private async ValueTask<AnyOptionalSharpObject> BuildTypedObjectFromObjectNode(INode objNode, CancellationToken ct,
+		(IReadOnlyList<INode>? Flags, IReadOnlyList<INode>? Powers) preloaded = default)
 	{
 		var key = objNode["key"].As<int>();
 		var type = objNode["type"].As<string>();
-		var sharpObj = MapNodeToSharpObject(objNode);
+		var sharpObj = MapNodeToSharpObject(objNode, preloaded);
 
 		var typedResult = await ExecuteWithRetryAsync("MATCH (typed)-[:IS_OBJECT]->(o:Object {key: $key}) RETURN typed, labels(typed) AS lbl", new { key }, ct);
 
@@ -273,8 +317,8 @@ RETURN c.value AS nextKey
 			PasswordHash = typedNode["passwordHash"].As<string>(),
 			PasswordSalt = typedNode.Properties.ContainsKey("passwordSalt") ? typedNode["passwordSalt"].As<string?>() : null,
 			Quota = typedNode["quota"].As<int>(),
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
+			Home = new(ct => relations.HomeOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -284,7 +328,7 @@ RETURN c.value AS nextKey
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetDropToAsync(id, ct))
+			Location = new(ct => relations.DropToOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -294,8 +338,8 @@ RETURN c.value AS nextKey
 		{
 			Id = id,
 			Object = sharpObj,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
-			Home = new(async ct => await GetHomeAsync(id, ct))
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
+			Home = new(ct => relations.HomeOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -309,8 +353,8 @@ RETURN c.value AS nextKey
 			Id = id,
 			Object = sharpObj,
 			Aliases = aliases,
-			Location = new(async ct => await GetLocationForTypedAsync(id, ct)),
-			Home = new(async ct => await GetExitDestinationAsync(id, ct))
+			Location = new(ct => relations.LocationOf(id, sharpObj.Id!, ct)),
+			Home = new(ct => relations.ExitDestinationOf(id, sharpObj.Id!, sharpObj.Key, ct))
 		};
 	}
 
@@ -322,13 +366,13 @@ RETURN c.value AS nextKey
 MATCH (src:%LABEL% {key: $key})-[:AT_LOCATION]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""".Replace("%LABEL%", typedLabel), new { key }, ct);
+""".Replace("%LABEL%", typedLabel) + RelationColumns("destObj"), new { key }, ct);
 
 		if (result.Result.Count == 0)
 			throw new InvalidOperationException($"No location found for {typedId}");
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var located = await BuildTypedObjectFromObjectNode(destObjNode, ct);
+		var located = await BuildTypedObjectFromObjectNode(destObjNode, ct, RelationsOf(result.Result[0]));
 		return located.Match<AnySharpContainer>(
 		player => player,
 		room => room,
@@ -337,7 +381,7 @@ RETURN destObj
 		_ => throw new Exception("No location found"));
 	}
 
-	private async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct)
+	public async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(typedId);
 		var typedLabel = ExtractTypedLabel(typedId);
@@ -345,13 +389,13 @@ RETURN destObj
 MATCH (src:%LABEL% {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""".Replace("%LABEL%", typedLabel), new { key }, ct);
+""".Replace("%LABEL%", typedLabel) + RelationColumns("destObj"), new { key }, ct);
 
 		if (result.Result.Count == 0)
 			throw new InvalidOperationException($"No home found for {typedId}");
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var homeObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
+		var homeObj = await BuildTypedObjectFromObjectNode(destObjNode, ct, RelationsOf(result.Result[0]));
 		return homeObj.Match<AnySharpContainer>(
 		player => player,
 		room => room,
@@ -363,7 +407,7 @@ RETURN destObj
 	/// <summary>
 	/// An exit's destination. Absent on a freshly @open'd or an @unlink'd exit, hence optional.
 	/// </summary>
-	private async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpContainer> GetExitDestinationAsync(string typedId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(typedId);
 		var typedLabel = ExtractTypedLabel(typedId);
@@ -371,7 +415,7 @@ RETURN destObj
 MATCH (src:%LABEL% {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""".Replace("%LABEL%", typedLabel), new { key }, ct);
+""".Replace("%LABEL%", typedLabel) + RelationColumns("destObj"), new { key }, ct);
 
 		if (result.Result.Count == 0)
 		{
@@ -379,7 +423,7 @@ RETURN destObj
 		}
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var destination = await BuildTypedObjectFromObjectNode(destObjNode, ct);
+		var destination = await BuildTypedObjectFromObjectNode(destObjNode, ct, RelationsOf(result.Result[0]));
 		return destination.Match<AnyOptionalSharpContainer>(
 			player => player,
 			room => room,
@@ -388,19 +432,19 @@ RETURN destObj
 			_ => new None());
 	}
 
-	private async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(roomId);
 		var result = await ExecuteWithRetryAsync("""
 MATCH (r:Room {key: $key})-[:HAS_HOME]->(dest)
 MATCH (dest)-[:IS_OBJECT]->(destObj:Object)
 RETURN destObj
-""", new { key }, ct);
+""" + RelationColumns("destObj"), new { key }, ct);
 
 		if (result.Result.Count == 0) return new None();
 
 		var destObjNode = result.Result[0]["destObj"].As<INode>();
-		var dropToObj = await BuildTypedObjectFromObjectNode(destObjNode, ct);
+		var dropToObj = await BuildTypedObjectFromObjectNode(destObjNode, ct, RelationsOf(result.Result[0]));
 		return dropToObj.Match<AnyOptionalSharpContainer>(
 		player => player,
 		room => room,
@@ -409,58 +453,25 @@ RETURN destObj
 		_ => new None());
 	}
 
-	private async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct)
+	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
 		var result = await ExecuteWithRetryAsync("""
 MATCH (o:Object {key: $key})-[:HAS_OWNER]->(ownerTyped:Player)
 MATCH (ownerTyped)-[:IS_OBJECT]->(ownerObj:Object)
 RETURN ownerObj, ownerTyped
-""", new { key }, ct);
+""" + RelationColumns("ownerObj"), new { key }, ct);
 
 		if (result.Result.Count == 0)
 			throw new InvalidOperationException($"No owner found for {objectId}");
 
 		var ownerObjNode = result.Result[0]["ownerObj"].As<INode>();
 		var ownerTypedNode = result.Result[0]["ownerTyped"].As<INode>();
-		var sharpObj = MapNodeToSharpObject(ownerObjNode);
+		var sharpObj = MapNodeToSharpObject(ownerObjNode, RelationsOf(result.Result[0]));
 		var ownerKey = ownerObjNode["key"].As<int>();
 		return BuildPlayer(PlayerId(ownerKey), ownerTypedNode, sharpObj);
 	}
 
-	private async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsForIdAsync(string objectId, string type, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_FLAG]->(f:ObjectFlag) RETURN f", new { key }, ct);
-
-		foreach (var record in result.Result)
-		{
-			yield return MapNodeToFlag(record["f"].As<INode>());
-		}
-
-		yield return new SharpObjectFlag
-		{
-			Name = type,
-			SetPermissions = [],
-			TypeRestrictions = [],
-			Symbol = type[0].ToString(),
-			System = true,
-			UnsetPermissions = [],
-			Id = null,
-			Aliases = []
-		};
-	}
-
-	private async IAsyncEnumerable<SharpPower> GetPowersForIdAsync(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
-	{
-		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_POWER]->(p:Power) RETURN p", new { key }, ct);
-
-		foreach (var record in result.Result)
-		{
-			yield return MapNodeToPower(record["p"].As<INode>());
-		}
-	}
 
 	private static SharpObjectFlag MapNodeToFlag(INode node)
 	{
@@ -558,13 +569,13 @@ RETURN ownerObj, ownerTyped
 MATCH (a:Attribute {key: $key})-[:HAS_ATTRIBUTE_OWNER]->(p:Player)
 MATCH (p)-[:IS_OBJECT]->(o:Object)
 RETURN o, p
-""", new { key = attrKey }, ct);
+""" + RelationColumns("o"), new { key = attrKey }, ct);
 
 		if (result.Result.Count == 0) return null;
 
 		var objNode = result.Result[0]["o"].As<INode>();
 		var playerNode = result.Result[0]["p"].As<INode>();
-		var sharpObj = MapNodeToSharpObject(objNode);
+		var sharpObj = MapNodeToSharpObject(objNode, RelationsOf(result.Result[0]));
 		var pKey = objNode["key"].As<int>();
 		return BuildPlayer(PlayerId(pKey), playerNode, sharpObj);
 	}
@@ -729,23 +740,23 @@ RETURN o, p
 	private async IAsyncEnumerable<SharpObject> GetChildrenAsyncInner(string objectId, [EnumeratorCancellation] CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child", new { key }, ct);
+		var result = await ExecuteWithRetryAsync("MATCH (child:Object)-[:HAS_PARENT]->(parent:Object {key: $key}) RETURN child" + RelationColumns("child"), new { key }, ct);
 
 		foreach (var record in result.Result)
 		{
-			yield return MapNodeToSharpObject(record["child"].As<INode>());
+			yield return MapNodeToSharpObject(record["child"].As<INode>(), RelationsOf(record));
 		}
 	}
 
-	private async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct)
+	public async ValueTask<AnyOptionalSharpObject> GetZoneAsync(string objectId, CancellationToken ct = default)
 	{
 		var key = ExtractKey(objectId);
-		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z", new { key }, ct);
+		var result = await ExecuteWithRetryAsync("MATCH (o:Object {key: $key})-[:HAS_ZONE]->(z:Object) RETURN z" + RelationColumns("z"), new { key }, ct);
 
 		if (result.Result.Count == 0) return new None();
 
 		var zoneObjNode = result.Result[0]["z"].As<INode>();
-		return await BuildTypedObjectFromObjectNode(zoneObjNode, ct);
+		return await BuildTypedObjectFromObjectNode(zoneObjNode, ct, RelationsOf(result.Result[0]));
 	}
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

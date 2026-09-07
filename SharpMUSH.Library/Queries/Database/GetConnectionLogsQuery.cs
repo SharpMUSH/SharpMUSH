@@ -14,4 +14,5 @@ public record GetConnectionLogsQuery(string Category, int Skip = 0, int Count = 
 {
 	public string CacheKey => $"logs:{Category}:{Skip}:{Count}";
 	public string[] CacheTags => [Definitions.CacheTags.ConnectionLogs];
+	public CacheEntryProfile Profile => CacheEntryProfile.Scan;
 }

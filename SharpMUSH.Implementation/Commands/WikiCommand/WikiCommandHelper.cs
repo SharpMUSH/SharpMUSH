@@ -187,7 +187,7 @@ public static class WikiCommandHelper
 				return stored;
 		}
 
-		var database = parser.ServiceProvider.GetRequiredService<ISharpDatabase>();
+		var database = parser.ServiceProvider.GetRequiredService<IAttributeStore>();
 		var localeAttrs = database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
 		await foreach (var attr in localeAttrs)
 		{

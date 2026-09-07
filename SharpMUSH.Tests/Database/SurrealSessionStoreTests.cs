@@ -1,3 +1,4 @@
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Database.SurrealDB;
@@ -34,7 +35,7 @@ public class SurrealSessionStoreTests
 		var client = services.BuildServiceProvider().GetRequiredService<ISurrealDbClient>();
 		await client.Connect();
 
-		var database = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService());
+		var database = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client, new NoopPasswordService(), Substitute.For<IObjectRelationLoader>());
 		await database.Migrate();
 		return database;
 	}

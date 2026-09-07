@@ -21,6 +21,6 @@ public record GetAncestorCommandAttributesQuery(DBRef Ancestor) : IQuery<Command
 	// Keyed by dbref NUMBER only (not DBRef.ToString(), which appends CreationMilliseconds): the
 	// invalidating attribute commands carry the number-only key, and the resolved ancestor ref may
 	// arrive without millis, so both sides must agree on the number-only form.
-	public string CacheKey => $"ancestor-commands:#{Ancestor.Number}";
+	public string CacheKey => Definitions.CacheKeys.AncestorCommands(Ancestor.Number);
 	public string[] CacheTags => [];
 }

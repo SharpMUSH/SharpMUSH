@@ -6,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionParser booleanParser, ILockService lockService, ZiggyCreatures.Caching.Fusion.IFusionCache cache) : ICommandHandler<SetLockCommand>
+public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser, ILockService lockService) : ICommandHandler<SetLockCommand>
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{
@@ -28,16 +28,13 @@ public class SetLockCommandHandler(ISharpDatabase database, IBooleanExpressionPa
 
 		await database.SetLockAsync(request.Target, request.LockName, lockData, cancellationToken);
 
-		// Update in-memory state so subsequent reads see the new lock without a DB round-trip
-		request.Target.Locks = request.Target.Locks.SetItem(request.LockName, lockData);
-
-		// Invalidate the object cache so Locate calls see the updated locks
-		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
+		// The loaded object is a snapshot; the command's own CacheKeys expire the cached one.
+		request.Target.WithLock(request.LockName, lockData);
 
 		return new Unit();
 	}
 }
-public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpressionParser booleanParser, ZiggyCreatures.Caching.Fusion.IFusionCache cache) : ICommandHandler<UnsetLockCommand>
+public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionParser booleanParser) : ICommandHandler<UnsetLockCommand>
 {
 	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
 	{
@@ -50,9 +47,7 @@ public class UnsetLockCommandHandler(ISharpDatabase database, IBooleanExpression
 
 		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
 
-		request.Target.Locks = request.Target.Locks.Remove(request.LockName);
-
-		await cache.RemoveAsync(SharpMUSH.Library.Definitions.CacheKeys.Object(request.Target.DBRef), token: cancellationToken);
+		request.Target.WithoutLock(request.LockName);
 
 		return new Unit();
 	}

@@ -1,105 +1,106 @@
-﻿using DotNext.Collections.Generic;
+using SharpMUSH.Library.Markup;
+using DotNext.Collections.Generic;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
-using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
 	[SharpFunction(Name = "regmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
-	public static ValueTask<CallState> regmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, false);
 	}
 
 	[SharpFunction(Name = "regmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
-	public static ValueTask<CallState> regmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegMatchInternal(parser, true);
 	}
 
 	[SharpFunction(Name = "regrab", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> regrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, false);
 	}
 
 	[SharpFunction(Name = "regraball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> regraball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regraball(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, false, true);
 	}
 
 	[SharpFunction(Name = "regraballi", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> regraballi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regraballi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, true);
 	}
 
 	[SharpFunction(Name = "regrabi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> regrabi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regrabi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegGrabInternal(parser, true, false);
 	}
 
 	[SharpFunction(Name = "reglmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> reglmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> reglmatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, false);
 	}
 
 	[SharpFunction(Name = "reglmatchi", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> reglmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> reglmatchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, false);
 	}
 
 	[SharpFunction(Name = "reglmatchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> reglmatchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> reglmatchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, false, true);
 	}
 
 	[SharpFunction(Name = "reglmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
-	public static ValueTask<CallState> reglmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> reglmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, true);
 	}
 
 	[SharpFunction(Name = "regmatchalli", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
-	public static ValueTask<CallState> regmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> regmatchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return RegLMatchInternal(parser, true, true);
 	}
 
 	[SharpFunction(Name = "reswitch", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
 		ParameterNames = ["text", "pattern...|result...", "default"])]
-	public static async ValueTask<CallState> reswitch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> reswitch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, false);
 	}
 
 	[SharpFunction(Name = "reswitchall", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
 		ParameterNames = ["text", "pattern...|result...", "default"])]
-	public static async ValueTask<CallState> reswitchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> reswitchall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, false, true);
 	}
 
 	[SharpFunction(Name = "reswitchalli", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
 		ParameterNames = ["text", "pattern...|result...", "default"])]
-	public static async ValueTask<CallState> reswitchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> reswitchalli(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, true);
 	}
 
 	[SharpFunction(Name = "reswitchi", MinArgs = 3, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse,
 		ParameterNames = ["text", "pattern...|result...", "default"])]
-	public static async ValueTask<CallState> reswitchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> reswitchi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return await RegSwitchInternal(parser, true, false);
 	}
@@ -107,7 +108,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for regmatch and regmatchi.
 	/// </summary>
-	private static ValueTask<CallState> RegMatchInternal(IMUSHCodeParser parser, bool caseInsensitive)
+	private ValueTask<CallState> RegMatchInternal(IMUSHCodeParser parser, bool caseInsensitive)
 	{
 		var args = parser.CurrentState.Arguments;
 		var str = args["0"].Message!.ToPlainText();
@@ -121,7 +122,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var match = regex.Match(str);
 
 			// Check if the entire string matches (not just a substring)
@@ -138,6 +139,11 @@ public partial class Functions
 
 			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 		catch (ArgumentException)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpInvalid));
@@ -147,7 +153,7 @@ public partial class Functions
 	/// <summary>
 	/// Helper to set registers from a regex match.
 	/// </summary>
-	private static void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
+	private void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
 		if (!match.Success) return;
 
@@ -199,7 +205,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for regrab, regrabi, regraball, regraballi.
 	/// </summary>
-	private static ValueTask<CallState> RegGrabInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	private ValueTask<CallState> RegGrabInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var args = parser.CurrentState.Arguments;
 		var list = args["0"].Message!;
@@ -217,8 +223,8 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
-			var splitList = MushText.SplitList(delimiter, list);
+			var regex = SoftcodeRegex.Create(pattern, options);
+			var splitList = MushText.SplitList(delimiter, list) ?? [];
 
 			if (all)
 			{
@@ -231,6 +237,11 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(firstMatch ?? MarkupText.Empty);
 			}
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 		catch (ArgumentException)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpInvalid));
@@ -240,7 +251,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for reglmatch, reglmatchi, reglmatchall, regmatchalli.
 	/// </summary>
-	private static ValueTask<CallState> RegLMatchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	private ValueTask<CallState> RegLMatchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var args = parser.CurrentState.Arguments;
 		var list = args["0"].Message!;
@@ -258,8 +269,8 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
-			var splitList = MushText.SplitList(delimiter, list);
+			var regex = SoftcodeRegex.Create(pattern, options);
+			var splitList = MushText.SplitList(delimiter, list) ?? [];
 
 			if (all)
 			{
@@ -281,6 +292,11 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
 			}
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 		catch (ArgumentException)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpInvalid));
@@ -290,7 +306,7 @@ public partial class Functions
 	/// <summary>
 	/// Internal helper for reswitch, reswitchi, reswitchall, reswitchalli.
 	/// </summary>
-	private static async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
+	private async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var str = arg0!.ToPlainText();
@@ -322,7 +338,7 @@ public partial class Functions
 
 				try
 				{
-					var regex = new Regex(patternStr, options);
+					var regex = SoftcodeRegex.Create(patternStr, options);
 					var match = regex.Match(str!);
 
 					if (match.Success)
@@ -384,7 +400,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
 		ParameterNames = ["string", "pattern", "replacement", "flags"])]
-	public static ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> RegReplace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var pattern = parser.CurrentState.Arguments["1"].Message!.ToPlainText();

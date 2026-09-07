@@ -68,10 +68,10 @@ public partial class SurrealDatabase : IRoleRegistryService
 		return results?.Count > 0 ? MapRole(results[0]) : new NotFound();
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync()
+	public async Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default)
 	{
 		var response = await ExecuteAsync(
-			$"SELECT {RoleFields} FROM role ORDER BY priority DESC, slug");
+			$"SELECT {RoleFields} FROM role ORDER BY priority DESC, slug", cancellationToken);
 		var results = response.GetValue<List<RoleDbRecord>>(0) ?? [];
 		return results.Select(MapRole).ToList();
 	}
@@ -113,13 +113,13 @@ public partial class SurrealDatabase : IRoleRegistryService
 			""", parameters);
 	}
 
-	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId)
+	public async Task<IReadOnlyList<SharpRole>> GetRolesForAccountAsync(string accountId, CancellationToken cancellationToken = default)
 	{
 		var key = NormalizeSurrealId(accountId, "account");
 		var parameters = new Dictionary<string, object?> { ["accountId"] = new StringRecordId(key) };
 		var response = await ExecuteAsync($"""
 			SELECT {RoleFieldsViaEdge} FROM account_has_role WHERE in = $accountId
-			""", parameters);
+			""", parameters, cancellationToken);
 		var results = response.GetValue<List<RoleDbRecord>>(0) ?? [];
 		return results.Select(MapRole).OrderByDescending(r => r.Priority).ThenBy(r => r.Slug).ToList();
 	}

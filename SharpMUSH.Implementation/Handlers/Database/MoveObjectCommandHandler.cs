@@ -7,7 +7,7 @@ using SharpMUSH.Library.Notifications;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class MoveObjectCommandHandler(ISharpDatabase database, IPublisher publisher) : ICommandHandler<MoveObjectCommand, DBRef>
+public class MoveObjectCommandHandler(INavigationStore database, IPublisher publisher) : ICommandHandler<MoveObjectCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(MoveObjectCommand request, CancellationToken cancellationToken)
 	{

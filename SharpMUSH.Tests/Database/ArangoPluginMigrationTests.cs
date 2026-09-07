@@ -244,7 +244,7 @@ public class ArangoPluginMigrationTests
 	private SharpArangoDatabase Database(IArangoContext context, ArangoHandle handle,
 		params IMigrationSource[] sources) =>
 		new(NullLogger<SharpArangoDatabase>.Instance, context, handle,
-			WebAppFactory.Services.GetRequiredService<IMediator>(),
+			WebAppFactory.Services.GetRequiredService<IObjectRelationLoader>(),
 			WebAppFactory.Services.GetRequiredService<IPasswordService>(),
 			sources);
 

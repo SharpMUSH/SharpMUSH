@@ -13,14 +13,6 @@ public record GetObjectFlagQuery(string FlagName) : IQuery<SharpObjectFlag?>, IC
 	public string[] CacheTags => [Definitions.CacheTags.FlagList];
 }
 
-public record GetObjectFlagsQuery(string Id, string Type) : IStreamQuery<SharpObjectFlag>, ICacheable
-{
-	// An object's flag set, keyed by its stable graph _id (Type is fixed per object). Invalidated by
-	// SetObjectFlagCommand / UnsetObjectFlagCommand.
-	public string CacheKey => CacheKeys.ObjectFlags(Id);
-	public string[] CacheTags => [];
-}
-
 public record GetAllObjectFlagsQuery() : IStreamQuery<SharpObjectFlag>, ICacheable
 {
 	public string CacheKey => "global:ObjectFlagsList";

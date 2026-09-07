@@ -3,6 +3,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -109,8 +110,9 @@ public class ListenPatternMatcher(
 			if (!shouldTrigger)
 				continue;
 
-			var regexMatch = listenAttr.CompiledRegex.Match(message);
-			if (!regexMatch.Success)
+			// A pattern that cannot finish is not a match, and must not stop the patterns after it.
+			var regexMatch = SoftcodeRegex.Match(listenAttr.CompiledRegex, message);
+			if (regexMatch is not { Success: true })
 				continue;
 
 			var capturedGroups = new string[regexMatch.Groups.Count];

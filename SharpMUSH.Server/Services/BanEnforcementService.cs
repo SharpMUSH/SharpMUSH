@@ -30,7 +30,7 @@ public sealed class BanEnforcementService(
 	IConnectionService connectionService,
 	IMessageBus messageBus,
 	HubConnectionRegistry registry,
-	ISharpDatabase database,
+	IAccountStore database,
 	ILogger<BanEnforcementService> logger) : IBanEnforcer
 {
 	/// <summary>The sentinel IP/host value connections use when no real origin is known.</summary>

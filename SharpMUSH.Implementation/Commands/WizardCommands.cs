@@ -21,7 +21,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
-using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -29,28 +29,28 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",
 		MinArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 
-		var objects = Mediator!.CreateStream(new GetAllObjectsQuery());
+		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
 		var haltedCount = 0;
 
 		await foreach (var obj in objects)
 		{
-			await Mediator!.Send(new HaltObjectQueueRequest(obj.DBRef));
+			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
 			haltedCount++;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, haltedCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, haltedCount);
 		return CallState.Empty;
 	}
 
 	// PennMUSH src/flags.c:955 letter_to_flagptr: a letter is only taken by a definition whose object
 	// types overlap, so two definitions with no type in common may share one
 	// (game/txt/hlp/pennv177.hlp:20). The letter comparison is case-sensitive.
-	private static async ValueTask<string?> FindLetterConflict(
+	private async ValueTask<string?> FindLetterConflict(
 		IAsyncEnumerable<(string Name, string Symbol, string[] TypeRestrictions)> definitions,
 		string ownName, string letter, string[] ownTypes)
 	{
@@ -72,9 +72,9 @@ public partial class Commands
 		[
 			"ADD", "TYPE", "LETTER", "LIST", "RESTRICT", "DELETE", "ALIAS", "DISABLE", "ENABLE", "DEBUG", "DECOMPILE"
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "flag"])]
-	public static async ValueTask<Option<CallState>> Flag(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Flag(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("LIST"))
@@ -84,14 +84,14 @@ public partial class Commands
 			output.AppendLine("Name                 Symbol Type Restrictions");
 			output.AppendLine("-------------------- ------ -------------------");
 
-			var flags = Mediator!.CreateStream(new GetAllObjectFlagsQuery());
+			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
 			await foreach (var flag in flags)
 			{
 				var types = string.Join(",", flag.TypeRestrictions);
 				output.AppendLine($"{flag.Name,-20} {flag.Symbol,-6} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -99,14 +99,14 @@ public partial class Commands
 		// /list, and /debug wants Wizard rather than God.
 		if (!switches.Contains("DECOMPILE") && !switches.Contains("DEBUG") && switches.Any() && !executor.IsGod())
 		{
-			await NotifyService!.NotifyLocalized(executor,
+			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
 			return CallState.Empty;
 		}
 
 		if (switches.Contains("DEBUG") && !await executor.IsWizard())
 		{
-			await NotifyService!.NotifyLocalized(executor,
+			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
@@ -115,7 +115,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor);
 				return CallState.Empty;
 			}
 
@@ -124,18 +124,18 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(symbol))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndSymbolCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndSymbolCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var existingFlag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var existingFlag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (existingFlag != null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
-			var result = await Mediator!.Send(new CreateObjectFlagCommand(
+			var result = await Mediator.Send(new CreateObjectFlagCommand(
 				flagName.ToUpper(),
 				null, // aliases
 				symbol,
@@ -147,12 +147,12 @@ public partial class Commands
 
 			if (result != null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, flagName, symbol);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, flagName, symbol);
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreateFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 		}
@@ -161,7 +161,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeleteRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeleteRequiresName), executor);
 				return CallState.Empty;
 			}
 
@@ -169,33 +169,33 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
-			var result = await Mediator!.Send(new DeleteObjectFlagCommand(flagName.ToUpper()));
+			var result = await Mediator.Send(new DeleteObjectFlagCommand(flagName.ToUpper()));
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, flagName);
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeleteFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeleteFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 		}
@@ -205,7 +205,7 @@ public partial class Commands
 			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_flag with ns "FLAG".
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterRequiresName), executor);
 				return CallState.Empty;
 			}
 
@@ -213,7 +213,7 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
@@ -222,40 +222,40 @@ public partial class Commands
 				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
 				: string.Empty;
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (newSymbol.Length > 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters), executor);
 				return CallState.Empty;
 			}
 
 			if (newSymbol.Length == 1)
 			{
 				var conflict = await FindLetterConflict(
-					Mediator!.CreateStream(new GetAllObjectFlagsQuery())
+					Mediator.CreateStream(new GetAllObjectFlagsQuery())
 						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
 					flag.Name, newSymbol, flag.TypeRestrictions);
 
 				if (conflict is not null)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterConflictFormat), executor, conflict);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterConflictFormat), executor, conflict);
 					return CallState.Empty;
 				}
 			}
 
-			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+			var result = await Mediator.Send(new UpdateObjectFlagCommand(
 				flag.Name,
 				flag.Aliases,
 				newSymbol,
@@ -266,17 +266,17 @@ public partial class Commands
 
 			if (!result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (newSymbol.Length == 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterSetFormat), executor, flag.Name, newSymbol);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterSetFormat), executor, flag.Name, newSymbol);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, flag.Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, flag.Name);
 			}
 
 			return new CallState(MarkupText.Plain(flag.Name));
@@ -286,7 +286,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeRequiresNameAndTypes), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeRequiresNameAndTypes), executor);
 				return CallState.Empty;
 			}
 
@@ -295,20 +295,20 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(typesArg))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndTypesCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndTypesCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
@@ -316,7 +316,7 @@ public partial class Commands
 				.Select(t => t.ToUpper())
 				.ToArray();
 
-			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+			var result = await Mediator.Send(new UpdateObjectFlagCommand(
 				flagName.ToUpper(),
 				flag.Aliases,
 				flag.Symbol,
@@ -327,12 +327,12 @@ public partial class Commands
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat), executor, flagName, string.Join(", ", types));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat), executor, flagName, string.Join(", ", types));
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 		}
@@ -341,7 +341,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases), executor);
 				return CallState.Empty;
 			}
 
@@ -350,20 +350,20 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
@@ -375,7 +375,7 @@ public partial class Commands
 					.ToArray();
 			}
 
-			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+			var result = await Mediator.Send(new UpdateObjectFlagCommand(
 				flagName.ToUpper(),
 				aliases,
 				flag.Symbol,
@@ -387,12 +387,12 @@ public partial class Commands
 			if (result)
 			{
 				var aliasStr = aliases != null && aliases.Length > 0 ? string.Join(", ", aliases) : "none";
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasesSetFormat), executor, flagName, aliasStr);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasesSetFormat), executor, flagName, aliasStr);
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 		}
@@ -401,7 +401,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions), executor);
 				return CallState.Empty;
 			}
 
@@ -410,26 +410,26 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(permsArg))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
 
-			var result = await Mediator!.Send(new UpdateObjectFlagCommand(
+			var result = await Mediator.Send(new UpdateObjectFlagCommand(
 				flagName.ToUpper(),
 				flag.Aliases,
 				flag.Symbol,
@@ -440,12 +440,12 @@ public partial class Commands
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat), executor, flagName, string.Join(", ", perms));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat), executor, flagName, string.Join(", ", perms));
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 		}
@@ -454,16 +454,16 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDecompileRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDecompileRequiresName), executor);
 				return CallState.Empty;
 			}
 
 			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
@@ -477,7 +477,7 @@ public partial class Commands
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -485,7 +485,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
 				return CallState.Empty;
 			}
 
@@ -493,34 +493,34 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(flagName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			if (flag.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
 			bool disable = switches.Contains("DISABLE");
-			var result = await Mediator!.Send(new SetObjectFlagDisabledCommand(flagName.ToUpper(), disable));
+			var result = await Mediator.Send(new SetObjectFlagDisabledCommand(flagName.ToUpper(), disable));
 
 			if (result)
 			{
-				await NotifyService!.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FlagDisabledFormat : ErrorMessages.Notifications.FlagEnabledFormat, flagName), executor);
+				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FlagDisabledFormat : ErrorMessages.Notifications.FlagEnabledFormat, flagName), executor);
 				return new CallState(MarkupText.Plain(flagName));
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisableFlagFormat : ErrorMessages.Notifications.FailedToEnableFlagFormat, flagName), executor);
+				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisableFlagFormat : ErrorMessages.Notifications.FailedToEnableFlagFormat, flagName), executor);
 				return CallState.Empty;
 			}
 		}
@@ -529,16 +529,16 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDebugRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDebugRequiresName), executor);
 				return CallState.Empty;
 			}
 
 			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-			var flag = await Mediator!.Send(new GetObjectFlagQuery(flagName.ToUpper()));
+			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
 			if (flag == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
 				return CallState.Empty;
 			}
 
@@ -553,19 +553,19 @@ public partial class Commands
 			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagUsage), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagUsage), executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@LOG", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "RECALL"],
 		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type", "message"])]
-	public static async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		var category = switches.Contains("CHECK") ? "Check" :
@@ -589,7 +589,7 @@ public partial class Commands
 
 			count = Math.Max(1, Math.Min(count, 1000));
 
-			var logs = Mediator!.CreateStream(new GetConnectionLogsQuery(category, 0, count));
+			var logs = Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count));
 			var logList = new List<LogEventEntity>();
 
 			await foreach (var log in logs)
@@ -599,7 +599,7 @@ public partial class Commands
 
 			if (logList.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, category);
 				return CallState.Empty;
 			}
 
@@ -613,7 +613,7 @@ public partial class Commands
 				output.AppendLine($"[{timestamp}] {message}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -621,13 +621,13 @@ public partial class Commands
 
 		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var logMessage = logCallState!.Message!;
 
-		using (Logger!.BeginScope(new Dictionary<string, string>
+		using (Logger.BeginScope(new Dictionary<string, string>
 		{
 			["Category"] = category,
 			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
@@ -637,18 +637,18 @@ public partial class Commands
 			Logger.LogInformation("{LogMessage}", MarkupTextSerializer.Serialize(logMessage));
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, category);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, category);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player"])]
-	public static async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (!await executor.IsWizard())
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -657,18 +657,18 @@ public partial class Commands
 
 		if (parser.CurrentState.Arguments.Count < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PoorUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PoorUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
 			return CallState.Empty;
 		}
 
 		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 
 		if (maybePlayer.IsError)
 		{
@@ -677,23 +677,23 @@ public partial class Commands
 
 		var player = maybePlayer.AsSharpObject.AsPlayer;
 
-		await Mediator!.Send(new SetPlayerQuotaCommand(player, 0));
+		await Mediator.Send(new SetPlayerQuotaCommand(player, 0));
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerSetToPoorFormat), executor, player.Object.Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerSetToPoorFormat), executor, player.Object.Name);
 		await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToZeroByFormat), executor.Object().Name);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SQUOTA", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 1, ParameterNames = ["type", "value"])]
-	public static async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ShortQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabledMessage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabledMessage), executor);
 			return CallState.Empty;
 		}
 
@@ -701,7 +701,7 @@ public partial class Commands
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 			if (maybePlayer.IsError)
 			{
 				return maybePlayer.AsError;
@@ -712,9 +712,9 @@ public partial class Commands
 		var targetPlayerObj = targetPlayer.AsPlayer;
 		var quota = targetPlayerObj.Quota;
 
-		var objectsOwned = await Mediator!.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
+		var objectsOwned = await Mediator.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaStatusFormat), executor, objectsOwned, quota);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaStatusFormat), executor, objectsOwned, quota);
 
 		return CallState.Empty;
 	}
@@ -722,21 +722,21 @@ public partial class Commands
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration!.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout, executor);
+			await NotifyService.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -744,21 +744,21 @@ public partial class Commands
 
 	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration!.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout, executor);
+			await NotifyService.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -766,32 +766,32 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
-	public static async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> AllQuota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var isQuiet = switches.Contains("QUIET");
 
 		if (parser.CurrentState.Arguments.Count < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllQuotaUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllQuotaUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var amountArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (!int.TryParse(amountArg, out var amount))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
 			return CallState.Empty;
 		}
 
-		var players = Mediator!.CreateStream(new GetAllPlayersQuery());
+		var players = Mediator.CreateStream(new GetAllPlayersQuery());
 		var count = 0;
 
 		await foreach (var player in players)
@@ -801,33 +801,33 @@ public partial class Commands
 
 			if (!isQuiet)
 			{
-				await NotifyService!.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), amount, executor.Object().Name);
+				await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), amount, executor.Object().Name);
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SetQuotaForPlayersFormat), executor, amount, count);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SetQuotaForPlayersFormat), executor, amount, count);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["on-off"])]
-	public static async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
-		var darkFlag = await Mediator!.Send(new GetObjectFlagQuery("DARK"));
+		var darkFlag = await Mediator.Send(new GetObjectFlagQuery("DARK"));
 		if (darkFlag == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDarkFlagNotFound), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDarkFlagNotFound), executor);
 			return CallState.Empty;
 		}
 
@@ -850,23 +850,23 @@ public partial class Commands
 
 		if (shouldBeDark && !isDark)
 		{
-			await Mediator!.Send(new SetObjectFlagCommand(executor, darkFlag));
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NowHiddenFromWho), executor);
+			await Mediator.Send(new SetObjectFlagCommand(executor, darkFlag));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NowHiddenFromWho), executor);
 		}
 		else if (!shouldBeDark && isDark)
 		{
-			await Mediator!.Send(new UnsetObjectFlagCommand(executor, darkFlag));
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), executor);
+			await Mediator.Send(new UnsetObjectFlagCommand(executor, darkFlag));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), executor);
 		}
 		else
 		{
 			if (isDark)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), executor);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), executor);
 			}
 		}
 
@@ -875,20 +875,20 @@ public partial class Commands
 
 	[SharpCommand(Name = "@MOTD", Switches = ["CONNECT", "LIST", "WIZARD", "DOWN", "FULL", "CLEAR"],
 		Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type", "message"])]
-	public static async ValueTask<Option<CallState>> MessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> MessageOfTheDay(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
-		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
 		if (switches.Contains("LIST"))
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 
@@ -899,7 +899,7 @@ public partial class Commands
 			output.AppendLine($"Down MOTD:    {(string.IsNullOrEmpty(motdData.DownMotd) ? "(not set)" : motdData.DownMotd)}");
 			output.AppendLine($"Full MOTD:    {(string.IsNullOrEmpty(motdData.FullMotd) ? "(not set)" : motdData.FullMotd)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -922,7 +922,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard() && !await executor.HasPower("ANNOUNCE"))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedAnnouncePower), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedAnnouncePower), executor);
 				return CallState.Empty;
 			}
 		}
@@ -930,7 +930,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
 			}
 		}
@@ -945,14 +945,14 @@ public partial class Commands
 				_ => motdData with { ConnectMotd = null }
 			};
 
-			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdClearedFormat), executor, motdType.Humanize(LetterCasing.Title));
+			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdClearedFormat), executor, motdType.Humanize(LetterCasing.Title));
 			return CallState.Empty;
 		}
 
 		if (string.IsNullOrEmpty(argText))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdUsage), executor);
 			return CallState.Empty;
 		}
 
@@ -964,17 +964,17 @@ public partial class Commands
 			_ => motdData with { ConnectMotd = argText }
 		};
 
-		await ObjectDataService!.SetExpandedServerDataAsync(newMotdDataSet, ignoreNull: true);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdSetFormat), executor, motdType.Humanize(LetterCasing.Title));
+		await ObjectDataService.SetExpandedServerDataAsync(newMotdDataSet, ignoreNull: true);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MotdSetFormat), executor, motdType.Humanize(LetterCasing.Title));
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POWER",
 		Switches = ["ADD", "TYPE", "LETTER", "LIST", "RESTRICT", "DELETE", "ALIAS", "DISABLE", "ENABLE", "DECOMPILE"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "power"])]
-	public static async ValueTask<Option<CallState>> Power(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Power(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("LIST"))
@@ -985,7 +985,7 @@ public partial class Commands
 				: string.Empty;
 			var patternRegex = string.IsNullOrEmpty(pattern)
 				? null
-				: new Regex(MushText.Glob.ToRegex(pattern), RegexOptions.IgnoreCase);
+				: SoftcodeRegex.Wildcard(pattern);
 			var showDisabled = executor.IsGod();
 
 			var output = new System.Text.StringBuilder();
@@ -993,7 +993,7 @@ public partial class Commands
 			output.AppendLine("Name                 Symbol Alias              Type Restrictions");
 			output.AppendLine("-------------------- ------ ------------------ -------------------");
 
-			var powers = Mediator!.CreateStream(new GetPowersQuery());
+			var powers = Mediator.CreateStream(new GetPowersQuery());
 			await foreach (var power in powers)
 			{
 				if (power.Disabled && !showDisabled)
@@ -1001,7 +1001,7 @@ public partial class Commands
 					continue;
 				}
 
-				if (patternRegex is not null && !patternRegex.IsMatch(power.Name))
+				if (patternRegex is not null && !SoftcodeRegex.IsMatch(patternRegex, power.Name))
 				{
 					continue;
 				}
@@ -1010,14 +1010,14 @@ public partial class Commands
 				output.AppendLine($"{power.Name,-20} {power.Symbol,-6} {power.Alias,-18} {types}");
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
 		// Editing power definitions is God-only in flags.c; /decompile only reads, so it stays open like /list.
 		if (!switches.Contains("DECOMPILE") && switches.Any() && !executor.IsGod())
 		{
-			await NotifyService!.NotifyLocalized(executor,
+			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
 			return CallState.Empty;
 		}
@@ -1026,7 +1026,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor);
 				return CallState.Empty;
 			}
 
@@ -1035,11 +1035,11 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(alias))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var result = await Mediator!.Send(new CreatePowerCommand(
+			var result = await Mediator.Send(new CreatePowerCommand(
 				powerName.ToUpper(),
 				alias.ToUpper(),
 				string.Empty, // PennMUSH @power/add defaults <letter> to none
@@ -1051,12 +1051,12 @@ public partial class Commands
 
 			if (result != null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, powerName, alias);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, powerName, alias);
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreatePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 		}
@@ -1065,7 +1065,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeleteRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeleteRequiresName), executor);
 				return CallState.Empty;
 			}
 
@@ -1073,33 +1073,33 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
-			var result = await Mediator!.Send(new DeletePowerCommand(powerName.ToUpper()));
+			var result = await Mediator.Send(new DeletePowerCommand(powerName.ToUpper()));
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, powerName);
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeletePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeletePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 		}
@@ -1108,7 +1108,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias), executor);
 				return CallState.Empty;
 			}
 
@@ -1117,24 +1117,24 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(newAlias))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
-			var result = await Mediator!.Send(new UpdatePowerCommand(
+			var result = await Mediator.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				newAlias.ToUpper(),
 				power.Symbol,
@@ -1145,12 +1145,12 @@ public partial class Commands
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasChangedFormat), executor, powerName, newAlias);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasChangedFormat), executor, powerName, newAlias);
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 		}
@@ -1160,7 +1160,7 @@ public partial class Commands
 			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_power with ns "POWER".
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterRequiresName), executor);
 				return CallState.Empty;
 			}
 
@@ -1168,7 +1168,7 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
@@ -1177,22 +1177,22 @@ public partial class Commands
 				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
 				: string.Empty;
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (newLetter.Length > 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters), executor);
 				return CallState.Empty;
 			}
 
@@ -1201,18 +1201,18 @@ public partial class Commands
 				// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
 				// flagspace; it is implemented as written, not as reached.
 				var conflict = await FindLetterConflict(
-					Mediator!.CreateStream(new GetPowersQuery())
+					Mediator.CreateStream(new GetPowersQuery())
 						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
 					power.Name, newLetter, power.TypeRestrictions);
 
 				if (conflict is not null)
 				{
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict);
 					return CallState.Empty;
 				}
 			}
 
-			var lettered = await Mediator!.Send(new UpdatePowerCommand(
+			var lettered = await Mediator.Send(new UpdatePowerCommand(
 				power.Name,
 				power.Alias,
 				newLetter,
@@ -1223,17 +1223,17 @@ public partial class Commands
 
 			if (!lettered)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (newLetter.Length == 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterSetFormat), executor, power.Name, newLetter);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterSetFormat), executor, power.Name, newLetter);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, power.Name);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, power.Name);
 			}
 
 			return new CallState(MarkupText.Plain(power.Name));
@@ -1243,7 +1243,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeRequiresNameAndTypes), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeRequiresNameAndTypes), executor);
 				return CallState.Empty;
 			}
 
@@ -1252,20 +1252,20 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(typesArg))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndTypesCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndTypesCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
@@ -1273,7 +1273,7 @@ public partial class Commands
 				.Select(t => t.ToUpper())
 				.ToArray();
 
-			var result = await Mediator!.Send(new UpdatePowerCommand(
+			var result = await Mediator.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				power.Alias,
 				power.Symbol,
@@ -1284,12 +1284,12 @@ public partial class Commands
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat), executor, powerName, string.Join(", ", types));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat), executor, powerName, string.Join(", ", types));
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 		}
@@ -1298,7 +1298,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions), executor);
 				return CallState.Empty;
 			}
 
@@ -1307,26 +1307,26 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(permsArg))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
 
-			var result = await Mediator!.Send(new UpdatePowerCommand(
+			var result = await Mediator.Send(new UpdatePowerCommand(
 				powerName.ToUpper(),
 				power.Alias,
 				power.Symbol,
@@ -1337,12 +1337,12 @@ public partial class Commands
 
 			if (result)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat), executor, powerName, string.Join(", ", perms));
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat), executor, powerName, string.Join(", ", perms));
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 		}
@@ -1351,16 +1351,16 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDecompileRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDecompileRequiresName), executor);
 				return CallState.Empty;
 			}
 
 			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
@@ -1374,7 +1374,7 @@ public partial class Commands
 			output.AppendLine($"Set Permissions: {string.Join(", ", power.SetPermissions)}");
 			output.AppendLine($"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}");
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -1382,7 +1382,7 @@ public partial class Commands
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
 				return CallState.Empty;
 			}
 
@@ -1390,34 +1390,34 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(powerName))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
 				return CallState.Empty;
 			}
 
-			var power = await Mediator!.Send(new GetPowerQuery(powerName.ToUpper()));
+			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
 			if (power == null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			if (power.System)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, powerName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
 			bool disable = switches.Contains("DISABLE");
-			var result = await Mediator!.Send(new SetPowerDisabledCommand(powerName.ToUpper(), disable));
+			var result = await Mediator.Send(new SetPowerDisabledCommand(powerName.ToUpper(), disable));
 
 			if (result)
 			{
-				await NotifyService!.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.PowerDisabledFormat : ErrorMessages.Notifications.PowerEnabledFormat, powerName), executor);
+				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.PowerDisabledFormat : ErrorMessages.Notifications.PowerEnabledFormat, powerName), executor);
 				return new CallState(MarkupText.Plain(powerName));
 			}
 			else
 			{
-				await NotifyService!.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisablePowerFormat : ErrorMessages.Notifications.FailedToEnablePowerFormat, powerName), executor);
+				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisablePowerFormat : ErrorMessages.Notifications.FailedToEnablePowerFormat, powerName), executor);
 				return CallState.Empty;
 			}
 		}
@@ -1425,7 +1425,7 @@ public partial class Commands
 		// A declared-but-unhandled switch must not fall through into the grant form below.
 		if (switches.Any())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
 			return CallState.Empty;
 		}
 
@@ -1438,14 +1438,14 @@ public partial class Commands
 			// "@power <power>" describes the power itself. It does NOT list an object's powers.
 			if (string.IsNullOrWhiteSpace(objectArg))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerUsage), executor);
 				return CallState.Empty;
 			}
 
-			var namedPower = await ManipulateSharpObjectService!.FindPower(objectArg);
+			var namedPower = await ManipulateSharpObjectService.FindPower(objectArg);
 			if (namedPower is null)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor);
 				return CallState.Empty;
 			}
 
@@ -1457,7 +1457,7 @@ public partial class Commands
 			info.AppendLine($"{"Perms",9}: {string.Join(" ", namedPower.SetPermissions)}");
 			info.Append($"{"ResetPrms",9}: {string.Join(" ", namedPower.UnsetPermissions)}");
 
-			await NotifyService!.Notify(executor, info.ToString(), executor);
+			await NotifyService.Notify(executor, info.ToString(), executor);
 			return new CallState(MarkupText.Plain(namedPower.Name));
 		}
 
@@ -1465,48 +1465,48 @@ public partial class Commands
 		// grant powers rather than that the object could not be found.
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.Notify(executor, ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.OnlyWizardsMayGrantPowers);
 			return CallState.Empty;
 		}
 
-		var maybeTarget = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor, objectArg, LocateFlags.All);
+		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectArg, LocateFlags.All);
 		if (!maybeTarget.IsValid())
 		{
 			return CallState.Empty;
 		}
 
-		await ManipulateSharpObjectService!.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known(), powerArg, true);
+		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known(), powerArg, true);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@REJECTMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
+	public async ValueTask<Option<CallState>> RejectMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
 		// Alias for @motd/full
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
-		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
 		if (switches.Contains("CLEAR"))
 		{
 			var newMotdData = motdData with { FullMotd = null };
-			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdCleared), executor);
+			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdCleared), executor);
 		}
 		else if (string.IsNullOrEmpty(argText))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RejectMotdUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RejectMotdUsage), executor);
 		}
 		else
 		{
 			var newMotdData = motdData with { FullMotd = argText };
-			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdSet), executor);
+			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FullMotdSet), executor);
 		}
 
 		return CallState.Empty;
@@ -1514,13 +1514,13 @@ public partial class Commands
 
 	[SharpCommand(Name = "@SUGGEST", Switches = ["ADD", "DELETE", "LIST"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 0, MaxArgs = 2, ParameterNames = ["text"])]
-	public static async ValueTask<Option<CallState>> Suggest(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Suggest(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 
-		var suggestionData = await ObjectDataService!.GetExpandedServerDataAsync<SuggestionData>()
+		var suggestionData = await ObjectDataService.GetExpandedServerDataAsync<SuggestionData>()
 			?? new SuggestionData();
 
 		if (suggestionData.Categories == null)
@@ -1532,7 +1532,7 @@ public partial class Commands
 		{
 			if (suggestionData.Categories.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuggestionCategoriesDefined), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoSuggestionCategoriesDefined), executor);
 			}
 			else
 			{
@@ -1542,7 +1542,7 @@ public partial class Commands
 				{
 					output.AppendLine($"  {category}: {words.Count} words");
 				}
-				await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+				await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			}
 			return CallState.Empty;
 		}
@@ -1551,7 +1551,7 @@ public partial class Commands
 		{
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -1560,7 +1560,7 @@ public partial class Commands
 
 			if (string.IsNullOrWhiteSpace(category) || string.IsNullOrWhiteSpace(word))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryAndWordCannotBeEmpty), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryAndWordCannotBeEmpty), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -1571,12 +1571,12 @@ public partial class Commands
 
 			if (suggestionData.Categories[category].Add(word))
 			{
-				await ObjectDataService!.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddedWordToCategoryFormat), executor, word, category);
+				await ObjectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestAddedWordToCategoryFormat), executor, word, category);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestWordAlreadyExistsFormat), executor, word, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestWordAlreadyExistsFormat), executor, word, category);
 			}
 
 			return CallState.Empty;
@@ -1586,7 +1586,7 @@ public partial class Commands
 		{
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestDeleteUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestDeleteUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -1595,7 +1595,7 @@ public partial class Commands
 
 			if (!suggestionData.Categories.ContainsKey(category))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryDoesNotExistFormat), executor, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryDoesNotExistFormat), executor, category);
 				return CallState.Empty;
 			}
 
@@ -1606,12 +1606,12 @@ public partial class Commands
 					suggestionData.Categories.Remove(category);
 				}
 
-				await ObjectDataService!.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestRemovedWordFromCategoryFormat), executor, word, category);
+				await ObjectDataService.SetExpandedServerDataAsync(suggestionData, ignoreNull: true);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestRemovedWordFromCategoryFormat), executor, word, category);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestWordNotFoundInCategoryFormat), executor, word, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestWordNotFoundInCategoryFormat), executor, word, category);
 			}
 
 			return CallState.Empty;
@@ -1623,25 +1623,25 @@ public partial class Commands
 
 			if (!suggestionData.Categories.ContainsKey(category))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryDoesNotExistFormat), executor, category);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryDoesNotExistFormat), executor, category);
 				return CallState.Empty;
 			}
 
 			var words = suggestionData.Categories[category].OrderBy(w => w).ToList();
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryWordCountFormat), executor, category, words.Count);
-			await NotifyService!.Notify(executor, string.Join(", ", words), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestCategoryWordCountFormat), executor, category, words.Count);
+			await NotifyService.Notify(executor, string.Join(", ", words), executor);
 
 			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestUsage), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SuggestUsage), executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player"])]
-	public static async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches.ToHashSet();
 		var args = parser.CurrentState.Arguments;
 		var silent = switches.Contains("SILENT");
@@ -1657,22 +1657,22 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootPortUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootPortUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 			var portText = args["0"].Message!.ToPlainText();
 			if (!long.TryParse(portText, out var handle))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootDescriptorMustBeNumber), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootDescriptorMustBeNumber), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
-			if (ConnectionService!.Get(handle) is not null)
+			if (ConnectionService.Get(handle) is not null)
 			{
 				targetHandles.Add(handle);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootNoSuchDescriptorFormat), executor, handle);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootNoSuchDescriptorFormat), executor, handle);
 				return CallState.Empty;
 			}
 		}
@@ -1680,11 +1680,11 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 			if (maybePlayer.IsError)
 			{
 				return maybePlayer.AsError;
@@ -1693,7 +1693,7 @@ public partial class Commands
 			var targetDbRef = playerObj.Object.DBRef;
 			// Boot only the last active connection to match PennMUSH behavior
 			IConnectionService.ConnectionData? lastConnection = null;
-			await foreach (var cd in ConnectionService!.Get(targetDbRef))
+			await foreach (var cd in ConnectionService.Get(targetDbRef))
 			{
 				lastConnection = cd;
 			}
@@ -1703,7 +1703,7 @@ public partial class Commands
 			}
 			if (targetHandles.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
 				return CallState.Empty;
 			}
 		}
@@ -1712,9 +1712,9 @@ public partial class Commands
 		{
 			if (!silent)
 			{
-				await NotifyService!.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
+				await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
 			}
-			await ConnectionService!.Disconnect(handle);
+			await ConnectionService.Disconnect(handle);
 
 			// Tell ConnectionServer to close the actual socket connection (mirrors the QUIT path in
 			// SocketCommands.cs) — ConnectionService.Disconnect alone only updates server-side state
@@ -1730,7 +1730,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
-	public static async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await ConfigSetHelper(parser, isEnable: false);
 
 	[SharpCommand(Name = "@HOOK",
@@ -1739,15 +1739,15 @@ public partial class Commands
 			"LIST", "AFTER", "BEFORE", "EXTEND", "IGSWITCH", "IGNORE", "OVERRIDE", "INPLACE", "INLINE", "LOCALIZE",
 			"CLEARREGS", "NOBREAK"
 		], Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD|POWER^HOOK", MinArgs = 0, ParameterNames = ["type", "object/attribute"])]
-	public static async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Hook(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
 		if (!await executor.IsWizard())
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -1756,27 +1756,27 @@ public partial class Commands
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
 			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
 		var commandName = args["0"].Message?.ToPlainText()?.ToUpper();
 		if (string.IsNullOrEmpty(commandName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
 			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
 
 		if (switches.Contains("LIST"))
 		{
-			var hooks = await HookService!.GetAllHooksAsync(commandName);
+			var hooks = await HookService.GetAllHooksAsync(commandName);
 			if (hooks.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat), executor, commandName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat), executor, commandName);
 				return CallState.Empty;
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookListHeaderFormat), executor, commandName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookListHeaderFormat), executor, commandName);
 			foreach (var (hookType, hook) in hooks)
 			{
 				var flags = new List<string>();
@@ -1801,20 +1801,20 @@ public partial class Commands
 
 		if (selectedHookType == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyType), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyType), executor);
 			return new CallState(ErrorMessages.Returns.NoHookType);
 		}
 
 		if (args.Count < 2 || string.IsNullOrWhiteSpace(args["1"].Message?.ToPlainText()))
 		{
-			var cleared = await HookService!.ClearHookAsync(commandName, selectedHookType);
+			var cleared = await HookService.ClearHookAsync(commandName, selectedHookType);
 			if (cleared)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookClearedFormat), executor, selectedHookType, commandName);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookClearedFormat), executor, selectedHookType, commandName);
 				return CallState.Empty;
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNotSetFormat), executor, selectedHookType, commandName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookNotSetFormat), executor, selectedHookType, commandName);
 			return new CallState(ErrorMessages.Returns.NoHook);
 		}
 
@@ -1826,11 +1826,11 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(objectRef))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyObject), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyObject), executor);
 			return new CallState(ErrorMessages.Returns.NoObject);
 		}
 
-		var maybeObject = await LocateService!.LocateAndNotifyIfInvalid(parser, executor, executor,
+		var maybeObject = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
 			objectRef, LocateFlags.All);
 
 		if (!maybeObject.IsValid())
@@ -1846,12 +1846,12 @@ public partial class Commands
 			? attributeArg.Trim()
 			: $"cmd.{selectedHookType.ToLower()}";
 
-		var attrResult = await AttributeService!.GetAttributeAsync(executor, targetObject,
+		var attrResult = await AttributeService.GetAttributeAsync(executor, targetObject,
 			attributeName, IAttributeService.AttributeMode.Read);
 
 		if (attrResult.IsError)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookAttributeNotFoundFormat), executor, attributeName, dbref);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookAttributeNotFoundFormat), executor, attributeName, dbref);
 			return new CallState(ErrorMessages.Returns.NoAttribute);
 		}
 
@@ -1861,32 +1861,32 @@ public partial class Commands
 		var localize = switches.Contains("LOCALIZE") || inplace;
 		var clearregs = switches.Contains("CLEARREGS") || inplace;
 
-		await HookService!.SetHookAsync(commandName, selectedHookType, dbref, attributeName,
+		await HookService.SetHookAsync(commandName, selectedHookType, dbref, attributeName,
 			inline || inplace, nobreak, localize, clearregs);
 
 		var flagDesc = inline || inplace ? " (inline)" : "";
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookSetFormat), executor, selectedHookType, commandName, flagDesc);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookSetFormat), executor, selectedHookType, commandName, flagDesc);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
 		CommandLock = "FLAG^WIZARD", MinArgs = 1, ParameterNames = ["player", "password"])]
-	public static async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText();
 		var isGenerate = parser.CurrentState.Switches.Contains("GENERATE");
 
 		if (isGenerate && parser.CurrentState.Arguments.Count > 1)
 		{
-			await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
+			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
 		}
 
 		var maybePlayer =
-			await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
+			await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
 
 		if (maybePlayer.IsError)
 		{
@@ -1897,29 +1897,29 @@ public partial class Commands
 
 		if (isGenerate)
 		{
-			var generatedPassword = PasswordService!.GenerateRandomPassword();
+			var generatedPassword = PasswordService.GenerateRandomPassword();
 
-			await Mediator!.Send(
+			await Mediator.Send(
 				new SetPlayerPasswordCommand(asPlayer,
 					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
-			await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
+			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
 
 			return new CallState(generatedPassword);
 		}
 
 		if (!args.TryGetValue("1", out var arg1CallState))
 		{
-			await NotifyService!.Notify(executor, "Usage: @newpassword <player>=<password>", executor);
+			await NotifyService.Notify(executor, "Usage: @newpassword <player>=<password>", executor);
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@NEWPASSWORD", 2, 1));
 		}
 
 		var arg1 = arg1CallState.Message!.ToPlainText();
-		var newHashedPassword = PasswordService!.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
+		var newHashedPassword = PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), arg1);
 
-		await Mediator!.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
+		await Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
 
-		await NotifyService!.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
+		await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
 
 		return new CallState(arg1);
 	}
@@ -1932,22 +1932,22 @@ public partial class Commands
 	/// spared rather than freed.
 	/// </remarks>
 	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		await ObjectDestructionService!.PurgeAsync(parser);
+		await ObjectDestructionService.PurgeAsync(parser);
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeComplete), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeComplete), executor);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
-	public static async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var executorName = executor.Object().Name;
 
@@ -1955,57 +1955,57 @@ public partial class Commands
 		{
 			if (!executor.IsGod())
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.ShutdownOnlyGodPanic,
 					shouldNotify: true);
 			}
 
-			await GameBroadcastService!.BroadcastShutdownAsync(executorName, isReboot: false);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownPanicInitiated), executor);
+			await GameBroadcastService.BroadcastShutdownAsync(executorName, isReboot: false);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownPanicInitiated), executor);
 			// In a web-based environment, panic shutdown should trigger immediate termination
 			// This would typically be handled by orchestration (Kubernetes, Docker, etc.)
-			Logger!.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executorName);
+			Logger.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executorName);
 		}
 		else if (switches.Contains("REBOOT"))
 		{
 			// Broadcast reboot to all connected players (PennMUSH src/bsd.c).
-			await GameBroadcastService!.BroadcastAsync(
+			await GameBroadcastService.BroadcastAsync(
 				string.Format(ErrorMessages.Notifications.GameRebootBy, executorName));
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootDocker), executor);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootStandalone), executor);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootRedis), executor);
-			Logger!.LogWarning("REBOOT requested by {Executor}", executorName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootDocker), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootStandalone), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootRedis), executor);
+			Logger.LogWarning("REBOOT requested by {Executor}", executorName);
 		}
 		else if (switches.Contains("PARANOID"))
 		{
-			await GameBroadcastService!.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidInitiated), executor);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidArangoDB), executor);
-			Logger!.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
+			await GameBroadcastService.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidInitiated), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidArangoDB), executor);
+			Logger.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
 		}
 		else
 		{
 			// Broadcast shutdown to all connected players (PennMUSH src/bsd.c).
-			await GameBroadcastService!.BroadcastShutdownAsync(executorName, isReboot: false);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor);
-			Logger!.LogWarning("SHUTDOWN requested by {Executor}", executorName);
+			await GameBroadcastService.BroadcastShutdownAsync(executorName, isReboot: false);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor);
+			Logger.LogWarning("SHUTDOWN requested by {Executor}", executorName);
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteWebApp), executor);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteOrchestration), executor);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteNoSave), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteWebApp), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteOrchestration), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteNoSave), executor);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var data = (await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>())!;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var data = (await ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
 		var upSince = data.StartTime;
 		var lastReboot = data.LastRebootTime.Humanize();
 		var reboots = data.Reboots.ToString();
@@ -2024,7 +2024,7 @@ public partial class Commands
 		                  SharpMUSH Uptime: {uptime}
 		               """;
 
-		await NotifyService!.Notify(executor, details, executor);
+		await NotifyService.Notify(executor, details, executor);
 
 		if (!await executor.IsWizard() || parser.CurrentState.Switches.Contains("MORTAL"))
 		{
@@ -2054,21 +2054,21 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
 		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
-	public static async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Chown(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 		var preserve = switches.Contains("PRESERVE");
 
 		if (args.Count < 1)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 
 		if (maybePlayer.IsError)
 		{
@@ -2081,7 +2081,7 @@ public partial class Commands
 		if (args.Count > 1)
 		{
 			var newOwnerArg = args["1"].Message!.ToPlainText();
-			var maybeNewOwner = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg);
+			var maybeNewOwner = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg);
 			if (maybeNewOwner.IsError)
 			{
 				return maybeNewOwner.AsError;
@@ -2097,7 +2097,7 @@ public partial class Commands
 		var chownRooms = switches.Contains("ROOMS") || (!switches.Contains("THINGS") && !switches.Contains("EXITS"));
 		var chownExits = switches.Contains("EXITS") || (!switches.Contains("THINGS") && !switches.Contains("ROOMS"));
 
-		var objects = Mediator!.CreateStream(new GetAllTypedObjectsQuery());
+		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
 		var count = 0;
 
 		await foreach (var obj in objects)
@@ -2120,40 +2120,40 @@ public partial class Commands
 				continue;
 			}
 
-			await Mediator!.Send(new SetObjectOwnerCommand(obj, newOwner.AsPlayer));
+			await Mediator.Send(new SetObjectOwnerCommand(obj, newOwner.AsPlayer));
 			count++;
 
 			if (!preserve && !obj.IsPlayer)
 			{
 				if (await obj.HasFlag("WIZARD"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
 				}
 				if (await obj.HasFlag("ROYALTY"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 				}
 				if (await obj.HasFlag("TRUST"))
 				{
-					await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 				}
-				await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "HALT", false);
+				await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
 
-				await ManipulateSharpObjectService!.ClearAllPowers(executor, obj, false);
+				await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
 			}
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, count, oldOwner.Object.Name, newOwner.Object().Name);
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
-	public static async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
 		return new None();
 	}
 
@@ -2162,47 +2162,47 @@ public partial class Commands
 	/// </remarks>
 	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
-	public static async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var defaultHome = Configuration!.CurrentValue.Database.DefaultHome;
+		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var startingQuota = (int)Configuration!.CurrentValue.Limit.StartingQuota;
+		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
 		var args = parser.CurrentState.Arguments;
 		var name = args["0"].Message!.ToPlainText();
 		var password = args["1"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
 		// an existing AnySharpObject target (for rename operations), which we don't have yet
-		if (!await ValidateService!.Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None()))
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None()))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
 			return CallState.Empty;
 		}
 
 		// This is necessary because ValidationType.Name only checks format, not uniqueness
-		if (await Mediator!.CreateStream(new GetPlayerQuery(name)).AnyAsync())
+		if (await Mediator.CreateStream(new GetPlayerQuery(name)).AnyAsync())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
 			return CallState.Empty;
 		}
 
-		if (!await ValidateService!.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidPassword), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidPassword), executor);
 			return CallState.Empty;
 		}
 
-		var player = await Mediator!.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
+		var player = await Mediator.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		// PennMUSH src/wiz.c do_pcreate ends with exactly this notify — including the password, which the
 		// wizard has to be able to pass on to the new player and just typed anyway.
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
 			name, player.Number, password);
 
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
-		await EventService!.TriggerEventAsync(
+		await EventService.TriggerEventAsync(
 			parser,
 			"PLAYER`CREATE",
 			executor.Object().DBRef, // Enactor is the wizard who did @pcreate
@@ -2217,15 +2217,15 @@ public partial class Commands
 
 	[SharpCommand(Name = "@QUOTA", Switches = ["ALL", "SET"], Behavior = CB.Default | CB.EqSplit, MinArgs = 0,
 		MaxArgs = 2, ParameterNames = ["player", "quota"])]
-	public static async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Quota(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.Arguments;
 
-		if (!Configuration!.CurrentValue.Limit.UseQuota)
+		if (!Configuration.CurrentValue.Limit.UseQuota)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSystemDisabled), executor);
 			return CallState.Empty;
 		}
 
@@ -2233,7 +2233,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -2242,7 +2242,7 @@ public partial class Commands
 
 			if (args.Count < 2)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSetUsage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaSetUsage), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2251,11 +2251,11 @@ public partial class Commands
 
 			if (!int.TryParse(amountArg, out var amount))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaAmountMustBeNumber), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 			if (maybePlayer.IsError)
 			{
 				return maybePlayer.AsError;
@@ -2263,9 +2263,9 @@ public partial class Commands
 
 			var player = maybePlayer.AsSharpObject.AsPlayer;
 
-			await Mediator!.Send(new SetPlayerQuotaCommand(player, amount));
+			await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
 			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), amount, executor.Object().Name);
 
 			return CallState.Empty;
@@ -2275,18 +2275,18 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard())
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 					shouldNotify: true);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingHeader), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingHeader), executor);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingColumnHeader), executor);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingSeparator), executor);
 
-			var players = Mediator!.CreateStream(new GetAllPlayersQuery());
+			var players = Mediator.CreateStream(new GetAllPlayersQuery());
 			await foreach (var player in players)
 			{
 				var objectCount = await Mediator.Send(new GetOwnedObjectCountQuery(player));
@@ -2301,7 +2301,7 @@ public partial class Commands
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 			if (maybePlayer.IsError)
 			{
 				return maybePlayer.AsError;
@@ -2312,9 +2312,9 @@ public partial class Commands
 		var targetPlayerObj = targetPlayer.AsPlayer;
 		var quota = targetPlayerObj.Quota;
 
-		var objectsOwned = await Mediator!.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
+		var objectsOwned = await Mediator.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaPlayerObjectsFormat), executor, targetPlayerObj.Object.Name, objectsOwned, quota);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaPlayerObjectsFormat), executor, targetPlayerObj.Object.Name, objectsOwned, quota);
 
 		return CallState.Empty;
 	}
@@ -2330,14 +2330,14 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["site", "rule"])]
-	public static async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> SiteLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
-		var sitelockRules = Configuration!.CurrentValue.SitelockRules;
-		var bannedNames = Configuration!.CurrentValue.BannedNames;
+		var sitelockRules = Configuration.CurrentValue.SitelockRules;
+		var bannedNames = Configuration.CurrentValue.BannedNames;
 
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
@@ -2371,7 +2371,7 @@ public partial class Commands
 				output.AppendLine("  " + string.Join(", ", bannedNames.BannedNames));
 			}
 
-			await NotifyService!.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			return CallState.Empty;
 		}
 
@@ -2379,7 +2379,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockCheckRequiresHost), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockCheckRequiresHost), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2391,11 +2391,11 @@ public partial class Commands
 			if (matchingRule.HasValue)
 			{
 				var options = string.Join(", ", matchingRule.Value.Value);
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockHostMatchesFormat), executor, hostToCheck, matchingRule.Value.Key, options);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockHostMatchesFormat), executor, hostToCheck, matchingRule.Value.Key, options);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockHostNoMatchFormat), executor, hostToCheck);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockHostNoMatchFormat), executor, hostToCheck);
 			}
 
 			return CallState.Empty;
@@ -2405,13 +2405,13 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
 			// Note: Actual modification of configuration is not yet implemented
 			// This would require saving to the database
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotImplemented), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotImplemented), executor);
 			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
@@ -2420,14 +2420,14 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanRequiresPattern), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBanRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
 			var banPattern = args["0"].Message!.ToPlainText();
 			string[] banFlags = ["!connect", "!create", "!guest"];
 			await AddSitelockRuleAsync(banPattern, banFlags);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, banPattern, string.Join(" ", banFlags));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, banPattern, string.Join(" ", banFlags));
 			return CallState.Empty;
 		}
 
@@ -2436,14 +2436,14 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterRequiresPattern), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRegisterRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
 			var registerPattern = args["0"].Message!.ToPlainText();
 			string[] registerFlags = ["!create", "register"];
 			await AddSitelockRuleAsync(registerPattern, registerFlags);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, registerPattern, string.Join(" ", registerFlags));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, registerPattern, string.Join(" ", registerFlags));
 			return CallState.Empty;
 		}
 
@@ -2451,7 +2451,7 @@ public partial class Commands
 		{
 			if (args.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveRequiresPattern), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRemoveRequiresPattern), executor);
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
@@ -2459,11 +2459,11 @@ public partial class Commands
 			var removed = await RemoveSitelockRuleAsync(removePattern);
 			if (!removed)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotFound), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleNotFound), executor);
 				return new CallState(ErrorMessages.Returns.NoMatch);
 			}
 
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleRemovedFormat), executor, removePattern);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleRemovedFormat), executor, removePattern);
 			return CallState.Empty;
 		}
 
@@ -2473,11 +2473,11 @@ public partial class Commands
 			var ruleFlags = args["1"].Message!.ToPlainText()
 				.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			await AddSitelockRuleAsync(rulePattern, ruleFlags);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
 			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
 		return new CallState(ErrorMessages.Returns.InvalidArguments);
 	}
 
@@ -2486,14 +2486,14 @@ public partial class Commands
 	/// database, falling back to <see cref="Configuration"/>'s in-memory snapshot only if nothing has
 	/// been persisted yet. Read-modify-write mutations (<see cref="AddSitelockRuleAsync"/>,
 	/// <see cref="RemoveSitelockRuleAsync"/>) must base their merge on this rather than on
-	/// <c>Configuration!.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c>
+	/// <c>Configuration.CurrentValue</c> alone: <c>IOptionsWrapper&lt;SharpMUSHOptions&gt;</c>
 	/// re-reads lazily off the reload change-token, and a rule persisted moments earlier by a
 	/// *different* mutation (e.g. via the web admin UI, or a prior command in the same turn) could
 	/// otherwise be silently dropped by an overwrite based on a stale in-memory copy.
 	/// </summary>
-	private static async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
-		=> await Database!.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
-			?? Configuration!.CurrentValue;
+	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
+		=> await Database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+			?? Configuration.CurrentValue;
 
 	/// <summary>
 	/// Adds or replaces the sitelock rule for <paramref name="pattern"/> with <paramref name="flags"/>,
@@ -2502,7 +2502,7 @@ public partial class Commands
 	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
 	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
 	/// </summary>
-	private static async ValueTask AddSitelockRuleAsync(string pattern, string[] flags)
+	private async ValueTask AddSitelockRuleAsync(string pattern, string[] flags)
 	{
 		var currentOptions = await CurrentPersistedOptionsAsync();
 		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules)
@@ -2515,9 +2515,9 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database!.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-		ConfigReloadService!.SignalChange();
-		await BanEnforcer!.EnforceHostRuleAsync(pattern);
+		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		ConfigReloadService.SignalChange();
+		await BanEnforcer.EnforceHostRuleAsync(pattern);
 	}
 
 	/// <summary>
@@ -2527,7 +2527,7 @@ public partial class Commands
 	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
 	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
 	/// </summary>
-	private static async ValueTask<bool> RemoveSitelockRuleAsync(string pattern)
+	private async ValueTask<bool> RemoveSitelockRuleAsync(string pattern)
 	{
 		var currentOptions = await CurrentPersistedOptionsAsync();
 		var newRules = new Dictionary<string, string[]>(currentOptions.SitelockRules.Rules);
@@ -2542,28 +2542,28 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database!.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
-		ConfigReloadService!.SignalChange();
+		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		ConfigReloadService.SignalChange();
 		return true;
 	}
 
 	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService!.GetAll().Select(x => x.Handle);
+		var handles = ConnectionService.GetAll().Select(x => x.Handle);
 
 		if (!parser.CurrentState.Switches.Contains("EMIT"))
 		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration!.CurrentValue.Cosmetic.WallPrefix + " "), shout);
+			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
 		}
 
 		await foreach (var handle in handles)
 		{
-			await NotifyService!.Notify(handle, shout, executor);
+			await NotifyService.Notify(handle, shout, executor);
 		}
 
 		return new CallState(shout);
@@ -2571,10 +2571,10 @@ public partial class Commands
 
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
-	public static async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var playerName = args["0"].Message!.ToPlainText();
 		var zoneName = args["1"].Message!.ToPlainText();
@@ -2582,14 +2582,14 @@ public partial class Commands
 
 		// A player by name, so MAT_PMATCH: MAT_EVERYTHING carries MAT_PLAYER, which only answers to a
 		// leading '*'.
-		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, playerName,
 			LocateFlags.All | LocateFlags.MatchOptionalWildCardForPlayerName,
 			async player =>
 			{
 				if (!player.IsPlayer)
 				{
-					return await NotifyService!.NotifyAndReturn(
+					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
 						errorReturn: ErrorMessages.Returns.InvalidPlayer,
 						notifyMessage: ErrorMessages.Notifications.MustBePlayer,
@@ -2598,7 +2598,7 @@ public partial class Commands
 
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					var allObjects = Mediator!.CreateStream(new GetAllTypedObjectsQuery())!;
+					var allObjects = Mediator.CreateStream(new GetAllTypedObjectsQuery())!;
 					var count = 0;
 
 					await foreach (var obj in allObjects)
@@ -2607,12 +2607,12 @@ public partial class Commands
 						if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
 						{
 							// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-							await Mediator!.Send(new UnsetObjectZoneCommand(obj));
+							await Mediator.Send(new UnsetObjectZoneCommand(obj));
 							count++;
 						}
 					}
 
-					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZonesClearedForOwnerFormat), executor, count, player.Object().Name);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZonesClearedForOwnerFormat), executor, count, player.Object().Name);
 					return CallState.Empty;
 				}
 
@@ -2620,7 +2620,7 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						var allObjects = Mediator!.CreateStream(new GetAllTypedObjectsQuery())!;
+						var allObjects = Mediator.CreateStream(new GetAllTypedObjectsQuery())!;
 						var count = 0;
 
 						await foreach (var obj in allObjects)
@@ -2630,36 +2630,36 @@ public partial class Commands
 							{
 								// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
 
-								if (!await HelperFunctions.SafeToAddZone(Mediator, Database!, obj, zoneObj))
+								if (!await HelperFunctions.SafeToAddZone(Mediator, Database, obj, zoneObj))
 								{
 									continue;
 								}
 
-								await Mediator!.Send(new SetObjectZoneCommand(obj, zoneObj));
+								await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
 
 								if (!preserve && !obj.IsPlayer)
 								{
 									if (await obj.HasFlag("WIZARD"))
 									{
-										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
+										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
 									}
 									if (await obj.HasFlag("ROYALTY"))
 									{
-										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
+										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
 									}
 									if (await obj.HasFlag("TRUST"))
 									{
-										await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, obj, "!TRUST", false);
+										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 									}
 
-									await ManipulateSharpObjectService!.ClearAllPowers(executor, obj, false);
+									await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
 								}
 
 								count++;
 							}
 						}
 
-						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneSetForOwnerFormat), executor, zoneObj.Object().Name, count, player.Object().Name);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneSetForOwnerFormat), executor, zoneObj.Object().Name, count, player.Object().Name);
 						return CallState.Empty;
 					}
 				);
@@ -2669,23 +2669,23 @@ public partial class Commands
 
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
-	public static async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await ConfigSetHelper(parser, isEnable: true);
 
 	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player"])]
-	public static async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		if (args.Count == 0)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.KickUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.KickUsage), executor);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService!.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
+		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
 		if (maybePlayer.IsError)
 		{
 			return maybePlayer.AsError;
@@ -2695,35 +2695,35 @@ public partial class Commands
 		var targetDbRef = playerObj.Object.DBRef;
 
 		var any = false;
-		await foreach (var cd in ConnectionService!.Get(targetDbRef))
+		await foreach (var cd in ConnectionService.Get(targetDbRef))
 		{
 			any = true;
-			await NotifyService!.NotifyLocalized(cd.Handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
+			await NotifyService.NotifyLocalized(cd.Handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
 			await ConnectionService.Disconnect(cd.Handle);
 		}
 
 		if (!any)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
 		}
 
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var pollData = await ObjectDataService!.GetExpandedServerDataAsync<PollData>() ?? new PollData();
+		var pollData = await ObjectDataService.GetExpandedServerDataAsync<PollData>() ?? new PollData();
 
 		if (switches.Contains("CLEAR"))
 		{
 			if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 			{
-				return await NotifyService!.NotifyAndReturn(
+				return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
 					errorReturn: ErrorMessages.Returns.PermissionDenied,
 					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -2731,8 +2731,8 @@ public partial class Commands
 			}
 
 			var newPollData = pollData with { Message = null };
-			await ObjectDataService!.SetExpandedServerDataAsync(newPollData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageCleared), executor);
+			await ObjectDataService.SetExpandedServerDataAsync(newPollData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageCleared), executor);
 			return CallState.Empty;
 		}
 
@@ -2740,18 +2740,18 @@ public partial class Commands
 		{
 			if (string.IsNullOrEmpty(pollData.Message))
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollNoPollMessage), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollNoPollMessage), executor);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollCurrentMessageFormat), executor, pollData.Message);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollCurrentMessageFormat), executor, pollData.Message);
 			}
 			return CallState.Empty;
 		}
 
 		if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 		{
-			return await NotifyService!.NotifyAndReturn(
+			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
@@ -2760,35 +2760,35 @@ public partial class Commands
 
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 		var newData = pollData with { Message = argText };
-		await ObjectDataService!.SetExpandedServerDataAsync(newData, ignoreNull: true);
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageSet), executor);
+		await ObjectDataService.SetExpandedServerDataAsync(newData, ignoreNull: true);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PollMessageSet), executor);
 		return CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
-	public static async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (TextFileService == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheServiceNotAvailable), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheServiceNotAvailable), executor);
 			return CallState.Empty;
 		}
 
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor);
 
 		var startTime = DateTime.UtcNow;
 		try
 		{
 			await TextFileService.ReindexAsync();
 			var elapsed = DateTime.UtcNow - startTime;
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat), executor, elapsed.TotalMilliseconds.ToString("F0"));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat), executor, elapsed.TotalMilliseconds.ToString("F0"));
 		}
 		catch (Exception ex)
 		{
 			var elapsed = DateTime.UtcNow - startTime;
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheErrorFormat), executor, elapsed.TotalMilliseconds.ToString("F0"), ex.Message);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheErrorFormat), executor, elapsed.TotalMilliseconds.ToString("F0"), ex.Message);
 		}
 
 		return CallState.Empty;
@@ -2796,32 +2796,32 @@ public partial class Commands
 
 	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["message"])]
-	public static async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
+	public async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
 		// Alias for @motd/wizard
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();
 
-		var motdData = await ObjectDataService!.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
+		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>() ?? new MotdData();
 
 		if (switches.Contains("CLEAR"))
 		{
 			var newMotdData = motdData with { WizardMotd = null };
-			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdCleared), executor);
+			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdCleared), executor);
 		}
 		else if (string.IsNullOrEmpty(argText))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdUsage), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdUsage), executor);
 		}
 		else
 		{
 			var newMotdData = motdData with { WizardMotd = argText };
-			await ObjectDataService!.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdSet), executor);
+			await ObjectDataService.SetExpandedServerDataAsync(newMotdData, ignoreNull: true);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WizMotdSet), executor);
 		}
 
 		return CallState.Empty;
@@ -2831,15 +2831,15 @@ public partial class Commands
 	/// Helper method for @ENABLE and @DISABLE commands.
 	/// Mimics @config/set behavior for boolean options.
 	/// </summary>
-	private static async ValueTask<Option<CallState>> ConfigSetHelper(IMUSHCodeParser parser, bool isEnable)
+	private async ValueTask<Option<CallState>> ConfigSetHelper(IMUSHCodeParser parser, bool isEnable)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
 		var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
 		if (string.IsNullOrWhiteSpace(optionName))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, isEnable ? "enable" : "disable");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, isEnable ? "enable" : "disable");
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -2848,7 +2848,7 @@ public partial class Commands
 
 		if (matchingProperty.Key == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
@@ -2856,16 +2856,16 @@ public partial class Commands
 		if (propertyType != typeof(bool))
 		{
 			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, attr.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, attr.Name);
 			return new CallState(ErrorMessages.Returns.InvalidType);
 		}
 
-		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration!.CurrentValue, matchingProperty.Key);
+		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, matchingProperty.Key);
 		var attr2 = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
 
 		// Note: Runtime configuration modification is not yet fully implemented
 		// This would require writing to a configuration file or database and reloading
-		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, isEnable ? "enable" : "disable", attr2.Name, isEnable ? "yes" : "no");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, isEnable ? "enable" : "disable", attr2.Name, isEnable ? "yes" : "no");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RuntimeConfigNotImplemented), executor);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCurrentValueFormat), executor, attr2.Name, value?.ToString() ?? "null");
 

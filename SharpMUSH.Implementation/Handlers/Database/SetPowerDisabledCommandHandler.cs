@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetPowerDisabledCommandHandler(ISharpDatabase database)
+public class SetPowerDisabledCommandHandler(IFlagAndPowerStore database)
 	: ICommandHandler<SetPowerDisabledCommand, bool>
 {
 	public async ValueTask<bool> Handle(SetPowerDisabledCommand command, CancellationToken cancellationToken)

@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class RenameAttributeEntryCommandHandler(ISharpDatabase database) : ICommandHandler<RenameAttributeEntryCommand, SharpAttributeEntry?>
+public class RenameAttributeEntryCommandHandler(IAttributeStore database) : ICommandHandler<RenameAttributeEntryCommand, SharpAttributeEntry?>
 {
 	public async ValueTask<SharpAttributeEntry?> Handle(RenameAttributeEntryCommand request, CancellationToken cancellationToken)
 	{

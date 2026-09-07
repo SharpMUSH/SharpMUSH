@@ -5,13 +5,13 @@ using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreateChannelCommandHandler(ISharpDatabase database) : ICommandHandler<CreateChannelCommand, ChannelCreationResult>
+public class CreateChannelCommandHandler(IChannelStore database) : ICommandHandler<CreateChannelCommand, ChannelCreationResult>
 {
 	public async ValueTask<ChannelCreationResult> Handle(CreateChannelCommand request, CancellationToken cancellationToken)
 		=> await database.CreateChannelAsync(request.Channel, request.Privs, request.Owner, cancellationToken);
 }
 
-public class UpdateChannelCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateChannelCommand>
+public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -30,7 +30,7 @@ public class UpdateChannelCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class DeleteChannelCommandHandler(ISharpDatabase database) : ICommandHandler<DeleteChannelCommand>
+public class DeleteChannelCommandHandler(IChannelStore database) : ICommandHandler<DeleteChannelCommand>
 {
 	public async ValueTask<Unit> Handle(DeleteChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -39,7 +39,7 @@ public class DeleteChannelCommandHandler(ISharpDatabase database) : ICommandHand
 	}
 }
 
-public class AddUserToChannelCommandHandler(ISharpDatabase database) : ICommandHandler<AddUserToChannelCommand>
+public class AddUserToChannelCommandHandler(IChannelStore database) : ICommandHandler<AddUserToChannelCommand>
 {
 	public async ValueTask<Unit> Handle(AddUserToChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -48,7 +48,7 @@ public class AddUserToChannelCommandHandler(ISharpDatabase database) : ICommandH
 	}
 }
 
-public class RemoveUserFromChannelCommandHandler(ISharpDatabase database) : ICommandHandler<RemoveUserFromChannelCommand>
+public class RemoveUserFromChannelCommandHandler(IChannelStore database) : ICommandHandler<RemoveUserFromChannelCommand>
 {
 	public async ValueTask<Unit> Handle(RemoveUserFromChannelCommand request, CancellationToken cancellationToken)
 	{
@@ -57,7 +57,7 @@ public class RemoveUserFromChannelCommandHandler(ISharpDatabase database) : ICom
 	}
 }
 
-public class UpdateChannelUserStatusCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateChannelUserStatusCommand>
+public class UpdateChannelUserStatusCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelUserStatusCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelUserStatusCommand request, CancellationToken cancellationToken)
 	{
@@ -66,7 +66,7 @@ public class UpdateChannelUserStatusCommandHandler(ISharpDatabase database) : IC
 	}
 }
 
-public class UpdateChannelOwnerCommandHandler(ISharpDatabase database) : ICommandHandler<UpdateChannelOwnerCommand>
+public class UpdateChannelOwnerCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelOwnerCommand>
 {
 	public async ValueTask<Unit> Handle(UpdateChannelOwnerCommand request, CancellationToken cancellationToken)
 	{

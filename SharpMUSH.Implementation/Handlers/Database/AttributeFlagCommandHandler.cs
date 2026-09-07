@@ -4,7 +4,7 @@ using SharpMUSH.Library.Commands.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandHandler<SetAttributeFlagCommand, bool>
+public class SetAttributeFlagCommandHandler(IAttributeStore database) : ICommandHandler<SetAttributeFlagCommand, bool>
 {
 	public async ValueTask<bool> Handle(SetAttributeFlagCommand request, CancellationToken cancellationToken)
 	{
@@ -13,7 +13,7 @@ public class SetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandH
 	}
 }
 
-public class UnsetAttributeFlagCommandHandler(ISharpDatabase database) : ICommandHandler<UnsetAttributeFlagCommand, bool>
+public class UnsetAttributeFlagCommandHandler(IAttributeStore database) : ICommandHandler<UnsetAttributeFlagCommand, bool>
 {
 	public async ValueTask<bool> Handle(UnsetAttributeFlagCommand request, CancellationToken cancellationToken)
 	{

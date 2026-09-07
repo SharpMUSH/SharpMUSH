@@ -15,4 +15,5 @@ public record GetObjectsByZoneQuery(OneOf<DBRef, AnySharpObject> Zone)
 {
 	public string CacheKey => $"zone-objects:{Zone.Match(x => x, y => y.Object().DBRef)}";
 	public string[] CacheTags => [Definitions.CacheTags.ZoneObjects];
+	public CacheEntryProfile Profile => CacheEntryProfile.Scan;
 }

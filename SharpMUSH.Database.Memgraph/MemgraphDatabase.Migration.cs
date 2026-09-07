@@ -37,7 +37,7 @@ public partial class MemgraphDatabase
 
 		// Create staging instance (which IS the live database — but with rollback capability)
 		var staging = new MemgraphStagingDatabase(
-			logger, driver, passwordService, backupPath, stagingId);
+			logger, driver, passwordService, relations, backupPath, stagingId);
 
 		await staging.Migrate(ct);
 

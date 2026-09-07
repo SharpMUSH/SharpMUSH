@@ -1,10 +1,11 @@
-﻿using OneOf;
+﻿using SharpMUSH.Library.Extensions;
+using OneOf;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [GenerateOneOf]
-public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
+public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>, IObjectShaped<AnySharpContent>
 {
 	public AnySharpContent(OneOf<SharpPlayer, SharpExit, SharpThing> input) : base(input)
 	{
@@ -60,4 +61,13 @@ public class AnySharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing>
 			async exit => await exit.Home.WithCancellation(CancellationToken.None),
 			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).WithNoneOption()
 		);
+
+	public static DBRef? RefOf(AnySharpContent value) => value.Object().DBRef;
+
+	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContent value)
+	{
+		var content = !node.IsNone && node.Known.IsContent;
+		value = content ? node.Known.AsContent : null!;
+		return content;
+	}
 }

@@ -12,15 +12,15 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "NEWS", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> News(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> News(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		if (HelpTopicResolver == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsSystemNotInitialized), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsSystemNotInitialized), executor);
 			return new CallState(ErrorMessages.Returns.NewsSystemNotInitialized);
 		}
 
@@ -29,11 +29,11 @@ public partial class Commands
 			var mainNews = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, "news");
 			if (mainNews != null)
 			{
-				await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainNews.Markdown), executor);
+				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainNews.Markdown), executor);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoTopicAvailable), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoTopicAvailable), executor);
 			}
 			return CallState.Empty;
 		}
@@ -45,20 +45,20 @@ public partial class Commands
 			var matches = await HelpTopicResolver.SearchTopicsAsync(HelpCorpora.News, topic);
 			if (matches.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), executor, topic);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoEntriesFoundContaining), executor, topic);
 			}
 			else if (matches.Count == 1)
 			{
 				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.News, matches[0]);
 				if (searchContent != null)
 				{
-					await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
+					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsEntriesContaining), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsEntriesContaining), executor, topic);
+				await NotifyService.Notify(executor, string.Join(", ", matches), executor);
 			}
 			return CallState.Empty;
 		}
@@ -68,19 +68,19 @@ public partial class Commands
 
 		if (resolution.TryPickT0(out var entry, out var notAnEntry))
 		{
-			await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
 		}
 		else if (notAnEntry.TryPickT0(out var candidates, out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
-			await NotifyService!.Notify(executor, string.Join(", ", candidates.Topics), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
+			await NotifyService.Notify(executor, string.Join(", ", candidates.Topics), executor);
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, topic);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, topic);
 			if (!isWildcard)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTryPattern), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTryPattern), executor);
 			}
 		}
 
@@ -88,21 +88,21 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "AHELP", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> Ahelp(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public async ValueTask<Option<CallState>> Ahelp(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
 		if (!await executor.IsWizard())
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AdminCommandOnly), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AdminCommandOnly), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (HelpTopicResolver == null)
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpSystemNotInitialized), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpSystemNotInitialized), executor);
 			return new CallState(ErrorMessages.Returns.AhelpSystemNotInitialized);
 		}
 
@@ -111,11 +111,11 @@ public partial class Commands
 			var mainAhelp = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, "ahelp");
 			if (mainAhelp != null)
 			{
-				await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainAhelp.Markdown), executor);
+				await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(mainAhelp.Markdown), executor);
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpAvailable), executor);
 			}
 			return CallState.Empty;
 		}
@@ -127,20 +127,20 @@ public partial class Commands
 			var matches = await HelpTopicResolver.SearchTopicsAsync(HelpCorpora.Admin, topic);
 			if (matches.Count == 0)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining), executor, topic);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoEntriesFoundContaining), executor, topic);
 			}
 			else if (matches.Count == 1)
 			{
 				var searchContent = await HelpTopicResolver.GetExactAsync(HelpCorpora.Admin, matches[0]);
 				if (searchContent != null)
 				{
-					await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
+					await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(searchContent.Markdown), executor);
 				}
 			}
 			else
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpEntriesContaining), executor, topic);
-				await NotifyService!.Notify(executor, string.Join(", ", matches), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpEntriesContaining), executor, topic);
+				await NotifyService.Notify(executor, string.Join(", ", matches), executor);
 			}
 			return CallState.Empty;
 		}
@@ -150,19 +150,19 @@ public partial class Commands
 
 		if (resolution.TryPickT0(out var entry, out var notAnEntry))
 		{
-			await NotifyService!.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
+			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
 		}
 		else if (notAnEntry.TryPickT0(out var candidates, out _))
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
-			await NotifyService!.Notify(executor, string.Join(", ", candidates.Topics), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
+			await NotifyService.Notify(executor, string.Join(", ", candidates.Topics), executor);
 		}
 		else
 		{
-			await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, topic);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, topic);
 			if (!isWildcard)
 			{
-				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTryPattern), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTryPattern), executor);
 			}
 		}
 
@@ -171,7 +171,7 @@ public partial class Commands
 
 	// ANEWS is an alias for AHELP in PennMUSH
 	[SharpCommand(Name = "ANEWS", Switches = ["SEARCH"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["topic"])]
-	public static async ValueTask<Option<CallState>> Anews(IMUSHCodeParser parser, SharpCommandAttribute attr)
+	public async ValueTask<Option<CallState>> Anews(IMUSHCodeParser parser, SharpCommandAttribute attr)
 	{
 		return await Ahelp(parser, attr);
 	}

@@ -1,8 +1,11 @@
 using Mediator;
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -38,6 +41,23 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// The engine cache's registered defaults are the Tagged profile, the one that can never serve
+	/// stale. Ad-hoc Set/GetOrSet callers (the lock service, the account claims cache) inherit its
+	/// size unit, which the bounded memory cache requires, and must not inherit fail-safe: the
+	/// claims cache is invalidated by tag on a ban or role change. Only the caching behaviour hands
+	/// out fail-safe, to key-invalidated queries.
+	/// </summary>
+	[Test]
+	public async Task FusionCache_DefaultsAreTheTaggedProfile()
+	{
+		var defaults = Cache.DefaultEntryOptions;
+		await Assert.That(defaults.Size).IsEqualTo(1);
+		await Assert.That(defaults.IsFailSafeEnabled).IsFalse();
+		await Assert.That(defaults.EagerRefreshThreshold).IsNull();
+		await Assert.That(defaults.Duration).IsEqualTo(Library.Behaviors.CacheEntryProfiles.Tagged.Duration);
+	}
+
+	/// <summary>
 	/// Verifies that querying GetObjectNodeQuery twice with the same DBRef returns
 	/// a result from cache on the second call (the cache key should be populated).
 	/// Uses a freshly created object to avoid interference from concurrent tests that
@@ -67,8 +87,200 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
-	/// Verifies that StreamQueryCachingBehavior caches GetContentsQuery results.
-	/// The second invocation with the same container should serve from cache.
+	/// An object's flags are loaded with it. The same object also sits inside the room's cached
+	/// contents list, and a flag write removes only the object's own key; a mortal's <c>lcon()</c>
+	/// after <c>@set obj=DARK</c> read that list and still showed the object. Every cached result
+	/// carries a tag per object it embeds, and invalidating the object expires them all.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetAfterAContentsListWasCachedIsSeenThroughThatList()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@dig FlagThroughContents Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create FlagThroughContents Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
+
+		// Populate the contents cache, then change a flag through the normal command path.
+		var before = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+		await Assert.That(before.Select(c => c.Object().DBRef.Number)).Contains(thing.Number);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{thing.Number}=DARK"));
+
+		var after = await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync();
+		var embedded = after.Single(c => c.Object().DBRef.Number == thing.Number);
+
+		await Assert.That(await embedded.Object().HasFlag("DARK")).IsTrue()
+			.Because("the contents list carried the object's tag, so the flag write expired it");
+	}
+
+	/// <summary>
+	/// A contents list is stored as the dbrefs it names and resolved through the object node cache,
+	/// so the object it hands out is the object cache's instance, not a second snapshot.
+	/// </summary>
+	[Test]
+	public async Task AContentsListHandsOutTheObjectCachesInstance()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@dig OneInstance Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create OneInstance Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
+
+		var listed = (await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync())
+			.Single(c => c.Object().DBRef.Number == thing.Number);
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known();
+
+		await Assert.That(ReferenceEquals(listed.Object(), node.Object())).IsTrue()
+			.Because("there is one instance of an object in the process: the node cache's");
+
+		var located = await node.Where();
+		var roomNode = (await mediator.Send(new GetObjectNodeQuery(room))).Known();
+		await Assert.That(ReferenceEquals(located.Object(), roomNode.Object())).IsTrue()
+			.Because("a location answer is stored as a dbref and resolved through the same cache");
+	}
+
+	/// <summary>
+	/// The container an occupant's <c>Where()</c> answers with is a cached snapshot too (the location
+	/// query embeds the room). A flag set on the room must reach it, or every occupant keeps seeing
+	/// the room as it was.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnARoomIsSeenThroughAnOccupantsCachedLocation()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@dig FlagThroughLocation Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
+
+		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Known();
+		var before = await occupant.Where();
+		await Assert.That(before.Object().DBRef.Number).IsEqualTo(room.Number);
+		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{room.Number}=DARK"));
+
+		var after = await (await mediator.Send(new GetObjectNodeQuery(thing))).Known().Where();
+		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
+			.Because("the occupant's cached location embeds the room and carries its tag");
+	}
+
+	/// <summary>
+	/// A parent is resolved through a cached relation query and never memoised on the child's
+	/// instance, so a flag set on the parent is seen through the child immediately.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAParentIsSeenThroughItsChild()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var parent = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create FlagThroughParent Parent"))).Message!.ToPlainText()!);
+		var child = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent #{child.Number}=#{parent.Number}"));
+
+		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Known();
+		var before = await node.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(before.Known().Object().DBRef.Number).IsEqualTo(parent.Number);
+		await Assert.That(await before.Known().Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{parent.Number}=DARK"));
+
+		var after = await node.Object().Parent.WithCancellation(CancellationToken.None);
+		await Assert.That(await after.Known().Object().HasFlag("DARK")).IsTrue()
+			.Because("the same child instance resolves its parent afresh through the cache, which the flag write expired");
+	}
+
+	/// <summary>
+	/// Home is resolved through a cached relation query, never memoised on the instance, so a flag
+	/// set on the home room is seen through the object immediately.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAHomeIsSeenThroughTheObjectsHome()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var home = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@dig FlagThroughHome Room"))).Message!.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link #{thing.Number}=#{home.Number}"));
+
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known().AsThing;
+		var before = await node.Home.WithCancellation(CancellationToken.None);
+		await Assert.That(before.Object().DBRef.Number).IsEqualTo(home.Number);
+		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{home.Number}=DARK"));
+
+		var after = await node.Home.WithCancellation(CancellationToken.None);
+		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
+			.Because("the same instance resolves its home afresh through the cache, which the flag write expired");
+	}
+
+	/// <summary>
+	/// A lookup by name is cached with the player embedded. A flag set on the player must reach it:
+	/// otherwise a de-wizarded player stays a wizard for whoever finds them by name.
+	/// </summary>
+	[Test]
+	public async Task AFlagSetOnAPlayerIsSeenThroughACachedLookupByName()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, mediator, ConnectionService, "FlagThroughName");
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known().Object().Name;
+
+		var before = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
+		await Assert.That(await before.Single().Object.HasFlag("DARK")).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{player.DbRef.Number}=DARK"));
+
+		var after = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
+		await Assert.That(await after.Single().Object.HasFlag("DARK")).IsTrue()
+			.Because("the name lookup embeds the player and carries their tag");
+	}
+
+	/// <summary>
+	/// Powers ride with the object the same way flags do. The Memgraph projection once bound its
+	/// pattern-comprehension variables as <c>f</c> and <c>p</c>, and any query that had already bound
+	/// <c>p</c> (a player lookup binds it to the Player node) got an empty power list back, so no
+	/// player ever had a power when found by name or listed - <c>connect guest</c> found no guests.
+	/// </summary>
+	[Test]
+	public async Task APowerSetOnAPlayerIsSeenThroughLookupByNameAndTheAllPlayersStream()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, mediator, ConnectionService, "PowerThroughName");
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known().Object().Name;
+		var builder = await mediator.Send(new GetPowerQuery("Builder"));
+		await Assert.That(builder).IsNotNull();
+
+		var before = await mediator.CreateStream(new GetPlayerQuery(name)).SingleAsync();
+		await Assert.That(await before.Object.HasPower("Builder")).IsFalse();
+
+		await Assert.That(await mediator.Send(new SetObjectPowerCommand(new AnySharpObject(before), builder!))).IsTrue();
+
+		var byName = await mediator.CreateStream(new GetPlayerQuery(name)).SingleAsync();
+		await Assert.That(await byName.Object.HasPower("Builder")).IsTrue()
+			.Because("a player found by name arrives with the powers the provider stored");
+
+		var listed = await mediator.CreateStream(new GetAllPlayersQuery())
+			.SingleAsync(p => p.Object.Key == player.DbRef.Number);
+		await Assert.That(await listed.Object.HasPower("Builder")).IsTrue()
+			.Because("the all-players stream is what connect guest filters by power");
+	}
+
+	/// <summary>
+	/// Verifies that StreamQueryCachingBehavior caches GetContentsQuery results, stored as the dbrefs
+	/// the list names. The second invocation with the same container should serve from cache.
 	/// Uses a freshly created room to avoid interference from concurrent tests.
 	/// </summary>
 	[Test]
@@ -93,7 +305,7 @@ public class CachingBehaviorTests
 		// don't supply OldContainer (GeneralCommands, MoreCommands, UtilityFunctions) and is
 		// common under parallel CI load.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Contents(dbRef);
-		var cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
+		var cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)
 		{
 			result1.Clear();
@@ -101,7 +313,7 @@ public class CachingBehaviorTests
 			{
 				result1.Add(item);
 			}
-			cached = await Cache.TryGetAsync<List<AnySharpContent>>(cacheKey);
+			cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
 		}
 
 		await Assert.That(cached.HasValue).IsTrue();
@@ -253,7 +465,7 @@ public class CachingBehaviorTests
 		var evicted = new List<Library.Models.DBRef>();
 		foreach (var room in bystanders)
 		{
-			var cached = await Cache.TryGetAsync<List<AnySharpContent>>(
+			var cached = await Cache.TryGetAsync<CachedObjectRefs>(
 				SharpMUSH.Library.Definitions.CacheKeys.Contents(room));
 			if (!cached.HasValue) evicted.Add(room);
 		}
@@ -387,8 +599,8 @@ public class CachingBehaviorTests
 	public async Task StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt(bool byKey, bool byTag)
 	{
 		using var cache = new FusionCache(new FusionCacheOptions());
-		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache);
-		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache);
+		var reads = new StreamQueryCachingBehavior<StaleReadProbe, string>(cache, Substitute.For<Mediator.IMediator>());
+		var writes = new CacheInvalidationBehavior<StaleReadWrite, bool>(cache, new ObjectVersions());
 		var probe = new StaleReadProbe();
 		var write = new StaleReadWrite(byKey ? [probe.CacheKey] : [], byTag ? probe.CacheTags : []);
 

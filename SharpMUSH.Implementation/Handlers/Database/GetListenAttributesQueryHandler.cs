@@ -4,7 +4,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
-using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
@@ -44,8 +44,8 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 			try
 			{
 				var regex = isRegex
-					? new Regex(pattern, RegexOptions.Compiled)
-					: new Regex(MushText.Glob.ToRegex(pattern), RegexOptions.Compiled);
+					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
+					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
 
 				listenAttributes.Add(new ListenAttributeCache(
 					attr,

@@ -15,7 +15,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ConfigAdmin)]
 public class RestrictionsController(
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ISharpDatabase database,
+	IExpandedDataStore database,
 	ConfigurationReloadService configReloadService,
 	ILogger<RestrictionsController> logger)
 	: ControllerBase

@@ -35,7 +35,7 @@ public partial class ArangoDatabase
 		logger.LogInformation("Creating staging database: {StagingDb}", (string)stagingHandle);
 
 		var staging = new ArangoStagingDatabase(
-			logger, arangoDb, stagingHandle, mediator, passwordService,
+			logger, arangoDb, stagingHandle, relations, passwordService,
 			liveDatabase: this, originalHandle: handle, stagingId: stagingId);
 
 		await staging.Migrate(ct);

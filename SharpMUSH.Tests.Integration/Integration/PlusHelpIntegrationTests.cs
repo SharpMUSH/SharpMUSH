@@ -182,7 +182,7 @@ public class PlusHelpIntegrationTests
 		var librarian = await LibrarianAsync();
 		var installer = WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 		var controller = new PackagesController(
-			WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>(),
+			WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageSourceService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IPackageManifestService>(),
 			installer,

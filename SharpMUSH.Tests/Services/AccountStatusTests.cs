@@ -24,7 +24,7 @@ public class AccountStatusTests
 		db.GetCharactersForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(new List<SharpPlayer>());
 
-		return (new AccountService(db, pw, sessions), db, pw, sessions);
+		return (new AccountService(db, db, pw, sessions), db, pw, sessions);
 	}
 
 	private static SharpAccount MakeAccount(AccountStatus status = AccountStatus.Active, string username = "TestUser") => new()

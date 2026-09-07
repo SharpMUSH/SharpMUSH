@@ -5,7 +5,7 @@ using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class GetAllPlayersQueryHandler(ISharpDatabase database)
+public class GetAllPlayersQueryHandler(IObjectStore database)
 	: IStreamQueryHandler<GetAllPlayersQuery, SharpPlayer>
 {
 	public IAsyncEnumerable<SharpPlayer> Handle(GetAllPlayersQuery request, CancellationToken cancellationToken)
