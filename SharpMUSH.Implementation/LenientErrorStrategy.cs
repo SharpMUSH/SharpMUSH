@@ -19,7 +19,7 @@ internal sealed class LenientErrorStrategy : DefaultErrorStrategy
 		IToken current)
 	{
 		// Use empty text instead of "<missing X>" so that context.GetText() and
-		// MModule.substring(…, context.Stop.StopIndex, …) produce clean output.
+		// (…).Substring(…, context.Stop.StopIndex) produce clean output.
 		// Position at current.StopIndex so that StopIndex-based length calculations
 		// remain correct for the surrounding context.
 		return tokenSource.TokenFactory.Create(

@@ -18,11 +18,11 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var attrListStr = MModule.plainText(parser.CurrentState.Arguments["0"].Message!)!;
+		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var tokens = attrListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		// The base is the value threaded through the pipeline; it becomes %0 for the first attribute.
-		var accumulator = parser.CurrentState.Arguments["1"].Message ?? MModule.empty();
+		var accumulator = parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty;
 
 		if (tokens.Length == 0)
 		{

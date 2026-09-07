@@ -12,7 +12,7 @@ public static class ReviewMail
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MModule.repeat(MModule.single("-"), 78);
+		var line = MarkupText.Plain("-").Repeat(78);
 		var name = arg0?.ToPlainText() ?? "all";
 
 		var target = executor.AsPlayer;
@@ -29,7 +29,7 @@ public static class ReviewMail
 			if (!actualPlayer.IsPlayer)
 			{
 				await notifyService.Notify(executor, $"MAIL: {name} not found.", executor);
-				return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
+				return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
 			target = actualPlayer.AsPlayer;
@@ -39,7 +39,7 @@ public static class ReviewMail
 
 		if (!maybeMailList.IsError)
 		{
-			return MModule.single(maybeMailList.AsError);
+			return MarkupText.Plain(maybeMailList.AsError);
 		}
 
 		var mailList = maybeMailList.AsMailList;
@@ -48,30 +48,25 @@ public static class ReviewMail
 		await foreach (var actualMail in mailList)
 		{
 			i++;
-			var dateline = MModule.pad(
-				MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
-				MModule.single(" "),
-				25,
-				PadType.Right,
-				TruncationType.Truncate);
+			var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
 
 			var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 			var messageBuilder = new List<MString>
 			{
 				line,
-				MModule.single($"From: {mailFrom.Object()!.Name}"),
-				MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {i,5}"),
-				MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
-				MModule.concat(MModule.single("Subject: "), actualMail.Subject),
+				MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
+				MarkupText.Plain($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {i,5}"),
+				MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
+				MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
 				line,
 				actualMail.Content,
 				line
 			};
 
-			var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
+			var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
 			await notifyService.Notify(executor, output, executor);
 		}
 
-		return MModule.empty();
+		return MarkupText.Empty;
 	}
 }

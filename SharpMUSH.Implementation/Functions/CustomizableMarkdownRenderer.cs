@@ -176,7 +176,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			}
 			inline = inline.NextSibling;
 		}
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	protected override MString RenderCodeBlock(CodeBlock code)
@@ -189,7 +189,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var codeContent = string.Join("\n", lines);
 		var args = new Dictionary<string, CallState>
 		{
-			{ "0", new CallState(MModule.single(codeContent)) }
+			{ "0", new CallState(MarkupText.Plain(codeContent)) }
 		};
 
 		var custom = TryEvaluateTemplate("CODEBLOCK", args).GetAwaiter().GetResult();
@@ -203,13 +203,13 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var content = RenderListItemContent(listItem);
 		var args = new Dictionary<string, CallState>
 		{
-			{ "0", new CallState(MModule.single(isOrdered ? "1" : "0")) },
-			{ "1", new CallState(MModule.single((index + 1).ToString())) }, // Convert to 1-based index
+			{ "0", new CallState(MarkupText.Plain(isOrdered ? "1" : "0")) },
+			{ "1", new CallState(MarkupText.Plain((index + 1).ToString())) }, // Convert to 1-based index
 			{ "2", new CallState(content) }
 		};
 
 		var custom = TryEvaluateTemplate("LISTITEM", args).GetAwaiter().GetResult();
-		return custom ?? MModule.concat(ListMarker(index, isOrdered), content);
+		return custom ?? MarkupText.Concat(ListMarker(index, isOrdered), content);
 	}
 
 	protected override MString RenderQuote(QuoteBlock quote)
@@ -219,7 +219,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		var content = MarkupText.Join(MarkupText.NewLine, parts);
 		var args = new Dictionary<string, CallState>
 		{
 			{ "0", new CallState(content) }
@@ -236,9 +236,9 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 			.ToDictionary(pair => pair.index.ToString(), pair => new CallState(pair.value));
 
 	/// <summary>A boolean template argument, in the <c>1</c>/<c>0</c> spelling softcode tests with.</summary>
-	private static MString Flag(bool value) => MModule.single(value ? "1" : "0");
+	private static MString Flag(bool value) => MarkupText.Plain(value ? "1" : "0");
 
-	private static MString Text(string? value) => MModule.single(value ?? string.Empty);
+	private static MString Text(string? value) => MarkupText.Plain(value ?? string.Empty);
 
 	/// <summary>
 	/// Rendered content reduced to the plain text the default rendering would have used.
@@ -251,7 +251,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	/// The elements that genuinely work from rendered content (headings, LISTITEM, QUOTE, CONTAINER)
 	/// pass it through instead, and say so on their own members.
 	/// </remarks>
-	private static MString Plain(MString content) => MModule.single(content.ToPlainText());
+	private static MString Plain(MString content) => MarkupText.Plain(content.ToPlainText());
 
 	/// <summary>Runs <paramref name="templateName"/>, or <c>null</c> when the object does not define it.</summary>
 	private MString? Template(string templateName, Dictionary<string, CallState> args) =>
@@ -456,8 +456,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		// Serialised with the options json() uses, so a template meets one JSON dialect whichever
 		// function produced the document it is reading.
-		var custom = Template("TABLE", Args(MModule.single(
-			JsonSerializer.Serialize(payload, JsonHelpers.RelaxedJsonOptions))));
+		var custom = Template("TABLE", Args(MarkupText.Plain(JsonSerializer.Serialize(payload, JsonHelpers.RelaxedJsonOptions))));
 
 		return custom ?? base.RenderTable(table);
 	}
@@ -500,8 +499,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var name = tokens.Length > 0 ? tokens[0] : string.Empty;
 		var arguments = tokens.Length > 1 ? tokens[1] : string.Empty;
 
-		var contents = MModule.multipleWithDelimiter(MModule.single("\n"),
-			container.Select(Render).Where(rendered => rendered.Length > 0).ToList());
+		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0).ToList());
 
 		return Template("CONTAINER", Args(Text(name), Text(arguments), contents))
 			?? base.RenderCustomContainer(container);

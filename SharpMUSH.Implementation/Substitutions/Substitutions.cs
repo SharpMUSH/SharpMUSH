@@ -22,7 +22,7 @@ public static partial class Substitutions
 			"0" or "1" or "2" or "3" or "4" or "5" or "6" or "7" or "8" or "9" =>
 				parser.CurrentState.EnvironmentRegisters.TryGetValue(symbol, out var tmpCs)
 					? tmpCs.Message!
-					: MModule.empty(),
+					: MarkupText.Empty,
 			"B" or "b" => " ",
 			"R" or "r" => "\n",
 			"T" or "t" => "\t",
@@ -93,8 +93,8 @@ public static partial class Substitutions
 		};
 
 	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser) =>
-		MModule.single(parser.StateHistory(2).Match(
-			state => state.Command,
+		MarkupText.Plain(parser.StateHistory(2).Match(
+			state => state.Command ?? string.Empty,
 			_ => string.Empty));
 
 	private static async ValueTask<string> GetLocationDbRefString(IMUSHCodeParser parser, IMediator mediator)
@@ -139,7 +139,7 @@ public static partial class Substitutions
 	private static CallState HandleRegistrySymbol(CallState symbol, IMUSHCodeParser parser)
 	{
 		parser.CurrentState.Registers.TryPeek(out var curVal);
-		return curVal!.TryGetValue(MModule.plainText(symbol.Message).ToUpper(), out var value)
+		return curVal!.TryGetValue((symbol.Message ?? MarkupText.Empty).ToPlainText().ToUpper(), out var value)
 			? new CallState(value)
 			: new CallState(string.Empty);
 	}
@@ -153,7 +153,7 @@ public static partial class Substitutions
 		var val = await attributeService.GetAttributeAsync(
 			executor,
 			executor,
-			symbol.Message!.ToString(),
+			symbol.Message!.ToPlainText(),
 			IAttributeService.AttributeMode.Read);
 
 		return val.Match(
@@ -166,7 +166,7 @@ public static partial class Substitutions
 	// Symbol Example: %$0 --> 0
 	private static CallState HandleSTextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		var symbolValue = symbol.Message!.ToString();
+		var symbolValue = symbol.Message!.ToPlainText();
 		var stack = parser.CurrentState.SwitchStack;
 
 		if (!int.TryParse(symbolValue, out var symbolNumber) || symbolNumber < 0)
@@ -181,7 +181,7 @@ public static partial class Substitutions
 
 		// Get the nth item from the stack (0 is top/current)
 		var item = stack.ElementAtOrDefault(symbolNumber);
-		return new CallState(item ?? MModule.empty());
+		return new CallState(item ?? MarkupText.Empty);
 	}
 
 	// Symbol: %$L --> Last/outermost switch string
@@ -196,13 +196,13 @@ public static partial class Substitutions
 
 		var depth = stack.Count - 1;
 		var item = stack.ElementAtOrDefault(depth);
-		return new CallState(item ?? MModule.empty());
+		return new CallState(item ?? MarkupText.Empty);
 	}
 
 	// Symbol Example: %i0 --> 0
 	private static CallState HandleITextNumber(CallState symbol, IMUSHCodeParser parser)
 	{
-		var symbolValue = symbol.Message!.ToString();
+		var symbolValue = symbol.Message!.ToPlainText();
 		var symbolNumber = int.Parse(symbolValue);
 		var maxCount = parser.CurrentState.IterationRegisters.Count;
 

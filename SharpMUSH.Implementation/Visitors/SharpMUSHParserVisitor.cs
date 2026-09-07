@@ -20,6 +20,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using static SharpMUSHParser;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -165,9 +166,9 @@ public class SharpMUSHParserVisitor(
 			{
 				parts[i] = context.GetChild(i) switch
 				{
-					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MModule.empty(),
+					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MarkupText.Empty,
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
-					_ => MModule.empty()
+					_ => MarkupText.Empty
 				};
 			}
 		}
@@ -176,7 +177,7 @@ public class SharpMUSHParserVisitor(
 			visitor._suppressFunctionEval--;
 		}
 
-		return new CallState(MModule.ConcatMany(parts), context.Depth());
+		return new CallState(MarkupText.Concat(parts), context.Depth());
 	}
 
 	/// <summary>
@@ -195,19 +196,19 @@ public class SharpMUSHParserVisitor(
 		var closeParen = context.CPAREN()?.Symbol;
 		if (funChar is null || closeParen is null)
 		{
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 
 		var openParenOffset = funChar.Text.IndexOf('(');
 		if (openParenOffset < 0)
 		{
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 
 		var start = funChar.StartIndex + openParenOffset + 1;
 		var length = closeParen.StartIndex - start;
 
-		return length > 0 ? MModule.substring(start, length, source) : MModule.empty();
+		return length > 0 ? source.Substring(start, length) : MarkupText.Empty;
 	}
 
 	/// <summary>
@@ -304,11 +305,11 @@ public class SharpMUSHParserVisitor(
 	{
 		if (token.TokenIndex < 0 || token.StartIndex < 0)
 		{
-			return MModule.empty();
+			return MarkupText.Empty;
 		}
 
 		var length = token.StopIndex - token.StartIndex + 1;
-		return length > 0 ? MModule.substring(token.StartIndex, length, source) : MModule.empty();
+		return length > 0 ? source.Substring(token.StartIndex, length) : MarkupText.Empty;
 	}
 
 	/// <summary>
@@ -319,7 +320,7 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-		await NotifyService.Notify(owner, MModule.single(message));
+		await NotifyService.Notify(owner, MarkupText.Plain(message));
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST",
@@ -341,7 +342,7 @@ public class SharpMUSHParserVisitor(
 											 .Where(result => result.IsValid()))
 			{
 				var forwardTarget = locateResult.WithoutError().WithoutNone();
-				await NotifyService.Notify(forwardTarget, MModule.single(message));
+				await NotifyService.Notify(forwardTarget, MarkupText.Plain(message));
 			}
 		}
 	}
@@ -445,10 +446,10 @@ public class SharpMUSHParserVisitor(
 		var messages = new MString[results.Count];
 		for (var i = 0; i < results.Count; i++)
 		{
-			messages[i] = results[i].Message ?? MModule.Empty();
+			messages[i] = results[i].Message ?? MarkupText.Empty;
 		}
 
-		var combined = MModule.ConcatMany(messages);
+		var combined = MarkupText.Concat(messages);
 		var preserveSpaces = results.Any(r => r.PreserveSpaces);
 		return new CallState(combined, results[0].Depth, null,
 			() => ValueTask.FromResult<MString?>(combined))
@@ -470,7 +471,7 @@ public class SharpMUSHParserVisitor(
 			? 0
 			: context.Stop.StopIndex - context.Start.StartIndex + 1;
 
-		return MModule.substring(context.Start.StartIndex, length, source);
+		return source.Substring(context.Start.StartIndex, length);
 	}
 
 	/// <summary>
@@ -489,8 +490,8 @@ public class SharpMUSHParserVisitor(
 		bool stripAnsi) => async () =>
 	{
 		var result = await visitor.VisitChildren(context);
-		var message = result?.Message ?? MModule.empty();
-		return stripAnsi ? MModule.plainText2(message) : message;
+		var message = result?.Message ?? MarkupText.Empty;
+		return stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message;
 	};
 
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
@@ -808,17 +809,17 @@ public class SharpMUSHParserVisitor(
 					.Select<EvaluationStringContext?, CallState>(async (x, _) =>
 					{
 						if (x == null) return CallState.Empty;
-						var msg = (await visitor.VisitChildren(x))?.Message ?? MModule.empty();
-						if (stripAnsi) msg = MModule.plainText2(msg);
+						var msg = (await visitor.VisitChildren(x))?.Message ?? MarkupText.Empty;
+						if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
 						return new CallState(msg, x.Depth());
 					})
-					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+					.DefaultIfEmpty(new CallState(MarkupText.Empty, context.Depth()))
 					.ToListAsync();
 			}
 			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
 			{
 				return new CallState(
-					MModule.substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1, src),
+					src.Substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1),
 					contextDepth,
 					null,
 					async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() })
@@ -831,10 +832,10 @@ public class SharpMUSHParserVisitor(
 					{
 						if (x is null) return CallState.Empty;
 						var text = GetContextText(x);
-						var evalText = stripAnsi ? MModule.plainText2(text) : text;
+						var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
 						return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
 					})
-					.DefaultIfEmpty(new CallState(MModule.empty(), context.Depth()))
+					.DefaultIfEmpty(new CallState(MarkupText.Empty, context.Depth()))
 					.ToList();
 			}
 
@@ -883,7 +884,7 @@ public class SharpMUSHParserVisitor(
 			// Output ceiling: stop a single function that generates an enormous string from
 			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
 			// at the return so it covers every function without each having to guard itself.
-			if (result.Message is not null && MModule.getLength(result.Message) > MaxFunctionOutputChars)
+			if (result.Message is not null && result.Message.Length > MaxFunctionOutputChars)
 			{
 				limitExceeded.IsExceeded = true;
 				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
@@ -1053,10 +1054,7 @@ public class SharpMUSHParserVisitor(
 			// ArgumentSplit; $command matching must use the same slice (commandText) rather than the whole
 			// src, otherwise a $command in a list is matched against the entire list and its ^...$ pattern
 			// never matches. This is the same arithmetic as ArgumentSplit's realSubtext.
-			var commandText = MModule.substring(
-				firstCommandMatch.Start.StartIndex,
-				firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1,
-				src);
+			var commandText = src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
@@ -1467,17 +1465,14 @@ public class SharpMUSHParserVisitor(
 	private async Task<Option<CallState>> HandleChannelCommand(IMUSHCodeParser prs, SharpChannel channel,
 		CommandContext context, MString src)
 	{
-		var full = MModule.substring(
-			context.evaluationString().Start.StartIndex,
-			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
-			src);
+		var full = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
 
 		// The evaluation string still carries the `+<channel>` token itself; only what follows the first
 		// space is the message. Without this, `+Public Hi` was chatted as the literal "+Public Hi".
-		var firstSpace = MModule.indexOf(full, " ");
+		var firstSpace = full.IndexOf(" ");
 		var rest = firstSpace == -1
-			? MModule.empty()
-			: MModule.substring(firstSpace + 1, MModule.getLength(full) - firstSpace - 1, full);
+			? MarkupText.Empty
+			: full.Substring(firstSpace + 1, full.Length - firstSpace - 1);
 
 		var chatParser = prs.Push(prs.CurrentState with
 		{
@@ -1517,10 +1512,7 @@ public class SharpMUSHParserVisitor(
 				Caller = prs.CurrentState.Executor
 			});
 
-			await newParser.CommandListParse(MModule.substring(
-				attr.CommandListIndex!.Value,
-				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
-				attr.Value));
+			await newParser.CommandListParse(attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value));
 		}
 
 		return CallState.Empty;
@@ -1602,13 +1594,10 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		var fullText = MModule.substring(
-			evalString.Start.StartIndex,
-			evalString.Stop.StopIndex - evalString.Start.StartIndex + 1,
-			src);
+		var fullText = src.Substring(evalString.Start.StartIndex, evalString.Stop.StopIndex - evalString.Start.StartIndex + 1);
 
 		// The command format is: @attrname object=value
-		var spaceIndex = MModule.indexOf(fullText, " ");
+		var spaceIndex = fullText.IndexOf(" ");
 		if (spaceIndex == -1)
 		{
 			var handle = prs.CurrentState.Handle;
@@ -1621,7 +1610,7 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		var argsText = MModule.substring(spaceIndex + 1, MModule.getLength(fullText) - spaceIndex - 1, fullText);
+		var argsText = fullText.Substring(spaceIndex + 1, fullText.Length - spaceIndex - 1);
 		var argsPlainText = argsText.ToPlainText();
 
 		var equalsIndex = argsPlainText.IndexOf('=');
@@ -1673,10 +1662,10 @@ public class SharpMUSHParserVisitor(
 			: string.Empty;
 
 		// Preserve markup: the equals sign is at equalsIndex in argsText, so value starts at equalsIndex + 1
-		var valueLength = MModule.getLength(argsText) - equalsIndex - 1;
+		var valueLength = argsText.Length - equalsIndex - 1;
 		var valueMString = valueLength > 0
-			? MModule.substring(equalsIndex + 1, valueLength, argsText)
-			: MModule.single(valuePart);
+			? argsText.Substring(equalsIndex + 1, valueLength)
+			: MarkupText.Plain(valuePart);
 
 		var executor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
@@ -1740,7 +1729,7 @@ public class SharpMUSHParserVisitor(
 		var switchArray = switches.ToArray().AsReadOnly();
 		if (switchArray.Count > 0)
 		{
-			namedRegisters["SWITCHES"] = MModule.single(string.Join(" ", switchArray));
+			namedRegisters["SWITCHES"] = MarkupText.Plain(string.Join(" ", switchArray));
 		}
 
 		// For EQSPLIT commands, populate LS/RS registers
@@ -1750,9 +1739,9 @@ public class SharpMUSHParserVisitor(
 			var equalsIndex = sourceText.IndexOf('=');
 			if (equalsIndex >= 0)
 			{
-				namedRegisters["LS"] = MModule.single(sourceText[..equalsIndex].Trim());
-				namedRegisters["EQUALS"] = MModule.single("=");
-				namedRegisters["RS"] = MModule.single(sourceText[(equalsIndex + 1)..].Trim());
+				namedRegisters["LS"] = MarkupText.Plain(sourceText[..equalsIndex].Trim());
+				namedRegisters["EQUALS"] = MarkupText.Plain("=");
+				namedRegisters["RS"] = MarkupText.Plain(sourceText[(equalsIndex + 1)..].Trim());
 			}
 			else
 			{
@@ -1766,10 +1755,10 @@ public class SharpMUSHParserVisitor(
 
 		for (int i = 0; i < arguments.Count; i++)
 		{
-			namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MModule.empty();
+			namedRegisters[$"LSA{i + 1}"] = arguments[i].Message ?? MarkupText.Empty;
 		}
 
-		namedRegisters["LSAC"] = MModule.single(arguments.Count.ToString());
+		namedRegisters["LSAC"] = MarkupText.Plain(arguments.Count.ToString());
 
 		var commandWithSwitches = src;
 
@@ -2120,10 +2109,7 @@ public class SharpMUSHParserVisitor(
 				Caller = prs.CurrentState.Executor
 			});
 
-			var commandList = MModule.substring(
-				attr.CommandListIndex!.Value,
-				MModule.getLength(attr.Value) - attr.CommandListIndex!.Value,
-				attr.Value);
+			var commandList = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
 
 			await newParser.CommandListParse(commandList);
 		}
@@ -2222,23 +2208,20 @@ public class SharpMUSHParserVisitor(
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
 		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
-		var realSubtext = MModule.substring(
-			context.evaluationString().Start.StartIndex,
-			context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1,
-			src);
-		var spaceInContext = MModule.indexOf(realSubtext, " ");
+		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+		var spaceInContext = realSubtext.IndexOf(" ");
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
 		// EvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
 		// relative to THIS text (not the command's full source line), so re-visiting them later
 		// in EvaluateArgumentSubtree requires a visitor whose `source` field is this same MString.
-		var parsedArgumentText = MModule.empty();
+		var parsedArgumentText = MarkupText.Empty;
 
 		// command (space) argument(s)
 		if (spaceInContext != -1)
 		{
 			var remainder =
-				MModule.substring(spaceInContext + 1, MModule.getLength(realSubtext) - spaceInContext, realSubtext);
+				realSubtext.Substring(spaceInContext + 1, realSubtext.Length - spaceInContext);
 			parsedArgumentText = remainder;
 
 			// command arg0 = arg1,still arg 1
@@ -2261,14 +2244,14 @@ public class SharpMUSHParserVisitor(
 				argCallState = await newNoParseParser.CommandSingleArgParse(remainder);
 			}
 		}
-		else if (MModule.getLength(realSubtext) > 0)
+		else if (realSubtext.Length > 0)
 		{
 			// No space found but the realSubtext is non-empty.
 			// This can happen when the command name is directly followed by its arguments without a space
 			// (e.g., "addcom=Public" where "addcom" is the command and "=Public" is the arg,
 			//  or "@retry gt(%0,-1)=dec(%0)" where the args portion has no space).
 			// Strip the command name prefix (if present) to get just the arguments portion.
-			var realSubtextStr = MModule.plainText(realSubtext);
+			var realSubtextStr = realSubtext.ToPlainText();
 			var argsStr = realSubtextStr;
 			if (!string.IsNullOrEmpty(rootCommand)
 					&& realSubtextStr.StartsWith(rootCommand, StringComparison.OrdinalIgnoreCase))
@@ -2294,7 +2277,7 @@ public class SharpMUSHParserVisitor(
 
 			if (argsStr.Length > 0)
 			{
-				var argsSubtext = MModule.single(argsStr);
+				var argsSubtext = MarkupText.Plain(argsStr);
 				parsedArgumentText = argsSubtext;
 				if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
 				{
@@ -2333,7 +2316,7 @@ public class SharpMUSHParserVisitor(
 		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
 		if (argCallState is { Arguments: null })
 		{
-			var errorText = MModule.plainText(argCallState.Message ?? MModule.empty()).ToString();
+			var errorText = (argCallState.Message ?? MarkupText.Empty).ToPlainText().ToString();
 			return new Error<string>(errorText);
 		}
 
@@ -2367,7 +2350,7 @@ public class SharpMUSHParserVisitor(
 			// deferred ParsedMessage (mirroring the RHS args below) so a command that opts
 			// to evaluate its LHS — e.g. @SCENE, which evaluates args itself unless /NOEVAL —
 			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
-			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MModule.empty();
+			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MarkupText.Empty;
 			arguments.Add(noParse
 				? new CallState(noParseLhs, argCallState.Depth, null,
 					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
@@ -2501,7 +2484,7 @@ public class SharpMUSHParserVisitor(
 
 		if (emitSubstDebug)
 		{
-			var rawText = MModule.plainText(argument).ToString();
+			var rawText = argument.ToPlainText().ToString();
 			await MUSHCodeParser.EmitSubstitutionOnlyDebugTraceAsync(
 				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.DidEmitFunctionDebug);
 		}
@@ -2557,7 +2540,7 @@ public class SharpMUSHParserVisitor(
 			var children = context.children;
 			var lastChild = children[^1];
 			if (lastChild is GenericTextContext or BeginGenericTextContext)
-				result = result with { Message = MModule.trim(result.Message, " ", global::MarkupString.TrimType.TrimEnd) };
+				result = result with { Message = result.Message.Trim(global::MarkupString.TrimType.TrimEnd, " ") };
 		}
 
 		return result;
@@ -2604,10 +2587,10 @@ public class SharpMUSHParserVisitor(
 			result = vc is not null
 				? vc with
 				{
-					Message = MModule.multiple([
-						MModule.single("{"),
-						vc.Message,
-						MModule.single("}")
+					Message = MarkupText.Concat([
+						MarkupText.Plain("{"),
+						vc.Message ?? MarkupText.Empty,
+						MarkupText.Plain("}")
 					])
 				}
 				: new CallState(GetContextText(context), context.Depth());
@@ -2649,10 +2632,10 @@ public class SharpMUSHParserVisitor(
 
 		return result with
 		{
-			Message = MModule.multiple([
-				MModule.single("["),
-				result.Message,
-				MModule.single("]")
+			Message = MarkupText.Concat([
+				MarkupText.Plain("["),
+				result.Message ?? MarkupText.Empty,
+				MarkupText.Plain("]")
 			])
 		};
 	}
@@ -2667,7 +2650,7 @@ public class SharpMUSHParserVisitor(
 		if (context.beginGenericText() is null
 				&& parser.CurrentState.ParseMode is ParseMode.Default
 				&& result.Message is not null)
-			return result with { Message = MModule.compressSpaces(result.Message) };
+			return result with { Message = MushText.CompressSpaces(result.Message) };
 		return result;
 	}
 
@@ -2681,7 +2664,7 @@ public class SharpMUSHParserVisitor(
 		// but internal runs within OTHER tokens and top-level/command-arg leading spaces remain.
 		if (parser.CurrentState.ParseMode is ParseMode.Default && result.Message is not null)
 		{
-			var compressed = MModule.compressSpaces(result.Message);
+			var compressed = MushText.CompressSpaces(result.Message);
 			// Strip leading when this is the FIRST text node in an evaluation string
 			// (direct child of explicitEvaluationString). When reached via genericText
 			// (text between brackets), leading spaces are meaningful separators.
@@ -2695,7 +2678,7 @@ public class SharpMUSHParserVisitor(
 			// leading than the "3" is. So a tail-of-a-call node is excluded here.
 			if (context.Parent is ExplicitEvaluationStringContext or BraceExplicitEvaluationStringContext
 					&& !FollowsACallInTheSameEvaluationString(context.Parent))
-				compressed = MModule.trim(compressed, " ", global::MarkupString.TrimType.TrimStart);
+				compressed = compressed.Trim(global::MarkupString.TrimType.TrimStart, " ");
 			return result with { Message = compressed };
 		}
 
@@ -2724,7 +2707,7 @@ public class SharpMUSHParserVisitor(
 			return new CallState("%" + context.GetText());
 		}
 
-		var textContents = MModule.single(context.GetText());
+		var textContents = MarkupText.Plain(context.GetText());
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 
@@ -2774,9 +2757,9 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var firstChar = MModule.apply(MModule.substring(0, 1, result.Message), x => x.ToUpperInvariant());
-		var rest = MModule.substring(1, result.Message.Length - 1, result.Message);
-		return result with { Message = MModule.concat(firstChar, rest) };
+		var firstChar = result.Message.Substring(0, 1).Apply(x => x.ToUpperInvariant());
+		var rest = result.Message.Substring(1, result.Message.Length - 1);
+		return result with { Message = MarkupText.Concat(firstChar, rest) };
 	}
 
 	public override async ValueTask<CallState?> VisitCommand([NotNull] CommandContext context)
@@ -2859,10 +2842,7 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)
 		=> await VisitChildren(context)
 			 ?? new CallState(
-				 MModule.substring(
-					 context.Start.StartIndex + 1,
-					 context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
-					 source), context.Depth());
+				 source.Substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1), context.Depth());
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainSingleCommandArg"/>.
@@ -2908,7 +2888,7 @@ public class SharpMUSHParserVisitor(
 			: null;
 		return new CallState(null,
 			context.Depth(),
-			[baseArg?.Message ?? MModule.empty(), .. commaArgs?.Arguments ?? []],
+			[baseArg?.Message ?? MarkupText.Empty, .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null))
 		{
 			ArgumentContexts = [evalString, .. commaArgs?.ArgumentContexts ?? []]
@@ -2930,8 +2910,8 @@ public class SharpMUSHParserVisitor(
 		{
 			return new CallState(null, context.Depth(), [
 					evalStrings.Length > 0
-						? (await Visit(evalStrings[0]))?.Message ?? MModule.empty()
-						: MModule.empty()
+						? (await Visit(evalStrings[0]))?.Message ?? MarkupText.Empty
+						: MarkupText.Empty
 				],
 				() => ValueTask.FromResult<MString?>(null))
 			{
@@ -2944,7 +2924,7 @@ public class SharpMUSHParserVisitor(
 		var rsIdx = lhsExists ? 1 : 0;
 		var rhsArg = rsIdx < evalStrings.Length ? await Visit(evalStrings[rsIdx]) : null;
 		return new CallState(null, context.Depth(),
-			[lhsArg?.Message ?? MModule.empty(), rhsArg?.Message ?? MModule.empty()],
+			[lhsArg?.Message ?? MarkupText.Empty, rhsArg?.Message ?? MarkupText.Empty],
 			() => ValueTask.FromResult<MString?>(null))
 		{
 			ArgumentContexts =
@@ -2982,7 +2962,7 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				arguments[i] = MModule.empty();
+				arguments[i] = MarkupText.Empty;
 				contexts[i] = null;
 			}
 		}
@@ -3005,16 +2985,13 @@ public class SharpMUSHParserVisitor(
 				|| context.STEXT_NUM() is not null)
 		{
 			return new CallState(
-				MModule.substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1,
-					source), context.Depth());
+				source.Substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1), context.Depth());
 		}
 
 		return new CallState(
-			MModule.substring(context.Start.StartIndex,
-				context.Stop?.StopIndex is null
+			source.Substring(context.Start.StartIndex, context.Stop?.StopIndex is null
 					? 0
-					: context.Stop.StopIndex - context.Start.StartIndex + 1,
-				source),
+					: context.Stop.StopIndex - context.Start.StartIndex + 1),
 			context.Depth());
 	}
 }

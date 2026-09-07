@@ -35,12 +35,12 @@ public static class ScenePlotHandlers
 					{
 						await notifyService.Notify(executor,
 							"SCENE: /plot/create needs <ownerDbref>,<title>[,<description>].");
-						return MModule.single(SceneCommandHelper.BadArguments);
+						return MarkupText.Plain(SceneCommandHelper.BadArguments);
 					}
 
 					var plot = await sceneService.UpsertPlotAsync(null, title, description, ownerDbref);
 					await notifyService.Notify(executor, $"SCENE: Created plot #{plot.Id} '{plot.Title}'.");
-					return MModule.single(plot.Id);
+					return MarkupText.Plain(plot.Id);
 				}
 
 			case "LINK":
@@ -52,12 +52,12 @@ public static class ScenePlotHandlers
 						async _ =>
 						{
 							await notifyService.Notify(executor, $"SCENE: Linked scene #{sceneId} into plot #{plotId}.");
-							return MModule.single(plotId);
+							return MarkupText.Plain(plotId);
 						},
 						async _ =>
 						{
 							await notifyService.Notify(executor, "SCENE: No such plot or scene.");
-							return MModule.single(SceneCommandHelper.NotFound);
+							return MarkupText.Plain(SceneCommandHelper.NotFound);
 						});
 				}
 
@@ -70,12 +70,12 @@ public static class ScenePlotHandlers
 						async _ =>
 						{
 							await notifyService.Notify(executor, $"SCENE: Unlinked scene #{sceneId} from plot #{plotId}.");
-							return MModule.single(plotId);
+							return MarkupText.Plain(plotId);
 						},
 						async _ =>
 						{
 							await notifyService.Notify(executor, "SCENE: No such plot or scene.");
-							return MModule.single(SceneCommandHelper.NotFound);
+							return MarkupText.Plain(SceneCommandHelper.NotFound);
 						});
 				}
 
@@ -89,12 +89,12 @@ public static class ScenePlotHandlers
 						{
 							await notifyService.Notify(executor,
 								$"SCENE: Plot #{plot.Id} '{plot.Title}' — owner {plot.OwnerName}. {plot.Description}");
-							return MModule.single(plot.Id);
+							return MarkupText.Plain(plot.Id);
 						},
 						async _ =>
 						{
 							await notifyService.Notify(executor, $"SCENE: No plot '{plotId}'.");
-							return MModule.single(SceneCommandHelper.NotFound);
+							return MarkupText.Plain(SceneCommandHelper.NotFound);
 						});
 				}
 		}

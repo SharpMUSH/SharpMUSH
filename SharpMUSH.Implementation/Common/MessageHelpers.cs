@@ -83,15 +83,14 @@ public static class MessageHelpers
 	/// </summary>
 	public static MString FormatMStringsWithOxfordComma(IReadOnlyList<MString> items) => items.Count switch
 	{
-		0 => MModule.Empty(),
+		0 => MarkupText.Empty,
 		1 => items[0],
-		2 => MModule.ConcatMany([items[0], MModule.single(" and "), items[1]]),
-		_ => MModule.ConcatMany(
-			items.SelectMany<MString, MString>((item, i) => i == 0
+		2 => MarkupText.Concat([items[0], MarkupText.Plain(" and "), items[1]]),
+		_ => MarkupText.Concat(items.SelectMany<MString, MString>((item, i) => i == 0
 				? [item]
 				: i < items.Count - 1
-					? [MModule.single(", "), item]
-					: [MModule.single(", and "), item]).ToArray())
+					? [MarkupText.Plain(", "), item]
+					: [MarkupText.Plain(", and "), item]).ToArray())
 	};
 
 	/// <summary>
@@ -290,7 +289,7 @@ public static class MessageHelpers
 			{
 				return new KeyValuePair<string, CallState>(
 					kvp.Key,
-					new CallState(MModule.single(recipient.Object().DBRef.ToString()!)));
+					new CallState(MarkupText.Plain(recipient.Object().DBRef.ToString()!)));
 			}
 			return kvp;
 		}).ToDictionary();

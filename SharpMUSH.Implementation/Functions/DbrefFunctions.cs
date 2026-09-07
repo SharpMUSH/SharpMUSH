@@ -23,7 +23,7 @@ public partial class Functions
 	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public static async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		var locateResult = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
@@ -1101,7 +1101,7 @@ public partial class Functions
 					var objectDbRefNum = typedObj.Object().DBRef.Number.ToString();
 					var expression = evalExpression.Replace("##", objectDbRefNum);
 
-					var evalResult = await parser.FunctionParse(MModule.single(expression));
+					var evalResult = await parser.FunctionParse(MarkupText.Plain(expression));
 					if (evalResult == null || !evalResult.Message.Truthy())
 					{
 						matches = false;
@@ -1350,7 +1350,7 @@ public partial class Functions
 							.Replace("%0", originalName)
 							.Replace("%1", $"#{errorCode}");
 
-						await parser.CommandParse(MModule.single(substitutedCommand));
+						await parser.CommandParse(MarkupText.Plain(substitutedCommand));
 					}
 				}
 			}
@@ -1449,7 +1449,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args["0"].Message!.ToPlainText()!;
+		var arg0 = args["0"].Message!.ToPlainText();
 		var arg1 = args.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
@@ -1614,7 +1614,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var args = parser.CurrentState.Arguments;
-		var arg0 = args["0"].Message!.ToPlainText()!;
+		var arg0 = args["0"].Message!.ToPlainText();
 		var hasArg1 = args.TryGetValue("1", out var arg1Value);
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,

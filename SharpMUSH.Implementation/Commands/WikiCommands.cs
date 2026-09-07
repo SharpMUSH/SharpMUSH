@@ -115,7 +115,7 @@ public partial class Commands
 				=> await ManageWiki.Handle(parser, Mediator!, wikiService, NotifyService!, arg0!, arg1, ManageWiki.Operation.Tag),
 			"VIEW" when hasArg0 && !hasArg1
 				=> await ViewWiki.Handle(parser, Mediator!, wikiService, localization, NotifyService!, arg0!, locale, forceSource, showDraft, showRaw),
-			_ => MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand),
+			_ => MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand),
 		};
 
 		return new CallState(response);

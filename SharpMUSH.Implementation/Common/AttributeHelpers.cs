@@ -77,7 +77,7 @@ public static class AttributeHelpers
 			}
 
 			var attribute = attrResult.AsAttribute.Last();
-			if (MModule.getLength(attribute.Value) == 0)
+			if (attribute.Value.Length == 0)
 			{
 				return defaultValue;
 			}
@@ -91,7 +91,7 @@ public static class AttributeHelpers
 				evalParent: checkParents,
 				ignorePermissions: false);
 
-			return MModule.getLength(result) > 0 ? result : defaultValue;
+			return result.Length > 0 ? result : defaultValue;
 		}
 		catch
 		{

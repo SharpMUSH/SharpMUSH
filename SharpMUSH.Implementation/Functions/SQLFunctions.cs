@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -76,7 +77,7 @@ public partial class Functions
 
 			if (!string.IsNullOrEmpty(registerName))
 			{
-				parser.CurrentState.AddRegister(registerName, MModule.single(resultList.Count.ToString()));
+				parser.CurrentState.AddRegister(registerName, MarkupText.Plain(resultList.Count.ToString()));
 			}
 
 			var formattedRows = resultList
@@ -137,7 +138,7 @@ public partial class Functions
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
 			? osepArg.Message!
-			: MModule.single(" ");
+			: MarkupText.Space;
 
 		var doFieldNames = args.Count > 3
 											 && args.TryGetValue("3", out var fieldNameArg)
@@ -203,10 +204,10 @@ public partial class Functions
 
 							var remainder = columnNames
 								.Select((x, i)
-									=> new KeyValuePair<string, CallState>((i + 1).ToString(), MModule.single(x)))
+									=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
 								.ToDictionary();
 
-							remainder.TryAdd("0", MModule.single("0"));
+							remainder.TryAdd("0", MushText.Zero);
 
 							var headerResult = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found,
 								attrName,
@@ -222,9 +223,9 @@ public partial class Functions
 
 						var dict = values.Select((x, i) =>
 								new KeyValuePair<string, CallState>((i + 1).ToString(),
-									MModule.single(x?.ToString() ?? string.Empty)))
+									MarkupText.Plain(x?.ToString() ?? string.Empty)))
 							.ToDictionary();
-						dict.TryAdd("0", MModule.single(currentRow.ToString()));
+						dict.TryAdd("0", MarkupText.Plain(currentRow.ToString()));
 
 						var result = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, attrName,
 							dict);
@@ -239,7 +240,7 @@ public partial class Functions
 					return new CallState($"#-1 SQL ERROR: {ex.Message}");
 				}
 
-				return MModule.multipleWithDelimiter(osep, results.ToArray());
+				return MarkupText.Join(osep, results.ToArray());
 			});
 	}
 }

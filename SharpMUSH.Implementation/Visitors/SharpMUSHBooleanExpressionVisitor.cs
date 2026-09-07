@@ -8,6 +8,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Visitors;
 
@@ -45,10 +46,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> dbRef.Object().Type == type;
 
 	// For name matching, we need to convert the pattern to regex outside the expression tree
-	// because MModule.getWildcardMatchAsRegex2 cannot be compiled into an expression tree
+	// because MushText.Glob.ToRegex cannot be compiled into an expression tree
 	private bool MatchesName(AnySharpObject dbRef, string pattern)
 	{
-		var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+		var regexPattern = MushText.Glob.ToRegex(pattern);
 		return Regex.IsMatch(dbRef.Object().Name, regexPattern, RegexOptions.IgnoreCase)
 			|| (dbRef.Aliases != null && dbRef.Aliases.Any(alias => Regex.IsMatch(alias.Trim(), regexPattern, RegexOptions.IgnoreCase)));
 	}
@@ -330,7 +331,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					if (!attributes.Any())
 						return false;
 
-					var listValue = MModule.plainText(attributes.First().Value);
+					var listValue = attributes.First().Value.ToPlainText();
 					var dbrefs = listValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 					var unlockerDbRef = unlockerObj.Object().DBRef;
 
@@ -396,10 +397,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 						if (!attributes.Any())
 							return false;
 
-						var actualIp = MModule.plainText(attributes.First().Value);
+						var actualIp = attributes.First().Value.ToPlainText();
 
 						// Use wildcard matching for IP pattern
-						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+						var regexPattern = MushText.Glob.ToRegex(pattern);
 						return Regex.IsMatch(actualIp, regexPattern, RegexOptions.IgnoreCase);
 					},
 					none => false,
@@ -440,10 +441,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 						if (!attributes.Any())
 							return false;
 
-						var actualHost = MModule.plainText(attributes.First().Value);
+						var actualHost = attributes.First().Value.ToPlainText();
 
 						// Use wildcard matching for hostname pattern
-						var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+						var regexPattern = MushText.Glob.ToRegex(pattern);
 						return Regex.IsMatch(actualHost, regexPattern, RegexOptions.IgnoreCase);
 					},
 					none => false,
@@ -563,7 +564,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					if (!attributes.Any())
 						return false;
 
-					var actualValue = MModule.plainText(attributes.First().Value);
+					var actualValue = attributes.First().Value.ToPlainText();
 
 					if (expectedValue.StartsWith('>'))
 					{
@@ -577,7 +578,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					}
 					else if (expectedValue.Contains('*') || expectedValue.Contains('?'))
 					{
-						var pattern = MModule.getWildcardMatchAsRegex2(expectedValue);
+						var pattern = MushText.Glob.ToRegex(expectedValue);
 						return Regex.IsMatch(actualValue, pattern, RegexOptions.IgnoreCase);
 					}
 					else

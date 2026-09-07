@@ -131,7 +131,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AlreadyConnected);
 		}
 
-		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToString());
+		var match = ConnectionPatternRegex.Match(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 		var username = match.Groups["User"].Value;
 		var password = match.Groups["Password"].Value;
 
@@ -448,12 +448,12 @@ public partial class Commands
 		var executorOption = await parser.CurrentState.ExecutorObject(Mediator!);
 		var executor = executorOption.IsNone ? null : executorOption.Known();
 
-		await NotifyQuitAsync(MModule.single("GOODBYE."));
+		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
 
 		var quitText = await ReadMessageFileAsync(Configuration!.CurrentValue.Message.QuitFile);
 		if (!string.IsNullOrWhiteSpace(quitText))
 		{
-			await NotifyQuitAsync(MModule.single(quitText));
+			await NotifyQuitAsync(MarkupText.Plain(quitText));
 		}
 
 		await ConnectionService!.Disconnect(handle);
@@ -591,7 +591,7 @@ public partial class Commands
 			}
 		}
 
-		await parser.CommandParse(handle, ConnectionService!, MModule.single("look"));
+		await parser.CommandParse(handle, ConnectionService!, MarkupText.Plain("look"));
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]

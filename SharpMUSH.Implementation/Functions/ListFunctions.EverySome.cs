@@ -8,6 +8,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -31,15 +32,15 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		string? registerName = null;
 		if (parser.CurrentState.ArgumentsOrdered.TryGetValue("3", out var registerArg) && registerArg.Message is not null)
 		{
-			var candidate = MModule.plainText(registerArg.Message);
+			var candidate = registerArg.Message.ToPlainText();
 			if (!string.IsNullOrWhiteSpace(candidate))
 			{
 				registerName = candidate;
@@ -47,9 +48,9 @@ public partial class Functions
 		}
 
 		// A blank list has no elements: every() is vacuously true, some() finds nothing.
-		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(MModule.plainText(list[0]))))
+		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText())))
 		{
-			if (registerName is not null && !parser.CurrentState.AddRegister(registerName.ToUpper(), MModule.empty()))
+			if (registerName is not null && !parser.CurrentState.AddRegister(registerName.ToUpper(), MarkupText.Empty))
 			{
 				return new CallState(ErrorMessages.Returns.BadRegName);
 			}
@@ -163,7 +164,7 @@ public partial class Functions
 		}
 
 		if (registerName is not null && !parser.CurrentState.AddRegister(
-			registerName.ToUpper(), MModule.multipleWithDelimiter(delim, failures)))
+			registerName.ToUpper(), MarkupText.Join(delim, failures)))
 		{
 			return new CallState(ErrorMessages.Returns.BadRegName);
 		}

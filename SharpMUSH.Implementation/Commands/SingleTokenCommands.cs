@@ -16,7 +16,7 @@ public partial class Commands
 		// was already tokenized in Default mode by the time we reach this handler.
 		// The "]" prefix changes evaluation semantics for the entire command.
 		var oldCommand = RebuildTokenlessCommand(parser);
-		if (MModule.getLength(oldCommand) == 0)
+		if (oldCommand.Length == 0)
 		{
 			return CallState.Empty;
 		}
@@ -39,7 +39,7 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var oldCommand = RebuildTokenlessCommand(parser);
-		if (MModule.getLength(oldCommand) == 0)
+		if (oldCommand.Length == 0)
 		{
 			return CallState.Empty;
 		}
@@ -59,13 +59,13 @@ public partial class Commands
 	private static MString RebuildTokenlessCommand(IMUSHCodeParser parser)
 	{
 		var parts = parser.CurrentState.ArgumentsOrdered.Values
-			.Select(x => x.Message ?? MModule.empty())
-			.Where(x => MModule.getLength(x) > 0)
+			.Select(x => x.Message ?? MarkupText.Empty)
+			.Where(x => x.Length > 0)
 			.ToArray();
 
 		return parts.Length == 0
-			? MModule.empty()
-			: MModule.multipleWithDelimiter(MModule.single(" "), parts);
+			? MarkupText.Empty
+			: MarkupText.Join(MarkupText.Space, parts);
 	}
 
 	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
@@ -88,14 +88,14 @@ public partial class Commands
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
 		// substitutions like %q1 resolve to their current values before the attribute is set.
-		var attrNameRaw = args["0"].Message ?? MModule.empty();
+		var attrNameRaw = args["0"].Message ?? MarkupText.Empty;
 		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
-		var attrName = MModule.plainText(attrNameParsed);
+		var attrName = attrNameParsed.ToPlainText();
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
-			args["1"].Message!.ToString(), LocateFlags.All, async realLocated =>
+			args["1"].Message!.ToPlainText(), LocateFlags.All, async realLocated =>
 			{
 				if (!args.TryGetValue("2", out var tmpContents)
 					|| (!Configuration!.CurrentValue.Attribute.EmptyAttributes
@@ -127,7 +127,7 @@ public partial class Commands
 				//   @force, etc.); evaluate the value before storage, matching PennMUSH behavior.
 				var contents = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
 					? tmpContents!.Message!
-					: await tmpContents!.ParsedMessage() ?? MModule.empty();
+					: await tmpContents!.ParsedMessage() ?? MarkupText.Empty;
 
 				// command_atrset() in cmds.c passes executor to do_set_atr() for both
 				// match_controlled() permission check and notify().

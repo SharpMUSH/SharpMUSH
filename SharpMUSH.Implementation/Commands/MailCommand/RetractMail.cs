@@ -18,14 +18,14 @@ public static class RetractMail
 
 		if (!maybeLocate.IsValid())
 		{
-			return MModule.single(ErrorMessages.Returns.NoSuchPlayer);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MModule.single(msgList), maybeLocate.AsPlayer);
+		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MarkupText.Plain(msgList), maybeLocate.AsPlayer);
 
 		if (sentMails.IsError)
 		{
-			return MModule.single(sentMails.AsError);
+			return MarkupText.Plain(sentMails.AsError);
 		}
 
 		var foundMailList = sentMails.AsMailList;
@@ -43,6 +43,6 @@ public static class RetractMail
 			await mediator.Send(new DeleteMailCommand(mail));
 		}
 
-		return MModule.single(length.ToString());
+		return MarkupText.Plain(length.ToString());
 	}
 }

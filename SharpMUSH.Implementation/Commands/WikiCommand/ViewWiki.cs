@@ -33,7 +33,7 @@ public static class ViewWiki
 	/// for a draft's existence.
 	/// </param>
 	private static MString DraftWithheld(string what, bool maySeeDrafts) =>
-		MModule.single($"WIKI: This is a draft; its {what} is not shown."
+		MarkupText.Plain($"WIKI: This is a draft; its {what} is not shown."
 			+ (maySeeDrafts ? " Add /DRAFT to read it." : string.Empty));
 
 	/// <summary>
@@ -84,7 +84,7 @@ public static class ViewWiki
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
@@ -105,7 +105,7 @@ public static class ViewWiki
 		// English is how a translation gap goes unnoticed in game exactly as it does on the web.
 		var localeMarker = localized is { IsFallback: true } ? $" [{localized.Locale}]" : string.Empty;
 
-		var line = MModule.repeat(MModule.single("-"), RenderWidth);
+		var line = MarkupText.Plain("-").Repeat(RenderWidth);
 		var markers = $"{(published ? "" : " (draft)")}{(page.IsProtected ? " (protected)" : "")}";
 		var tags = page.Tags.Count > 0 ? string.Join(", ", page.Tags) : "-";
 
@@ -120,9 +120,9 @@ public static class ViewWiki
 		else if (showRaw)
 		{
 			// Byte-exact, deliberately: the point of /MD is source you can paste back into @wiki/edit,
-			// so nothing here may wrap, re-indent or otherwise touch it. MModule.single also means the
+			// so nothing here may wrap, re-indent or otherwise touch it. MarkupText.Plain also means the
 			// markdown's own [ ] % $ reach the player as text rather than as anything to evaluate.
-			rendered = MModule.single(markdown);
+			rendered = MarkupText.Plain(markdown);
 		}
 		else
 		{
@@ -131,11 +131,10 @@ public static class ViewWiki
 			rendered = RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser));
 		}
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"),
-		[
+		var output = MarkupText.Join(MarkupText.NewLine, [
 			line,
-			MModule.single($"Wiki: {title} [{page.Namespace}]{markers}"),
-			MModule.single($"Category: {page.Category ?? "-"}   Tags: {tags}   Rev {revision}{localeMarker} — {page.UpdatedAt:yyyy-MM-dd HH:mm}"),
+			MarkupText.Plain($"Wiki: {title} [{page.Namespace}]{markers}"),
+			MarkupText.Plain($"Category: {page.Category ?? "-"}   Tags: {tags}   Rev {revision}{localeMarker} — {page.UpdatedAt:yyyy-MM-dd HH:mm}"),
 			line,
 			rendered,
 			line,
@@ -170,7 +169,7 @@ public static class ViewWiki
 		if (lookup.IsT1)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchWikiPage);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
 		var page = lookup.AsT0;
@@ -192,7 +191,7 @@ public static class ViewWiki
 		var streamMarker = stream.Length == 0 ? string.Empty : $" ({stream})";
 		var lines = new List<MString>
 		{
-			MModule.single($"WIKI: Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}:"),
+			MarkupText.Plain($"WIKI: Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}:"),
 		};
 
 		if (IsPublic(page, localized) || (showDraft && maySeeDrafts))
@@ -201,15 +200,14 @@ public static class ViewWiki
 				? await wikiService.GetRevisionsAsync(page.Id)
 				: await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, 0, 20);
 
-			lines.AddRange(revisions.Select(r => MModule.single(
-				$"  r{r.RevisionNumber,-4} {r.Timestamp:yyyy-MM-dd HH:mm}  by {r.EditorDbref,-8} {r.EditSummary ?? ""}".TrimEnd())));
+			lines.AddRange(revisions.Select(r => MarkupText.Plain($"  r{r.RevisionNumber,-4} {r.Timestamp:yyyy-MM-dd HH:mm}  by {r.EditorDbref,-8} {r.EditSummary ?? ""}".TrimEnd())));
 		}
 		else
 		{
 			lines.Add(DraftWithheld("revision history", maySeeDrafts));
 		}
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}

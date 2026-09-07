@@ -18,7 +18,7 @@ public static class ReadMail
 		int messageNumber, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var line = MModule.repeat(MModule.single("-"), 78);
+		var line = MarkupText.Plain("-").Repeat(78);
 		var folder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 
 		var actualMail = await mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
@@ -26,30 +26,25 @@ public static class ReadMail
 		if (actualMail is null)
 		{
 			await notifyService.Notify(executor, $"MAIL: You do not have a mail with number: {messageNumber + 1}", executor);
-			return MModule.single(ErrorMessages.Returns.NoSuchMail);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchMail);
 		}
 
-		var dateline = MModule.pad(
-			MModule.single(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")),
-			MModule.single(" "),
-			25,
-			PadType.Right,
-			TruncationType.Truncate);
+		var dateline = MarkupText.Plain(actualMail.DateSent.ToString("ddd MMM dd HH:mm yyyy")).Pad(MarkupText.Space, 25, PadType.Right, TruncationType.Truncate);
 
 		var mailFrom = await actualMail.From.WithCancellation(CancellationToken.None);
 		var messageBuilder = new List<MString>
 		{
 			line,
-			MModule.single($"From: {mailFrom.Object()!.Name}"),
-			MModule.single($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
-			MModule.single($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
-			MModule.concat(MModule.single("Subject: "), actualMail.Subject),
+			MarkupText.Plain($"From: {mailFrom.Object()!.Name}"),
+			MarkupText.Plain($"Date: {dateline,-20} Folder: {actualMail.Folder,-20} Message: {messageNumber + 1,5}"),
+			MarkupText.Plain($"Status: {(actualMail.Read ? "Read" : "Unread")}"),
+			MarkupText.Concat(MarkupText.Plain("Subject: "), actualMail.Subject),
 			line,
 			actualMail.Content,
 			line
 		};
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), messageBuilder);
+		var output = MarkupText.Join(MarkupText.NewLine, messageBuilder);
 		await notifyService.Notify(executor, output, executor);
 
 		await mediator.Send(new UpdateMailCommand(actualMail, MailUpdate.ReadEdit(true)));

@@ -25,7 +25,7 @@ public static class SceneRead
 		if (scenes.Count == 0)
 		{
 			await notifyService.Notify(executor, "SCENE: No scenes match.");
-			return MModule.single(string.Empty);
+			return MarkupText.Plain(string.Empty);
 		}
 
 		await notifyService.Notify(executor, $"SCENE: {scenes.Count} scene(s).");
@@ -35,7 +35,7 @@ public static class SceneRead
 		}
 
 		// Fire-and-forget command: hand back the space-separated id list for convenience.
-		return MModule.single(string.Join(' ', scenes.Select(s => s.Id)));
+		return MarkupText.Plain(string.Join(' ', scenes.Select(s => s.Id)));
 	}
 
 	public static async ValueTask<MString> Get(
@@ -54,17 +54,17 @@ public static class SceneRead
 				if (string.IsNullOrEmpty(key))
 				{
 					await notifyService.Notify(executor, FormatSummary(scene));
-					return MModule.single(scene.Id);
+					return MarkupText.Plain(scene.Id);
 				}
 
 				var value = ReadKey(scene, key!);
 				await notifyService.Notify(executor, $"SCENE: {scene.Id}/{key} = {value}");
-				return MModule.single(value);
+				return MarkupText.Plain(value);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 
@@ -94,12 +94,12 @@ public static class SceneRead
 					}
 				}
 
-				return MModule.single(scene.Id);
+				return MarkupText.Plain(scene.Id);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 

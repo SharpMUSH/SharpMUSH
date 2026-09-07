@@ -17,11 +17,7 @@ public partial class Functions
 	public static ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		return new ValueTask<CallState>(new CallState(
-			MModule.concat(
-				MModule.concat(
-					MModule.single("<"),
-					parser.CurrentState.Arguments["0"].Message),
-				MModule.single(">"))));
+			MarkupText.Concat(MarkupText.Concat(MarkupText.Plain("<"), (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty)), MarkupText.Plain(">"))));
 	}
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]
@@ -58,7 +54,7 @@ public partial class Functions
 
 		// tagwrap() hands the caller literal HTML text, not markup: PennMUSH's tagwrap returns a
 		// string the game can go on manipulating, so the tags have to be in the text itself.
-		var wrappedContent = MModule.MarkupSingle2(htmlMarkup, content);
+		var wrappedContent = MarkupText.Wrap(htmlMarkup, content);
 
 		return ValueTask.FromResult<CallState>(wrappedContent.Render(MarkupFormat.Html));
 	}

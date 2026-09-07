@@ -18,7 +18,7 @@ public static class SceneWrite
 		MString? args)
 	{
 		// <roomDbref>,<ownerDbref>[,<title>] — roomDbref empty → roomless scheduled scene.
-		var fields = SceneCommandHelper.SplitFields(args ?? MModule.single(string.Empty), 3);
+		var fields = SceneCommandHelper.SplitFields(args ?? MarkupText.Plain(string.Empty), 3);
 		// here/me/name resolve through the engine LocateService (room empty stays empty = roomless scene).
 		var roomDbref = await SceneLocate.ObjectOrSelf(parser, fields[0]);
 		var ownerDbref = await SceneLocate.PlayerOrSelf(parser, fields[1]);
@@ -27,13 +27,13 @@ public static class SceneWrite
 		if (string.IsNullOrEmpty(ownerDbref))
 		{
 			await notifyService.Notify(executor, "SCENE: /create needs an owner dbref.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var scene = await sceneService.CreateSceneAsync(roomDbref, ownerDbref, title);
 		await notifyService.Notify(executor,
 			$"SCENE: Created scene #{scene.Id} owned by {scene.OwnerName}.");
-		return MModule.single(scene.Id);
+		return MarkupText.Plain(scene.Id);
 	}
 
 	public static async ValueTask<MString> Set(
@@ -49,7 +49,7 @@ public static class SceneWrite
 		if (string.IsNullOrEmpty(key))
 		{
 			await notifyService.Notify(executor, "SCENE: /set needs <sceneId>/<key>=<value>.");
-			return MModule.single(SceneCommandHelper.BadArguments);
+			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
 		var result = await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText());
@@ -58,12 +58,12 @@ public static class SceneWrite
 			async scene =>
 			{
 				await notifyService.Notify(executor, $"SCENE: #{scene.Id} {key} set.");
-				return MModule.single(scene.Id);
+				return MarkupText.Plain(scene.Id);
 			},
 			async _ =>
 			{
 				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MModule.single(SceneCommandHelper.NotFound);
+				return MarkupText.Plain(SceneCommandHelper.NotFound);
 			});
 	}
 }

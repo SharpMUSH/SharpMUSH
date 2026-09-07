@@ -29,7 +29,7 @@ public class ExecuteListenPatternCommandHandler(
 			var registerDict = new Dictionary<string, MString>();
 			foreach (var kvp in request.Registers)
 			{
-				registerDict[kvp.Key] = kvp.Value.Message ?? MModule.empty();
+				registerDict[kvp.Key] = kvp.Value.Message ?? MarkupText.Empty;
 			}
 
 			await parser.With(state => state with

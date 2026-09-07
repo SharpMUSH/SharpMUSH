@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -34,7 +35,7 @@ public partial class Functions
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
 	public static ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.ArgumentsOrdered.Skip(1).Any(x
-				=> decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(x.Value.Message)), out var num) && num == 0)
+				=> decimal.TryParse(ArgHelpers.EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText()), out var num) && num == 0)
 			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero))
 			: ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
 
@@ -68,7 +69,7 @@ public partial class Functions
 	/// The argument values as plain text, in argument order, ready for one of the integer folds.
 	/// </summary>
 	private static IEnumerable<string> Operands(ImmutableSortedDictionary<string, CallState> args)
-		=> args.Select(arg => MModule.plainText(arg.Value.Message));
+		=> args.Select(arg => (arg.Value.Message ?? MarkupText.Empty).ToPlainText());
 
 	/// <summary>
 	/// Folds the operands as 64-bit signed integers, matching PennMUSH's IVAL. A zero divisor
@@ -172,8 +173,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-				!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var min))
+		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
+				!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var min))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -183,7 +184,7 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(Math.Max(value, min));
 		}
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var max))
+		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var max))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -194,7 +195,7 @@ public partial class Functions
 	[SharpFunction(Name = "dec", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public static ValueTask<CallState> Dec(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
+		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
 
 		if (long.TryParse(text, out var parsed))
 		{
@@ -238,7 +239,7 @@ public partial class Functions
 	public static ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var input = parser.CurrentState.Arguments["0"].Message;
-		var inputText = MModule.plainText(input);
+		var inputText = (input ?? MarkupText.Empty).ToPlainText();
 
 		try
 		{
@@ -256,9 +257,9 @@ public partial class Functions
 	public static ValueTask<CallState> Decrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var encrypted = MModule.plainText(args["0"].Message);
-		var password = MModule.plainText(args["1"].Message);
-		var isEncoded = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
+		var encrypted = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var password = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
+		var isEncoded = args.Count == 3 && (args["2"].Message ?? MarkupText.Empty).ToPlainText() != "0";
 
 		if (string.IsNullOrEmpty(password))
 		{
@@ -292,10 +293,10 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var x1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var x2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var y2))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var x1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var y1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var x2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["3"].Message ?? MarkupText.Empty).ToPlainText()), out var y2))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -309,12 +310,12 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var x1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var y1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var z1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["3"].Message)), out var x2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["4"].Message)), out var y2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["5"].Message)), out var z2))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var x1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var y1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var z1) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["3"].Message ?? MarkupText.Empty).ToPlainText()), out var x2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["4"].Message ?? MarkupText.Empty).ToPlainText()), out var y2) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["5"].Message ?? MarkupText.Empty).ToPlainText()), out var z2))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -327,7 +328,7 @@ public partial class Functions
 	public static ValueTask<CallState> Encode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var input = parser.CurrentState.Arguments["0"].Message;
-		var inputText = MModule.plainText(input);
+		var inputText = (input ?? MarkupText.Empty).ToPlainText();
 		var bytes = System.Text.Encoding.UTF8.GetBytes(inputText);
 		var encoded = Convert.ToBase64String(bytes);
 		return ValueTask.FromResult<CallState>(encoded);
@@ -337,9 +338,9 @@ public partial class Functions
 	public static ValueTask<CallState> Encrypt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var plaintext = MModule.plainText(args["0"].Message);
-		var password = MModule.plainText(args["1"].Message);
-		var shouldEncode = args.Count == 3 && MModule.plainText(args["2"].Message) != "0";
+		var plaintext = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		var password = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
+		var shouldEncode = args.Count == 3 && (args["2"].Message ?? MarkupText.Empty).ToPlainText() != "0";
 
 		if (string.IsNullOrEmpty(password))
 		{
@@ -367,7 +368,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
+		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -375,7 +376,7 @@ public partial class Functions
 		var showWhole = false;
 		if (args.Count == 2)
 		{
-			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var wholeFlag))
+			if (!int.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var wholeFlag))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -422,7 +423,7 @@ public partial class Functions
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["integer"])]
 	public static ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message);
+		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
 
 		if (long.TryParse(text, out var parsed))
 		{
@@ -468,9 +469,9 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var operation = MModule.plainText(args["0"].Message).ToLower();
-		var delimiter = args.Count == 3 ? args["2"].Message : MModule.single(" ");
-		var list = MModule.splitList(delimiter, args["1"].Message).ToList();
+		var operation = (args["0"].Message ?? MarkupText.Empty).ToPlainText().ToLower();
+		var delimiter = args.Count == 3 ? args["2"].Message ?? MarkupText.Empty : MarkupText.Space;
+		var list = MushText.SplitList(delimiter, (args["1"].Message ?? MarkupText.Empty)).ToList();
 
 		// The integer operations are 64-bit, matching PennMUSH's IVAL and UIVAL, so they are
 		// folded before the list is reinterpreted as decimals for everything else.
@@ -479,7 +480,7 @@ public partial class Functions
 			var unsigned = new List<ulong>();
 			foreach (var item in list)
 			{
-				if (!ulong.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(item)), out var parsed))
+				if (!ulong.TryParse(ArgHelpers.EmptyStringToZero(item.ToPlainText()), out var parsed))
 				{
 					return ErrorMessages.Returns.UIntegers;
 				}
@@ -503,7 +504,7 @@ public partial class Functions
 
 		if (operation is "div" or "modulo" or "remainder")
 		{
-			var operands = list.Select(item => MModule.plainText(item));
+			var operands = list.Select(item => item.ToPlainText());
 
 			return operation switch
 			{
@@ -516,7 +517,7 @@ public partial class Functions
 		var values = new List<decimal>();
 		foreach (var item in list)
 		{
-			if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(item)), out var parsedValue))
+			if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(item.ToPlainText()), out var parsedValue))
 			{
 				return ErrorMessages.Returns.Numbers;
 			}
@@ -607,7 +608,7 @@ public partial class Functions
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var arg0Text = MModule.plainText(args["0"].Message);
+		var arg0Text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
 
 		// Single arg: lnum(count) -> 0..count-1, count must be integer-like
 		if (args.Count == 1)
@@ -627,15 +628,15 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var arg1Text = MModule.plainText(args["1"].Message);
+		var arg1Text = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
 		if (!double.TryParse(arg1Text, out var end) || double.IsNaN(end) || double.IsInfinity(end))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		var delim = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " "));
+		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
-		var stepText = MModule.plainText(ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "1"));
+		var stepText = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "1").ToPlainText();
 		if (!double.TryParse(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || Math.Abs(step) < 1e-12)
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
@@ -682,7 +683,7 @@ public partial class Functions
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
+			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -702,7 +703,7 @@ public partial class Functions
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
+			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -745,8 +746,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var root))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var root))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -837,13 +838,13 @@ public partial class Functions
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var y) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var x))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var y) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var x))
 		{
 			return ErrorMessages.Returns.Numbers;
 		}
 
-		var angleType = args.Count == 3 ? MModule.plainText(args["2"].Message) : null;
+		var angleType = args.Count == 3 ? (args["2"].Message ?? MarkupText.Empty).ToPlainText() : null;
 
 		return AngleTypeMath(angleType, Math.Atan2(y, x), angle => angle);
 	}
@@ -874,13 +875,13 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var angle))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var angle))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
 
-		var from = MModule.plainText(args["1"].Message).ToLower();
-		var to = MModule.plainText(args["2"].Message).ToLower();
+		var from = (args["1"].Message ?? MarkupText.Empty).ToPlainText().ToLower();
+		var to = (args["2"].Message ?? MarkupText.Empty).ToPlainText().ToLower();
 
 		double radians = from switch
 		{
@@ -905,7 +906,7 @@ public partial class Functions
 	public static ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		var arg1 = arguments["1"]?.Message?.ToString();
+		var arg1 = arguments["1"]?.Message?.ToPlainText();
 
 		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
 			? Math.Exp(dec).ToString()
@@ -917,8 +918,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var arg0) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var arg1))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var arg0) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var arg1))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -940,7 +941,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -958,7 +959,7 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(result);
 		}
 
-		var baseStr = MModule.plainText(args["1"].Message).Trim();
+		var baseStr = (args["1"].Message ?? MarkupText.Empty).ToPlainText().Trim();
 		double baseNum;
 		if (baseStr.Equals("e", StringComparison.OrdinalIgnoreCase))
 		{
@@ -980,7 +981,7 @@ public partial class Functions
 	public static ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message));
+		var text = ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!double.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -1004,8 +1005,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var baseNum) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var exponent))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var baseNum) ||
+				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var exponent))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -1018,8 +1019,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["0"].Message)), out var value) ||
-				!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["1"].Message)), out var decimals))
+		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
+				!int.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var decimals))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -1028,7 +1029,7 @@ public partial class Functions
 
 		if (args.Count == 3)
 		{
-			if (!int.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(args["2"].Message)), out var padZeros))
+			if (!int.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var padZeros))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -1062,7 +1063,7 @@ public partial class Functions
 	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public static ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = ArgHelpers.EmptyStringToZero(MModule.plainText(parser.CurrentState.ArgumentsOrdered["0"].Message));
+		var text = ArgHelpers.EmptyStringToZero((parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText());
 		if (!double.TryParse(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
@@ -1085,7 +1086,7 @@ public partial class Functions
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero(MModule.plainText(arg.Value.Message)), out var value))
+			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -1127,13 +1128,13 @@ public partial class Functions
 		Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
 	{
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
-		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message : delimiter;
-		var list1 = MModule.splitList(delimiter, parser.CurrentState.Arguments["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.splitList(delimiter, parser.CurrentState.Arguments["1"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+			? tmpDelimiter.Message ?? MarkupText.Empty
+			: MarkupText.Space;
+		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
+		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1147,20 +1148,20 @@ public partial class Functions
 		var result = new decimal[Math.Max(list1.Length, list2.Length)];
 		vectorResult.CopyTo(result);
 
-		var output = result.Select(x => MModule.single(x.ToString()));
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
+		var output = result.Select(x => MarkupText.Plain(x.ToString()));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
 	}
 
 	private static ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
 		Func<Vector<decimal>, Vector<decimal>, decimal> func)
 	{
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
-		var list1 = MModule.splitList(delimiter, parser.CurrentState.Arguments["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.splitList(delimiter, parser.CurrentState.Arguments["1"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+			? tmpDelimiter.Message ?? MarkupText.Empty
+			: MarkupText.Space;
+		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1185,14 +1186,14 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("2", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
-		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message : delimiter;
+			? tmpDelimiter.Message ?? MarkupText.Empty
+			: MarkupText.Space;
+		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
 
-		var list1 = MModule.splitList(delimiter, args["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
-		var list2 = MModule.splitList(delimiter, args["1"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list1 = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+		var list2 = MushText.SplitList(delimiter, (args["1"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1208,8 +1209,8 @@ public partial class Functions
 		var y = list1[2].result * list2[0].result - list2[2].result * list1[0].result;
 		var z = list1[0].result * list2[1].result - list2[0].result * list1[1].result;
 
-		var output = new[] { x, y, z }.Select(v => MModule.single(v.ToString(CultureInfo.InvariantCulture)));
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(sep, output)));
+		var output = new[] { x, y, z }.Select(v => MarkupText.Plain(v.ToString(CultureInfo.InvariantCulture)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
 	}
 
 	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
@@ -1237,11 +1238,11 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
+			? tmpDelimiter.Message ?? MarkupText.Empty
+			: MarkupText.Space;
 
-		var list = MModule.splitList(delimiter, args["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
 		{
@@ -1259,11 +1260,11 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
-			? tmpDelimiter.Message
-			: MModule.single(" ");
+			? tmpDelimiter.Message ?? MarkupText.Empty
+			: MarkupText.Space;
 
-		var list = MModule.splitList(delimiter, args["0"].Message)
-			.Select(x => (decimal.TryParse(MModule.plainText(x), out var result), result)).ToArray();
+		var list = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
+			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
 		{
@@ -1278,16 +1279,14 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero));
 		}
 
-		var output = list.Select(x => MModule.single((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));
-		return ValueTask.FromResult(new CallState(MModule.multipleWithDelimiter(delimiter, output)));
+		var output = list.Select(x => MarkupText.Plain((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, output)));
 	}
 
 	[SharpFunction(Name = "vdim", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public static ValueTask<CallState> vdim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(new CallState(
-			MModule.splitList(
-				ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MModule.single(" ")),
-				parser.CurrentState.Arguments["0"].Message).Length.ToString()
+			MushText.SplitList(ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Space), (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty)).Length.ToString()
 			));
 
 	private static CallState AngleTypeMath(string? angleType, double angle, Func<double, double> func)

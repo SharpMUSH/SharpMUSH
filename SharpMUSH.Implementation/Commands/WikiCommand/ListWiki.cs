@@ -42,7 +42,7 @@ public static class ListWiki
 			{
 				await notifyService.Notify(executor,
 					$"WIKI: Unknown namespace '{nsText}'. Valid: main, help, character, system.", executor);
-				return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 			}
 			ns = parsed;
 		}
@@ -53,18 +53,18 @@ public static class ListWiki
 
 		var lines = new List<MString>
 		{
-			MModule.single($"WIKI: {total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}:"),
+			MarkupText.Plain($"WIKI: {total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}:"),
 		};
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
-			.Select(l => MModule.single("  " + l)));
+			.Select(l => MarkupText.Plain("  " + l)));
 		// Both terms are drawn from the same population — the pages this reader may see — so the remainder
 		// is "visible pages past the window", and neither the header nor this line reveals a draft. The
 		// visible row count, not the fetched window's size, is what must be subtracted: drafts filtered out
 		// of the window still consumed window slots, so the window's size counts pages this reader cannot.
 		if (total > pages.Count)
-			lines.Add(MModule.single($"  … and {total - pages.Count} more. See the web portal for the full index."));
+			lines.Add(MarkupText.Plain($"  … and {total - pages.Count} more. See the web portal for the full index."));
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -87,7 +87,7 @@ public static class ListWiki
 		if (needle.Length == 0)
 		{
 			await notifyService.Notify(executor, "WIKI: What do you want to search for?", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		var matches = await SearchPagesAsync(
@@ -96,18 +96,17 @@ public static class ListWiki
 
 		var lines = new List<MString>
 		{
-			MModule.single($"WIKI: {matches.Count} page(s) matching '{needle}':"),
+			MarkupText.Plain($"WIKI: {matches.Count} page(s) matching '{needle}':"),
 		};
 		// The locale marker mirrors @wiki/view's: shown only when the hit is somewhere the reader is not
 		// already looking. Without it, a page whose English title and body contain the needle nowhere looks
 		// like a false positive.
-		lines.AddRange(matches.Select(m => MModule.single(
-			"  " + WikiCommandHelper.FormatPageLine(m.Page)
+		lines.AddRange(matches.Select(m => MarkupText.Plain("  " + WikiCommandHelper.FormatPageLine(m.Page)
 			+ (m.Locale.Equals(localization.SourceLocaleOf(m.Page), StringComparison.OrdinalIgnoreCase)
 				? string.Empty
 				: $" [{m.Locale}]"))));
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -133,7 +132,7 @@ public static class ListWiki
 		if (!string.IsNullOrEmpty(countText) && (!int.TryParse(countText, out count) || count < 1 || count > 50))
 		{
 			await notifyService.Notify(executor, "WIKI: Count must be a number between 1 and 50.", executor);
-			return MModule.single(ErrorMessages.Returns.BadArgumentsToWikiCommand);
+			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
 		// Filtered after the fetch, so a burst of draft edits shortens the answer rather than disclosing
@@ -142,11 +141,11 @@ public static class ListWiki
 		var pages = VisiblePages(
 			await WikiCommandHelper.CanSeeDrafts(executor), await wikiService.GetRecentChangesAsync(count));
 
-		var lines = new List<MString> { MModule.single("WIKI: Recently edited pages:") };
+		var lines = new List<MString> { MarkupText.Plain("WIKI: Recently edited pages:") };
 		lines.AddRange((await FormatPagesAsync(localization, pages, locale, forceSource))
-			.Select(l => MModule.single("  " + l)));
+			.Select(l => MarkupText.Plain("  " + l)));
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}

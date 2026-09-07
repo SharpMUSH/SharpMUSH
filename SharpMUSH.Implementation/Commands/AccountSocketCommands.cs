@@ -49,7 +49,7 @@ public partial class Commands
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]/["2"];
 		// Arguments["0"] holds the entire remainder of the line after the command word,
 		// so we split it on whitespace ourselves.
-		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var arg0 = rawArgs.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText() : null;
 		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
 
 		if (tokens.Length == 3)
@@ -116,7 +116,7 @@ public partial class Commands
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
 		// Arguments["0"] holds the entire remainder of the line after the command word,
 		// so we split it on whitespace ourselves.
-		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText() : null;
 		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
 		string? identifier = null;
 		string? password = null;
@@ -209,7 +209,7 @@ public partial class Commands
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
 		// Arguments["0"] holds the entire remainder of the line after the command word,
 		// so we split it on whitespace ourselves.
-		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString() : null;
+		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText() : null;
 		var tokens = arg0?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) ?? [];
 		string? charName = null;
 		string? charPassword = null;
@@ -284,7 +284,7 @@ public partial class Commands
 			return new None();
 		}
 
-		var charName = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToString()?.Trim() : null;
+		var charName = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message?.ToPlainText()?.Trim() : null;
 		if (string.IsNullOrWhiteSpace(charName))
 		{
 			await NotifyService!.Notify(handle, "Usage: play <character-name>");

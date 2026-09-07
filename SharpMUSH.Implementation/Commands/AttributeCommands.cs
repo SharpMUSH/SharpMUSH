@@ -25,7 +25,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var objAttrText = objAttrArg.Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
@@ -66,7 +66,7 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var lockValue = MModule.plainText(valueArg.Message!).ToLowerInvariant();
+		var lockValue = valueArg.Message!.ToPlainText().ToLowerInvariant();
 		bool shouldLock;
 
 		if (lockValue == "on" || lockValue == "1" || lockValue == "yes")
@@ -126,7 +126,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var sourceText = MModule.plainText(sourceArg.Message!);
+		var sourceText = sourceArg.Message!.ToPlainText();
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
@@ -164,7 +164,7 @@ public partial class Commands
 		var destinations = args
 			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
 			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => MModule.plainText(kvp.Value.Message!).Trim())
+			.Select(kvp => kvp.Value.Message!.ToPlainText().Trim())
 			.Where(d => !string.IsNullOrEmpty(d));
 
 		int copiedCount = 0;
@@ -251,7 +251,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var sourceText = MModule.plainText(sourceArg.Message!);
+		var sourceText = sourceArg.Message!.ToPlainText();
 		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
 
 		if (!sourceSplit.TryPickT0(out var sourceDetails, out _) || string.IsNullOrEmpty(sourceDetails.Attribute))
@@ -289,7 +289,7 @@ public partial class Commands
 		var destinations = args
 			.Where(kvp => int.TryParse(kvp.Key, out var k) && k >= 1)
 			.OrderBy(kvp => int.Parse(kvp.Key))
-			.Select(kvp => MModule.plainText(kvp.Value.Message!).Trim())
+			.Select(kvp => kvp.Value.Message!.ToPlainText().Trim())
 			.Where(d => !string.IsNullOrEmpty(d));
 
 		int copiedCount = 0;
@@ -384,7 +384,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = MModule.plainText(objAttrArg.Message!);
+		var objAttrText = objAttrArg.Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
@@ -414,7 +414,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var newOwnerText = MModule.plainText(ownerArg.Message!);
+		var newOwnerText = ownerArg.Message!.ToPlainText();
 		var ownerLocate = await LocateService!.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, newOwnerText, LocateFlags.All);
 
@@ -490,7 +490,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
 
-		var objAttr = MModule.plainText(args["0"].Message!);
+		var objAttr = args["0"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
 
 		if (!split.TryPickT0(out var details, out _))

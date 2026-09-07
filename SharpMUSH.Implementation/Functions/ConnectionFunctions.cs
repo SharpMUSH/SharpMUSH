@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Globalization;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -73,7 +74,7 @@ public partial class Functions
 				};
 
 				if (addressValue != null
-						&& MModule.isWildcardMatch2(MModule.single(addressValue), pattern)
+						&& MushText.IsWildcardMatch(MarkupText.Plain(addressValue), pattern)
 						&& uniqueAddresses.Add(addressValue)
 						&& !isCount)
 				{
@@ -238,9 +239,7 @@ public partial class Functions
 							}
 						case "ip":
 							{
-								if (!MModule.isWildcardMatch2(
-											MModule.single(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")),
-											value))
+								if (!MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("InternetProtocolAddress", "")), value))
 								{
 									matches = false;
 								}
@@ -248,7 +247,7 @@ public partial class Functions
 								break;
 							}
 						case "hostname" when
-							!MModule.isWildcardMatch2(MModule.single(log.Properties.GetValueOrDefault("HostName", "")), value):
+							!MushText.IsWildcardMatch(MarkupText.Plain(log.Properties.GetValueOrDefault("HostName", "")), value):
 							matches = false;
 							break;
 					}
@@ -1392,7 +1391,7 @@ public partial class Functions
 	public static async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		if (!long.TryParse(portString, out var port))
 		{

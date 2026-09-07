@@ -63,9 +63,9 @@ public partial class Commands
 			executor.WithNoneOption(),
 			INotifyService.NotificationType.Emit,
 			message,
-			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
-			MModule.single("says"),
+			status.Title ?? MarkupText.Empty,
+			MarkupText.Plain(executor.Object().Name),
+			MarkupText.Plain("says"),
 			[]
 		));
 
@@ -126,9 +126,9 @@ public partial class Commands
 			executor.WithNoneOption(),
 			chatType,
 			chatMessage,
-			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
-			MModule.single("says"),
+			status.Title ?? MarkupText.Empty,
+			MarkupText.Plain(executor.Object().Name),
+			MarkupText.Plain("says"),
 			[]
 		));
 
@@ -138,7 +138,7 @@ public partial class Commands
 	private static (INotifyService.NotificationType Type, MString Message) ClassifyChannelSpeech(MString message)
 	{
 		var plain = message.ToPlainText();
-		var rest = MModule.substring(1, MModule.getLength(message) - 1, message);
+		var rest = message.Substring(1, message.Length - 1);
 
 		return plain switch
 		{
@@ -201,9 +201,9 @@ public partial class Commands
 				? INotifyService.NotificationType.NSEmit
 				: INotifyService.NotificationType.Emit,
 			message,
-			status.Title ?? MModule.empty(),
-			MModule.single(executor.Object().Name),
-			MModule.single("says"),
+			status.Title ?? MarkupText.Empty,
+			MarkupText.Plain(executor.Object().Name),
+			MarkupText.Plain("says"),
 			[]
 		));
 
@@ -366,8 +366,8 @@ public partial class Commands
 			PermissionService!,
 			Mediator!,
 			NotifyService!,
-			MModule.empty(),
-			MModule.empty(),
+			MarkupText.Empty,
+			MarkupText.Empty,
 			switches);
 	}
 
@@ -458,13 +458,10 @@ public partial class Commands
 			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.AsSpan(10).ToString() : attrName;
 			var channelName = attr.Value;
 
-			outputLines.Add(MModule.concat(
-				MModule.single($"{aliasName.ToLower()} : "),
-				channelName
-			));
+			outputLines.Add(MarkupText.Concat(MarkupText.Plain($"{aliasName.ToLower()} : "), channelName));
 		}
 
-		await NotifyService!.Notify(executor, MModule.multiple(outputLines.ToArray()), executor);
+		await NotifyService!.Notify(executor, MarkupText.Concat(outputLines.ToArray()), executor);
 		return new CallState(string.Empty);
 	}
 }

@@ -36,6 +36,7 @@ using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -59,14 +60,14 @@ public partial class Commands
 			? WebUtility.HtmlEncode(string.Join("|", aliases))
 			: $"Go {command}";
 		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
-		return MModule.MarkupSingle2(sendMarkup, MModule.single(displayName));
+		return MarkupText.Wrap(sendMarkup, MarkupText.Plain(displayName));
 	}
 
 	private static MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
 	{
 		var template = LocalizationService?.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
 			?? ErrorMessages.Notifications.ExitNameToDestFormat;
-		return MarkupTemplateFormatter.Format(template, exitName, MModule.single(destName));
+		return MarkupTemplateFormatter.Format(template, exitName, MarkupText.Plain(destName));
 	}
 
 	/// <summary>
@@ -81,7 +82,7 @@ public partial class Commands
 			return (" ", originalListText);
 		}
 
-		var plainListText = MModule.plainText(originalListText);
+		var plainListText = originalListText.ToPlainText();
 		if (plainListText.Length == 0)
 		{
 			return (" ", originalListText);
@@ -90,14 +91,14 @@ public partial class Commands
 		var spaceIndex = plainListText.IndexOf(' ');
 		if (spaceIndex <= 0)
 		{
-			return (plainListText, MModule.empty());
+			return (plainListText, MarkupText.Empty);
 		}
 
 		var textSpan = plainListText.AsSpan();
 		var paramValue = textSpan.Slice(0, spaceIndex).ToString();
 		var remainingText = plainListText.Length > spaceIndex + 1
-			? MModule.single(textSpan.Slice(spaceIndex + 1).ToString())
-			: MModule.empty();
+			? MarkupText.Plain(textSpan.Slice(spaceIndex + 1).ToString())
+			: MarkupText.Empty;
 
 		return (paramValue, remainingText);
 	}
@@ -301,9 +302,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var originalListText = args.Count >= 2 ? args["1"].Message! : MModule.empty();
+		var originalListText = args.Count >= 2 ? args["1"].Message! : MarkupText.Empty;
 		var (delimiter, listText) = ExtractFirstParameter(originalListText, switches.Contains("DELIMIT"));
-		var list = MModule.split(delimiter, listText);
+		var list = listText.Split(delimiter);
 
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapWouldIterateFormat), executor, list.Length, objSpec, attrName);
 
@@ -387,7 +388,7 @@ public partial class Commands
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("@notify me"),
+					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -420,7 +421,7 @@ public partial class Commands
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("@notify me"),
+					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -471,14 +472,14 @@ public partial class Commands
 			listText = parser.CurrentState.Arguments["0"].Message!;
 		}
 
-		var list = MModule.split(delimiter, listText);
+		var list = listText.Split(delimiter);
 		var command = parser.CurrentState.Arguments["1"].Message!;
 
 		// Replace ## with %iL in the command for PennMUSH backward compatibility
-		var commandParts = MModule.split("##", command);
+		var commandParts = command.Split("##");
 		if (commandParts.Length > 1)
 		{
-			command = MModule.multipleWithDelimiter(MModule.single("%iL"), commandParts);
+			command = MarkupText.Join(MarkupText.Plain("%iL"), commandParts);
 		}
 
 		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
@@ -487,7 +488,7 @@ public partial class Commands
 		{
 			var noBreak = switches.Contains("NOBREAK") || switches.Contains("INPLACE");
 			var wrappedIteration = new IterationWrapper<MString>
-			{ Value = MModule.empty(), Break = false, NoBreak = noBreak, Iteration = 0 };
+			{ Value = MarkupText.Empty, Break = false, NoBreak = noBreak, Iteration = 0 };
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			var lastCallState = CallState.Empty;
@@ -507,7 +508,7 @@ public partial class Commands
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("@notify me"),
+					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -515,7 +516,7 @@ public partial class Commands
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single($"@notify {notifyPid}"),
+					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -558,7 +559,7 @@ public partial class Commands
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("@notify me"),
+					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -566,7 +567,7 @@ public partial class Commands
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single($"@notify {notifyPid}"),
+					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -622,7 +623,7 @@ public partial class Commands
 				parser,
 				executor,
 				executor,
-				args["0"].Message!.ToString(),
+				args["0"].Message!.ToPlainText(),
 				LocateFlags.All);
 
 			if (locate.IsValid())
@@ -651,7 +652,7 @@ public partial class Commands
 			&& executorLocation.Object().DBRef == viewingObject.DBRef;
 
 		var baseName = viewingObject.Name;
-		var baseDesc = MModule.empty();
+		var baseDesc = MarkupText.Empty;
 
 		// @idescribe is only used for players and things; rooms and exits always use @describe
 		// (help @idescribe). And when no @idescribe is set, the viewer sees the @describe run
@@ -678,9 +679,9 @@ public partial class Commands
 		{
 			var descResult = await AttributeService!.GetAttributeAsync(executor, realViewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false);
-			baseDesc = descResult.IsAttribute && MModule.getLength(descResult.AsAttribute.Last().Value) > 0
+			baseDesc = descResult.IsAttribute && descResult.AsAttribute.Last().Value.Length > 0
 				? descResult.AsAttribute.Last().Value
-				: MModule.single("You see nothing special.");
+				: MarkupText.Plain("You see nothing special.");
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
@@ -712,7 +713,7 @@ public partial class Commands
 			descFormatArgs, baseDesc, checkParents: false);
 
 		await NotifyService!.Notify(executor, formattedName, executor);
-		if (MModule.getLength(formattedDesc) > 0)
+		if (formattedDesc.Length > 0)
 		{
 			await NotifyService.Notify(executor, formattedDesc, executor);
 		}
@@ -786,11 +787,9 @@ public partial class Commands
 					{
 						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object());
 					}
-					return MModule.single(item.Object().Name);
+					return MarkupText.Plain(item.Object().Name);
 				}));
-				var defaultContents = MModule.multipleWithDelimiter(
-					MModule.single("\n"),
-					new[] { MModule.single(contentsLabel) }.Concat(contentMStrings));
+				var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
 
 				var conFormatArgs = new Dictionary<string, CallState>
 				{
@@ -846,15 +845,13 @@ public partial class Commands
 							exitParts.Add(FormatExitNameToDestination(exitMString, destName, executorLocale));
 						}
 					}
-					defaultExits = MModule.ConcatMany(exitParts.SelectMany<MString, MString>((part, i) =>
-						i > 0 ? [MModule.single("\n"), part] : [part]).ToArray());
+					defaultExits = MarkupText.Concat(exitParts.SelectMany<MString, MString>((part, i) =>
+						i > 0 ? [MarkupText.NewLine, part] : [part]).ToArray());
 				}
 				else
 				{
 					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
-					defaultExits = MModule.concat(
-						MModule.single("Obvious exits:\n"),
-						MessageHelpers.FormatMStringsWithOxfordComma(exitMStrings));
+					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageHelpers.FormatMStringsWithOxfordComma(exitMStrings));
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
@@ -884,7 +881,7 @@ public partial class Commands
 								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
 								executor,
 								exitMString,
-								MModule.single(destName));
+								MarkupText.Plain(destName));
 						}
 					}
 				}
@@ -994,11 +991,11 @@ public partial class Commands
 		var description = (await AttributeService!.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false))
 			.Match(
-				attr => MModule.getLength(attr.Last().Value) == 0
-					? MModule.single("There is nothing to see here")
+				attr => attr.Last().Value.Length == 0
+					? MarkupText.Plain("There is nothing to see here")
 					: attr.Last().Value,
-				none => MModule.single("There is nothing to see here"),
-				error => MModule.empty());
+				none => MarkupText.Plain("There is nothing to see here"),
+				error => MarkupText.Empty);
 
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
 		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
@@ -1015,8 +1012,8 @@ public partial class Commands
 		outputSections.Add(nameRow);
 
 		outputSections.Add(showFlags
-			? MModule.single($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}")
-			: MModule.single($"Type: {obj.Type}"));
+			? MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}")
+			: MarkupText.Plain($"Type: {obj.Type}"));
 
 		if (!switches.Contains("BRIEF"))
 		{
@@ -1026,7 +1023,7 @@ public partial class Commands
 		MString zoneSection;
 		if (objZone.IsNone)
 		{
-			zoneSection = MModule.single("  Zone: *NOTHING*");
+			zoneSection = MarkupText.Plain("  Zone: *NOTHING*");
 		}
 		else
 		{
@@ -1043,7 +1040,7 @@ public partial class Commands
 		var parentObject = objParent.Object();
 		if (parentObject == null)
 		{
-			outputSections.Add(MModule.single("Parent: *NOTHING*"));
+			outputSections.Add(MarkupText.Plain("Parent: *NOTHING*"));
 		}
 		else
 		{
@@ -1055,35 +1052,34 @@ public partial class Commands
 		foreach (var lockKvp in obj.Locks)
 		{
 			var flagsStr = LockService!.FormatLockFlags(lockKvp.Value.Flags);
-			outputSections.Add(MModule.single(
-				$"{lockKvp.Key} Lock [#{obj.DBRef.Number}{flagsStr}]: {lockKvp.Value.LockString}"));
+			outputSections.Add(MarkupText.Plain($"{lockKvp.Key} Lock [#{obj.DBRef.Number}{flagsStr}]: {lockKvp.Value.LockString}"));
 		}
 
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
-		outputSections.Add(MModule.single($"Powers: {string.Join(" ", powersList)}"));
+		outputSections.Add(MarkupText.Plain($"Powers: {string.Join(" ", powersList)}"));
 
 		var warningsStr = obj.Warnings != WarningType.None
 			? WarningTypeHelper.UnparseWarnings(obj.Warnings)
 			: string.Empty;
-		outputSections.Add(MModule.single($"Warnings checked: {warningsStr}"));
+		outputSections.Add(MarkupText.Plain($"Warnings checked: {warningsStr}"));
 
 		if (switches.Contains("DEBUG") && await executor.IsWizard())
 		{
-			outputSections.Add(MModule.single($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
+			outputSections.Add(MarkupText.Plain($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
 		}
 		else
 		{
-			outputSections.Add(MModule.single($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
+			outputSections.Add(MarkupText.Plain($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
-		outputSections.Add(MModule.single($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
+		outputSections.Add(MarkupText.Plain($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
 
 		if (viewingKnown.IsPlayer)
 		{
-			outputSections.Add(MModule.single($"Quota: {viewingKnown.AsPlayer.Quota}"));
+			outputSections.Add(MarkupText.Plain($"Quota: {viewingKnown.AsPlayer.Quota}"));
 		}
 
-		await NotifyService!.Notify(enactor, MModule.multipleWithDelimiter(MModule.single("\n"), outputSections), enactor);
+		await NotifyService!.Notify(enactor, MarkupText.Join(MarkupText.NewLine, outputSections), enactor);
 
 		if (!switches.Contains("BRIEF"))
 		{
@@ -1129,7 +1125,7 @@ public partial class Commands
 						continue;
 					}
 
-					var header = MModule.single($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
+					var header = MarkupText.Plain($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
 					var parseType = attr.SyntaxParseType();
 
 					if (parseType is null)
@@ -1140,7 +1136,7 @@ public partial class Commands
 
 					await NotifyService!.Notify(enactor, header, enactor);
 
-					if (MModule.getLength(attr.Value) == 0)
+					if (attr.Value.Length == 0)
 					{
 						continue;
 					}
@@ -1203,10 +1199,10 @@ public partial class Commands
 					var contentItems = await contents
 						.ToAsyncEnumerable()
 						.Select(BuildContentLine)
-						.Prepend(MModule.single(contentsLabel))
+						.Prepend(MarkupText.Plain(contentsLabel))
 						.ToListAsync();
 					await NotifyService!.Notify(enactor,
-						MModule.multipleWithDelimiter(MModule.single("\n"), contentItems), enactor);
+						MarkupText.Join(MarkupText.NewLine, contentItems), enactor);
 				}
 			}
 
@@ -1227,10 +1223,10 @@ public partial class Commands
 					var exitLines = await exits
 						.ToAsyncEnumerable()
 						.Select(BuildExitLine)
-						.Prepend(MModule.single("Exits:"))
+						.Prepend(MarkupText.Plain("Exits:"))
 						.ToListAsync();
 					await NotifyService!.Notify(enactor,
-						MModule.multipleWithDelimiter(MModule.single("\n"), exitLines), enactor);
+						MarkupText.Join(MarkupText.NewLine, exitLines), enactor);
 				}
 			}
 
@@ -1278,7 +1274,7 @@ public partial class Commands
 		// Kept as markup — see the note in Think: ToString() renders the colour to escape characters
 		// and the recipient's client is left with nothing to style.
 		var notification = args["1"].Message!;
-		var targetListText = MModule.plainText(args["0"].Message!);
+		var targetListText = args["0"].Message!.ToPlainText();
 		var nameListTargets = ArgHelpers.NameList(targetListText);
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
@@ -1313,7 +1309,7 @@ public partial class Commands
 		if (notified.Count > 1)
 		{
 			await NotifyService!.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToCountFormat),
-				executor, message, MModule.single(notified.Count.ToString()));
+				executor, message, MarkupText.Plain(notified.Count.ToString()));
 			return;
 		}
 
@@ -1324,7 +1320,7 @@ public partial class Commands
 		}
 
 		await NotifyService!.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
-			executor, message, MModule.single(only.Object().Name));
+			executor, message, MarkupText.Plain(only.Object().Name));
 	}
 
 	/// <summary>
@@ -1466,12 +1462,12 @@ public partial class Commands
 		var attributeArgs = new Dictionary<string, CallState> { { "0", new CallState(typedName) } };
 
 		var resolved = await AttributeHelpers.EvaluateFormatAttribute(
-			AttributeService!, parser, executor, exitObject, "DESTINATION", attributeArgs, MModule.empty());
+			AttributeService!, parser, executor, exitObject, "DESTINATION", attributeArgs, MarkupText.Empty);
 
-		if (MModule.getLength(resolved) == 0)
+		if (resolved.Length == 0)
 		{
 			resolved = await AttributeHelpers.EvaluateFormatAttribute(
-				AttributeService!, parser, executor, exitObject, "EXITTO", attributeArgs, MModule.empty());
+				AttributeService!, parser, executor, exitObject, "EXITTO", attributeArgs, MarkupText.Empty);
 		}
 
 		var destinationText = resolved.ToPlainText().Trim();
@@ -1532,7 +1528,7 @@ public partial class Commands
 			parser,
 			executor,
 			executor,
-			args["0"].Message!.ToString(),
+			args["0"].Message!.ToPlainText(),
 			LocateFlags.ExitsInTheRoomOfLooker
 			| LocateFlags.EnglishStyleMatching
 			| LocateFlags.ExitsPreference
@@ -1594,8 +1590,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
-		var destinationString = MModule.plainText(args.Count == 1 ? args["0"].Message : args["1"].Message);
-		var toTeleport = MModule.plainText(args.Count == 1 ? MModule.single(executor.Object().DBRef.ToString()) : args["0"].Message);
+		var destinationString = (args.Count == 1 ? args["0"].Message : args["1"].Message)?.ToPlainText() ?? string.Empty;
+		var toTeleport = (args.Count == 1 ? MarkupText.Plain(executor.Object().DBRef.ToString()) : args["0"].Message)?.ToPlainText() ?? string.Empty;
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
@@ -1769,7 +1765,7 @@ public partial class Commands
 				};
 
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("look"),
+					MarkupText.Plain("look"),
 					targetPlayerState,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -2094,7 +2090,7 @@ public partial class Commands
 			{
 				var qregName = args[i.ToString()].Message!.ToPlainText().Trim();
 				var qregValue = args[(i + 1).ToString()].Message!.ToPlainText();
-				qRegisters[qregName] = MModule.single(qregValue);
+				qRegisters[qregName] = MarkupText.Plain(qregValue);
 			}
 		}
 		else if (args.Count > 1 && args.TryGetValue("1", out var arg1))
@@ -2116,12 +2112,12 @@ public partial class Commands
 				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
 				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
-					MModule.single(newCount.ToString()));
+					MarkupText.Plain(newCount.ToString()));
 				break;
 			case "ALL":
 				await Mediator!.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
 				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
-					MModule.single(0.ToString()));
+					MarkupText.Plain(0.ToString()));
 				break;
 			case "SETQ":
 				var modified = await Mediator!.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2133,7 +2129,7 @@ public partial class Commands
 				await Mediator!.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
 				await AttributeService!.SetAttributeAsync(executor, objectToNotify, attribute,
-					MModule.single(newCountSetQ.ToString()));
+					MarkupText.Plain(newCountSetQ.ToString()));
 				return new None();
 		}
 
@@ -2422,7 +2418,7 @@ public partial class Commands
 				}
 				else
 				{
-					patternMatched = MModule.isWildcardMatch(strArg.Message!, evaluatedPattern);
+					patternMatched = MushText.IsWildcardMatch(strArg.Message!, evaluatedPattern);
 				}
 
 				if (patternMatched)
@@ -2430,7 +2426,7 @@ public partial class Commands
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
 					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
-					await parser.CommandListParseVisitor(MModule.single(actionText))();
+					await parser.CommandListParseVisitor(MarkupText.Plain(actionText))();
 
 					if (isFirst) break;
 				}
@@ -2439,13 +2435,13 @@ public partial class Commands
 			if (defaultArg.IsSome() && !matched)
 			{
 				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
-				await parser.CommandListParseVisitor(MModule.single(defaultText))();
+				await parser.CommandListParseVisitor(MarkupText.Plain(defaultText))();
 			}
 
 			if (switches.Contains("NOTIFY"))
 			{
 				await Mediator!.Send(new QueueCommandListRequest(
-					MModule.single("@notify me"),
+					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
@@ -2472,7 +2468,7 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.RSBrace, MinArgs = 1, MaxArgs = 2, ParameterNames = ["seconds", "command"])]
 	public static async ValueTask<Option<CallState>> Wait(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message!.ToPlainText()!;
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText() ?? string.Empty;
 		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
@@ -2641,7 +2637,7 @@ public partial class Commands
 		if (attrValue is null)
 		{
 
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
 				one.AsPlayer));
 
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
@@ -2658,7 +2654,7 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
 
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
@@ -2679,7 +2675,7 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single("0"),
+			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
 				one.AsPlayer));
 			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
@@ -2692,7 +2688,7 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MModule.single($"{last + 1}"),
+		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
@@ -3014,7 +3010,7 @@ public partial class Commands
 				{
 					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-						MModule.single("0"),
+						MushText.Zero,
 						one.AsPlayer));
 				}
 				else
@@ -3026,7 +3022,7 @@ public partial class Commands
 					{
 						var newCount = currentCount + drainCount.Value;
 						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-							MModule.single(newCount.ToString()),
+							MarkupText.Plain(newCount.ToString()),
 							one.AsPlayer));
 					}
 				}
@@ -3042,14 +3038,14 @@ public partial class Commands
 				if (hasAll)
 				{
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MModule.single("0"),
+						MushText.Zero,
 						one.AsPlayer));
 				}
 				else
 				{
 					// Without /all, set to -1 to indicate no tasks waiting
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MModule.single("-1"),
+						MarkupText.Plain("-1"),
 						one.AsPlayer));
 				}
 			}
@@ -3062,7 +3058,7 @@ public partial class Commands
 				{
 					var newCount = currentCount + drainCount.Value;
 					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MModule.single(newCount.ToString()),
+						MarkupText.Plain(newCount.ToString()),
 						one.AsPlayer));
 				}
 			}
@@ -3076,8 +3072,8 @@ public partial class Commands
 	public static async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var objArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty());
-		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty());
+		var objArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty);
+		var cmdListArg = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 
 		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
@@ -3194,8 +3190,8 @@ public partial class Commands
 		var isSpoof = true;
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
@@ -3238,7 +3234,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var objects = MModule.plainText(args["0"].Message!);
+		var objects = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
@@ -3313,7 +3309,7 @@ public partial class Commands
 		// Kept as markup — see the note in Think: ToString() renders the colour to escape characters
 		// and the recipient's client is left with nothing to style.
 		var notification = args["1"].Message!;
-		var targetListText = MModule.plainText(args["0"].Message!);
+		var targetListText = args["0"].Message!.ToPlainText();
 		var nameListTargets = ArgHelpers.NameList(targetListText);
 
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator!);
@@ -3654,7 +3650,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = MModule.plainText(objAttrArg.Message);
+		var objAttrText = objAttrArg.Message.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
 		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
@@ -3755,7 +3751,7 @@ public partial class Commands
 
 			if (!isCheck)
 			{
-				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, MModule.single(newText));
+				await AttributeService!.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(newText));
 			}
 		}
 
@@ -3912,7 +3908,7 @@ public partial class Commands
 			}
 		}
 
-		var evaluatedReplacement = await parser.FunctionParse(MModule.single(replacement));
+		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
 		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
 	}
 
@@ -4456,7 +4452,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var zoneName = MModule.plainText(args["0"].Message!);
+		var zoneName = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
@@ -4773,7 +4769,7 @@ public partial class Commands
 				}
 				else
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regexPattern = MushText.Glob.ToRegex(pattern);
 					var regex = new Regex(regexPattern, RegexOptions.None);
 					matches = regex.IsMatch(testString);
 				}
@@ -4783,7 +4779,7 @@ public partial class Commands
 					matchFound = true;
 
 					var actionText = action.ToPlainText().Replace("#$", testString);
-					var actionMString = MModule.single(actionText);
+					var actionMString = MarkupText.Plain(actionText);
 
 					if (isInline)
 					{
@@ -4810,7 +4806,7 @@ public partial class Commands
 				if (defaultAction != null)
 				{
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
-					var actionMString = MModule.single(actionText);
+					var actionMString = MarkupText.Plain(actionText);
 
 					if (isInline)
 					{
@@ -4971,7 +4967,7 @@ public partial class Commands
 				var trimmedPattern = pattern.Trim();
 				if (string.IsNullOrEmpty(trimmedPattern)) continue;
 
-				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
+				var regexPattern = MushText.Glob.ToRegex(trimmedPattern);
 				var regex = new Regex(regexPattern, RegexOptions.None);
 
 				if (regex.IsMatch(testString))
@@ -5021,7 +5017,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var zoneName = MModule.plainText(args["0"].Message!);
+		var zoneName = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -5103,8 +5099,8 @@ public partial class Commands
 		// KeyNotFoundException, so read through the dictionary and let the arms state their own arity.
 		var arg0 = args.GetValueOrDefault("0")?.Message;
 		var arg1 = args.GetValueOrDefault("1")?.Message;
-		var emptyIfMissing0 = arg0 ?? MModule.empty();
-		var emptyIfMissing1 = arg1 ?? MModule.empty();
+		var emptyIfMissing0 = arg0 ?? MarkupText.Empty;
+		var emptyIfMissing1 = arg1 ?? MarkupText.Empty;
 
 		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
 		return switches switch
@@ -5402,7 +5398,7 @@ public partial class Commands
 	private static bool ContainsAnsiMarkup(MString str)
 	{
 		var hasAnsi = false;
-		MModule.evaluateWith((markupType, innerText) =>
+		MarkupWalker.EvaluateWith((markupType, innerText) =>
 		{
 			if (markupType is Ansi)
 			{
@@ -5419,7 +5415,7 @@ public partial class Commands
 	private static string DecomposeAttributeValue(MString input)
 	{
 		// Use same logic as decompose() function from StringFunctions
-		var reconstructed = MModule.evaluateWith((markupType, innerText) =>
+		var reconstructed = MarkupWalker.EvaluateWith((markupType, innerText) =>
 		{
 			return markupType switch
 			{
@@ -5498,8 +5494,8 @@ public partial class Commands
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		if (isSpoof)
 		{
@@ -5583,8 +5579,8 @@ public partial class Commands
 		var contents = executorLocation.Content(Mediator!);
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
 		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MModule.empty())
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MModule.empty());
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
@@ -5624,7 +5620,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var objects = MModule.plainText(args["0"].Message!);
+		var objects = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		// Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
@@ -5704,7 +5700,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var objects = MModule.plainText(args["0"].Message!);
+		var objects = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		var objectList = ArgHelpers.NameListString(objects);
@@ -5877,7 +5873,7 @@ public partial class Commands
 		var othersMessage = await GetAttributeOrDefault(
 			parser, AttributeService!, executor, victim, actor, owhat, owhatd, stackArgs);
 
-		var prependedMessage = MModule.single($"{actor.Object().Name} {othersMessage.ToPlainText()}");
+		var prependedMessage = MarkupText.Plain($"{actor.Object().Name} {othersMessage.ToPlainText()}");
 
 		await CommunicationService!.SendToRoomAsync(
 			actor, actorLocation, _ => prependedMessage,
@@ -5920,7 +5916,7 @@ public partial class Commands
 	{
 		if (string.IsNullOrWhiteSpace(attrName))
 		{
-			return MModule.single(defaultValue);
+			return MarkupText.Plain(defaultValue);
 		}
 
 		var maybeAttr = await attributeService.GetAttributeAsync(
@@ -5928,7 +5924,7 @@ public partial class Commands
 
 		if (maybeAttr.IsError || maybeAttr.IsNone)
 		{
-			return MModule.single(defaultValue);
+			return MarkupText.Plain(defaultValue);
 		}
 
 		var result = await parser.With(
@@ -5942,7 +5938,7 @@ public partial class Commands
 			newParser => attributeService.EvaluateAttributeFunctionAsync(
 				newParser, victim, victim, attrName, stackArgs));
 
-		return result ?? MModule.single(defaultValue);
+		return result ?? MarkupText.Plain(defaultValue);
 	}
 
 	[SharpCommand(Name = "@ENTRANCES", Switches = ["EXITS", "THINGS", "PLAYERS", "ROOMS"],
@@ -6070,8 +6066,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var objAttrText = MModule.plainText(objAttrArg.Message!);
-		var pattern = MModule.plainText(patternArg.Message!);
+		var objAttrText = objAttrArg.Message!.ToPlainText();
+		var pattern = patternArg.Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
 
 		if (!split.TryPickT0(out var details, out _))
@@ -6123,7 +6119,7 @@ public partial class Commands
 
 		foreach (var attr in attributes.AsAttributes)
 		{
-			var attrValue = MModule.plainText(attr.Value);
+			var attrValue = attr.Value.ToPlainText();
 			bool matches = false;
 
 			if (isRegexp)
@@ -6148,7 +6144,7 @@ public partial class Commands
 			{
 				try
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
+					var regexPattern = MushText.Glob.ToRegex(pattern);
 					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
 					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
 				}
@@ -6204,7 +6200,7 @@ public partial class Commands
 					else
 					{
 						// Highlight the matching parts using Span to avoid allocations
-						var plainValue = MModule.plainText(attr.Value);
+						var plainValue = attr.Value.ToPlainText();
 						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 						var index = plainValue.IndexOf(pattern, comparison);
 
@@ -6215,13 +6211,7 @@ public partial class Commands
 							var match = valueSpan.Slice(index, pattern.Length).ToString();
 							var after = valueSpan.Slice(index + pattern.Length).ToString();
 
-							displayValue = MModule.concat(
-								MModule.concat(
-									MModule.single(before),
-									MModule.single(match).Hilight()
-								),
-								MModule.single(after)
-							);
+							displayValue = MarkupText.Concat(MarkupText.Concat(MarkupText.Plain(before), MarkupText.Plain(match).Hilight()), MarkupText.Plain(after));
 						}
 						else
 						{
@@ -6241,7 +6231,7 @@ public partial class Commands
 					// summary the formatter appends beneath it.
 					int codeLength;
 
-					if (MModule.getLength(attr.Value) == 0)
+					if (attr.Value.Length == 0)
 					{
 						formatted = attr.Value;
 						codeLength = 0;
@@ -6265,25 +6255,24 @@ public partial class Commands
 					else
 					{
 						// Same highlight as the unflagged path, but sliced from the formatted block via
-						// MModule.substring (rather than rebuilt from plain-text spans) so the formatter's
+						// MarkupText.Substring (rather than rebuilt from plain-text spans) so the formatter's
 						// own syntax colouring survives around the highlighted match.
 						//
 						// Bounded by codeLength: the attribute matched on its *value*, so the match is in the
 						// code. Searching the whole block would let a pattern that occurs only in the appended
 						// "#-1 PARSER FAILURE ..." summary highlight as though it were the match that put this
 						// attribute in the result set.
-						var plainFormatted = MModule.plainText(formatted);
+						var plainFormatted = formatted.ToPlainText();
 						var comparison = isNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 						var index = plainFormatted.IndexOf(pattern, 0, codeLength, comparison);
 
 						if (index >= 0)
 						{
-							var before = MModule.substring(0, index, formatted);
-							var match = MModule.substring(index, pattern.Length, formatted).Hilight();
-							var after = MModule.substring(index + pattern.Length,
-								plainFormatted.Length - index - pattern.Length, formatted);
+							var before = formatted.Substring(0, index);
+							var match = formatted.Substring(index, pattern.Length).Hilight();
+							var after = formatted.Substring(index + pattern.Length, plainFormatted.Length - index - pattern.Length);
 
-							displayValue = MModule.concat(MModule.concat(before, match), after);
+							displayValue = MarkupText.Concat(MarkupText.Concat(before, match), after);
 						}
 						else
 						{
@@ -6293,9 +6282,7 @@ public partial class Commands
 				}
 
 				await NotifyService!.Notify(executor,
-					MModule.concat(
-						MModule.single($"{attr.Name}: ").Hilight(),
-						displayValue), executor);
+					MarkupText.Concat(MarkupText.Plain($"{attr.Name}: ").Hilight(), displayValue), executor);
 			}
 		}
 		else
@@ -6417,7 +6404,7 @@ public partial class Commands
 					await parser.With(
 						state => state with
 						{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = chainPropagation },
-						p => p.CommandListParse(MModule.single(combined))) ?? CallState.Empty);
+						p => p.CommandListParse(MarkupText.Plain(combined))) ?? CallState.Empty);
 
 				RaiseBreakForCaller(chainPropagation);
 
@@ -6527,7 +6514,7 @@ public partial class Commands
 				var execResult = await parser.With(
 					state => state with
 					{ EnvironmentRegisters = envArgs, Caller = state.Executor, BreakPropagation = propagation },
-					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MModule.single(text))));
+					p => p.WithAttributeDebug(attribute, pp => pp.CommandListParse(MarkupText.Plain(text))));
 
 				RaiseBreakForCaller(propagation);
 
@@ -6641,7 +6628,7 @@ public partial class Commands
 	private static async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
 	{
 		await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailBadArguments), executor);
-		return MModule.single(ErrorMessages.Returns.BadArgumentsToMailCommand);
+		return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToMailCommand);
 	}
 
 	[SharpCommand(Name = "@NSPEMIT", Switches = ["LIST", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
@@ -6657,7 +6644,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var recipients = MModule.plainText(args["0"].Message!);
+		var recipients = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
 		var notificationType = await PermissionService!.CanNoSpoof(executor)
@@ -7023,23 +7010,23 @@ public partial class Commands
 		var uptimeData = await ObjectDataService!.GetExpandedServerDataAsync<UptimeData>();
 		var net = Configuration!.CurrentValue.Net;
 
-		var lines = new List<MString> { MModule.single($"You are connected to {net.MudName}") };
+		var lines = new List<MString> { MarkupText.Plain($"You are connected to {net.MudName}") };
 
 		// PennMUSH: `if (MUDURL && *MUDURL)`. An unset mud_url means the game has no published address,
 		// which is not the same fact as "the address is Unknown" — so the line is omitted, not filled in.
 		if (!string.IsNullOrWhiteSpace(net.MudUrl))
 		{
-			lines.Add(MModule.single($"Address: {net.MudUrl}"));
+			lines.Add(MarkupText.Plain($"Address: {net.MudUrl}"));
 		}
 
 		if (uptimeData != null)
 		{
-			lines.Add(MModule.single($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
+			lines.Add(MarkupText.Plain($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
 		}
 
-		lines.Add(MModule.single(Implementation.Generated.VersionInfo.Version));
+		lines.Add(MarkupText.Plain(Implementation.Generated.VersionInfo.Version));
 
-		var result = MModule.multipleWithDelimiter(MModule.single("\n"), lines.ToArray());
+		var result = MarkupText.Join(MarkupText.NewLine, lines.ToArray());
 
 		await NotifyService!.Notify(executor, result, executor);
 

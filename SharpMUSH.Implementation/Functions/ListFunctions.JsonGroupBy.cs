@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.Json.Nodes;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -19,13 +20,13 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
-		var rawAttrStr = MModule.plainText(rawAttrArg)!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MModule.single(" "));
-		var list = MModule.splitList(delim, parser.CurrentState.Arguments["1"].Message!);
+		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// A blank list has nothing to group.
-		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(MModule.plainText(list[0]))))
+		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText())))
 		{
 			return new CallState("{}");
 		}
@@ -39,7 +40,7 @@ public partial class Functions
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
 			foreach (var (item, keyResult) in list.Zip(lambdaResults, (item, keyResult) => (item, keyResult)))
 			{
-				AddToJsonGroup(groups, keyResult.ToPlainText(), MModule.plainText(item));
+				AddToJsonGroup(groups, keyResult.ToPlainText(), item.ToPlainText());
 			}
 
 			return new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions));
@@ -86,7 +87,7 @@ public partial class Functions
 			});
 
 			var key = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
-			AddToJsonGroup(groups, key, MModule.plainText(item));
+			AddToJsonGroup(groups, key, item.ToPlainText());
 		}
 
 		return new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions));

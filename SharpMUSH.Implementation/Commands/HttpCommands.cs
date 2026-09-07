@@ -78,7 +78,7 @@ public partial class Commands
 				}
 
 				var requestUri = uri;
-				var requestBody = dataArg?.Message?.ToString();
+				var requestBody = dataArg?.Message?.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
 				await Mediator!.Send(new QueueAttributeRequest(
@@ -102,12 +102,12 @@ public partial class Commands
 						var response = await client.SendAsync(message);
 
 						parser.CurrentState.AddRegister("STATUS",
-							MModule.single(((int)response.StatusCode).ToString()));
+							MarkupText.Plain(((int)response.StatusCode).ToString()));
 						parser.CurrentState.AddRegister("CONTENT-TYPE",
-							MModule.single(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
+							MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
 
 						var content = await response.Content.ReadAsStringAsync();
-						var contentState = new CallState(MModule.single(content));
+						var contentState = new CallState(MarkupText.Plain(content));
 						var contentDict = new Dictionary<string, CallState> { { "0", contentState } };
 
 						return parser.CurrentState with

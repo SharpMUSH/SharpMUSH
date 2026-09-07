@@ -35,22 +35,22 @@ public static class ChannelWhat
 		if (channels.Length == 0)
 		{
 			await notifyService.Notify(executor, "CHAT: No channels match that.", executor);
-			return new CallState(MModule.empty());
+			return new CallState(MarkupText.Empty);
 		}
 
 		List<MString> lines = [];
 		foreach (var channel in channels)
 		{
 			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-			lines.Add(MModule.concat(MModule.single("Channel: "), channel.Name));
-			lines.Add(MModule.concat(MModule.single("Description: "), channel.Description));
-			lines.Add(MModule.single($"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
-			lines.Add(MModule.single($"Flags: {string.Join(" ", channel.Privs)}"));
-			lines.Add(MModule.single($"Mogrifier: {(string.IsNullOrEmpty(channel.Mogrifier) ? "none" : channel.Mogrifier)}"));
-			lines.Add(MModule.single($"Buffer: {channel.Buffer}"));
+			lines.Add(MarkupText.Concat(MarkupText.Plain("Channel: "), channel.Name));
+			lines.Add(MarkupText.Concat(MarkupText.Plain("Description: "), channel.Description));
+			lines.Add(MarkupText.Plain($"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
+			lines.Add(MarkupText.Plain($"Flags: {string.Join(" ", channel.Privs)}"));
+			lines.Add(MarkupText.Plain($"Mogrifier: {(string.IsNullOrEmpty(channel.Mogrifier) ? "none" : channel.Mogrifier)}"));
+			lines.Add(MarkupText.Plain($"Buffer: {channel.Buffer}"));
 		}
 
-		var output = MModule.multipleWithDelimiter(MModule.single("\n"), lines);
+		var output = MarkupText.Join(MarkupText.NewLine, lines);
 		await notifyService.Notify(executor, output, executor);
 		return new CallState(output);
 	}

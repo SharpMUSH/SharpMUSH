@@ -13,6 +13,7 @@ using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -130,7 +131,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator!);
-		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var name = parser.CurrentState.Arguments["1"].Message!;
 
 		return await LocateService!.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target,
@@ -142,7 +143,7 @@ public partial class Commands
 
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
-				if (result.ToString() != ErrorMessages.Returns.PermissionDenied)
+				if (result.Message?.ToPlainText() != ErrorMessages.Returns.PermissionDenied)
 				{
 					await EventService!.TriggerEventAsync(
 						parser,
@@ -163,7 +164,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(MModule.plainText(args["0"].Message!));
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator!)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator!)).WithoutNone();
 
@@ -193,8 +194,8 @@ public partial class Commands
 			// do_attrib_flags/af_helper checks permission once for the whole flag argument,
 			// not once per flag, so `@set obj/attr=!safe wizard` isn't order-dependent on
 			// whether "!safe" or "wizard" is processed first.
-			var flagTokens = MModule.splitList(MModule.single(" "), args["1"].Message!)
-				.Select(MModule.plainText)
+			var flagTokens = MushText.SplitList(MarkupText.Space, args["1"].Message!)
+				.Select(x => x.ToPlainText())
 				.ToList();
 
 			var flagResult = await AttributeService!.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
@@ -207,20 +208,20 @@ public partial class Commands
 			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
 		}
 
-		var maybeColonLocation = MModule.indexOf(args["1"].Message!, ":");
+		var maybeColonLocation = args["1"].Message!.IndexOf(":");
 		if (maybeColonLocation > -1)
 		{
 			var arg1 = args["1"].Message!;
-			var attribute = MModule.substring(0, maybeColonLocation, arg1);
-			var content = MModule.substring(maybeColonLocation + 1, MModule.getLength(arg1), arg1);
+			var attribute = arg1.Substring(0, maybeColonLocation);
+			var content = arg1.Substring(maybeColonLocation + 1, arg1.Length);
 
 			var setResult =
-				await AttributeService!.SetAttributeAsync(executor, realLocated, MModule.plainText(attribute), content);
+				await AttributeService!.SetAttributeAsync(executor, realLocated, attribute.ToPlainText(), content);
 
 			if (setResult.IsT0)
 			{
 				await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					realLocated.Object().Name, MModule.plainText(attribute));
+					realLocated.Object().Name, attribute.ToPlainText());
 			}
 			else
 			{
@@ -232,7 +233,7 @@ public partial class Commands
 				failure => failure.Value));
 		}
 
-		foreach (var flag in MModule.splitList(MModule.single(" "), args["1"].Message!))
+		foreach (var flag in MushText.SplitList(MarkupText.Space, args["1"].Message!))
 		{
 			await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
 		}
@@ -642,13 +643,13 @@ public partial class Commands
 				{
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
-						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeHome));
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeHome));
 						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome), executor);
 						return CallState.Empty;
 					}
 					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
 					{
-						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.single(LinkTypeVariable));
+						await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeVariable));
 						await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
 						return CallState.Empty;
 					}
@@ -720,7 +721,7 @@ public partial class Commands
 								await ManipulateSharpObjectService!.SetOrUnsetFlag(executor, exitObj, "HALT", true);
 							}
 
-							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MModule.empty());
+							await AttributeService!.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
 
 							await Mediator!.Send(new LinkExitCommand(exitObj.AsExit, destination));
 
@@ -963,7 +964,7 @@ public partial class Commands
 		var exitTo = exitToCallState?.Message;
 		var exitFrom = exitFromCallState?.Message;
 
-		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToString()))
+		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToPlainText()))
 		{
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
 			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
@@ -973,7 +974,7 @@ public partial class Commands
 		// - Can executor create rooms (quota check)
 		// - Does executor have DIG permission
 
-		var response = await Mediator!.Send(new CreateRoomCommand(MModule.plainText(roomName),
+		var response = await Mediator!.Send(new CreateRoomCommand(roomName.ToPlainText(),
 			await executor.Owner.WithCancellation(CancellationToken.None)));
 		await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
@@ -991,9 +992,9 @@ public partial class Commands
 			}
 		}
 
-		if (!string.IsNullOrWhiteSpace(exitTo?.ToString()))
+		if (!string.IsNullOrWhiteSpace(exitTo?.ToPlainText()))
 		{
-			var exitToName = MModule.plainText(exitTo).Split(";");
+			var exitToName = exitTo.ToPlainText().Split(";");
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
@@ -1011,12 +1012,12 @@ public partial class Commands
 			await NotifyService!.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
 		}
 
-		if (!string.IsNullOrWhiteSpace(exitFrom?.ToString()))
+		if (!string.IsNullOrWhiteSpace(exitFrom?.ToPlainText()))
 		{
 			// CAN CREATE EXIT THERE?
 			// CAN LINK BACK TO CURRENT ROOM?
 
-			var exitFromName = MModule.plainText(exitFrom).Split(";");
+			var exitFromName = exitFrom.ToPlainText().Split(";");
 			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
 
 			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
@@ -1574,7 +1575,7 @@ public partial class Commands
 
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MModule.single(""));
+					await AttributeService!.SetAttributeAsync(executor, obj, "MONIKER", MarkupText.Plain(""));
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MonikerCleared), executor);
 					return CallState.Empty;
 				}
@@ -1650,7 +1651,7 @@ public partial class Commands
 
 				if (obj.IsExit)
 				{
-					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MModule.empty());
+					await AttributeService!.SetAttributeAsync(executor, obj, AttrLinkType, MarkupText.Empty);
 
 					await Mediator!.Send(new UnlinkExitCommand(obj.AsExit));
 					await NotifyService!.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
