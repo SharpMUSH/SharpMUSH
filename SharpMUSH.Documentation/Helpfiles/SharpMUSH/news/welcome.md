@@ -6,7 +6,7 @@ SharpMUSH is a modern implementation of the MUSH server, providing PennMUSH comp
 
 Features:
 - Full PennMUSH compatibility
-- Modern C# and F# codebase
+- Modern C# codebase
 - Scalable architecture
 - Comprehensive help system
 

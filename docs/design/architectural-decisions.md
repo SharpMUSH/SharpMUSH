@@ -655,9 +655,11 @@ room at a time (no multi-scene participation).
 
 ### 8.1 MString Is the Shared Library
 
-**Decision:** MString already has `.ToAnsi()`, `.ToHtml()`, `.ToPlainText()`.
-Web portal references the same shared library. No separate ANSI-to-HTML parser
-needed — MString handles it natively.
+**Decision:** MString (`SharpMUSH.MarkupString` core + the `.Ansi`/`.Html` kind
+packages) renders any registered format via `.Render(MarkupFormat.Ansi | .Html
+| .Pueblo | .Mxp | .BBCode)`, plus `.ToPlainText()`. Web portal references the
+same packages. No separate ANSI-to-HTML parser needed — MString handles it
+natively.
 
 ### 8.2 Markdown Uses Markdig Everywhere
 
@@ -674,7 +676,7 @@ Same library, different renderer backend.
 ### 8.4 Poses Are MString Only
 
 **Decision:** Poses are never Markdown. They are MString in, MString out.
-Web renders via `.ToHtml()`. No Markdown processing path for poses.
+Web renders via `.Render(MarkupFormat.Html)`. No Markdown processing path for poses.
 
 ### 8.5 Wiki Rendering Is Cached
 
@@ -893,7 +895,7 @@ formatting. Web "New Post" button is a UX shortcut that pre-fills the command.
 ### 16.4 Post Format
 
 **Decision:** MString (same as mail). Posts can contain ANSI formatting from
-in-game. Rendered via `.ToHtml()` on web. Not Markdown.
+in-game. Rendered via `.Render(MarkupFormat.Html)` on web. Not Markdown.
 
 ---
 
@@ -1169,6 +1171,119 @@ the former two-step setup (install softcode, then hand-register in
 unit, while a manual registration stays available for one-offs (its
 `OwningPackage` is null). The manifest format minor bumps to **1.1** for the
 new `kind`/`application` keys. Decision: confirmed 2026-06-13.
+
+---
+
+## Area 22: Markup Packages
+
+### 22.1 Core + Kind Split
+
+**Decision:** `MarkupText` (`MString`) and the rendering machinery (registry,
+formats, serializer, grapheme/display-width helpers) live in a core package,
+`SharpMUSH.MarkupString`, with zero rendering opinions. Each kind of markup —
+ANSI/terminal styling, raw HTML/MXP tags — ships as its own package
+(`SharpMUSH.MarkupString.Ansi`, `SharpMUSH.MarkupString.Html`) that registers
+its own emitters for every format it supports. This is a dependency boundary
+and an extension path (a plugin can add a markup kind of its own without
+touching core), **not** a WASM bundle-size reduction: every game stream can
+carry both ANSI and HTML/MXP markup, so every consumer references all three
+packages regardless of split. Bundle size comes from `IsTrimmable` and from
+scoping `TrimmerRootAssembly` to the three packages instead of rooting all of
+`SharpMUSH.Client`.
+
+### 22.2 Explicit Registry, No Reflection
+
+**Decision:** `MarkupRegistry` is built by explicit calls —
+`MarkupRegistry.Empty.WithAnsi().WithHtml()` — not by scanning assemblies or
+attributes for markup kinds. Each host process assigns the result to
+`MarkupRegistry.Default` once at startup (`SharpMUSH.Server`, `ConnectionServer`,
+`Client`, the Tests infrastructure, Benchmarks, LanguageServer). Rendering or
+deserializing before that assignment throws rather than silently falling back
+to plain text. No reflection, no dynamic code, no source generators anywhere
+in the three packages — this is what keeps them AOT- and trim-clean, verified
+by a dedicated `SharpMUSH.MarkupString.AotSmoke` publish in CI.
+
+### 22.3 Formats Are Core Values
+
+**Decision:** `MarkupFormat` (`Plain`, `Ansi`, `Html`, `Pueblo`, `Mxp`, `BBCode`,
+plus `MarkupFormat.Custom(name, encoding)`) is defined in core, not owned by
+any kind package. This replaces the old design where `IMarkup.WrapAs(string
+format)` dispatched on ad hoc format strings inside every markup type (the
+expression-problem shape that produced 113 public statics and 49 lowercase
+F#-era aliases). A kind package registers `IMarkupEmitter`/`IMarkupSetEmitter`
+implementations against these format values instead of matching on strings.
+
+### 22.4 Set Emitters Fold Style Layers
+
+**Decision:** A run can carry several markup layers (e.g. bold inside red
+inside underline); rendering each layer as its own nested escape sequence
+produces the `ESC[4mESC[31mESC[1m`-per-attribute output the audit flagged as
+9.5 output characters per text character. Instead, `IMarkupSetEmitter` is
+consulted first for the whole run: the ANSI set-emitter folds every
+`AnsiMarkup` in the set (and anything else implementing `IAnsiStyleSource`,
+so a caller's own markup type can contribute bold or a colour without writing
+its own per-format emitter) into one `AnsiStyle`, diffs it against the style
+in effect after the previous run, and writes one minimal SGR transition. The
+HTML set-emitter folds the same layers into one `<span style="…" class="…">`.
+Non-style layers in the set (e.g. an `HtmlMarkup` tag) are still delegated to
+their own emitters around the folded output.
+
+### 22.5 Text-Only Equality, Format-Scoped Overload
+
+**Decision:** `MarkupText.Equals`/`==`/`GetHashCode` compare `Text` only —
+identically-styled spans are equal or not by their characters, independent of
+markup, matching PennMUSH `strcmp`-style semantics MUSH code already depends
+on. There is no `Equals(object)` overload against `string` (the old API's
+asymmetric comparison is gone); a plain-string comparison is
+`TextEquals(string)`. A separate `Equals(MarkupText other, MarkupFormat
+format, MarkupRegistry? registry = null)` overload compares two values by
+what they render to in a given format — `MarkupFormat.Plain` is equivalent to
+the markup-blind `Equals(other)` — for callers that do care about markup
+(e.g. deduplicating identically-rendered scene output).
+
+### 22.6 UTF-16 Length, Grapheme-Safe Cuts, Display-Width Padding
+
+**Decision:** `MarkupText.Length` stays UTF-16 code units — `strlen()` and
+friends keep their existing PennMUSH-visible semantics; this is not
+renegotiable for compatibility. What changed is that every cutting operation
+(`Substring`, `Split`, `Trim`, `Remove`, `Splice`) now snaps a cut that would
+land inside a grapheme cluster (a surrogate pair, a combining mark, ZWJ, a
+variation selector) outward to the cluster boundary, so `a😀b` and `é`
+survive round-trips intact instead of yielding a lone surrogate or a detached
+combining mark. `Pad`/`Center` compute padding and truncation from
+`DisplayWidth` (a generated East Asian Width table: wide/fullwidth glyphs
+count as 2 cells, combining/format characters as 0) rather than `Length`, so
+CJK columns line up instead of running short by one cell per wide character.
+
+### 22.7 `ToString()` Is Always Plain Text
+
+**Decision:** `MarkupText.ToString()` is `ToPlainText()` — full stop. The old
+API's `ToString()` was format-ambiguous and could mix HTML and ANSI in one
+string depending on call site; the new API has no implicit rendering path at
+all. Producing client output is always an explicit `Render(MarkupFormat)`
+call, so a format is never inferred from context or forgotten in a `+`
+concatenation or a log statement.
+
+### 22.8 Wire Format Keeps Its `"k"` Kind Tag
+
+**Decision:** The JSON envelope (`{"t","p","r"}`, a palette of markup arrays)
+is unchanged; each markup object still carries a `"k"` kind id (`"ansi"`,
+`"html"`, `"neutral"`) written by core and read back via `IMarkupCodec`. A
+kind package supplies its own codec; an unrecognised `"k"` on read survives
+as an `UnknownMarkup(kind, rawJson)` that round-trips verbatim and renders as
+plain rather than dropping data — so a reader built against an older set of
+kind packages does not destroy markup it doesn't understand, and stored
+attributes and scene events from before the split still deserialize.
+
+### 22.9 MUSH Policy Lives Outside the Library
+
+**Decision:** Nothing PennMUSH-specific — `#-1` and other error strings,
+`PE_COMPRESS_SPACES`, glob-to-regex, space-list splitting, column alignment —
+lives in the markup packages. It moved to `SharpMUSH.Library/Markup/`
+(`MushText`, `ColumnSpec`, `TextAligner`), built on top of the generic
+`MarkupText` API. The markup packages are usable by any .NET project that
+wants styled text with pluggable output formats; SharpMUSH's own conventions
+are a consumer of that API, not part of its surface.
 
 ---
 

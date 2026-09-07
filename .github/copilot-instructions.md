@@ -1,7 +1,7 @@
 # Copilot Instructions for SharpMUSH
 
 ## Project Overview
-SharpMUSH is a modern iteration of MUSH (Multi-User Shared Hallucination) servers - text-based role-playing game servers. It's written in C# and F# using .NET, with the goal of providing PennMUSH compatibility while modernizing the technology stack.
+SharpMUSH is a modern iteration of MUSH (Multi-User Shared Hallucination) servers - text-based role-playing game servers. It's written in C# using .NET, with the goal of providing PennMUSH compatibility while modernizing the technology stack.
 
 ## Domain Knowledge
 - **MUSH/MU\***: Text-based multiplayer online role-playing environments
