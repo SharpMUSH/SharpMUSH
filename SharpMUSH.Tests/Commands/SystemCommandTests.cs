@@ -119,14 +119,17 @@ public class SystemCommandTests
 			"@WIKI doesn't know switch GET.")).IsTrue();
 	}
 
-	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left).
-	// @HIDE acts on the executor. Use an isolated player to avoid modifying shared God (#1).
-	// Expected: "You are now hidden from the WHO list."
+	// PennMUSH reference: cmd_hide calls hide_player(executor, status, arg_left), a permission-gated
+	// (Can_Hide), per-connection toggle - not the DARK flag. @HIDE acts on the executor's own
+	// connections. Use an isolated player to avoid modifying shared God (#1).
+	// Expected: "You no longer appear on the WHO list." (bsd.c:7239, self-target branch).
 	[Test]
 	public async ValueTask HideCommand()
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideCmd");
+		// @hide is permission-gated (CanHide: wizard/royalty or the Hide power) - grant WIZARD.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 		// Ensure executor starts visible so the subsequent /on produces a deterministic message.
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 

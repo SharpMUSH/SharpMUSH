@@ -989,11 +989,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
-		public const string ErrorDarkFlagNotFound = "Error: DARK flag not found in database.";
-		public const string NowHiddenFromWho = "You are now hidden from the WHO list.";
-		public const string NoLongerHiddenFromWho = "You are no longer hidden from the WHO list.";
-		public const string AlreadyHiddenFromWho = "You are already hidden from the WHO list.";
-		public const string AlreadyVisibleOnWho = "You are already visible on the WHO list.";
+		// PennMUSH bsd.c:7239,7246 (hide_player's self-target branch, the only one @hide implements).
+		public const string NowHiddenFromWho = "You no longer appear on the WHO list.";
+		public const string NoLongerHiddenFromWho = "You now appear on the WHO list.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MotdClearedFormat = "{0} MOTD cleared.";
