@@ -17,4 +17,5 @@ public record ConnectionStateChangeNotification(
 	DBRef? PlayerRef,
 	IConnectionService.ConnectionState OldState,
 	IConnectionService.ConnectionState NewState,
-	bool FirstLogin = false) : INotification;
+	bool FirstLogin = false,
+	IConnectionService.ConnectionData? FormerConnection = null) : INotification;
