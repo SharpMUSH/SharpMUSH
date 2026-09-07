@@ -68,6 +68,7 @@ Additional Flags:
 * Paranoid
 * Track_money
 * XTERM256
+* TRUECOLOR
 * MONIKER
 * open_ok
 
@@ -99,6 +100,7 @@ ANSI highlight can also be enabled on a per-connection basis with `@sockset`.
 - [ansi()]
 - [COLOR]
 - [XTERM256]
+- [TRUECOLOR]
 - [@config]
 - [@sockset]
 
@@ -196,6 +198,7 @@ ANSI colors can also be enabled on a per-connection basis with `@sockset`.
 **See Also:**
 - [ANSI]
 - [XTERM256]
+- [TRUECOLOR]
 - [ansi()]
 - [@sockset]
 
@@ -214,8 +217,23 @@ XTERM colors can also be enabled on a per-connection basis with `@sockset`.
 **See Also:**
 - [ANSI]
 - [COLOR]
+- [TRUECOLOR]
 - [ansi()]
 - [@sockset]
+
+# TRUECOLOR
+
+**Flag: TRUECOLOR (players)**
+
+This flag indicates to the MUSH that the player's client can handle 24-bit RGB colors. It is aliased to TRUECOLOUR, RGB, and 24BIT.
+
+Player ANSI and color-depth flags take precedence over automatically detected terminal capabilities after login. ANSI and COLOR must also be set for colored output; XTERM256 independently controls 256-color output and fallback.
+
+**See Also:**
+- [ANSI]
+- [COLOR]
+- [XTERM256]
+- [ansi()]
 
 # CONNECTED
 

@@ -490,6 +490,8 @@ public partial class Commands
 			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase));
 		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
 			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
+		var truecolorEnabled = await player.Flags.Value.AnyAsync(f =>
+			string.Equals(f.Name, "TRUECOLOR", StringComparison.OrdinalIgnoreCase));
 
 		if (MessageBus != null)
 		{
@@ -497,11 +499,12 @@ public partial class Commands
 				handle,
 				ansiEnabled,
 				colorEnabled,
-				xterm256Enabled
+				xterm256Enabled,
+				truecolorEnabled
 			));
 
-			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
-				handle, ansiEnabled, colorEnabled, xterm256Enabled);
+			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",
+				handle, ansiEnabled, colorEnabled, xterm256Enabled, truecolorEnabled);
 		}
 	}
 

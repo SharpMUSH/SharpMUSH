@@ -30,6 +30,7 @@ public class UpdatePlayerPreferencesConsumer(
 				AnsiEnabled: message.AnsiEnabled,
 				ColorEnabled: message.ColorEnabled,
 				Xterm256Enabled: message.Xterm256Enabled,
+				TruecolorEnabled: message.TruecolorEnabled,
 				Locale: existingPreferences?.Locale ?? "en"
 			);
 
@@ -38,11 +39,12 @@ public class UpdatePlayerPreferencesConsumer(
 			if (success)
 			{
 				logger.LogInformation(
-					"Updated preferences for connection {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
+					"Updated preferences for connection {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",
 					message.Handle,
 					message.AnsiEnabled,
 					message.ColorEnabled,
-					message.Xterm256Enabled);
+					message.Xterm256Enabled,
+					message.TruecolorEnabled);
 			}
 			else
 			{

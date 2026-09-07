@@ -66,5 +66,6 @@ public record UpdatePlayerPreferencesMessage(
 	long Handle,
 	bool AnsiEnabled,
 	bool ColorEnabled,
-	bool Xterm256Enabled
+	bool Xterm256Enabled,
+	bool TruecolorEnabled = false
 ) : IHandleMessage;

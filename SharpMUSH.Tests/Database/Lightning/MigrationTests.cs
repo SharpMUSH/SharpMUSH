@@ -26,7 +26,7 @@ public class MigrationTests
 			await db.Migrate();
 
 			await Assert.That(db.Store.Count(Tables.Obj)).IsEqualTo(10);
-			await Assert.That(db.Store.Count(Tables.Flag)).IsEqualTo(61);
+			await Assert.That(db.Store.Count(Tables.Flag)).IsEqualTo(62);
 			await Assert.That(db.Store.Count(Tables.AttrEntry)).IsEqualTo(216);
 
 			var next = db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : -1);

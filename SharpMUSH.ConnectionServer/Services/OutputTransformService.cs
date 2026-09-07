@@ -72,12 +72,13 @@ public partial class OutputTransformService : IOutputTransformService
 		// Always strip OSC 8 hyperlinks - telnet clients don't support them
 		text = StripOsc8Hyperlinks(text);
 
-		if (preferences is { AnsiEnabled: false } or { ColorEnabled: false })
-		{
-			return StripAnsiCodes(text, capabilities.Format == OutputFormat.Mxp);
-		}
+		// Authenticated player flags are explicit preferences and therefore take precedence over
+		// inferred terminal capabilities. Before login, terminal negotiation remains the only signal.
+		var ansiAllowed = preferences is null
+			? capabilities.SupportsAnsi
+			: preferences.AnsiEnabled && preferences.ColorEnabled;
 
-		if (!capabilities.SupportsAnsi)
+		if (!ansiAllowed)
 		{
 			return StripAnsiCodes(text, capabilities.Format == OutputFormat.Mxp);
 		}
@@ -86,14 +87,15 @@ public partial class OutputTransformService : IOutputTransformService
 		// 24-bit RGB freely — every hex ansi() code and every syntax-highlighted help block does —
 		// so a client that stops at 256 needs those mapped into the palette before the palette is
 		// mapped into the basic sixteen. Skipping a rung leaves sequences the client cannot read.
-		var deepColorAllowed = preferences is null or { Xterm256Enabled: true };
+		var truecolorAllowed = preferences?.TruecolorEnabled ?? capabilities.SupportsTruecolor;
+		var xterm256Allowed = preferences?.Xterm256Enabled ?? capabilities.SupportsXterm256;
 
-		if (!deepColorAllowed || !capabilities.SupportsTruecolor)
+		if (!truecolorAllowed)
 		{
 			text = DowngradeTruecolorToXterm256(text);
 		}
 
-		if (!deepColorAllowed || !capabilities.SupportsXterm256)
+		if (!xterm256Allowed)
 		{
 			text = DowngradeXterm256To16Color(text);
 		}
