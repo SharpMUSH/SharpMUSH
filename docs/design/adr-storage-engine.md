@@ -1,7 +1,7 @@
 # ADR-DB-1: Storage engine for SharpMUSH
 
-**Status:** Proposed
-**Date:** 2026-09-06
+**Status:** Accepted
+**Date:** 2026-09-07
 **Deciders:** SharpMUSH maintainers
 
 ## Context
@@ -93,16 +93,22 @@ one of them by accident (`ISharpDatabase.cs:196-216`).
 
 ## Decision
 
-Adopt **SQLite** (via `Microsoft.Data.Sqlite`) as the primary, embedded, default
-storage provider, modelled relationally rather than as a property graph. Keep the
-SurrealDB provider as the second embedded option while the SQLite provider matures,
-then retire it. Retire the ArangoDB and Memgraph providers once the SQLite provider
-passes the full parity suite. Track **LadybugDB** as the graph-native alternative if
-the relational model proves unworkable.
+Build **LMDB via Lightning.NET** (`SharpMUSH.Database.Lightning`, the appendix's Option F
+substrate) as the embedded, permissively licensed storage provider, selected by
+`SHARPMUSH_DATABASE_PROVIDER=lightning`; it landed 2026-09-07, with the full unit and
+integration suite passing under it per
+`docs/superpowers/specs/2026-09-06-lightning-provider-design.md`. Keep ArangoDB, Memgraph
+and SurrealDB selectable rather than retiring them now. SQLite (Option A) remains the
+relational alternative on record, considered and set aside for now rather than adopted.
+Track **LadybugDB** as the graph-native alternative if a future workload needs traversal
+the flat keyspace cannot express.
 
 ## Options considered
 
 ### Option A: SQLite (Microsoft.Data.Sqlite / SQLitePCLRaw)
+
+Not pursued: set aside in favor of the LMDB provider that shipped (Option F below); kept
+here as the relational alternative of record.
 
 | Dimension | Assessment |
 |---|---|
@@ -222,6 +228,9 @@ DuckPGQ is a CWI research extension that lags DuckDB patch releases.
 
 ### Option F: In-memory object graph in C# with an embedded KV/log for durability
 
+What shipped: `SharpMUSH.Database.Lightning` built the LMDB substrate below; see
+`docs/superpowers/specs/2026-09-06-lightning-provider-design.md` for the design.
+
 The classic PennMUSH/TinyMUX architecture with a modern persistence layer (LMDB via
 Lightning.NET, RocksDB, ZoneTree, FASTER/Tsavorite, LiteDB, DBreeze; all MIT/BSD/
 OpenLDAP-licensed). Fastest possible reads and it would make FusionCache redundant.
@@ -301,22 +310,15 @@ Revisit if:
 
 ## Action items
 
-**Status, 2026-09-07:** the embedded provider landed as LMDB (`SharpMUSH.Database.Lightning`,
-appendix Option F substrate) rather than SQLite; items 3, 5 and 6 are done against it, and the
-whole unit and integration suite runs under `SHARPMUSH_DATABASE_PROVIDER=lightning` in CI beside
-the other three. Items 1, 2, 4, 7-10 are open, and the "adopt SQLite" decision above is
-superseded for the engine choice while its consequences (one embedded provider, no Docker,
-retire the rest) still stand.
-
 1. [ ] Fix the stale "in-memory" wording in `CLAUDE.md` and `DatabaseProvider.cs`; state that production runs SurrealDB on RocksDB.
-2. [ ] Extend `SharpMUSH.Benchmarks/DatabaseBenchmarks.cs` with the uncached shapes before comparing engines: inheritance walk, wildcard and regex `lattr`, `GetFilteredObjectsAsync`, `WipeAttributeAsync`, `DeleteObjectAsync`, `IsReachableViaParentOrZoneAsync`, and a concurrent-writer scenario.
+2. [x] Extend `SharpMUSH.Benchmarks/DatabaseBenchmarks.cs` with the uncached shapes before comparing engines: inheritance walk, wildcard and regex `lattr`, `GetFilteredObjectsAsync`, `WipeAttributeAsync`, `DeleteObjectAsync`, `IsReachableViaParentOrZoneAsync`, and a concurrent-writer scenario. **Done:** `ExtendedDatabaseBenchmarks` covers all seven shapes for all four providers.
 3. [x] Prototype the SQLite schema (objects, typed tables or a `type` column, flat `attributes` with `UNIQUE(object_id, long_name)`, edge tables with properties, JSON1 for locks/expanded data) and implement `GetAttributeAsync`, `GetAttributesAsync`, `GetAttributeWithInheritanceAsync` and `IsReachableViaParentOrZoneAsync` against it; run the parity tests for those four. **Done as LMDB:** `SharpMUSH.Database.Lightning` implements the whole surface — a flat dbref-prefixed attribute keyspace, edge tables with `DUPSORT` reverse indexes, and all four of those methods — and passes the full unit and integration suites.
 4. [ ] Register a .NET-backed `REGEXP` function and confirm `GLOB` prefix seeks use the `long_name` index (`EXPLAIN QUERY PLAN`).
 5. [x] Implement `IStagingDatabase` as a second file with rename-on-promote. **Done as LMDB:** `LightningStagingDatabase` is a second directory, and promotion swaps directories under the live store's gate, keeping the outgoing world at `<path>.previous`.
 6. [x] Make the parent-before-child ordering of `GetAttributesByRegexAsync` an explicit contract and test it, rather than relying on traversal order. **Done as LMDB:** the ordering is the byte order of the attribute keyspace, stated on the method and pinned by test.
 7. [ ] Add batching to `PennMUSHDatabaseConverter` (independent of engine).
 8. [ ] Delete or fix `LazilyGetAttributePatternAsync` (zero callers, three divergent implementations).
-9. [ ] Once SQLite passes the full suite: flip the default provider, then retire Memgraph and ArangoDB, and move `Core.Arango` out of the shared `SharpMUSH.Database` project (today every provider transitively depends on it).
+9. [x] Once SQLite passes the full suite: flip the default provider, then retire Memgraph and ArangoDB, and move `Core.Arango` out of the shared `SharpMUSH.Database` project (today every provider transitively depends on it). **Done:** `Core.Arango` and `Core.Arango.Migration` moved to `SharpMUSH.Database.ArangoDB.csproj`; flipping the default provider and retiring Memgraph/ArangoDB stays open.
 10. [ ] Spike a LadybugDB .NET binding only if step 3 surfaces a traversal the relational model cannot express acceptably.
 
 ## Sources
