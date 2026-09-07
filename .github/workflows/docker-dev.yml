@@ -73,6 +73,7 @@ jobs:
               - 'SharpMUSH.Database.ArangoDB/**'
               - 'SharpMUSH.Database.Memgraph/**'
               - 'SharpMUSH.Database.SurrealDB/**'
+              - 'SharpMUSH.Database.Lightning/**'
               - 'SharpMUSH.Documentation/**'
               - 'SharpMUSH.Plugins.Scene/**'
               - 'global.json'
