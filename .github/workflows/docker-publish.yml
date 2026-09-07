@@ -35,7 +35,7 @@ jobs:
         run: |
           # Extract version from tag (e.g., v1.0.0 -> 1.0.0)
           VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version: $VERSION"
 
       - name: Build and push SharpMUSH Server
@@ -93,19 +93,21 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Summary
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          echo "## 🐳 Docker Images Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully built and pushed images to DockerHub:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### SharpMUSH Server" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-server:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-server:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ConnectionServer" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-connectionserver:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-connectionserver:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### SocketServer — replacement drops live connections" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Images Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Successfully built and pushed images to DockerHub:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SharpMUSH Server" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-server:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-server:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### ConnectionServer" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-connectionserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-connectionserver:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SocketServer — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-socketserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> "$GITHUB_STEP_SUMMARY"

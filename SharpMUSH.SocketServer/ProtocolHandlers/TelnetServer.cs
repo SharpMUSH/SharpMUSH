@@ -68,9 +68,23 @@ public class TelnetServer : ConnectionHandler
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
-		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
+		var nextPort = await _descriptorGenerator.GetNextTelnetDescriptorAsync(ct);
+		try
+		{
+			await RunConnectionAsync(connection, nextPort, ct);
+		}
+		finally
+		{
+			using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+			try { await _connectionService.DisconnectAsync(nextPort, teardown.Token).WaitAsync(teardown.Token); }
+			catch (OperationCanceledException) { _logger.LogDebug("Connection {Handle} teardown timed out", nextPort); }
+			finally { _descriptorGenerator.ReleaseTelnetDescriptor(nextPort); }
+		}
+	}
 
+	private async Task RunConnectionAsync(ConnectionContext connection, long nextPort, CancellationToken ct)
+	{
 		// Assigned once BuildAndStartAsync returns; the callbacks below only run after that, since the
 		// interpreter has to exist before it can hand any of them anything.
 		TelnetInterpreter? telnetInterpreter = null;
@@ -345,11 +359,6 @@ public class TelnetServer : ConnectionHandler
 		{
 			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
 		}
-
-		using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-		try { await _connectionService.DisconnectAsync(nextPort, teardown.Token).WaitAsync(teardown.Token); }
-		catch (OperationCanceledException) { _logger.LogDebug("Connection {Handle} teardown timed out", nextPort); }
-		finally { _descriptorGenerator.ReleaseTelnetDescriptor(nextPort); }
 	}
 
 	/// <summary>

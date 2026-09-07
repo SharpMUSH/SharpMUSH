@@ -21,6 +21,7 @@ public interface ITerminalReplayStore
 	/// <summary>Wrapped frames with seq greater than <paramref name="lastSeq"/>, oldest first.</summary>
 	ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default);
 
+	/// <summary>Returns retained frames and whether all requested history is available.</summary>
 	async ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default) =>
 		new(true, await AfterAsync(session, lastSeq, ct));
 

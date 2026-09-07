@@ -64,3 +64,5 @@ The process boundary added roughly 0.15–0.19 ms to this simple transformation.
 | Host, disk or NATS retention loss | Not guaranteed | Limited by available durable state and replay |
 
 Keep a single socket owner. Multi-host operation requires explicit ownership fencing, coordinated cleanup and replicated durable storage; the supplied singleton stack does not provide those guarantees. The embedded portal's engine-hosted SignalR/HTTP connections also restart with the engine; gateway recovery does not preserve those separate transports. No JSON state snapshot can preserve a terminated process's kernel TCP socket, TLS session, or telnet parser.
+
+Resume tokens remain retryable when engine authorization is unavailable. After a token is consumed, failure of the final durable revocation check fails closed; the client must establish a fresh session.

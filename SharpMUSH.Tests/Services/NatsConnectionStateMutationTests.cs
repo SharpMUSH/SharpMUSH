@@ -144,6 +144,55 @@ public class NatsConnectionStateMutationTests
 		await Assert.That(kv.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "TryUpdateAsync")).IsFalse();
 	}
 
+	[Test]
+	public async Task SnapshotSkipsMalformedJsonAndRetainsFollowingConnections()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		kv.GetKeysAsync(Arg.Any<NatsKVWatchOpts>(), Arg.Any<CancellationToken>())
+			.Returns(Keys("conn.41", "conn.42"));
+		kv.TryGetEntryAsync<string>("conn.41", Arg.Any<ulong>(), Arg.Any<INatsDeserialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(new NatsResult<NatsKVEntry<string>>(new NatsKVEntry<string>("sharpmush-connections", "conn.41")
+			{
+				Value = "{malformed", Revision = 1
+			}));
+		Reads(kv, Entry(Data(), 2));
+		await using var store = Create(kv);
+
+		var connections = (await store.GetAllConnectionsAsync()).ToArray();
+
+		await Assert.That(connections.Length).IsEqualTo(1);
+		await Assert.That(connections[0].Handle).IsEqualTo(42L);
+		await Assert.That(connections[0].Data.Handle).IsEqualTo(42L);
+	}
+
+	[Test]
+	public async Task SnapshotDoesNotSwallowBrokerReadFailure()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		kv.GetKeysAsync(Arg.Any<NatsKVWatchOpts>(), Arg.Any<CancellationToken>()).Returns(Keys("conn.42"));
+		Reads(kv, new NatsResult<NatsKVEntry<string>>(new IOException("NATS unavailable")));
+		await using var store = Create(kv);
+
+		await Assert.That(async () => await store.GetAllConnectionsAsync()).Throws<IOException>();
+	}
+
+	[Test]
+	public async Task SnapshotDoesNotSwallowReadCancellation()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		kv.GetKeysAsync(Arg.Any<NatsKVWatchOpts>(), Arg.Any<CancellationToken>()).Returns(Keys("conn.42"));
+		Reads(kv, new NatsResult<NatsKVEntry<string>>(new OperationCanceledException()));
+		await using var store = Create(kv);
+
+		await Assert.That(async () => await store.GetAllConnectionsAsync()).Throws<OperationCanceledException>();
+	}
+
+	private static async IAsyncEnumerable<string> Keys(params string[] keys)
+	{
+		await Task.CompletedTask;
+		foreach (var key in keys) yield return key;
+	}
+
 	private static NatsConnectionStateStore Create(INatsKVStore kv) =>
 		new(new NatsConnection(), kv, NullLogger<NatsConnectionStateStore>.Instance);
 

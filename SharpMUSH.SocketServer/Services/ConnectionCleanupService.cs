@@ -14,25 +14,38 @@ public class ConnectionCleanupService(
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
 		var grace = TimeSpan.FromSeconds(configuration.GetValue("Session:GraceSeconds", 120.0));
-		foreach (var (handle, data) in await stateStore.GetAllConnectionsAsync(cancellationToken))
+		await Parallel.ForEachAsync(await stateStore.GetAllConnectionsAsync(cancellationToken),
+			new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = cancellationToken },
+			async (record, ct) =>
 		{
-			var expiry = ResumeExpiry(data, grace);
-			if (data.ConnectionType == "websocket"
-				&& data.Metadata.GetValueOrDefault("ResumeRevoked") != "1"
-				&& Guid.TryParseExact(data.Metadata.GetValueOrDefault("SessionId"), "N", out _)
-				&& expiry > DateTimeOffset.UtcNow)
+			var (handle, data) = record;
+			using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+			deadline.CancelAfter(TimeSpan.FromSeconds(10));
+			try
 			{
-				await pump.RestoreDormantAsync(data, expiry, cancellationToken);
-				logger.LogInformation("Restored dormant browser session {Handle} until {Expiry}", handle, expiry);
+				var expiry = ResumeExpiry(data, grace);
+				if (data.ConnectionType == "websocket"
+					&& data.Metadata.GetValueOrDefault("ResumeRevoked") != "1"
+					&& Guid.TryParseExact(data.Metadata.GetValueOrDefault("SessionId"), "N", out _)
+					&& expiry > DateTimeOffset.UtcNow)
+				{
+					await pump.RestoreDormantAsync(data, expiry, deadline.Token);
+					logger.LogInformation("Restored dormant browser session {Handle} until {Expiry}", handle, expiry);
+				}
+				else
+				{
+					await stateStore.RemoveConnectionAsync(handle, deadline.Token);
+					if (data.Metadata.GetValueOrDefault("SessionId") is { Length: > 0 } sessionId)
+						await bus.Publish(new SharpMUSH.Messaging.Messages.ConnectionClosedMessage(
+							handle, DateTimeOffset.UtcNow, sessionId), deadline.Token);
+				}
 			}
-			else
+			catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+			catch (Exception ex)
 			{
-				await stateStore.RemoveConnectionAsync(handle, cancellationToken);
-				if (data.Metadata.GetValueOrDefault("SessionId") is { Length: > 0 } sessionId)
-					await bus.Publish(new SharpMUSH.Messaging.Messages.ConnectionClosedMessage(
-						handle, DateTimeOffset.UtcNow, sessionId), cancellationToken);
+				logger.LogWarning(ex, "Could not recover persisted connection {Handle}; continuing startup", handle);
 			}
-		}
+		});
 	}
 
 	internal static DateTimeOffset ResumeExpiry(ConnectionStateData data, TimeSpan grace)

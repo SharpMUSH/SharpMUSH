@@ -21,12 +21,12 @@ public class WebSocketServer(
 
 		// KeepAliveTimeout makes the server abort the socket when pongs stop arriving, so a half-open
 		// peer (abrupt drop) is detected in ~interval+timeout instead of lingering for minutes.
-		var webSocket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
+		using var webSocket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
 		{
 			KeepAliveInterval = keepAlive.WsInterval,
 			KeepAliveTimeout = keepAlive.WsTimeout
 		});
-		var handle = descriptorGenerator.GetNextWebSocketDescriptor();
+		var handle = await descriptorGenerator.GetNextWebSocketDescriptorAsync(context.RequestAborted);
 		var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 		var hostname = context.Request.Headers.Host.ToString();
 

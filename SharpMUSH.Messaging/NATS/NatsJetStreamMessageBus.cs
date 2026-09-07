@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
-using NATS.Client.Serializers.Json;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
@@ -17,19 +16,21 @@ namespace SharpMUSH.Messaging.NATS;
 public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 {
 	private readonly NatsConnection _nats;
-	private readonly NatsJSContext _js;
+	private readonly INatsJSContext _js;
+	private readonly TimeSpan _publishTimeout;
 	private readonly ILogger<NatsJetStreamMessageBus> _logger;
 	private readonly string _subjectPrefix;
 
-	private NatsJetStreamMessageBus(
+	internal NatsJetStreamMessageBus(
 		NatsConnection nats,
-		NatsJSContext js,
-		string subjectPrefix,
+		INatsJSContext js,
+		NatsOptions options,
 		ILogger<NatsJetStreamMessageBus> logger)
 	{
 		_nats = nats;
 		_js = js;
-		_subjectPrefix = subjectPrefix;
+		_subjectPrefix = options.SubjectPrefix;
+		_publishTimeout = options.PublishTimeout;
 		_logger = logger;
 	}
 
@@ -42,12 +43,13 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 		ILogger<NatsJetStreamMessageBus> logger,
 		CancellationToken ct = default)
 	{
+		if (options.PublishTimeout <= TimeSpan.Zero || options.PublishTimeout.TotalMilliseconds > uint.MaxValue - 1)
+			throw new ArgumentOutOfRangeException(nameof(options.PublishTimeout));
 		var nats = new NatsConnection(new NatsOpts { Url = options.Url });
-		await nats.ConnectAsync();
-		var js = new NatsJSContext(nats);
-
 		try
 		{
+			await nats.ConnectAsync();
+			var js = new NatsJSContext(nats);
 			await js.CreateOrUpdateStreamAsync(
 				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
 				{
@@ -55,6 +57,7 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 					MaxMsgSize = options.MaxMsgSize,
 				},
 				ct);
+			return new NatsJetStreamMessageBus(nats, js, options, logger);
 		}
 		catch
 		{
@@ -62,20 +65,17 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 			throw;
 		}
 
-		return new NatsJetStreamMessageBus(nats, js, options.SubjectPrefix, logger);
 	}
 
 	/// <inheritdoc/>
 	public async Task Publish<T>(T message, CancellationToken cancellationToken = default) where T : class
 	{
-		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-		deadline.CancelAfter(TimeSpan.FromSeconds(2));
 		var subject = GetSubjectForMessageType<T>();
 
 		_logger.LogTrace("[NATS-SEND] Publishing message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
 
-		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, cancellationToken: deadline.Token);
+		await PublishCoreAsync(subject, message, null, cancellationToken);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published message to subject {Subject} - Type: {MessageType}",
 			subject, typeof(T).Name);
@@ -84,18 +84,32 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	/// <inheritdoc/>
 	public async Task HandlePublish<T>(T message, CancellationToken cancellationToken = default) where T : IHandleMessage
 	{
-		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-		deadline.CancelAfter(TimeSpan.FromSeconds(2));
 		var subject = GetSubjectForMessageType<T>();
 
 		_logger.LogTrace("[NATS-SEND] Publishing handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);
 
 		var headers = new NatsHeaders { { "X-Handle", message.Handle.ToString() } };
-		await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default, headers: headers, cancellationToken: deadline.Token);
+		await PublishCoreAsync(subject, message, headers, cancellationToken);
 
 		_logger.LogTrace("[NATS-SEND] Successfully published handle-based message to subject {Subject} - Type: {MessageType}, Handle: {Handle}",
 			subject, typeof(T).Name, message.Handle);
+	}
+
+	private async Task PublishCoreAsync<T>(string subject, T message, NatsHeaders? headers,
+		CancellationToken cancellationToken)
+	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		deadline.CancelAfter(_publishTimeout);
+		try
+		{
+			await _js.PublishAsync(subject, message, serializer: CompressingNatsSerializer<T>.Default,
+				headers: headers, cancellationToken: deadline.Token);
+		}
+		catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && deadline.IsCancellationRequested)
+		{
+			throw new TimeoutException($"Publishing to {subject} exceeded {_publishTimeout}.", ex);
+		}
 	}
 
 	private string GetSubjectForMessageType<T>()

@@ -17,6 +17,12 @@ on:
 permissions:
   contents: read
 
+# Serialize validation and publication together so slower validation cannot reorder publishers.
+concurrency:
+  group: docker-dev-${{ github.ref }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   build-and-test:
     uses: ./.github/workflows/_dotnet-build-test.yml

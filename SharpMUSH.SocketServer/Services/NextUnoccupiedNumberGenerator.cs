@@ -12,7 +12,8 @@ public class NextUnoccupiedNumberGenerator(long initial)
 	{
 		if (number == _next - 1)
 		{
-			var latest = _next - 1;
+			_next = number;
+			var latest = number - 1;
 			while (_unoccupiedNumbers.Count > 0 && _unoccupiedNumbers.Max == latest)
 			{
 				_unoccupiedNumbers.Remove(latest);

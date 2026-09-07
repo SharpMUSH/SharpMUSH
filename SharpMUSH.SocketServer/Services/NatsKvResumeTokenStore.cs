@@ -68,7 +68,8 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 		var binding = Parse(entry.Value.Value);
 		if (!binding.Found || await IsRevokedAsync(binding.Session, ct)) return (false, 0, string.Empty);
 		// A consumed marker is deliberately not parseable as a binding. The revision precondition
-		// ensures two processes racing on the same token cannot both restore it.
+		// ensures two processes racing on the same token cannot both restore it. ConnectionPump
+		// separately CASes the connection incarnation against logout before exposing replay.
 		var spent = await _store.TryUpdateAsync(key, "consumed", entry.Value.Revision, cancellationToken: ct);
 		if (spent.Success)
 			return !await IsRevokedAsync(binding.Session, ct) ? binding : (false, 0, string.Empty);

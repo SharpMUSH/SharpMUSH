@@ -23,10 +23,10 @@ public class LifecycleNoticeTests
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8, () => disconnected = true);
 		var notices = new EngineLifecycleNoticeService(service, NullLogger<EngineLifecycleNoticeService>.Instance);
 		var now = DateTimeOffset.UtcNow;
-		await notices.NotifyAsync(now, false);
-		await notices.NotifyAsync(now, false);
-		await notices.NotifyAsync(now.AddSeconds(1), true);
-		await notices.NotifyAsync(now, false);
+		await notices.NotifyAsync(now, false).WaitAsync(TimeSpan.FromSeconds(5));
+		await notices.NotifyAsync(now, false).WaitAsync(TimeSpan.FromSeconds(5));
+		await notices.NotifyAsync(now.AddSeconds(1), true).WaitAsync(TimeSpan.FromSeconds(5));
+		await notices.NotifyAsync(now, false).WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(output.Count).IsEqualTo(2);
 		await Assert.That(output[0]).Contains("restarting");
 		await Assert.That(output[1]).Contains("ready");
@@ -99,8 +99,8 @@ public class LifecycleNoticeTests
 		var now = DateTimeOffset.UtcNow;
 		try
 		{
-			await notices.NotifyAsync(now, false);
-			await notices.NotifyAsync(now.AddSeconds(1), true);
+			await notices.NotifyAsync(now, false).WaitAsync(TimeSpan.FromSeconds(5));
+			await notices.NotifyAsync(now.AddSeconds(1), true).WaitAsync(TimeSpan.FromSeconds(5));
 			await Assert.That(writes).IsEqualTo(1);
 		}
 		finally { pending.TrySetResult(); }

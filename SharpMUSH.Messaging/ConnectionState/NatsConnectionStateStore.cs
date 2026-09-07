@@ -134,9 +134,16 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			var connections = new List<(long, ConnectionStateData)>();
 			foreach (var handle in handles)
 			{
-				var data = await GetConnectionAsync(handle, ct);
-				if (data is not null)
-					connections.Add((handle, data));
+				try
+				{
+					var data = await GetConnectionAsync(handle, ct);
+					if (data is not null)
+						connections.Add((handle, data));
+				}
+				catch (JsonException ex)
+				{
+					_logger.LogWarning(ex, "Skipping malformed connection state for handle {Handle}", handle);
+				}
 			}
 
 			return connections;
@@ -166,43 +173,25 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		string.IsNullOrWhiteSpace(sessionId) ? Task.FromResult(false)
 			: MutateAsync(handle, data => data.Metadata["ResumeRevoked"] = "1", ct, sessionId);
 
-	public async Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
-		string ip, string host, bool secure, CancellationToken ct = default)
-	{
-		if (string.IsNullOrWhiteSpace(sessionId)) return false;
-		for (var attempt = 0; attempt < 16; attempt++)
+	public Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
+		string ip, string host, bool secure, CancellationToken ct = default) =>
+		string.IsNullOrWhiteSpace(sessionId) ? Task.FromResult(false) : MutateAsync(handle, data =>
 		{
-			var entry = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
-			if (!entry.Success)
-			{
-				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return false;
-				throw entry.Error;
-			}
-			var data = entry.Value.Value is { } json ? JsonSerializer.Deserialize<ConnectionStateData>(json) : null;
-			if (data is null || data.Handle != handle || data.Metadata.GetValueOrDefault("SessionId") != sessionId
-				|| data.Metadata.GetValueOrDefault("ResumeRevoked") == "1"
-				|| data.PlayerObjid != playerObjid || data.State != state || data.ConnectionType != "websocket"
-				|| (!secure && data.Metadata.GetValueOrDefault("SSL") == "1")) return false;
-			if (data.Metadata.TryGetValue("ResumeExpiresAt", out var expiry)
-				&& (!long.TryParse(expiry, out var expiresAt) || expiresAt < 0
-				|| (expiresAt > 0 && expiresAt <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())))
-				return false;
-
 			data.Metadata["InternetProtocolAddress"] = ip;
 			data.Metadata["HostName"] = host;
 			data.Metadata["SSL"] = secure ? "1" : "0";
-			data.LastSeen = DateTimeOffset.UtcNow;
-			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),
-				entry.Value.Revision, cancellationToken: ct);
-			if (result.Success) return true;
-			if (result.Error is not NatsKVWrongLastRevisionException) throw result.Error;
-			await Task.Delay(SharpMUSH.Library.Utilities.ConnectionRetryPolicy.Delay, ct);
-		}
-		throw new InvalidOperationException($"Connection {handle} changed repeatedly while resuming transport.");
-	}
+		}, ct, sessionId, data =>
+		{
+			if (data.Metadata.GetValueOrDefault("ResumeRevoked") == "1"
+				|| data.PlayerObjid != playerObjid || data.State != state || data.ConnectionType != "websocket"
+				|| (!secure && data.Metadata.GetValueOrDefault("SSL") == "1")) return false;
+			return !data.Metadata.TryGetValue("ResumeExpiresAt", out var expiry)
+				|| (long.TryParse(expiry, out var expiresAt) && expiresAt >= 0
+					&& (expiresAt == 0 || expiresAt > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+		});
 
 	private async Task<bool> MutateAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct,
-		string? sessionId = null)
+		string? sessionId = null, Func<ConnectionStateData, bool>? validate = null)
 	{
 		DateTimeOffset? incarnation = null;
 		for (var attempt = 0; attempt < 16; attempt++)
@@ -219,6 +208,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			// Never apply a retry to a later occupant of a recycled descriptor.
 			if (incarnation is not null && incarnation != data.ConnectedAt) return false;
 			incarnation = data.ConnectedAt;
+			if (validate is not null && !validate(data)) return false;
 			mutate(data);
 			data.LastSeen = DateTimeOffset.UtcNow;
 			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),

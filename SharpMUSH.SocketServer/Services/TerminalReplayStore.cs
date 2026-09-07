@@ -28,8 +28,17 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 
 	public ValueTask<IReadOnlyList<byte[]>> AfterAsync(string session, long lastSeq, CancellationToken ct = default)
 		=> ValueTask.FromResult(_buffers.TryGetValue(session, out var buffer)
-			? buffer.After(lastSeq, _now(), MaxAge)
+			? buffer.Read(lastSeq, _now(), MaxAge).Frames
 			: []);
+
+	public ValueTask<ReplayReadResult> ReadAsync(string session, long lastSeq, CancellationToken ct = default)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegative(lastSeq);
+		ct.ThrowIfCancellationRequested();
+		return ValueTask.FromResult(_buffers.TryGetValue(session, out var buffer)
+			? buffer.Read(lastSeq, _now(), MaxAge)
+			: new ReplayReadResult(lastSeq == 0, []));
+	}
 
 	public ValueTask DropAsync(string session, CancellationToken ct = default)
 	{
@@ -56,15 +65,19 @@ public sealed class TerminalReplayStore : ITerminalReplayStore
 			}
 		}
 
-		public IReadOnlyList<byte[]> After(long lastSeq, DateTimeOffset now, TimeSpan maxAge)
+		public ReplayReadResult Read(long lastSeq, DateTimeOffset now, TimeSpan maxAge)
 		{
 			lock (_gate)
 			{
 				var cutoff = now - maxAge;
-				return _entries
-					.Where(entry => entry.Seq > lastSeq && entry.At >= cutoff)
+				while (_entries.First is { } first && first.Value.At < cutoff)
+					_entries.RemoveFirst();
+				var earliest = _entries.First?.Value.Seq;
+				var complete = earliest is { } seq ? lastSeq >= seq - 1 : lastSeq >= _seq;
+				return new ReplayReadResult(complete, _entries
+					.Where(entry => entry.Seq > lastSeq)
 					.Select(entry => entry.Payload)
-					.ToList();
+					.ToList());
 			}
 		}
 

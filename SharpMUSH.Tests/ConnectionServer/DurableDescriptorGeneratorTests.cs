@@ -10,6 +10,34 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class DurableDescriptorGeneratorTests
 {
 	[Test]
+	public async Task WaitingAllocationsAreAsynchronousAndIndividuallyCancelable()
+	{
+		var backend = new AllocatorStore();
+		await using var generator = await DurableDescriptorGeneratorService.CreateAsync(backend.Store, 1, 0);
+		await generator.GetNextTelnetDescriptorAsync();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		backend.Store.TryGetEntryAsync<string>(DurableDescriptorGeneratorService.HighWaterKey, Arg.Any<ulong>(),
+			Arg.Any<INatsDeserialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(call => StallReadAsync(call.ArgAt<CancellationToken>(3)));
+		async ValueTask<NatsResult<NatsKVEntry<string>>> StallReadAsync(CancellationToken ct)
+		{
+			entered.TrySetResult();
+			await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+			return default;
+		}
+		using var reservationCancellation = new CancellationTokenSource();
+		var reservation = generator.GetNextTelnetDescriptorAsync(reservationCancellation.Token).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		using var waiterCancellation = new CancellationTokenSource();
+		var waiter = generator.GetNextWebSocketDescriptorAsync(waiterCancellation.Token).AsTask();
+		waiterCancellation.Cancel();
+		await Assert.That(async () => await waiter.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+		await Assert.That(reservation.IsCompleted).IsFalse();
+		reservationCancellation.Cancel();
+		await Assert.That(async () => await reservation.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+	}
+
+	[Test]
 	public async Task RecreatedOwnerNeverReusesAnyPreviouslyReservedHandle()
 	{
 		var backend = new AllocatorStore();

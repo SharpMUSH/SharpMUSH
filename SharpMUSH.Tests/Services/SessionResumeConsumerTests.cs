@@ -44,7 +44,7 @@ public class SessionResumeConsumerTests
 				Id = "account", Username = "user", PasswordHash = "unused"
 			});
 			var config = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-			var baseline = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
+			var baseline = ReadPennMushConfig.Create(Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 			config.CurrentValue.Returns(baseline with { Net = baseline.Net with { Logins = true } });
 			Consumer = new(Store, Connections, Accounts, Substitute.For<IMediator>(), config, Bus,
 				NullLogger<SessionResumeConsumer>.Instance, lifetime);

@@ -14,6 +14,47 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class DurableSessionResumeTests
 {
 	[Test]
+	public async Task RevocationDuringTokenConsumptionPreventsReplayAndReattachment()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var connections = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus);
+		var state = Substitute.For<IConnectionStateStore>();
+		var data = new ConnectionStateData
+		{
+			Handle = 9, PlayerObjid = "#5:1234", State = "LoggedIn", IpAddress = "old", Hostname = "old",
+			ConnectionType = "websocket", ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
+			Metadata = new() { ["SessionId"] = "session" }
+		};
+		state.GetConnectionAsync(9, Arg.Any<CancellationToken>()).Returns(data);
+		state.TryUpdateTransportAsync(9, "session", data.PlayerObjid, data.State,
+			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(_ => data.Metadata.GetValueOrDefault("ResumeRevoked") != "1");
+		var tokens = Substitute.For<IResumeTokenStore>();
+		tokens.TryResolveAsync("token", Arg.Any<CancellationToken>()).Returns((true, 9L, "session"));
+		tokens.TryConsumeAsync("token", Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			data.Metadata["ResumeRevoked"] = "1";
+			return ValueTask.FromResult((true, 9L, "session"));
+		});
+		tokens.MintAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("fresh");
+		var authorization = Substitute.For<ISessionResumeAuthorizationService>();
+		authorization.AuthorizeAsync(9, "session", Arg.Any<IDuplexTransport>(), Arg.Any<CancellationToken>()).Returns(true);
+		var replay = new TerminalReplayStore();
+		var pump = new ConnectionPump(NullLogger<ConnectionPump>.Instance, connections, bus,
+			new DescriptorGeneratorService(new ConnectionServerOptions()), replay, tokens,
+			new SessionSinkRegistry(), new DetachedSessionTracker(new ManualScheduler()), TimeSpan.FromMinutes(2),
+			state, authorization);
+		await pump.RestoreDormantAsync(data, DateTimeOffset.UtcNow.AddMinutes(1), default);
+		await replay.AppendAsync("session", Encoding.UTF8.GetBytes("private replay"));
+		var transport = new ResumeTransport("token");
+		await pump.RunAsync(transport, 10, default);
+		await Assert.That(transport.Sent.Any(frame => frame.Contains("reattached") || frame.Contains("private replay"))).IsFalse();
+		await state.Received(1).TryUpdateTransportAsync(9, "session", data.PlayerObjid, data.State,
+			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+		await Assert.That(connections.Get(10)).IsNotNull();
+	}
+
+	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async Task AuthorizationOutagePreservesCredentialForNextAttempt(bool timeout)

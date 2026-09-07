@@ -14,6 +14,7 @@ public sealed class ResumeTokenService : IResumeTokenStore
 	private readonly ConcurrentDictionary<string, Entry> _tokens = new();
 	private readonly ConcurrentDictionary<string, DateTimeOffset> _revoked = new();
 	private readonly Func<DateTimeOffset> _now;
+	internal int RevocationCount => _revoked.Count;
 
 	public ResumeTokenService() : this(() => DateTimeOffset.UtcNow) { }
 
@@ -52,11 +53,19 @@ public sealed class ResumeTokenService : IResumeTokenStore
 	public ValueTask RevokeSessionAsync(string session, CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
+		foreach (var entry in _revoked)
+			if (_now() >= entry.Value) _revoked.TryRemove(entry);
 		_revoked[session] = _now() + Ttl;
 		return ValueTask.CompletedTask;
 	}
 
-	private bool IsRevoked(string session) => _revoked.TryGetValue(session, out var expires) && _now() < expires;
+	private bool IsRevoked(string session)
+	{
+		if (!_revoked.TryGetValue(session, out var expires)) return false;
+		if (_now() < expires) return true;
+		_revoked.TryRemove(new KeyValuePair<string, DateTimeOffset>(session, expires));
+		return false;
+	}
 
 	internal static string TokenKey(string token) =>
 		Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));

@@ -15,6 +15,18 @@ public interface IDescriptorGeneratorService
 	/// </summary>
 	long GetNextWebSocketDescriptor();
 
+	ValueTask<long> GetNextTelnetDescriptorAsync(CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		return ValueTask.FromResult(GetNextTelnetDescriptor());
+	}
+
+	ValueTask<long> GetNextWebSocketDescriptorAsync(CancellationToken ct = default)
+	{
+		ct.ThrowIfCancellationRequested();
+		return ValueTask.FromResult(GetNextWebSocketDescriptor());
+	}
+
 	void ReserveWebSocketDescriptor(long descriptor);
 
 	/// <summary>

@@ -8,7 +8,16 @@ namespace SharpMUSH.ConnectionServer.Services;
 public sealed record KeepAliveOptions(TimeSpan WsInterval, TimeSpan WsTimeout, TimeSpan TcpUserTimeout)
 {
 	public static KeepAliveOptions FromConfiguration(IConfiguration config) => new(
-		WsInterval: TimeSpan.FromSeconds(config.GetValue("KeepAlive:WsIntervalSeconds", 15.0)),
-		WsTimeout: TimeSpan.FromSeconds(config.GetValue("KeepAlive:WsTimeoutSeconds", 20.0)),
-		TcpUserTimeout: TimeSpan.FromSeconds(config.GetValue("KeepAlive:TcpUserTimeoutSeconds", 20.0)));
+		WsInterval: ReadSeconds(config, "WsIntervalSeconds", 15),
+		WsTimeout: ReadSeconds(config, "WsTimeoutSeconds", 20),
+		TcpUserTimeout: ReadSeconds(config, "TcpUserTimeoutSeconds", 20));
+
+	private static TimeSpan ReadSeconds(IConfiguration config, string name, double fallback)
+	{
+		var key = $"KeepAlive:{name}";
+		var seconds = config.GetValue(key, fallback);
+		if (!double.IsFinite(seconds) || seconds < 0 || seconds > int.MaxValue / 1000.0)
+			throw new ArgumentOutOfRangeException(key, seconds, "Keep-alive seconds must be finite and between 0 and 2147483.647.");
+		return TimeSpan.FromSeconds(seconds);
+	}
 }

@@ -230,7 +230,7 @@ public class Program
 			.ConfigureResource(resource =>
 			{
 				resource.AddService(
-					serviceName: "sharpmush-connectionserver",
+					serviceName: "sharpmush-socketserver",
 					serviceVersion: "1.0.0",
 					serviceInstanceId: Environment.MachineName);
 

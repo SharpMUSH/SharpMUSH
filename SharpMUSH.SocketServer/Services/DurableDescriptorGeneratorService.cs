@@ -14,7 +14,8 @@ public sealed class DurableDescriptorGeneratorService : IDescriptorGeneratorServ
 	private readonly NatsConnection? _nats;
 	private readonly int _blockSize;
 	private readonly long _initialHighWater;
-	private readonly object _gate = new();
+	private readonly SemaphoreSlim _gate = new(1, 1);
+	private static readonly TimeSpan ReservationTimeout = TimeSpan.FromSeconds(5);
 	private long _next;
 	private long _last;
 	private bool _hasBlock;
@@ -58,6 +59,9 @@ public sealed class DurableDescriptorGeneratorService : IDescriptorGeneratorServ
 
 	private async Task ReserveBlockAsync(CancellationToken ct)
 	{
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(ReservationTimeout);
+		ct = deadline.Token;
 		for (var attempt = 0; attempt < 32; attempt++)
 		{
 			var entry = await _store.TryGetEntryAsync<string>(HighWaterKey, cancellationToken: ct);
@@ -91,20 +95,26 @@ public sealed class DurableDescriptorGeneratorService : IDescriptorGeneratorServ
 		throw new InvalidOperationException("Could not reserve a connection descriptor block after concurrent updates.");
 	}
 
-	private long Next()
+	private async ValueTask<long> NextAsync(CancellationToken ct)
 	{
-		lock (_gate)
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(ReservationTimeout);
+		await _gate.WaitAsync(deadline.Token);
+		try
 		{
-			if (!_hasBlock) ReserveBlockAsync(CancellationToken.None).GetAwaiter().GetResult();
+			if (!_hasBlock) await ReserveBlockAsync(deadline.Token);
 			var result = _next;
 			if (result == _last) _hasBlock = false;
 			else _next++;
 			return result;
 		}
+		finally { _gate.Release(); }
 	}
 
-	public long GetNextTelnetDescriptor() => Next();
-	public long GetNextWebSocketDescriptor() => Next();
+	public long GetNextTelnetDescriptor() => NextAsync(default).AsTask().GetAwaiter().GetResult();
+	public long GetNextWebSocketDescriptor() => NextAsync(default).AsTask().GetAwaiter().GetResult();
+	public ValueTask<long> GetNextTelnetDescriptorAsync(CancellationToken ct = default) => NextAsync(ct);
+	public ValueTask<long> GetNextWebSocketDescriptorAsync(CancellationToken ct = default) => NextAsync(ct);
 	public void ReserveWebSocketDescriptor(long descriptor) { }
 	public void ReleaseTelnetDescriptor(long descriptor) { }
 	public void ReleaseWebSocketDescriptor(long descriptor) { }

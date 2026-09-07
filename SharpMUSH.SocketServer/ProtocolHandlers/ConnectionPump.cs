@@ -31,9 +31,8 @@ public sealed class ConnectionPump(
 		{
 			logger.LogWarning(ex, "Connection handshake or teardown failed for {Handle}", candidateHandle);
 			var sink = sinkRegistry.Get(candidateHandle);
-			if (sink is not null && ReferenceEquals(sink.Current, transport))
+			if (sink is not null && sink.Detach(transport))
 			{
-				sink.Detach();
 				ScheduleExpiry(candidateHandle, sink.SessionId, grace);
 			}
 			else if (connectionService.Get(candidateHandle) is null)
@@ -135,9 +134,10 @@ public sealed class ConnectionPump(
 			if (sinkRegistry.Get(oldHandle) != sink || connectionService.Get(oldHandle) is null) return null;
 			if (authorization is not null && !await authorization.AuthorizeAsync(oldHandle, oldSession, transport, ct))
 				return null;
+			SharpMUSH.Library.Services.Interfaces.ConnectionStateData? persisted = null;
 			if (stateStore is not null)
 			{
-				var persisted = await stateStore.GetConnectionAsync(oldHandle, ct);
+				persisted = await stateStore.GetConnectionAsync(oldHandle, ct);
 				if (persisted?.Metadata.GetValueOrDefault("SessionId") != oldSession) return null;
 			}
 			using var attachDeadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -145,12 +145,21 @@ public sealed class ConnectionPump(
 			await sink.OutputGate.WaitAsync(attachDeadline.Token);
 			try
 			{
-				if (connectionService.Get(oldHandle) is null) return null;
+				if (sink.Ended || connectionService.Get(oldHandle) is null) return null;
 				var history = await replayStore.ReadAsync(oldSession, lastSeq, ct);
 				if (!history.Complete) return null;
 				var frames = history.Frames;
 				var consumed = await resumeTokens.TryConsumeAsync(token, ct);
 				if (!consumed.Found || consumed.Handle != oldHandle || consumed.Session != oldSession) return null;
+				// Logout and this transition CAS the same persisted incarnation. Perform the fence
+				// after token consumption and before sending any remembered output.
+				if (stateStore is not null)
+				{
+					if (persisted is null || !await stateStore.TryUpdateTransportAsync(oldHandle, oldSession,
+						persisted.PlayerObjid, persisted.State, transport.RemoteIp, transport.Hostname, transport.IsSecure, ct))
+						return null;
+				}
+				if (sink.Ended || connectionService.Get(oldHandle) is null) return null;
 				detachedTracker.Reattach(oldHandle);
 				var previous = sink.Current;
 				sink.Detach();
@@ -162,7 +171,7 @@ public sealed class ConnectionPump(
 				await SendTransportAsync(transport, SeqEnvelope.ResumeToken(newToken), ct);
 				sink.TokenIssuedAt = DateTimeOffset.UtcNow;
 				await SetExpiryAsync(oldHandle, null, ct);
-				sink.Attach(transport);
+				if (!sink.TryAttach(transport)) return null;
 				return (oldHandle, oldSession);
 			}
 			catch
@@ -204,11 +213,11 @@ public sealed class ConnectionPump(
 		DateTimeOffset expiry, CancellationToken ct)
 	{
 		var session = data.Metadata["SessionId"];
+		await SetExpiryAsync(data.Handle, expiry, ct);
 		descriptorGenerator.ReserveWebSocketDescriptor(data.Handle);
 		var sink = sinkRegistry.GetOrCreate(data.Handle);
 		sink.SessionId = session;
 		connectionService.RestoreDormant(data, CreateOutput(data.Handle, session, sink), CreateDisconnect(data.Handle, session, sink));
-		await SetExpiryAsync(data.Handle, expiry, ct);
 		ScheduleExpiry(data.Handle, session, expiry - DateTimeOffset.UtcNow);
 	}
 
@@ -260,9 +269,7 @@ public sealed class ConnectionPump(
 
 	private Action CreateDisconnect(long handle, string session, SessionSink sink) => () =>
 	{
-		var current = sink.Current;
-		sink.Ended = true;
-		sink.Detach();
+		var current = sink.End();
 		sinkRegistry.Remove(handle);
 		descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 		detachedTracker.Reattach(handle);

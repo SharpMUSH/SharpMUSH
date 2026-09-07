@@ -375,9 +375,11 @@ complete.
 ## Updating
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
-publishes `sharpmush/sharpmush-server:dev` and `sharpmush/sharpmush-connectionserver:dev` to
-Docker Hub (`.github/workflows/docker-dev.yml`); the `watchtower` service polls Docker Hub every
-5 minutes and recreates the two labeled services when the tag moves, pruning superseded images.
+publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
+`sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
+for the renderer, and `sharpmush/sharpmush-socketserver:dev` for the socket owner. The
+`watchtower` service polls every 5 minutes and recreates each of these three labeled services
+when its image tag changes, pruning superseded images. Socket owner replacement drops live sockets.
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
 image — the Blazor WASM portal is baked into the server image at build time.
 

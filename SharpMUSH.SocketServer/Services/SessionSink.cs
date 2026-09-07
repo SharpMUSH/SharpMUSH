@@ -9,9 +9,10 @@ namespace SharpMUSH.ConnectionServer.Services;
 /// </summary>
 public sealed class SessionSink
 {
+	private readonly object _lifetimeGate = new();
 	private volatile IDuplexTransport? _current;
 	private volatile bool _ended;
-	public bool Ended { get => _ended; set => _ended = value; }
+	public bool Ended => _ended;
 	public string SessionId { get; set; } = "";
 	public DateTimeOffset TokenIssuedAt { get; set; }
 	public SemaphoreSlim OutputGate { get; } = new(1, 1);
@@ -19,7 +20,29 @@ public sealed class SessionSink
 
 	public IDuplexTransport? Current => _current;
 
-	public void Attach(IDuplexTransport transport) => _current = transport;
+	public void Attach(IDuplexTransport transport)
+	{
+		if (!TryAttach(transport)) throw new InvalidOperationException("The session has ended.");
+	}
+
+	public bool TryAttach(IDuplexTransport transport)
+	{
+		lock (_lifetimeGate)
+		{
+			if (_ended) return false;
+			_current = transport;
+			return true;
+		}
+	}
+
+	public IDuplexTransport? End()
+	{
+		lock (_lifetimeGate)
+		{
+			_ended = true;
+			return Interlocked.Exchange(ref _current, null);
+		}
+	}
 
 	public void Detach() => _current = null;
 

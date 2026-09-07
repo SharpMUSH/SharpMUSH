@@ -99,6 +99,17 @@ public class NatsSessionResumeMutationTests
 		await Assert.That(writes[1].Data.Metadata["SSL"]).IsEqualTo("1");
 	}
 
+	[Test]
+	public async Task TransportRetryCannotUpdateRecycledDescriptorIncarnation()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		Reads(kv, Entry(Data(), 1), Entry(Data(DateTimeOffset.UnixEpoch.AddSeconds(1)), 2));
+		var writes = Writes(kv, Conflict());
+		await using var store = Create(kv);
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsFalse();
+		await Assert.That(writes.Count).IsEqualTo(1);
+	}
+
 	private static NatsConnectionStateStore Create(INatsKVStore kv) =>
 		new(new NatsConnection(), kv, NullLogger<NatsConnectionStateStore>.Instance);
 

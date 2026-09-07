@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace SharpMUSH.ConnectionServer.Services;
 
 /// <summary>Schedules a delayed action; abstracted so grace expiry is deterministic in tests.</summary>
@@ -55,34 +53,59 @@ public sealed class TimerGraceScheduler(ILogger<TimerGraceScheduler>? logger = n
 /// </summary>
 public sealed class DetachedSessionTracker(IGraceScheduler scheduler) : IDisposable
 {
-	private readonly ConcurrentDictionary<long, IDisposable> _pending = new();
+	private readonly object _gate = new();
+	private readonly Dictionary<long, Registration> _pending = new();
+	private bool _disposed;
 
 	public void Detach(long handle, Func<Task> onGraceExpired, TimeSpan grace)
 	{
-		var registration = scheduler.Schedule(grace, async () =>
+		lock (_gate)
 		{
-			if (_pending.TryRemove(handle, out _))
-				await onGraceExpired();
-		});
-
-		// Replace any prior pending timer for this handle.
-		if (_pending.TryRemove(handle, out var previous))
-			previous.Dispose();
-		_pending[handle] = registration;
+			if (_disposed) return;
+			if (_pending.Remove(handle, out var previous)) previous.Timer?.Dispose();
+			var registration = new Registration();
+			_pending[handle] = registration;
+			registration.Timer = scheduler.Schedule(grace > TimeSpan.Zero ? grace : TimeSpan.Zero, () =>
+			{
+				lock (_gate)
+				{
+					if (_disposed || !_pending.TryGetValue(handle, out var current) || current != registration)
+						return Task.CompletedTask;
+					_pending.Remove(handle);
+					registration.Timer?.Dispose();
+					return onGraceExpired();
+				}
+			});
+		}
 	}
 
 	public bool Reattach(long handle)
 	{
-		if (!_pending.TryRemove(handle, out var registration))
-			return false;
-		registration.Dispose();
-		return true;
+		lock (_gate)
+		{
+			if (!_pending.Remove(handle, out var registration)) return false;
+			registration.Timer?.Dispose();
+			return true;
+		}
 	}
 
-	public bool IsDetached(long handle) => _pending.ContainsKey(handle);
+	public bool IsDetached(long handle)
+	{
+		lock (_gate) return _pending.ContainsKey(handle);
+	}
+
 	public void Dispose()
 	{
-		foreach (var handle in _pending.Keys) Reattach(handle);
+		lock (_gate)
+		{
+			_disposed = true;
+			foreach (var registration in _pending.Values) registration.Timer?.Dispose();
+			_pending.Clear();
+		}
 	}
 
+	private sealed class Registration
+	{
+		public IDisposable? Timer { get; set; }
+	}
 }

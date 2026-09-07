@@ -17,6 +17,31 @@ public class SessionSinkTests
 	}
 
 	[Test]
+	public async Task EndAndAttachRaceNeverLeavesAnEndedSessionAttached()
+	{
+		for (var attempt = 0; attempt < 100; attempt++)
+		{
+			var sink = new SessionSink();
+			await Task.WhenAll(Task.Run(() => sink.End()), Task.Run(() => sink.TryAttach(new DummyTransport())));
+			await Assert.That(sink.Ended).IsTrue();
+			await Assert.That(sink.Current).IsNull();
+			await Assert.That(sink.TryAttach(new DummyTransport())).IsFalse();
+		}
+	}
+
+	[Test]
+	public async Task OldTransportCannotDetachItsReplacement()
+	{
+		var sink = new SessionSink();
+		var old = new DummyTransport();
+		var replacement = new DummyTransport();
+		sink.Attach(old);
+		sink.Attach(replacement);
+		await Assert.That(sink.Detach(old)).IsFalse();
+		await Assert.That(sink.Current).IsSameReferenceAs(replacement);
+	}
+
+	[Test]
 	public async Task Attach_then_Detach_updates_Current()
 	{
 		var sink = new SessionSink();

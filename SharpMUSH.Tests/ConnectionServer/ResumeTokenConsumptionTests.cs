@@ -5,6 +5,21 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class ResumeTokenConsumptionTests
 {
 	[Test]
+	public async Task NewRevocationCleansExpiredSessionsWithoutRemovingActiveRevocations()
+	{
+		var now = DateTimeOffset.UtcNow;
+		var store = new ResumeTokenService(() => now);
+		await store.RevokeSessionAsync("expired");
+		now += TimeSpan.FromSeconds(15);
+		await store.RevokeSessionAsync("active");
+		now += TimeSpan.FromSeconds(15);
+		await store.RevokeSessionAsync("new");
+		await Assert.That(store.RevocationCount).IsEqualTo(2);
+		await Assert.That(async () => await store.MintAsync(1, "active")).Throws<InvalidOperationException>();
+		await Assert.That((await store.MintAsync(1, "expired")).Length).IsEqualTo(64);
+	}
+
+	[Test]
 	public async Task ConcurrentConsumersHaveExactlyOneWinner()
 	{
 		var store = new ResumeTokenService();

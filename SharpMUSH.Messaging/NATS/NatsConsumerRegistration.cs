@@ -27,7 +27,7 @@ public sealed class NatsConsumerRegistry
 		lock (_active)
 		{
 			_active.Add(durableName);
-			if (_active.Count == Registrations.Count) _ready.TrySetResult();
+			if (Registrations.All(registration => _active.Contains(registration.DurableName))) _ready.TrySetResult();
 		}
 	}
 }

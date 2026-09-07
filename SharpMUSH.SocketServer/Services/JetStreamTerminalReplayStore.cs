@@ -17,11 +17,14 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	private const string SubjectPrefix = "terminal.replay2";
 	private static readonly TimeSpan DefaultRetention = TimeSpan.FromHours(24);
 	private readonly NatsConnection _nats;
-	private readonly NatsJSContext _js;
+	private readonly INatsJSContext _js;
+	private readonly TimeSpan _publishTimeout;
 	private readonly ILogger<JetStreamTerminalReplayStore> _logger;
 
-	private JetStreamTerminalReplayStore(NatsConnection nats, NatsJSContext js, ILogger<JetStreamTerminalReplayStore> logger)
+	internal JetStreamTerminalReplayStore(NatsConnection nats, INatsJSContext js, ILogger<JetStreamTerminalReplayStore> logger, TimeSpan? publishTimeout = null)
 	{
+		_publishTimeout = publishTimeout ?? TimeSpan.FromSeconds(2);
+		ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_publishTimeout, TimeSpan.Zero);
 		_nats = nats;
 		_js = js;
 		_logger = logger;
@@ -32,19 +35,44 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	{
 		var maxAge = retention ?? DefaultRetention;
 		var nats = new NatsConnection(new NatsOpts { Url = url });
-		await nats.ConnectAsync();
-		var js = new NatsJSContext(nats);
-		await js.CreateOrUpdateStreamAsync(new StreamConfig(StreamName, [$"{SubjectPrefix}.>"])
-		{ MaxAge = maxAge }, ct);
-		logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge})", StreamName, maxAge);
-		return new JetStreamTerminalReplayStore(nats, js, logger);
+		try
+		{
+			await nats.ConnectAsync();
+			var js = new NatsJSContext(nats);
+			await js.CreateOrUpdateStreamAsync(new StreamConfig(StreamName, [$"{SubjectPrefix}.>"])
+			{ MaxAge = maxAge }, ct);
+			logger.LogInformation("JetStream replay stream '{Stream}' ready (MaxAge {MaxAge})", StreamName, maxAge);
+			return new JetStreamTerminalReplayStore(nats, js, logger);
+		}
+		catch
+		{
+			await nats.DisposeAsync();
+			throw;
+		}
 	}
 
-	private static string Subject(string session) => $"{SubjectPrefix}.{session}";
+	private static string Subject(string session)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(session);
+		if (session.Any(c => c is '.' or '*' or '>' || char.IsWhiteSpace(c) || char.IsControl(c)))
+			throw new ArgumentException("A replay session must be a single literal NATS subject token.", nameof(session));
+		return $"{SubjectPrefix}.{session}";
+	}
 
 	public async ValueTask<(long Seq, byte[] Wrapped)> AppendAsync(string session, byte[] rawUtf8, CancellationToken ct = default)
 	{
-		var acknowledgement = await _js.PublishAsync(Subject(session), rawUtf8, cancellationToken: ct);
+		var subject = Subject(session);
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		deadline.CancelAfter(_publishTimeout);
+		PubAckResponse acknowledgement;
+		try
+		{
+			acknowledgement = await _js.PublishAsync(subject, rawUtf8, cancellationToken: deadline.Token);
+		}
+		catch (OperationCanceledException ex) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
+		{
+			throw new TimeoutException($"Replay publish did not complete within {_publishTimeout}.", ex);
+		}
 		acknowledgement.EnsureSuccess();
 		var seq = checked((long)acknowledgement.Seq);
 		return (seq, SeqEnvelope.Wrap(seq, rawUtf8));
@@ -99,11 +127,14 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		catch (IncompleteReplayException) { return new(false, []); }
 	}
 
-	private sealed class IncompleteReplayException : Exception { }
+	public sealed class IncompleteReplayException : Exception
+	{
+		public IncompleteReplayException() : base("The requested replay history is no longer complete.") { }
+	}
 
 	public async ValueTask DropAsync(string session, CancellationToken ct = default)
 	{
-		await _js.PurgeStreamAsync(StreamName, new StreamPurgeRequest { Filter = $"{SubjectPrefix}.{session}" }, ct);
+		await _js.PurgeStreamAsync(StreamName, new StreamPurgeRequest { Filter = Subject(session) }, ct);
 	}
 
 	public async ValueTask DisposeAsync() => await _nats.DisposeAsync();
