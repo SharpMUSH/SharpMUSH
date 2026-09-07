@@ -55,17 +55,19 @@ public class MarkupTextOperationsTests
 		// The end snaps down to a boundary.
 		await Assert.That(t.Substring(0, 2).Text).IsEqualTo("a");
 
-		// The start snaps down to 1, and the two code units are counted from there: the emoji alone,
-		// not the emoji plus "b", which would be three code units for a request of two.
-		await Assert.That(t.Substring(2, 2).Text).IsEqualTo("\U0001F600");
+		// (2, 2) is "the rest of the string" spelled out as start + (Length - start): the caller's
+		// own range already reaches the end, so the tail survives even though the start snaps back
+		// into the emoji cluster.
+		await Assert.That(t.Substring(2, 2).Text).IsEqualTo("\U0001F600b");
 	}
 
 	[Test]
 	public async Task Substring_LengthIsCountedFromTheSnappedStart()
 	{
-		// The window [1,3) lands inside the "\u00e9" cluster; snapping the start back to 0 must not push
-		// the end out to 3, which would return three code units for a request of two.
-		await Assert.That(MarkupText.Plain("e\u0301x").Substring(1, 2).Text).IsEqualTo("e\u0301");
+		// The window [1,3) lands inside the "\u00e9" cluster and does not reach the end of this
+		// four-code-unit text; snapping the start back to 0 must not push the end out past what was
+		// asked for, which would return three code units for a request of two.
+		await Assert.That(MarkupText.Plain("e\u0301xy").Substring(1, 2).Text).IsEqualTo("e\u0301");
 	}
 
 	[Test]
@@ -74,6 +76,34 @@ public class MarkupTextOperationsTests
 		// The one-argument overload has no length to shorten: an index inside a cluster snaps back
 		// and everything from there survives.
 		await Assert.That(MarkupText.Plain("a\U0001F600b").Substring(2).Text).IsEqualTo("\U0001F600b");
+	}
+
+	[Test]
+	public async Task Substring_RangeReachingTheEnd_KeepsTheTailEvenWhenStartIsInsideACluster()
+	{
+		// The "rest of the string" idiom (x.Substring(n, x.Length - n)) has to decide the shortcut
+		// from the caller's own arguments, before start snaps back: deciding it from the snapped
+		// start instead would let the inward snap swallow code units off the tail.
+
+		// start=1 lands on the low surrogate of the leading emoji; the range still reaches the end.
+		await Assert.That(MarkupText.Plain("\U0001F600abc").Substring(1, 4).Text).IsEqualTo("\U0001F600abc");
+
+		// Same shape with the cluster in the middle: start=2 lands on the low surrogate.
+		await Assert.That(MarkupText.Plain("a\U0001F600bc").Substring(2, 3).Text).IsEqualTo("\U0001F600bc");
+
+		// Decomposed "cafe\u0301 x" (\u0301 = combining acute on the preceding e): start=4
+		// lands on the combining mark itself.
+		await Assert.That(MarkupText.Plain("cafe\u0301 x").Substring(4, 3).Text).IsEqualTo("e\u0301 x");
+	}
+
+	[Test]
+	public async Task Substring_InteriorRangeInsideACluster_NeverExceedsTheRequestedLength()
+	{
+		// [1,2) lands entirely inside the decomposed "e\u0301" cluster and does not reach the end of
+		// this three-code-unit text: from snaps back to 0, and to - measured as snapped-start + length -
+		// snaps back to 0 as well, since it must not exceed the one code unit requested. The result
+		// is empty rather than the whole cluster, which would be two code units for a request of one.
+		await Assert.That(MarkupText.Plain("e\u0301x").Substring(1, 1).Text).IsEqualTo("");
 	}
 
 	[Test]

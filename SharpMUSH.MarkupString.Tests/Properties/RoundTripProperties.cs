@@ -187,6 +187,25 @@ public class RoundTripProperties
 	}
 
 	[Test]
+	public void SubstringToEnd_TakesEverythingFromTheSnappedStart()
+	{
+		Action<(MarkupText Text, int N)> property = t =>
+		{
+			var expected = t.Text.Text[Graphemes.SnapStart(t.Text.Text, t.N)..];
+			var actual = t.Text.Substring(t.N).Text;
+			if (!string.Equals(actual, expected, StringComparison.Ordinal))
+			{
+				throw new MarkupPropertyException(
+					$"substring({t.N}) of {Show(t.Text.Text)} gave {Show(actual)}, expected {Show(expected)}");
+			}
+		};
+
+		Check.Sample(
+			GenMarkupText.SelectMany(x => Gen.Int[0, x.Length], (x, n) => (x, n)),
+			property, seed: Seed, iter: 5000);
+	}
+
+	[Test]
 	public void PadWithTruncation_NeverExceedsTheRequestedWidth()
 	{
 		Action<(MarkupText Text, int Width, char Fill)> property = t =>

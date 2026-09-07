@@ -171,6 +171,18 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
+	// The leading grapheme cluster (a surrogate-pair emoji here) can't be split to capitalize just
+	// its first code unit, so it is left as-is rather than corrupted; the "rest of the string" fix
+	// in MarkupText.Substring keeps every code unit of the tail regardless.
+	[Arguments("capstr(\U0001F600abc)", "\U0001F600abc")]
+	[Arguments("capstr(élan)", "Élan")]
+	public async Task Capstr(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
 	[Arguments("repeat(x,5)", "xxxxx")]
 	[Arguments("repeat(ab,3)", "ababab")]
 	public async Task Repeat(string str, string expectedText)

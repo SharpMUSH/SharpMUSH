@@ -37,18 +37,23 @@ public sealed partial class MarkupText
 	/// </summary>
 	/// <remarks>
 	/// This is an extraction, so both ends snap <em>inward</em> to a grapheme cluster boundary:
-	/// <paramref name="start"/> moves back to the start of the cluster it lands in, and the end —
-	/// measured as <c>snapped start + <paramref name="length"/></c>, so the count is always taken
-	/// from where the result actually begins — moves back as well. The result therefore never splits
-	/// a cluster and never exceeds <paramref name="length"/> code units; it may be shorter, and is
-	/// empty when the whole requested window sits inside one cluster. Edits
-	/// (<see cref="Splice"/> and the operations built on it) snap outward instead.
+	/// <paramref name="start"/> moves back to the start of the cluster it lands in, and — unless the
+	/// requested range reaches the end of the text, in which case the end always stays at
+	/// <see cref="Length"/> — the end, measured as <c>snapped start + <paramref name="length"/></c>
+	/// so the count is always taken from where the result actually begins, moves back as well. The
+	/// result therefore never splits a cluster and never exceeds <paramref name="length"/> code
+	/// units; it may be shorter, and is empty when the whole requested window sits inside one
+	/// cluster. Edits (<see cref="Splice"/> and the operations built on it) snap outward instead.
 	/// </remarks>
 	public MarkupText Substring(int start, int length)
 	{
 		if (length <= 0 || start >= Length) return Empty;
-		var from = Graphemes.SnapStart(Text, Math.Max(0, start));
-		var to = Graphemes.SnapStart(Text, length >= Length - from ? Length : from + length);
+		var clampedStart = Math.Max(0, start);
+		var from = Graphemes.SnapStart(Text, clampedStart);
+		// Whether the caller's own range reaches the end decides the shortcut - deciding it from
+		// the post-snap `from` instead would let an inward start-snap swallow code units off the
+		// tail of "take the rest" calls like x.Substring(n, x.Length - n).
+		var to = length >= Length - clampedStart ? Length : Graphemes.SnapStart(Text, from + length);
 		if (to <= from) return Empty;
 		if (from == 0 && to == Length) return this;
 

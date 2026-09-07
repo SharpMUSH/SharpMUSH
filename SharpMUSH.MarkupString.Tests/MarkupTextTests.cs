@@ -93,10 +93,17 @@ public class MarkupTextTests
 		for (var i = 0; i < 5000; i++) MarkupSet.Of(new Tag($"fill-{i}"));
 
 		var a = MarkupSet.Of(new Tag("after-the-drop"));
-		var b = MarkupSet.Of(new Tag("after-the-drop"));
+		// A distinct set created in between proves the entry survives being shouldered aside by
+		// another insertion, not just that two calls made back to back happened to line up.
+		var c = MarkupSet.Of(new Tag("distinct-after-the-drop"));
+		var aAgain = MarkupSet.Of(new Tag("after-the-drop"));
 
-		await Assert.That(a).IsEqualTo(b);
-		await Assert.That(ReferenceEquals(a, b)).IsTrue();
+		await Assert.That(aAgain).IsEqualTo(a);
+		await Assert.That(ReferenceEquals(a, aAgain)).IsTrue();
+		await Assert.That(ReferenceEquals(a, c)).IsFalse();
+
+		// Exceeding the cap a second time must not throw (e.g. from a stale/negative approximate count).
+		for (var i = 0; i < 5000; i++) MarkupSet.Of(new Tag($"fill2-{i}"));
 	}
 
 	[Test]
