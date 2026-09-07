@@ -11,6 +11,14 @@ public sealed class MarkupSet : IEquatable<MarkupSet>, IReadOnlyList<IMarkup>
 {
 	private const int InternCapacity = 4096;
 	private static readonly ConcurrentDictionary<MarkupSet, MarkupSet> Intern = new();
+
+	/// <summary>
+	/// How many sets <see cref="Intern"/> holds, kept by hand because
+	/// <see cref="ConcurrentDictionary{TKey,TValue}.Count"/> locks every bucket to answer and would
+	/// pay that on each new set. Races can leave it a little off; it only decides when to drop the
+	/// table, and dropping early or late costs nothing but a few re-interned sets.
+	/// </summary>
+	private static int _internCount;
 	private readonly IMarkup[] _items;
 	private readonly int _hash;
 
@@ -39,8 +47,16 @@ public sealed class MarkupSet : IEquatable<MarkupSet>, IReadOnlyList<IMarkup>
 	{
 		if (candidate._items.Length == 0) throw new ArgumentException("A MarkupSet must contain at least one markup.");
 		if (Intern.TryGetValue(candidate, out var existing)) return existing;
-		if (Intern.Count >= InternCapacity) Intern.Clear();
-		return Intern.GetOrAdd(candidate, candidate);
+
+		if (Volatile.Read(ref _internCount) >= InternCapacity)
+		{
+			Intern.Clear();
+			Volatile.Write(ref _internCount, 0);
+		}
+
+		var canonical = Intern.GetOrAdd(candidate, candidate);
+		if (ReferenceEquals(canonical, candidate)) Interlocked.Increment(ref _internCount);
+		return canonical;
 	}
 
 	public int Count => _items.Length;

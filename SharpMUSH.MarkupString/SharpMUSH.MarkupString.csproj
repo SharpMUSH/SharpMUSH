@@ -42,4 +42,11 @@
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- MarkupRegistry.AssignOnce: the set-once logic behind Default, which the tests exercise
+         against a field of their own because assigning Default would configure the whole test
+         process (and RendererTests asserts it is never configured). -->
+    <InternalsVisibleTo Include="SharpMUSH.MarkupString.Tests" />
+  </ItemGroup>
 </Project>

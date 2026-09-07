@@ -29,8 +29,19 @@ public abstract record AnsiColor
 	/// </summary>
 	public sealed record Standard(byte Index, bool Bright) : AnsiColor
 	{
-		/// <summary>The palette slot, 0–7.</summary>
-		public byte Index { get; init; } = ValidateIndex(Index);
+		private readonly byte _index = ValidateIndex(Index);
+
+		/// <summary>
+		/// The palette slot, 0–7. Validated in the setter rather than in an initialiser, because a
+		/// <c>with</c> expression copies the backing field and then runs the <c>init</c> accessor —
+		/// an initialiser would check the constructor's argument and let <c>colour with { Index = 200 }</c>
+		/// through.
+		/// </summary>
+		public byte Index
+		{
+			get => _index;
+			init => _index = ValidateIndex(value);
+		}
 
 		private static byte ValidateIndex(byte index) =>
 			index <= 7

@@ -29,7 +29,13 @@ var link = MarkupText.Wrap(
 	AnsiMarkup.Create(linkUrl: "https://example.com/", linkText: "example", linkKind: LinkKind.Url),
 	"example");
 
-var text = MarkupText.Concat([red, wide, nested, MarkupText.Space, link]);
+// A command link, which is the one thing Pueblo and MXP spell differently (XCH_CMD against SEND):
+// without it every assertion those two formats could make is one the other satisfies too.
+var command = MarkupText.Wrap(
+	AnsiMarkup.Create(linkUrl: "look", linkKind: LinkKind.Command),
+	"look");
+
+var text = MarkupText.Concat([red, wide, nested, MarkupText.Space, link, MarkupText.Space, command]);
 
 MarkupFormat[] formats =
 [
@@ -78,8 +84,8 @@ Expect(rendered["plain"], "日本語テキスト", "plain");
 Expect(rendered["ansi"], "\e[1;31m", "ansi");
 Expect(rendered["html"], "<send href=\"n\">", "html");
 Expect(rendered["html"], "color: #ff5555", "html");
-Expect(rendered["pueblo"], "<send href=\"n\">", "pueblo");
-Expect(rendered["mxp"], "<send href=\"n\">", "mxp");
+Expect(rendered["pueblo"], "<A XCH_CMD=\"look\"", "pueblo");
+Expect(rendered["mxp"], "<SEND HREF=\"look\"", "mxp");
 Expect(rendered["bbcode"], "[color=#ff5555]", "bbcode");
 
 if (failures.Count > 0)

@@ -41,22 +41,43 @@ public sealed class MarkupRegistry
 
 	/// <summary>
 	/// The registry used when a render or a (de)serialisation is not given one. The host sets it
-	/// once at startup; reading it before then throws.
+	/// once at startup; reading it before then throws, and so does replacing it afterwards —
+	/// everything already rendered would have gone through the old one.
 	/// </summary>
-	/// <exception cref="InvalidOperationException">The registry was never set.</exception>
+	/// <exception cref="InvalidOperationException">
+	/// The registry was never set, or a second, different registry was assigned. Assigning the
+	/// instance already installed is a no-op, so a host guarded by <see cref="IsConfigured"/> can
+	/// run its startup twice.
+	/// </exception>
 	public static MarkupRegistry Default
 	{
-		get => _default ?? throw new InvalidOperationException(
+		get => Volatile.Read(ref _default) ?? throw new InvalidOperationException(
 			"MarkupRegistry.Default has not been configured. Call MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml() at startup.");
-		set
-		{
-			ArgumentNullException.ThrowIfNull(value);
-			_default = value;
-		}
+		set => AssignOnce(ref _default, value);
 	}
 
 	/// <summary>Whether <see cref="Default"/> has been set.</summary>
-	public static bool IsConfigured => _default is not null;
+	public static bool IsConfigured => Volatile.Read(ref _default) is not null;
+
+	/// <summary>
+	/// The set-once assignment behind <see cref="Default"/>, factored out so it can be exercised
+	/// against a field of its own: a test that assigned <see cref="Default"/> would install a
+	/// registry for the rest of the process.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">
+	/// <paramref name="field"/> already holds a different registry.
+	/// </exception>
+	internal static void AssignOnce(ref MarkupRegistry? field, MarkupRegistry value)
+	{
+		ArgumentNullException.ThrowIfNull(value);
+		var existing = Interlocked.CompareExchange(ref field, value, null);
+		if (existing is not null && !ReferenceEquals(existing, value))
+		{
+			throw new InvalidOperationException(
+				"MarkupRegistry.Default is already configured and cannot be replaced. Build the whole registry, "
+				+ "including every kind package, before assigning it, or pass a registry per call.");
+		}
+	}
 
 	/// <summary>Returns a registry with <paramref name="emitter"/> added, replacing any emitter for the same type and format.</summary>
 	public MarkupRegistry With(IMarkupEmitter emitter)
@@ -88,15 +109,23 @@ public sealed class MarkupRegistry
 		return new MarkupRegistry(_emitters, _setEmitters, framers.ToFrozenDictionary(), _codecsByKind, _codecsByType);
 	}
 
-	/// <summary>Returns a registry with <paramref name="codec"/> added, replacing any codec for the same kind or markup type.</summary>
+	/// <summary>
+	/// Returns a registry with <paramref name="codec"/> added, replacing any codec for the same kind
+	/// or markup type. A codec the new one displaces on either side is dropped from both sides, so a
+	/// kind and a markup type are never mapped to two different codecs: a codec that can no longer
+	/// be found by its wire kind must not still be found by its type, or text would serialise under
+	/// a kind that reads back as something else.
+	/// </summary>
 	public MarkupRegistry With(IMarkupCodec codec)
 	{
 		ArgumentNullException.ThrowIfNull(codec);
 		var byKind = new Dictionary<string, IMarkupCodec>(_codecsByKind.Count + 1, StringComparer.Ordinal);
-		foreach (var pair in _codecsByKind) byKind[pair.Key] = pair.Value;
+		foreach (var pair in _codecsByKind)
+			if (pair.Value.MarkupType != codec.MarkupType) byKind[pair.Key] = pair.Value;
 		byKind[codec.Kind] = codec;
 		var byType = new Dictionary<Type, IMarkupCodec>(_codecsByType.Count + 1);
-		foreach (var pair in _codecsByType) byType[pair.Key] = pair.Value;
+		foreach (var pair in _codecsByType)
+			if (!string.Equals(pair.Value.Kind, codec.Kind, StringComparison.Ordinal)) byType[pair.Key] = pair.Value;
 		byType[codec.MarkupType] = codec;
 		return new MarkupRegistry(_emitters, _setEmitters, _framers, byKind.ToFrozenDictionary(StringComparer.Ordinal), byType.ToFrozenDictionary());
 	}

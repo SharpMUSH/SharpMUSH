@@ -51,7 +51,21 @@ one of your own; a registry keyed by it renders through your emitters like any b
   `UnknownMarkup` and is written back verbatim, so an old reader does not destroy new markup.
 
 Build a `MarkupRegistry` from `MarkupRegistry.Empty` with `With(...)`, pass it per call, or install
-it once as `MarkupRegistry.Default`.
+it once as `MarkupRegistry.Default` (set-once: a second, different registry throws).
+
+### Composing with another kind package
+
+A registry holds **one `IMarkupSetEmitter` per format**, and the last registration wins — so a kind
+package that registers a set emitter for, say, `Html` takes that format over from whatever
+registered it before, for every layer, not only its own. `WithAnsi().WithHtml()` works because
+`SharpMUSH.MarkupString.Html` deliberately hands the styling half back: it implements
+`IAnsiStyleSource` on its own markup, and the ANSI package's set emitters fold that into their
+output. If your kind wants ANSI styling applied to it, do the same — implement `IAnsiStyleSource`
+and let the ANSI set emitters run — rather than registering a competing set emitter, which would
+silently drop every other kind's contribution to that format.
+
+Per-layer `IMarkupEmitter`s are keyed by `(markup type, format)`, so unrelated kinds never collide
+there; only the set emitter and the framer are one-per-format.
 
 ## AOT and trimming
 

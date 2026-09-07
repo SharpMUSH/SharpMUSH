@@ -99,6 +99,17 @@ public static class MarkupTextSerializer
 
 	private static void Write(Utf8JsonWriter writer, MarkupText text, MarkupRegistry? registry)
 	{
+		// Text with no runs — the common case in a game database — takes neither a palette nor a
+		// cover, so it is written straight out rather than building the two collections the general
+		// path needs only to find them empty. The bytes are the same: {"t":"…"}, or {} when empty.
+		if (text.Runs.Length == 0)
+		{
+			writer.WriteStartObject();
+			if (text.Length > 0) writer.WriteString("t", text.Text);
+			writer.WriteEndObject();
+			return;
+		}
+
 		// Index 0 is the reserved "no markup" slot; distinct sets take 1..n.
 		var palette = new List<MarkupSet>();
 		var indexOf = new Dictionary<MarkupSet, int>();

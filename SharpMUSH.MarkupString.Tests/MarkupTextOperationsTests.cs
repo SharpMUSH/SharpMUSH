@@ -51,8 +51,29 @@ public class MarkupTextOperationsTests
 	public async Task Substring_NeverSplitsSurrogatePair()
 	{
 		var t = MarkupText.Plain("a\U0001F600b");
-		await Assert.That(t.Substring(0, 2).Text).IsEqualTo("a");                 // snaps end down to boundary
-		await Assert.That(t.Substring(2, 2).Text).IsEqualTo("\U0001F600b");       // snaps start down to 1
+
+		// The end snaps down to a boundary.
+		await Assert.That(t.Substring(0, 2).Text).IsEqualTo("a");
+
+		// The start snaps down to 1, and the two code units are counted from there: the emoji alone,
+		// not the emoji plus "b", which would be three code units for a request of two.
+		await Assert.That(t.Substring(2, 2).Text).IsEqualTo("\U0001F600");
+	}
+
+	[Test]
+	public async Task Substring_LengthIsCountedFromTheSnappedStart()
+	{
+		// The window [1,3) lands inside the "\u00e9" cluster; snapping the start back to 0 must not push
+		// the end out to 3, which would return three code units for a request of two.
+		await Assert.That(MarkupText.Plain("e\u0301x").Substring(1, 2).Text).IsEqualTo("e\u0301");
+	}
+
+	[Test]
+	public async Task Substring_ToEnd_TakesTheWholeRemainderFromTheSnappedStart()
+	{
+		// The one-argument overload has no length to shorten: an index inside a cluster snaps back
+		// and everything from there survives.
+		await Assert.That(MarkupText.Plain("a\U0001F600b").Substring(2).Text).IsEqualTo("\U0001F600b");
 	}
 
 	[Test]
@@ -103,14 +124,24 @@ public class MarkupTextOperationsTests
 		await Assert.That(parts[0].ToPlainText()).IsEqualTo("hello");
 	}
 
+	/// <summary>
+	/// An empty delimiter matches nothing rather than every position: the text comes back whole, as
+	/// the one segment. Splitting into characters is <c>text.Select(…)</c>'s job, not this overload's.
+	/// </summary>
 	[Test]
 	public async Task Split_EmptyDelimiter_ReturnsSingle()
 	{
-		var parts = MarkupText.Plain("hello").Split("");
+		var text = MarkupText.Plain("hello");
+
+		var parts = text.Split("");
 
 		await Assert.That(parts.Length).IsEqualTo(1);
-		await Assert.That(parts[0].ToPlainText()).IsEqualTo("hello");
+		await Assert.That(parts[0]).IsSameReferenceAs(text);
 	}
+
+	[Test]
+	public async Task Split_EmptyDelimiterOnEmptyText_ReturnsNoSegments()
+		=> await Assert.That(MarkupText.Empty.Split("").Length).IsEqualTo(0);
 
 	[Test]
 	public async Task Split_MarkupTextDelimiter_MatchesStringDelimiter()

@@ -20,6 +20,23 @@ public class AnsiColorTests
 	}
 
 	[Test]
+	public async Task Standard_IndexAboveSeven_Throws()
+		=> await Assert.That(() => new AnsiColor.Standard(8, false)).Throws<ArgumentOutOfRangeException>();
+
+	/// <summary>
+	/// A <c>with</c> expression copies the backing field and then runs the <c>init</c> accessor, so
+	/// the check has to live in the accessor: an initialiser on the property would only ever see the
+	/// constructor's argument, and this would build a colour whose index indexes past the palette.
+	/// </summary>
+	[Test]
+	public async Task Standard_IndexAboveSevenThroughWith_Throws()
+	{
+		var colour = new AnsiColor.Standard(1, false);
+
+		await Assert.That(() => colour with { Index = 200 }).Throws<ArgumentOutOfRangeException>();
+	}
+
+	[Test]
 	public async Task Xterm_CubeEntry_ResolvesThroughSixLevelCube()
 	{
 		// 200 - 16 = 184 => r = 184/36 = 5 (255), g = (184/6)%6 = 0 (0), b = 184%6 = 4 (215)

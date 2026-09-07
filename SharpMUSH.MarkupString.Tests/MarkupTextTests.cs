@@ -68,11 +68,33 @@ public class MarkupTextTests
 		await Assert.That(plain.Equals((object)"x")).IsFalse();
 	}
 
-	[Test]
+	// Serialised against MarkupSet_StillInternsAfterTheTableFills: that test drops the intern table,
+	// and a drop landing between the two Of() calls here would break reference equality legitimately.
+	[Test, NotInParallel]
 	public async Task MarkupSet_IsValueEqualAndInterned()
 	{
 		var a = MarkupSet.Of(new Tag("b"));
 		var b = MarkupSet.Of(new Tag("b"));
+		await Assert.That(a).IsEqualTo(b);
+		await Assert.That(ReferenceEquals(a, b)).IsTrue();
+	}
+
+	/// <summary>
+	/// The intern table is bounded and drops everything when it fills. That path is reached by
+	/// creating more distinct sets than it holds, which is what this does — and interning has to
+	/// keep working across the drop, which is the part a broken approximate count would break (a
+	/// count that never resets clears the table on every later miss, so no two equal sets built
+	/// after the first drop would ever share an instance again).
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task MarkupSet_StillInternsAfterTheTableFills()
+	{
+		// Comfortably past the 4,096-entry cap, so the clear happens whichever set ran first.
+		for (var i = 0; i < 5000; i++) MarkupSet.Of(new Tag($"fill-{i}"));
+
+		var a = MarkupSet.Of(new Tag("after-the-drop"));
+		var b = MarkupSet.Of(new Tag("after-the-drop"));
+
 		await Assert.That(a).IsEqualTo(b);
 		await Assert.That(ReferenceEquals(a, b)).IsTrue();
 	}

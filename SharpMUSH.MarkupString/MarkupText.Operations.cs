@@ -25,21 +25,30 @@ public sealed partial class MarkupText
 	/// </summary>
 	public int DisplayWidth => _displayWidth >= 0 ? _displayWidth : _displayWidth = Cells.Of(Text);
 
-	/// <summary>The remainder of the text from <paramref name="start"/>.</summary>
-	public MarkupText Substring(int start) => Substring(start, Length - Math.Max(0, start));
+	/// <summary>
+	/// The remainder of the text from <paramref name="start"/>, whose index snaps back to the start
+	/// of the cluster it lands in.
+	/// </summary>
+	public MarkupText Substring(int start) => Substring(start, Length);
 
 	/// <summary>
-	/// The text from <paramref name="start"/> for <paramref name="length"/> code units, clamped
-	/// to the text. Both ends snap down to a grapheme cluster boundary, so a substring never
-	/// splits a cluster and never grows past what was asked for.
+	/// The text from <paramref name="start"/> for at most <paramref name="length"/> code units,
+	/// clamped to the text.
 	/// </summary>
+	/// <remarks>
+	/// This is an extraction, so both ends snap <em>inward</em> to a grapheme cluster boundary:
+	/// <paramref name="start"/> moves back to the start of the cluster it lands in, and the end —
+	/// measured as <c>snapped start + <paramref name="length"/></c>, so the count is always taken
+	/// from where the result actually begins — moves back as well. The result therefore never splits
+	/// a cluster and never exceeds <paramref name="length"/> code units; it may be shorter, and is
+	/// empty when the whole requested window sits inside one cluster. Edits
+	/// (<see cref="Splice"/> and the operations built on it) snap outward instead.
+	/// </remarks>
 	public MarkupText Substring(int start, int length)
 	{
 		if (length <= 0 || start >= Length) return Empty;
-		var from = Math.Max(0, start);
-		var to = length >= Length - from ? Length : from + length;
-		from = Graphemes.SnapStart(Text, from);
-		to = Graphemes.SnapStart(Text, to);
+		var from = Graphemes.SnapStart(Text, Math.Max(0, start));
+		var to = Graphemes.SnapStart(Text, length >= Length - from ? Length : from + length);
 		if (to <= from) return Empty;
 		if (from == 0 && to == Length) return this;
 
@@ -79,7 +88,7 @@ public sealed partial class MarkupText
 			segments[i] = Substring(cursor, positions[i] - cursor);
 			cursor = positions[i] + delimiter.Length;
 		}
-		segments[^1] = Substring(cursor, Length - cursor);
+		segments[^1] = Substring(cursor);
 		return segments;
 	}
 
@@ -205,10 +214,17 @@ public sealed partial class MarkupText
 
 	/// <summary>
 	/// Applies every edit in one pass. Edits must be sorted by <see cref="Edit.Start"/> and must
-	/// not overlap; each range snaps outward to grapheme cluster boundaries, and a zero-length
-	/// edit (an insertion) snaps to the start of the cluster it lands in. Where snapping makes
-	/// one range swallow the next, the later edit applies to what is left of its range.
+	/// not overlap.
 	/// </summary>
+	/// <remarks>
+	/// These are edits, not extractions, so each range snaps <em>outward</em> to grapheme cluster
+	/// boundaries — the start back to the start of its cluster, the end forward to the end of
+	/// its — and a replaced range therefore never leaves half a cluster behind. (A zero-length
+	/// edit, an insertion, has no end to push and simply lands on the start of the cluster it
+	/// falls in.) Where snapping makes one range swallow the next, the later edit applies to what
+	/// is left of its range. <see cref="Substring(int, int)"/> and the other extractions snap inward
+	/// instead.
+	/// </remarks>
 	/// <exception cref="ArgumentException">The edits are unsorted or overlapping.</exception>
 	/// <exception cref="ArgumentOutOfRangeException">An edit falls outside the text.</exception>
 	public MarkupText Splice(ReadOnlySpan<Edit> edits)
@@ -317,7 +333,7 @@ public sealed partial class MarkupText
 			segments.Add(transform(Substring(run.Start, run.Length)));
 			position = run.End;
 		}
-		if (position < Length) segments.Add(transform(Substring(position, Length - position)));
+		if (position < Length) segments.Add(transform(Substring(position)));
 		return Concat(CollectionsMarshal.AsSpan(segments));
 	}
 
