@@ -210,8 +210,8 @@ else
         => Data?.Fields is not null && Data.Fields.TryGetValue(key, out var v) ? v.Value : null;
 
     // Render a serialized MString to safe HTML the way the terminal does
-    // (MarkupString library → AnsiMarkup.WrapAsHtmlClass). Falls back to HTML-encoded
-    // text when the value is not a serialized MString envelope.
+    // (MarkupText.Render(MarkupFormat.Html)). Falls back to HTML-encoded text when the
+    // value is not a serialized MString envelope.
     private static string RenderMarkup(string value)
     {
         if (string.IsNullOrEmpty(value))
@@ -221,8 +221,7 @@ else
 
         try
         {
-            // Fully qualified: in a .razor file the bare "MarkupString" binds to Blazor's type.
-            return global::MarkupString.MarkupStringModule.deserialize(value).Render(MarkupFormat.Html);
+            return MarkupTextSerializer.Deserialize(value).Render(MarkupFormat.Html);
         }
         catch (Exception)
         {

@@ -30,7 +30,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MModule.single(message.Input),
+				command: MarkupText.Plain(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle });
 		}
 		catch (Exception ex)
@@ -63,7 +63,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MModule.single(message.Input),
+				command: MarkupText.Plain(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle });
 		}
 		catch (Exception ex)

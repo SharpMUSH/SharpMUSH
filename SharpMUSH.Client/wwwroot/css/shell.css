@@ -587,8 +587,11 @@
 }
 
 /* ── MarkupString (MString) non-color attributes ──
-   Colors arrive as inline `style` from AnsiMarkup.WrapAsHtmlClass; these classes carry
-   the remaining text attributes. Class names match AnsiMarkup.HtmlClassNames. */
+   Colors arrive as inline `style` from the MarkupString.Html ANSI emitter; these classes
+   carry the remaining text attributes. The canonical rule set is MarkupString.Html's
+   `HtmlCss.Fixed` — every class listed there must have a rule here, and the portal keeps its
+   own values (a locally defined @keyframes name, the combined underline+strike rule, and the
+   link classes below, which HtmlCss.Fixed does not cover). */
 .ms-bold { font-weight: bold; }
 .ms-faint { opacity: 0.6; }
 .ms-italic { font-style: italic; }
@@ -597,6 +600,10 @@
 .ms-underline.ms-strike { text-decoration: underline line-through; }
 .ms-overline { text-decoration: overline; }
 .ms-blink { animation: ms-blink 1s steps(2, start) infinite; }
+/* Reverse video for a run that has neither colour set — the emitter only writes ms-invert
+   when it has no colours to swap inline. --ms-fg/--ms-bg default to the terminal pane's own
+   colours so the swap is visible against the portal theme. */
+.ms-invert { color: var(--ms-bg, var(--surface, #000)); background-color: var(--ms-fg, var(--text, #fff)); }
 
 @keyframes ms-blink {
     to { visibility: hidden; }

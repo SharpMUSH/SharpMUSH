@@ -174,7 +174,7 @@ public class ObjectsController(
 		}
 
 		var result = await attributeService.SetAttributeAsync(
-			executor, target, name, MModule.single(request.Value));
+			executor, target, name, MarkupText.Plain(request.Value ?? string.Empty));
 
 		return result.Match<IActionResult>(
 			_ => NoContent(),

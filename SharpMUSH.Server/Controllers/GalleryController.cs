@@ -224,6 +224,6 @@ public class GalleryController(
 	private async Task<OneOf<Success, Error<string>>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
 	{
 		var json = JsonSerializer.Serialize(entries);
-		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MModule.single(json));
+		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json));
 	}
 }

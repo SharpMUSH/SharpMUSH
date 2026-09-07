@@ -2,7 +2,6 @@ using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.ConnectionServer.Models;
-using MModule = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.ConnectionServer.Services;
 
@@ -54,7 +53,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
 		}
 
-		var ms = MModule.deserialize(markup);
+		var ms = MarkupTextSerializer.Deserialize(markup);
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo),
