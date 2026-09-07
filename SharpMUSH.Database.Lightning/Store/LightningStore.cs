@@ -14,7 +14,6 @@ public sealed partial class LightningStore : IDisposable
 {
 	private readonly LightningStoreOptions _options;
 	private readonly ReaderWriterLockSlim _gate = new(LockRecursionPolicy.NoRecursion);
-	private readonly object _openTableLock = new();
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 	private Dictionary<TableDef, LmdbDb> _tables = new();
@@ -26,7 +25,7 @@ public sealed partial class LightningStore : IDisposable
 	{
 		_options = options;
 		Open();
-		_writer = new LightningWriter(work => Write(work));
+		_writer = new LightningWriter(work => Write(work), rawWork => WriteRawInternal(rawWork));
 	}
 
 	private void Open()
@@ -69,38 +68,40 @@ public sealed partial class LightningStore : IDisposable
 	/// Opens (creating if needed) a table this environment's own <see cref="Tables"/> catalogue does not
 	/// know about — a plugin's own tables, opened on the plugin's first use rather than baked into the
 	/// core schema. Idempotent by name: a second call for the same name returns the existing definition
-	/// rather than reopening the handle. Runs its own write transaction directly on the calling thread
-	/// (LMDB serializes writers with an environment-wide mutex, so this is safe even while the writer
-	/// thread has jobs in flight) because opening a sub-database needs the raw <c>LightningTransaction</c>,
-	/// which <see cref="ITx"/> does not expose.
+	/// rather than reopening the handle. The open+commit itself runs as a raw job on the writer thread
+	/// (see <see cref="WriteRaw{T}"/>) because opening a sub-database needs the raw
+	/// <see cref="LightningTransaction"/>, which <see cref="ITx"/> does not expose; the writer thread's own
+	/// single-job-at-a-time processing is what makes the "check, then open" idempotency check race-free,
+	/// not any lock on this method. Must not be called from inside a write job — see <see cref="WriteRaw{T}"/>.
 	/// </summary>
 	internal TableDef OpenTable(string name, bool duplicates)
 	{
-		lock (_openTableLock)
+		var existing = FindTable(name);
+		if (existing is not null)
 		{
-			var existing = _tables.Keys.FirstOrDefault(t => t.Name == name);
-			if (existing is not null)
+			return existing;
+		}
+
+		return WriteRaw(tx =>
+		{
+			// Re-check inside the job: two concurrent callers can both queue an OpenTable job for the
+			// same new name before either one runs; only the first should actually open the database.
+			var alreadyOpened = FindTable(name);
+			if (alreadyOpened is not null)
 			{
-				return existing;
+				return alreadyOpened;
 			}
 
-			var def = TableDef.Index(name, duplicates: duplicates);
-			_gate.EnterReadLock();
-			try
-			{
-				using var tx = _env.BeginTransaction();
-				var handle = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
-				var code = tx.Commit();
-				if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
-				_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
-				return def;
-			}
-			finally
-			{
-				_gate.ExitReadLock();
-			}
-		}
+			var def = duplicates ? TableDef.Index(name, duplicates: true) : TableDef.Node(name);
+			var handle = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
+			var code = tx.Commit();
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
+			_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
+			return def;
+		});
 	}
+
+	private TableDef? FindTable(string name) => _tables.Keys.FirstOrDefault(t => t.Name == name);
 
 	public T Read<T>(Func<ITx, T> read)
 	{
@@ -134,10 +135,38 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>Direct raw write on the calling thread, same read-gate discipline as <see cref="Write{T}"/> but
+	/// without <see cref="ITx"/>'s wrapping or auto-commit — <paramref name="job"/> owns the transaction and must
+	/// commit it itself. Only <see cref="LightningWriter"/>'s thread may call this.</summary>
+	private T WriteRawInternal<T>(Func<LightningTransaction, T> job)
+	{
+		_gate.EnterReadLock();
+		try
+		{
+			using var tx = _env.BeginTransaction();
+			return job(tx);
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
+	}
+
 	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default) => _writer.EnqueueAsync(job, ct);
 
 	public async ValueTask WriteAsync(Action<ITx> job, CancellationToken ct = default)
 		=> await _writer.EnqueueAsync<object?>(tx => { job(tx); return null; }, ct).ConfigureAwait(false);
+
+	/// <summary>
+	/// Queues <paramref name="job"/> onto the writer thread like any other write, but hands it the raw
+	/// <see cref="LightningTransaction"/> instead of an <see cref="ITx"/> — for callers that need LMDB APIs
+	/// <see cref="ITx"/> does not expose (e.g. <see cref="OpenTable"/> opening a sub-database) and must
+	/// commit the transaction themselves. Blocks the calling thread until the writer thread runs the job.
+	/// Must not be called from inside a write job (a job already running on the writer thread) — it would
+	/// wait forever on the writer thread that is running it.
+	/// </summary>
+	internal T WriteRaw<T>(Func<LightningTransaction, T> job)
+		=> _writer.EnqueueRawAsync(job, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	internal Task DrainAsync() => _writer.DrainAsync();
 	internal void PauseWriter() => _writer.Pause();
