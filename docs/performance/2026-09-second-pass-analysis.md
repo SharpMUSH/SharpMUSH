@@ -11,7 +11,7 @@ assemblies.
 Nothing here contradicts the first pass. Several findings are the *same class of bug* the first pass
 fixed, in a place it did not look.
 
-> **Status.** Findings 1, 2, 3, 4, 11 and 12 are fixed on `claude/attribute-cache-tags-and-gc`, with
+> **Status.** Findings 1, 2, 3, 4, 5, 11 and 12 are fixed on `claude/attribute-cache-tags-and-gc`, with
 > tests. Finding 2 is fixed for the attribute reads that consult one object; the inherited reads keep
 > a game-wide tag deliberately (see `CacheKeys.AttributesTag`), and closing that needs the providers
 > to project the objects a read visited — the same prerequisite as the `commands:`/`listens:`
@@ -161,14 +161,20 @@ running it per recipient repeats identical work.
 Twenty people in a room ⇒ ~400 listener evaluations and ~400 attribute reads per line typed. Each lock
 evaluation is a compiled expression tree that blocks on DB calls (finding #12).
 
-The design already anticipated the fix — `NotificationContext.IsRoomBroadcast` exists and is hardcoded
-`false` at its only production call site.
+It is also a correctness bug, not only a cost: each of those N passes queues an
+`ExecuteListenPatternCommand` for every listener that matches, so a single `say` fires each listener N
+times.
 
-**Fix:** hoist listener routing out of the per-recipient `Notify` and run it once per broadcast, from
-`SendToRoomAsync` (and the other room-broadcast entry points), with `IsRoomBroadcast: true`. Cache the
-compiled LISTEN regex alongside the pattern the way `GetListenAttributesQuery` already does for
-`ListenAttributeCache.CompiledRegex` — `ProcessListenAttributeAsync` builds a fresh `Regex` instead of
-using it.
+**Fixed** by scoping the pass to `context.Target` rather than hoisting it to the broadcast. Each of the
+three things it does is about the object that heard the message — its `^`-patterns match what it heard,
+its `LISTEN` is its own, a puppet relays what it was told — so the addressee is the right subject, the
+broadcast still reaches every occupant through the notification addressed to each of them, and each is
+weighed exactly once. The dead `NotificationContext.IsRoomBroadcast` (never read; hardcoded `false` at
+its only call site) went with it. A targeted `@pemit` now runs only the recipient's listeners instead
+of the whole room's, which is what it always should have done.
+
+**Still open here:** `ProcessListenAttributeAsync` builds a fresh `Regex` per call instead of using the
+compiled one `GetListenAttributesQuery` already caches in `ListenAttributeCache.CompiledRegex`.
 
 ## 6. Every ArangoDB write fsyncs — twice over
 

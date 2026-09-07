@@ -35,6 +35,22 @@ public class ListenerRoutingService(
 {
 	private IAttributeService? _attributeService;
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
+	/// <summary>
+	/// Runs the listener pass for the object this notification is addressed to.
+	/// </summary>
+	/// <remarks>
+	/// It used to run the pass over every object in the sender's room, ignoring
+	/// <see cref="NotificationContext.Target"/> entirely. A room broadcast is one notification per
+	/// occupant, so a room of N enumerated its own contents N times and weighed all N objects each
+	/// time: quadratic in occupancy, with a lock evaluation behind every gate — and every listener
+	/// fired N times for one <c>say</c>, since each pass queued its matches again.
+	/// <para>
+	/// Each of the three things this does is about the object that heard the message: its ^-patterns
+	/// match what it heard, its LISTEN attribute is its own, and a puppet relays what it was told. So
+	/// the addressee is the right and only subject, the broadcast still reaches every occupant through
+	/// the notification addressed to each of them, and each of them is weighed exactly once.
+	/// </para>
+	/// </remarks>
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
 		OneOf<MString, string> message,
@@ -47,34 +63,33 @@ public class ListenerRoutingService(
 		if (context.Location is null)
 			return;
 
+		if (context.ExcludedObjects.Contains(context.Target))
+			return;
+
+		var targetResult = await mediator.Send(new GetObjectNodeQuery(context.Target));
+		if (targetResult.IsNone())
+			return;
+
+		var listener = targetResult.WithoutNone();
+
+		// Only when there is no speaker at all, which NotifyService never does: it routes nothing
+		// without one. The location stands in for the speaker, as it did when this walked the room.
+		var actualSender = sender ?? (await mediator.Send(new GetObjectNodeQuery(context.Location.Value)))
+			.WithoutNone();
+
+		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
+			return;
+
 		var messageText = message.Match(
 			markupString => markupString.ToString(),
 			str => str
 		);
 
-		var locationResult = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
-		if (locationResult.IsNone())
-			return;
+		await ProcessListenPatternsAsync(listener, messageText, actualSender);
 
-		var location = locationResult.WithoutNone();
-		var actualSender = sender ?? location;
+		await ProcessListenAttributeAsync(listener, messageText, actualSender);
 
-		await foreach (var obj in mediator.CreateStream(new GetContentsQuery(location.Object().DBRef)))
-		{
-			var objAsObject = obj.WithRoomOption();
-
-			if (context.ExcludedObjects.Contains(objAsObject.Object().DBRef))
-				continue;
-
-			if (!await permissionService.CanInteract(actualSender, objAsObject, IPermissionService.InteractType.Hear))
-				continue;
-
-			await ProcessListenPatternsAsync(objAsObject, messageText, actualSender);
-
-			await ProcessListenAttributeAsync(objAsObject, messageText, actualSender);
-
-			await ProcessPuppetRelayAsync(objAsObject, message, actualSender, type);
-		}
+		await ProcessPuppetRelayAsync(listener, message, actualSender, type);
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(

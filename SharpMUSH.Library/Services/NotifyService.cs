@@ -117,7 +117,6 @@ public class NotifyService(
 				var notificationContext = new NotificationContext(
 					Target: who,
 					Location: location,
-					IsRoomBroadcast: false,
 					ExcludedObjects: []
 				);
 
