@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database;
@@ -17,8 +18,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <summary>
 /// <see cref="IObjectStore"/>: object identity and structure. Ported from
 /// <c>SurrealDatabase.Objects.cs</c>; see that file and the hydration helpers in
-/// <c>SurrealDatabase.cs</c> for the semantics this mirrors. <see cref="GetFilteredObjectsAsync"/>
-/// stays unimplemented — that is Task 12.
+/// <c>SurrealDatabase.cs</c> for the semantics this mirrors.
 /// </summary>
 public sealed partial class LightningDatabase
 {
@@ -349,7 +349,113 @@ public sealed partial class LightningDatabase
 	}
 
 	public IAsyncEnumerable<SharpObject> GetFilteredObjectsAsync(ObjectSearchFilter filter, CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException();
+		=> new FreshAsyncEnumerable<SharpObject>(ct => GetFilteredObjectsCoreAsync(filter, ct));
+
+	private async IAsyncEnumerable<SharpObject> GetFilteredObjectsCoreAsync(ObjectSearchFilter filter,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		var entries = filter.MinDbRef.HasValue
+			? Store.RangeFromKeyAsync(Tables.Obj, Keys.Dbref(filter.MinDbRef.Value), ct: ct)
+			: Store.RangeAsync(Tables.Obj, [], ct: ct);
+
+		var skip = filter.Skip ?? 0;
+		var skipped = 0;
+		var yielded = 0;
+
+		await foreach (var (key, value) in entries.WithCancellation(ct))
+		{
+			var dbref = Keys.ReadDbref(key);
+			if (filter.MaxDbRef.HasValue && dbref > filter.MaxDbRef.Value)
+			{
+				yield break;
+			}
+
+			var record = Codec.Deserialize<ObjectRecord>(value);
+			if (!Store.Read(tx => MatchesFilter(tx, dbref, record, filter)))
+			{
+				continue;
+			}
+
+			if (skipped < skip)
+			{
+				skipped++;
+				continue;
+			}
+
+			if (filter.Limit.HasValue && yielded >= filter.Limit.Value)
+			{
+				yield break;
+			}
+
+			yielded++;
+			yield return MapToSharpObject(dbref, record);
+		}
+	}
+
+	/// <summary>
+	/// Evaluates every populated predicate of <paramref name="filter"/> against one already-decoded row, inside
+	/// the same <see cref="ITx"/> the caller opened to read it — mirrors <c>ArangoDatabase.Objects.cs</c>'
+	/// <c>GetFilteredObjectsAsync</c> predicate-for-predicate; see that method and the doc comment on
+	/// <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
+	/// </summary>
+	private static bool MatchesFilter(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	{
+		if (filter.Types is { Length: > 0 } types && !types.Contains(record.Type))
+		{
+			return false;
+		}
+
+		if (!string.IsNullOrEmpty(filter.NamePattern))
+		{
+			var nameMatches = filter.UseRegex
+				? Regex.IsMatch(record.Name, filter.NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+				: record.Name.Contains(filter.NamePattern, StringComparison.OrdinalIgnoreCase);
+			if (!nameMatches)
+			{
+				return false;
+			}
+		}
+
+		if (filter.Owner.HasValue && GetSingleEdge(tx, Tables.Owner.Forward, dbref) != filter.Owner.Value.Number)
+		{
+			return false;
+		}
+
+		if (filter.Zone.HasValue && GetSingleEdge(tx, Tables.Zone.Forward, dbref) != filter.Zone.Value.Number)
+		{
+			return false;
+		}
+
+		if (filter.Parent.HasValue && GetSingleEdge(tx, Tables.Parent.Forward, dbref) != filter.Parent.Value.Number)
+		{
+			return false;
+		}
+
+		if (!string.IsNullOrEmpty(filter.HasFlag))
+		{
+			var hasFlag = string.Equals(record.Type, filter.HasFlag, StringComparison.OrdinalIgnoreCase)
+				|| ReadObjectFlags(tx, dbref).Any(flag =>
+					string.Equals(flag.Name, filter.HasFlag, StringComparison.OrdinalIgnoreCase)
+					|| (flag.Aliases?.Any(alias => string.Equals(alias, filter.HasFlag, StringComparison.OrdinalIgnoreCase)) ?? false));
+			if (!hasFlag)
+			{
+				return false;
+			}
+		}
+
+		if (!string.IsNullOrEmpty(filter.HasPower))
+		{
+			var hasPower = ReadObjectPowers(tx, dbref).Any(power =>
+				string.Equals(power.Name, filter.HasPower, StringComparison.OrdinalIgnoreCase)
+				|| string.Equals(power.Alias, filter.HasPower, StringComparison.OrdinalIgnoreCase));
+			if (!hasPower)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 
 	public IAsyncEnumerable<SharpPlayer> GetAllPlayersAsync(CancellationToken cancellationToken = default)
 		=> new FreshAsyncEnumerable<SharpPlayer>(ct => GetAllPlayersCoreAsync(ct));

@@ -15,6 +15,9 @@ public interface ITx
 	IEnumerable<(byte[] Key, byte[] Value)> Range(TableDef table, byte[] prefix);
 	/// <summary>As <see cref="Range"/>, resuming strictly after (<paramref name="afterKey"/>, <paramref name="afterValue"/>).</summary>
 	IEnumerable<(byte[] Key, byte[] Value)> RangeFrom(TableDef table, byte[] prefix, byte[] afterKey, byte[]? afterValue);
+	/// <summary>All entries whose key is greater than or equal to <paramref name="startKey"/>, in key order, with no
+	/// prefix restriction — the rest of the table from that point on.</summary>
+	IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey);
 	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
 	/// <summary>Deletes every entry under the prefix; returns how many.</summary>

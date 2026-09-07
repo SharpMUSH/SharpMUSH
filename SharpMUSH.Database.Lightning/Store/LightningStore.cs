@@ -251,6 +251,19 @@ public sealed partial class LightningStore : IDisposable
 			}
 		}
 
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			var positioned = cursor.SetRange(startKey);
+			if (positioned != MDBResultCode.Success) yield break;
+			do
+			{
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
+			} while (cursor.Next().resultCode == MDBResultCode.Success);
+		}
+
 		public IEnumerable<byte[]> Dups(TableDef table, byte[] key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
