@@ -571,6 +571,10 @@ public sealed class LightningSceneStorage : ISceneStorage
 			// sequence. Pose VALUES move verbatim — only their keys change.
 			var ordered = ScenePoses(tx, sceneId);
 			var from = ordered.FindIndex(e => string.Equals(e.Pose.Id, id, StringComparison.Ordinal));
+			if (from < 0)
+			{
+				return new Error<string>("Pose is not in its scene's pose chain.");
+			}
 			var moved = ordered[from];
 			ordered.RemoveAt(from);
 			var insertAt = afterId is null
@@ -909,7 +913,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 				return new NotFound();
 			}
 
-			RemoveIndex(tx, Keys.Composite(IdxPlotKind, plot), scene);
+			RemoveIndex(tx, PlotIndexKey(plot), scene);
 			return new OkNone();
 		}).AsTask();
 
@@ -955,6 +959,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 
 	private static byte[] MemberIndexKey(long dbref) => Keys.Concat(Keys.Str(IdxMemberKind), Keys.Sep, Keys.Dbref(dbref));
 
+	private static byte[] PlotIndexKey(string plotId) => Keys.Composite(IdxPlotKind, plotId);
+
 	private void AddIndex(ITx tx, byte[] indexKey, string sceneId) => tx.Put(_sceneIdx, indexKey, Keys.Str(sceneId));
 
 	private void RemoveIndex(ITx tx, byte[] indexKey, string sceneId) => tx.Delete(_sceneIdx, indexKey, Keys.Str(sceneId));
@@ -964,7 +970,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 	{
 		if (tx.TryGet(_plots, Keys.Str(plotId), out _))
 		{
-			AddIndex(tx, Keys.Composite(IdxPlotKind, plotId), sceneId);
+			AddIndex(tx, PlotIndexKey(plotId), sceneId);
 		}
 	}
 

@@ -7,8 +7,8 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// over the WIRE — the wizard-only <c>scene…()</c> side-effect functions (writes) and the <c>scene…()</c>
 /// read functions (reads). The Scene plugin now owns <c>ISceneService</c> inside its own (collectible)
 /// AssemblyLoadContext, so the host cannot name it any more; the engine's softcode surface is the
-/// host-visible seam. These exercises run identically on all three providers (arangodb / memgraph /
-/// surrealdb, selected by <c>SHARPMUSH_DATABASE_PROVIDER</c>). Object references use <c>#1</c> (the seeded
+/// host-visible seam. These exercises run identically on all four providers (arangodb / memgraph /
+/// surrealdb / lightning, selected by <c>SHARPMUSH_DATABASE_PROVIDER</c>). Object references use <c>#1</c> (the seeded
 /// God object) so the resolve → edge → name-snapshot mechanism is exercised against a real vertex.
 ///
 /// <para>Each scene is made <c>public</c> immediately after creation so the read functions' visibility
@@ -260,5 +260,69 @@ public class SceneServiceIntegrationTests
 
 		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
 		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,status,…)</c> moves the scene's <c>scene.idx</c> "status" row, which is what
+	/// <c>scenelist(active)</c>/<c>scenelist(finished)</c> read instead of scanning every scene. A stale
+	/// row would either hide a newly-active scene from the listing or leave a finished one behind in it.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_Status_UpdatesTheActiveListIndex()
+	{
+		var id = await NewSceneAsync("StatusIndex");
+
+		await Eval($"sceneset({id},status,active)");
+		await Assert.That(await Eval("scenelist(active)")).Contains(id);
+
+		await Eval($"sceneset({id},status,finished)");
+		await Assert.That(await Eval("scenelist(active)")).DoesNotContain(id);
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,room,…)</c> repoints the scene's <c>scene.idx</c> "room" row, which is what
+	/// <c>scenewhere()</c> (softcode: <c>scenewhere</c>) reads. A stale row would leave the scene
+	/// findable from the room it just left, or unfindable from the room it just entered.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_Room_UpdatesTheActiveSceneInRoomIndex()
+	{
+		const string oldRoom = "#0";
+		var newRoom = God;
+		var id = await Eval($"scenecreate({oldRoom},{God},RoomIndex {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+		await Eval($"sceneset({id},status,active)");
+
+		await Assert.That(await Eval($"scenewhere({oldRoom})")).IsEqualTo(id);
+
+		await Eval($"sceneset({id},room,{newRoom})");
+
+		await Assert.That(await Eval($"scenewhere({newRoom})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenewhere({oldRoom})")).StartsWith("#-1");
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,scheduledfor,…)</c> adds or removes the scene's <c>scene.idx</c> "sched"
+	/// row on the null boundary, which is what <c>scenelist(scheduled,&lt;from&gt;,&lt;to&gt;)</c> windows.
+	/// A stale row would leave a cleared scene in every future window, or hide a freshly-scheduled one.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_ScheduledFor_UpdatesTheScheduledWindowIndex()
+	{
+		var id = await NewSceneAsync("ScheduledIndex");
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var insideFrom = now - 60_000;
+		var insideTo = now + 60_000;
+		var outsideFrom = now + 120_000;
+		var outsideTo = now + 180_000;
+
+		await Eval($"sceneset({id},scheduledfor,{now})");
+
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).Contains(id);
+		await Assert.That(await Eval($"scenelist(scheduled,{outsideFrom},{outsideTo})")).DoesNotContain(id);
+
+		await Eval($"sceneset({id},scheduledfor,)");
+
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).DoesNotContain(id);
 	}
 }
