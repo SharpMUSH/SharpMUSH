@@ -6,7 +6,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 
 /// <summary>
 /// Owns the LMDB environment and the open table handles. Reads run on the calling thread inside
-/// <see cref="Read{T}"/>; writes are serialized through <see cref="LightningWriter"/> (Task 3). The
+/// <see cref="Read{T}"/>; writes are serialized through <see cref="LightningWriter"/>. The
 /// environment can be closed and reopened under <see cref="Gate"/> so staging promotion can swap the
 /// directory beneath a live singleton.
 /// </summary>
@@ -14,6 +14,7 @@ public sealed partial class LightningStore : IDisposable
 {
 	private readonly LightningStoreOptions _options;
 	private readonly ReaderWriterLockSlim _gate = new(LockRecursionPolicy.NoRecursion);
+	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 	private Dictionary<TableDef, LmdbDb> _tables = new();
 
@@ -24,6 +25,7 @@ public sealed partial class LightningStore : IDisposable
 	{
 		_options = options;
 		Open();
+		_writer = new LightningWriter(work => Write(work));
 	}
 
 	private void Open()
@@ -75,8 +77,8 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
-	/// <summary>Direct write on the calling thread. Only the writer thread (Task 3) and tests may call this.</summary>
-	internal T Write<T>(Func<ITx, T> write)
+	/// <summary>Direct write on the calling thread. Only <see cref="LightningWriter"/>'s thread may call this.</summary>
+	private T Write<T>(Func<ITx, T> write)
 	{
 		_gate.EnterReadLock();
 		try
@@ -93,6 +95,15 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default) => _writer.EnqueueAsync(job, ct);
+
+	public async ValueTask WriteAsync(Action<ITx> job, CancellationToken ct = default)
+		=> await _writer.EnqueueAsync<object?>(tx => { job(tx); return null; }, ct).ConfigureAwait(false);
+
+	internal Task DrainAsync() => _writer.DrainAsync();
+	internal void PauseWriter() => _writer.Pause();
+	internal void ResumeWriter() => _writer.Resume();
+
 	public long Count(TableDef table) => Read(tx => tx.Count(table));
 
 	public void CopyTo(string path, bool compact = true)
@@ -103,6 +114,7 @@ public sealed partial class LightningStore : IDisposable
 
 	public void Dispose()
 	{
+		_writer.Dispose();
 		Close();
 		_gate.Dispose();
 	}

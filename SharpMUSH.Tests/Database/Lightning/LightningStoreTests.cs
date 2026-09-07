@@ -24,7 +24,7 @@ public class LightningStoreTests
 	public async Task RangeReturnsOnlyKeysUnderThePrefixInOrder()
 	{
 		using var store = Open();
-		store.Write(tx =>
+		await store.WriteAsync(tx =>
 		{
 			tx.Put(Tables.AttrMeta, Keys.Attr(5, "B"), "b"u8);
 			tx.Put(Tables.AttrMeta, Keys.Attr(5, "A`X"), "ax"u8);
@@ -41,7 +41,7 @@ public class LightningStoreTests
 	public async Task DuplicateValuesAreSortedAndIndividuallyDeletable()
 	{
 		using var store = Open();
-		store.Write(tx =>
+		await store.WriteAsync(tx =>
 		{
 			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(30));
 			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(20));
@@ -50,7 +50,7 @@ public class LightningStoreTests
 		});
 		var before = store.Read(tx => tx.Dups(Tables.RevLocation, Keys.Dbref(1)).Select(v => Keys.ReadDbref(v)).ToArray());
 		await Assert.That(before).IsEquivalentTo(new long[] { 20, 30 });
-		store.Write(tx =>
+		await store.WriteAsync(tx =>
 		{
 			tx.Delete(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(20));
 			return 0;
