@@ -1,6 +1,8 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -102,5 +104,41 @@ public class HideCommandTests
 
 		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsFalse();
 		await Assert.That(ConnectionService.Get(secondHandle)?.IsHidden).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH's alternate login words (<c>bsd.c:4431-4497</c>): <c>cd</c> connects and forces
+	/// <c>DARK</c> on (and hides the connection if the player has permission), <c>cv</c> connects
+	/// and forces <c>DARK</c> off, <c>ch</c> connects and hides the connection if permitted without
+	/// touching <c>DARK</c>. Login runs at the connect screen (an unauthenticated handle), so this
+	/// registers a fresh handle the way <c>ConnectScreenTests</c>/<c>SetPasswordConnectTests</c> do
+	/// rather than using <see cref="TestIsolationHelpers.CreateTestPlayerWithHandleAsync"/>, which
+	/// pre-binds the handle.
+	/// </summary>
+	[Test]
+	[Arguments("cd", true, true)]   // command, expectDark, expectHidden
+	[Arguments("cv", false, false)]
+	[Arguments("ch", false, true)]
+	public async ValueTask ConnectAlias_SetsExpectedDarkAndHiddenState(string connectWord, bool expectDark, bool expectHidden)
+	{
+		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "ConnAlias");
+		// cd/ch only hide the connection when the connecting player has Hide permission (CanHide:
+		// wizard/royalty or the Hide power) - grant WIZARD so the hidden-state assertions are meaningful
+		// for every alias under test, including cv (which never hides regardless of permission).
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {playerDbRef}=WIZARD"));
+
+		var handle = Random.Shared.NextInt64(800_000, 899_999);
+		await ConnectionService.Register(handle, "localhost", "localhost", "test",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
+
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"{connectWord} {playerDbRef} TestPassword123"));
+
+		// The login must have actually bound the handle - otherwise the mode-specific logic never ran
+		// and the assertions below would be vacuous.
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsEqualTo(playerDbRef);
+
+		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		await Assert.That(await connectedPlayer.HasFlag("DARK")).IsEqualTo(expectDark);
+		await Assert.That(ConnectionService.Get(handle)?.IsHidden).IsEqualTo(expectHidden);
 	}
 }
