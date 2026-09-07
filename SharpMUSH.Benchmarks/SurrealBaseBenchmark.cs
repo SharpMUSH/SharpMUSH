@@ -21,13 +21,17 @@ namespace SharpMUSH.Benchmarks;
 public class SurrealBaseBenchmark
 {
 	public SurrealBaseBenchmark() =>
-		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
+		Log.Logger = new LoggerConfiguration()
+			.WriteTo.Console()
+			.MinimumLevel.Information()
+			.CreateLogger();
 
 	protected TestWebApplicationBuilderFactory<Server.Program>? _server;
 	protected ISharpDatabase? _database;
 	private IContainer? _natsContainer;
 	private string _surrealEndpoint = null!;
 	private string? _rocksDbPath;
+	private bool _createdRocksDbDirectory;
 
 	[GlobalSetup]
 	public virtual async ValueTask Setup()
@@ -42,9 +46,10 @@ public class SurrealBaseBenchmark
 		if (_surrealEndpoint.StartsWith("rocksdb://", StringComparison.OrdinalIgnoreCase))
 		{
 			_rocksDbPath = _surrealEndpoint.Substring("rocksdb://".Length);
-			if (!string.IsNullOrEmpty(_rocksDbPath))
+			if (!string.IsNullOrEmpty(_rocksDbPath) && !Directory.Exists(_rocksDbPath))
 			{
 				Directory.CreateDirectory(_rocksDbPath);
+				_createdRocksDbDirectory = true;
 			}
 		}
 
@@ -68,14 +73,14 @@ public class SurrealBaseBenchmark
 		_server?.Dispose();
 		Environment.SetEnvironmentVariable("NATS_URL", null);
 
-		// Clean up the rocksdb directory if it was created
-		if (!string.IsNullOrEmpty(_rocksDbPath) && Directory.Exists(_rocksDbPath))
+		// Clean up the rocksdb directory only if this benchmark created it
+		if (_createdRocksDbDirectory && !string.IsNullOrEmpty(_rocksDbPath) && Directory.Exists(_rocksDbPath))
 		{
 			try
 			{
 				Directory.Delete(_rocksDbPath, recursive: true);
 			}
-			catch
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 			{
 				// Ignore errors during cleanup
 			}

@@ -56,9 +56,10 @@ public class StreamingTests
 	/// Exercises the duplicate-table resumption path that <see cref="RangeAsyncResumesAcrossPagesWhileWritesLand"/>
 	/// never touches: <c>Tables.SessionAccount</c> is a duplicate-values table (<c>TableDef.Duplicates</c>
 	/// true), so <c>RangeAsync</c> must resume with <c>afterValue</c> set, and <c>Tx.RangeFrom</c> must
-	/// filter on <c>keyCompare == 0 &amp;&amp; entry.Value &lt;= afterValue</c> to skip only what was already
-	/// yielded within a key's duplicate run. Three keys carry 40 duplicate values each; pageSize 25 puts
-	/// every page boundary mid-duplicate-run for at least one key.
+	/// seek the cursor to <c>afterKey</c> with <c>SetRange</c> and then step forward through that key's
+	/// duplicate run while <c>entry.Value &lt;= afterValue</c>, so only what was already yielded within the
+	/// run is skipped. Three keys carry 40 duplicate values each; pageSize 25 puts every page boundary
+	/// mid-duplicate-run for at least one key.
 	/// </summary>
 	[Test]
 	public async Task RangeAsyncResumesAcrossDuplicateValuesWithinAKey()
