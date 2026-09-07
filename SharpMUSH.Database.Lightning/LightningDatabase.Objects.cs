@@ -745,12 +745,7 @@ public sealed partial class LightningDatabase
 
 	private async IAsyncEnumerable<SharpObjectFlag> GetFlagsCoreAsync(long dbref, string type, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var flags = Store.Read(tx => tx.Dups(Tables.ObjFlag.Forward, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadStr(v))
-			.Select(name => tx.TryGet(Tables.Flag, Keys.Upper(name), out var bytes) ? Codec.Deserialize<FlagRecord>(bytes) : null)
-			.Where(flag => flag is not null)
-			.Select(flag => MapFlag(flag!))
-			.ToList());
+		var flags = Store.Read(tx => ReadObjectFlags(tx, dbref).ToList());
 
 		foreach (var flag in flags)
 		{
@@ -766,12 +761,7 @@ public sealed partial class LightningDatabase
 
 	private async IAsyncEnumerable<SharpPower> GetPowersCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var powers = Store.Read(tx => tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(dbref))
-			.Select(v => Keys.ReadStr(v))
-			.Select(name => tx.TryGet(Tables.Power, Keys.Upper(name), out var bytes) ? Codec.Deserialize<PowerRecord>(bytes) : null)
-			.Where(power => power is not null)
-			.Select(power => MapPower(power!))
-			.ToList());
+		var powers = Store.Read(tx => ReadObjectPowers(tx, dbref).ToList());
 
 		foreach (var power in powers)
 		{
@@ -779,32 +769,6 @@ public sealed partial class LightningDatabase
 			yield return power;
 		}
 	}
-
-	private static SharpObjectFlag MapFlag(FlagRecord record) => new()
-	{
-		Id = null,
-		Name = record.Name,
-		Aliases = record.Aliases,
-		Symbol = record.Symbol,
-		SetPermissions = record.SetPermissions,
-		UnsetPermissions = record.UnsetPermissions,
-		System = record.System,
-		Disabled = record.Disabled,
-		TypeRestrictions = record.TypeRestrictions
-	};
-
-	private static SharpPower MapPower(PowerRecord record) => new()
-	{
-		Id = null,
-		Name = record.Name,
-		System = record.System,
-		Disabled = record.Disabled,
-		Alias = record.Alias,
-		Symbol = record.Symbol,
-		SetPermissions = record.SetPermissions,
-		UnsetPermissions = record.UnsetPermissions,
-		TypeRestrictions = record.TypeRestrictions
-	};
 
 	private static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
 	{
