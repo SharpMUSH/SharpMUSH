@@ -18,6 +18,7 @@ public sealed record PowerRecord
 {
 	public string Name { get; init; } = "";
 	public string Alias { get; init; } = "";
+	public string Symbol { get; init; } = "";
 	public string[] SetPermissions { get; init; } = [];
 	public string[] UnsetPermissions { get; init; } = [];
 	public string[] TypeRestrictions { get; init; } = [];

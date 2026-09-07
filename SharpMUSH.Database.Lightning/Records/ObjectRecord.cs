@@ -18,10 +18,10 @@ public sealed record ObjectRecord
 	public string? Warnings { get; init; }
 	public Dictionary<string, LockRecord> Locks { get; init; } = new();
 
-	// A record's synthesized Equals compares Aliases by array reference (arrays don't override
-	// Equals), so two deserialized copies with identical contents would never compare equal.
-	// Locks keeps default (reference) equality — callers that need to compare it structurally
-	// do so explicitly, the way CodecTests does via `record with { Locks = other.Locks }`.
+	// A record's synthesized Equals compares Aliases and Locks by reference (arrays don't override
+	// Equals, and Dictionary<TKey,TValue> doesn't either), so two deserialized copies with identical
+	// contents would never compare equal. Both are compared structurally here instead: Aliases by
+	// sequence, Locks by same key set with equal (order-independent) LockRecord values.
 	public bool Equals(ObjectRecord? other) =>
 		other is not null
 		&& Name == other.Name
@@ -33,7 +33,11 @@ public sealed record ObjectRecord
 		&& PasswordSalt == other.PasswordSalt
 		&& Quota == other.Quota
 		&& Warnings == other.Warnings
-		&& Locks.Equals(other.Locks);
+		&& LocksEqual(other.Locks);
+
+	private bool LocksEqual(Dictionary<string, LockRecord> other) =>
+		Locks.Count == other.Count
+		&& Locks.All(pair => other.TryGetValue(pair.Key, out var value) && pair.Value == value);
 
 	public override int GetHashCode()
 	{
@@ -47,6 +51,10 @@ public sealed record ObjectRecord
 		hash.Add(PasswordSalt);
 		hash.Add(Quota);
 		hash.Add(Warnings);
+		hash.Add(Locks.Count);
+		var locksHash = 0;
+		foreach (var pair in Locks) locksHash ^= HashCode.Combine(pair.Key, pair.Value);
+		hash.Add(locksHash);
 		return hash.ToHashCode();
 	}
 }

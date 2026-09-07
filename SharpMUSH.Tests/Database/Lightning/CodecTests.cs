@@ -14,7 +14,7 @@ public class CodecTests
 			Locks = new() { ["Basic"] = new LockRecord { LockString = "#TRUE", Flags = "" } }
 		};
 		var back = Codec.Deserialize<ObjectRecord>(Codec.Serialize(record));
-		await Assert.That(back).IsEqualTo(record with { Locks = back.Locks });
+		await Assert.That(back).IsEqualTo(record);
 		await Assert.That(back.Locks["Basic"].LockString).IsEqualTo("#TRUE");
 		await Assert.That(back.PasswordHash).IsNull();
 	}
