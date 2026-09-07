@@ -37,7 +37,7 @@ public class LightningBaseBenchmark
 
 		// No container, no shared server: LMDB is a plain directory. Give each run its own so
 		// benchmark iterations never collide with a prior run's data.
-		_lightningPath = Path.Combine(Path.GetTempPath(), "sharpmush-lightning-benchmarks-" + Guid.NewGuid().ToString("N"));
+		_lightningPath = CreateDataDirectory();
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
 			acnf: null,
@@ -74,4 +74,25 @@ public class LightningBaseBenchmark
 
 	protected async Task<IMUSHCodeParser?> TestParser() =>
 		await BenchmarkHelpers.CreateTestParser(_database!, _server!.Services).ConfigureAwait(false);
+
+	/// <summary>
+	/// Picks a per-run LMDB data directory under the real filesystem, never under
+	/// <see cref="Path.GetTempPath"/> - on this machine (and most CI runners) that path is a tmpfs
+	/// mount, which serves every write from RAM and hides the fsync cost every Lightning commit
+	/// pays on real disk. <see cref="Environment.SpecialFolder.LocalApplicationData"/> is backed by
+	/// disk, so benchmark numbers reflect what production actually costs. The
+	/// <c>SHARPMUSH_LIGHTNING_BENCH_PATH</c> environment variable overrides the root (still with a
+	/// fresh guid subdirectory beneath it), letting a runner point this at a specific disk without
+	/// editing this file.
+	/// </summary>
+	internal static string CreateDataDirectory()
+	{
+		var root = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BENCH_PATH");
+		if (string.IsNullOrEmpty(root))
+		{
+			root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+		}
+
+		return Path.Combine(root, "sharpmush-bench", Guid.NewGuid().ToString("N"));
+	}
 }
