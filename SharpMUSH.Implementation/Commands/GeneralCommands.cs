@@ -653,6 +653,7 @@ public partial class Commands
 
 		var baseName = viewingObject.Name;
 		var baseDesc = MarkupText.Empty;
+		string? descriptionAttributeName = null;
 
 		// @idescribe is only used for players and things; rooms and exits always use @describe
 		// (help @idescribe). And when no @idescribe is set, the viewer sees the @describe run
@@ -671,6 +672,7 @@ public partial class Commands
 				// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
 				// @aidescribe without text), so an empty value stays empty here.
 				usedIdesc = true;
+				descriptionAttributeName = "IDESCRIBE";
 				baseDesc = idescResult.AsAttribute.Last().Value;
 			}
 		}
@@ -679,9 +681,22 @@ public partial class Commands
 		{
 			var descResult = await AttributeService.GetAttributeAsync(executor, realViewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false);
-			baseDesc = descResult.IsAttribute && descResult.AsAttribute.Last().Value.Length > 0
-				? descResult.AsAttribute.Last().Value
-				: MarkupText.Plain("You see nothing special.");
+			if (descResult.IsAttribute && descResult.AsAttribute.Last().Value.Length > 0)
+			{
+				descriptionAttributeName = "DESCRIBE";
+				baseDesc = descResult.AsAttribute.Last().Value;
+			}
+			else
+			{
+				baseDesc = MarkupText.Plain("You see nothing special.");
+			}
+		}
+
+		if (descriptionAttributeName is not null)
+		{
+			baseDesc = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, executor, realViewing, descriptionAttributeName,
+				new Dictionary<string, CallState>(), evalParent: false, ignorePermissions: true);
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
@@ -716,6 +731,25 @@ public partial class Commands
 		if (formattedDesc.Length > 0)
 		{
 			await NotifyService.Notify(executor, formattedDesc, executor);
+		}
+
+		var actionAttributeName = usedIdesc ? "AIDESCRIBE" : "ADESCRIBE";
+		var actionAttribute = await AttributeService.GetAttributeAsync(
+			realViewing, realViewing, actionAttributeName, IAttributeService.AttributeMode.Execute);
+		if (actionAttribute.IsAttribute)
+		{
+			var actionState = parser.CurrentState with
+			{
+				Executor = viewingObject.DBRef,
+				Caller = parser.CurrentState.Executor,
+				Arguments = new Dictionary<string, CallState>(),
+				EnvironmentRegisters = new Dictionary<string, CallState>(),
+				CurrentEvaluation = new DBAttribute(viewingObject.DBRef, actionAttributeName),
+				Function = null
+			};
+			await Mediator.Send(new QueueAttributeRequest(
+				() => ValueTask.FromResult(actionState),
+				new DbRefAttribute(viewingObject.DBRef, [actionAttributeName])));
 		}
 
 		var showInventory = realViewing.IsContainer

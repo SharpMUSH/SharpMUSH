@@ -528,14 +528,12 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests that @desc (and other @attribute commands) evaluate their argument before storing.
-	/// This confirms PennMUSH-compatible behavior:
-	/// - @desc me=[add(1,2)] should store "3" (not "[add(1,2)]")
-	/// - look should display "3" (no re-evaluation)
+	/// Tests that @desc (and other @attribute commands) store their argument without evaluating it.
+	/// PennMUSH defers evaluation until the attribute is used.
 	/// Using @desc to verify prefix matching correctly chooses DESCRIBE over DESCFORMAT (shorter match wins).
 	/// </summary>
 	[Test]
-	public async ValueTask DescribeCommand_EvaluatesBeforeStoring()
+	public async ValueTask DescribeCommand_StoresContentsWithoutEvaluation()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DescEvalTestObject"));
@@ -556,7 +554,7 @@ public class BuildingCommandTests
 
 		await Assert.That(descAttr.IsAttribute).IsTrue();
 		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
-		await Assert.That(storedValue).IsEqualTo("47201");
+		await Assert.That(storedValue).IsEqualTo("[add(47119,82)]");
 	}
 
 	/// <summary>
@@ -585,18 +583,16 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Tests that look displays the pre-evaluated DESCRIBE value without re-evaluating.
-	/// If DESCRIBE contained "[mul(2,5)]" and was set via @desc, look should show "10".
+	/// Tests that look displays a literal DESCRIBE value.
 	/// </summary>
 	[Test]
-	public async ValueTask Look_DisplaysStoredDescribe_NoReEvaluation()
+	public async ValueTask Look_DisplaysLiteralDescribe()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create LookDescTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		// Use @desc with a unique value - stored as-is (no function evaluation tested here)
-		// to verify look displays the stored description without re-evaluation
+		// Use @desc with a unique literal value to verify look displays it unchanged.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=LookDesc_UniqueTestValue_38471"));
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"look {objDbRef}"));
@@ -632,6 +628,62 @@ public class BuildingCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"ROOMDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking at a room evaluates @describe, then passes the evaluated text to @descformat as %0.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_EvaluatesDescribeBeforePassingItToDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lde");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookRoomEval{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomEval_{token}"));
+		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomDbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		await attributeService.SetAttributeAsync(playerObject, room, "DESCRIBE", MarkupText.Plain("[add(47119,82)]"));
+		await attributeService.SetAttributeAsync(playerObject, room, "DESCFORMAT", MarkupText.Plain($"evaluated_{token}:%0"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"evaluated_{token}:47201")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking at a room queues its @adescribe action with the looker as enactor.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_TriggersAdescribe()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lad");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookRoomAdesc{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomAdesc_{token}"));
+		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@adesc here=@pemit %#=adesc_{token}_from_%!"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		var expectedMessage = $"adesc_{token}_from_#{roomDbRef.Number}";
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, expectedMessage);
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, expectedMessage)), TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

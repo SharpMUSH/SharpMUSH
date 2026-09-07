@@ -1694,12 +1694,8 @@ public class SharpMUSHParserVisitor(
 
 		var targetObject = locateResult.WithoutError().WithoutNone();
 
-		// Evaluate the value before setting (standard command behavior)
-		// This allows @desc me=[add(1,2)] to store "3" rather than "[add(1,2)]"
-		var evaluatedValue = (await prs.FunctionParse(valueMString))?.Message ?? valueMString;
-
 		var setResult = await AttributeService.SetAttributeAsync(
-			executor, targetObject, matchedEntry.Name, evaluatedValue);
+			executor, targetObject, matchedEntry.Name, valueMString);
 
 		var handle2 = prs.CurrentState.Handle;
 
