@@ -32,7 +32,6 @@ public static class ChannelAdd
 		//
 		// Channel names are globally unique, so uniqueness has to be tested against every channel, not just
 		// the ones this player may see. A visible lookup here would report "no such channel" for a hidden
-		// one and then let the create proceed — on ArangoDB and Memgraph a duplicate, on SurrealDB a hidden
 		// channel created over by someone who cannot see it. PennMUSH resolves it the same way:
 		// ok_channel_name (src/extchat.c:1855-1870) walks the whole channel list and returns
 		// NAME_NOT_UNIQUE without consulting Chan_Can_See.
@@ -85,7 +84,6 @@ public static class ChannelAdd
 
 		// The check above raced; this one cannot. CreateChannelAsync tests the name inside the same storage
 		// transaction that writes the channel, so the loser is refused rather than duplicating the winner
-		// (ArangoDB, Memgraph) or overwriting its privileges and locks (SurrealDB).
 		var creation = await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
 
 		if (creation.IsNameTaken)

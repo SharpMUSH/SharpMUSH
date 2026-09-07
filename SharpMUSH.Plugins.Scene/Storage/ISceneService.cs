@@ -19,7 +19,6 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// resolves the live vertex, manages the edge, and snapshots the object's name
 /// (so a later deletion still renders). All timestamps are UTC Unix-millis.
 /// <see cref="Scene.Status"/> is a free string. There is <b>no in-memory
-/// implementation</b> — the three database providers (ArangoDB, Memgraph,
 /// SurrealDB) implement this interface as a side-effect of implementing
 /// <c>ISharpDatabase</c>; it is exercised by integration tests.
 /// </para>

@@ -9,7 +9,6 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// This exists as a type rather than a phrase because the four <c>IWikiService</c> implementations each
 /// detect these cases separately. Classifying them by matching on error text made the status code depend on
 /// four backends wording their messages identically, which they did only by coincidence — and one of them
-/// (Memgraph) had already drifted. The compiler checks this instead.
 /// </remarks>
 public enum WikiWriteConflict
 {

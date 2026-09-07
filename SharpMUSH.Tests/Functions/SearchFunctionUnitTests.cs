@@ -242,7 +242,6 @@ public class SearchFunctionUnitTests
 	public async Task Scan_ReturnsVisibleObjects()
 	{
 		// Use a short unique identifier to avoid cross-test interference.
-		// We do NOT use @create here because that increments Memgraph's global counter node,
 		// which all parallel @create calls compete for and causes transient transaction conflicts.
 		// Instead, set a $-command attribute directly on room #0 (the master room).
 		// scan() with the default "all" switch always checks room #0 via the globals scope,

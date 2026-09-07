@@ -1,272 +1,104 @@
-using Microsoft.AspNetCore.Connections;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.ResourceDetectors.Container;
-using Serilog;
-using SharpMUSH.ConnectionServer.Configuration;
-using SharpMUSH.ConnectionServer.Consumers;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using System.Net.Sockets;
 using SharpMUSH.ConnectionServer.Services;
-using Microsoft.Extensions.Logging;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.Messages;
-using SharpMUSH.Messaging.NATS;
-using SharpMUSH.Messaging.NATS.Strategy;
 
-namespace SharpMUSH.ConnectionServer;
+namespace SharpMUSH.RenderingWorker;
 
-public class Program
+public static class Program
 {
-	/// <summary>
-	/// Installs the markup layers this process can render and serialise. <see cref="MarkupText"/>
-	/// resolves emitters and codecs through <see cref="MarkupRegistry.Default"/>, which throws until
-	/// something sets it, so this has to run before the first render or deserialise.
-	/// </summary>
-	private static void ConfigureMarkup()
-	{
-		if (!MarkupRegistry.IsConfigured)
-		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
-		}
-	}
-
 	public static async Task Main(string[] args)
 	{
-		ConfigureMarkup();
+		if (args.Contains("--healthcheck"))
+		{
+			var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
+			Environment.ExitCode = await IsHealthyAsync(configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock") ? 0 : 1;
+			return;
+		}
+		await using var app = CreateApplication(args);
+		await app.RunAsync();
+	}
 
-		var natsStrategy = NatsStrategyProvider.GetStrategy();
-		var natsUrl = await natsStrategy.GetUrlAsync();
+	public static WebApplication CreateApplication(string[] args, string? socketPath = null)
+	{
+		if (!MarkupRegistry.IsConfigured)
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
 
-		var app = await CreateHostBuilderAsync(args, natsUrl);
+		var builder = WebApplication.CreateBuilder(args);
+		builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+		socketPath ??= builder.Configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock";
+		Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(socketPath))!);
+		RemoveStaleSocket(socketPath);
+		builder.WebHost.ConfigureKestrel(options =>
+		{
+			options.Limits.MaxRequestBodySize = 16 * 1024 * 1024;
+			options.ListenUnixSocket(socketPath, listen => listen.Protocols = HttpProtocols.Http2);
+		});
+		builder.Services.AddSingleton<MarkupOutputRenderer>();
+		builder.Services.AddSingleton<OutputTransformService>();
+		var app = builder.Build();
+		app.MapGet("/health", () => Results.Ok());
+		app.MapPost("/render", (RenderRequest request, MarkupOutputRenderer renderer, OutputTransformService transform) =>
+		{
+			if (request.Context is null || request.Context.Capabilities is null ||
+				(request.Markup is null) == (request.Data is null))
+				return Results.BadRequest();
+			var rendered = request.Markup is not null
+				? renderer.Render(request.Markup, request.Context)
+				: new RenderedOutput(request.Data!, true);
+			var bytes = rendered.ApplyOutputTransform
+				? transform.Transform(rendered.Data, request.Context.Capabilities, request.Context.Preferences)
+				: rendered.Data;
+			return Results.Bytes(bytes, "application/octet-stream");
+		});
+		return app;
+	}
 
+	public static async Task<bool> IsHealthyAsync(string socketPath)
+	{
+		using var handler = new SocketsHttpHandler
+		{
+			ConnectCallback = async (_, ct) =>
+			{
+				var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+				try
+				{
+					await socket.ConnectAsync(new UnixDomainSocketEndPoint(socketPath), ct);
+					return new NetworkStream(socket, ownsSocket: true);
+				}
+				catch { socket.Dispose(); throw; }
+			}
+		};
+		using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+		using var request = new HttpRequestMessage(HttpMethod.Get, "http://renderer/health")
+		{
+			Version = System.Net.HttpVersion.Version20,
+			VersionPolicy = HttpVersionPolicy.RequestVersionExact
+		};
 		try
 		{
-			var webSocketOptions = new WebSocketOptions
-			{
-				KeepAliveInterval = TimeSpan.FromSeconds(30)
-			};
-			app.UseWebSockets(webSocketOptions);
-			var webSocketHandler = app.Services.GetRequiredService<WebSocketServer>();
-			app.Map("/ws", webSocketHandler.HandleWebSocketAsync);
-
-			app.MapControllers();
-			app.MapGet("/", () => "SharpMUSH Connection Server");
-			app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow }));
-			app.MapGet("/ready", () => Results.Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow }));
-
-			app.MapPrometheusScrapingEndpoint();
-
-			var logger = app.Services.GetRequiredService<ILogger<Program>>();
-			logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);
-
-			await app.RunAsync();
+			using var response = await client.SendAsync(request);
+			return response.IsSuccessStatusCode;
 		}
-		finally
+		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
 		{
-			await natsStrategy.DisposeAsync();
+			return false;
 		}
 	}
 
-	/// <summary>
-	/// Creates and configures the WebApplication host.
-	/// This method is used by WebApplicationFactory for testing.
-	/// </summary>
-	/// <param name="args">Application arguments.</param>
-	/// <param name="natsUrl">
-	/// NATS URL to use.  When called from <see cref="Main"/> this is resolved via
-	/// <see cref="NatsStrategyProvider"/> before this method is invoked.  When called
-	/// from a test <c>WebApplicationFactory</c> (with no explicit URL) the value is read
-	/// lazily from <c>NATS_URL</c> inside each DI registration lambda, which executes after
-	/// the factory's <c>ConfigureWebHost</c> callback has set the environment variable.
-	/// </param>
-	public static async Task<WebApplication> CreateHostBuilderAsync(string[] args, string? natsUrl = null)
+	private static void RemoveStaleSocket(string path)
 	{
-		var builder = WebApplication.CreateBuilder(args);
-
-		var connectionServerOptions = new ConnectionServerOptions();
-		builder.Configuration.GetSection("ConnectionServer").Bind(connectionServerOptions);
-		builder.Services.AddSingleton(connectionServerOptions);
-
-		builder.Services.AddLogging(logging =>
+		if (!File.Exists(path)) return;
+		using var probe = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+		try
 		{
-			logging.ClearProviders();
-
-			var loggerConfig = new LoggerConfiguration()
-				.ReadFrom.Configuration(builder.Configuration);
-
-			logging.AddSerilog(loggerConfig.CreateLogger());
-		});
-
-		// Add NATS-backed connection state store.
-		// Resolve the URL lazily so that WebApplicationFactory's ConfigureWebHost (which sets
-		// NATS_URL via Environment.SetEnvironmentVariable) takes effect before the service is built.
-		builder.Services.AddSingleton<IConnectionStateStore>(sp =>
+			probe.Connect(new UnixDomainSocketEndPoint(path));
+		}
+		catch (SocketException ex) when (ex.SocketErrorCode is SocketError.ConnectionRefused or SocketError.AddressNotAvailable)
 		{
-			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-			var logger = sp.GetRequiredService<ILogger<NatsConnectionStateStore>>();
-			return NatsConnectionStateStore.CreateAsync(url, logger).GetAwaiter().GetResult();
-		});
-
-		builder.Services.AddSingleton<IConnectionServerService, ConnectionServerService>();
-
-		builder.Services.AddSingleton<IOutputTransformService, OutputTransformService>();
-
-		builder.Services.AddSingleton<IMarkupOutputRenderer, MarkupOutputRenderer>();
-
-		builder.Services.AddSingleton<IDescriptorGeneratorService, DescriptorGeneratorService>();
-
-		builder.Services.AddSingleton<ITelemetryService, TelemetryService>();
-
-		// Terminal output sequencing + durable NATS-backed replay on reconnect is always on. Buffered
-		// output + resume tokens survive a ConnectionServer restart / instance change; the retention
-		// window is configurable (Replay:RetentionHours, default 24h). URL resolved lazily for the same
-		// reason as the connection state store above.
-		var replayRetention = TimeSpan.FromHours(builder.Configuration.GetValue("Replay:RetentionHours", 24.0));
-		builder.Services.AddSingleton<ITerminalReplayStore>(sp =>
-		{
-			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-			return JetStreamTerminalReplayStore
-				.CreateAsync(url, sp.GetRequiredService<ILogger<JetStreamTerminalReplayStore>>(), replayRetention)
-				.GetAwaiter().GetResult();
-		});
-		builder.Services.AddSingleton<IResumeTokenStore>(sp =>
-		{
-			var url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-			return NatsKvResumeTokenStore
-				.CreateAsync(url, sp.GetRequiredService<ILogger<NatsKvResumeTokenStore>>(), replayRetention)
-				.GetAwaiter().GetResult();
-		});
-		// Detached-session pinning: hold a dropped session for a grace window and rebind on reconnect.
-		var graceSeconds = builder.Configuration.GetValue("Session:GraceSeconds", 120.0);
-		builder.Services.AddSingleton<SessionSinkRegistry>();
-		builder.Services.AddSingleton<IGraceScheduler, TimerGraceScheduler>();
-		builder.Services.AddSingleton<DetachedSessionTracker>();
-		builder.Services.AddSingleton(sp => new ConnectionPump(
-			sp.GetRequiredService<ILogger<ConnectionPump>>(),
-			sp.GetRequiredService<IConnectionServerService>(),
-			sp.GetRequiredService<SharpMUSH.Messaging.Abstractions.IMessageBus>(),
-			sp.GetRequiredService<IDescriptorGeneratorService>(),
-			sp.GetRequiredService<ITerminalReplayStore>(),
-			sp.GetRequiredService<IResumeTokenStore>(),
-			sp.GetRequiredService<SessionSinkRegistry>(),
-			sp.GetRequiredService<DetachedSessionTracker>(),
-			TimeSpan.FromSeconds(graceSeconds)));
-
-		builder.Services.AddSingleton<WebSocketServer>();
-
-		// Register the telnet interpreter factory (server mode) with the DI system.
-		// This resolves the logger from DI automatically. Protocol plugins and per-connection
-		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
-		builder.Services.AddTelnetServer();
-
-		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
-
-		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.ConnectionCleanupService>();
-
-		// Configure NATS messaging (URL resolved lazily for the same reason as above)
-		builder.Services.AddNatsConnectionServerMessaging(
-			options =>
-			{
-				options.Url = natsUrl ?? Environment.GetEnvironmentVariable("NATS_URL") ?? "nats://localhost:4222";
-			},
-			x =>
-			{
-				x.AddConsumer<TelnetOutputConsumer, TelnetOutputMessage>();
-				x.AddConsumer<TelnetPromptConsumer, TelnetPromptMessage>();
-				x.AddConsumer<MarkupOutputConsumer, MarkupOutputMessage>();
-				x.AddConsumer<MarkupPromptConsumer, MarkupPromptMessage>();
-				x.AddConsumer<BroadcastConsumer, BroadcastMessage>();
-				x.AddConsumer<DisconnectConnectionConsumer, DisconnectConnectionMessage>();
-				x.AddConsumer<GMCPOutputConsumer, GMCPOutputMessage>();
-				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePlayerPreferencesMessage>();
-				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
-				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
-				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();
-				x.AddConsumer<MainProcessShutdownConsumer, MainProcessShutdownMessage>();
-			});
-
-		var keepAlive = KeepAliveOptions.FromConfiguration(builder.Configuration);
-		builder.Services.AddSingleton(keepAlive);
-
-		builder.WebHost.ConfigureKestrel((context, options) =>
-		{
-			options.AddServerHeader = true;
-
-			options.ListenAnyIP(connectionServerOptions.TelnetPort, listenOptions =>
-			{
-				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
-				listenOptions.UseConnectionHandler<TelnetServer>();
-			});
-
-			// TLS telnet, when a port is configured. Kestrel terminates the handshake and attaches
-			// ITlsHandshakeFeature, which is what TelnetServer reads to report ssl() and terminfo()'s
-			// "ssl" token — so a connection is secure because a handshake happened on this endpoint,
-			// not because of which port number it came in on. UseHttps() with no argument takes the
-			// certificate from Kestrel:Certificates:Default and throws at startup if there is none,
-			// which is why the port is opt-in: a misconfigured cert fails loudly rather than quietly
-			// serving plaintext on a port players believe is encrypted.
-			if (connectionServerOptions.TelnetSslPort > 0)
-			{
-				options.ListenAnyIP(connectionServerOptions.TelnetSslPort, listenOptions =>
-				{
-					listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
-					listenOptions.UseHttps();
-					listenOptions.UseConnectionHandler<TelnetServer>();
-				});
-			}
-
-			options.ListenAnyIP(connectionServerOptions.HttpPort, listenOptions =>
-			{
-				listenOptions.UseTcpKeepAlive(keepAlive.TcpUserTimeout);
-			});
-		});
-
-		builder.Services.AddControllers();
-
-		var isGKE = LoggingConfiguration.IsRunningInGKE();
-		var isK8s = LoggingConfiguration.IsRunningInKubernetes();
-
-		builder.Services.AddOpenTelemetry()
-			.ConfigureResource(resource =>
-			{
-				resource.AddService(
-					serviceName: "sharpmush-connectionserver",
-					serviceVersion: "1.0.0",
-					serviceInstanceId: Environment.MachineName);
-
-				if (isK8s)
-				{
-					resource.AddDetector(new ContainerResourceDetector());
-				}
-
-				if (isGKE)
-				{
-					var projectId = LoggingConfiguration.GetGoogleCloudProjectId();
-					if (!string.IsNullOrEmpty(projectId))
-					{
-						resource.AddAttributes(new[]
-						{
-							new KeyValuePair<string, object>("cloud.provider", "gcp"),
-							new KeyValuePair<string, object>("cloud.platform", "gcp_kubernetes_engine"),
-							new KeyValuePair<string, object>("gcp.project.id", projectId)
-						});
-					}
-				}
-			})
-			.WithMetrics(metrics => metrics
-				.AddMeter("SharpMUSH")
-				.AddRuntimeInstrumentation()
-				.AddAspNetCoreInstrumentation()
-				.AddPrometheusExporter());
-
-		return builder.Build();
+			// SIGKILL leaves the filesystem entry behind, although no process owns the listener.
+			File.Delete(path);
+			return;
+		}
+		throw new IOException($"A rendering worker already owns {path}.");
 	}
-
-	/// <summary>
-	/// Synchronous wrapper for CreateHostBuilderAsync for WebApplicationFactory compatibility.
-	/// WebApplicationFactory traditionally expects a synchronous CreateHostBuilder method.
-	/// </summary>
-	public static WebApplication CreateHostBuilder(string[] args)
-		=> CreateHostBuilderAsync(args).GetAwaiter().GetResult();
 }

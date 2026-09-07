@@ -9,7 +9,7 @@ namespace SharpMUSH.Benchmarks;
 /// <summary>
 /// Base class for all Lightning-backed benchmarks.
 /// Lightning (LMDB via Lightning.NET) runs embedded in-process against a plain directory - no
-/// database Testcontainer, unlike the ArangoDB and Memgraph base classes. Still spins up NATS and
+/// database Testcontainer. It still spins up NATS and
 /// wires up the full DI stack, providing a ready-to-use <see cref="IMUSHCodeParser"/>.
 /// </summary>
 [Config(typeof(AdaptiveBenchmarkConfig))]
@@ -40,7 +40,6 @@ public class LightningBaseBenchmark
 		_lightningPath = CreateDataDirectory();
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
-			acnf: null,
 			configFile: configFile,
 			databaseProvider: DatabaseProvider.Lightning,
 			lightningPath: _lightningPath);
@@ -74,6 +73,25 @@ public class LightningBaseBenchmark
 
 	protected async Task<IMUSHCodeParser?> TestParser() =>
 		await BenchmarkHelpers.CreateTestParser(_database!, _server!.Services).ConfigureAwait(false);
+
+	private IMUSHCodeParser? _baseParser;
+	private DBRef _executor;
+
+	/// <summary>
+	/// Returns a parser over a fresh top-level state. Invocation and call-depth counters live on the
+	/// state, so reusing one parser across benchmark iterations would eventually time only the
+	/// function-limit short circuit.
+	/// </summary>
+	protected IMUSHCodeParser FreshParser()
+	{
+		if (_baseParser is null)
+		{
+			_baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
+			_executor = BenchmarkHelpers.ExecutorDbRef(_database!).ConfigureAwait(false).GetAwaiter().GetResult();
+		}
+
+		return _baseParser.FromState(BenchmarkHelpers.FreshState(_executor));
+	}
 
 	/// <summary>
 	/// Picks a per-run LMDB data directory under the real filesystem, never under

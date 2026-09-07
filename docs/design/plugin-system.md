@@ -152,33 +152,13 @@ A plugin's `[SharpPlugin] IPlugin` may implement any subset of these (all live i
 | Interface | Where it is applied | Wiring |
 |-----------|---------------------|--------|
 | `IServiceRegistrar` | **Pre-build**, into the host `IServiceCollection` | `PluginCatalog.Build` calls `RegisterServices(services)` in `Startup.ConfigureServices`, before `AddMediator()`. |
-| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Arango UPSERTs them after the migration pass; Memgraph/Surreal MERGE/UPSERT them after the built-in flag batch. Idempotent (keyed on flag name). |
-| `IMigrationSource` (provider-tagged) | **DB migration**, alongside the built-in batch | The catalog's `MigrationSources` is passed into each DB constructor. Arango treats each `ArangoMigrationAssembly` as a migration stream of its own (see below); Memgraph runs `CypherStatements`; Surreal runs `SurrealStatements`. Each statement is isolated. |
+| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Lightning and SurrealDB seed them idempotently by flag name. |
+| `IMigrationSource` (provider-tagged) | **DB migration**, alongside the built-in batch | Lightning runs `LightningSteps`; SurrealDB runs `SurrealStatements`. |
 | `IBridgeSubscriptionSource` | **NATS→SignalR bridge** background loop | `NatsBridgeService` runs each `BridgeSources` entry's `RunAsync(nats, hubContext, ct)` alongside its built-in output/room/scene subscriptions, each wrapped in `try/catch` so one faulting subscription cannot tear down the loop. |
 
 `IMigrationSource` and `IBridgeSubscriptionSource` keep their parameter types loose (`Assembly?` / `object`)
 so the contracts live in `SharpMUSH.Library` without forcing a SignalR dependency there; the host passes the
 concrete `NatsConnection` and `IHubContext<GameHub, IGameHubClient>` for the plugin to cast.
-
-#### Arango migrations are per-source streams
-
-A migration's identity is **(source, Id)**, where the source is the assembly contributing it — the engine is
-one source, each plugin's `ArangoMigrationAssembly` another. This is Django's `(app, name)` rather than one
-global sequence, and the engine-plus-plugins shape requires it: a plugin author can coordinate Ids with
-nobody. `ArangoDatabase.ApplyMigrationsAsync` therefore replaces `ArangoMigrator.UpgradeAsync`, whose single
-whole-history high-water mark skipped any plugin migration older than the engine's newest (F-04).
-
-- **Within a source**, Ids run ascending, and one dated before an Id that source has already applied is
-  **refused** with an error naming both — Flyway's default for a back-dated version. Add migrations in
-  increasing Id order.
-- **Across sources**, nothing is ordered. A plugin's `20260619_001` is unaffected by the engine sitting at
-  `20260713_001`, and two plugins may both ship the same Id.
-- **History** is one row per applied migration in `MigrationHistory`, the shape `UpgradeAsync` already wrote.
-  Engine rows keep a bare Id as their `_key`; a plugin's are namespaced `{assembly}:{id}`. Rows a pre-Phase-5
-  build wrote for a plugin under a bare Id are re-keyed into that plugin's stream on the next boot.
-- Memgraph and SurrealDB have no history table: they replay every plugin statement on every boot, and those
-  statements are written idempotent (`MERGE` / `UPSERT` / `DEFINE`). They never had the F-04 defect and have
-  no ordering to model.
 
 ### How the DB factory receives the migration/flag sources
 
@@ -307,7 +287,7 @@ The architecture leaves these seams for the committed later phases:
 - **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
   plugin via the Phase-1/2a seams (see below).
 - **Phase 8** — *implemented* — plugin-owned **storage**: the `ISceneService` implementations moved out of
-  the core providers behind per-provider **connection-accessor** interfaces (`I{Arango,Memgraph,Surreal}StorageAccessor`),
+  the core providers behind the supported provider storage seams,
   registered ASP.NET-style via `AddSceneSystem(config)` (keyed storage + an `.AddBehavior<T>()` decorator chain).
 - **Phase 9** — *implemented* — plugin-owned **web surface**: a plugin contributes MVC controllers
   (`AddControllers().AddApplicationPart(...)` from `IServiceRegistrar`) and maps its own hubs/endpoints via the
@@ -398,9 +378,8 @@ committed to), not trust; trust is the operator's two-part opt-in. The default `
 ### The installed-package registry record extension
 
 The existing `InstalledPackageRecord` gained one field — `IReadOnlyList<string>? DeployedFiles` (default empty)
-— **no new collection**. It is threaded read+write through all three providers: ArangoDB (`DeployedFiles` array
-on the `PackageDbDoc`), Memgraph (a `deployedFiles` list property on `:SysPackage`), and SurrealDB (a
-`deployedFiles` list field on `sys_package`). Empty for softcode/application packages; populated for managed
+— **no new collection**. It is threaded read+write through Lightning and SurrealDB. Empty for
+softcode/application packages; populated for managed
 packages so uninstall removes exactly what install deposited.
 
 ## Phase 5 — Scene as the reference plugin
@@ -420,7 +399,7 @@ subsystem.
 | `@SCENE` command (`SceneCommandModule` + the `Scene*Handlers`) | `PluginBase`→`ICommandSource` via the generator analyzer | `SharpMUSH.Plugins.Scene/Commands/` |
 | `scene…` functions (`SceneFunctions`) | `PluginBase`→`IFunctionSource` | `SharpMUSH.Plugins.Scene/Functions/` |
 | `game.scene.{id}` publish (`SceneBroadcast`) | called by the `@SCENE` arms | `SharpMUSH.Plugins.Scene/Commands/SceneBroadcast.cs` |
-| Arango `Migration_AddScenes`; Memgraph/Surreal scene schema | `IMigrationSource` (`ArangoMigrationAssembly` / `CypherStatements` / `SurrealStatements`) | `ScenePlugin` + `Migrations/Migration_AddScenes.cs` |
+| Lightning/Surreal scene schema | `IMigrationSource` (`LightningSteps` / `SurrealStatements`) | `ScenePlugin` |
 | `SCENE_ROOM` object flag | `IFlagSource` (`PluginFlag`) | `ScenePlugin.Flags` |
 | `game.scene.*` NATS→SignalR leg (was `NatsBridgeService.SubscribeSceneAsync`) | `IBridgeSubscriptionSource` | `ScenePlugin.RunAsync` |
 
@@ -429,8 +408,8 @@ plugin (`PluginLoaderService.IsUnloadablePlugin` returns false), exactly as the 
 
 **Authoring shape.** The plugin csproj mirrors the `SamplePlugin` fixture (`EnableDynamicLoading`, the
 `SharpMUSH.Library` reference `Private=false`+`ExcludeAssets=runtime`, the `SharpMUSH.Implementation.Generated`
-analyzer). It additionally references `SharpMUSH.Database` (for `DatabaseConstants` + the `Core.Arango`
-migration types) and `SharpMUSH.Messaging` (for `NatsOptions`/`NatsConnection`), both `Private=false` so the
+analyzer). It additionally references `SharpMUSH.Messaging` (for `NatsOptions`/`NatsConnection`),
+`Private=false` so the
 host's copies load. The bridge leg forwards through the **non-generic** `IHubContext` with
 `SendAsync("ReceiveSceneMessage", …)` and builds the `scene:{id}` group key itself, so the plugin needs no
 reference to the Server's `GameHub`/`IGameHubClient`.
@@ -460,22 +439,21 @@ MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugi
 
 The Phase-5 extraction left `ISceneService`'s *storage* in the core providers as `partial class
 <Provider>` files, because they share the provider's private connection and write provider-native
-AQL/Cypher/SurrealQL. Phase 8 closes that seam:
+provider-native queries. Phase 8 closes that seam:
 
-- **Per-provider connection accessors** in `SharpMUSH.Library/Plugins/Storage/`
-  (`IArangoStorageAccessor`, `IMemgraphStorageAccessor`, `ISurrealStorageAccessor`) expose just the
+- **Per-provider storage integrations** expose just the
   connection + the primitive helpers a storage plugin needs. They are **generic** — no subsystem
   concept. Each provider implements its own accessor and registers it in DI.
-- The three storage implementations moved into `SharpMUSH.Plugins.Scene/Storage/` as standalone classes
-  (`{Arango,Memgraph,Surreal}SceneStorage`) taking the matching accessor by constructor; the queries
+- The supported storage implementations live in `SharpMUSH.Plugins.Scene/Storage/` as standalone classes
+  taking the matching provider dependency by constructor; the queries
   moved **verbatim**. Core `DatabaseConstants` no longer names the scene graph.
 - **Registration is ASP.NET-style** (`SceneSystemServiceCollectionExtensions`): `AddSceneSystem(config)`
-  registers each provider's storage as a **keyed** `ISceneStorage` (`"arangodb"`/`"memgraph"`/
-  `"surrealdb"`), picks the active one from config, and composes `ISceneService` through an ordered
+  registers each provider's storage as a **keyed** `ISceneStorage`, picks the active one from config,
+  and composes `ISceneService` through an ordered
   **decorator chain** — `ISceneSystemBuilder.AddBehavior<T>()` layers behavior (`T :
   ISceneServiceBehavior`) like `IHttpClientBuilder.AddHttpMessageHandler`. Hand-rolled (no Scrutor).
-- **ALC type identity:** the accessor interfaces live in `SharpMUSH.Library` (already host-shared); the
-  DB-client assemblies (`Core.Arango`, `Neo4j.Driver`, `SurrealDb.Net`) are shared **by assembly name**
+- **ALC type identity:** provider contracts live in `SharpMUSH.Library` (already host-shared); provider
+  client assemblies such as `SurrealDb.Net` are shared **by assembly name**
   via `PluginLoaderService.DefaultSharedAssemblyNames` + `PluginConfig.SharedAssemblies` — the host owns
   the runtime copy, the plugin references them compile-only, so an accessor-returned client unifies on
   one `Type`. The plugin stays collectible.

@@ -9,7 +9,7 @@ namespace SharpMUSH.Benchmarks;
 /// <summary>
 /// Base class for all SurrealDB-backed benchmarks.
 /// SurrealDB runs embedded in-process, defaulting to mem:// for isolation.
-/// No database Testcontainer is used, unlike the ArangoDB and Memgraph base classes.
+/// No database Testcontainer is used.
 /// Still spins up NATS and wires up the full DI stack, providing a ready-to-use <see cref="IMUSHCodeParser"/>.
 ///
 /// The SurrealDB endpoint is read from the <c>SHARPMUSH_SURREALDB_BENCH_ENDPOINT</c> environment variable,
@@ -53,7 +53,6 @@ public class SurrealBaseBenchmark
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
-			acnf: null,
 			configFile: configFile,
 			databaseProvider: DatabaseProvider.SurrealDB,
 			surrealEndpoint: _surrealEndpoint);

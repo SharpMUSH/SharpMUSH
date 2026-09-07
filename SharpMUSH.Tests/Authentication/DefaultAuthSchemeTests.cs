@@ -28,9 +28,6 @@ public class DefaultAuthSchemeTests
 	///   <c>NatsJetStreamMessageBus</c>, etc.) is registered behind a lazy <c>AddSingleton(sp =&gt; ...)</c>
 	///   factory — the migration/connect calls inside them only run when the service is actually resolved,
 	///   which this test never does.</item>
-	///   <item>Passing <c>arangoConfig: null</c> skips the <c>services.AddArango(...)</c> call entirely (see
-	///   the <c>if (databaseProvider == DatabaseProvider.ArangoDB &amp;&amp; arangoConfig is not null)</c>
-	///   guard in <c>Startup.ConfigureServices</c>), so no Arango connection is attempted.</item>
 	///   <item><c>Implementation.Services.PluginCatalog.Build</c> (run synchronously, not behind a lazy
 	///   factory) delegates to <c>PluginLoaderService.LoadAll</c>, which checks
 	///   <c>Directory.Exists(pluginsRoot)</c> first and no-ops when there's no <c>plugins/</c> directory
@@ -52,11 +49,9 @@ public class DefaultAuthSchemeTests
 		var services = new ServiceCollection();
 
 		var startup = new Startup(
-			arangoConfig: null,
 			colorFile: "colors.json",
 			natsUrl: "nats://localhost:4222",
-			databaseProvider: DatabaseProvider.ArangoDB,
-			memgraphUri: null);
+			databaseProvider: DatabaseProvider.Lightning);
 
 		startup.ConfigureServices(services, configuration, environment);
 

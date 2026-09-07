@@ -77,7 +77,6 @@ public partial class SurrealDatabase
 	/// observed committing, which is the overwrite this method exists to prevent. The same reasoning
 	/// already produced the in-memory object-key counter at <c>SurrealDatabase.cs:214-220</c>.
 	///
-	/// <para>ArangoDB and Memgraph get no equivalent, and must not: they are real servers with other
 	/// possible clients, so a lock inside one process would guarantee nothing. Their guarantee is an
 	/// exclusive collection lock and a uniqueness constraint respectively.</para>
 	/// </remarks>

@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Commands;
 /// AF_PRIVATE (<c>no_inherit</c>) — this test is guarded by <c>target != obj</c>, so it only fires
 /// while crossing a parent/ancestor boundary, never against an object's own attributes.
 ///
-/// SharpMUSH's <c>GetAttributeWithInheritanceAsync</c> (all three providers) previously tested
+/// SharpMUSH's <c>GetAttributeWithInheritanceAsync</c> (both supported providers) previously tested
 /// only the leaf attribute's own flags, so a <c>no_inherit</c> flag on an intermediate branch
 /// leaked every leaf beneath it to a child through <c>@parent</c>. <see cref="AttributeTreeParentPermissionTests.Parent_NoInheritOnBranch_BlocksChildren"/>
 /// pinned that leak as expected behavior; it has been corrected alongside this fix.

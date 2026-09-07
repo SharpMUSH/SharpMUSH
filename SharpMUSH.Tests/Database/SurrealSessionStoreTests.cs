@@ -64,10 +64,8 @@ public class SurrealSessionStoreTests
 	}
 
 	/// <summary>
-	/// The ArangoDB provider needed an exclusive transaction because concurrent upserts of one session
 	/// document lost the race with a 409 that surfaced as an HTTP 500. This pins the answer to the same
 	/// question for SurrealDB: the embedded engine serialises the statement itself, so the same fan-out
-	/// that broke ArangoDB completes here without conflict and no provider-side change is warranted.
 	/// </summary>
 	[Test]
 	public async Task ConcurrentUpsertsOfOneSession_DoNotConflict()
@@ -92,7 +90,6 @@ public class SurrealSessionStoreTests
 
 	/// <summary>
 	/// Same contract as <see cref="SessionStoreDbTests.TouchSessionExpiry_SlidesALiveSession_AndNeverInsertsARevokedOne"/>,
-	/// pinned here because the ArangoDB/Memgraph test host has no SurrealDB leg. It also pins the
 	/// SurrealDB-specific premise: since 2.0, UPDATE and UPSERT are distinct statements and UPDATE on a
 	/// record that does not exist creates nothing.
 	/// </summary>

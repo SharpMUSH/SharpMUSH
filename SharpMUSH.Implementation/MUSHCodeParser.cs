@@ -599,6 +599,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public async ValueTask<CallState> CommandParse(long handle, IConnectionService connectionService, MString text)
 	{
 		var handleId = connectionService.Get(handle);
+		var expectedSession = State.IsEmpty ? null : CurrentState.ConnectionSessionId;
+		if (!string.IsNullOrEmpty(expectedSession) &&
+			handleId?.Metadata.GetValueOrDefault("SessionId") != expectedSession) return CallState.Empty;
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -623,7 +626,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag(),
-			Flags: ParserStateFlags.DirectInput));
+			Flags: ParserStateFlags.DirectInput,
+			ConnectionSessionId: expectedSession));
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

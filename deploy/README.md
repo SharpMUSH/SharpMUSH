@@ -43,6 +43,25 @@ The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on por
 Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
 account linked to `#1`.
 
+### Socket worker identity and connection capacity
+
+SocketServer and renderer run as UID/GID `1654:1654`. New `render-socket` volumes
+inherit that ownership from the images; the Kubernetes example uses `fsGroup: 1654`.
+When upgrading an existing root-owned socket volume, stop both services and change
+its ownership before starting the new images (this maintenance disconnects clients):
+
+```bash
+docker compose -f docker-compose.prod.yml stop connectionserver renderer
+docker compose -f docker-compose.prod.yml run --rm --no-deps --user 0:0 --entrypoint chown renderer -R 1654:1654 /run/sharpmush
+docker compose -f docker-compose.prod.yml up -d connectionserver renderer
+```
+
+Use your selected Compose file for all three commands. SocketServer waits for the
+renderer to answer an HTTP/2 health request on the shared Unix socket before startup.
+Its WebSocket capacity defaults to 10,000 concurrent upgraded connections; set the
+positive `ConnectionServer__MaxConcurrentUpgradedConnections` environment variable
+to tune that limit. This limit does not apply to raw Telnet sockets.
+
 ### The database
 
 The world is an LMDB environment at `/app/data/lightning` on the `app-data` volume: one
@@ -280,7 +299,7 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 |---|---|---|
 | `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
 | `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
-| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. **Required** on Memgraph, and on SurrealDB with a `mem://` endpoint: those keep no world directory to sit beside, and guessing would put the copies in the working directory, which on a container is not the mounted volume. Without it `@backup` says so rather than writing somewhere that disappears. |
+| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. Set it explicitly for an in-memory SurrealDB endpoint so backups land on the mounted volume. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
@@ -293,10 +312,6 @@ configuration above is the same whichever one you run:
 |---|---|---|
 | `lightning` (what these stacks run) | LMDB's own `mdb_env_copy` of the environment | a point-in-time snapshot by construction |
 | `surrealdb` | `world.surql`, the engine's own export, restored with `surreal import` | logical, taken from a running game — not documented as an instant |
-| `memgraph` | `world.json`, every node and relationship, read in one transaction | one consistent read, but a logical dump rather than a page-level snapshot |
-| `arangodb` | **not available** — it is a server the game only talks to and its hot backup is an Enterprise feature | use `arangodump` / `arangorestore` |
-
-On ArangoDB `@backup` says exactly that instead of doing nothing silently.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
@@ -323,11 +338,9 @@ docker compose run --rm -v restore:/restore backup \
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
 `lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
 
-> Restoring the other two is not a file copy, because their backups are exports rather than
-> directories. With the game **stopped**, load `backup/<timestamp>/world.surql` into an empty
-> SurrealDB with `surreal import --ns sharpmush --db world <file>`, or `world.json` into an empty
-> Memgraph with `MemgraphStagingDatabase.RestoreAsync`, which is the same path staging rollback
-> uses. Both replace whatever is there; neither is a merge.
+> Restoring SurrealDB is not a file copy. With the game **stopped**, load
+> `backup/<timestamp>/world.surql` into an empty database with
+> `surreal import --ns sharpmush --db world <file>`. The import replaces the database; it is not a merge.
 
 ```bash
 docker compose stop sharpmush-server connectionserver
@@ -362,9 +375,11 @@ complete.
 ## Updating
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
-publishes `sharpmush/sharpmush-server:dev` and `sharpmush/sharpmush-connectionserver:dev` to
-Docker Hub (`.github/workflows/docker-dev.yml`); the `watchtower` service polls Docker Hub every
-5 minutes and recreates the two labeled services when the tag moves, pruning superseded images.
+publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
+`sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
+for the renderer, and `sharpmush/sharpmush-socketserver:dev` for the socket owner. The
+`watchtower` service polls every 5 minutes and recreates each of these three labeled services
+when its image tag changes, pruning superseded images. Socket owner replacement drops live sockets.
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
 image — the Blazor WASM portal is baked into the server image at build time.
 
@@ -379,3 +394,7 @@ docker compose up -d
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
 are recorded in the database and re-applied only when new, so unattended restarts are safe.
+
+## Updates and live connections
+
+See [Connections during deployment](connection-updates.md) for lifecycle notices, PR deployment-impact checks, stop grace, session recovery limits and rollout options.

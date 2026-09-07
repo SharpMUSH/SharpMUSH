@@ -3,8 +3,6 @@
 **Date:** 2026-06-21
 **Status:** Approved (design)
 **Scope:** Scene package softcode only (`examples/packages/scene/package.yaml`). No engine changes.
-**Parallel sibling:** [Ancestor objects + inheritance](2026-06-21-ancestor-objects-inheritance-design.md) — supplies the `FORMAT`*` defaults via the Ancestor Player.
-
 ## Problem
 
 The scene package captures roleplay by `@hook/override` on `POSE`/`SAY`/`SEMIPOSE`/`@EMIT`. The

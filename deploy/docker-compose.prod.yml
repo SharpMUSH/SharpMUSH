@@ -34,12 +34,20 @@ services:
   connectionserver:
     build:
       context: ../
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
-    image: sharpmush/sharpmush-connectionserver:latest
+      dockerfile: SharpMUSH.SocketServer/Dockerfile
+    image: sharpmush/sharpmush-socketserver:latest
     container_name: sharpmush-connectionserver
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    stop_grace_period: 60s
+    volumes:
+      - render-socket:/run/sharpmush
     environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
     depends_on:
+      renderer:
+        condition: service_healthy
       nats:
         condition: service_healthy
     ports:
@@ -50,12 +58,29 @@ services:
     cpus: 1.0
     restart: unless-stopped
 
+  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  renderer:
+    build:
+      context: ../
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    image: sharpmush/sharpmush-connectionserver:latest
+    stop_grace_period: 60s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
+    volumes:
+      - render-socket:/run/sharpmush
+    network_mode: none
+    restart: unless-stopped
+
   sharpmush-server:
     build:
       context: ../
       dockerfile: Dockerfile
     image: sharpmush/sharpmush-server:latest
     container_name: sharpmush-server
+    stop_grace_period: 60s
     environment:
       # --- Object database: LMDB embedded through Lightning.NET (no separate DB server) ---
       - SHARPMUSH_DATABASE_PROVIDER=lightning
@@ -179,6 +204,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  render-socket: # Private Unix socket shared only by socket owner and rendering worker
   app-data:      # LMDB world (data/lightning), its hot copies (data/backup) and wiki assets — the game.
   nats-data:     # JetStream state (transient I/O, not the source of truth) — not backed up.
   caddy-data:    # Let's Encrypt certificates

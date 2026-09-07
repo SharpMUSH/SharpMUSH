@@ -3,9 +3,9 @@
 > **2026-06-20 status:** Phases 0–7 are **shipped**. The system is extracted into
 > `SharpMUSH.Plugins.Scene` (commands/functions/migration/flag/bridge) with
 > tri-provider graph storage, realtime, and full portal UI; the scene suite is
-> green on all three providers. Two design deviations from the plan below, now
+> green on both supported providers. Two design deviations from the plan below, now
 > reflected in the boxes: **(a)** there is **no `InMemorySceneService`** — the
-> three DB providers implement `ISceneService` directly and the WASM client reads
+> two supported database providers implement `ISceneService` directly and the WASM client reads
 > over the server API (Phase 1 reframed); **(b)** the member model is
 > `SceneMember`, not `SceneMemberEdge`. Remaining work is the optional temp-room
 > softcode extension (Phase 6, not in the 1.0 package) and a display audit pass.
@@ -59,7 +59,7 @@ plugin seam.
       `scenemembers`, `scenemember`, `scenefocus`, `scenetags`, `scenecast`
       (`SharpMUSH.Library/Services/Interfaces/ISceneService.cs`)
 - [x] ~~`InMemorySceneService`~~ **dropped by design** — there is no in-memory
-      implementation. The three DB providers implement `ISceneService` directly
+      implementation. The two supported database providers implement `ISceneService` directly
       (Phase 3) and the WASM client reads scene data over the server API. The
       Phase-1 graph-mechanism behaviours (`pose_next` chain, `current_edit`
       undo/redo, soft-delete, `isCurrent` single-current, `scenewhere`, roomless
@@ -91,25 +91,15 @@ plugin seam.
   `@hook/override POSE`→`sceneaddpose` reading `scenewhere`/`scenefocus`/
   `scenemember(...,showas)`); `hasflag(<room>,SCENE_ROOM)` after softcode `@set`.
 
-## Phase 3 — DB-backed `ISceneService` across 3 providers + migrations — ✅ shipped
-- [x] `DatabaseConstants.cs`: the `node_sharp_sys_scene_*`, `edge_sharp_sys_scene_*`,
-      `graph_sharp_sys_scene` names (`SharpScenes`/`SharpScenePoses`/
-      `SharpScenePoseEdits`/`SharpScenePlots` + the edge-type set)
-- [x] **ArangoDB** `Migration_AddScenes : IArangoMigration` (in the plugin, via
-      `IMigrationSource`): vertex doc collections; an **edge collection per edge
-      type**; the named graph with edge definitions (incl. cross-collection edges
-      into core collections); indexes on `Scene.Status`/`ScheduledFor`/`IsPublic`
-- [x] `ArangoDatabase.Scene.cs` / `MemgraphDatabase.Scene.cs` /
-      `SurrealDatabase.Scene.cs` partials implementing `ISceneService` —
-      graph traversals (not FK scans)
-- [x] Memgraph: labels + relationship types + indexes (auto-commit DDL).
-      Surreal: tables + `RELATE` edges; `*DbRecord` **verbatim camelCase** (CBOR
-      gotcha); `SCENE_ROOM` contributed via `IFlagSource` (all providers)
+## Phase 3 — DB-backed `ISceneService` across both providers + migrations — ✅ shipped
+- [x] Lightning and SurrealDB storage implementations provide equivalent scene semantics.
+- [x] `IMigrationSource` contributes provider-specific scene schema.
+- [x] `SCENE_ROOM` is contributed via `IFlagSource` for both providers.
 - [x] Server `Startup.cs`: `ISceneService` resolves from `ISharpDatabase` (the
       provider tri-cast). **`Client/Program.cs` registers no `ISceneService`** —
       the WASM client reads scene data over the server API
 - **Ships:** durable scenes + edges + edits on the default provider, incl.
-  1-based scene/pose ids across all three providers (this branch).
+  1-based scene/pose ids across both supported providers (this branch).
 - **Test matrix (all 3 via Podman):** per-method parity; `pose_next` move; edit
   versioning + undo/redo pointer; soft-delete; member `isCurrent`; `scenewhere`
   via `in_room`; **object-edge + `Name` snapshot round-trip, incl. target-delete
@@ -194,15 +184,14 @@ was extracted into `SharpMUSH.Plugins.Scene` (Phase 5 of the plugin framework).
 
 > Note: the **In-Memory (TUnit)** column reflects the original plan's
 > `InMemorySceneService` oracle, which was dropped. Those `P1` mechanism concerns
-> are now covered directly against the three real providers (the `Arango`/
-> `Memgraph`/`Surreal` columns) via the integration scene suite.
+> are now covered directly against Lightning and SurrealDB via the integration scene suite.
 
-| Concern | In-Memory (TUnit) | Arango | Memgraph | Surreal | bUnit |
-|---|---|---|---|---|---|
-| Service-method parity | P1 | P3 | P3 | P3 | — |
-| `pose_next` order + move re-link | P1 | P3 | P3 | P3 | — |
-| Versioned edits + undo/redo pointer | P1 | P3 | P3 | P3 | — |
-| Soft-delete keeps slot | P1 | P3 | P3 | P3 | — |
+| Concern | In-Memory (TUnit) | Lightning | Surreal | bUnit |
+|---|---|---|---|---|
+| Service-method parity | P1 | P3 | P3 | — |
+| `pose_next` order + move re-link | P1 | P3 | P3 | — |
+| Versioned edits + undo/redo pointer | P1 | P3 | P3 | — |
+| Soft-delete keeps slot | P1 | P3 | P3 | — |
 | Object edge + `Name` snapshot (incl. target delete) | P1 | P3 | P3 | P3 | P5 (display) |
 | Member edge `isCurrent`/`showAs`; `scenefocus`/`scenewhere` | P1 | P3 | P3 | P3 | — |
 | Roomless create + scheduled window/sort | P1 | P3 | P3 | P3 | — |

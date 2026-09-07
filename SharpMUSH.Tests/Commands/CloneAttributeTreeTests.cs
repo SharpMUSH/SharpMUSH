@@ -281,8 +281,8 @@ public class CloneAttributeTreeTests
 	/// still end up flag-for-flag identical to the source - the clone loop's first foreach
 	/// (<c>destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name))</c>,
 	/// <c>BuildingCommands.cs</c>) has to actively unset it, not just leave the default in place.
-	/// <c>DOING</c>'s seeded defaults are <c>no_command, no_inherit, visual, public</c>
-	/// (<c>Migration_CreateDatabase.cs</c>): stripping <c>visual</c> from the source before
+	/// <c>DOING</c>'s seeded defaults are <c>no_command, no_inherit, visual, public</c>;
+	/// stripping <c>visual</c> from the source before
 	/// cloning exercises exactly that path.
 	/// </summary>
 	[Test]
@@ -317,7 +317,6 @@ public class CloneAttributeTreeTests
 	/// <summary>
 	/// The pre-existing "_"-prefix skip (orthogonal to Penn's no_clone) must propagate to a
 	/// non-"_" child the same way no_clone's skip does: otherwise SetAttributeAsync's
-	/// auto-vivification (<c>ArangoDatabase.Attributes.cs:608-675</c>) would silently recreate a
 	/// stripped, empty "_"-branch on the clone just to hang the child off of.
 	/// </summary>
 	/// <remarks>

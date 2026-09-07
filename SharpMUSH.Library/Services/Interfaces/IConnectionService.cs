@@ -86,7 +86,7 @@ public interface IConnectionService
 	/// </summary>
 	void IncrementMetadata(long handle, string key);
 
-	ValueTask Disconnect(long handle);
+	ValueTask Disconnect(long handle, string? sessionId = null);
 
 	/// <summary>
 	/// Gets the connection state of a handle.

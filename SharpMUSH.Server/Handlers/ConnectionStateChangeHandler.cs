@@ -29,7 +29,7 @@ public class ConnectionStateChangeHandler(
 			connectionId, notification.Handle, notification.PlayerRef, notification.OldState, notification.NewState);
 
 		var connection = connectionService.Get(notification.Handle);
-		if (connection is null)
+		if (connection is null && notification.NewState != IConnectionService.ConnectionState.Disconnected)
 		{
 			logger.LogWarning("[{ConnectionId}] Connection {Handle} not found in service",
 				connectionId, notification.Handle);

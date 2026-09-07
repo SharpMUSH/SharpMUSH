@@ -65,7 +65,7 @@ the registration UI and `/apps/{slug}` route land — see Area-21 TODO Phase 9).
                                                        │ GET /api/applications│
                                           ┌────────────┴──────────────────────┴────────┐
                                           │ ApplicationsController (admin) → ISharpDatabase│
-                                          │ RegisteredApplication (Arango/Memgraph/Surreal)│
+                                          │ RegisteredApplication (Lightning/Surreal)│
                                           └─────────────────────────────────────────────┘
 ```
 
@@ -253,7 +253,7 @@ RegisteredApplication {
 }
 ```
 
-Persisted via `ISharpDatabase` across **all three providers** — ArangoDB, Memgraph,
+Persisted via `ISharpDatabase` across **both supported providers** — Lightning and SurrealDB.
 SurrealDB — at parity, with per-provider integration tests, exactly like the Area-20
 `sys_*` collections (`area-20-packages.md` Phase 2). Exposed through an
 `ApplicationsController` at `/api/applications`, `[Authorize]` **Wizard+** (decision

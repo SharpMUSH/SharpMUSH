@@ -12,7 +12,7 @@ namespace SharpMUSH.Server.Consumers;
 /// <summary>
 /// Consumes telnet input messages from NATS JetStream and processes them
 /// </summary>
-public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskScheduler scheduler)
+public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null)
 	: IMessageConsumer<TelnetInputMessage>
 {
 	public async Task HandleAsync(TelnetInputMessage message, CancellationToken cancellationToken = default)
@@ -22,6 +22,8 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 		try
 		{
+			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
+
 			if (string.IsNullOrWhiteSpace(message.Input))
 			{
 				logger.LogDebug("[NATS-RECV] TelnetInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
@@ -31,7 +33,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
 				command: MarkupText.Plain(message.Input),
-				state: ParserState.Empty with { Handle = message.Handle });
+				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
 		}
 		catch (Exception ex)
 		{
@@ -45,7 +47,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 /// WebSocket connections publish <see cref="WebSocketInputMessage"/> rather than
 /// <see cref="TelnetInputMessage"/>; both are processed identically by the MUSH engine.
 /// </summary>
-public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITaskScheduler scheduler)
+public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null)
 	: IMessageConsumer<WebSocketInputMessage>
 {
 	public async Task HandleAsync(WebSocketInputMessage message, CancellationToken cancellationToken = default)
@@ -55,6 +57,8 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 
 		try
 		{
+			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
+
 			if (string.IsNullOrWhiteSpace(message.Input))
 			{
 				logger.LogDebug("[NATS-RECV] WebSocketInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
@@ -64,7 +68,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
 				command: MarkupText.Plain(message.Input),
-				state: ParserState.Empty with { Handle = message.Handle });
+				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
 		}
 		catch (Exception ex)
 		{
@@ -200,7 +204,8 @@ public class NAWSUpdateConsumer(ILogger<NAWSUpdateConsumer> logger, IConnectionS
 public class ConnectionEstablishedConsumer(
 	ILogger<ConnectionEstablishedConsumer> logger,
 	IConnectionService connectionService,
-	IMessageBus bus)
+	IMessageBus bus,
+	IConnectionStateStore? stateStore = null)
 	: IMessageConsumer<ConnectionEstablishedMessage>
 {
 	public async Task HandleAsync(ConnectionEstablishedMessage message, CancellationToken cancellationToken = default)
@@ -211,6 +216,12 @@ public class ConnectionEstablishedConsumer(
 		logger.LogInformation("Connection established: Handle {Handle}, IP {IpAddress}, Type {ConnectionType}",
 			message.Handle, message.IpAddress, message.ConnectionType);
 
+		if (!string.IsNullOrEmpty(message.SessionId) && stateStore is not null)
+		{
+			var persisted = await stateStore.GetConnectionAsync(message.Handle, cancellationToken);
+			if (persisted?.Metadata.GetValueOrDefault("SessionId") != message.SessionId) return;
+		}
+
 		await connectionService.Register(message.Handle,
 			message.IpAddress,
 			message.Hostname,
@@ -220,12 +231,14 @@ public class ConnectionEstablishedConsumer(
 			() => System.Text.Encoding.UTF8,
 			new System.Collections.Concurrent.ConcurrentDictionary<string, string>(new Dictionary<string, string>
 			{
-				{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
+				{ "ConnectionStartTime", message.Timestamp.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture) },
+				{ "ConnectionIncarnationTime", (message.Timestamp.UtcTicks - DateTimeOffset.UnixEpoch.UtcTicks).ToString(CultureInfo.InvariantCulture) },
 				{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
 				{ "InternetProtocolAddress", message.IpAddress },
 				{ "HostName", message.Hostname },
 				{ "ConnectionType", message.ConnectionType },
 				{ "PresenceClass", message.PresenceClass },
+				{ "SessionId", message.SessionId ?? "" },
 				// PennMUSH's CONN_SSL: what ssl() answers and terminfo()'s "ssl" token. Established at
 				// accept time from the transport, so it is known before the connection can ask.
 				{ "SSL", message.IsSecure ? "1" : "0" }
@@ -374,15 +387,31 @@ public class TerminalTypeNegotiatedConsumer(
 public class ConnectionClosedConsumer(ILogger<ConnectionClosedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<ConnectionClosedMessage>
 {
-	public Task HandleAsync(ConnectionClosedMessage message, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(ConnectionClosedMessage message, CancellationToken cancellationToken = default)
 	{
 		logger.LogDebug("[NATS-RECV] ConnectionClosedMessage received - Handle: {Handle}, Timestamp: {Timestamp}",
 			message.Handle, message.Timestamp);
 
 		logger.LogInformation("Connection closed: Handle {Handle}", message.Handle);
 
-		connectionService.Disconnect(message.Handle);
+		if (!string.IsNullOrEmpty(message.SessionId) &&
+			connectionService.Get(message.Handle)?.Metadata.GetValueOrDefault("SessionId") != message.SessionId) return;
+		await connectionService.Disconnect(message.Handle, message.SessionId);
+	}
+}
 
-		return Task.CompletedTask;
+internal static class ConnectionIncarnation
+{
+	public static async Task<bool> WaitForRegistrationAsync(IConnectionService? connections,
+		long handle, string? session, CancellationToken ct)
+	{
+		if (string.IsNullOrEmpty(session)) return true;
+		// Input and registration use separate subjects: a fast first command may arrive first.
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			if (connections?.Get(handle)?.Metadata.GetValueOrDefault("SessionId") == session) return true;
+			await Task.Delay(ConnectionRetryPolicy.Delay, ct);
+		}
+		return connections?.Get(handle)?.Metadata.GetValueOrDefault("SessionId") == session;
 	}
 }

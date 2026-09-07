@@ -104,7 +104,7 @@ kubectl delete -f kubernetes/dev-k8s.yaml
 
 The deployment includes:
 
-- **ArangoDB**: Database (port 8529)
+- **Lightning**: Embedded LMDB database on the application data volume
 - **RedPanda**: Kafka-compatible message broker (port 9092)
 - **SharpMUSH Server**: Main game server
 - **ConnectionServer**: Handles player connections (port 4201)
@@ -113,5 +113,5 @@ The deployment includes:
 
 - All services use `ClusterIP` by default except ConnectionServer which uses `LoadBalancer`
 - CPU limits are set to 500m (0.5 cores) per container for local development
-- Persistent volumes are used for ArangoDB and RedPanda data
+- Persistent volumes are used for game and RedPanda data
 - Images use `imagePullPolicy: Never` to use locally built images

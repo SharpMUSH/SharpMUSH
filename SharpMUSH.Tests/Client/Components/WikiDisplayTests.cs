@@ -185,7 +185,7 @@ public class WikiDisplayTests
 	}
 
 	[Test]
-	public async Task WikiDisplay_HomeSlug_DisplaysAsHero()
+	public async Task WikiDisplay_EmbeddedHomeSlug_DisplaysAsHero()
 	{
 		await using var ctx = new BunitContext();
 		ctx.AddAuthorization();
@@ -203,9 +203,12 @@ public class WikiDisplayTests
 
 		var article = new WikiArticle("Home", "Welcome", null);
 
+		// The hero belongs to the front-page widget. On the /wiki route the home page is an article
+		// like any other — see WikiDisplayHomeChromeTests for the controls it keeps there.
 		var cut = ctx.Render<WikiDisplay>(parameters => parameters
 			.Add(p => p.Slug, "home")
 			.Add(p => p.Article, article)
+			.Add(p => p.Embedded, true)
 			.Add(p => p.ActivateEditMode, () => Task.CompletedTask));
 
 		var markup = cut.Markup;

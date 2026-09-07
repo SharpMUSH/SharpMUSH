@@ -124,7 +124,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var parameters = new Dictionary<string, object?>
 		{
 			["id"] = sceneId,
-			["status"] = "new", // create-default must match the other providers (ArangoDB/Memgraph) — a freshly created scene is "new", not "active"
+			["status"] = "new",
 
 			["startedAt"] = now,
 			["lastActivityAt"] = now,
@@ -671,7 +671,6 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		// At most one member edge per (player, scene). This used to DELETE then RELATE, which is why it
 		// is now an UPDATE-or-RELATE: this edge does not only carry the role. `isCurrent` IS the
 		// player's focus and `showAs` is their +scene/as persona, so recreating the edge silently reset
-		// both — and the ArangoDB provider, which updates in place, kept them. The two providers
 		// disagreed about what re-roling somebody costs, and production is the one that lost the data.
 		// Losing focus is not cosmetic: nearly every owner verb acts on scenefocus(%#) and does nothing
 		// without one, and the capture hooks need it to record a pose at all.
@@ -786,7 +785,6 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var sceneKey = SceneKey(sceneId);
 		var sid = sceneKey.Split(':')[1];
 
-		// Ensure a member edge exists, then mark it current — matches ArangoDB/Memgraph: focusing a
 		// player who is not yet a member auto-creates a role-less member edge so the focus sticks (a bare
 		// UPDATE would no-op for a non-member, leaving the player with no current scene).
 		var member = await GetMemberAsync(sceneId, playerDbref);
@@ -1046,7 +1044,6 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	/// Ids are not an internal detail here: a player types them (<c>+scene 1</c>, <c>+scene/join 1</c>),
 	/// they are a path segment in <c>/scenes/{id}/live</c>, and they are stored in player attributes.
 	/// Handing back <c>scene:1</c> made the id shape depend on which database the game runs on —
-	/// production (surrealdb) and the test suites' default (arangodb) disagreed — and put a colon in
 	/// every scene URL. Internal queries keep the prefixed form, which they parse with
 	/// <c>Split(':')</c>; only what leaves this class as a model <c>Id</c> is stripped.
 	/// </remarks>

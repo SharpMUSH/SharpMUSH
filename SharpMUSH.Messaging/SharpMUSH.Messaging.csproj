@@ -19,5 +19,8 @@
     <PackageReference Include="Testcontainers.Nats" Version="4.14.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
+  </ItemGroup>
 
 </Project>

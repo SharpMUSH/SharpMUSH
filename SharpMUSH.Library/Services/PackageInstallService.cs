@@ -528,7 +528,6 @@ public class PackageInstallService(
 		}
 
 		// The package record must exist BEFORE its dependency edges: graph
-		// providers (Memgraph) MATCH both endpoint nodes when creating the
 		// DEPENDS_ON relationship, so a fresh install would otherwise lose
 		// its edges silently.
 		var revision = (inputs.Installed?.CurrentRevision ?? 0) + 1;

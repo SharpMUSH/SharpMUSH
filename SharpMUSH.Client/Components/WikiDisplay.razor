@@ -66,7 +66,11 @@ else
 {
     <div class="wiki-article-grid">
         <article class="wiki-article-main">
-            <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
+            @* Embedded on another page, there is no wiki the reader came from, so no way "back" to it. *@
+            @if (!Embedded)
+            {
+                <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
+            }
             <div class="wiki-article-kicker">@CategoryLabel</div>
             <h1 class="wiki-article-title">@Article.Title</h1>
 
@@ -395,5 +399,10 @@ else
         return segments;
     }
 
-    private bool DisplayAsHero => Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
+    /// <summary>
+    /// True for the centred, chrome-free framing the home page gets inside the front-page widget.
+    /// Only when <see cref="Embedded"/>: on the <c>/wiki/...</c> route the home page is an article
+    /// like any other, and the hero would strip the very edit and history controls it needs there.
+    /// </summary>
+    private bool DisplayAsHero => Embedded && Slug.Equals("home", StringComparison.InvariantCultureIgnoreCase);
 }
