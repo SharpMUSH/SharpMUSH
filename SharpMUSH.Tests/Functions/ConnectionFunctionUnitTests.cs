@@ -12,21 +12,21 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Idle()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("idle(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("idle(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).Length().IsPositive();
 	}
 
 	[Test]
 	public async Task Conn()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("conn(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("conn(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).Length().IsPositive();
 	}
 
 	[Test]
 	public async Task ListWho()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("lwho()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lwho()")))?.Message!;
 		await Assert.That(result.ToPlainText()).Length().IsPositive();
 	}
 
@@ -34,14 +34,14 @@ public class ConnectionFunctionUnitTests
 	[Arguments("doing(%#)", "")]
 	public async Task Doing(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Test_Doing_ReturnsEmptyWhenNoAttribute()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("doing(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("doing(%#)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -49,7 +49,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Doing_WithDescriptor()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("doing(999999)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("doing(999999)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsEqualTo(string.Empty);
 	}
@@ -57,7 +57,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Doing_WithInvalidPlayerName()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("doing(NonExistentPlayer_XYZ_12345)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("doing(NonExistentPlayer_XYZ_12345)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsEqualTo(string.Empty);
 	}
@@ -74,7 +74,7 @@ public class ConnectionFunctionUnitTests
 
 		foreach (var testCase in testCases)
 		{
-			var result = (await Parser.FunctionParse(MModule.single(testCase)))?.Message!;
+			var result = (await Parser.FunctionParse(MarkupText.Plain(testCase)))?.Message!;
 			await Assert.That(result.ToPlainText()).IsNotNull();
 		}
 	}
@@ -83,7 +83,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("host(%#)", "")]
 	public async Task Host(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -91,7 +91,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("ipaddr(%#)", "")]
 	public async Task Ipaddr(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -99,7 +99,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("lports()", "")]
 	public async Task Lports(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -107,7 +107,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("mwho()", "")]
 	public async Task Mwho(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -115,7 +115,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nwho()", "1")]
 	public async Task Nwho(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -124,7 +124,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Lwhoid(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -133,7 +133,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Ncon(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -142,7 +142,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nexits(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -151,7 +151,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nplayers(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -160,7 +160,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nthings(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -169,7 +169,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nvcon(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -178,7 +178,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nvexits(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -187,7 +187,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nvplayers(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -196,7 +196,7 @@ public class ConnectionFunctionUnitTests
 	public async Task Nvthings(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -205,14 +205,14 @@ public class ConnectionFunctionUnitTests
 	public async Task Ports(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
 	[Test]
 	public async Task Test_Addrlog_WithValidArguments()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("addrlog(ip,*)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("addrlog(ip,*)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -220,7 +220,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Addrlog_WithCount()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("addrlog(count,hostname,*)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("addrlog(count,hostname,*)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -228,7 +228,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Addrlog_InvalidSearchType_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("addrlog(invalid,pattern)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("addrlog(invalid,pattern)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -236,7 +236,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Connlog_WithValidArguments()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("connlog(all,count,1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("connlog(all,count,1)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -244,7 +244,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Connlog_InvalidFilter_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("connlog(invalid,count,1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("connlog(invalid,count,1)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -252,7 +252,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Connrecord_WithValidId()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("connrecord(12345)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("connrecord(12345)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}
@@ -260,7 +260,7 @@ public class ConnectionFunctionUnitTests
 	[Test]
 	public async Task Test_Connrecord_WithCustomSeparator()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("connrecord(12345,|)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("connrecord(12345,|)")))?.Message!;
 		var text = result.ToPlainText();
 		await Assert.That(text).IsNotNull();
 	}

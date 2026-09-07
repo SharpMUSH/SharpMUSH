@@ -66,7 +66,7 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "correct-pass-1");
 		var handle = await RegisterConnectionAsync(6001L);
 
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"connect {name} correct-pass-1"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {name} correct-pass-1"));
 
 		await Assert.That(PlainMessage(result).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
@@ -79,7 +79,7 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "correct-pass-2");
 		var handle = await RegisterConnectionAsync(6002L);
 
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"con {name} correct-pass-2"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"con {name} correct-pass-2"));
 
 		await Assert.That(PlainMessage(result).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
@@ -92,7 +92,7 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "correct-pass-3");
 		var handle = await RegisterConnectionAsync(6003L);
 
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"co {name} correct-pass-3"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"co {name} correct-pass-3"));
 
 		await Assert.That(PlainMessage(result).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
@@ -105,7 +105,7 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "correct-pass-4");
 		var handle = await RegisterConnectionAsync(6004L);
 
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"conn {name} correct-pass-4"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"conn {name} correct-pass-4"));
 
 		await Assert.That(PlainMessage(result).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
@@ -123,12 +123,12 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "the-real-password-9");
 
 		var wrongHandle = await RegisterConnectionAsync(6005L);
-		var wrongResult = await Parser.CommandParse(wrongHandle, ConnectionService, MModule.single($"con {name} not-the-password"));
+		var wrongResult = await Parser.CommandParse(wrongHandle, ConnectionService, MarkupText.Plain($"con {name} not-the-password"));
 		await Assert.That(PlainMessage(wrongResult)).IsEqualTo(ErrorMessages.Returns.InvalidPassword);
 		await Assert.That(ConnectionService.Get(wrongHandle)?.Ref).IsNull();
 
 		var rightHandle = await RegisterConnectionAsync(6006L);
-		var rightResult = await Parser.CommandParse(rightHandle, ConnectionService, MModule.single($"con {name} the-real-password-9"));
+		var rightResult = await Parser.CommandParse(rightHandle, ConnectionService, MarkupText.Plain($"con {name} the-real-password-9"));
 		await Assert.That(PlainMessage(rightResult).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(rightHandle)?.Ref).IsNotNull();
 	}
@@ -146,7 +146,7 @@ public class SocketCommandAbbreviationTests
 		await CreateTestPlayerAsync(name, "irrelevant-password");
 		var handle = await RegisterConnectionAsync(6007L);
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single($"xyz {name} irrelevant-password"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"xyz {name} irrelevant-password"));
 
 		var gotNoSuchCommandNotice = NotifyService.ReceivedCalls().Any(c =>
 			c.GetMethodInfo().Name == "NotifyLocalized" &&
@@ -177,14 +177,14 @@ public class SocketCommandAbbreviationTests
 
 		// Log the player in: after this the connection is bound and Executor resolves to the
 		// player's DBRef on subsequent commands.
-		var connectResult = await Parser.CommandParse(handle, ConnectionService, MModule.single($"connect {name} post-login-pass-1"));
+		var connectResult = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {name} post-login-pass-1"));
 		await Assert.That(PlainMessage(connectResult).Contains("#-1")).IsFalse();
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 
 		// A bare "q" from a logged-in player must not hijack to SOCKET QUIT (which would
 		// Disconnect the handle and clear its Ref). "q" uniquely prefixes QUIT among the SOCKET
 		// commands, so an unrestricted abbreviation block would definitely dispatch it.
-		await Parser.CommandParse(handle, ConnectionService, MModule.single("q"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("q"));
 
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 	}

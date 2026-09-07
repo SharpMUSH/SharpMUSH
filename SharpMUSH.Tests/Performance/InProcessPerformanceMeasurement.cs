@@ -25,48 +25,48 @@ public class InProcessPerformanceMeasurement
 	{
 		Console.WriteLine("=== Performance Measurement: @dolist vs iter() ===\n");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think test"));
 
 		Console.WriteLine("Test 1: @dolist lnum(100)=think %i0");
 		var sw1 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist lnum(100)=think %i0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(100)=think %i0"));
 		sw1.Stop();
 		Console.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms");
 		Console.WriteLine($"  Notify calls: Check if buffering was used");
 
 		Console.WriteLine("\nTest 2: think iter(lnum(100),%i0,,%r)");
 		var sw2 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think iter(lnum(100),%i0,,%r)"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think iter(lnum(100),%i0,,%r)"));
 		sw2.Stop();
 		Console.WriteLine($"  Time: {sw2.ElapsedMilliseconds}ms");
 
 		Console.WriteLine("\nTest 3: @dolist lnum(1000)=think %i0");
 		var sw3 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist lnum(1000)=think %i0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(1000)=think %i0"));
 		sw3.Stop();
 		Console.WriteLine($"  Time: {sw3.ElapsedMilliseconds}ms");
 
 		Console.WriteLine("\nTest 4: think iter(lnum(1000),%i0,,%r)");
 		var sw4 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think iter(lnum(1000),%i0,,%r)"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think iter(lnum(1000),%i0,,%r)"));
 		sw4.Stop();
 		Console.WriteLine($"  Time: {sw4.ElapsedMilliseconds}ms");
 
 		Console.WriteLine("\nTest 5: @dolist lnum(100)=@pemit %#=%i0");
 		var sw5 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist lnum(100)=@pemit %#=%i0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(100)=@pemit %#=%i0"));
 		sw5.Stop();
 		Console.WriteLine($"  Time: {sw5.ElapsedMilliseconds}ms");
 
 		Console.WriteLine("\nTest 6: @dolist lnum(1000)=@pemit %#=%i0");
 		var sw6 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist lnum(1000)=@pemit %#=%i0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(1000)=@pemit %#=%i0"));
 		sw6.Stop();
 		Console.WriteLine($"  Time: {sw6.ElapsedMilliseconds}ms");
 
 		Console.WriteLine("\nTest 7: Nested @dolist (outer 10, inner 10)");
 		var sw7 = Stopwatch.StartNew();
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dolist lnum(10)={@dolist lnum(10)=think %i0}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(10)={@dolist lnum(10)=think %i0}"));
 		sw7.Stop();
 		Console.WriteLine($"  Time: {sw7.ElapsedMilliseconds}ms");
 

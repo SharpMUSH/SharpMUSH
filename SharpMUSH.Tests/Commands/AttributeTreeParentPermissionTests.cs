@@ -24,13 +24,13 @@ public class AttributeTreeParentPermissionTests
 
 	private async Task<string> Eval(long handle, string expr)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expr}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expr}"));
 		return result?.Message?.ToPlainText() ?? "";
 	}
 
 	private async Task Cmd(string cmd)
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single(cmd));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(cmd));
 	}
 
 	/// <summary>
@@ -202,7 +202,7 @@ public class AttributeTreeParentPermissionTests
 		await Cmd($"@parent {mortalDbRef}={parent}");
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&PPW{uid} me=myval"));
+			MarkupText.Plain($"&PPW{uid} me=myval"));
 		var getResult = await Eval(mortal.Handle, $"get(me/PPW{uid})");
 		await Assert.That(getResult).IsEqualTo("myval")
 			.Because("mortal should be able to set local copy overriding inherited wiz-flagged attribute");

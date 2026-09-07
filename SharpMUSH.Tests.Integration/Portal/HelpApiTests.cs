@@ -148,7 +148,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		await Assert.That(entry!.Markdown).IsNotNull();
 
 		var before = NotifyCount();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"help {topic}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"help {topic}"));
 		var notified = NotifiedSince(before);
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown!).ToString();

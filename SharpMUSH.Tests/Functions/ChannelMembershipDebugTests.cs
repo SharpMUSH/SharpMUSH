@@ -40,7 +40,7 @@ public class ChannelMembershipDebugTests
 		// NOTE: CreateChannelCommand DOES automatically add the owner, so we'll track this
 		Console.WriteLine("\n--- Step 2: Creating channel ---");
 		await Mediator.Send(new CreateChannelCommand(
-		MModule.single(DebugChannelName),
+		MarkupText.Plain(DebugChannelName),
 		[DebugChannelPrivilege],
 		player
 		));

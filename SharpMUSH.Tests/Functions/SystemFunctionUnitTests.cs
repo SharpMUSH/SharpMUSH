@@ -13,7 +13,7 @@ public class SystemFunctionUnitTests
 	[Arguments("restarts()", "")]
 	public async Task Restarts(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -21,7 +21,7 @@ public class SystemFunctionUnitTests
 	[Arguments("restarttime()", "")]
 	public async Task Restarttime(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -29,7 +29,7 @@ public class SystemFunctionUnitTests
 	[Arguments("numversion()", "")]
 	public async Task Numversion(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -37,7 +37,7 @@ public class SystemFunctionUnitTests
 	[Arguments("getpids()", "")]
 	public async Task Getpids(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -45,7 +45,7 @@ public class SystemFunctionUnitTests
 	[Arguments("pidinfo(1234)", "")]
 	public async Task Pidinfo(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

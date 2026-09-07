@@ -57,11 +57,11 @@ public class SceneRoleplayIntegrationTests
 
 	/// <summary>Evaluates a softcode expression as God and returns its plain text.</summary>
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	/// <summary>Runs a command as God (#1, handle 1).</summary>
 	private async Task<CallState> God1(string command) =>
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>Extracts the short "#N" dbref (drops any ":creation-timestamp") for like-for-like compares.</summary>
 	private static string Num(string dbref)
@@ -152,7 +152,7 @@ public class SceneRoleplayIntegrationTests
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(long handle, string command)
 	{
 		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		return MessagesSince(before);
 	}
 
@@ -160,7 +160,7 @@ public class SceneRoleplayIntegrationTests
 	private async Task<IReadOnlyList<Notification>> RunAndCollectNotificationsAs(long handle, string command)
 	{
 		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		return NotificationsSince(before);
 	}
 

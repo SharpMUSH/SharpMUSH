@@ -2,7 +2,6 @@ using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Extensions;
 using System.Drawing;
-using A = MarkupString.MarkupStringModule;
 using M = MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Markup;
@@ -56,7 +55,7 @@ public class MarkupCompressionTests
 	public async Task ConcatenatingEquallyMarkedStrings_CoalescesAtConstruction()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		var combined = A.concat(A.MarkupSingle(red, "Hello"), A.MarkupSingle(red, " World"));
+		var combined = MarkupText.Concat(MarkupText.Wrap(red, "Hello"), MarkupText.Wrap(red, " World"));
 
 		await Assert.That(combined.ToPlainText()).IsEqualTo("Hello World");
 		await Assert.That(combined.Runs.Length).IsEqualTo(1);
@@ -69,7 +68,7 @@ public class MarkupCompressionTests
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
 		var blue = M.Create(foreground: Color.Blue.ToAnsiColor());
-		var combined = A.concat(A.MarkupSingle(red, "Hello"), A.MarkupSingle(blue, " World"));
+		var combined = MarkupText.Concat(MarkupText.Wrap(red, "Hello"), MarkupText.Wrap(blue, " World"));
 
 		await Assert.That(combined.Runs.Length).IsEqualTo(2);
 	}
@@ -85,8 +84,8 @@ public class MarkupCompressionTests
 		var red = M.Create(foreground: Color.Red.ToAnsiColor(), bold: true);
 		const string text = "The quick brown fox";
 
-		var perCharacter = A.multiple(text.Select(c => A.MarkupSingle(red, c.ToString())).ToArray());
-		var singleRun = A.MarkupSingle(red, text);
+		var perCharacter = MarkupText.Concat(text.Select(c => MarkupText.Wrap(red, c.ToString())).ToArray());
+		var singleRun = MarkupText.Wrap(red, text);
 
 		await Assert.That(perCharacter.ToPlainText()).IsEqualTo(singleRun.ToPlainText());
 		await Assert.That(perCharacter.Render(MarkupFormat.Ansi)).IsEqualTo(singleRun.Render(MarkupFormat.Ansi));
@@ -106,13 +105,13 @@ public class MarkupCompressionTests
 		const int iterations = 10_000;
 
 		// Warm the JIT and any statics so their allocations land outside the measurement.
-		for (var i = 0; i < 100; i++) GC.KeepAlive(A.single("hello"));
+		for (var i = 0; i < 100; i++) GC.KeepAlive(MarkupText.Plain("hello"));
 
 		// Per-thread, not GC.GetTotalAllocatedBytes: that counts the whole process, so any test
 		// running in parallel would land its allocations inside this window and inflate the result.
 		// Everything between the two reads is synchronous, so it stays on one thread.
 		var before = GC.GetAllocatedBytesForCurrentThread();
-		for (var i = 0; i < iterations; i++) GC.KeepAlive(A.single("hello"));
+		for (var i = 0; i < iterations; i++) GC.KeepAlive(MarkupText.Plain("hello"));
 		var perInstance = (GC.GetAllocatedBytesForCurrentThread() - before) / iterations;
 
 		// The bound leaves room for allocator variation while still failing if per-instance render

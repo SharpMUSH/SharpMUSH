@@ -78,20 +78,20 @@ public class AttributeTreeNonPropagationTests
 		var mortalDbRef = mortal.DbRef.ToString();
 
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&WR{uid} me=branchvalue_{uid}"));
+			MarkupText.Plain($"&WR{uid} me=branchvalue_{uid}"));
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&WR{uid}`LEAF me=leafvalue_{uid}"));
+			MarkupText.Plain($"&WR{uid}`LEAF me=leafvalue_{uid}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@set {mortalDbRef}/WR{uid}=wizard"));
+			MarkupText.Plain($"@set {mortalDbRef}/WR{uid}=wizard"));
 
 		// Positive control: wizard on the branch is live and still blocks the mortal owner's
 		// own write to the leaf beneath it (the write gate this branch already implements) -
 		// so this is not a Controls failure, a broken backtick path, or a flag that silently
 		// failed to apply.
 		await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"&WR{uid}`LEAF me=changed_{uid}"));
-		var writeCheck = await Parser.FunctionParse(MModule.single($"get({mortalDbRef}/WR{uid}`LEAF)"));
+			MarkupText.Plain($"&WR{uid}`LEAF me=changed_{uid}"));
+		var writeCheck = await Parser.FunctionParse(MarkupText.Plain($"get({mortalDbRef}/WR{uid}`LEAF)"));
 		await Assert.That(writeCheck!.Message!.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
 			.Because("wizard on the branch must still block the mortal owner's write to its leaf - proves the flag was actually set and is live");
 
@@ -100,7 +100,7 @@ public class AttributeTreeNonPropagationTests
 		// evaluates as the parser's bound (privileged) executor and would take an early-out
 		// that makes the read trivially succeed regardless of the flag under test.
 		var readResult = await Parser.CommandParse(mortal.Handle, ConnectionService,
-			MModule.single($"think get(me/WR{uid}`LEAF)"));
+			MarkupText.Plain($"think get(me/WR{uid}`LEAF)"));
 		await Assert.That(readResult.Message!.ToPlainText()).IsEqualTo($"leafvalue_{uid}")
 			.Because("AF_WIZARD gates writes only, per Penn's can_read_attr_internal - it must not block reading the leaf");
 	}
@@ -120,9 +120,9 @@ public class AttributeTreeNonPropagationTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NPVeil");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&VB{uid} {obj}=branchvalue_{uid}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&VB{uid}`LEAF {obj}=leafvalue_{uid}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {obj}/VB{uid}=veiled"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&VB{uid} {obj}=branchvalue_{uid}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&VB{uid}`LEAF {obj}=leafvalue_{uid}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/VB{uid}=veiled"));
 
 		// VB{uid}** (no backtick) matches the branch itself plus every descendant, so both rows
 		// are candidates for this single examine call. Read through the recipient-keyed recorder
@@ -130,7 +130,7 @@ public class AttributeTreeNonPropagationTests
 		// other tests are still recording violates NSubstitute's threading contract, and clearing
 		// it would delete a parallelizable test's calls out from under it.
 		var messages = await MessagesWhile(new DBRef(1), () =>
-			Parser.CommandParse(1, ConnectionService, MModule.single($"examine {obj}/VB{uid}**")).AsTask());
+			Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/VB{uid}**")).AsTask());
 
 		// Positive control: the veiled branch's own value must be suppressed. Proves the flag
 		// was actually set and this examine call genuinely exercises the veiled gate, rather than

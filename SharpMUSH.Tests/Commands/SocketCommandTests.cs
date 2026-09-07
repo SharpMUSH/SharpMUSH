@@ -415,7 +415,7 @@ public class SocketCommandTests
 	{
 		var before = WebAppFactoryArg.Notifications.CountForHandle(handle);
 
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(input));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(input));
 
 		return [.. WebAppFactoryArg.Notifications.ForHandle(handle).Skip(before)];
 	}

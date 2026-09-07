@@ -28,7 +28,7 @@ public class AttributeTreePatternVisibilityTests
 	/// </summary>
 	private async Task<string> Eval(long handle, string expression)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result?.Message?.ToPlainText() ?? string.Empty;
 	}
 
@@ -40,14 +40,14 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatDarkL");
 		var mortalDbRef = mortal.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PD{uid} {mortalDbRef}=branchvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PD{uid}`LEAF {mortalDbRef}=leafvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mortalDbRef}/PD{uid}=mortal_dark"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PD{uid} {mortalDbRef}=branchvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PD{uid}`LEAF {mortalDbRef}=leafvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mortalDbRef}/PD{uid}=mortal_dark"));
 
 		// Control: a leaf-only pattern on an unflagged branch is listed, so a miss below
 		// is the mortal_dark branch and not a broken pattern or a failed lookup.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PO{uid} {mortalDbRef}=openvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PO{uid}`LEAF {mortalDbRef}=openleaf"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PO{uid} {mortalDbRef}=openvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PO{uid}`LEAF {mortalDbRef}=openleaf"));
 		var control = await Eval(mortal.Handle, $"lattr(me/PO{uid}`LEAF)");
 		await Assert.That(control).Contains($"PO{uid}`LEAF")
 			.Because("a leaf under an unflagged branch must still be listed");
@@ -65,9 +65,9 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatDarkN");
 		var mortalDbRef = mortal.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PN{uid} {mortalDbRef}=branchvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&PN{uid}`LEAF {mortalDbRef}=leafvalue"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {mortalDbRef}/PN{uid}=mortal_dark"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PN{uid} {mortalDbRef}=branchvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PN{uid}`LEAF {mortalDbRef}=leafvalue"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mortalDbRef}/PN{uid}=mortal_dark"));
 
 		var beforeFlagged = await Eval(1, $"nattr({mortalDbRef}/PN{uid}`LEAF)");
 		await Assert.That(beforeFlagged).IsEqualTo("1")
@@ -91,12 +91,12 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatVisViewer");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PV{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PV{uid}`LEAF me=leafvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PVOK{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PV{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PV{uid}`LEAF me=leafvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PVOK{uid} me=okvalue"));
 		// Leaf is visual; its branch deliberately is not. The top-level control is visual.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PV{uid}`LEAF=visual"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PVOK{uid}=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PV{uid}`LEAF=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PVOK{uid}=visual"));
 
 		// Control: proves the viewer can reach the target and that a visual top-level
 		// attribute is granted, so the miss below is the branch and not a locate failure.
@@ -124,11 +124,11 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatGetViewer");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PG{uid} me=branchvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PG{uid}`LEAF me=leafvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PGOK{uid} me=okvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PG{uid}`LEAF=visual"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PGOK{uid}=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PG{uid} me=branchvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PG{uid}`LEAF me=leafvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PGOK{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PG{uid}`LEAF=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PGOK{uid}=visual"));
 
 		var control = await Eval(viewer.Handle, $"get({ownerDbRef}/PGOK{uid})");
 		await Assert.That(control).IsEqualTo("okvalue")
@@ -155,10 +155,10 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatPubViewer");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PBOK{uid} me=okvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PBOK{uid}=visual"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PB{uid} me=pubvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PB{uid}=public"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PBOK{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PBOK{uid}=visual"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PB{uid} me=pubvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PB{uid}=public"));
 
 		// Control: a visual (not public) attribute is readable by a non-owner, so the miss
 		// below is the public/visual distinction and not a locate or CanExamine failure.
@@ -187,8 +187,8 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatNearViewer");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PN{uid} me=nearbyvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PN{uid}=visual nearby"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PN{uid} me=nearbyvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PN{uid}=visual nearby"));
 
 		// Control: both players start in the same room, so the attribute is readable while
 		// nearby - a miss here would mean the test never reached the nearby gate at all.
@@ -197,7 +197,7 @@ public class AttributeTreePatternVisibilityTests
 			.Because("visual+nearby is readable while the viewer is nearby the owner");
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName("PatNearRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		// /QUIET: a plain @teleport queues a "look" command for the target (GeneralCommands.cs's
 		// Teleport, QueueCommandListRequest) rather than running it inline, so its arrival autolook
@@ -205,7 +205,7 @@ public class AttributeTreePatternVisibilityTests
 		// capture window, since the shared NotifyService substitute is session-wide. /QUIET skips
 		// that queued look entirely.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@teleport/quiet {viewer.DbRef}={roomDbRef}"));
+			MarkupText.Plain($"@teleport/quiet {viewer.DbRef}={roomDbRef}"));
 
 		// The room dbref is scraped out of @dig's message text: if that wording ever changes,
 		// the @teleport above silently does nothing and the negative assertion below passes
@@ -239,11 +239,11 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatIntWiz");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PI{uid} me=leafvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PI{uid}=internal"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIOK{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PI{uid} me=leafvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PI{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PIOK{uid} me=okvalue"));
 
 		// Control: a wizard's CanExamine short-circuit (IsSee_All) grants read of ANY
 		// non-internal attribute regardless of ownership, so the miss below is the internal
@@ -270,15 +270,15 @@ public class AttributeTreePatternVisibilityTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatIntWOwner");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {owner.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIW{uid} me=original"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PIW{uid}=internal"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PIWOK{uid} me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PIW{uid} me=original"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PIW{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PIWOK{uid} me=original"));
 
 		// Control: the wizard owner can overwrite its own unflagged sibling attribute, so a
 		// no-op on the internal one below is the flag denial, not a Controls/locate failure.
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me=PIWOK{uid}:changed"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me=PIWOK{uid}:changed"));
 		var control = await Eval(owner.Handle, $"get(me/PIWOK{uid})");
 		await Assert.That(control).IsEqualTo("changed")
 			.Because("a wizard owner can overwrite its own unflagged attribute");
@@ -288,7 +288,7 @@ public class AttributeTreePatternVisibilityTests
 		// was blocked" from "write succeeded but read is blocked too". Assert directly on the
 		// @set command's own result instead.
 		var attempt = await Parser.CommandParse(owner.Handle, ConnectionService,
-			MModule.single($"@set me=PIW{uid}:changed"));
+			MarkupText.Plain($"@set me=PIW{uid}:changed"));
 		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).Contains("NO PERMISSION")
 			.Because("AF_INTERNAL blocks writes for everyone but God - a wizard owner must not be able to overwrite it");
 	}
@@ -312,11 +312,11 @@ public class AttributeTreePatternVisibilityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PatLIntWiz");
 		var ownerDbRef = owner.DbRef.ToString();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PLIA{uid} me=secretvalue"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@set me/PLIA{uid}=internal"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"&PLIB{uid} me=okvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PLIA{uid} me=secretvalue"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/PLIA{uid}=internal"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&PLIB{uid} me=okvalue"));
 
 		var result = await Eval(wizard.Handle, $"lattr({ownerDbRef}/PLI*{uid})");
 

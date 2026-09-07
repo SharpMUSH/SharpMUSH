@@ -27,7 +27,7 @@ public class ParseDepthGuardTests
 	/// </summary>
 	private async Task<string> EvalPlain(string input)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message).IsNotNull();
 		return result.Message!.ToPlainText();

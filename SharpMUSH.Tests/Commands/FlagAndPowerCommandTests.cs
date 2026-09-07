@@ -29,8 +29,8 @@ public class FlagAndPowerCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagListCmd");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@flag/list"));
 
 		await NotifyService
 			.Received(1)
@@ -45,7 +45,7 @@ public class FlagAndPowerCommandTests
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
 
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(createdFlag).IsNotNull();
@@ -64,7 +64,7 @@ public class FlagAndPowerCommandTests
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
 
 		var createdFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(createdFlag).IsNotNull();
@@ -80,9 +80,9 @@ public class FlagAndPowerCommandTests
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, executor)).IsTrue();
 
@@ -102,7 +102,7 @@ public class FlagAndPowerCommandTests
 		));
 		await Assert.That(createdFlag).IsNotNull();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/delete {flagName}"));
 
 		var deletedFlag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(deletedFlag).IsNull();
@@ -114,7 +114,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Delete_PreventsSystemFlagDeletion()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/delete WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@flag/delete WIZARD"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
@@ -124,7 +124,7 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var flagName = "NONEXISTENT_FLAG_XYZ123";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/delete {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/delete {flagName}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, executor)).IsTrue();
 	}
@@ -133,7 +133,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_List_DisplaysAllPowers()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/list"));
 
 		// The notify substitute is a session-wide singleton, so assert the call happened, not how many times.
 		await NotifyService
@@ -149,7 +149,7 @@ public class FlagAndPowerCommandTests
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(createdPower).IsNotNull();
@@ -168,7 +168,7 @@ public class FlagAndPowerCommandTests
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
 		var createdPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(createdPower).IsNotNull();
@@ -190,7 +190,7 @@ public class FlagAndPowerCommandTests
 		));
 		await Assert.That(createdPower).IsNotNull();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/delete {powerName}"));
 
 		var deletedPower = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(deletedPower).IsNull();
@@ -205,7 +205,7 @@ public class FlagAndPowerCommandTests
 		var builderPower = await Mediator.Send(new GetPowerQuery("BUILDER"));
 		if (builderPower != null && builderPower.System)
 		{
-			await Parser.CommandParse(1, ConnectionService, MModule.single("@power/delete BUILDER"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/delete BUILDER"));
 
 			await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, executor)).IsTrue();
 		}
@@ -216,7 +216,7 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = "NONEXISTENT_POWER_XYZ123";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/delete {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/delete {powerName}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, executor)).IsTrue();
 	}
@@ -225,7 +225,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Flag_Add_RequiresBothArguments()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/add TESTFLAG"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@flag/add TESTFLAG"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor, executor)).IsTrue();
 	}
@@ -234,7 +234,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_RequiresBothArguments()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/add TESTPOWER"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/add TESTPOWER"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor, executor)).IsTrue();
 	}
@@ -246,9 +246,9 @@ public class FlagAndPowerCommandTests
 		var flagName = $"TEST_FLAG_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/disable {flagName}"));
 
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(flag).IsNotNull();
@@ -269,10 +269,10 @@ public class FlagAndPowerCommandTests
 		var flagName = $"TEST_FLAG_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var symbol = "T";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/add {flagName}={symbol}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/disable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={symbol}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/disable {flagName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/enable {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/enable {flagName}"));
 
 		var flag = await Mediator.Send(new GetObjectFlagQuery(flagName));
 		await Assert.That(flag).IsNotNull();
@@ -293,7 +293,7 @@ public class FlagAndPowerCommandTests
 		// Use WIZARD (a system flag stored in the ObjectFlags table).
 		// PLAYER is a type flag added implicitly per-object and is NOT in the ObjectFlags table,
 		// so it cannot be looked up or disabled via @flag/disable.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@flag/disable WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@flag/disable WIZARD"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, executor)).IsTrue();
 	}
@@ -305,9 +305,9 @@ public class FlagAndPowerCommandTests
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/disable {powerName}"));
 
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(power).IsNotNull();
@@ -328,10 +328,10 @@ public class FlagAndPowerCommandTests
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		var alias = "TPOW";
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/add {powerName}={alias}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/disable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/disable {powerName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/enable {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/enable {powerName}"));
 
 		var power = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(power).IsNotNull();
@@ -349,7 +349,7 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Disable_PreventsSystemPowerDisable()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/disable Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/disable Builder"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, executor)).IsTrue();
 	}
@@ -358,10 +358,10 @@ public class FlagAndPowerCommandTests
 	[NotInParallel]
 	public async ValueTask God_CanSetTrustFlag()
 	{
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GodTrustFlagTestObj"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GodTrustFlagTestObj"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {newDb}=TRUST"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {newDb}=TRUST"));
 
 		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
 		await Assert.That(newObject.Object()).IsNotNull();
@@ -369,7 +369,7 @@ public class FlagAndPowerCommandTests
 
 		await Assert.That(flags.Any(f => f.Name.Equals("TRUST", StringComparison.OrdinalIgnoreCase))).IsTrue();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	private async ValueTask<string[]> PowerNamesOf(DBRef dbref)
@@ -384,14 +384,14 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Grant_SetsPowerOnObject()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerGrant")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerGrant")}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
 		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// PennMUSH src/flags.c set_power: granting emits "<name> - <power> granted."
@@ -399,11 +399,11 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Grant_NotifiesGranted()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("PowerGrantMsg");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 
 		// ManipulateSharpObjectService reports flag and power changes with no explicit sender.
 		await NotifyService
@@ -412,7 +412,7 @@ public class FlagAndPowerCommandTests
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted.")),
 				null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// PennMUSH src/wiz.c do_power: a leading ! on the power name revokes it.
@@ -420,16 +420,16 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Revoke_ClearsPowerOnObject()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerRevoke")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerRevoke")}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=!Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=!Builder"));
 		await Assert.That(await PowerNamesOf(newDb)).DoesNotContain("Builder");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// PennMUSH src/wiz.c do_power splits the right-hand side on spaces and applies each token.
@@ -437,20 +437,20 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Grant_AppliesEverySpaceSeparatedToken()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerMulti")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerMulti")}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder Boot"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder Boot"));
 		var granted = await PowerNamesOf(newDb);
 		await Assert.That(granted).Contains("Builder");
 		await Assert.That(granted).Contains("Boot");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=!Builder Boot"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=!Builder Boot"));
 		var after = await PowerNamesOf(newDb);
 		await Assert.That(after).DoesNotContain("Builder");
 		await Assert.That(after).Contains("Boot");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// PennMUSH src/flags.c set_power reports the unrecognised power name, not the object's name.
@@ -458,11 +458,11 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Grant_UnknownPowerNamesThePower()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerUnknown")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerUnknown")}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=NOSUCHPOWERXYZ"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=NOSUCHPOWERXYZ"));
 
 		await NotifyService
 			.Received(1)
@@ -471,7 +471,7 @@ public class FlagAndPowerCommandTests
 					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power.")),
 				null, INotifyService.NotificationType.Announce);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// PennMUSH src/wiz.c do_power: "Only wizards may grant powers."
@@ -482,7 +482,7 @@ public class FlagAndPowerCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerNonWiz");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@power {testPlayer.DbRef}=Builder"));
+			MarkupText.Plain($"@power {testPlayer.DbRef}=Builder"));
 
 		await Assert.That(await PowerNamesOf(testPlayer.DbRef)).DoesNotContain("Builder");
 		await NotifyService
@@ -499,7 +499,7 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power Builder"));
 
 		await NotifyService
 			.Received(1)
@@ -514,7 +514,7 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power NOSUCHPOWERABC"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power NOSUCHPOWERABC"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
 			nameof(ErrorMessages.Notifications.NoSuchPowerInfo), executor, executor)).IsTrue();
@@ -526,11 +526,11 @@ public class FlagAndPowerCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerAddNonGod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@power/add {powerName}=TPOW"));
+			MarkupText.Plain($"@power/add {powerName}=TPOW"));
 
 		await Assert.That(await Mediator.Send(new GetPowerQuery(powerName))).IsNull();
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -542,16 +542,16 @@ public class FlagAndPowerCommandTests
 	public async ValueTask PowersFunction_SideEffect_HonoursRevokePrefix()
 	{
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {TestIsolationHelpers.GenerateUniqueName("PowerFnRevoke")}"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PowerFnRevoke")}"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {newDb}=Builder"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {newDb}=Builder"));
 		await Assert.That(await PowerNamesOf(newDb)).Contains("Builder");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"think [powers({newDb},!Builder)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think [powers({newDb},!Builder)]"));
 		await Assert.That(await PowerNamesOf(newDb)).DoesNotContain("Builder");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy {newDb}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
 	}
 
 	// Every built-in power carries letter '\0' (PennMUSH hdrs/flag_tab.h power_table) and SharpMUSH
@@ -575,7 +575,7 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = await CreateLetterlessPower();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=Q"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}=Q"));
 
 		var updated = await Mediator.Send(new GetPowerQuery(powerName));
 		await Assert.That(updated).IsNotNull();
@@ -593,10 +593,10 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = await CreateLetterlessPower();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=V"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}=V"));
 		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo("V");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -612,7 +612,7 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = await CreateLetterlessPower();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=ABC"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}=ABC"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -629,10 +629,10 @@ public class FlagAndPowerCommandTests
 		var holder = await CreateLetterlessPower();
 		var claimant = await CreateLetterlessPower();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {holder}=Z"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {holder}=Z"));
 		await Assert.That((await Mediator.Send(new GetPowerQuery(holder)))!.Symbol).IsEqualTo("Z");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {claimant}=Z"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {claimant}=Z"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -650,8 +650,8 @@ public class FlagAndPowerCommandTests
 		var playerPower = await CreateLetterlessPower(["PLAYER"]);
 		var roomPower = await CreateLetterlessPower(["ROOM"]);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {playerPower}=Y"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {roomPower}=Y"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {playerPower}=Y"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {roomPower}=Y"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(playerPower)))!.Symbol).IsEqualTo("Y");
 		await Assert.That((await Mediator.Send(new GetPowerQuery(roomPower)))!.Symbol).IsEqualTo("Y");
@@ -667,10 +667,10 @@ public class FlagAndPowerCommandTests
 		var powerName = await CreateLetterlessPower();
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PowerLetterNonGod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@power/letter {powerName}=J"));
+			MarkupText.Plain($"@power/letter {powerName}=J"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -688,7 +688,7 @@ public class FlagAndPowerCommandTests
 		await Assert.That(builder).IsNotNull();
 		await Assert.That(builder!.System).IsTrue();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/letter BUILDER=B"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/letter BUILDER=B"));
 
 		await Assert.That((await Mediator.Send(new GetPowerQuery("BUILDER")))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -701,9 +701,9 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = await CreateLetterlessPower();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=K"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}=K"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/list {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/list {powerName}"));
 
 		await NotifyService
 			.Received()
@@ -723,9 +723,9 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = await CreateLetterlessPower();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power/letter {powerName}=X"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/letter {powerName}=X"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@power {powerName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {powerName}"));
 
 		await NotifyService
 			.Received()
@@ -743,7 +743,7 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@power/list Buil*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@power/list Buil*"));
 
 		await NotifyService
 			.Received()
@@ -838,7 +838,7 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var flagName = await CreateLetterlessFlag();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {flagName}=1"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo("1");
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -854,10 +854,10 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var flagName = await CreateLetterlessFlag();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {flagName}=2"));
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo("2");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {flagName}"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -873,7 +873,7 @@ public class FlagAndPowerCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var flagName = await CreateLetterlessFlag();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {flagName}=ABC"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {flagName}=ABC"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -892,10 +892,10 @@ public class FlagAndPowerCommandTests
 		var holder = await CreateLetterlessFlag();
 		var claimant = await CreateLetterlessFlag();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {holder}=3"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {holder}=3"));
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(holder)))!.Symbol).IsEqualTo("3");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {claimant}=3"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {claimant}=3"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(claimant)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -913,8 +913,8 @@ public class FlagAndPowerCommandTests
 		var playerFlag = await CreateLetterlessFlag(["PLAYER"]);
 		var roomFlag = await CreateLetterlessFlag(["ROOM"]);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {playerFlag}=4"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@flag/letter {roomFlag}=4"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {playerFlag}=4"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/letter {roomFlag}=4"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(playerFlag)))!.Symbol).IsEqualTo("4");
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(roomFlag)))!.Symbol).IsEqualTo("4");
@@ -930,10 +930,10 @@ public class FlagAndPowerCommandTests
 		var flagName = await CreateLetterlessFlag();
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagLetterNonGod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@flag/letter {flagName}=5"));
+			MarkupText.Plain($"@flag/letter {flagName}=5"));
 
 		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Symbol).IsEqualTo(string.Empty);
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -948,11 +948,11 @@ public class FlagAndPowerCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagAddNonGod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@flag/add {flagName}=6"));
+			MarkupText.Plain($"@flag/add {flagName}=6"));
 
 		await Assert.That(await Mediator.Send(new GetObjectFlagQuery(flagName))).IsNull();
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
@@ -966,7 +966,7 @@ public class FlagAndPowerCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagDecompileNonGod");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@flag/decompile WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@flag/decompile WIZARD"));
 
 		await NotifyService
 			.Received()

@@ -41,7 +41,7 @@ public class CommandArityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"Arity{reportedName.TrimStart('@')}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(command));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 
 		var messages = NotificationsTo(player.DbRef);
 
@@ -66,7 +66,7 @@ public class CommandArityTests
 			$"ChanArity{command.Replace("@", "").Replace("/", "")}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(command));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 
 		var messages = NotificationsTo(player.DbRef);
 
@@ -90,7 +90,7 @@ public class CommandArityTests
 			$"ChanUsage{command.Replace("@", "").Replace("/", "")}");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(command));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 
 		var messages = NotificationsTo(player.DbRef);
 

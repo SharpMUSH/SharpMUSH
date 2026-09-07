@@ -20,7 +20,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/attribute,ansi(hr,ZIP!))][get(%!/attribute)][attrib_set(%!/attribute,ansi(hr,ZAP!))][get(%!/attribute)]", "\e[1;31mZIP!ZAP!\e[0m")]
 	public async Task SetAndGet(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		// The ANSI byte stream, which ToString() no longer produces: it is the plain text now.
 		await Assert.That(result!.Message!.Render(MarkupFormat.Ansi)).IsEqualTo(expected);
 	}
@@ -36,7 +36,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "them")]
 	public async Task GenderTest1(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -52,9 +52,9 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "her")]
 	public async Task GenderTest2(string input, string expected)
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&GENDER me=F"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me=F"));
 
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -70,9 +70,9 @@ public class AttributeFunctionUnitTests
 	[Arguments("obj(%#)", "him")]
 	public async Task GenderTest3(string input, string expected)
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&GENDER me=M"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me=M"));
 
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -86,7 +86,7 @@ public class AttributeFunctionUnitTests
 	[DependsOn(nameof(GenderTest3))]
 	public async Task GenderCleanup()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&GENDER me="));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&GENDER me="));
 	}
 
 
@@ -106,7 +106,7 @@ public class AttributeFunctionUnitTests
 		"TEST_GREP_CASESENSITIVE_1 TEST_GREP_CASESENSITIVE_2")]
 	public async Task Test_Grep_CaseSensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -124,7 +124,7 @@ public class AttributeFunctionUnitTests
 		"TEST_GREPI_CASEINSENSITIVE2_1 TEST_GREPI_CASEINSENSITIVE2_2 TEST_GREPI_CASEINSENSITIVE2_UPPER")]
 	public async Task Test_Grepi_CaseInsensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -134,7 +134,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/WILDGREP_1,test_wildcard_value_match)][wildgrep(%!,WILDGREP_*,test_*_match)]", "WILDGREP_1")]
 	public async Task Test_Wildgrep_Pattern(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -143,7 +143,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/WILDGREP_1,has_WILDCARD)][attrib_set(%!/WILDGREP_UPPER,TEST_WILDCARD)][wildgrepi(%!,WILDGREP_*,*WILDCARD*)]", "WILDGREP_1 WILDGREP_UPPER")]
 	public async Task Test_Wildgrepi_CaseInsensitive(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -166,7 +166,7 @@ public class AttributeFunctionUnitTests
 		"TESTREGLATTR_UNIQUE_RGX3_A TESTREGLATTR_UNIQUE_RGX3_B TESTREGLATTR_UNIQUE_RGX3_UPPER")]
 	public async Task Test_Reglattr_RegexPattern(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -186,7 +186,7 @@ public class AttributeFunctionUnitTests
 						 "[regnattr(%!/^TESTREGNATTR_UNIQUE_CNT3_\\[XYZ\\]$)]", "3")]
 	public async Task Test_Regnattr_Count(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -208,7 +208,7 @@ public class AttributeFunctionUnitTests
 		"TEST_REGXATTR_RANGEWITHREGEX3_1 TEST_REGXATTR_RANGEWITHREGEX3_2")]
 	public async Task Test_Regxattr_RangeWithRegex(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -229,7 +229,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[xattr(%!/Test_Xattr_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
 	public async Task Test_Xattr_RangeAndErrors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -250,7 +250,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[xattrp(%!/Test_Xattrp_NonInteger1_*,x,2)]", ErrorMessages.Returns.Integer)]
 	public async Task Test_Xattrp_RangeAndErrors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -259,7 +259,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[regxattr(%!/Test_Regxattr_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
 	public async Task Test_Regxattr_CountZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -268,7 +268,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[regxattrp(%!/Test_Regxattrp_CountZero1_\\[0-9\\]+,1,0)]", ErrorMessages.Returns.ArgRange)]
 	public async Task Test_Regxattrp_CountZero(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -276,7 +276,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("zfun(TEST_ATTR)", "#-1 NO ZONE SET")]
 	public async Task Test_Zfun_NoZoneSet(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -288,7 +288,7 @@ public class AttributeFunctionUnitTests
 		"REGREP_UNIQUE_ATTR_B1")]
 	public async Task Regrep(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -300,7 +300,7 @@ public class AttributeFunctionUnitTests
 		"REGREPI_UNIQUE_ATTR_D1")]
 	public async Task Regrepi(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -310,7 +310,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("regedit(aaa,a,b)", "baa")]
 	public async Task Regedit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -319,7 +319,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xattr(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -333,7 +333,7 @@ public class AttributeFunctionUnitTests
 		"PGREP_PARENTINHERIT_ATTR")]
 	public async Task Test_Pgrep_IncludesParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -348,7 +348,7 @@ public class AttributeFunctionUnitTests
 		"REGLATTRP_PARENTINHERIT_001 REGLATTRP_PARENTINHERIT_002 REGLATTRP_PARENTINHERIT_100")]
 	public async Task Test_Reglattrp_IncludesParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -363,7 +363,7 @@ public class AttributeFunctionUnitTests
 		"3")]
 	public async Task Test_Regnattrp_CountWithParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -383,7 +383,7 @@ public class AttributeFunctionUnitTests
 		"REGXATTRP_PARENTINHERIT_001 REGXATTRP_PARENTINHERIT_002")]
 	public async Task Test_Regxattrp_RangeWithParents(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -405,7 +405,7 @@ public class AttributeFunctionUnitTests
 		"TEST_LATTR_ATTRIBUTETREES3")]
 	public async Task Test_Lattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -421,7 +421,7 @@ public class AttributeFunctionUnitTests
 						 "[grep(%!,Test_Grep_AttributeTrees_2**,test)]", "TEST_GREP_ATTRIBUTETREES_2 TEST_GREP_ATTRIBUTETREES_2`SUB1")]
 	public async Task Test_Grep_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -439,7 +439,7 @@ public class AttributeFunctionUnitTests
 		"TEST_REGLATTR_ATTRIBUTETREES2_001 TEST_REGLATTR_ATTRIBUTETREES2_001`SUB")]
 	public async Task Test_Reglattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -456,7 +456,7 @@ public class AttributeFunctionUnitTests
 						 "[regnattr(%!/^Test_Regnattr_AttributeTrees2)]", "3")]
 	public async Task Test_Regnattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -469,7 +469,7 @@ public class AttributeFunctionUnitTests
 		"TEST_WILDGREP_ATTRIBUTETREES`CHILD")]
 	public async Task Test_Wildgrep_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -483,7 +483,7 @@ public class AttributeFunctionUnitTests
 		"TEST_REGXATTR_ATTRIBUTETREES`A TEST_REGXATTR_ATTRIBUTETREES`B")]
 	public async Task Test_Regxattr_AttributeTrees(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -496,7 +496,7 @@ public class AttributeFunctionUnitTests
 						 "[get(%!/Test_Basic_AttribSet_And_Get21)][get(%!/Test_Basic_AttribSet_And_Get22)]", "val1val2")]
 	public async Task Test_Basic_AttribSet_And_Get(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(str));
+		var result = await Parser.FunctionParse(MarkupText.Plain(str));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -508,7 +508,7 @@ public class AttributeFunctionUnitTests
 		"TEST_LATTR_SIMPLE1 TEST_LATTR_SIMPLE2")]
 	public async Task Test_Lattr_Simple(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(str));
+		var result = await Parser.FunctionParse(MarkupText.Plain(str));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -517,7 +517,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xattrp(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -526,7 +526,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xcon(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -535,7 +535,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xexits(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -544,7 +544,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xmwhoid(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -553,7 +553,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xplayers(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -562,7 +562,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xthings(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -571,7 +571,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvcon(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -580,7 +580,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvexits(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -589,7 +589,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvplayers(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -598,7 +598,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xvthings(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -607,7 +607,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xwho(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -616,7 +616,7 @@ public class AttributeFunctionUnitTests
 	public async Task Xwhoid(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -625,7 +625,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(name,)", "0")]
 	public async Task Valid_Name(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -634,7 +634,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("valid(attrvalue,test_value,NONEXISTENT_ATTR)", "1")]
 	public async Task Valid_AttributeValue(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -644,7 +644,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("[attrib_set(%!/Test_V_AttrName2,hello world)][v(Test_V_AttrName2)]", "hello world")]
 	public async Task Test_V_AttributeName(string str, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(str));
+		var result = await Parser.FunctionParse(MarkupText.Plain(str));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -663,22 +663,22 @@ public class AttributeFunctionUnitTests
 	{
 		var uid = TestIsolationHelpers.GenerateUniqueName("OWN");
 
-		var createResult = await Parser.FunctionParse(MModule.single($"create(OwnerTarget_{uid})"));
+		var createResult = await Parser.FunctionParse(MarkupText.Plain($"create(OwnerTarget_{uid})"));
 		var otherObj = createResult!.Message!.ToPlainText();
 
-		await Parser.FunctionParse(MModule.single($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
+		await Parser.FunctionParse(MarkupText.Plain($"[attrib_set({otherObj}/OW{uid},val_{uid})]"));
 
 		// Positive controls: the attribute genuinely exists on the OTHER object, and NOT on the
 		// executor (self) - otherwise a buggy owner() that reads off the executor instead of the
 		// located object could coincidentally still appear to pass.
-		var hasAttrOther = await Parser.FunctionParse(MModule.single($"hasattr({otherObj},OW{uid})"));
+		var hasAttrOther = await Parser.FunctionParse(MarkupText.Plain($"hasattr({otherObj},OW{uid})"));
 		await Assert.That(hasAttrOther!.Message!.ToPlainText()).IsEqualTo("1")
 			.Because("the attribute must actually exist on the OTHER object for this test to mean anything");
-		var hasAttrSelf = await Parser.FunctionParse(MModule.single($"hasattr(%!,OW{uid})"));
+		var hasAttrSelf = await Parser.FunctionParse(MarkupText.Plain($"hasattr(%!,OW{uid})"));
 		await Assert.That(hasAttrSelf!.Message!.ToPlainText()).IsEqualTo("0")
 			.Because("the executor must NOT carry this attribute name, so a buggy owner() reading off the executor would report NO SUCH ATTRIBUTE rather than coincidentally succeeding");
 
-		var ownerResult = await Parser.FunctionParse(MModule.single($"owner({otherObj}/OW{uid})"));
+		var ownerResult = await Parser.FunctionParse(MarkupText.Plain($"owner({otherObj}/OW{uid})"));
 		await Assert.That(ownerResult!.Message!.ToPlainText())
 			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
 			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");

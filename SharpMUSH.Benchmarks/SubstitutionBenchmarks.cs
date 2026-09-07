@@ -11,20 +11,20 @@ public class SubstitutionBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	private static readonly MString ExecDbRefCmd = MModule.single("think %#");
-	private static readonly MString ExecNameCmd = MModule.single("think %N");
+	private static readonly MString ExecDbRefCmd = MarkupText.Plain("think %#");
+	private static readonly MString ExecNameCmd = MarkupText.Plain("think %N");
 
-	private static readonly MString Cat3Subst = MModule.single("[cat(%#,%#,%#)]");
-	private static readonly MString Cat10Subst = MModule.single(
+	private static readonly MString Cat3Subst = MarkupText.Plain("[cat(%#,%#,%#)]");
+	private static readonly MString Cat10Subst = MarkupText.Plain(
 		$"[cat({string.Join(",", Enumerable.Repeat("%#", 10))})]");
 
-	private static readonly MString SetQRead = MModule.single("[setq(0,hello)]%q0");
+	private static readonly MString SetQRead = MarkupText.Plain("[setq(0,hello)]%q0");
 
-	private static readonly MString IterReg5 = MModule.single("iter(lnum(5),%i0)");
-	private static readonly MString IterReg50 = MModule.single("iter(lnum(50),%i0)");
+	private static readonly MString IterReg5 = MarkupText.Plain("iter(lnum(5),%i0)");
+	private static readonly MString IterReg50 = MarkupText.Plain("iter(lnum(50),%i0)");
 
-	private static readonly MString Add1Subst = MModule.single("[add(0,%#)]");
-	private static readonly MString Add5Subst = MModule.single(
+	private static readonly MString Add1Subst = MarkupText.Plain("[add(0,%#)]");
+	private static readonly MString Add5Subst = MarkupText.Plain(
 		"[add(%#,[add(%#,[add(%#,[add(%#,%#)])])])]");
 
 	public override async ValueTask Setup()

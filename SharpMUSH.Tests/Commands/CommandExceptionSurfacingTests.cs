@@ -79,7 +79,7 @@ public class CommandExceptionSurfacingTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExcSurface");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(CrashingCommand));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(CrashingCommand));
 
 		var message = NotificationTo(player.DbRef);
 
@@ -94,7 +94,7 @@ public class CommandExceptionSurfacingTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExcJson");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(CrashingCommand));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(CrashingCommand));
 
 		var payload = PayloadOf(NotificationTo(player.DbRef));
 
@@ -113,7 +113,7 @@ public class CommandExceptionSurfacingTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExcMortal");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(CrashingCommand));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(CrashingCommand));
 
 		var payload = PayloadOf(NotificationTo(player.DbRef));
 
@@ -139,7 +139,7 @@ public class CommandExceptionSurfacingTests
 		// Handle 1 is bound to #1 (God), which IsPriv.
 		var parser = WebAppFactoryArg.CommandParser;
 
-		await parser.CommandParse(1, ConnectionService, MModule.single(CrashingCommand));
+		await parser.CommandParse(1, ConnectionService, MarkupText.Plain(CrashingCommand));
 
 		var payload = PayloadOf(NotificationTo(WebAppFactoryArg.ExecutorDBRef));
 
@@ -168,7 +168,7 @@ public class CommandExceptionSurfacingTests
 		await ConnectionService.Bind(handle, new DBRef(999_999_999));
 
 		await WebAppFactoryArg.CommandParser.CommandParse(handle, ConnectionService,
-			MModule.single(CrashingCommand));
+			MarkupText.Plain(CrashingCommand));
 
 		var message = NotificationToHandle(handle);
 
@@ -199,7 +199,7 @@ public class CommandExceptionSurfacingTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExcLog");
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single(CrashingCommand));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(CrashingCommand));
 
 		var correlationId = JsonDocument.Parse(PayloadOf(NotificationTo(player.DbRef)))
 			.RootElement.GetProperty("id").GetString()!;

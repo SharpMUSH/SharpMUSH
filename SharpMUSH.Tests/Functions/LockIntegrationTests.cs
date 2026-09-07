@@ -21,18 +21,18 @@ public class LockIntegrationTests
 
 	private async Task<string> Eval(string expr)
 	{
-		var result = (await FunctionParser.FunctionParse(MModule.single(expr)))?.Message!;
+		var result = (await FunctionParser.FunctionParse(MarkupText.Plain(expr)))?.Message!;
 		return result.ToPlainText();
 	}
 
 	private async Task Command(string cmd)
 	{
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single(cmd));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(cmd));
 	}
 
 	private async Task<DBRef> CreateObject(string name)
 	{
-		var result = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		return DBRef.Parse(result.Message!.ToPlainText()!);
 	}
 
@@ -226,7 +226,7 @@ public class LockIntegrationTests
 	{
 		var obj = await CreateObject("LockUseEndToEnd");
 
-		var lockUseResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@lock/use #{obj.Number}=#FALSE"));
+		var lockUseResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/use #{obj.Number}=#FALSE"));
 		await Assert.That(lockUseResult.Message?.ToPlainText() ?? string.Empty).DoesNotContain("#-1 INVALID SWITCH");
 
 		var elockResult = await Eval($"elock(#{obj.Number}/Use,%#)");

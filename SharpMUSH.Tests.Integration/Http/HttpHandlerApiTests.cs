@@ -28,7 +28,7 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Known;
 		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Known;
 
-		var result = await attributeService.SetAttributeAsync(god, handler, method, MModule.single(commandList));
+		var result = await attributeService.SetAttributeAsync(god, handler, method, MarkupText.Plain(commandList));
 		await Assert.That(result.IsT0).IsTrue();
 	}
 

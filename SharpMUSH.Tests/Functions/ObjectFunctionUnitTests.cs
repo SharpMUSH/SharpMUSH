@@ -13,7 +13,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("create(TestObject)", "")]
 	public async Task Create(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -21,7 +21,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("dig(TestRoom)", "")]
 	public async Task Dig(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -29,7 +29,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("clone(%#)", "")]
 	public async Task Clone(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -37,7 +37,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("link(%#,#0)", "")]
 	public async Task Link(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -45,7 +45,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("open(TestExit,#0)", "")]
 	public async Task Open(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -53,7 +53,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("tel(%#,#0)", "")]
 	public async Task Tel(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -61,7 +61,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("wipe(%#/testattr)", "")]
 	public async Task Wipe(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -69,7 +69,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("lsearch(all,type,PLAYER)", "")]
 	public async Task Lsearch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -77,7 +77,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("nlsearch(all,type,PLAYER)", "1")]
 	public async Task Nlsearch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(1);
 	}
 
@@ -85,7 +85,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("nsearch(all,type,PLAYER)", "1")]
 	public async Task Nsearch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(1);
 	}
 
@@ -93,7 +93,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("lsearchr(all,type,PLAYER)", "")]
 	public async Task Lsearchr(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -101,7 +101,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("textsearch(all,One)", "")]
 	public async Task Textsearch(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -109,7 +109,7 @@ public class ObjectFunctionUnitTests
 	[Arguments("next(%#)", "")]
 	public async Task Next(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

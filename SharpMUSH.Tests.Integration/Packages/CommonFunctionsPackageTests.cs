@@ -27,7 +27,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
 	private async Task<string> Eval(string expression) =>
-		(await factory.FunctionParser.FunctionParse(MModule.single(expression)))?.Message?.ToString() ?? string.Empty;
+		(await factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))?.Message?.ToString() ?? string.Empty;
 
 	/// <summary>
 	/// A connected player whose client does or does not announce Pueblo. Handles are picked by hand
@@ -42,8 +42,8 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 				$"Handle {handle} is already registered; pick one no other test in this project uses.");
 		}
 
-		await factory.CommandParser.CommandParse(1, ConnectionService, MModule.single($"@pcreate {name}=pw-{Tag}"));
-		var dbref = (await factory.CommandParser.CommandParse(1, ConnectionService, MModule.single($"think [pmatch({name})]")))
+		await factory.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw-{Tag}"));
+		var dbref = (await factory.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"think [pmatch({name})]")))
 			.Message!.ToPlainText().Trim();
 		if (!DBRef.TryParse(dbref, out var parsed) || parsed is null)
 		{
@@ -90,7 +90,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task Header_RendersFullWidthCenteredRule()
 	{
-		var result = (await factory.FunctionParser.FunctionParse(MModule.single("header(Title)")))?.Message!.ToString();
+		var result = (await factory.FunctionParser.FunctionParse(MarkupText.Plain("header(Title)")))?.Message!.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(78);
@@ -102,7 +102,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task Header_LeftType_BracketsAndLeftJustifies()
 	{
-		var result = (await factory.FunctionParser.FunctionParse(MModule.single("header(Test,40,left)")))?.Message!.ToString();
+		var result = (await factory.FunctionParser.FunctionParse(MarkupText.Plain("header(Test,40,left)")))?.Message!.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40);
@@ -114,7 +114,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task Footer_RightType_BracketsAndRightJustifies()
 	{
-		var result = (await factory.FunctionParser.FunctionParse(MModule.single("footer(Test,40,right)")))?.Message!.ToString();
+		var result = (await factory.FunctionParser.FunctionParse(MarkupText.Plain("footer(Test,40,right)")))?.Message!.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40);
@@ -127,7 +127,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	public async Task Header_LongTitle_IsClippedToWidth()
 	{
 		var huge = new string('x', 200);
-		var result = (await factory.FunctionParser.FunctionParse(MModule.single($"header({huge},40,left)")))?.Message!.ToString();
+		var result = (await factory.FunctionParser.FunctionParse(MarkupText.Plain($"header({huge},40,left)")))?.Message!.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsEqualTo(40)

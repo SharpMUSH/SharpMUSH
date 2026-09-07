@@ -83,7 +83,7 @@ public class ChannelPermissionTests
 	private async Task<SharpChannel> CreateChannel(string name, params string[] privileges)
 	{
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
-		await Mediator.Send(new CreateChannelCommand(MModule.single(name), privileges, god));
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privileges, god));
 		return (await Mediator.Send(new GetChannelQuery(name)))!;
 	}
 
@@ -120,7 +120,7 @@ public class ChannelPermissionTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
-		var digResult = await GodParser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		// /QUIET, not a plain @teleport: without it, @teleport queues a "look" command for the
@@ -130,7 +130,7 @@ public class ChannelPermissionTests
 		// the queue drains it. /QUIET skips that queued look entirely, so there is nothing left to
 		// race against.
 		await GodParser.CommandParse(1, ConnectionService,
-			MModule.single($"@teleport/quiet {player.DbRef}={roomDbRef}"));
+			MarkupText.Plain($"@teleport/quiet {player.DbRef}={roomDbRef}"));
 
 		return player;
 	}
@@ -138,12 +138,12 @@ public class ChannelPermissionTests
 	private async Task<TestIsolationHelpers.TestPlayer> CreateFlagged(string prefix, string flag)
 	{
 		var player = await CreateMortal(prefix);
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@set {player.DbRef}={flag}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}={flag}"));
 		return player;
 	}
 
 	private async Task Run(TestIsolationHelpers.TestPlayer who, string command)
-		=> await GodParser.CommandParse(who.Handle, ConnectionService, MModule.single(command));
+		=> await GodParser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<int> MessageCount(string channelName)
 	{
@@ -293,7 +293,7 @@ public class ChannelPermissionTests
 		var failing = await CreateMortal("ChanPermJoinFail");
 
 		await GodParser.CommandParse(1, ConnectionService,
-			MModule.single($"@clock/join {name}=#{passing.DbRef.Number}"));
+			MarkupText.Plain($"@clock/join {name}=#{passing.DbRef.Number}"));
 
 		await Run(failing, $"@channel/on {name}");
 		await Assert.That(await IsMember(name, failing.DbRef)).IsFalse();
@@ -320,7 +320,7 @@ public class ChannelPermissionTests
 		}
 
 		await GodParser.CommandParse(1, ConnectionService,
-			MModule.single($"@clock/speak {name}=#{passing.DbRef.Number}"));
+			MarkupText.Plain($"@clock/speak {name}=#{passing.DbRef.Number}"));
 
 		var before = await MessageCount(name);
 
@@ -348,7 +348,7 @@ public class ChannelPermissionTests
 		await Mediator.Send(new AddUserToChannelCommand(channel, loudObject));
 
 		// A lock nobody passes: the channel owner is #1, and the speaker is not.
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/speak {name}=#1"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/speak {name}=#1"));
 
 		var before = await MessageCount(name);
 		await Run(loud, $"@chat {name}=LOUD speaks anyway.");
@@ -433,7 +433,7 @@ public class ChannelPermissionTests
 	public async Task ChannelAddStoresPrivilegesInCanonicalCasing()
 	{
 		var name = UniqueChannel("Canon");
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {name}=wizard player"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {name}=wizard player"));
 
 		var channel = await Mediator.Send(new GetChannelQuery(name));
 
@@ -453,14 +453,14 @@ public class ChannelPermissionTests
 		var name = UniqueChannel("PrivOr");
 		await CreateChannel(name, "Player", "Quiet");
 
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/privs {name}=Wizard"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/privs {name}=Wizard"));
 
 		var afterAdd = await Mediator.Send(new GetChannelQuery(name));
 		await Assert.That(afterAdd!.Privs).Contains("Player");
 		await Assert.That(afterAdd.Privs).Contains("Quiet");
 		await Assert.That(afterAdd.Privs).Contains("Wizard");
 
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/privs {name}=!Wizard"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/privs {name}=!Wizard"));
 
 		var afterRemove = await Mediator.Send(new GetChannelQuery(name));
 		await Assert.That(afterRemove!.Privs).Contains("Player");
@@ -481,15 +481,15 @@ public class ChannelPermissionTests
 		var deaded = UniqueChannel("ReproDead");
 		var locked = UniqueChannel("ReproLock");
 
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {wizOnly}=wizard player"));
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {locked}=player"));
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/join {locked}=#1"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {wizOnly}=wizard player"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {locked}=player"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/join {locked}=#1"));
 
 		// PennMUSH refuses `@channel/add <name>=disabled` outright — Chan_Can is false for a disabled type
 		// for everyone, wizards included (extchat.c:1736). A wizard reaches the same state through
 		// @channel/privs, where Chan_Can_Priv's `Wizard(p) ||` escape applies (extchat.c:1832).
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {deaded}=player"));
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/privs {deaded}=disabled"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {deaded}=player"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/privs {deaded}=disabled"));
 
 		var mortimer = await CreateMortal("Mortimer");
 
@@ -507,7 +507,7 @@ public class ChannelPermissionTests
 		// @channel/on and a @chat that had simply stopped working for everyone. An ungated channel,
 		// created by the same command in the same test, must admit the same player and carry his speech.
 		var open = UniqueChannel("ReproOpen");
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/add {open}=player"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {open}=player"));
 
 		await Run(mortimer, $"@channel/on {open}");
 		await Assert.That(await IsMember(open, mortimer.DbRef)).IsTrue();
@@ -540,8 +540,8 @@ public class ChannelPermissionTests
 		var parser = FunctionParserFor(mortal.DbRef);
 
 		// The function surface is where the return value is observable to a mortal's softcode.
-		var invisibleResult = await parser.FunctionParse(MModule.single($"cwho({invisible})"));
-		var missingResult = await parser.FunctionParse(MModule.single($"cwho({missing})"));
+		var invisibleResult = await parser.FunctionParse(MarkupText.Plain($"cwho({invisible})"));
+		var missingResult = await parser.FunctionParse(MarkupText.Plain($"cwho({missing})"));
 
 		await Assert.That(invisibleResult?.Message?.ToPlainText())
 			.IsEqualTo(missingResult?.Message?.ToPlainText());
@@ -573,12 +573,12 @@ public class ChannelPermissionTests
 
 		var mortal = await CreateMortal("ChanPermCwho");
 
-		var mortalResult = await FunctionParserFor(mortal.DbRef).FunctionParse(MModule.single($"cwho({name})"));
+		var mortalResult = await FunctionParserFor(mortal.DbRef).FunctionParse(MarkupText.Plain($"cwho({name})"));
 		await Assert.That(mortalResult?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		await Assert.That(mortalResult?.Message?.ToPlainText()).DoesNotContain($"#{wizard.DbRef.Number}");
 
 		// The wizard, who may see it, still gets the member list.
-		var wizardResult = await FunctionParserFor(wizard.DbRef).FunctionParse(MModule.single($"cwho({name})"));
+		var wizardResult = await FunctionParserFor(wizard.DbRef).FunctionParse(MarkupText.Plain($"cwho({name})"));
 		await Assert.That(wizardResult?.Message?.ToPlainText()).Contains($"#{wizard.DbRef.Number}");
 	}
 
@@ -601,12 +601,12 @@ public class ChannelPermissionTests
 
 		foreach (var call in new[] { $"cowner({name})", $"cmogrifier({name})", $"cwho({name})" })
 		{
-			var result = await parser.FunctionParse(MModule.single(call));
+			var result = await parser.FunctionParse(MarkupText.Plain(call));
 			await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 
 			// The gate is what refuses the mortal, not the function being broken: a viewer who passes
 			// Chan_Can_See gets an answer from the same call.
-			var allowed = await wizardParser.FunctionParse(MModule.single(call));
+			var allowed = await wizardParser.FunctionParse(MarkupText.Plain(call));
 			await Assert.That(allowed?.Message?.ToPlainText()).IsNotEqualTo(ErrorMessages.Returns.NoSuchChannel);
 		}
 	}
@@ -641,20 +641,20 @@ public class ChannelPermissionTests
 		var parser = FunctionParserFor(mortal.DbRef);
 
 		// Naming the wizard reads back the channel they share and not the wizard-only one.
-		var named = await parser.FunctionParse(MModule.single($"channels(#{wizard.DbRef.Number})"));
+		var named = await parser.FunctionParse(MarkupText.Plain($"channels(#{wizard.DbRef.Number})"));
 		await Assert.That(named?.Message?.ToPlainText()).DoesNotContain(name);
 		await Assert.That(named?.Message?.ToPlainText()).Contains(sharedName);
 
 		// `off` listed every channel in the game; it must still list the ones the mortal really is off.
-		var off = await parser.FunctionParse(MModule.single("channels(me,off)"));
+		var off = await parser.FunctionParse(MarkupText.Plain("channels(me,off)"));
 		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(name);
 		await Assert.That(off?.Message?.ToPlainText()).DoesNotContain(sharedName);
 
-		var on = await parser.FunctionParse(MModule.single("channels(me,on)"));
+		var on = await parser.FunctionParse(MarkupText.Plain("channels(me,on)"));
 		await Assert.That(on?.Message?.ToPlainText()).DoesNotContain(name);
 		await Assert.That(on?.Message?.ToPlainText()).Contains(sharedName);
 
-		var all = await parser.FunctionParse(MModule.single("channels()"));
+		var all = await parser.FunctionParse(MarkupText.Plain("channels()"));
 		await Assert.That(all?.Message?.ToPlainText()).DoesNotContain(name);
 		await Assert.That(all?.Message?.ToPlainText()).Contains(sharedName);
 	}
@@ -762,7 +762,7 @@ public class ChannelPermissionTests
 		await Assert.That(afterMeddler!.Status.Mute ?? false).IsFalse();
 
 		// God owns the channel, so the same command from God does mute.
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@channel/mute {name}={victimName}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/mute {name}={victimName}"));
 
 		var afterOwner = await ChannelHelper.ChannelMemberStatus(victimObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
@@ -785,13 +785,13 @@ public class ChannelPermissionTests
 		await CreateChannel(hidden, "Player", "Wizard");
 		var missing = UniqueChannel("ClockMissing");
 
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/join {hidden}=#1"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/join {hidden}=#1"));
 
 		var mortal = await CreateMortal("ChanPermClockFn");
 		var parser = FunctionParserFor(mortal.DbRef);
 
-		var hiddenResult = await parser.FunctionParse(MModule.single($"clock({hidden})"));
-		var missingResult = await parser.FunctionParse(MModule.single($"clock({missing})"));
+		var hiddenResult = await parser.FunctionParse(MarkupText.Plain($"clock({hidden})"));
+		var missingResult = await parser.FunctionParse(MarkupText.Plain($"clock({missing})"));
 
 		await Assert.That(hiddenResult?.Message?.ToPlainText())
 			.IsEqualTo(missingResult?.Message?.ToPlainText());
@@ -801,7 +801,7 @@ public class ChannelPermissionTests
 
 		// God set that lock and can see the channel, so the key IS readable by someone — the mortal's
 		// refusal is the Chan_Can_Decomp gate rather than clock() failing to read a lock at all.
-		var ownerResult = await WebAppFactoryArg.FunctionParser.FunctionParse(MModule.single($"clock({hidden})"));
+		var ownerResult = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"clock({hidden})"));
 		await Assert.That(ownerResult?.Message?.ToPlainText()).Contains("#1");
 	}
 
@@ -862,7 +862,7 @@ public class ChannelPermissionTests
 			(await Mediator.Send(new GetChannelQuery(name)))!.JoinLock)).IsTrue();
 
 		// God owns the channel, so the same command from God does set the lock.
-		await GodParser.CommandParse(1, ConnectionService, MModule.single($"@clock/join {name}=#1"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/join {name}=#1"));
 		await Assert.That(string.IsNullOrEmpty(
 			(await Mediator.Send(new GetChannelQuery(name)))!.JoinLock)).IsFalse();
 	}

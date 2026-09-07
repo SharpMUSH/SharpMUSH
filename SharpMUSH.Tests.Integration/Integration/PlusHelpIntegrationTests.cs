@@ -65,7 +65,7 @@ public class PlusHelpIntegrationTests
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<CallState> God1(string command) =>
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>
 	/// What the reader on <paramref name="handle"/> is SHOWN: a $-command answers with @pemit, so
@@ -77,7 +77,7 @@ public class PlusHelpIntegrationTests
 	{
 		var actor = _actors[handle];
 		var before = Notifications.CountFor(actor);
-		await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		return [.. Notifications.For(actor).Skip(before)];
 	}
 
@@ -400,7 +400,7 @@ public class PlusHelpIntegrationTests
 		// markup a command link is made of only exists in the unflattened form.
 		var actor = _actors[handle];
 		var before = Notifications.RawCountFor(actor);
-		await Parser.CommandParse(handle, ConnectionService, MModule.single("+help scene"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("+help scene"));
 		var markup = string.Join("\n", Notifications.RawFor(actor).Skip(before)
 			.Select(m => m.Match(ms => ms.ToString(), str => str)));
 

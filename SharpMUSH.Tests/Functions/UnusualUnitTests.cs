@@ -15,7 +15,7 @@ public class UnusualUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message;
 
 		Console.WriteLine("Result: {0}", result);
 		await Assert.That(result!.ToPlainText()).IsEqualTo(expected);

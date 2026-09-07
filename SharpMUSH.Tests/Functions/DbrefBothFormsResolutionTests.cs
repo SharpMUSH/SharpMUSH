@@ -28,15 +28,15 @@ public class DbrefBothFormsResolutionTests
 
 	private async ValueTask<string> Eval(string expression)
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result.Message?.ToPlainText()?.Trim() ?? "";
 	}
 
 	private async ValueTask Cmd(string command)
-		=> await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private async ValueTask<string> CmdOut(string command)
-		=> (await Parser.CommandParse(1, ConnectionService, MModule.single(command))).Message?.ToPlainText()?.Trim() ?? "";
+		=> (await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command))).Message?.ToPlainText()?.Trim() ?? "";
 
 	/// <summary>The bare "#N" of a "#N" or "#N:creation" dbref string.</summary>
 	private static string Short(string dbref) => dbref.Contains(':') ? dbref[..dbref.IndexOf(':')] : dbref;

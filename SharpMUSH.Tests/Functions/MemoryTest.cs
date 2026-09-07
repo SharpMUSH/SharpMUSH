@@ -31,7 +31,7 @@ public class MemoryTest
 		}
 		var str = sb.ToString();
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
 		// Each operation: add(1,x)=1+x, sub(1,x)=1-x, mul(1,x)=1*x, div(1,x)=1/x
 		// Working from innermost: 1
@@ -59,7 +59,7 @@ public class MemoryTest
 		}
 		var str = sb.ToString();
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
 		await Assert
 			.That(result)
@@ -99,7 +99,7 @@ public class MemoryTest
 
 		await Assert.That(async () =>
 		{
-			var result = await Parser.FunctionParse(MModule.single(str));
+			var result = await Parser.FunctionParse(MarkupText.Plain(str));
 		}).ThrowsNothing();
 	}
 
@@ -136,7 +136,7 @@ public class MemoryTest
 
 		await Assert.That(async () =>
 		{
-			var result = await Parser.FunctionParse(MModule.single(str));
+			var result = await Parser.FunctionParse(MarkupText.Plain(str));
 		}).ThrowsNothing();
 	}
 }

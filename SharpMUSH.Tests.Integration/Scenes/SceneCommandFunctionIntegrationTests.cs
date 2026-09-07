@@ -25,10 +25,10 @@ public class SceneCommandFunctionIntegrationTests
 	private const string God = "#1";
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText().Trim();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	private async Task Cmd(string command) =>
-		await CommandParser.CommandParse(1, Connection, MModule.single(command));
+		await CommandParser.CommandParse(1, Connection, MarkupText.Plain(command));
 
 	/// <summary>Creates a fresh scene owned by God via the wizard-only side-effect function; returns its id.</summary>
 	private async Task<string> CreateSceneAsync(string title) =>

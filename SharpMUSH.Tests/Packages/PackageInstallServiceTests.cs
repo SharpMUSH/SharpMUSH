@@ -161,7 +161,7 @@ public class PackageInstallServiceTests
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
 		await Database.SetAttributeAsync(
 			PackageInstallService.ParseObjid(boardObjid)!.Value, ["FN_FMT"],
-			MModule.single("my-custom-format"), pm.Match(p => p, _ => null!, _ => null!, _ => null!));
+			MarkupText.Plain("my-custom-format"), pm.Match(p => p, _ => null!, _ => null!, _ => null!));
 
 		var manifestV2 = Parse(ManifestV2);
 		var upgradePlan = await Installer.PlanAsync(manifestV2, answers);
@@ -219,7 +219,7 @@ public class PackageInstallServiceTests
 
 		// A pre-existing object the package will attach to (not created by it).
 		var hostDbref = await Database.CreateThingAsync("Attach Host", location, pm, location);
-		await Database.SetAttributeAsync(hostDbref, ["PRE_EXISTING"], MModule.single("untouched"), pm);
+		await Database.SetAttributeAsync(hostDbref, ["PRE_EXISTING"], MarkupText.Plain("untouched"), pm);
 		var hostObjid = (await Database.GetObjectNodeAsync(hostDbref)).Known().Object().DBRef.ToString();
 
 		var manifest = Parse(

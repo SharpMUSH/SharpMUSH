@@ -22,7 +22,7 @@ public class NotificationCommandTests
 	public async ValueTask MessageCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@message #1=Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@message #1=Test message"));
 
 		await NotifyService
 			.Received(1)
@@ -36,7 +36,7 @@ public class NotificationCommandTests
 	public async ValueTask RespondCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@respond #1=Response"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@respond #1=Response"));
 
 		await NotifyService
 			.Received(1)
@@ -49,7 +49,7 @@ public class NotificationCommandTests
 	public async ValueTask RwallCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@rwall Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@rwall Test message"));
 
 		await NotifyService
 			.Received(1)
@@ -63,7 +63,7 @@ public class NotificationCommandTests
 	public async ValueTask WarningsCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@warnings"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@warnings"));
 
 		await NotifyService
 			.Received(1)
@@ -76,7 +76,7 @@ public class NotificationCommandTests
 	public async ValueTask WcheckCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wcheck #1"));
 
 		await NotifyService
 			.Received(1)
@@ -89,7 +89,7 @@ public class NotificationCommandTests
 	public async ValueTask SuggestCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest Test suggestion"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@suggest Test suggestion"));
 
 		await NotifyService
 			.Received(1)

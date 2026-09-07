@@ -32,7 +32,7 @@ public class CommandUnitTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing NoEval: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)
@@ -52,7 +52,7 @@ public class CommandUnitTests
 		// TODO: We need eval vs noparse evaluation.
 		// NoParse is currently not running the command. So let's use NoEval instead for that.
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)
@@ -81,7 +81,7 @@ public class CommandUnitTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CmdListParse");
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
 		Console.WriteLine("Testing: {0}", str);
-		await testParser.CommandListParse(MModule.single(str));
+		await testParser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)

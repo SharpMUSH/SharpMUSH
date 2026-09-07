@@ -32,12 +32,12 @@ public class ExamineNullOwnerTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamNullOwner");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LEAFA {objDbRef}=leafa"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LEAFA {objDbRef}=leafa"));
 		// Setting only the child auto-creates BRANCHY as a parent with no owner of its own.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&BRANCHY`CHILD {objDbRef}=child"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&LEAFZ {objDbRef}=leafz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BRANCHY`CHILD {objDbRef}=child"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LEAFZ {objDbRef}=leafz"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"examine {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {objDbRef}"));
 
 		// Every top-level attribute must render — including the owner-less BRANCHY parent and LEAFZ
 		// (which, depending on enumeration order, may follow it). Before the fix, dereferencing the

@@ -17,7 +17,7 @@ public class EncryptionFunctionUnitTests
 	[Arguments("digest(sha512,foo)", "f7fbba6e0636f890e56fbbf3283e524c6fa3204ae298382d624741d0dc6638326e282c41be5e4254d8820772c5518a2c5a8c0c7f7eda19594a7eb539453e1ed7")]
 	public async Task Digest(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -30,7 +30,7 @@ public class EncryptionFunctionUnitTests
 	[Arguments("encode64(123)", "MTIz")]
 	public async Task Encode64(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -41,7 +41,7 @@ public class EncryptionFunctionUnitTests
 	[Arguments("decode64(MTIz)", "123")]
 	public async Task Decode64(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -49,23 +49,23 @@ public class EncryptionFunctionUnitTests
 	public async Task Encrypt_Basic()
 	{
 		// Use base64 encoding to ensure the encrypted text can be passed through the parser
-		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_case1,mypassword,1)")))?.Message!;
+		var encrypted = (await Parser.FunctionParse(MarkupText.Plain("encrypt(test_string_encrypt_case1,mypassword,1)")))?.Message!;
 		await Assert.That(encrypted.ToPlainText()).IsNotNull();
 
-		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({encrypted.ToPlainText()},mypassword,1)")))?.Message!;
+		var decrypted = (await Parser.FunctionParse(MarkupText.Plain($"decrypt({encrypted.ToPlainText()},mypassword,1)")))?.Message!;
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo("test_string_encrypt_case1");
 	}
 
 	[Test]
 	public async Task Encrypt_WithBase64Encoding()
 	{
-		var encrypted = (await Parser.FunctionParse(MModule.single("encrypt(test_string_encrypt_encoded,mykey,1)")))?.Message!;
+		var encrypted = (await Parser.FunctionParse(MarkupText.Plain("encrypt(test_string_encrypt_encoded,mykey,1)")))?.Message!;
 		await Assert.That(encrypted.ToPlainText()).IsNotNull();
 
 		var text = encrypted.ToPlainText();
 		await Assert.That(text.All(c => char.IsLetterOrDigit(c) || c == '=' || c == '+' || c == '/')).IsTrue();
 
-		var decrypted = (await Parser.FunctionParse(MModule.single($"decrypt({text},mykey,1)")))?.Message!;
+		var decrypted = (await Parser.FunctionParse(MarkupText.Plain($"decrypt({text},mykey,1)")))?.Message!;
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo("test_string_encrypt_encoded");
 	}
 
@@ -74,9 +74,9 @@ public class EncryptionFunctionUnitTests
 	[Arguments("encrypt(test data,secretkey)", "decrypt(@0,secretkey)")]
 	public async Task EncryptDecrypt_RoundTrip(string encryptFunc, string decryptFunc)
 	{
-		var encrypted = (await Parser.FunctionParse(MModule.single(encryptFunc)))?.Message!;
+		var encrypted = (await Parser.FunctionParse(MarkupText.Plain(encryptFunc)))?.Message!;
 		var decryptCall = decryptFunc.Replace("@0", encrypted.ToPlainText());
-		var decrypted = (await Parser.FunctionParse(MModule.single(decryptCall)))?.Message!;
+		var decrypted = (await Parser.FunctionParse(MarkupText.Plain(decryptCall)))?.Message!;
 
 		var originalText = encryptFunc.Substring(encryptFunc.IndexOf('(') + 1, encryptFunc.IndexOf(',') - encryptFunc.IndexOf('(') - 1);
 		await Assert.That(decrypted.ToPlainText()).IsEqualTo(originalText);
@@ -86,7 +86,7 @@ public class EncryptionFunctionUnitTests
 	[Arguments("hmac(test,key,sha256)", "")]
 	public async Task Hmac(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

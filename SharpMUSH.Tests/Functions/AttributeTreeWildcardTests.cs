@@ -11,13 +11,13 @@ public class AttributeTreeWildcardTests
 
 	private async Task SetupAttributeTree()
 	{
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT,root_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD1,child1_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD1`GRANDCHILD1,gc1_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD1`GRANDCHILD2,gc2_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD2,child2_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOT`CHILD2`GRANDCHILD3,gc3_value)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/ROOTOTHER,other_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT,root_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT`CHILD1,child1_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT`CHILD1`GRANDCHILD1,gc1_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT`CHILD1`GRANDCHILD2,gc2_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT`CHILD2,child2_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOT`CHILD2`GRANDCHILD3,gc3_value)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/ROOTOTHER,other_value)]"));
 	}
 
 	/// <summary>
@@ -28,7 +28,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_Star_NoBacktick()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT*)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT*)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).OrderBy(x => x).ToArray();
 
@@ -46,7 +46,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_DoubleStar_MatchAll()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT**)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT**)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -67,7 +67,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_ImmediateChildren()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`*)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT`*)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -86,7 +86,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_EntireSubtree()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`**)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT`**)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -107,7 +107,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_Grandchildren()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`CHILD1`*)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT`CHILD1`*)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -126,7 +126,7 @@ public class AttributeTreeWildcardTests
 	public async Task Test_Wildcard_QuestionMark()
 	{
 		await SetupAttributeTree();
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/ROOT`CHILD?)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/ROOT`CHILD?)]")))?.Message!;
 
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
@@ -145,13 +145,13 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		var count1 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT*)]")))?.Message!.ToPlainText();
+		var count1 = (await Parser.FunctionParse(MarkupText.Plain("[nattr(%!/ROOT*)]")))?.Message!.ToPlainText();
 		await Assert.That(count1).IsEqualTo("2");
 
-		var count2 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT**)]")))?.Message!.ToPlainText();
+		var count2 = (await Parser.FunctionParse(MarkupText.Plain("[nattr(%!/ROOT**)]")))?.Message!.ToPlainText();
 		await Assert.That(count2).IsEqualTo("7");
 
-		var count3 = (await Parser.FunctionParse(MModule.single("[nattr(%!/ROOT`*)]")))?.Message!.ToPlainText();
+		var count3 = (await Parser.FunctionParse(MarkupText.Plain("[nattr(%!/ROOT`*)]")))?.Message!.ToPlainText();
 		await Assert.That(count3).IsEqualTo("2");
 	}
 
@@ -164,13 +164,13 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		var result1 = (await Parser.FunctionParse(MModule.single("[grep(%!,ROOT*,value)]")))?.Message!;
+		var result1 = (await Parser.FunctionParse(MarkupText.Plain("[grep(%!,ROOT*,value)]")))?.Message!;
 		var attrs1 = result1.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		await Assert.That(attrs1).Contains("ROOT");
 		await Assert.That(attrs1).Contains("ROOTOTHER");
 		await Assert.That(attrs1).DoesNotContain("ROOT`CHILD1");
 
-		var result2 = (await Parser.FunctionParse(MModule.single("[grep(%!,ROOT**,child)]")))?.Message!;
+		var result2 = (await Parser.FunctionParse(MarkupText.Plain("[grep(%!,ROOT**,child)]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 		await Assert.That(attrs2).Contains("ROOT`CHILD1");
 		await Assert.That(attrs2).Contains("ROOT`CHILD2");
@@ -186,7 +186,7 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		var result = (await Parser.FunctionParse(MModule.single("[reglattr(%!/^ROOT)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[reglattr(%!/^ROOT)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs).Contains("ROOT");
@@ -196,7 +196,7 @@ public class AttributeTreeWildcardTests
 
 		// Pattern uses [12] as a regex character class to match '1' or '2'
 		// Brackets are escaped with \\[ \\] for the MUSH parser
-		var result2 = (await Parser.FunctionParse(MModule.single("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
+		var result2 = (await Parser.FunctionParse(MarkupText.Plain("[reglattr(%!/ROOT`CHILD\\[12\\])]")))?.Message!;
 		var attrs2 = result2.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs2.Length).IsGreaterThanOrEqualTo(2);
@@ -214,7 +214,7 @@ public class AttributeTreeWildcardTests
 		await SetupAttributeTree();
 
 		// wildgrep searches attribute VALUES (not names) for the wildcard pattern
-		var result = (await Parser.FunctionParse(MModule.single("[wildgrep(%!,ROOT**,*child*)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[wildgrep(%!,ROOT**,*child*)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		// Should find ROOT`CHILD1 and ROOT`CHILD2 because their values 
@@ -232,7 +232,7 @@ public class AttributeTreeWildcardTests
 	{
 		await SetupAttributeTree();
 
-		var result = (await Parser.FunctionParse(MModule.single("[xattr(%!/ROOT**,1,2)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[xattr(%!/ROOT**,1,2)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		// start=1 is 1-based and inclusive of the first match (natural-sort order: ROOT, ROOT`CHILD1, ...),
@@ -247,12 +247,12 @@ public class AttributeTreeWildcardTests
 	[NotInParallel]
 	public async Task Test_SpecialCharacters_Escaped()
 	{
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST.DOT,value1)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST_UNDERSCORE,value2)]"));
-		await Parser.FunctionParse(MModule.single("[attrib_set(%!/TEST-DASH,value3)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/TEST.DOT,value1)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/TEST_UNDERSCORE,value2)]"));
+		await Parser.FunctionParse(MarkupText.Plain("[attrib_set(%!/TEST-DASH,value3)]"));
 
 		// The * wildcard should match these literally, not as regex
-		var result = (await Parser.FunctionParse(MModule.single("[lattr(%!/TEST*)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[lattr(%!/TEST*)]")))?.Message!;
 		var attrs = result.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToArray();
 
 		await Assert.That(attrs).Contains("TEST.DOT");

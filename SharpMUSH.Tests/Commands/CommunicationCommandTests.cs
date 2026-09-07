@@ -46,7 +46,7 @@ public class CommunicationCommandTests
 		}
 
 		await Mediator.Send(new CreateChannelCommand(
-			MModule.single(TestChannelName),
+			MarkupText.Plain(TestChannelName),
 			[TestChannelPrivilege],
 			_testPlayer
 		));
@@ -67,7 +67,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -86,7 +86,7 @@ public class CommunicationCommandTests
 	public async ValueTask PemitWithFunctionCallInArgument(string command, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -114,7 +114,7 @@ public class CommunicationCommandTests
 		// Missing the closing ')' on add(1,2 — matches the exact malformed input already proven
 		// to produce "#-1 PARSER FAILURE: Expected ) or , at end of expression" via FunctionParse
 		// (see SharpMUSH.Tests/Parser/ParserFailureTests.cs and FunctionUnitTests.cs).
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@pemit me=add(1,2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@pemit me=add(1,2"));
 
 		await NotifyService
 			.Received(1)
@@ -131,7 +131,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
 		// Notify(AnySharpObject, ..., NotificationType.Emit)
@@ -147,7 +147,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -162,7 +162,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -179,11 +179,11 @@ public class CommunicationCommandTests
 
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExclude");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {excludeName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
 		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var expectedMsg = "Test omit emit";
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@oemit {excludeDbRef}={expectedMsg}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@oemit {excludeDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received(1)
@@ -202,14 +202,14 @@ public class CommunicationCommandTests
 
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitZMO");
-		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
 		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone #0={zmoDbRef}"));
 
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}={expectedMsg}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@zemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received(1)
@@ -218,7 +218,7 @@ public class CommunicationCommandTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 
 		// Clean up: remove the temporary zone from room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzone #0=none"));
 	}
 
 	[Test]
@@ -227,7 +227,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -243,7 +243,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -259,7 +259,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -275,7 +275,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received()
@@ -291,7 +291,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received(1)
@@ -311,14 +311,14 @@ public class CommunicationCommandTests
 
 		// Create a unique zone master object (ZMO).
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("NsZemitZMO");
-		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
 		var zmoDbRef = DBRef.Parse(zmoResult.Message!.ToPlainText()!);
 
 		// Zone room #0 to the ZMO so that it participates in the zone.  Player #1 is in room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chzone #0={zmoDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone #0={zmoDbRef}"));
 
 		// Emit to the zone — player #1 (in room #0, which is now in the zone) should receive it.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@nszemit {zmoDbRef}={expectedMsg}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nszemit {zmoDbRef}={expectedMsg}"));
 
 		await NotifyService
 			.Received(1)
@@ -327,7 +327,7 @@ public class CommunicationCommandTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 
 		// Clean up: remove the temporary zone from room #0.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@chzone #0=none"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@chzone #0=none"));
 	}
 
 	[Test]
@@ -338,7 +338,7 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, executor)).IsTrue();
 	}
@@ -347,7 +347,7 @@ public class CommunicationCommandTests
 	public async ValueTask AddComEmptyAlias()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom=Public"));
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNameCannotBeEmpty), executor, executor)).IsTrue();
 	}
 
@@ -365,7 +365,7 @@ public class CommunicationCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AddComChannelNotFound");
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
 
-		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("addcom test_alias_ADDCOM3=NonExistentChannel"));
+		await testParser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("addcom test_alias_ADDCOM3=NonExistentChannel"));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), TestHelpers.MatchingMessage(ErrorMessages.Notifications.DontRecognizeThatChannel),
@@ -379,9 +379,9 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"addcom {alias}=Public"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// Check for the specific deletion message (not the addcom message from earlier)
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasDeletedFormat), executor, executor)).IsTrue();
@@ -394,7 +394,7 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
@@ -406,7 +406,7 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
 			.Received() // Weak check
@@ -425,9 +425,9 @@ public class CommunicationCommandTests
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"addcom {alias}=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"addcom {alias}=Public"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// Note: This command sends TWO notifications - one from ChannelTitle.Handle and one custom message
 		// We check that at least one contains our custom message with alias information
@@ -441,7 +441,7 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, executor)).IsTrue();
 	}
@@ -452,10 +452,10 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST1=Public"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("addcom test_alias_COMLIST2=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST1=Public"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST2=Public"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// The output is sent as a multi-line MString containing all aliases (in lowercase)
 		// Note: Aliases are stored in uppercase but displayed in lowercase
@@ -474,9 +474,9 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", command);
 		// Wipe all channel aliases for the executor to ensure an empty state
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wipe me/CHANALIAS*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wipe me/CHANALIAS*"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor, executor)).IsTrue();
 	}
@@ -490,9 +490,9 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitEchoTarget");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit {targetName}=Hello there"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit {targetName}=Hello there"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsTrue();
@@ -503,11 +503,11 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var targetName = TestIsolationHelpers.GenerateUniqueName("PemitSilentTarget");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {targetName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
 		var targetDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit/silent {targetName}=Quietly"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit/silent {targetName}=Quietly"));
 
 		// /silent suppresses the sender's echo, not the delivery — without this a no-op would pass.
 		await NotifyService
@@ -530,7 +530,7 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@pemit #{executor.Number}=Talking to myself"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit #{executor.Number}=Talking to myself"));
 
 		await NotifyService
 			.Received(1)
@@ -551,11 +551,11 @@ public class CommunicationCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var firstName = TestIsolationHelpers.GenerateUniqueName("PemitListA");
 		var secondName = TestIsolationHelpers.GenerateUniqueName("PemitListB");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {firstName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {secondName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {firstName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {secondName}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@pemit/list {firstName} {secondName}=Group message"));
+			MarkupText.Plain($"@pemit/list {firstName} {secondName}=Group message"));
 
 		// The key alone would pass even if the command counted the recipients wrong.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
@@ -571,13 +571,13 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitExitRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("RemitExit");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@open {exitName}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open {exitName}={roomDbRef}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit {exitName}=Nobody hears this"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {exitName}=Nobody hears this"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor, executor)).IsTrue();
@@ -592,10 +592,10 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitEchoRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit {roomDbRef}=Anyone there?"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {roomDbRef}=Anyone there?"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsTrue();
@@ -606,11 +606,11 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var roomName = TestIsolationHelpers.GenerateUniqueName("RemitSilentRoom");
-		var digResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@dig {roomName}"));
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@remit/silent {roomDbRef}=Hush"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit/silent {roomDbRef}=Hush"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsFalse();
@@ -627,11 +627,11 @@ public class CommunicationCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LemitEcho");
 
 		var boxName = TestIsolationHelpers.GenerateUniqueName("LemitBox");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {boxName}"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {boxName}=ENTER_OK"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}={boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boxName}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {boxName}=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={boxName}"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@lemit Anyone outside?"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@lemit Anyone outside?"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouLemitFormat), player.DbRef, player.DbRef)).IsTrue();
@@ -648,9 +648,9 @@ public class CommunicationCommandTests
 
 		// God is the one object a mortal provably cannot control, so this isolates the new permission
 		// branch from the Control-lock default that governs ordinary objects.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@tel {player.DbRef}=#0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}=#0"));
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@zemit #1=Not mine"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@zemit #1=Not mine"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.PermissionDenied), player.DbRef, player.DbRef)).IsTrue();
@@ -664,10 +664,10 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var zmoName = TestIsolationHelpers.GenerateUniqueName("ZemitEchoZMO");
-		var zmoResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {zmoName}"));
+		var zmoResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zmoName}"));
 		var zmoDbRef = zmoResult.Message!.ToPlainText()!.Trim();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@zemit {zmoDbRef}=Zone wide"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@zemit {zmoDbRef}=Zone wide"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouZemitInZoneFormat), executor, executor)).IsTrue();

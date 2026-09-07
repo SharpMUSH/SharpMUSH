@@ -23,7 +23,7 @@ public class NewsCommandTests
 	public async ValueTask NewsCommandWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("news"));
 
 		await NotifyService
 			.Received() // Weak check. This is currently being interfered with by 'anews' also matching 'news'.
@@ -37,7 +37,7 @@ public class NewsCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NewsTopic");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("news welcome"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("news welcome"));
 
 		await NotifyService
 			.Received(1)
@@ -51,7 +51,7 @@ public class NewsCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Use a pattern that matches no topics → NewsNoNewsForTopic is deterministically sent.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news *xyznonexistent99*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("news *xyznonexistent99*"));
 
 		// Wildcard with 0 matches sends NewsNoNewsForTopic.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
@@ -61,7 +61,7 @@ public class NewsCommandTests
 	public async ValueTask NewsNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("news nonexistenttopicxyz123"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("news nonexistenttopicxyz123"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NewsNoNewsForTopic), executor, executor)).IsTrue();
 	}
@@ -82,8 +82,8 @@ public class AhelpCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("anews"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("anews"));
 
 		await NotifyService
 			.Received(2)
@@ -97,7 +97,7 @@ public class AhelpCommandTests
 	public async ValueTask AhelpWithTopicWorks()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp security"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp security"));
 
 		await NotifyService
 			.Received(1)
@@ -110,7 +110,7 @@ public class AhelpCommandTests
 	public async ValueTask AhelpNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("ahelp nonexistenttopicxyz123"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("ahelp nonexistenttopicxyz123"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AhelpNoHelpForTopic), executor, executor)).IsTrue();
 	}

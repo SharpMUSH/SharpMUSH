@@ -58,8 +58,8 @@ public class AttributeSyntaxFlagTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UnsetFlagWiz");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNSETWIZ_ATTR {objDbRef}=hello"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=wizard"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNSETWIZ_ATTR {objDbRef}=hello"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {objDbRef}/UNSETWIZ_ATTR=wizard"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
@@ -71,7 +71,7 @@ public class AttributeSyntaxFlagTests
 		// asymmetric case that used to fail on the unset path while `@set .../attr=wiz` succeeded.
 		var messages = await MessagesWhile(executor, () =>
 			Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz")).AsTask());
+				MarkupText.Plain($"@set {objDbRef}/UNSETWIZ_ATTR=!wiz")).AsTask());
 
 		await Assert.That(messages.Any(m => m.EndsWith("/UNSETWIZ_ATTR - wizard reset.")))
 			.IsTrue()
@@ -87,8 +87,8 @@ public class AttributeSyntaxFlagTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UnsetFlagCmdX");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&UNSETX_ATTR {objDbRef}=$hi:@pemit %#=hi"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {objDbRef}/UNSETX_ATTR=cmdsyntax"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNSETX_ATTR {objDbRef}=$hi:@pemit %#=hi"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {objDbRef}/UNSETX_ATTR=cmdsyntax"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
@@ -98,7 +98,7 @@ public class AttributeSyntaxFlagTests
 
 		var messages = await MessagesWhile(executor, () =>
 			Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@set {objDbRef}/UNSETX_ATTR=!x")).AsTask());
+				MarkupText.Plain($"@set {objDbRef}/UNSETX_ATTR=!x")).AsTask());
 
 		await Assert.That(messages.Any(m => m.EndsWith("/UNSETX_ATTR - cmdsyntax reset.")))
 			.IsTrue()
@@ -130,7 +130,7 @@ public class AttributeSyntaxFlagTests
 		Owner: new AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(null)),
 		SharpAttributeEntry: new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult<SharpAttributeEntry?>(null)))
 	{
-		Value = MModule.single("say hi")
+		Value = MarkupText.Plain("say hi")
 	};
 
 	[Test]

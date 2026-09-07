@@ -42,7 +42,7 @@ public class ConnectionTerminfoTests
 	}
 
 	private async Task<string> TerminfoAsync(DBRef player) =>
-		(await Parser.FunctionParse(MModule.single($"terminfo(#{player.Number})")))!.Message!.ToPlainText();
+		(await Parser.FunctionParse(MarkupText.Plain($"terminfo(#{player.Number})")))!.Message!.ToPlainText();
 
 	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
 	public async Task Terminfo_ReportsWebsocket_ForWebSocketConnection()

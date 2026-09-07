@@ -70,7 +70,7 @@ public class SubstitutionUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		if (expected is not null)
 		{

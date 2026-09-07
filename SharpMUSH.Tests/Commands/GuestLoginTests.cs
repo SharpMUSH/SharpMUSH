@@ -27,7 +27,7 @@ public class GuestLoginTests
 	public async ValueTask ConnectGuest_NoGuestCharacters_FailsWithError()
 	{
 		var guestHandle = 1002L;
-		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsTrue();
@@ -68,12 +68,12 @@ public class GuestLoginTests
 		await Task.Delay(200);
 
 		var guestHandle = 1000L;
-		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest1"));
 	}
 
 	[Test]
@@ -98,12 +98,12 @@ public class GuestLoginTests
 		await Task.Delay(200);
 
 		var guestHandle = 1001L;
-		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect GUEST"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect GUEST"));
 
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest2"));
 	}
 
 	[Test]
@@ -126,13 +126,13 @@ public class GuestLoginTests
 		await Task.Delay(200);
 
 		var guestHandle = 1003L;
-		var result = await Parser.CommandParse(guestHandle, ConnectionService, MModule.single("connect guest"));
+		var result = await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 
 		var resultMessage = result.Message?.ToString() ?? "";
 		await Assert.That(resultMessage.Contains("#-1")).IsFalse();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest3"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@destroy Guest4"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest3"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy Guest4"));
 	}
 
 	[Test]

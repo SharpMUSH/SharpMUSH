@@ -53,11 +53,11 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiCreator");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Cmd Test Page=# Cmd Heading\n\nSome **bold** body."));
+			MarkupText.Plain("@wiki/create Cmd Test Page=# Cmd Heading\n\nSome **bold** body."));
 		await ExpectNotify(player.DbRef, "WIKI: Created page 'Cmd Test Page'");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki cmd test page"));
+			MarkupText.Plain("@wiki cmd test page"));
 		await ExpectNotify(player.DbRef, "Wiki: Cmd Test Page [main]");
 	}
 
@@ -68,7 +68,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiViewer");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki absolutely_missing_page"));
+			MarkupText.Plain("@wiki absolutely_missing_page"));
 		await ExpectNotify(player.DbRef, "WIKI: No such page");
 	}
 
@@ -79,7 +79,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLister");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/list help"));
+			MarkupText.Plain("@wiki/list help"));
 		await ExpectNotify(player.DbRef, "help:general:markdown_guide");
 	}
 
@@ -95,8 +95,8 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMainLister");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Qualified Row Page=Body of the qualified row page."));
-		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+			MarkupText.Plain("@wiki/create Qualified Row Page=Body of the qualified row page."));
+		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
 		var rows = listing.Message!.ToPlainText()
 			.Split('\n')
@@ -126,14 +126,14 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoundTrip");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Round Trip Page=Body of the round trip page."));
+			MarkupText.Plain("@wiki/create Round Trip Page=Body of the round trip page."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/view main:general:round_trip_page"));
+			MarkupText.Plain("@wiki/view main:general:round_trip_page"));
 		await ExpectNotify(player.DbRef, "Body of the round trip page");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/view help:general:markdown_guide"));
+			MarkupText.Plain("@wiki/view help:general:markdown_guide"));
 		await ExpectNoNotify(player.DbRef, "WIKI: No such page: help:general:markdown_guide");
 	}
 
@@ -144,10 +144,10 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSearcher");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Search Fodder=The xyzzy-marker phrase lives here."));
+			MarkupText.Plain("@wiki/create Search Fodder=The xyzzy-marker phrase lives here."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search xyzzy-marker"));
+			MarkupText.Plain("@wiki/search xyzzy-marker"));
 		// The slug alone also appears in the create confirmation; the search header ("N page(s)
 		// matching '<needle>'") is unique to the search reply and confirms the page was found.
 		await ExpectNotify(player.DbRef, "1 page(s) matching 'xyzzy-marker'");
@@ -160,14 +160,14 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiAppender");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Append Target=First paragraph."));
+			MarkupText.Plain("@wiki/create Append Target=First paragraph."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/append append_target=Second paragraph."));
+			MarkupText.Plain("@wiki/append append_target=Second paragraph."));
 		await ExpectNotify(player.DbRef, "now rev 2");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/history append_target"));
+			MarkupText.Plain("@wiki/history append_target"));
 		await ExpectNotify(player.DbRef, "Revision history for Append Target");
 	}
 
@@ -178,10 +178,10 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiMortal");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Mortal Page=content"));
+			MarkupText.Plain("@wiki/create Mortal Page=content"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/protect mortal_page"));
+			MarkupText.Plain("@wiki/protect mortal_page"));
 		await ExpectNotify(player.DbRef, "wizard-only");
 	}
 
@@ -193,14 +193,14 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiLocked");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Locked Page=original content"));
+			MarkupText.Plain("@wiki/create Locked Page=original content"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@wiki/protect locked_page"));
+			MarkupText.Plain("@wiki/protect locked_page"));
 		await ExpectNotify(god, "now protected");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/edit locked_page=replacement content"));
+			MarkupText.Plain("@wiki/edit locked_page=replacement content"));
 		await ExpectNotify(player.DbRef, "protected. Only wizards may edit it");
 	}
 
@@ -211,16 +211,16 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRoller");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Rollback Target=original body"));
+			MarkupText.Plain("@wiki/create Rollback Target=original body"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/edit rollback_target=changed body"));
+			MarkupText.Plain("@wiki/edit rollback_target=changed body"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/rollback rollback_target=1"));
+			MarkupText.Plain("@wiki/rollback rollback_target=1"));
 		await ExpectNotify(player.DbRef, "Restored 'Rollback Target' to r1 (now rev 3)");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki rollback_target"));
+			MarkupText.Plain("@wiki rollback_target"));
 		await ExpectNotify(player.DbRef, "original body");
 	}
 
@@ -231,10 +231,10 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiRollMiss");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Rollback Missing=body"));
+			MarkupText.Plain("@wiki/create Rollback Missing=body"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/rollback rollback_missing=42"));
+			MarkupText.Plain("@wiki/rollback rollback_missing=42"));
 		await ExpectNotify(player.DbRef, "has no revision r42");
 	}
 
@@ -244,7 +244,7 @@ public class WikiCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiHelpReader");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("help @wiki"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help @wiki"));
 
 		// help output is sent by the help command's own notify path (sender may differ),
 		// so only the recipient and content are asserted here.
@@ -263,7 +263,7 @@ public class WikiCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiFnHelp");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("help wiki()"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("help wiki()"));
 
 		await NotifyService
 			.Received(1)
@@ -281,10 +281,10 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTagger");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Tagged Page=content"));
+			MarkupText.Plain("@wiki/create Tagged Page=content"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/tag tagged_page=Magic FIRE magic"));
+			MarkupText.Plain("@wiki/tag tagged_page=Magic FIRE magic"));
 		await ExpectNotify(player.DbRef, "set to: fire, magic");
 	}
 
@@ -326,8 +326,8 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"Locale Dragons", "en dragon body", "Dragons Localises", "corps du dragon", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
 
 		await ExpectNotify(player.DbRef, "corps du dragon");
 	}
@@ -340,8 +340,8 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"Source Dragons", "en source body", "Dragons Sources", "corps source fr", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view/source {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view/source {slug}"));
 
 		// The header carries the title, so asserting on the source title also proves the source row won.
 		await ExpectNotify(player.DbRef, "Wiki: Source Dragons");
@@ -354,9 +354,9 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiSwitchCounter");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Switch Count Page=body here"));
+			MarkupText.Plain("@wiki/create Switch Count Page=body here"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/view/source switch_count_page"));
+			MarkupText.Plain("@wiki/view/source switch_count_page"));
 
 		// SOURCE is a modifier like NOEVAL. If it stayed in the action set, this would be "too many
 		// switches" and the page would never render.
@@ -369,11 +369,11 @@ public class WikiCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiGermanReader");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale de"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Untranslated Page=only english body"));
+			MarkupText.Plain("@wiki/create Untranslated Page=only english body"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/view untranslated_page"));
+			MarkupText.Plain("@wiki/view untranslated_page"));
 
 		await ExpectNotify(player.DbRef, "only english body");
 	}
@@ -391,8 +391,8 @@ public class WikiCommandTests
 		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
 		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
 
 		await ExpectNotify(player.DbRef, "en visible body");
 		await ExpectNoNotify(player.DbRef, "corps brouillon secret");
@@ -416,8 +416,8 @@ public class WikiCommandTests
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
 		await Assert.That(unpublished.IsT0).IsTrue();
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
 
 		await ExpectNoNotify(player.DbRef, "corps publié secret");
 		await ExpectNoNotify(player.DbRef, "en secret host body");
@@ -438,8 +438,8 @@ public class WikiCommandTests
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
 		await Assert.That(unpublished.IsT0).IsTrue();
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/history {slug}"));
 
 		await ExpectNotify(player.DbRef, "revision history is not shown");
 	}
@@ -452,8 +452,8 @@ public class WikiCommandTests
 		await SeedTranslatedPageAsync(
 			"Listed Dragons", "en listed body", "Dragons Listes", "corps liste", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
 		await ExpectNotify(player.DbRef, "Dragons Listes");
 	}
@@ -477,9 +477,9 @@ public class WikiCommandTests
 		var localization = WebAppFactoryArg.Services.GetRequiredService<IWikiLocalizationService>();
 		await Assert.That(localization.DefaultLocale).IsNotEqualTo("de");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale de"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Stamped At Birth=body of a stamped page"));
+			MarkupText.Plain("@wiki/create Stamped At Birth=body of a stamped page"));
 
 		var created = await WikiService.GetBySlugAsync("stamped_at_birth", "general", WikiNamespace.Main);
 		await Assert.That(created.IsT0).IsTrue();
@@ -497,8 +497,8 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"History Dragons", "en history body", "Dragons Historiques", "corps historique", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/history {slug}"));
 
 		// The header names the stream, which is the only thing that distinguishes "showed the fr stream"
 		// from "showed the source stream" when both happen to hold a single revision 1.
@@ -516,8 +516,8 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"History Gap Dragons", "en gap body", "Dragons Ecart", "corps ecart", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale de"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale de"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/history {slug}"));
 
 		await ExpectNotify(player.DbRef, "r1");
 	}
@@ -531,8 +531,8 @@ public class WikiCommandTests
 			"History Source Dragons", "en source-history body", "Dragons Source Hist", "corps source hist",
 			published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/history/source {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/history/source {slug}"));
 
 		// The source stream carries no marker and the header keeps the source title.
 		await ExpectNotify(player.DbRef, "History Source Dragons");
@@ -569,7 +569,7 @@ public class WikiCommandTests
 			"Mortal Draft Fodder", "The grue-marker phrase lives here.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search grue-marker"));
+			MarkupText.Plain("@wiki/search grue-marker"));
 
 		await ExpectNotify(player.DbRef, "0 page(s) matching 'grue-marker'");
 		await ExpectNoNotify(player.DbRef, page.Slug);
@@ -583,12 +583,12 @@ public class WikiCommandTests
 		// would satisfy the test above. Unpublishing is wizard-only, so a wizard must still find the draft.
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftWizard");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
 			"Wizard Draft Fodder", "The plover-marker phrase lives here.");
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
-			MModule.single("@wiki/search plover-marker"));
+			MarkupText.Plain("@wiki/search plover-marker"));
 
 		await ExpectNotify(wizard.DbRef, "1 page(s) matching 'plover-marker'");
 		await ExpectNotify(wizard.DbRef, $"{page.Slug}");
@@ -604,7 +604,7 @@ public class WikiCommandTests
 			"le corps contient sangloterie", published: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search sangloterie"));
+			MarkupText.Plain("@wiki/search sangloterie"));
 
 		// The needle appears in no English text this page holds, so finding it at all proves the
 		// translation stream was scanned; the [fr] marker is what tells the reader why.
@@ -623,7 +623,7 @@ public class WikiCommandTests
 			"corps francais avec kadingir", published: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search kadingir"));
+			MarkupText.Plain("@wiki/search kadingir"));
 
 		// Two matching rows, one page. Scanning two streams without a dedupe would say "2 page(s)".
 		await ExpectNotify(player.DbRef, "1 page(s) matching 'kadingir'");
@@ -641,9 +641,9 @@ public class WikiCommandTests
 			"Tiebreak Dragons", "en body with garabatos", "Dragons Egalite",
 			"corps francais avec garabatos", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search garabatos"));
+			MarkupText.Plain("@wiki/search garabatos"));
 
 		await ExpectNotify(player.DbRef, "1 page(s) matching 'garabatos'");
 		await ExpectNotify(player.DbRef, "[fr]");
@@ -659,7 +659,7 @@ public class WikiCommandTests
 			"corps avec zwiebelturm", published: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search/source zwiebelturm"));
+			MarkupText.Plain("@wiki/search/source zwiebelturm"));
 
 		await ExpectNotify(player.DbRef, "0 page(s) matching 'zwiebelturm'");
 	}
@@ -676,7 +676,7 @@ public class WikiCommandTests
 			"corps brouillon avec quenouille", published: false);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/search quenouille"));
+			MarkupText.Plain("@wiki/search quenouille"));
 
 		await ExpectNotify(player.DbRef, "0 page(s) matching 'quenouille'");
 		await ExpectNoNotify(player.DbRef, slug);
@@ -687,13 +687,13 @@ public class WikiCommandTests
 	{
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftTrWizard");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var slug = await SeedTranslatedPageAsync(
 			"Wizard Draft Translation Dragons", "en wiz host body", "Dragons Brouillon Sorcier",
 			"corps brouillon avec grelinette", published: false);
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
-			MModule.single("@wiki/search grelinette"));
+			MarkupText.Plain("@wiki/search grelinette"));
 
 		await ExpectNotify(wizard.DbRef, "1 page(s) matching 'grelinette'");
 		await ExpectNotify(wizard.DbRef, slug);
@@ -706,7 +706,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftLister");
 		var page = await SeedUnpublishedPageAsync("Mortal Draft Listing", "listing body");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
 		await ExpectNoNotify(player.DbRef, page.Slug);
 		await ExpectNotify(player.DbRef, "WIKI: ");
@@ -724,18 +724,18 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounter");
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftCounterWiz");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 
 		var page = await SeedUnpublishedPageAsync(
 			"Draft Counting Fodder", "counting body", WikiNamespace.System);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list system"));
 		await ExpectNotify(player.DbRef, "WIKI: 0 page(s) in namespace 'system'");
 		await ExpectNoNotify(player.DbRef, page.Slug);
 
 		// A count hard-wired to the published total would satisfy the assertion above and hide the draft
 		// from the one reader entitled to see it, so the wizard's view has to be pinned in the same breath.
-		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/list system"));
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@wiki/list system"));
 		await ExpectNotify(wizard.DbRef, "WIKI: 1 page(s) in namespace 'system'");
 		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
@@ -748,7 +748,7 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecent");
 		var page = await SeedUnpublishedPageAsync("Mortal Draft Recent", "recent body");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@wiki/recent"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/recent"));
 
 		await ExpectNoNotify(player.DbRef, page.Slug);
 		await ExpectNotify(player.DbRef, "Recently edited pages");
@@ -759,10 +759,10 @@ public class WikiCommandTests
 	{
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftRecentWiz");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync("Wizard Draft Recent", "wizard recent body");
 
-		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single("@wiki/recent"));
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@wiki/recent"));
 
 		await ExpectNotify(wizard.DbRef, page.Slug);
 	}
@@ -777,7 +777,7 @@ public class WikiCommandTests
 		var page = await SeedUnpublishedPageAsync(
 			"Mortal Draft Body", "The zork-body-marker phrase lives here.");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki {page.Slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki {page.Slug}"));
 
 		await ExpectNoNotify(player.DbRef, "zork-body-marker");
 		// Not a bare "no such page": the page exists, and saying otherwise would be a lie the header
@@ -796,7 +796,7 @@ public class WikiCommandTests
 			"Mortal Draft Switch Body", "The plugh-body-marker phrase lives here.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/view/draft {page.Slug}"));
+			MarkupText.Plain($"@wiki/view/draft {page.Slug}"));
 
 		await ExpectNoNotify(player.DbRef, "plugh-body-marker");
 		await ExpectNotify(player.DbRef, "This is a draft; its body is not shown.");
@@ -810,11 +810,11 @@ public class WikiCommandTests
 		// the opt-in, not the permission.
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizDefault");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
 			"Wizard Draft Default Body", "The frotz-body-marker phrase lives here.");
 
-		await Parser.CommandParse(wizard.Handle, ConnectionService, MModule.single($"@wiki {page.Slug}"));
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain($"@wiki {page.Slug}"));
 
 		await ExpectNoNotify(wizard.DbRef, "frotz-body-marker");
 		await ExpectNotify(wizard.DbRef, "Add /DRAFT to read it.");
@@ -826,12 +826,12 @@ public class WikiCommandTests
 		// Without this, "never render an unpublished body" would satisfy every test above.
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftBodyWizShown");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync(
 			"Wizard Draft Shown Body", "The plover-body-marker phrase lives here.");
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
-			MModule.single($"@wiki/view/draft {page.Slug}"));
+			MarkupText.Plain($"@wiki/view/draft {page.Slug}"));
 
 		await ExpectNotify(wizard.DbRef, "plover-body-marker");
 	}
@@ -845,9 +845,9 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftSwitchPublished");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/create Draft Switch Published=The grue-body-marker phrase lives here."));
+			MarkupText.Plain("@wiki/create Draft Switch Published=The grue-body-marker phrase lives here."));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@wiki/view/draft draft_switch_published"));
+			MarkupText.Plain("@wiki/view/draft draft_switch_published"));
 
 		await ExpectNotify(player.DbRef, "grue-body-marker");
 		await ExpectNoNotify(player.DbRef, "is a draft");
@@ -865,8 +865,8 @@ public class WikiCommandTests
 			"Unprotected Draft Locale Page", "en unprotected visible body", "Brouillon Libre",
 			"corps brouillon libre secret", published: false);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single($"@wiki/view {slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
 
 		await ExpectNotify(player.DbRef, "en unprotected visible body");
 		await ExpectNoNotify(player.DbRef, "corps brouillon libre secret");
@@ -882,7 +882,7 @@ public class WikiCommandTests
 		var page = await SeedUnpublishedPageAsync("Mortal Draft History", "draft history body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/history {page.Slug}"));
+			MarkupText.Plain($"@wiki/history {page.Slug}"));
 
 		await ExpectNotify(player.DbRef, "This is a draft; its revision history is not shown.");
 		await ExpectNoNotify(player.DbRef, "by #1");
@@ -893,11 +893,11 @@ public class WikiCommandTests
 	{
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiDraftHistoryWiz");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedUnpublishedPageAsync("Wizard Draft History", "wizard draft history body");
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
-			MModule.single($"@wiki/history/draft {page.Slug}"));
+			MarkupText.Plain($"@wiki/history/draft {page.Slug}"));
 
 		await ExpectNotify(wizard.DbRef, "by #1");
 	}
@@ -920,14 +920,14 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Translatable Dragons", "en dragon body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=corps traduit en jeu"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps traduit en jeu"));
 		await ExpectNotify(player.DbRef, $"Wrote the fr translation of '{page.Title}'");
 
 		// Reading it back through @wiki proves the row landed where a French reader resolves to, which a
 		// write into the source page (or into some other locale) would not satisfy...
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/view {page.Slug}"));
+			MarkupText.Plain($"@wiki/view {page.Slug}"));
 		await ExpectNotify(player.DbRef, "corps traduit en jeu");
 
 		// ...and the source body being untouched is what rules out "wrote the page itself".
@@ -945,9 +945,9 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorNoLang");
 		var page = await SeedSourcePageAsync("Untagged Dragons", "en untagged body");
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}=corps sans etiquette"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}=corps sans etiquette"));
 
 		await ExpectNotify(player.DbRef, "a translation needs an explicit language");
 
@@ -969,7 +969,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Bad Tag Dragons", "en bad-tag body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/zzq=corps en langue inventee"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/zzq=corps en langue inventee"));
 
 		// The message names the offending tag rather than reporting a generic syntax error.
 		await ExpectNotify(player.DbRef, "'zzq' is not a recognised BCP-47 locale tag");
@@ -986,7 +986,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Shadowing Dragons", "en shadowing body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/en=an English shadow of the source"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/en=an English shadow of the source"));
 
 		// No row may shadow the source. The store enforces it; what is asserted here is that the player
 		// is told what to do instead, rather than shown a raw error naming a storage id.
@@ -1007,9 +1007,9 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Revised Dragons", "en revised body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=premiere version"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=premiere version"));
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=deuxieme version"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=deuxieme version"));
 
 		await ExpectNotify(player.DbRef, "now rev 2");
 
@@ -1029,7 +1029,7 @@ public class WikiCommandTests
 		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=corps interdit"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps interdit"));
 
 		await ExpectNotify(player.DbRef, $"'{page.Title}' is protected");
 
@@ -1043,12 +1043,12 @@ public class WikiCommandTests
 		// Without this, "refuse every translation of a protected page" would satisfy the test above.
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorWiz");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {wizard.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var page = await SeedSourcePageAsync("Wizard Protected Dragons", "en wiz protected body");
 		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
 
 		await Parser.CommandParse(wizard.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=corps autorise"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps autorise"));
 
 		await ExpectNotify(wizard.DbRef, $"Wrote the fr translation of '{page.Title}'");
 
@@ -1069,7 +1069,7 @@ public class WikiCommandTests
 		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {slug}/fr=corps corrige"));
+			MarkupText.Plain($"@wiki/translate {slug}/fr=corps corrige"));
 
 		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
 		await Assert.That(fr.IsT0).IsTrue();
@@ -1088,7 +1088,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Fresh Dragons", "en fresh body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr=corps tout neuf"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps tout neuf"));
 
 		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
 		await Assert.That(fr.IsT0).IsTrue();
@@ -1106,7 +1106,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Ambiguous Dragons", "en ambiguous body");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/translate {page.Slug}/fr/de=corps ambigu"));
+			MarkupText.Plain($"@wiki/translate {page.Slug}/fr/de=corps ambigu"));
 
 		await ExpectNotify(player.DbRef, "has more than one '/'");
 
@@ -1158,7 +1158,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Linking Dragons", "See [[Help:Markdown Guide]] for details.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki {page.Slug}"));
+			MarkupText.Plain($"@wiki {page.Slug}"));
 
 		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Html, "xch_cmd=\"@wiki help:general:markdown_guide\"");
 		await ExpectNotifyRendered(player.DbRef, MarkupFormat.Pueblo, "XCH_CMD=\"@wiki help:general:markdown_guide\"");
@@ -1188,7 +1188,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Raw Source Dragons", RawSourceBody);
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/md {page.Slug}"));
+			MarkupText.Plain($"@wiki/md {page.Slug}"));
 
 		// Every line intact and in order: nothing rendered, reflowed, re-indented or wrapped.
 		await ExpectNotifyPlainText(player.DbRef, RawSourceBody);
@@ -1207,7 +1207,7 @@ public class WikiCommandTests
 		var page = await SeedSourcePageAsync("Literal Dragons", "Call [add(1,2)] with %0 and $foo.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/md {page.Slug}"));
+			MarkupText.Plain($"@wiki/md {page.Slug}"));
 
 		await ExpectNotifyPlainText(player.DbRef, "Call [add(1,2)] with %0 and $foo.");
 		await ExpectNoNotify(player.DbRef, "Call 3 with");
@@ -1226,16 +1226,16 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"Md Locale Dragons", "# English source", "Dragons Md", "# Source francaise", published: true);
 
-		await Parser.CommandParse(player.Handle, ConnectionService, MModule.single("@locale fr"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 
 		// Without /source the reader's own locale is served, still as raw markdown.
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/view/md {slug}"));
+			MarkupText.Plain($"@wiki/view/md {slug}"));
 		await ExpectNotifyPlainText(player.DbRef, "# Source francaise");
 
 		// With it, the locale the page was written in.
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/view/source/md {slug}"));
+			MarkupText.Plain($"@wiki/view/source/md {slug}"));
 		await ExpectNotifyPlainText(player.DbRef, "# English source");
 	}
 
@@ -1252,7 +1252,7 @@ public class WikiCommandTests
 			"Md Draft Dragons", "Contains the plugh-md-marker token.");
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@wiki/md {draft.Slug}"));
+			MarkupText.Plain($"@wiki/md {draft.Slug}"));
 
 		await ExpectNoNotify(player.DbRef, "plugh-md-marker");
 		await ExpectNotifyPlainText(player.DbRef, "WIKI: This is a draft; its body is not shown.");

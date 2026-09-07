@@ -55,7 +55,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_PlainText_ExactMatch()
 	{
 		// Note: In MUSH, strings with spaces/special chars need proper quoting or escaping
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(Hello world)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(Hello world)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("Hello world");
 	}
@@ -64,7 +64,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_BoldText_ExactMatch()
 	{
 		var markdown = "This is **bold** text";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("This is **bold** text");
@@ -77,7 +77,7 @@ public class MarkdownFunctionUnitTests
 	{
 		// italic is rendered as bold in this implementation
 		var markdown = "This is *italic* text";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("This is *italic* text");
@@ -89,7 +89,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Heading1_ExactMatch()
 	{
 		var markdown = "# Heading 1";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# Heading 1");
@@ -100,7 +100,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_InlineCode_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(This is `code` text)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(This is `code` text)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("This is code text");
 	}
@@ -109,7 +109,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_CodeBlock_ExactMatch()
 	{
 		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rcode line 1%rcode line 2%r```)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(```%rcode line 1%rcode line 2%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(TrimmedPlainText(result!)).IsEqualTo("  code line 1\n  code line 2");
 	}
@@ -118,7 +118,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_CodeBlock_Indentation_ExactMatch()
 	{
 		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rLine one%r  Line two indented%rLine three%r```)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(```%rLine one%r  Line two indented%rLine three%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		// All lines in code blocks should have 2 spaces of indentation added.
@@ -133,7 +133,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Link_ExactMatch()
 	{
 		// Escape square brackets and parentheses with percent for MUSH parser
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(%[Click here%]%(https://example.com%))")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(%[Click here%]%(https://example.com%))")))?.Message;
 		await Assert.That(result).IsNotNull();
 		// With hyperlink markup, only the link text is visible in plain text; the URL is embedded in ANSI escape codes
 		await Assert.That(result!.ToPlainText()).IsEqualTo("Click here");
@@ -145,7 +145,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Link_WithUrlOnly_ExactMatch()
 	{
 		// autolink: URL by itself in angle brackets, shown as both text and link
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(<https://example.com>)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(<https://example.com>)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
 		var fullString = result.Render(MarkupFormat.Ansi);
@@ -156,7 +156,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Link_TextSameAsUrl_ExactMatch()
 	{
 		// Escape square brackets and parentheses with percent for MUSH parser
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(%[https://example.com%]%(https://example.com%))")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(%[https://example.com%]%(https://example.com%))")))?.Message;
 		await Assert.That(result).IsNotNull();
 		// Link text is shown, URL is in hyperlink metadata
 		await Assert.That(result!.ToPlainText()).IsEqualTo("https://example.com");
@@ -173,7 +173,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_UnorderedList_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(- Item 1%r- Item 2%r- Item 3)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(- Item 1%r- Item 2%r- Item 3)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("* Item 1\n* Item 2\n* Item 3");
 	}
@@ -181,7 +181,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_OrderedList_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(1. First%r2. Second%r3. Third)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(1. First%r2. Second%r3. Third)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("1. First\n2. Second\n3. Third");
 	}
@@ -194,7 +194,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_OrderedListStartingAtThree_KeepsItsNumbering()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(3. Third%r4. Fourth)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(3. Third%r4. Fourth)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("3. Third\n4. Fourth");
 	}
@@ -202,7 +202,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_Quote_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(> This is a quote)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(> This is a quote)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("  This is a quote");
 	}
@@ -211,7 +211,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_Table_ExactMatch()
 	{
 		var markdown = "| Header 1 | Header 2 |%r|---|---|%r| Cell 1 | Cell 2 |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("| Header 1 | Header 2 |\n|---|---|\n| Cell 1 | Cell 2 |");
@@ -222,7 +222,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_WithCustomWidth_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(| A | B | C |%r|---|---|---|%r| 1 | 2 | 3 |,50)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(| A | B | C |%r|---|---|---|%r| 1 | 2 | 3 |,50)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var lines = result!.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -235,8 +235,8 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_DefaultWidth78_ExactMatch()
 	{
-		var resultDefault = (await Parser.FunctionParse(MModule.single("rendermarkdown(| Column 1 | Column 2 | Column 3 |%r|---|---|---|%r| A | B | C |)")))?.Message;
-		var result78 = (await Parser.FunctionParse(MModule.single("rendermarkdown(| Column 1 | Column 2 | Column 3 |%r|---|---|---|%r| A | B | C |,78)")))?.Message;
+		var resultDefault = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(| Column 1 | Column 2 | Column 3 |%r|---|---|---|%r| A | B | C |)")))?.Message;
+		var result78 = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(| Column 1 | Column 2 | Column 3 |%r|---|---|---|%r| A | B | C |,78)")))?.Message;
 
 		await Assert.That(resultDefault).IsNotNull();
 		await Assert.That(result78).IsNotNull();
@@ -249,7 +249,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_MultipleParagraphs_ExactMatch()
 	{
 		// Note: Markdown treats double newlines as paragraph breaks, which get rendered as double newlines in output
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(Paragraph 1%r%rParagraph 2)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(Paragraph 1%r%rParagraph 2)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("Paragraph 1\n\nParagraph 2");
 	}
@@ -257,7 +257,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_NestedEmphasis_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(This is ***bold and italic*** text)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(This is ***bold and italic*** text)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("This is bold and italic text");
 	}
@@ -266,7 +266,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_HtmlEntityHandling_ExactMatch()
 	{
 		var markdown = "&copy; 2024";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("&copy; 2024");
@@ -277,7 +277,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_HtmlTagsStripped_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(This is <b>bold</b> text)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(This is <b>bold</b> text)")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("This is bold text");
 	}
@@ -285,7 +285,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdown_EmptyInput_ExactMatch()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown()")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown()")))?.Message;
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.ToPlainText()).IsEqualTo("");
 	}
@@ -294,7 +294,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_ComplexMixedContent_FullComparison()
 	{
 		var markdown = "# Title%r%rThis is **bold** and *italic*.%r%r- Item 1%r- Item 2";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# Title\n\nThis is **bold** and *italic*.\n\n- Item 1\n- Item 2");
@@ -306,7 +306,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableWithAlignment_FullComparison()
 	{
 		var markdown = "| Left | Center | Right |%r|:---|:---:|---:|%r| A | B | C |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("| Left | Center | Right |\n|:---|:---:|---:|\n| A | B | C |");
@@ -318,7 +318,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_NestedListsAndQuotes_FullComparison()
 	{
 		var markdown = "- Item 1%r  - Nested 1%r  - Nested 2%r- Item 2%r%r> Quote text";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		// Note: PE_COMPRESS_SPACES compresses runs of spaces in evaluated args,
@@ -332,7 +332,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_CodeBlocksWithLanguage_FullComparison()
 	{
 		// Lines are rendered with background-fill padding; use TrimmedPlainText when checking indentation.
-		var result = (await Parser.FunctionParse(MModule.single("rendermarkdown(```%rvar x = 42;%rvar y = 100;%r```)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rendermarkdown(```%rvar x = 42;%rvar y = 100;%r```)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		await Assert.That(TrimmedPlainText(result!)).IsEqualTo("  var x = 42;\n  var y = 100;");
@@ -342,7 +342,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_MixedFormattingInParagraph_FullComparison()
 	{
 		var markdown = "This has **bold** text.";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("This has **bold** text.");
@@ -354,7 +354,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_HeadingsH1ThroughH3_FullComparison()
 	{
 		var markdown = "# H1 Heading%r## H2 Heading%r### H3 Heading";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# H1 Heading\n## H2 Heading\n### H3 Heading");
@@ -366,7 +366,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_CompleteDocument_FullComparison()
 	{
 		var markdown = "# Project Title%r%rThis is a **complete** example.%r%r## Features%r%r- Item 1%r- Item 2%r%r> Important note%r%r```%rcode here%r```";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# Project Title\n\nThis is a **complete** example.\n\n## Features\n\n- Item 1\n- Item 2\n\n> Important note\n\n```\ncode here\n```");
@@ -378,7 +378,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_OrderedListWithNumbers_FullComparison()
 	{
 		var markdown = "1. First item%r2. Second item%r3. Third item";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("1. First item\n2. Second item\n3. Third item");
@@ -390,7 +390,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableColumnSpacing_DefaultWidth()
 	{
 		var markdown = "| Header A | Header B | Header C |%r|---|---|---|%r| Data 1 | Data 2 | Data 3 |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var fullOutput = result!.ToString();
@@ -415,7 +415,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableColumnSpacing_CustomWidth50()
 	{
 		var markdown = "| Column One | Column Two | Column Three |%r|---|---|---|%r| A | B | C |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown},50)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown},50)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var plainText = result!.ToPlainText();
@@ -439,7 +439,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableColumnAlignment_LeftCenterRight()
 	{
 		var markdown = "| Left | Center | Right |%r|:---|:---:|---:|%r| L | C | R |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("| Left | Center | Right |\n|:---|:---:|---:|\n| L | C | R |");
@@ -451,7 +451,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableExpansion_SmallContentFitsWidth()
 	{
 		var markdown = "| A | B |%r|---|---|%r| 1 | 2 |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var plainText = result!.ToPlainText();
@@ -475,7 +475,7 @@ public class MarkdownFunctionUnitTests
 	{
 		// Note: Table fitting/shrinking works but some constraints apply based on content
 		var markdown = "| Very Long Header One | Very Long Header Two | Very Long Header Three | Very Long Header Four |%r|---|---|---|---|%r| Data1 | Data2 | Data3 | Data4 |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown},60)")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown},60)")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var plainText = result!.ToPlainText();
@@ -489,7 +489,7 @@ public class MarkdownFunctionUnitTests
 			await Assert.That(line.EndsWith("|")).IsTrue();
 		}
 
-		var result120 = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown},120)")))?.Message;
+		var result120 = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown},120)")))?.Message;
 		await Assert.That(result120).IsNotNull();
 
 		var lines120 = result120!.ToPlainText().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -503,7 +503,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_TableProportionalScaling_MultipleColumns()
 	{
 		var markdown = "| Short | Medium Length | Very Very Long Column |%r|---|---|---|%r| A | B | C |";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var plainText = result!.ToPlainText();
@@ -526,7 +526,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdown_FullDocument_ByteWiseComparison()
 	{
 		var markdown = "# Main Title%r%rSome **bold** text here.%r%r| Col1 | Col2 |%r|---|---|%r| A | B |%r%r- List item 1%r- List item 2";
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdown({markdown})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdown({markdown})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var expected = RecursiveMarkdownHelper.RenderMarkdown("# Main Title\n\nSome **bold** text here.\n\n| Col1 | Col2 |\n|---|---|\n| A | B |\n\n- List item 1\n- List item 2");
@@ -537,26 +537,26 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_AllCustomTemplates_NonDefaultBehavior()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownCustomTestObj)")))?.Message?.ToString()!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownCustomTestObj)")))?.Message?.ToString()!;
 		await Assert.That(createResult).IsNotNull();
 		var testDbref = createResult.Trim();
 
 		// Use & command instead of attrib_set() to avoid evaluating the template before storing
-		var h1Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H1 {testDbref}=[ansi(hg,>>> %0)]"));
+		var h1Set = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`H1 {testDbref}=[ansi(hg,>>> %0)]"));
 
-		var h2Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H2 {testDbref}=[ansi(hc,>> %0)]"));
+		var h2Set = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`H2 {testDbref}=[ansi(hc,>> %0)]"));
 
-		var h3Set = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`H3 {testDbref}=[ansi(hm,> %0)]"));
+		var h3Set = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`H3 {testDbref}=[ansi(hm,> %0)]"));
 
-		var cbSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`CODEBLOCK {testDbref}=[ansi(hy,%[CODE:%])]%r[ansi(h,%0)]"));
+		var cbSet = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`CODEBLOCK {testDbref}=[ansi(hy,%[CODE:%])]%r[ansi(h,%0)]"));
 
-		var liSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LISTITEM {testDbref}=[if(%0,[ansi(hr,%(%1%). %2)],[ansi(hb,★ %2)])]"));
+		var liSet = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LISTITEM {testDbref}=[if(%0,[ansi(hr,%(%1%). %2)],[ansi(hb,★ %2)])]"));
 
-		var qSet = await Parser.CommandParse(MModule.single($"&RENDERMARKUP`QUOTE {testDbref}=[ansi(hb,QUOTE: %0)]"));
+		var qSet = await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`QUOTE {testDbref}=[ansi(hb,QUOTE: %0)]"));
 
 		var markdown = "# H1 Title%r## H2 Title%r### H3 Title%r%r```%rcode line 1%rcode line 2%r```%r%r1. First item%r2. Second item%r%r- Bullet one%r- Bullet two%r%r> This is a quote";
 
-		var result = (await Parser.FunctionParse(MModule.single($"rendermarkdowncustom({markdown},{testDbref})")))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"rendermarkdowncustom({markdown},{testDbref})")))?.Message;
 		await Assert.That(result).IsNotNull();
 
 		var plainText = result!.ToPlainText();
@@ -620,10 +620,10 @@ public class MarkdownFunctionUnitTests
 		var obj = await CreateTemplateObject("MarkdownInlineTemplateObj");
 
 		// & rather than attrib_set() so the template is stored unevaluated.
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`INLINECODE {obj}=<%0>"));
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=%0 %(%1%) cmd=%2"));
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=[ansi(hc,%0)] %(@wiki %1%)"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`BOLD {obj}=[ansi(hr,BOLD:%0)]"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`INLINECODE {obj}=<%0>"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LINK {obj}=%0 %(%1%) cmd=%2"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`WIKILINK {obj}=[ansi(hc,%0)] %(@wiki %1%)"));
 
 		// No commas: rendermarkdowncustom()'s second argument is the template object, so a comma in
 		// the markdown would be read as one (and the third as a width).
@@ -654,7 +654,7 @@ public class MarkdownFunctionUnitTests
 	[Test]
 	public async Task RenderMarkdownCustom_NoTemplates_MatchesDefaultRenderingForNewHooks()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(MarkdownNoTemplateObj)")))?.Message?.ToString()!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(MarkdownNoTemplateObj)")))?.Message?.ToString()!;
 		await Assert.That(createResult).IsNotNull();
 		var obj = createResult.Trim();
 
@@ -682,7 +682,7 @@ public class MarkdownFunctionUnitTests
 	/// </remarks>
 	private async Task<MString> EvaluateAsync(string expression)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(expression)))?.Message;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message;
 
 		await Assert.That(result).IsNotNull();
 
@@ -701,7 +701,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_TableTemplate_ReceivesTheTableAsJson()
 	{
 		var obj = await CreateTemplateObject("MarkdownTableJsonObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=%0"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`TABLE {obj}=%0"));
 
 		// The last row writes one cell where the header has three.
 		var markdown = "| A | B | C |%r|:---|:---:|---:|%r| 1 | 2 | 3 |%r| 4 |";
@@ -720,7 +720,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_TableTemplate_WidthIsTheRequestedRenderWidth()
 	{
 		var obj = await CreateTemplateObject("MarkdownTableWidthObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`TABLE {obj}=W:[json_query(%0,get,width)]"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`TABLE {obj}=W:[json_query(%0,get,width)]"));
 
 		var markdown = "| A |%r|---|%r| 1 |";
 
@@ -739,7 +739,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_TableTemplate_CellsAreRawSourceNotRendered()
 	{
 		var obj = await CreateTemplateObject("MarkdownTableRawSourceObj");
-		await Parser.CommandParse(MModule.single(
+		await Parser.CommandParse(MarkupText.Plain(
 			$"&RENDERMARKUP`TABLE {obj}=RAW:[json_query(%0,extract,$.head%[0%])]"
 			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
 
@@ -765,7 +765,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_TableTemplate_EscapesRoundTripThroughJsonQuery()
 	{
 		var obj = await CreateTemplateObject("MarkdownTableEscapeObj");
-		await Parser.CommandParse(MModule.single(
+		await Parser.CommandParse(MarkupText.Plain(
 			$"&RENDERMARKUP`TABLE {obj}=COLS:[json_query([json_query(%0,get,widths)],size)] RAW:%0"
 			+ " CELL:[json_query(%0,extract,$.head%[0%])]"
 			+ " OUT:[rendermarkdown([json_query(%0,extract,$.head%[0%])])]"));
@@ -820,7 +820,7 @@ public class MarkdownFunctionUnitTests
 				+ "[jiter({0}/FUN`TABLE`HEAD {0}/FUN`TABLE`RULE {0}/FUN`TABLE`BODY,%0,%r)]",
 		})
 		{
-			await Parser.CommandParse(MModule.single(string.Format(attribute, obj)));
+			await Parser.CommandParse(MarkupText.Plain(string.Format(attribute, obj)));
 		}
 
 		var markdown = "| Command | Effect | Cost |%r|:---|:-:|--:|"
@@ -865,7 +865,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_ImageTemplate_AltTextArrivesPlain()
 	{
 		var obj = await CreateTemplateObject("MarkdownImageAltObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`IMAGE {obj}=ALT:%0/URL:%1"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`IMAGE {obj}=ALT:%0/URL:%1"));
 
 		// The alt text carries bold and inline code, both of which the renderer would style.
 		var markdown = "!%[a **bold** `logo`%]%(/assets/Logo.svg%)";
@@ -894,7 +894,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_AutolinkTemplate_DoesNotFireWithoutAUrl()
 	{
 		var obj = await CreateTemplateObject("MarkdownAutolinkGuardObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`AUTOLINK {obj}=SAW-AN-AUTOLINK:%0"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`AUTOLINK {obj}=SAW-AN-AUTOLINK:%0"));
 
 		var renderer = await BuildCustomRendererAsync(obj);
 
@@ -932,8 +932,8 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_LinkTemplates_DoNotFireForEmptyElements()
 	{
 		var obj = await CreateTemplateObject("MarkdownLinkGuardObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`LINK {obj}=SAW-A-LINK:%0"));
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`WIKILINK {obj}=SAW-A-WIKILINK:%0"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`LINK {obj}=SAW-A-LINK:%0"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`WIKILINK {obj}=SAW-A-WIKILINK:%0"));
 
 		// A URL-less link: the default emits the bracket text as prose, so the template is not consulted.
 		var empty = await EvaluateAsync($"rendermarkdowncustom(%[just text%]%(%),{obj})");
@@ -959,7 +959,7 @@ public class MarkdownFunctionUnitTests
 	public async Task RenderMarkdownCustom_EmphasisTemplates_ContentArrivesPlain()
 	{
 		var obj = await CreateTemplateObject("MarkdownEmphasisPlainObj");
-		await Parser.CommandParse(MModule.single($"&RENDERMARKUP`BOLD {obj}=<%0>"));
+		await Parser.CommandParse(MarkupText.Plain($"&RENDERMARKUP`BOLD {obj}=<%0>"));
 
 		// Inline code nested inside the bold run would otherwise arrive coloured.
 		var result = await EvaluateAsync($"rendermarkdowncustom(A **bold `code` run** here.,{obj})");

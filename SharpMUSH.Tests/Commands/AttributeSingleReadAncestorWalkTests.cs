@@ -52,7 +52,7 @@ public class AttributeSingleReadAncestorWalkTests
 	private static readonly DBRef AncestorThing = new(6);
 
 	private async Task Cmd(long handle, string command)
-		=> await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		=> await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>
 	/// Evaluates <paramref name="expression"/> AS the player behind <paramref name="handle"/>.
@@ -61,7 +61,7 @@ public class AttributeSingleReadAncestorWalkTests
 	/// </summary>
 	private async Task<string> Eval(long handle, string expression)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result?.Message?.ToPlainText() ?? string.Empty;
 	}
 

@@ -27,10 +27,10 @@ public class PluginLoaderIntegrationTests
 	private IConnectionService Connection => WebAppFactory.Services.GetRequiredService<IConnectionService>();
 
 	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	private async Task<string?> Cmd(string command) =>
-		(await CommandParser.CommandParse(1, Connection, MModule.single(command))).Message?.ToPlainText();
+		(await CommandParser.CommandParse(1, Connection, MarkupText.Plain(command))).Message?.ToPlainText();
 
 	[Test]
 	public async Task PluginFunction_PluginAdd_EvaluatesToSum()

@@ -25,7 +25,7 @@ public class VerbCommandTests
 		// Syntax: @verb victim=actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
 		// Empty what-attr means use the default string directly
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
+			MarkupText.Plain($"@verb {verbObj}={verbObj},,VerbActorDefault_Value_52830,,VerbOthersDefault_Value_52830,,"));
 
 		await NotifyService
 			.Received(1)
@@ -41,12 +41,12 @@ public class VerbCommandTests
 	{
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbAttr");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_74102 {verbObj}=VerbAction_Value_74102"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&OWHAT_74102 {verbObj}=VerbOther_Value_74102"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WHAT_74102 {verbObj}=VerbAction_Value_74102"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OWHAT_74102 {verbObj}=VerbOther_Value_74102"));
 
 		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
+			MarkupText.Plain($"@verb {verbObj}={verbObj},WHAT_74102,DefaultWhat,OWHAT_74102,DefaultOwhat,,"));
 
 		await NotifyService
 			.Received(1)
@@ -62,11 +62,11 @@ public class VerbCommandTests
 	{
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbArgs");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&WHAT_ARGS_91605 {verbObj}=VerbArgs_Value_91605"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WHAT_ARGS_91605 {verbObj}=VerbArgs_Value_91605"));
 
 		// 7 RHS args: actor,what-attr,what-default,owhat-attr,owhat-default,awhat-attr,awhat-default
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
+			MarkupText.Plain($"@verb {verbObj}={verbObj},WHAT_ARGS_91605,Default,,,,"));
 
 		await NotifyService
 			.Received(1)
@@ -84,7 +84,7 @@ public class VerbCommandTests
 		var verbObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "VerbInsuf");
 
 		// Provide only the victim with no actor/message args — args.Count < 2 triggers the Usage error
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@verb {verbObj}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@verb {verbObj}"));
 
 		await NotifyService
 			.Received(1)

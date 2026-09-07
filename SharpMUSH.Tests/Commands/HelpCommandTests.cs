@@ -23,7 +23,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWorks");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help"));
 
 		await NotifyService
 			.Received(1)
@@ -37,7 +37,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpTopic");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help newbie"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help newbie"));
 
 		// The 'newbie' entry renders to exactly this body; assert the full opening
 		// paragraph verbatim rather than just the substring "MUSH", so the test fails
@@ -57,7 +57,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HelpWildcard");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help help*"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help help*"));
 
 		await NotifyService
 			.Received(1)
@@ -77,7 +77,7 @@ public class HelpCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// help/search finds topics whose body CONTAINS the search term (content search, not title match).
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help/search newbie"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help/search newbie"));
 
 		await NotifyService
 			.Received(1)
@@ -90,7 +90,7 @@ public class HelpCommandTests
 	public async ValueTask HelpNonExistentTopic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help nonexistenttopicxyz123"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help nonexistenttopicxyz123"));
 
 		// "No entry for" is the PennMUSH-compatible message.
 		await NotifyService
@@ -105,7 +105,7 @@ public class HelpCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// PennMUSH behavior: 'help newb' prefix-matches and finds 'newbie'.
-		await Parser.CommandParse(1, ConnectionService, MModule.single("help newb"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("help newb"));
 
 		await NotifyService
 			.Received(1)
@@ -129,7 +129,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpPriv{privilege}");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help @channel privs"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @channel privs"));
 
 		await NotifyService
 			.Received(1)
@@ -161,7 +161,7 @@ public class HelpCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"HelpClock{lockName}");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("help @clock"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("help @clock"));
 
 		await NotifyService
 			.Received(1)

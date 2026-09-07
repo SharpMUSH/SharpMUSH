@@ -33,7 +33,7 @@ public class CommandFlowUnitTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandListParse(MModule.single(str));
+		await Parser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
@@ -47,7 +47,7 @@ public class CommandFlowUnitTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CmdFlowRetry");
 		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
-		await testParser.CommandListParse(MModule.single("think Retry %0; @retry gt(%0,-1)=dec(%0)"));
+		await testParser.CommandListParse(MarkupText.Plain("think Retry %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>

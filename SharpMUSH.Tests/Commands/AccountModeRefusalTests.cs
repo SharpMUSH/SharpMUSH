@@ -59,7 +59,7 @@ public class AccountModeRefusalTests
 		await RegisterAsync(handle);
 		try
 		{
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("play Someone"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("play Someone"));
 
 			await Assert.That(await SawAsync(handle, LoginPrompt)).IsTrue()
 				.Because("a connection that never authenticated genuinely does need to log in first");
@@ -80,7 +80,7 @@ public class AccountModeRefusalTests
 			await ConnectionService.BindAccount(handle, "accounts/refusal-play");
 			await ConnectionService.Bind(handle, new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("play Someone"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("play Someone"));
 
 			await Assert.That(await SawAsync(handle, ReconnectAdvice)).IsTrue()
 				.Because("switching characters on telnet means reconnecting — that is the actual rule");
@@ -103,7 +103,7 @@ public class AccountModeRefusalTests
 			await ConnectionService.BindAccount(handle, "accounts/refusal-make");
 			await ConnectionService.Bind(handle, new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-			await Parser.CommandParse(handle, ConnectionService, MModule.single("make Newbie secretpassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make Newbie secretpassword"));
 
 			await Assert.That(await SawAsync(handle, ReconnectAdvice)).IsTrue();
 			await Assert.That(await SawAsync(handle, LoginPrompt)).IsFalse();

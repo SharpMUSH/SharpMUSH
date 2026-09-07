@@ -24,7 +24,7 @@ public class UtilityCommandTests
 	public async ValueTask ThinkBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkBasic Test output"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think ThinkBasic Test output"));
 
 		await NotifyService
 			.Received(1)
@@ -36,7 +36,7 @@ public class UtilityCommandTests
 	public async ValueTask ThinkWithFunction()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("think ThinkWithFunction [add(2,3)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think ThinkWithFunction [add(2,3)]"));
 
 		await NotifyService
 			.Received(1)
@@ -50,7 +50,7 @@ public class UtilityCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var guid = Guid.NewGuid();
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@@ This is a comment {guid}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@@ This is a comment {guid}"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -63,7 +63,7 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasic");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// Use StartsWith because HALT flag ('h') gets set on Room Zero by other tests in the shared session
 		await NotifyService
@@ -77,7 +77,7 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasicAnsi");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
 		// because name.Hilight() applies bold+bright-white (ansi("hw", …) → ESC[1;37m).
@@ -95,7 +95,7 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookAtObj");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("look #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look #1"));
 
 		await NotifyService
 			.Received(1)
@@ -108,9 +108,9 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameDbref");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 		// We use plain-text check because name.Hilight() inserts ANSI codes (bold+bright-white) around the name.
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -123,10 +123,10 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamNameAnsi");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 		// The name row output must be an MString where the ANSI render contains escape codes,
 		// because the object name is wrapped with Hilight() which applies bold+bright-white (ESC[1;37m).
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -142,8 +142,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOwnerRow");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -156,8 +156,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamZonePowers");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -174,8 +174,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamWarnings");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -188,8 +188,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamLastMod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -202,8 +202,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamQuota");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine #1"));
 
 		await NotifyService
 			.Received(1)
@@ -216,16 +216,16 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamRoomExits");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 		// Dig a room with exits; the new room gets the return exit → examine should show Exits:
 		var digResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("@dig ExitTestSource=North;N,South;S"));
+			MarkupText.Plain("@dig ExitTestSource=North;N,South;S"));
 		var digMessage = digResult?.Message?.ToPlainText();
 		await Assert.That(digMessage).IsNotNull();
 		var roomDbRef = DBRef.Parse(digMessage!);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"examine {roomDbRef}"));
+			MarkupText.Plain($"examine {roomDbRef}"));
 
 		await NotifyService
 			.Received(1)
@@ -238,8 +238,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefMod");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine/brief #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/brief #1"));
 
 		await NotifyService
 			.Received(1)
@@ -253,14 +253,14 @@ public class UtilityCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamAnsiMarkup");
 		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("@create AnsiExamineTestObj"));
+			MarkupText.Plain("@create AnsiExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
+			MarkupText.Plain($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"examine {objDbRef}"));
+			MarkupText.Plain($"examine {objDbRef}"));
 
 		await NotifyService
 			.Received(2)
@@ -280,13 +280,13 @@ public class UtilityCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamBriefHeader");
 		var createResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single("@create BriefExamineTestObj"));
+			MarkupText.Plain("@create BriefExamineTestObj"));
 		var objDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"@desc {objDbRef}=BriefShouldNotSeeThis"));
+			MarkupText.Plain($"@desc {objDbRef}=BriefShouldNotSeeThis"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
-			MModule.single($"examine/brief {objDbRef}"));
+			MarkupText.Plain($"examine/brief {objDbRef}"));
 
 		// Brief MUST show owner header (in plain text because owner name is hilighted)
 		await NotifyService
@@ -305,8 +305,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamOpaque");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine/opaque #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine/opaque #1"));
 
 		// /opaque sends a combined multi-line output starting with "God(#1..."
 		await NotifyService
@@ -319,8 +319,8 @@ public class UtilityCommandTests
 	public async ValueTask ExamineWithAttributePattern()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&examinewithattributepattern #1=jim"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("examine #1/exa*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&examinewithattributepattern #1=jim"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("examine #1/exa*"));
 
 		await NotifyService
 			.Received(1)
@@ -333,8 +333,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamCurLoc");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {testPlayer.DbRef}=WIZARD"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("examine"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("examine"));
 
 		await NotifyService
 			.Received(1)
@@ -348,7 +348,7 @@ public class UtilityCommandTests
 	public async ValueTask FindCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@find #0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@find #0"));
 
 		await NotifyService
 			.Received(1)
@@ -362,7 +362,7 @@ public class UtilityCommandTests
 	public async ValueTask SearchCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@search"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search"));
 
 		await NotifyService
 			.Received(1)
@@ -375,7 +375,7 @@ public class UtilityCommandTests
 	public async ValueTask EntrancesCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@entrances #0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@entrances #0"));
 
 		await NotifyService
 			.Received(1)
@@ -389,7 +389,7 @@ public class UtilityCommandTests
 	public async ValueTask StatsCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@stats"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@stats"));
 
 		await NotifyService
 			.Received(1)
@@ -406,7 +406,7 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionCmd");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@version"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@version"));
 
 		await NotifyService
 			.Received(1)
@@ -419,8 +419,8 @@ public class UtilityCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "VersionAgree");
-		var command = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@version"));
-		var function = await Parser.FunctionParse(MModule.single("version()"));
+		var command = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@version"));
+		var function = await Parser.FunctionParse(MarkupText.Plain("version()"));
 
 		var banner = function!.Message!.ToPlainText();
 		var lines = command.Message!.ToPlainText().Split('\n');
@@ -441,15 +441,15 @@ public class UtilityCommandTests
 		var attrName = $"CMD_SCAN_{uniqueSuffix}";
 		var commandWord = $"scantestword{uniqueSuffix.ToLowerInvariant()}";
 
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {objectName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objectName}"));
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
+			MarkupText.Plain($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
 
 		var scanResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@scan {commandWord} test"));
+			MarkupText.Plain($"@scan {commandWord} test"));
 		var scanPlainText = scanResult.Message?.ToPlainText() ?? string.Empty;
 
 		// The return value is a space-joined list of "#{dbref.Number}/{attrName}" entries.
@@ -474,17 +474,17 @@ public class UtilityCommandTests
 		var commandWord = $"scancolon{uniqueSuffix.ToLowerInvariant()}";
 
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@create ScanColonObj_{uniqueSuffix}"));
+			MarkupText.Plain($"@create ScanColonObj_{uniqueSuffix}"));
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#")
 			.Because($"@create should return a dbref; got: '{createdDbref}'");
 
 		// \\: survives attribute-set evaluation as \:, the form PennMUSH stores.
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($@"&{attrName} {createdDbref}=${commandWord}\\:go *:think scan colon triggered"));
+			MarkupText.Plain($@"&{attrName} {createdDbref}=${commandWord}\\:go *:think scan colon triggered"));
 
 		var scanResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@scan {commandWord}:go north"));
+			MarkupText.Plain($"@scan {commandWord}:go north"));
 
 		var dbrefNum = DBRef.Parse(createdDbref).Number;
 		await Assert.That(scanResult.Message?.ToPlainText() ?? string.Empty)
@@ -495,7 +495,7 @@ public class UtilityCommandTests
 		// pattern and must not match. (There is no companion "typed backslash" case - a command line is
 		// evaluated before it is matched, so \\: on the way in collapses to the same : as above.)
 		var nearMiss = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@scan {commandWord} go north"));
+			MarkupText.Plain($"@scan {commandWord} go north"));
 		await Assert.That(nearMiss.Message?.ToPlainText() ?? string.Empty).DoesNotContain(attrName);
 	}
 
@@ -503,7 +503,7 @@ public class UtilityCommandTests
 	public async ValueTask DecompileCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@decompile #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@decompile #1"));
 
 		await NotifyService
 			.Received(1)
@@ -517,7 +517,7 @@ public class UtilityCommandTests
 	public async ValueTask WhereisCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@whereis #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@whereis #1"));
 
 		await NotifyService
 			.Received(1)
@@ -531,7 +531,7 @@ public class UtilityCommandTests
 	[Test]
 	public async ValueTask PageNoeval_EscapedEquals_DoesNotCrash()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("page/noeval #1 \\= ="));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("page/noeval #1 \\= ="));
 		await Assert.That(result).IsNotNull();
 	}
 }

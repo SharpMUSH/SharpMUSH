@@ -20,7 +20,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("woof", "65", "10", "#-1 ARGUMENT 1 MUST BE BETWEEN 2 AND 64")]
 	public async Task BaseConv(string number, string frombase, string tobase, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single($"baseconv({number},{frombase},{tobase})"));
+		var result = await Parser.FunctionParse(MarkupText.Plain($"baseconv({number},{frombase},{tobase})"));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -30,7 +30,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("band(12,10)", "8")]
 	public async Task Band(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -40,7 +40,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bor(12,10)", "14")]
 	public async Task Bor(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -50,7 +50,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bxor(12,10)", "6")]
 	public async Task Bxor(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -59,7 +59,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shl(5,2)", "20")]
 	public async Task Shl(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -68,7 +68,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shr(20,2)", "5")]
 	public async Task Shr(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -78,7 +78,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bnand(5,3)", "4")]
 	public async Task Bnand(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -87,7 +87,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bnot(1)", "-2")]
 	public async Task Bnot(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -105,7 +105,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shr(4294967296,32)", "1")]
 	public async Task BitwiseOperationsAre64Bit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -120,7 +120,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shr(18446744073709551615,1)", "9223372036854775807")]
 	public async Task ResultsAboveSignedRangeArePrintedSigned(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -135,7 +135,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("shr(1,64)", "1")]
 	public async Task ShiftCountsWrapAtSixtyFour(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -143,7 +143,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bnand(12,10,5)", "#-1 FUNCTION (BNAND) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3")]
 	public async Task BnandTakesExactlyTwoArguments(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -154,7 +154,7 @@ public class BitwiseFunctionUnitTests
 	[Arguments("bnot(-1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task BitwiseRejectsNonUnsignedIntegers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

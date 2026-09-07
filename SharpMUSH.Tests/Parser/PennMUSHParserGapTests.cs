@@ -32,7 +32,7 @@ public class PennMUSHParserGapTests
 	[Category("PennMUSH Parity - lit()")]
 	public async Task Lit_BasicText(string input, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -48,7 +48,7 @@ public class PennMUSHParserGapTests
 		// PennMUSH: lit(%b%b%b) -> literal "%b%b%b", NOT three spaces
 		// PennMUSH: lit(%r) -> literal "%r", NOT a newline
 		// PennMUSH: lit(%t) -> literal "%t", NOT a tab
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -59,7 +59,7 @@ public class PennMUSHParserGapTests
 	public async Task Lit_SuppressesBracketEvaluation(string input, string expected)
 	{
 		// PennMUSH: lit([add(1,2)]) -> literal "[add(1,2)]", NOT "3"
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -69,7 +69,7 @@ public class PennMUSHParserGapTests
 	public async Task Lit_SuppressesBraceProcessing(string input, string expected)
 	{
 		// PennMUSH: lit({test}) -> literal "{test}", braces not stripped
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -80,7 +80,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: lit() explicitly removes PE_COMPRESS_SPACES
 		// so "near       far" keeps all internal spaces
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -91,7 +91,7 @@ public class PennMUSHParserGapTests
 	public async Task Lit_SpecialCharacters(string input, string expected)
 	{
 		// PennMUSH: special characters pass through lit() as-is
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -102,7 +102,7 @@ public class PennMUSHParserGapTests
 		// PennMUSH: lit() -> "" (empty string, since lit has min 0 args)
 		// SharpMUSH: returns #-1 error because lit() is registered with minArgs=1
 		// GAP: lit() should accept 0 arguments and return empty string
-		var result = (await Parser.FunctionParse(MModule.single("lit()")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit()")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("");
 	}
 
@@ -114,7 +114,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: lit(add(1,2)) -> "add(1,2)" — function syntax is literal text
 		// PennMUSH: lit(lit(hello)) -> "lit(hello)" — nested lit is also literal
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -125,7 +125,7 @@ public class PennMUSHParserGapTests
 		// PennMUSH: lit(a,b,c) -> "a,b,c" — commas are NOT treated as
 		// argument separators inside lit(). This is because lit() uses
 		// FunctionFlags.Literal which treats everything as one literal arg.
-		var result = (await Parser.FunctionParse(MModule.single("lit(a,b,c)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(a,b,c)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("a,b,c");
 	}
 
@@ -135,7 +135,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: lit(%# [add(1,2)] {test} %q0) -> "%# [add(1,2)] {test} %q0"
 		// Everything is completely literal — no subs, no brackets, no braces
-		var result = (await Parser.FunctionParse(MModule.single("lit(%# [add(1,2)] {test} %q0)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(%# [add(1,2)] {test} %q0)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("%# [add(1,2)] {test} %q0");
 	}
 
@@ -145,7 +145,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: lit(\) -> "\" — backslash is literal
 		// SharpMUSH does not match this: backslash escapes the closing paren
-		var result = (await Parser.FunctionParse(MModule.single("lit(\\)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(\\)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("#-1 PARSER FAILURE: Expected ) or , at end of expression");
 	}
 
@@ -155,7 +155,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: cat(lit(hello),lit(world)) -> "hello world"
 		// Each lit() returns its literal arg, then cat() joins with space
-		var result = (await Parser.FunctionParse(MModule.single("cat(lit(hello),lit(world))")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("cat(lit(hello),lit(world))")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("hello world");
 	}
 
@@ -184,7 +184,7 @@ public class PennMUSHParserGapTests
 		// PennMUSH: cat(a,  b) -> "a b"
 		// cat() joins arguments with a single space. Leading/trailing spaces
 		// in arguments are trimmed before joining.
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -195,7 +195,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: cat(a, b    cd        e) -> "a b cd e"
 		// Multiple spaces within arguments AND between arguments are compressed.
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -206,7 +206,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: cat(a,   b,   c) -> "a b c"
 		// Leading spaces in args are trimmed, cat() joins with single space.
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -218,7 +218,7 @@ public class PennMUSHParserGapTests
 		// SharpMUSH returns " " for space-only cat args (joined with space separator)
 		// PennMUSH returns "" after full think-level compression
 		// This test documents FunctionParse-level behavior
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -237,7 +237,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: think %? -> "N M" where N=invocations, M=recursions
 		// SharpMUSH currently returns only one number
-		var result = (await Parser.FunctionParse(MModule.single("%?")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("%?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
 		var parts = result!.Split(' ');
@@ -250,7 +250,7 @@ public class PennMUSHParserGapTests
 	[Category("PennMUSH Parity - %? Substitution")]
 	public async Task PercentQuestion_InvocationsIncrementWithFunctionCalls()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("[add(1,2)]%?")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[add(1,2)]%?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
 		var afterResult = result!.Substring(1).Trim();
@@ -267,7 +267,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: [add(1,[mul(2,3)])] %? -> "7 N M"
 		// Nested calls increase invocation count further
-		var result = (await Parser.FunctionParse(MModule.single("[add(1,[mul(2,3)])]%?")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[add(1,[mul(2,3)])]%?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).StartsWith("7");
@@ -285,7 +285,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: think hello %? -> "hello N M" — %? still returns two numbers
 		// even when no functions have been called in this expression
-		var result = (await Parser.FunctionParse(MModule.single("hello %?")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("hello %?")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).StartsWith("hello ");
@@ -302,7 +302,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: [cat(%?,done)] -> "N M done"
 		// %? is evaluated inside a function argument
-		var result = (await Parser.FunctionParse(MModule.single("[cat(%?,done)]")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[cat(%?,done)]")))?.Message?.ToString();
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!).EndsWith("done");
@@ -328,7 +328,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_CallsBuiltinFunctions(string input, string expected)
 	{
 		// PennMUSH: fn(add,1,2) -> 3 (calls built-in add directly)
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -338,7 +338,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_UnknownFunctionReturnsError(string input, string expected)
 	{
 		// PennMUSH: fn(notafunction) -> #-1 FUNCTION (NOTAFUNCTION) NOT FOUND
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).StartsWith(expected);
 	}
 
@@ -348,7 +348,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_CaseInsensitive(string input, string expected)
 	{
 		// PennMUSH: fn(ADD,1,2) -> 3 — function name lookup is case-insensitive
-		var result = (await Parser.FunctionParse(MModule.single(input)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -358,7 +358,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: fn(add, fn(mul,2,3), 4) -> 10
 		// Inner fn(mul,2,3) evaluates first to 6, then fn(add,6,4) -> 10
-		var result = (await Parser.FunctionParse(MModule.single("fn(add,fn(mul,2,3),4)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("fn(add,fn(mul,2,3),4)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("10");
 	}
 
@@ -367,7 +367,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_ExtraArgsSummed()
 	{
 		// PennMUSH: fn(add,1,2,3) -> 6 — add() accepts variadic args, sums all
-		var result = (await Parser.FunctionParse(MModule.single("fn(add,1,2,3)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("fn(add,1,2,3)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("6");
 	}
 
@@ -376,7 +376,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_TooFewArgsReturnsError()
 	{
 		// PennMUSH: fn(add) -> #-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1
-		var result = (await Parser.FunctionParse(MModule.single("fn(add)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("fn(add)")))?.Message?.ToString();
 		await Assert.That(result).StartsWith("#-1");
 	}
 
@@ -385,7 +385,7 @@ public class PennMUSHParserGapTests
 	public async Task Fn_VersionNoArgs()
 	{
 		// PennMUSH: fn(version) -> version string (no extra args needed)
-		var result = (await Parser.FunctionParse(MModule.single("fn(version)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("fn(version)")))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Length).IsGreaterThan(0);
 	}
@@ -424,7 +424,7 @@ public class PennMUSHParserGapTests
 	public async Task QRegister_LitReturnsLiteral()
 	{
 		// PennMUSH: lit(%q0) -> literal "%q0"
-		var result = (await Parser.FunctionParse(MModule.single("lit(%q0)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(%q0)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("%q0");
 	}
 
@@ -433,7 +433,7 @@ public class PennMUSHParserGapTests
 	public async Task QRegister_NormalContextReturnsValue()
 	{
 		// PennMUSH: [setq(0,test)]%q0 -> "test"
-		var result = (await Parser.FunctionParse(MModule.single("[setq(0,test)]%q0")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[setq(0,test)]%q0")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("test");
 	}
 
@@ -444,7 +444,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: [setq(0,test)]lit(%q0) -> "%q0"
 		// setq runs (setting q0=test), but lit() returns %q0 literally
-		var result = (await Parser.FunctionParse(MModule.single("[setq(0,test)]lit(%q0)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[setq(0,test)]lit(%q0)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("%q0");
 	}
 
@@ -454,7 +454,7 @@ public class PennMUSHParserGapTests
 	{
 		// PennMUSH: lit([setr(0,X)]%q0) -> "[setr(0,X)]%q0"
 		// Everything inside lit() is literal — no bracket eval, no %q eval
-		var result = (await Parser.FunctionParse(MModule.single("lit([setr(0,X)]%q0)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit([setr(0,X)]%q0)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("[setr(0,X)]%q0");
 	}
 
@@ -466,7 +466,7 @@ public class PennMUSHParserGapTests
 		// PennMUSH: [setq(0,A)][setq(1,B)]lit(%q0%q1) -> "%q0%q1"
 		// setq calls run (evaluated in outer context before lit's arg),
 		// but lit() treats its argument as completely literal
-		var result = (await Parser.FunctionParse(MModule.single("[setq(0,A)][setq(1,B)]lit(%q0%q1)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("[setq(0,A)][setq(1,B)]lit(%q0%q1)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("%q0%q1");
 	}
 
@@ -475,7 +475,7 @@ public class PennMUSHParserGapTests
 	public async Task QRegister_NamedRegisterInLit()
 	{
 		// PennMUSH: lit(%q<foo>) -> "%q<foo>" — named Q-registers also literal
-		var result = (await Parser.FunctionParse(MModule.single("lit(%q<foo>)")))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lit(%q<foo>)")))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo("%q<foo>");
 	}
 

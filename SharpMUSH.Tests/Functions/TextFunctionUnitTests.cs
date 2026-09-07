@@ -14,7 +14,7 @@ public class TextFunctionUnitTests
 	public async Task Textentries(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -23,7 +23,7 @@ public class TextFunctionUnitTests
 	public async Task Textfile(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -32,7 +32,7 @@ public class TextFunctionUnitTests
 	public async Task Textsearch(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 }

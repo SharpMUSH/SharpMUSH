@@ -36,7 +36,7 @@ public class WarningCommandTests
 		// ParseWarnings("normal") → WarningType.Normal; UnparseWarnings → "normal".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Normal");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=normal"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=normal"));
 
 		await NotifyService
 			.Received(1)
@@ -51,7 +51,7 @@ public class WarningCommandTests
 		// ParseWarnings("all") → WarningType.All; UnparseWarnings → "all".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_All");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=all"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=all"));
 
 		await NotifyService
 			.Received(1)
@@ -66,7 +66,7 @@ public class WarningCommandTests
 		// ParseWarnings("none") → WarningType.None → "Warnings cleared." branch.
 		var freshPlayer = await CreateFreshPlayerAsync("WT_None");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=none"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=none"));
 
 		await NotifyService
 			.Received(1)
@@ -81,7 +81,7 @@ public class WarningCommandTests
 		// ParseWarnings("all !exit-desc") → All & ~ExitDesc = Extra; UnparseWarnings → "extra".
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Negate");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=all !exit-desc"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=all !exit-desc"));
 
 		await NotifyService
 			.Received(1)
@@ -96,7 +96,7 @@ public class WarningCommandTests
 		// @warnings sends "Unknown warning: unknown-warning" for each unrecognised token.
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Unknown");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings me=unknown-warning"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings me=unknown-warning"));
 
 		await NotifyService
 			.Received(1)
@@ -111,7 +111,7 @@ public class WarningCommandTests
 		// @warnings with no object arg sends "Usage: @warnings <object>=<warning list>" as the first line.
 		var freshPlayer = await CreateFreshPlayerAsync("WT_Usage");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@warnings"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@warnings"));
 
 		await NotifyService
 			.Received(1)
@@ -127,7 +127,7 @@ public class WarningCommandTests
 		var freshPlayer = await CreateFreshPlayerAsync("WT_WCheck");
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService,
-			MModule.single($"@wcheck #{freshPlayer.DbRef.Number}"));
+			MarkupText.Plain($"@wcheck #{freshPlayer.DbRef.Number}"));
 
 		await NotifyService
 			.Received(1)
@@ -141,7 +141,7 @@ public class WarningCommandTests
 	{
 		var freshPlayer = await CreateFreshPlayerAsync("WT_WCheckUsage");
 
-		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MModule.single("@wcheck"));
+		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain("@wcheck"));
 
 		await NotifyService
 			.Received(1)
@@ -156,7 +156,7 @@ public class WarningCommandTests
 	public async Task WCheckCommand_WithMe_ChecksOwnedObjects()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@wcheck/me"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wcheck/me"));
 
 		await NotifyService
 			.Received(1)

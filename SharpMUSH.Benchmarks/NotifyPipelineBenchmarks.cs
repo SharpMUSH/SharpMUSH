@@ -14,10 +14,10 @@ public class NotifyPipelineBenchmarks : BaseBenchmark
 	private INotifyService? _notifyService;
 	private IMUSHCodeParser? _parser;
 
-	private static readonly MString ShortMsg = MModule.single("Hello World");
-	private static readonly MString LongMsg = MModule.single(new string('x', 1000));
-	private static readonly MString ThinkCmd = MModule.single("think Hello World");
-	private static readonly MString PemitCmd = MModule.single("@pemit me=Hello World");
+	private static readonly MString ShortMsg = MarkupText.Plain("Hello World");
+	private static readonly MString LongMsg = MarkupText.Plain(new string('x', 1000));
+	private static readonly MString ThinkCmd = MarkupText.Plain("think Hello World");
+	private static readonly MString PemitCmd = MarkupText.Plain("@pemit me=Hello World");
 
 	public override async ValueTask Setup()
 	{

@@ -34,9 +34,9 @@ public class RecursionAndInvocationLimitTests
 
 		var command = $"&RECURSE_LIM_UNIQUE {objDbRef}=[setq(c,add(r(c),1))][if(lte(r(c),105),[u({objDbRef}/RECURSE_LIM_UNIQUE)],DONE)]";
 
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single(command));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -61,7 +61,7 @@ public class RecursionAndInvocationLimitTests
 			nestedCalls = $"[strlen({nestedCalls})]";
 		}
 
-		var result = await FunctionParser.FunctionParse(MModule.single(nestedCalls));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain(nestedCalls));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -89,8 +89,8 @@ public class RecursionAndInvocationLimitTests
 			nested11 = $"[strlen({nested11})]";
 		}
 
-		var result10 = await FunctionParser.FunctionParse(MModule.single(nested10));
-		var result11 = await FunctionParser.FunctionParse(MModule.single(nested11));
+		var result10 = await FunctionParser.FunctionParse(MarkupText.Plain(nested10));
+		var result11 = await FunctionParser.FunctionParse(MarkupText.Plain(nested11));
 
 		await Assert.That(result10).IsNotNull();
 		await Assert.That(result11).IsNotNull();
@@ -113,10 +113,10 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "MutualRecurse");
 
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
 
-		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -135,7 +135,7 @@ public class RecursionAndInvocationLimitTests
 			nested = $"[strlen({nested})]";
 		}
 
-		var result = await FunctionParser.FunctionParse(MModule.single(nested));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain(nested));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -160,7 +160,7 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task SimpleFunctionCall_NoLimits_Succeeds()
 	{
-		var input = MModule.single("[strlen(hello world)]");
+		var input = MarkupText.Plain("[strlen(hello world)]");
 
 		var result = await FunctionParser.FunctionParse(input);
 
@@ -177,10 +177,10 @@ public class RecursionAndInvocationLimitTests
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "RecursePerFunc");
 
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
 
-		var result = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/WRAP_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/WRAP_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -211,15 +211,15 @@ public class RecursionAndInvocationLimitTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "DiffLimits");
 
 		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),150),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&REC_LIM_UNIQUE {objDbRef}={recursiveAttr}"));
-		var recursionResult = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/REC_LIM_UNIQUE)]"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&REC_LIM_UNIQUE {objDbRef}={recursiveAttr}"));
+		var recursionResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/REC_LIM_UNIQUE)]"));
 
 		var deepNest = "x";
 		for (int i = 0; i < 12; i++)
 		{
 			deepNest = $"[strlen({deepNest})]";
 		}
-		var stackResult = await FunctionParser.FunctionParse(MModule.single(deepNest));
+		var stackResult = await FunctionParser.FunctionParse(MarkupText.Plain(deepNest));
 
 		await Assert.That(recursionResult).IsNotNull();
 		await Assert.That(stackResult).IsNotNull();
@@ -245,17 +245,17 @@ public class RecursionAndInvocationLimitTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "AllAttrMethods");
 
 		var uRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[u({objDbRef}/U_REC_LIM_UNIQUE)],DONE)]";
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&U_REC_LIM_UNIQUE {objDbRef}={uRecursive}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&U_REC_LIM_UNIQUE {objDbRef}={uRecursive}"));
 
 		var ufunRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE,default)],DONE)]";
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&UFUN_REC_LIM_UNIQUE {objDbRef}={ufunRecursive}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UFUN_REC_LIM_UNIQUE {objDbRef}={ufunRecursive}"));
 
 		var ulocalRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)],DONE)]";
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"&ULOCAL_REC_LIM_UNIQUE {objDbRef}={ulocalRecursive}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ULOCAL_REC_LIM_UNIQUE {objDbRef}={ulocalRecursive}"));
 
-		var uResult = await FunctionParser.FunctionParse(MModule.single($"[u({objDbRef}/U_REC_LIM_UNIQUE)]"));
-		var ufunResult = await FunctionParser.FunctionParse(MModule.single($"[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE)]"));
-		var ulocalResult = await FunctionParser.FunctionParse(MModule.single($"[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)]"));
+		var uResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/U_REC_LIM_UNIQUE)]"));
+		var ufunResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE)]"));
+		var ulocalResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)]"));
 
 		await Assert.That(uResult).IsNotNull();
 		await Assert.That(ufunResult).IsNotNull();
@@ -294,13 +294,13 @@ public class RecursionAndInvocationLimitTests
 		// and that NotifyService was called (command dispatched some notification).
 
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&SELFCALL_INCL_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_INCL_LIM_UNIQUE)]"));
+			MarkupText.Plain($"&SELFCALL_INCL_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_INCL_LIM_UNIQUE)]"));
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&INCLUDETEST_RECUR_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_INCL_LIM_UNIQUE)]"));
+			MarkupText.Plain($"&INCLUDETEST_RECUR_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_INCL_LIM_UNIQUE)]"));
 
 		// Should complete (not hang) – recursion limit terminates the u() loop
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/INCLUDETEST_RECUR_LIM_UNIQUE"));
+			MarkupText.Plain($"@include {objDbRef}/INCLUDETEST_RECUR_LIM_UNIQUE"));
 
 		// The recursion-error string is treated as an unknown command → "Huh?" notification (sent via NotifyLocalized)
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor, executor)).IsTrue();
@@ -320,11 +320,11 @@ public class RecursionAndInvocationLimitTests
 		// error string is treated as an unknown command → "Huh?" notification.
 
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&SELFCALL_TRIG_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_TRIG_LIM_UNIQUE)]"));
+			MarkupText.Plain($"&SELFCALL_TRIG_LIM_UNIQUE {objDbRef}=[u({objDbRef}/SELFCALL_TRIG_LIM_UNIQUE)]"));
 
 		// Should complete (not hang)
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
+			MarkupText.Plain($"@trigger {objDbRef}/SELFCALL_TRIG_LIM_UNIQUE"));
 
 		// At least one notification must have been dispatched (Huh? from unknown command, sent via NotifyLocalized).
 		// @trigger runs the attribute with the triggered object as executor.
@@ -344,12 +344,12 @@ public class RecursionAndInvocationLimitTests
 		// Set up attribute A = "think CMDTRACK_A[u(objDbRef/CMDTRACK_B_LIM_UNIQUE)]" and B = "_B_OK"
 		// @include A → executes "think CMDTRACK_A_LIM_UNIQUE_B_OK" → notification with that text.
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMDTRACK_B_LIM_UNIQUE {objDbRef}=_B_OK"));
+			MarkupText.Plain($"&CMDTRACK_B_LIM_UNIQUE {objDbRef}=_B_OK"));
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMDTRACK_A_LIM_UNIQUE {objDbRef}=think CMDTRACK_A_LIM_UNIQUE[u({objDbRef}/CMDTRACK_B_LIM_UNIQUE)]"));
+			MarkupText.Plain($"&CMDTRACK_A_LIM_UNIQUE {objDbRef}=think CMDTRACK_A_LIM_UNIQUE[u({objDbRef}/CMDTRACK_B_LIM_UNIQUE)]"));
 
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@include {objDbRef}/CMDTRACK_A_LIM_UNIQUE"));
+			MarkupText.Plain($"@include {objDbRef}/CMDTRACK_A_LIM_UNIQUE"));
 
 		await NotifyService
 			.Received(1)
@@ -368,7 +368,7 @@ public class RecursionAndInvocationLimitTests
 	{
 		// One character past the 5 MB (5,242,880-char) ceiling — enough to cross it without
 		// allocating far more than necessary.
-		var result = await FunctionParser.FunctionParse(MModule.single("repeat(x,5242881)"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain("repeat(x,5242881)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
@@ -378,7 +378,7 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task OutputCeiling_NormalResult_IsUnaffected()
 	{
-		var result = await FunctionParser.FunctionParse(MModule.single("repeat(ab,5)"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain("repeat(ab,5)"));
 
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("ababababab");
 	}
@@ -393,7 +393,7 @@ public class RecursionAndInvocationLimitTests
 	[Test]
 	public async Task OutputCeiling_OversizedResultNestedInAnotherCall_ReportsOutputError()
 	{
-		var result = await FunctionParser.FunctionParse(MModule.single("strcat(repeat(x,5242881),tail)"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain("strcat(repeat(x,5242881),tail)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 OUTPUT EXCEEDED MAXIMUM SIZE");
@@ -414,10 +414,10 @@ public class RecursionAndInvocationLimitTests
 		// Unbounded self-recursion: u() re-invokes the same attribute, tripping the per-attribute
 		// FunctionRecursionLimit (100) well before the invocation limit (100000).
 		await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"&NESTED_REC_UNIQUE {objDbRef}=[u({objDbRef}/NESTED_REC_UNIQUE)]"));
+			MarkupText.Plain($"&NESTED_REC_UNIQUE {objDbRef}=[u({objDbRef}/NESTED_REC_UNIQUE)]"));
 
 		var result = await FunctionParser.FunctionParse(
-			MModule.single($"strcat([u({objDbRef}/NESTED_REC_UNIQUE)],tail)"));
+			MarkupText.Plain($"strcat([u({objDbRef}/NESTED_REC_UNIQUE)],tail)"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();

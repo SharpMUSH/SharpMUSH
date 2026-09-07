@@ -45,7 +45,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Create a unique thing to halt, instead of halting shared God (#1).
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HaltTarget");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@halt {thingDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@halt {thingDbRef}"));
 
 		await NotifyService
 			.Received(1)
@@ -56,7 +56,7 @@ public class WizardCommandTests
 	public async ValueTask AllhaltCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@allhalt"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@allhalt"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, executor)).IsTrue();
 	}
@@ -67,7 +67,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
 		var messages = await MessagesWhile(executor, () =>
-			Parser.CommandParse(1, ConnectionService, MModule.single("@drain #1")).AsTask());
+			Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@drain #1")).AsTask());
 
 		await Assert.That(messages.Any(m => m.StartsWith("#-1"))).IsFalse()
 			.Because("@drain must not report an error return code");
@@ -79,7 +79,7 @@ public class WizardCommandTests
 	public async ValueTask PsCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ps"));
 
 		await NotifyService
 			.Received(1)
@@ -93,7 +93,7 @@ public class WizardCommandTests
 	public async ValueTask PsWithTarget()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@ps #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@ps #1"));
 
 		await NotifyService
 			.Received(1)
@@ -107,9 +107,9 @@ public class WizardCommandTests
 	public async ValueTask TriggerCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("&TRIGGER_TEST_WIZ_UNIQUE #1=think Triggered!"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&TRIGGER_TEST_WIZ_UNIQUE #1=think Triggered!"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@trigger #1/TRIGGER_TEST_WIZ_UNIQUE"));
 
 		await NotifyService
 			.Received(1)
@@ -122,7 +122,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Pattern A: embed unique token so the think output is globally unique in the session.
 		var token = TestIsolationHelpers.GenerateUniqueName("Forced");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@force #1=think {token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force #1=think {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -142,10 +142,10 @@ public class WizardCommandTests
 		var attrName = $"FORCEEVAL_{Guid.NewGuid():N}"[..20];
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@force me=&{attrName} me=[add(1,1)]"));
+			MarkupText.Plain($"@force me=&{attrName} me=[add(1,1)]"));
 
 		var result = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"think [get(me/{attrName})]"));
+			MarkupText.Plain($"think [get(me/{attrName})]"));
 
 		var attrValue = result.Message?.ToPlainText()?.Trim() ?? "";
 		await Assert.That(attrValue).IsEqualTo("2")
@@ -166,7 +166,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@force me={@pemit me=[add(1,2)]}"));
+			MarkupText.Plain("@force me={@pemit me=[add(1,2)]}"));
 
 		await NotifyService
 			.Received(1)
@@ -177,7 +177,7 @@ public class WizardCommandTests
 	public async ValueTask NotifyCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@notify #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@notify #1"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.Notified), executor, executor)).IsTrue();
 	}
@@ -189,7 +189,7 @@ public class WizardCommandTests
 
 		// Note: This test doesn't verify the wait actually happened, just that the command executed
 		var messages = await MessagesWhile(executor, () =>
-			Parser.CommandParse(1, ConnectionService, MModule.single("@wait 1=think Waited")).AsTask());
+			Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wait 1=think Waited")).AsTask());
 
 		await Assert.That(messages.Any(m => m.StartsWith("#-1"))).IsFalse()
 			.Because("@wait must not report an error return code");
@@ -212,7 +212,7 @@ public class WizardCommandTests
 		var attrName = $"WIZWAIT_{uniqueId[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@wait 1={{&{attrName} {testObj}=[add(1,1)]}}"));
+			MarkupText.Plain($"@wait 1={{&{attrName} {testObj}=[add(1,1)]}}"));
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
@@ -243,10 +243,10 @@ public class WizardCommandTests
 		var resultAttr = $"RESULT_{uniqueId}";
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"&CMD_TEST_{uniqueId} {testObj}=$testcmd_{uniqueId} *:@wait 1={{&{resultAttr} {testObj}=%0}}"));
+			MarkupText.Plain($"&CMD_TEST_{uniqueId} {testObj}=$testcmd_{uniqueId} *:@wait 1={{&{resultAttr} {testObj}=%0}}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"testcmd_{uniqueId} hello_world"));
+			MarkupText.Plain($"testcmd_{uniqueId} hello_world"));
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
@@ -270,7 +270,7 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "UptimeTest");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@uptime"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@uptime"));
 
 		await NotifyService
 			.Received(1)
@@ -285,7 +285,7 @@ public class WizardCommandTests
 	public async ValueTask DbckCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dbck"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dbck"));
 
 		await NotifyService
 			.Received(1)
@@ -298,7 +298,7 @@ public class WizardCommandTests
 	public async ValueTask DumpCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dump"));
 
 		await NotifyService
 			.Received(1)
@@ -311,7 +311,7 @@ public class WizardCommandTests
 	public async ValueTask QuotaCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@quota #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@quota #1"));
 
 		await NotifyService
 			.Received(1)
@@ -324,7 +324,7 @@ public class WizardCommandTests
 	public async ValueTask AllquotaCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@allquota"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@allquota"));
 
 		await NotifyService
 			.Received(1)
@@ -337,7 +337,7 @@ public class WizardCommandTests
 	public async ValueTask BootCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@boot #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@boot #1"));
 
 		await NotifyService
 			.Received(1)
@@ -350,7 +350,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Pattern A: embed unique token so the wall output is session-unique.
 		var token = TestIsolationHelpers.GenerateUniqueName("Wall");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wall {token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wall {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -364,7 +364,7 @@ public class WizardCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// Pattern A: embed unique token so the wizwall output is session-unique.
 		var token = TestIsolationHelpers.GenerateUniqueName("Wizwall");
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@wizwall {token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wizwall {token}"));
 
 		await NotifyService
 			.Received(1)
@@ -377,10 +377,10 @@ public class WizardCommandTests
 	public async ValueTask PollCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll WizardPollDisplay999"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poll WizardPollDisplay999"));
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollMessageSet), executor, executor)).IsTrue();
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poll"));
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollCurrentMessageFormat), executor, executor)).IsTrue();
 	}
 
@@ -391,13 +391,13 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideToggle");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -409,10 +409,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideYes");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/yes"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/yes"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -424,10 +424,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOn");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -439,10 +439,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideNo");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/no"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/no"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -454,10 +454,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOff");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -469,10 +469,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideAlready");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/on"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -484,10 +484,10 @@ public class WizardCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideVisible");
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MModule.single("@hide/off"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), testPlayer.DbRef)).IsTrue();
 	}
@@ -496,7 +496,7 @@ public class WizardCommandTests
 	public async ValueTask PurgeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@purge"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@purge"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PurgeComplete), executor, executor)).IsTrue();
 	}
@@ -505,7 +505,7 @@ public class WizardCommandTests
 	public async ValueTask ReadCacheCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@readcache"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@readcache"));
 
 		// ReadCacheReindexing is always sent before the try/catch, so it is deterministic.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor, executor)).IsTrue();
@@ -515,7 +515,7 @@ public class WizardCommandTests
 	public async ValueTask ShutdownCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown"));
 
 		// No switch → else branch sends ShutdownInitiated, then ShutdownNoteWebApp is always sent.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor, executor)).IsTrue();
@@ -525,7 +525,7 @@ public class WizardCommandTests
 	public async ValueTask ShutdownRebootCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@shutdown/reboot"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@shutdown/reboot"));
 
 		// /reboot switch → ShutdownRebootInitiated is sent in the REBOOT branch.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor, executor)).IsTrue();
@@ -545,9 +545,9 @@ public class WizardCommandTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ChownallOwner");
 		var thingName = TestIsolationHelpers.GenerateUniqueName("ChownallThing");
-		await Parser.CommandParse(owner.Handle, ConnectionService, MModule.single($"@create {thingName}"));
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@chownall #{owner.DbRef.Number}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chownall #{owner.DbRef.Number}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, executor)).IsTrue();
 	}
@@ -557,7 +557,7 @@ public class WizardCommandTests
 	public async ValueTask SuggestListCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@suggest/list"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoSuggestionCategoriesDefined), executor, executor)).IsTrue();
 	}
@@ -567,7 +567,7 @@ public class WizardCommandTests
 	public async ValueTask SuggestAddCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@suggest/add testcat547=testword923"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@suggest/add testcat547=testword923"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SuggestAddedWordToCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -577,7 +577,7 @@ public class WizardCommandTests
 	public async ValueTask PollSetCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll TestPollMessage897"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poll TestPollMessage897"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollMessageSet), executor, executor)).IsTrue();
 	}
@@ -587,7 +587,7 @@ public class WizardCommandTests
 	public async ValueTask PollClearCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@poll/clear"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@poll/clear"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.PollMessageCleared), executor, executor)).IsTrue();
 	}

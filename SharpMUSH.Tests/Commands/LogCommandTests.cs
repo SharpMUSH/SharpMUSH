@@ -22,7 +22,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_DefaultSwitch_LogsToCommandCategory()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log Test log entry"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log Test log entry"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -31,7 +31,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithCmdSwitch_LogsToCommandCategory()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/cmd Test command log entry"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log/cmd Test command log entry"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -40,7 +40,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithWizSwitch_LogsToWizardCategory()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/wiz Test wizard log entry"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log/wiz Test wizard log entry"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -49,7 +49,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_WithErrSwitch_LogsToErrorCategory()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/err Test error log entry"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log/err Test error log entry"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -58,7 +58,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_NoMessage_ReturnsError()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.LogUsage), executor, executor)).IsTrue();
 	}
@@ -67,7 +67,7 @@ public class LogCommandTests
 	public async ValueTask LogCommand_RecallSwitch_RetrievesLogs()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@log/recall"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@log/recall"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, executor)).IsTrue();
 	}
@@ -78,7 +78,7 @@ public class LogCommandTests
 	public async ValueTask LogwipeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@logwipe command"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@logwipe command"));
 
 		await NotifyService
 			.Received(1)
@@ -89,12 +89,12 @@ public class LogCommandTests
 	public async ValueTask LsetCommand()
 	{
 		// Create a dedicated test object so we don't mutate God (#1) in the shared DB
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single("@create LSetTestObject"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create LSetTestObject"));
 		var newDb = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock #{newDb.Number}=#TRUE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock #{newDb.Number}=#TRUE"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@lset #{newDb.Number}/Basic=visual"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lset #{newDb.Number}/Basic=visual"));
 
 		await Assert.That(result).IsNotNull();
 	}

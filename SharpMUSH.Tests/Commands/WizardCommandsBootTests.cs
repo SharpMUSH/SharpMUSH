@@ -63,7 +63,7 @@ public class WizardCommandsBootTests
 		// publish can race the subscription and be missed.
 		await Task.Delay(TimeSpan.FromMilliseconds(500));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@boot/port {handle}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@boot/port {handle}"));
 
 		var message = await received.Task.WaitAsync(TimeSpan.FromSeconds(10));
 		await Assert.That(message.Handle).IsEqualTo(handle);

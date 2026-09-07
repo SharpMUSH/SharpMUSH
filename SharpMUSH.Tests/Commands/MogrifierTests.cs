@@ -16,13 +16,13 @@ public class MogrifierTests
 	[Test]
 	public async ValueTask ChannelMogrifier_SetCommand_ExecutesWithoutError()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/mogrifier test=#1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@channel/mogrifier test=#1"));
 	}
 
 	[Test]
 	public async ValueTask ChannelMogrifier_ClearCommand_ExecutesWithoutError()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@channel/mogrifier test"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@channel/mogrifier test"));
 	}
 
 	[Test]

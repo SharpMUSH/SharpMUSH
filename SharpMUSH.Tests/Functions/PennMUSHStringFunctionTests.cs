@@ -22,7 +22,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("tr(test STRING,te,et)", "etse STRING")]
 	public async Task Tr(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -31,7 +31,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("tr(test STRING,,t)", "#-1")]
 	public async Task TrErrors(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).StartsWith(expected);
 	}
 
@@ -48,7 +48,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("lnum(1.5,4.5,%b,.5)", "1.5 2 2.5 3 3.5 4 4.5")]
 	public async Task Lnum(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -60,7 +60,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("lnum(,5)")]
 	public async Task LnumErrors(string expr)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -70,7 +70,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("rjust(foo bar baz,5,=,1)", "foo b")]
 	public async Task JustTruncate(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -78,7 +78,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("center(foo, 5, =, ~)", "=foo~")]
 	public async Task CenterAsymmetric(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -90,7 +90,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("stringsecs(1d 2h 3m 4s)", "93784")]
 	public async Task StringSecs(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -99,7 +99,7 @@ public class PennMUSHStringFunctionTests
 	[Arguments("stringsecs(h)", "#-1 INVALID TIMESTRING")]
 	public async Task StringSecsErrors(string expr, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(expr));
+		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 }

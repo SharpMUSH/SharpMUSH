@@ -16,7 +16,7 @@ public class FlowFunctionUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -29,7 +29,7 @@ public class FlowFunctionUnitTests
 	{
 		Console.WriteLine("Testing: {0}", str);
 
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -41,7 +41,7 @@ public class FlowFunctionUnitTests
 	[Arguments("null(a,b,c)", "")]
 	public async Task Null(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -52,7 +52,7 @@ public class FlowFunctionUnitTests
 	[Arguments("setr(A, 1):[letq(setr(A, 2))]:%qA", "1:2:2")]
 	public async Task LetQ(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -70,7 +70,7 @@ public class FlowFunctionUnitTests
 	[Arguments("letq(A,1,%qA)", "1")]
 	public async Task ParityAcceptsValidArgumentCounts(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -80,7 +80,7 @@ public class FlowFunctionUnitTests
 	[Arguments("setr(A,1,B)", "#-1 FUNCTION (SETR) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
 	public async Task ParityRejectsInvalidArgumentCounts(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -95,7 +95,7 @@ public class FlowFunctionUnitTests
 	[Arguments("caseall(b,a,first,b,second,fallback)", "second")]
 	public async Task CaseHasNoParityRequirement(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -107,7 +107,7 @@ public class FlowFunctionUnitTests
 	[Arguments("firstof(1,2,3)", "1")]
 	public async Task Firstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -119,7 +119,7 @@ public class FlowFunctionUnitTests
 	[Arguments("strfirstof(bar,baz,foo)", "bar")]
 	public async Task StrFirstof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -136,7 +136,7 @@ public class FlowFunctionUnitTests
 	[Arguments("allof(1,2,3,@)", "1@2@3")]
 	public async Task Allof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 
@@ -152,7 +152,7 @@ public class FlowFunctionUnitTests
 	[Arguments("strallof(foo,bar,,@)", "foo@bar")]
 	public async Task StrAllof(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsEqualTo(expected);
 	}
 

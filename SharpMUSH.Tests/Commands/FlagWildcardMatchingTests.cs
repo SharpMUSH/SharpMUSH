@@ -27,10 +27,10 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_NoCommand()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing1"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FlagTestThing1"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=no_com"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=no_com"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
@@ -46,16 +46,16 @@ public class FlagWildcardMatchingTests
 		// Create a thing with a unique name so the flag-reset message is unique in the session.
 		// Pattern B: "{uniqueName} - NO_COMMAND reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest2");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
 		var createMessage = createResult.Message
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
 		var createPlainText = createMessage.ToPlainText()
 			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
 		var thingDbRef = DBRef.Parse(createPlainText);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=NO_COMMAND"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=NO_COMMAND"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!no_com"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=!no_com"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - NO_COMMAND reset." is globally unique due to the generated name.
@@ -70,10 +70,10 @@ public class FlagWildcardMatchingTests
 	[Test]
 	public async ValueTask SetFlag_PartialMatch_Visual()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create FlagTestThing3"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FlagTestThing3"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=vis"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=vis"));
 
 		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
 		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
@@ -89,15 +89,15 @@ public class FlagWildcardMatchingTests
 		// Create a thing with a unique name so the flag-reset message is unique in the session.
 		// Pattern B: "{uniqueName} - VISUAL reset." appears exactly once across the session.
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("FlagTest4");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
 		var createPlainText = createResult.Message?.ToPlainText()
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message.");
 		var thingDbRef = DBRef.Parse(createPlainText);
 
 		// Use DBRef to avoid name-lookup flakiness.
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=VISUAL"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=VISUAL"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"@set {thingDbRef}=!vis"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=!vis"));
 
 		// Pattern B: ManipulateSharpObjectService.SetOrUnsetFlag notifies with sender=null.
 		// The message "{uniqueName} - VISUAL reset." is globally unique due to the generated name.

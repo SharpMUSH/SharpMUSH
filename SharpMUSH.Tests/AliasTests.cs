@@ -25,7 +25,7 @@ public class AliasTests
 	[Test]
 	public async Task FunctionAlias_U_WorksAsUfun()
 	{
-		var result = await FunctionParser.FunctionParse(MModule.single("u(#1/test)"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain("u(#1/test)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result?.Message).IsNotNull();
@@ -38,7 +38,7 @@ public class AliasTests
 	[Test]
 	public async Task FunctionAlias_Iter_WorksAsParse()
 	{
-		var result = await FunctionParser.FunctionParse(MModule.single("iter(a b c,##)"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain("iter(a b c,##)"));
 
 		await Assert.That(result).IsNotNull();
 		await Assert.That(result?.Message).IsNotNull();
@@ -53,7 +53,7 @@ public class AliasTests
 	{
 		var exception = await Assert.That(async () =>
 		{
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("l"));
+			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("l"));
 		}).ThrowsNothing();
 
 		await Assert.That(exception).IsNull();
@@ -68,7 +68,7 @@ public class AliasTests
 	{
 		var exception = await Assert.That(async () =>
 		{
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("i"));
+			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("i"));
 		}).ThrowsNothing();
 
 		await Assert.That(exception).IsNull();
@@ -82,7 +82,7 @@ public class AliasTests
 	{
 		var exception = await Assert.That(async () =>
 		{
-			await CommandParser.CommandParse(1, ConnectionService, MModule.single("L"));
+			await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("L"));
 		}).ThrowsNothing();
 
 		await Assert.That(exception).IsNull();

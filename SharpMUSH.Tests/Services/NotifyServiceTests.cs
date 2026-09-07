@@ -51,7 +51,7 @@ public class NotifyServiceTests
 		await messageBus.Received(1).HandlePublish(
 			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 1 &&
-				MModule.deserialize(msg.Markup).ToPlainText() == raw));
+				MarkupTextSerializer.Deserialize(msg.Markup).ToPlainText() == raw));
 	}
 
 	[Test]
@@ -81,20 +81,20 @@ public class NotifyServiceTests
 				["OUTPUT_FORMAT"] = "pueblo"
 			}));
 
-		var exitMarkup = MModule.MarkupSingle2(
+		var exitMarkup = MarkupText.Wrap(
 			HtmlMarkup.Create("send", "href=\"North\""),
-			MModule.single("North"));
+			MarkupText.Plain("North"));
 
 		await notify.NotifyLocalizedMarkup(
 			7,
 			nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
 			sender: null,
 			exitMarkup,
-			MModule.single("Room Zero"));
+			MarkupText.Plain("Room Zero"));
 
 		await messageBus.Received(1).HandlePublish(
 			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 7 &&
-				MModule.deserialize(msg.Markup).Render(MarkupFormat.Pueblo).Contains("<send href=\"North\">North</send> to Room Zero")));
+				MarkupTextSerializer.Deserialize(msg.Markup).Render(MarkupFormat.Pueblo).Contains("<send href=\"North\">North</send> to Room Zero")));
 	}
 }

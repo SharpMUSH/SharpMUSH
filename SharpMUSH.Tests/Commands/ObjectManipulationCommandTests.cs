@@ -21,10 +21,10 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GetCommand()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@create GetTestObject"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GetTestObject"));
 		var thingDbRef = DBRef.Parse(result.Message!.ToPlainText()!);
 
-		var getResult = await Parser.CommandParse(1, ConnectionService, MModule.single("get GetTestObject"));
+		var getResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get GetTestObject"));
 
 		await Assert.That(getResult).IsNotNull();
 	}
@@ -32,15 +32,15 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GetFromContainer()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Container2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create InnerObject2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Container2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create InnerObject2"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Container2=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Container2=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get InnerObject2"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give Container2=InnerObject2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get InnerObject2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Container2=InnerObject2"));
 
-		var getResult = await Parser.CommandParse(1, ConnectionService, MModule.single("get Container2's InnerObject2"));
+		var getResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Container2's InnerObject2"));
 
 		await Assert.That(getResult).IsNotNull();
 	}
@@ -48,7 +48,7 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GetNonexistentObject()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("get NonexistentObject12345"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get NonexistentObject12345"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -56,10 +56,10 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask DropCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create DropTestObject"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get DropTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DropTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get DropTestObject"));
 
-		var dropResult = await Parser.CommandParse(1, ConnectionService, MModule.single("drop DropTestObject"));
+		var dropResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("drop DropTestObject"));
 
 		await Assert.That(dropResult).IsNotNull();
 	}
@@ -67,14 +67,14 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GiveCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create GiveTestObject"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get GiveTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create GiveTestObject"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get GiveTestObject"));
 
 		// Create a recipient (needs to be created as player or thing with ENTER_OK)
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Recipient"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Recipient=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Recipient"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Recipient=ENTER_OK"));
 
-		var giveResult = await Parser.CommandParse(1, ConnectionService, MModule.single("give Recipient=GiveTestObject"));
+		var giveResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Recipient=GiveTestObject"));
 
 		await Assert.That(giveResult).IsNotNull();
 	}
@@ -85,7 +85,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask UseCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("use test object"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("use test object"));
 
 		await NotifyService
 			.Received(1)
@@ -95,7 +95,7 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask InventoryCommand()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("inventory"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("inventory"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -103,18 +103,18 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GetPreventsLoops()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Box"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Bag"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Box"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Bag"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Box=ENTER_OK"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Bag=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Box=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Bag=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get Box"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get Bag"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Box"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Bag"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give Box=Bag"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Box=Bag"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("get Bag's Box"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Bag's Box"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -122,18 +122,18 @@ public class ObjectManipulationCommandTests
 	[Test]
 	public async ValueTask GivePreventsLoops()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Chest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create Sack"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Chest"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create Sack"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Chest=ENTER_OK"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set Sack=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Chest=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set Sack=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get Chest"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get Sack"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Chest"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get Sack"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give Chest=Sack"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Chest=Sack"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("give Sack=Chest"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give Sack=Chest"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -144,7 +144,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask DestroyCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@destroy #100"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@destroy #100"));
 
 		await NotifyService
 			.Received(1)
@@ -157,7 +157,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask NukeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@nuke #100"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@nuke #100"));
 
 		await NotifyService
 			.Received(1)
@@ -170,7 +170,7 @@ public class ObjectManipulationCommandTests
 	public async ValueTask UndestroyCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@undestroy #100"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@undestroy #100"));
 
 		await NotifyService
 			.Received(1)

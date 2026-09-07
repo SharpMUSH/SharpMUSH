@@ -20,7 +20,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task PCreate()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("pcreate(John,SomePassword)")))?.Message?.ToString()!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
 		var a = HelperFunctions.ParseDbRef(result).AsValue();
 		var db = await Mediator.Send(new GetObjectNodeQuery(a));
@@ -33,7 +33,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Beep()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("beep()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("beep()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("\a");
 	}
 
@@ -41,14 +41,14 @@ public class UtilityFunctionUnitTests
 	[Arguments("fn(testfunc)", "")]
 	public async Task Fn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Functions_All()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("functions()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("functions()")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
 		await Assert.That(functions).Contains("rand");
@@ -58,7 +58,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Functions_Wildcard()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("functions(add*)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("functions(add*)")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
 		await Assert.That(functions).Contains("add");
@@ -67,7 +67,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Functions_Exact()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("functions(rand)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("functions(rand)")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
 		await Assert.That(functions).Contains("rand");
@@ -85,7 +85,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("valid(attrname,`LEADING)", "0")]
 	public async Task Valid(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -93,7 +93,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("visible(%#,%#)", "1")]
 	public async Task Visible(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -101,7 +101,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("poll()", "")]
 	public async Task Poll(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -110,7 +110,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("benchmark(sub(5,3),50)", "")]
 	public async Task Benchmark(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var value = result.ToPlainText();
 		await Assert.That(value).IsNotNull();
 		await Assert.That(double.TryParse(value, out _)).IsTrue();
@@ -120,7 +120,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("colors()", "")]
 	public async Task Colors(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotEmpty();
 	}
 
@@ -133,7 +133,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("isobjid(1:0)", "0")]
 	public async Task Isobjid(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -156,7 +156,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("isint(9223372036854775808)", "0")]
 	public async Task Isint(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -166,7 +166,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("null(a,b,c)", "")]
 	public async Task Null(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -175,7 +175,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("s(strcat\\(a\\,b\\))", "ab")]
 	public async Task S(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -185,7 +185,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("@@({a,b,c})", "")]
 	public async Task AtAt(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -194,7 +194,7 @@ public class UtilityFunctionUnitTests
 	public async Task R(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -203,7 +203,7 @@ public class UtilityFunctionUnitTests
 	public async Task Recv(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -212,7 +212,7 @@ public class UtilityFunctionUnitTests
 	public async Task Sent(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -229,20 +229,20 @@ public class UtilityFunctionUnitTests
 		await dataService.SetExpandedServerDataAsync(suggestionData);
 
 		// "aple" is a misspelling of apple
-		var result1 = (await Parser.FunctionParse(MModule.single("suggest(test,aple)")))?.Message?.ToString();
+		var result1 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple)")))?.Message?.ToString();
 		await Assert.That(result1).IsNotNull();
 		await Assert.That(result1).Contains("apple");
 
-		var result2 = (await Parser.FunctionParse(MModule.single("suggest(test,aple,|)")))?.Message?.ToString();
+		var result2 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple,|)")))?.Message?.ToString();
 		await Assert.That(result2).IsNotNull();
 		await Assert.That(result2).Contains("|");
 
-		var result3 = (await Parser.FunctionParse(MModule.single("suggest(test,app,|,2)")))?.Message?.ToString();
+		var result3 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,app,|,2)")))?.Message?.ToString();
 		await Assert.That(result3).IsNotNull();
 		var suggestions = result3!.Split('|');
 		await Assert.That(suggestions.Length).IsLessThanOrEqualTo(2);
 
-		var result4 = (await Parser.FunctionParse(MModule.single("suggest(nonexistent,word)")))?.Message?.ToString();
+		var result4 = (await Parser.FunctionParse(MarkupText.Plain("suggest(nonexistent,word)")))?.Message?.ToString();
 		await Assert.That(result4).IsEqualTo(string.Empty);
 	}
 
@@ -251,14 +251,14 @@ public class UtilityFunctionUnitTests
 	public async Task Suggest(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
 	[Test]
 	public async Task Rand_NoArgs()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("rand()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(0);
 		await Assert.That(value).IsLessThan(int.MaxValue);
@@ -270,7 +270,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("rand(1)", 0, 0)]
 	public async Task Rand_OneArg(string str, int min, int max)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(min);
 		await Assert.That(value).IsLessThanOrEqualTo(max);
@@ -282,7 +282,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("rand(-5,5)", -5, 5)]
 	public async Task Rand_TwoArgs(string str, int min, int max)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(min);
 		await Assert.That(value).IsLessThanOrEqualTo(max);
@@ -291,7 +291,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_TwoDice()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("die(2,6)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("die(2,6)")))?.Message!;
 		var rolls = result.ToPlainText().Split(' ');
 		await Assert.That(rolls.Length).IsEqualTo(2);
 		foreach (var roll in rolls)
@@ -305,7 +305,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Die_ShowSum()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("die(5,6,0)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("die(5,6,0)")))?.Message!;
 		var value = int.Parse(result.ToPlainText());
 		await Assert.That(value).IsGreaterThanOrEqualTo(5);
 		await Assert.That(value).IsLessThanOrEqualTo(30);
@@ -314,7 +314,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task R_WithRegister()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("setq(A,test_value_r)[r(A)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("setq(A,test_value_r)[r(A)]")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("test_value_r");
 	}
 
@@ -323,33 +323,33 @@ public class UtilityFunctionUnitTests
 	{
 		// A missing q-register returns empty — the SECOND argument is a TYPE selector (per `help r`),
 		// not a fallback default value.
-		var empty = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT)")))?.Message!;
+		var empty = (await Parser.FunctionParse(MarkupText.Plain("r(NONEXISTENT)")))?.Message!;
 		await Assert.That(empty.ToPlainText()).IsEqualTo("");
 
 		// The explicit "qregisters" type reads setq/setr registers, same as the default.
-		var explicitQ = (await Parser.FunctionParse(MModule.single("setq(A,qval)[r(A,qregisters)]")))?.Message!;
+		var explicitQ = (await Parser.FunctionParse(MarkupText.Plain("setq(A,qval)[r(A,qregisters)]")))?.Message!;
 		await Assert.That(explicitQ.ToPlainText()).IsEqualTo("qval");
 
 		// An unrecognized type is an error (it is NOT treated as a default value any more).
-		var badType = (await Parser.FunctionParse(MModule.single("r(NONEXISTENT,default_value)")))?.Message!;
+		var badType = (await Parser.FunctionParse(MarkupText.Plain("r(NONEXISTENT,default_value)")))?.Message!;
 		await Assert.That(badType.ToPlainText()).StartsWith("#-1");
 
 		// The type accepts unambiguous prefixes: "q" resolves to "qregisters".
-		var prefixQ = (await Parser.FunctionParse(MModule.single("setq(B,bval)[r(B,q)]")))?.Message!;
+		var prefixQ = (await Parser.FunctionParse(MarkupText.Plain("setq(B,bval)[r(B,q)]")))?.Message!;
 		await Assert.That(prefixQ.ToPlainText()).IsEqualTo("bval");
 	}
 
 	[Test]
 	public async Task Registers_Count()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("setq(A,1)[setq(B,2)][registers()]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("setq(A,1)[setq(B,2)][registers()]")))?.Message!;
 		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(2);
 	}
 
 	[Test]
 	public async Task Registers_List()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("setq(TEST1,val1)[setq(TEST2,val2)][registers(list)]")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("setq(TEST1,val1)[setq(TEST2,val2)][registers(list)]")))?.Message!;
 		var list = result.ToPlainText();
 		await Assert.That(list).Contains("TEST1");
 		await Assert.That(list).Contains("TEST2");
@@ -358,7 +358,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task SLev_CheckDepth()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("slev()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("slev()")))?.Message!;
 		var depth = int.Parse(result.ToPlainText());
 		await Assert.That(depth).IsGreaterThanOrEqualTo(0);
 	}
@@ -379,7 +379,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("allof(#-1,#101,#2970,,#-3,0,#319,null(x),|)", "#101|#2970|#319")]
 	public async Task AllOf_Evaluation(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -396,7 +396,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("itext(123)", "#-1 REGISTER OUT OF RANGE")]
 	public async Task IText_Validation(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -429,7 +429,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("iter(a,iter(b,ilev()))", "1")]
 	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -444,7 +444,7 @@ public class UtilityFunctionUnitTests
 	[Arguments("[itext(L)]")]
 	public async Task TheOutermostIterationRegister_KeepsItsMarkup(string substitution)
 	{
-		var result = (await Parser.FunctionParse(MModule.single($"iter([ansi(+red,coloured)],{substitution})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"iter([ansi(+red,coloured)],{substitution})")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("coloured");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[")
@@ -454,7 +454,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Dig_CreateRoom()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("dig(test_room_DIG_case1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("dig(test_room_DIG_case1)")))?.Message!;
 		var resultStr = result.ToPlainText();
 
 		await Assert.That(resultStr).StartsWith("#");
@@ -468,7 +468,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Open_CreateExit()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("open(test_exit_OPEN_case1;te1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("open(test_exit_OPEN_case1;te1)")))?.Message!;
 		var resultStr = result.ToPlainText();
 
 		await Assert.That(resultStr).StartsWith("#");
@@ -482,14 +482,14 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Clone_CopyObject()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(test_thing_CLONE_original)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(test_thing_CLONE_original)")))?.Message!;
 		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).AsValue();
 
 		// attrib_set(<object>/<attrib>, <value>) - see Wipe_ClearAttributes. In the old form this
 		// line set nothing at all, so the attribute it was meant to give the clone never existed.
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/TEST_ATTR,test_value_CLONE)"));
+		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({createResult}/TEST_ATTR,test_value_CLONE)"));
 
-		var cloneResult = (await Parser.FunctionParse(MModule.single($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
+		var cloneResult = (await Parser.FunctionParse(MarkupText.Plain($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
 		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).AsValue();
 
 		await Assert.That(cloneDbRef.Number).IsNotEqualTo(originalDbRef.Number);
@@ -498,7 +498,7 @@ public class UtilityFunctionUnitTests
 		await Assert.That(clone.IsThing).IsTrue();
 		await Assert.That(clone.AsThing.Object.Name).IsEqualTo("test_thing_CLONE_copy");
 
-		var clonedAttr = (await Parser.FunctionParse(MModule.single($"get({cloneResult}/TEST_ATTR)")))?.Message!;
+		var clonedAttr = (await Parser.FunctionParse(MarkupText.Plain($"get({cloneResult}/TEST_ATTR)")))?.Message!;
 		await Assert.That(clonedAttr.ToPlainText()).IsEqualTo("test_value_CLONE")
 			.Because("clone() copies the original's attributes - otherwise setting one here proves nothing");
 	}
@@ -511,14 +511,14 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task TestLock_EvaluateLock()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(test_obj_TESTLOCK)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var passes = (await Parser.FunctionParse(MModule.single("testlock(FLAG^WIZARD,#1)")))?.Message!;
+		var passes = (await Parser.FunctionParse(MarkupText.Plain("testlock(FLAG^WIZARD,#1)")))?.Message!;
 		await Assert.That(passes.ToPlainText()).IsEqualTo("1")
 			.Because("#1 is a wizard, so it passes FLAG^WIZARD");
 
-		var fails = (await Parser.FunctionParse(MModule.single($"testlock(FLAG^WIZARD,{dbref})")))?.Message!;
+		var fails = (await Parser.FunctionParse(MarkupText.Plain($"testlock(FLAG^WIZARD,{dbref})")))?.Message!;
 		await Assert.That(fails.ToPlainText()).IsEqualTo("0")
 			.Because("a freshly created thing is not a wizard - without this the assertion above proves nothing");
 	}
@@ -537,13 +537,13 @@ public class UtilityFunctionUnitTests
 	[Skip("Bare-dbref lock keys always pass - see the doc comment. Tracked separately.")]
 	public async Task TestLock_BareDbrefKey_OnlyThatObjectPasses()
 	{
-		var subject = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK_subject)")))?.Message!.ToPlainText()!;
-		var other = (await Parser.FunctionParse(MModule.single("create(test_obj_TESTLOCK_other)")))?.Message!.ToPlainText()!;
+		var subject = (await Parser.FunctionParse(MarkupText.Plain("create(test_obj_TESTLOCK_subject)")))?.Message!.ToPlainText()!;
+		var other = (await Parser.FunctionParse(MarkupText.Plain("create(test_obj_TESTLOCK_other)")))?.Message!.ToPlainText()!;
 
-		var passes = (await Parser.FunctionParse(MModule.single($"testlock({subject},{subject})")))?.Message!;
+		var passes = (await Parser.FunctionParse(MarkupText.Plain($"testlock({subject},{subject})")))?.Message!;
 		await Assert.That(passes.ToPlainText()).IsEqualTo("1");
 
-		var fails = (await Parser.FunctionParse(MModule.single($"testlock({subject},{other})")))?.Message!;
+		var fails = (await Parser.FunctionParse(MarkupText.Plain($"testlock({subject},{other})")))?.Message!;
 		await Assert.That(fails.ToPlainText()).IsEqualTo("0")
 			.Because("an object lock names exactly one object");
 	}
@@ -551,26 +551,26 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task Wipe_ClearAttributes()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(test_obj_WIPE)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(test_obj_WIPE)")))?.Message!;
 
 		// attrib_set(<object>/<attrib>[, <value>]) - the object and attribute are ONE argument
 		// (help ATTRIB_SET()). The previous form, attrib_set(<obj>,ATTR1,value1), returned
 		// "#-1 BAD ARGUMENT FORMAT TO ATTRIB_SET" and set nothing, which is why the original
 		// assertion saw a wipe count of zero: there was never anything on the object to wipe.
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/ATTR1,value1)"));
-		await Parser.FunctionParse(MModule.single($"attrib_set({createResult}/ATTR2,value2)"));
+		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({createResult}/ATTR1,value1)"));
+		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({createResult}/ATTR2,value2)"));
 
 		// Control: the attributes are readable before the wipe, so a passing assertion below
 		// cannot be the attrib_set calls having silently done nothing.
-		var before = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR1)")))?.Message!;
+		var before = (await Parser.FunctionParse(MarkupText.Plain($"get({createResult}/ATTR1)")))?.Message!;
 		await Assert.That(before.ToPlainText()).IsEqualTo("value1");
 
-		var wipeResult = (await Parser.FunctionParse(MModule.single($"wipe({createResult})")))?.Message!;
+		var wipeResult = (await Parser.FunctionParse(MarkupText.Plain($"wipe({createResult})")))?.Message!;
 		await Assert.That(wipeResult.ToPlainText()).IsEqualTo(string.Empty)
 			.Because("PennMUSH's wipe() returns nothing at all");
 
-		var after1 = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR1)")))?.Message!;
-		var after2 = (await Parser.FunctionParse(MModule.single($"get({createResult}/ATTR2)")))?.Message!;
+		var after1 = (await Parser.FunctionParse(MarkupText.Plain($"get({createResult}/ATTR1)")))?.Message!;
+		var after2 = (await Parser.FunctionParse(MarkupText.Plain($"get({createResult}/ATTR2)")))?.Message!;
 		await Assert.That(after1.ToPlainText()).IsEmpty();
 		await Assert.That(after2.ToPlainText()).IsEmpty();
 	}
@@ -579,7 +579,7 @@ public class UtilityFunctionUnitTests
 	public async Task ANSI_NamedColor()
 	{
 		// named color from colors.json
-		var result = (await Parser.FunctionParse(MModule.single("ansi(+red,test)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(+red,test)")))?.Message!;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("test");
@@ -592,7 +592,7 @@ public class UtilityFunctionUnitTests
 	[Test]
 	public async Task ANSI_NamedBackgroundColor()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("ansi(/+blue,test)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(/+blue,test)")))?.Message!;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("test");
@@ -606,7 +606,7 @@ public class UtilityFunctionUnitTests
 	public async Task ANSI_XtermColor()
 	{
 		// xterm color (0-255)
-		var result = (await Parser.FunctionParse(MModule.single("ansi(196,test)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(196,test)")))?.Message!;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("test");
@@ -620,7 +620,7 @@ public class UtilityFunctionUnitTests
 	public async Task ANSI_XtermWithPrefix()
 	{
 		// +xterm prefix format
-		var result = (await Parser.FunctionParse(MModule.single("ansi(+xterm196,test)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(+xterm196,test)")))?.Message!;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("test");
@@ -634,7 +634,7 @@ public class UtilityFunctionUnitTests
 	public async Task ANSI_RGBFormat()
 	{
 		// RGB format <r g b>
-		var result = (await Parser.FunctionParse(MModule.single("ansi(<255 0 0>,test)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("ansi(<255 0 0>,test)")))?.Message!;
 		var plainText = result.ToPlainText();
 
 		await Assert.That(plainText).IsEqualTo("test");

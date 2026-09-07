@@ -35,15 +35,15 @@ public class ObjectPredicateFlagTests
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
 	private async Task<string> EvalAs(DBRef executor, string expr)
-		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MModule.single(expr)))
+		=> (await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(expr)))
 			?.Message!.ToPlainText() ?? "<null>";
 
 	private async Task<AnySharpObject> ThingWithFlag(string label, string flag)
 	{
 		var dbref = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, label);
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@set {dbref}={flag}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {dbref}={flag}"));
 
-		var softcode = (await FunctionParser.FunctionParse(MModule.single($"hasflag({dbref},{flag})")))
+		var softcode = (await FunctionParser.FunctionParse(MarkupText.Plain($"hasflag({dbref},{flag})")))
 			?.Message!.ToPlainText();
 		await Assert.That(softcode)
 			.IsEqualTo("1")
@@ -119,13 +119,13 @@ public class ObjectPredicateFlagTests
 		var darkName = TestIsolationHelpers.GenerateUniqueName("DarkLocateHidden");
 		var plainName = TestIsolationHelpers.GenerateUniqueName("DarkLocateVisible");
 		var dark = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {darkName}")))!.Message!.ToPlainText());
+			MarkupText.Plain($"@create {darkName}")))!.Message!.ToPlainText());
 		var plain = DBRef.Parse((await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@create {plainName}")))!.Message!.ToPlainText());
+			MarkupText.Plain($"@create {plainName}")))!.Message!.ToPlainText());
 
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@set #{dark.Number}=DARK"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@tel #{dark.Number}={mortalLoc}"));
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@tel #{plain.Number}={mortalLoc}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{dark.Number}=DARK"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{dark.Number}={mortalLoc}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{plain.Number}={mortalLoc}"));
 
 		await Assert.That(await EvalAs(mortal.DbRef, $"locate(%#,{plainName},*)"))
 			.IsEqualTo($"#{plain.Number}")

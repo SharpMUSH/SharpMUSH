@@ -3,7 +3,6 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using System.Drawing;
-using A = MarkupString.MarkupStringModule;
 using M = MarkupString.Ansi.AnsiMarkup;
 
 namespace SharpMUSH.Tests.Database;
@@ -167,12 +166,12 @@ public class ArangoDBTests
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDBRef = new DBRef(playerOne.Object.Key);
 
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MarkupText.Plain("Layer"), playerOne);
 		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(existingLayer.Last().Value.ToString()).IsEqualTo("Layer");
 
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MarkupText.Plain("Layer2"), playerOne);
 		var overwrittenLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();
 
 		await Assert.That(overwrittenLayer.Last().Value.ToString()).IsEqualTo("Layer2");
@@ -184,7 +183,7 @@ public class ArangoDBTests
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1)));
 		var playerOneDBRef = playerOne.Object()!.DBRef;
 
-		var ansiString = A.MarkupSingle(M.Create(foreground: Color.Red.ToAnsiColor()), "red");
+		var ansiString = MarkupText.Wrap(M.Create(foreground: Color.Red.ToAnsiColor()), "red");
 		await Database.SetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"], ansiString, playerOne.AsPlayer);
 		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["AnsiTest", "Layers"]))!.ToListAsync();
 
@@ -210,7 +209,7 @@ public class ArangoDBTests
 	{
 		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var playerOneDbRef = playerOne.Object.DBRef;
-		await Database.SetAttributeAsync(playerOneDbRef, ["TZ"], MModule.single("America/Chicago"), playerOne);
+		await Database.SetAttributeAsync(playerOneDbRef, ["TZ"], MarkupText.Plain("America/Chicago"), playerOne);
 		var result = Database.GetAttributeAsync(playerOneDbRef, ["TZ"]);
 		var realResult = await result!.FirstOrDefaultAsync();
 
@@ -234,13 +233,13 @@ public class ArangoDBTests
 
 		var playerOneDBRef = new DBRef(playerOne.Object.Key);
 
-		await Database.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], MModule.single("Single"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two"], MModule.single("Twin"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MModule.single("Layer"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves"], MModule.single("Leaf"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"], MModule.single("Leaf2"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], MModule.single("Deep1"), playerOne);
-		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], MModule.single("Deeper"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["SingleLayer"], MarkupText.Plain("Single"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two"], MarkupText.Plain("Twin"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Layers"], MarkupText.Plain("Layer"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves"], MarkupText.Plain("Leaf"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Two", "Leaves2"], MarkupText.Plain("Leaf2"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep"], MarkupText.Plain("Deep1"), playerOne);
+		await Database.SetAttributeAsync(playerOneDBRef, ["Three", "Layers", "Deep2"], MarkupText.Plain("Deeper"), playerOne);
 
 		var existingSingle = await (Database.GetAttributeAsync(playerOneDBRef, ["SingleLayer"]))!.ToListAsync();
 		var existingLayer = await (Database.GetAttributeAsync(playerOneDBRef, ["Two", "Layers"]))!.ToListAsync();

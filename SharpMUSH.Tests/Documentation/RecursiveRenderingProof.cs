@@ -50,7 +50,7 @@ This is **bold** and *italic* text.
 	}
 
 	[Test]
-	public async Task ProofOfConcept_TableColumnAlignment_UsesTextAlignerModule()
+	public async Task ProofOfConcept_TableColumnAlignment_UsesTextAligner()
 	{
 		var markdown = @"| Short | Medium Text | Very Long Content Here |
 | --- | --- | --- |

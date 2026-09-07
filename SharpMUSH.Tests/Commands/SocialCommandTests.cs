@@ -21,12 +21,12 @@ public class SocialCommandTests
 	public async ValueTask SayCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("say Hello world"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("say Hello world"));
 
 		// Sender sees "You say, ..." while others see "Name says, ..."
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("You say, \"Hello world\""), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), MarkupText.Plain("You say, \"Hello world\""), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -35,11 +35,11 @@ public class SocialCommandTests
 	public async ValueTask PoseCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("pose waves hello"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("pose waves hello"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One waves hello"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), MarkupText.Plain("One waves hello"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -48,11 +48,11 @@ public class SocialCommandTests
 	public async ValueTask SemiposeCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("semipose 's greeting"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("semipose 's greeting"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), MModule.single("One's greeting"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), MarkupText.Plain("One's greeting"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -61,7 +61,7 @@ public class SocialCommandTests
 	public async ValueTask WhisperCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("whisper #1=Secret message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("whisper #1=Secret message"));
 
 		await NotifyService
 			.Received(1)
@@ -74,7 +74,7 @@ public class SocialCommandTests
 	public async ValueTask PageCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("page #1=Hello there"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("page #1=Hello there"));
 
 		await NotifyService
 			.Received(1)

@@ -25,7 +25,7 @@ public class BracketDepthColouringTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	private MString Format(string src, IReadOnlyList<ParseError>? errors = null)
-		=> SoftcodeFormatter.Format(MModule.single(src), TestLexer.Lex(src), [], errors ?? [], 78, Parser);
+		=> SoftcodeFormatter.Format(MarkupText.Plain(src), TestLexer.Lex(src), [], errors ?? [], 78, Parser);
 
 	private static AnsiStyle? StyleAt(MString ms, int offset)
 	{
@@ -79,7 +79,7 @@ public class BracketDepthColouringTests
 	[Test]
 	public async Task PlainTextSurvivesColouring()
 	{
-		await Assert.That(MModule.plainText(Format("add(sub(1,2),3)"))).IsEqualTo("add(sub(1,2),3)");
+		await Assert.That(Format("add(sub(1,2),3)").ToPlainText()).IsEqualTo("add(sub(1,2),3)");
 	}
 
 	// @"ljust(%b\[%b[left(%0)]%b\]%b,%1)" offsets: '(' 5, '\[' 8-9, '[' 12, '(' 17, ')' 20, ']' 21,

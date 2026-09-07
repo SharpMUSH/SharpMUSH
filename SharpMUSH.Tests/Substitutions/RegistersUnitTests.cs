@@ -31,7 +31,7 @@ public class RegistersUnitTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		Console.WriteLine("Testing: {0}", str);
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single(str));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)

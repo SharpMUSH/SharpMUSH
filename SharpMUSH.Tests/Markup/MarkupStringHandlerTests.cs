@@ -3,7 +3,6 @@ using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Library.Extensions;
-using AMS = MarkupString.MarkupStringModule;
 using M = MarkupString.Ansi.AnsiMarkup;
 using static MarkupString.MStringInterpolation;
 
@@ -64,7 +63,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_MStringHole_PreservesMarkupRuns()
 	{
 		var redMarkup = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString bold = AMS.MarkupSingle(redMarkup, "world");
+		MString bold = MarkupText.Wrap(redMarkup, "world");
 
 		MString result = Format($"Hello, {bold}!");
 
@@ -83,8 +82,8 @@ public class MarkupStringHandlerTests
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
 		var blue = M.Create(foreground: Color.Blue.ToAnsiColor());
 
-		MString redWord = AMS.MarkupSingle(red, "red");
-		MString blueWord = AMS.MarkupSingle(blue, "blue");
+		MString redWord = MarkupText.Wrap(red, "red");
+		MString blueWord = MarkupText.Wrap(blue, "blue");
 
 		MString result = Format($"Color: {redWord} and {blueWord}.");
 
@@ -100,11 +99,11 @@ public class MarkupStringHandlerTests
 	public async Task Handler_MStringHole_AnsiRenderMatchesConcatMany()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString marked = AMS.MarkupSingle(red, "world");
+		MString marked = MarkupText.Wrap(red, "world");
 
 		MString fromHandler = Format($"Hello, {marked}!");
 
-		MString manual = AMS.concatMany([AMS.single("Hello, "), marked, AMS.single("!")]);
+		MString manual = MarkupText.Concat([MarkupText.Plain("Hello, "), marked, MarkupText.Plain("!")]);
 
 		await Assert.That(fromHandler.ToPlainText()).IsEqualTo(manual.ToPlainText());
 		await Assert.That(fromHandler.Render(MarkupFormat.Ansi)).IsEqualTo(manual.Render(MarkupFormat.Ansi));
@@ -115,7 +114,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_MixedHoles_CombinesCorrectly()
 	{
 		var boldMarkup = M.Create(bold: true);
-		MString name = AMS.MarkupSingle(boldMarkup, "Alice");
+		MString name = MarkupText.Wrap(boldMarkup, "Alice");
 		int score = 99;
 
 		MString result = Format($"Player {name} scored {score} points.");
@@ -138,7 +137,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_EmptyMStringHole_SkipsEmptySegment()
 	{
-		MString empty = AMS.empty();
+		MString empty = MarkupText.Empty;
 		MString result = Format($"before{empty}after");
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("beforeafter");
@@ -151,9 +150,9 @@ public class MarkupStringHandlerTests
 		var blue = M.Create(foreground: Color.Blue.ToAnsiColor());
 		var green = M.Create(foreground: Color.Green.ToAnsiColor());
 
-		MString a = AMS.MarkupSingle(red, "R");
-		MString b = AMS.MarkupSingle(blue, "G");
-		MString c = AMS.MarkupSingle(green, "B");
+		MString a = MarkupText.Wrap(red, "R");
+		MString b = MarkupText.Wrap(blue, "G");
+		MString c = MarkupText.Wrap(green, "B");
 
 		MString result = Format($"{a}{b}{c}");
 
@@ -168,7 +167,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_RunsSortedByStart()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString marked = AMS.MarkupSingle(red, "mid");
+		MString marked = MarkupText.Wrap(red, "mid");
 
 		MString result = Format($"before {marked} after");
 
@@ -180,7 +179,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_SingleHoleNoLiterals_RetainsMarkup()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString marked = AMS.MarkupSingle(red, "only");
+		MString marked = MarkupText.Wrap(red, "only");
 
 		MString result = Format($"{marked}");
 
@@ -192,7 +191,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_DefaultTrimsBothSides()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -200,7 +199,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_ExplicitBoth_TrimsBothSides()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim:both}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -208,7 +207,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_Left_TrimsStart()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim:left}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello  ");
 	}
@@ -216,7 +215,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_Start_TrimsStart()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim:start}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello  ");
 	}
@@ -224,7 +223,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_Right_TrimsEnd()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim:right}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("  hello");
 	}
@@ -232,7 +231,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_End_TrimsEnd()
 	{
-		MString value = AMS.single("  hello  ");
+		MString value = MarkupText.Plain("  hello  ");
 		MString result = Format($"{value:trim:end}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("  hello");
 	}
@@ -240,7 +239,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_WithCustomChars()
 	{
-		MString value = AMS.single("---hello---");
+		MString value = MarkupText.Plain("---hello---");
 		MString result = Format($"{value:trim:both:-}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -249,7 +248,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_Trim_PreservesMarkupOnRemainingText()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString value = AMS.MarkupSingle(red, "  hello  ");
+		MString value = MarkupText.Wrap(red, "  hello  ");
 		MString result = Format($"{value:trim}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Runs.Any(r => r.Markups.Count > 0)).IsTrue();
@@ -258,7 +257,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_Left_PadsRight()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value:align:left:10}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hi        ");
 		await Assert.That(result.Length).IsEqualTo(10);
@@ -267,7 +266,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_Right_PadsLeft()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value:align:right:10}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("        hi");
 		await Assert.That(result.Length).IsEqualTo(10);
@@ -276,7 +275,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_Center_PadsBothSides()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value:align:center:10}");
 		await Assert.That(result.Length).IsEqualTo(10);
 		var plain = result.ToPlainText();
@@ -288,7 +287,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_WithCustomFill()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value:align:left:6:-}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hi----");
 	}
@@ -296,7 +295,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_TruncatesWhenTextTooLong()
 	{
-		MString value = AMS.single("hello world");
+		MString value = MarkupText.Plain("hello world");
 		MString result = Format($"{value:align:left:5}");
 		await Assert.That(result.Length).IsEqualTo(5);
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
@@ -306,7 +305,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_Align_PreservesMarkup()
 	{
 		var red = M.Create(foreground: Color.Red.ToAnsiColor());
-		MString value = AMS.MarkupSingle(red, "hi");
+		MString value = MarkupText.Wrap(red, "hi");
 		MString result = Format($"{value:align:left:6}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hi    ");
 		await Assert.That(result.Runs.Any(r => r.Markups.Count > 0)).IsTrue();
@@ -315,7 +314,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_CSharpAlignment_Positive_RightJustifies()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value,10}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("        hi");
 		await Assert.That(result.Length).IsEqualTo(10);
@@ -324,7 +323,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_CSharpAlignment_Negative_LeftJustifies()
 	{
-		MString value = AMS.single("hi");
+		MString value = MarkupText.Plain("hi");
 		MString result = Format($"{value,-10}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hi        ");
 		await Assert.That(result.Length).IsEqualTo(10);
@@ -333,7 +332,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_CSharpAlignment_CombinedWithTrimFormat()
 	{
-		MString value = AMS.single("  hi  ");
+		MString value = MarkupText.Plain("  hi  ");
 		MString result = Format($"{value,-10:trim}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hi        ");
 		await Assert.That(result.Length).IsEqualTo(10);
@@ -342,7 +341,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_AppliesAnsiMarkup()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:r}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -351,7 +350,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_AppliesHexColor()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:#ff0000}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -360,7 +359,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_AppliesHighlightCode()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		// 'h' sets highlight mode, 'r' applies red — same as ansi("hr", ...) in MUSHCode
 		MString result = Format($"{value:color:hr}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
@@ -371,7 +370,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_AppliesXtermColor()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:200}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -381,7 +380,7 @@ public class MarkupStringHandlerTests
 	public async Task Handler_Color_PreservesInnerMarkup()
 	{
 		var blue = M.Create(foreground: Color.Blue.ToAnsiColor());
-		MString inner = AMS.MarkupSingle(blue, "hello");
+		MString inner = MarkupText.Wrap(blue, "hello");
 		MString result = Format($"{inner:color:r}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Runs.All(r => r.Markups.Count >= 2)).IsTrue();
@@ -390,7 +389,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_UnknownFormatSpecifier_RetainsValue()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:unknown_format}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Runs.All(r => r.Markups.Count == 0)).IsTrue();
@@ -507,7 +506,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_BackgroundLetter_SetsBackground()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:R}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -516,7 +515,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_BackgroundHex_SetsBackground()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:/#ff0000}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -525,7 +524,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_RgbTripletInFormat_SetsForeground()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:<255 0 0>}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -536,7 +535,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_EmptyCodes_RetainsValueUnchanged()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Runs.All(r => r.Markups.Count == 0)).IsTrue();
@@ -545,7 +544,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Color_XtermPlusPrefix_ProducesAnsi()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:color:+xterm200}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains("\u001b[");
@@ -554,7 +553,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_InvalidWidth_RetainsValue()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:align:left:notanumber}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -562,7 +561,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Trim_EmptyString_ReturnsEmpty()
 	{
-		MString value = AMS.empty();
+		MString value = MarkupText.Empty;
 		MString result = Format($"{value:trim}");
 		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
 	}
@@ -570,7 +569,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Handler_Align_ZeroWidth_RetainsValue()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString result = Format($"{value:align:left:0}");
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 	}
@@ -591,7 +590,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Hilight_MString_ProducesBoldBrightWhite()
 	{
-		MString inner = AMS.single("hello");
+		MString inner = MarkupText.Plain("hello");
 		MString result = inner.Hilight();
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");
 		var ansiOut = result.Render(MarkupFormat.Ansi);
@@ -601,7 +600,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Hilight_RendersIdenticallyToColorHw()
 	{
-		MString value = AMS.single("hello");
+		MString value = MarkupText.Plain("hello");
 		MString fromHilight = value.Hilight();
 		MString fromColorHw = Format($"{value:color:hw}");
 		await Assert.That(fromHilight.Render(MarkupFormat.Ansi)).IsEqualTo(fromColorHw.Render(MarkupFormat.Ansi));

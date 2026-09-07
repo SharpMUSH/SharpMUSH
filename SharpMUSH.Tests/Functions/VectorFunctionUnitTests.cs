@@ -16,7 +16,7 @@ public class VectorFunctionUnitTests
 	[Arguments("vcross(0 0 1,1 0 0)", "0 1 0")]
 	public async Task Vcross(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -28,7 +28,7 @@ public class VectorFunctionUnitTests
 	[Arguments("vmag(1 1 1)", "1.73205080756888")]
 	public async Task Vmag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -36,7 +36,7 @@ public class VectorFunctionUnitTests
 	[Arguments("vunit(3 4)", "")]
 	public async Task Vunit(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -47,7 +47,7 @@ public class VectorFunctionUnitTests
 	[Arguments("dist2d(0,0,5,5)", "7.07106781186548")]
 	public async Task Dist2d(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -58,7 +58,7 @@ public class VectorFunctionUnitTests
 	[Arguments("dist3d(0,0,0,5,5,5)", "8.66025403784439")]
 	public async Task Dist3d(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

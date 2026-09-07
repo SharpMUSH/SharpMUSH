@@ -43,12 +43,12 @@ public class ObjectSearchFilterPushdownTests
 
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@create {name}"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 
 	private ValueTask<CallState> RunAsync(string command) =>
-		Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>
 	/// Runs the filter and reports which of this test's own two objects came back, ignoring everything

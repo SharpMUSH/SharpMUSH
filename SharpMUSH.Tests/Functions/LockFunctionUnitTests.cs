@@ -15,7 +15,7 @@ public class LockFunctionUnitTests
 	[Arguments("testlock(#TRUE,%#)", "1")]
 	public async Task Testlock(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -23,7 +23,7 @@ public class LockFunctionUnitTests
 	[Arguments("lockowner(%#)", "")]
 	public async Task Lockowner(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -31,7 +31,7 @@ public class LockFunctionUnitTests
 	[Arguments("lockfilter(#0,basic)", "")]
 	public async Task Lockfilter(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -39,7 +39,7 @@ public class LockFunctionUnitTests
 	[Arguments("llocks(%#)", "")]
 	public async Task Llocks(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -47,7 +47,7 @@ public class LockFunctionUnitTests
 	[Arguments("llockflags(%#,basic)", "")]
 	public async Task Llockflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -55,7 +55,7 @@ public class LockFunctionUnitTests
 	[Arguments("atrlock(%#,testattr)", "")]
 	public async Task Atrlock(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -63,10 +63,10 @@ public class LockFunctionUnitTests
 	public async Task LockReturnsUnlocked()
 	{
 		// Create a dedicated object to avoid parallel test interference
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockFunc_UnlockedTest)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockFunc_UnlockedTest)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref})")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("*UNLOCKED*");
 	}
 
@@ -74,10 +74,10 @@ public class LockFunctionUnitTests
 	public async Task ElockNoLockPasses()
 	{
 		// Create a dedicated object to avoid parallel test interference
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockFunc_ElockTest)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockFunc_ElockTest)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref}/Basic,%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref}/Basic,%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 }

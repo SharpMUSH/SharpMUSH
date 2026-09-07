@@ -115,7 +115,7 @@ public static class TestIsolationHelpers
 		string namePrefix)
 	{
 		var uniqueName = GenerateUniqueName(namePrefix);
-		var result = await parser.CommandParse(1, connectionService, MModule.single($"@create {uniqueName}"));
+		var result = await parser.CommandParse(1, connectionService, MarkupText.Plain($"@create {uniqueName}"));
 		var message = result.Message
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message. The command may have failed.");
 		var plainText = message.ToPlainText()

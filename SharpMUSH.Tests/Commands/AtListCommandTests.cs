@@ -34,7 +34,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood))).IsTrue();
@@ -44,7 +44,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_UnknownArgument_DisplaysHelpMessage()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list zorblatt"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list zorblatt"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood))).IsTrue();
@@ -57,7 +57,7 @@ public class AtListCommandTests
 	public async ValueTask List_CommandsArgument_DisplaysCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list commands"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list commands"));
 
 		await NotifyService
 			.Received(1)
@@ -70,7 +70,7 @@ public class AtListCommandTests
 	public async ValueTask List_AbbreviatedArgument_DisplaysCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list comm"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list comm"));
 
 		await NotifyService
 			.Received(1)
@@ -84,7 +84,7 @@ public class AtListCommandTests
 	public async ValueTask List_SingleLetterF_ResolvesToFunctionsNotFlags()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list f"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list f"));
 
 		await NotifyService
 			.Received(1)
@@ -96,7 +96,7 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_AbbreviatedFlags_IsNotAccepted()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list flag"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list flag"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood))).IsTrue();
@@ -107,7 +107,7 @@ public class AtListCommandTests
 	public async ValueTask List_LowercaseSwitchWithArgument_DisplaysLowercaseList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase flags"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/lowercase flags"));
 
 		await NotifyService
 			.Received(1)
@@ -119,7 +119,7 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_DisplaysFlagList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/flags"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/flags"));
 
 		await NotifyService
 			.Received(1)
@@ -131,7 +131,7 @@ public class AtListCommandTests
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/lowercase/flags"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/lowercase/flags"));
 
 		await NotifyService
 			.Received(1)
@@ -143,7 +143,7 @@ public class AtListCommandTests
 	public async ValueTask List_Powers_DisplaysPowerList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/powers"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/powers"));
 
 		await NotifyService
 			.Received(1)
@@ -155,7 +155,7 @@ public class AtListCommandTests
 	public async ValueTask List_Locks_DisplaysLockTypes()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/locks"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/locks"));
 
 		await NotifyService
 			.Received(1)
@@ -167,7 +167,7 @@ public class AtListCommandTests
 	public async ValueTask List_Attribs_DisplaysStandardAttributes()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/attribs"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/attribs"));
 
 		await NotifyService
 			.Received(1)
@@ -179,7 +179,7 @@ public class AtListCommandTests
 	public async ValueTask List_Commands_DisplaysCommandList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/commands"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/commands"));
 
 		await NotifyService
 			.Received(1)
@@ -191,7 +191,7 @@ public class AtListCommandTests
 	public async ValueTask List_Functions_DisplaysFunctionList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/functions"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/functions"));
 
 		await NotifyService
 			.Received(1)
@@ -203,7 +203,7 @@ public class AtListCommandTests
 	public async ValueTask List_Motd_DisplaysMotdSettings()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@list/motd"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@list/motd"));
 
 		await NotifyService
 			.Received(1)

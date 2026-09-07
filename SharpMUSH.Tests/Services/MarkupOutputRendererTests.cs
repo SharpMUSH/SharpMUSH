@@ -47,7 +47,7 @@ public partial class MarkupOutputRendererTests
 	[Test]
 	public async Task Pueblo_HtmlEncodesPlainText()
 	{
-		var markup = MModule.serialize(MModule.single(Raw));
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(Raw));
 		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo));
 		var text = Encoding.UTF8.GetString(result.Data);
 
@@ -58,7 +58,7 @@ public partial class MarkupOutputRendererTests
 	[Test]
 	public async Task Mxp_PrefixesLinesAndHtmlEncodes()
 	{
-		var markup = MModule.serialize(MModule.single(Raw));
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(Raw));
 		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp));
 		var text = Encoding.UTF8.GetString(result.Data);
 
@@ -70,7 +70,7 @@ public partial class MarkupOutputRendererTests
 	[Test]
 	public async Task Ansi_KeepsRawText()
 	{
-		var markup = MModule.serialize(MModule.single(Raw));
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(Raw));
 		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Ansi));
 		var text = Encoding.UTF8.GetString(result.Data);
 
@@ -87,7 +87,7 @@ public partial class MarkupOutputRendererTests
 	public async Task Ansi_StripsHtmlMarkupTags()
 	{
 		var send = HtmlMarkup.Create("send", "href=\"north\" hint=\"Go north\"");
-		var markup = MModule.serialize(MModule.MarkupSingle2(send, MModule.single("north")));
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Wrap(send, MarkupText.Plain("north")));
 
 		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Ansi));
 		var text = Encoding.UTF8.GetString(result.Data);
@@ -107,11 +107,11 @@ public partial class MarkupOutputRendererTests
 	public async Task Ansi_StripsHtmlMarkupTagsInAMixedLine()
 	{
 		var send = HtmlMarkup.Create("send", "href=\"north\" hint=\"Go north\"");
-		var line = MModule.concat(
-			MModule.single("Obvious exits:\n"),
-			MModule.MarkupSingle2(send, MModule.single("north")));
+		var line = MarkupText.Concat(
+			MarkupText.Plain("Obvious exits:\n"),
+			MarkupText.Wrap(send, MarkupText.Plain("north")));
 
-		var result = new MarkupOutputRenderer().Render(MModule.serialize(line), Connection(OutputFormat.Ansi));
+		var result = new MarkupOutputRenderer().Render(MarkupTextSerializer.Serialize(line), Connection(OutputFormat.Ansi));
 		var text = Encoding.UTF8.GetString(result.Data);
 
 		await Assert.That(text).DoesNotContain("<send");
@@ -126,9 +126,9 @@ public partial class MarkupOutputRendererTests
 	{
 		var send = HtmlMarkup.Create("send", "href=\"north\"");
 		var red = AnsiMarkup.Create(foreground: Color.Red.ToAnsiColor());
-		var line = MModule.MarkupSingleMulti(ImmutableArray.Create<IMarkup>(red, send), "north");
+		var line = MarkupText.Wrap(MarkupSet.Of([red, send]), "north");
 
-		var result = new MarkupOutputRenderer().Render(MModule.serialize(line), Connection(OutputFormat.Ansi));
+		var result = new MarkupOutputRenderer().Render(MarkupTextSerializer.Serialize(line), Connection(OutputFormat.Ansi));
 		var text = Encoding.UTF8.GetString(result.Data);
 
 		await Assert.That(text).DoesNotContain("<send");
@@ -139,7 +139,7 @@ public partial class MarkupOutputRendererTests
 	[Test]
 	public async Task WebSocket_WrapsMarkupEnvelopeWithoutTransform()
 	{
-		var markup = MModule.serialize(MModule.single(Raw));
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(Raw));
 		var result = new MarkupOutputRenderer().Render(markup, Connection(connectionType: "websocket"));
 		var text = Encoding.UTF8.GetString(result.Data);
 
@@ -151,6 +151,6 @@ public partial class MarkupOutputRendererTests
 		await Assert.That(root.GetProperty("type").GetString()).IsEqualTo("markup");
 
 		var data = root.GetProperty("data").GetString()!;
-		await Assert.That(MModule.deserialize(data).ToPlainText()).IsEqualTo(Raw);
+		await Assert.That(MarkupTextSerializer.Deserialize(data).ToPlainText()).IsEqualTo(Raw);
 	}
 }

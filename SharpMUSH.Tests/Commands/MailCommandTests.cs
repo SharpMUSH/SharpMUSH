@@ -38,11 +38,11 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@mail #{player.DbRef.Number}=Bare List Subject/Bare list body."));
+			MarkupText.Plain($"@mail #{player.DbRef.Number}=Bare List Subject/Bare list body."));
 
 		var beforeBare = NotificationsTo(player.DbRef).Length;
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("@mail"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mail"));
 
 		var afterBare = NotificationsTo(player.DbRef).Skip(beforeBare).ToArray();
 
@@ -63,11 +63,11 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@mail #{player.DbRef.Number}=Clear Subject/Clear body."));
+			MarkupText.Plain($"@mail #{player.DbRef.Number}=Clear Subject/Clear body."));
 
 		var beforeClear = NotificationsTo(player.DbRef).Length;
 
-		await parser.CommandParse(player.Handle, ConnectionService, MModule.single("@mail/clear"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mail/clear"));
 
 		var afterClear = NotificationsTo(player.DbRef).Skip(beforeClear).ToArray();
 
@@ -93,7 +93,7 @@ public class MailCommandTests
 	public async ValueTask MailCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@mail #1=Test subject/Test message"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@mail #1=Test subject/Test message"));
 
 		// Mailing yourself produces both halves of the exchange: the send confirmation and the
 		// delivery notice. The original expectation of exactly one is what kept this skipped.
@@ -120,7 +120,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@mail me=Me Subject/Me body."));
+			MarkupText.Plain("@mail me=Me Subject/Me body."));
 
 		var notifications = NotificationsTo(player.DbRef);
 
@@ -137,7 +137,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@mail NoSuchPlayerAtAll=Subject/Body."));
+			MarkupText.Plain("@mail NoSuchPlayerAtAll=Subject/Body."));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
 			NotifyService,
@@ -158,7 +158,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("@mail me=and//or/The body."));
+			MarkupText.Plain("@mail me=and//or/The body."));
 
 		var mail = await Mediator.Send(new GetMailQuery(
 			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
@@ -181,7 +181,7 @@ public class MailCommandTests
 
 		var body = new string('x', 80);
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single($"@mail me={body}"));
+			MarkupText.Plain($"@mail me={body}"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
 			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
@@ -205,7 +205,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
 
 		await parser.CommandParse(sender.Handle, ConnectionService,
-			MModule.single($"@mail/silent #{target.DbRef.Number}=Quiet/Body."));
+			MarkupText.Plain($"@mail/silent #{target.DbRef.Number}=Quiet/Body."));
 
 		await Assert.That(NotificationsTo(sender.DbRef))
 			.DoesNotContain(m => m!.StartsWith("MAIL: You sent"));
@@ -225,7 +225,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("think [mailsend(me,Fn Subject/Fn body.)]"));
+			MarkupText.Plain("think [mailsend(me,Fn Subject/Fn body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
 			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
@@ -249,7 +249,7 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
 
 		await parser.CommandParse(sender.Handle, ConnectionService,
-			MModule.single($"think [mailsend(#{target.DbRef.Number},Fn Subject/Fn body.)]"));
+			MarkupText.Plain($"think [mailsend(#{target.DbRef.Number},Fn Subject/Fn body.)]"));
 
 		await Assert.That(NotificationsTo(target.DbRef)).Contains(m => m!.Contains("You have"));
 		await Assert.That(NotificationsTo(sender.DbRef)).DoesNotContain(m => m!.StartsWith("MAIL: You sent"));
@@ -264,9 +264,9 @@ public class MailCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("&MAILSIGNATURE me=-- Regards"));
+			MarkupText.Plain("&MAILSIGNATURE me=-- Regards"));
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MModule.single("think [mailsend(me,Sig Subject/Sig body.)]"));
+			MarkupText.Plain("think [mailsend(me,Sig Subject/Sig body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
 			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
@@ -289,14 +289,14 @@ public class MailCommandTests
 
 		var targetParser = WebAppFactoryArg.CommandParserFor(target.DbRef, target.Handle);
 		await targetParser.CommandParse(target.Handle, ConnectionService,
-			MModule.single($"@lock/mail me=#{target.DbRef.Number}"));
+			MarkupText.Plain($"@lock/mail me=#{target.DbRef.Number}"));
 
 		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
 
 		var refused = await parser.CommandParse(sender.Handle, ConnectionService,
-			MModule.single($"@mail #{target.DbRef.Number}=Subject/Body."));
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Subject/Body."));
 		var missing = await parser.CommandParse(sender.Handle, ConnectionService,
-			MModule.single("@mail NoSuchPlayerAtAll=Subject/Body."));
+			MarkupText.Plain("@mail NoSuchPlayerAtAll=Subject/Body."));
 
 		await Assert.That(refused.Message!.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.RecipientDoesNotAcceptMail);
@@ -310,7 +310,7 @@ public class MailCommandTests
 	public async ValueTask MaliasCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@malias add all=*"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@malias add all=*"));
 
 		await NotifyService
 			.Received(1)

@@ -37,7 +37,7 @@ public class ChannelUniquenessTests
 		=> (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
 
 	private async Task<ChannelCreationResult> Create(string name, params string[] privs)
-		=> await Mediator.Send(new CreateChannelCommand(MModule.single(name), privs, await God()));
+		=> await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privs, await God()));
 
 	/// <summary>
 	/// Counts straight through <see cref="ISharpDatabase"/> rather than <c>GetChannelListQuery</c>, so a

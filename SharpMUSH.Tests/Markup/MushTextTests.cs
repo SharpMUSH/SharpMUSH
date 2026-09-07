@@ -177,19 +177,6 @@ public class MushTextTests
 	public async Task Glob_ToRegex_AlwaysOpensWithSingleLineMode(string wildcardPattern)
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).StartsWith("(?s)");
 
-	/// <summary>
-	/// The shim's <c>getWildcardMatchAsRegex2</c> is a duplicate implementation (task 15 deletes it);
-	/// this pins the two in lockstep until then.
-	/// </summary>
-	[Test]
-	[Arguments("*")]
-	[Arguments("abc*def")]
-	[Arguments("abc?efg*xyz")]
-	[Arguments(@"abc\?efg*xyz")]
-	[Arguments(@"abc\\?efg*xyz")]
-	public async Task Glob_ToRegex_MatchesTheShimsEquivalent(string wildcardPattern)
-		=> await Assert.That(MModule.getWildcardMatchAsRegex2(wildcardPattern)).IsEqualTo(MushText.Glob.ToRegex(wildcardPattern));
-
 	[Test]
 	public async Task GetWildcardMatches_ReturnsGroupsCarryingTheirMarkup()
 	{

@@ -14,14 +14,14 @@ public class InformationFunctionUnitTests
 	[Arguments("type(%l)", "ROOM")]
 	public async Task Type(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task MudName()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("mudname()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("mudname()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
@@ -29,7 +29,7 @@ public class InformationFunctionUnitTests
 	[Test, Skip("Not Yet Implemented")]
 	public async Task Name()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("name(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("One");
 	}
 
@@ -37,7 +37,7 @@ public class InformationFunctionUnitTests
 	[Arguments("alias(%#)", "")]
 	public async Task Alias(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -45,7 +45,7 @@ public class InformationFunctionUnitTests
 	[Arguments("fullname(%#)", "")]
 	public async Task Fullname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotEmpty();
 	}
 
@@ -53,7 +53,7 @@ public class InformationFunctionUnitTests
 	[Arguments("accname(%#)", "")]
 	public async Task Accname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -61,7 +61,7 @@ public class InformationFunctionUnitTests
 	[Arguments("iname(%#)", "")]
 	public async Task Iname(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -69,7 +69,7 @@ public class InformationFunctionUnitTests
 	[Arguments("moniker(%#)", "")]
 	public async Task Moniker(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -77,14 +77,14 @@ public class InformationFunctionUnitTests
 	[Arguments("money(%#)", "#-1 NOT SUPPORTED")]
 	public async Task Money(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Quota()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("quota(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("quota(%#)")))?.Message!;
 		var text = result.ToPlainText();
 		// Format is "<owned_count> <max_quota>". Owned count varies by test order; max quota is always 999999.
 		var parts = text.Split(' ');
@@ -97,7 +97,7 @@ public class InformationFunctionUnitTests
 	[Arguments("powers(%#)", "")]
 	public async Task Powers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -105,7 +105,7 @@ public class InformationFunctionUnitTests
 	[Arguments("findable(%#,%#)", "1")]
 	public async Task Findable(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -115,7 +115,7 @@ public class InformationFunctionUnitTests
 	[Skip("Test infrastructure issue - intermittent failure, returns '1' instead of '0'")]
 	public async Task Hidden(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -124,7 +124,7 @@ public class InformationFunctionUnitTests
 	[Arguments("playermem(%#)", "0")]
 	public async Task Playermem(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -132,7 +132,7 @@ public class InformationFunctionUnitTests
 	[Arguments("version()", "")]
 	public async Task Version(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -140,7 +140,7 @@ public class InformationFunctionUnitTests
 	[Arguments("numversion()", "20250102000000")]
 	public async Task Numversion(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -149,7 +149,7 @@ public class InformationFunctionUnitTests
 	[Arguments("nearby(%#,%l)", "1")]
 	public async Task Nearby(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -158,16 +158,16 @@ public class InformationFunctionUnitTests
 	[Arguments("first(rloc(%#,1),:)", "%l")]
 	public async Task Rloc(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var resultPlain = result.ToPlainText();
-		var expectedParsed = (await Parser.FunctionParse(MModule.single(expected)))?.Message!.ToPlainText();
+		var expectedParsed = (await Parser.FunctionParse(MarkupText.Plain(expected)))?.Message!.ToPlainText();
 		await Assert.That(resultPlain).IsEqualTo(expectedParsed);
 	}
 
 	[Test]
 	public async Task Lstats_NoArguments()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("lstats()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lstats()")))?.Message!;
 		var stats = result.ToPlainText();
 
 		// Should return 5 space-separated numbers: players things exits rooms garbage
@@ -187,7 +187,7 @@ public class InformationFunctionUnitTests
 	[Arguments("lstats(exit)", "")]
 	public async Task Lstats_WithTypeFilter(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var count = result.ToPlainText();
 
 		await Assert.That(int.TryParse(count, out var num)).IsTrue();
@@ -199,7 +199,7 @@ public class InformationFunctionUnitTests
 	public async Task Lstats_GarbageAlwaysZero(string str, string expected)
 	{
 		// Garbage count should always be 0 (not tracked separately)
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -207,7 +207,7 @@ public class InformationFunctionUnitTests
 	[Arguments("lstats(invalid)", "#-1 INVALID TYPE")]
 	public async Task Lstats_InvalidType(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -216,7 +216,7 @@ public class InformationFunctionUnitTests
 	[Arguments("pidinfo(abc)", "#-1 INVALID PID")]
 	public async Task Pidinfo_Invalid(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -224,7 +224,7 @@ public class InformationFunctionUnitTests
 	public async Task Pidinfo_ValidFormat()
 	{
 		// In a live environment with actual tasks, this would return task info
-		var result = (await Parser.FunctionParse(MModule.single("pidinfo(1)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("pidinfo(1)")))?.Message!;
 		var text = result.ToPlainText();
 
 		await Assert.That(text).IsNotNull();
@@ -238,14 +238,14 @@ public class InformationFunctionUnitTests
 	[Arguments("pidinfo(1,status)", "")]
 	public async Task Pidinfo_WithField(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Colors_NoArgs()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("colors()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("colors()")))?.Message!;
 		var colors = result.ToPlainText();
 
 		await Assert.That(colors).IsNotEmpty();
@@ -259,7 +259,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(*yellow*)", "yellow")]
 	public async Task Colors_Wildcard(string str, string expectedContains)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var colors = result.ToPlainText();
 
 		await Assert.That(colors).IsNotEmpty();
@@ -270,7 +270,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, hex)", "#ffff00")]
 	public async Task Colors_NameToHex(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -278,7 +278,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, rgb)", "255 255 0")]
 	public async Task Colors_NameToRgb(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -286,7 +286,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, xterm256)")]
 	public async Task Colors_NameToXterm(string str)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var xterm = result.ToPlainText();
 
 		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
@@ -298,7 +298,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, 16color)")]
 	public async Task Colors_NameTo16Color(string str)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var ansiCode = result.ToPlainText();
 
 		await Assert.That(ansiCode).IsNotEmpty();
@@ -310,7 +310,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(#ffff00, name)", "yellow")]
 	public async Task Colors_HexToName(string str, string expectedContains)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		var names = result.ToPlainText();
 
 		await Assert.That(names).IsNotEmpty();
@@ -321,7 +321,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+blue /+black, hex)", "#0000ff /#000000")]
 	public async Task Colors_ForegroundAndBackground(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -329,7 +329,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(iuB+red, hex styles)", "iuB #ff0000")]
 	public async Task Colors_WithStyles(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -337,7 +337,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+blue huyG/+black, auto)", "+blue huyG/+black")]
 	public async Task Colors_AutoFormat(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -345,7 +345,7 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(invalidcolor, hex)", "#-1 INVALID COLOR")]
 	public async Task Colors_InvalidColor(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -353,35 +353,35 @@ public class InformationFunctionUnitTests
 	[Arguments("colors(+yellow, invalidformat)", "#-1 INVALID FORMAT")]
 	public async Task Colors_InvalidFormat(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task Motd_ReturnsConnectMotd()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("motd()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("motd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task WizMotd_ReturnsWizardMotd()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("wizmotd()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("wizmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task DownMotd_ReturnsDownMotd()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("downmotd()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("downmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task FullMotd_ReturnsFullMotd()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("fullmotd()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("fullmotd()")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

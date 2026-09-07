@@ -9,22 +9,22 @@ public class StringFunctionBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	private static readonly MString MidInput = MModule.single("mid(abcdefghij,2,5)");
-	private static readonly MString LjustInput = MModule.single("ljust(hello,20)");
-	private static readonly MString RjustInput = MModule.single("rjust(hello,20)");
-	private static readonly MString TrimInput = MModule.single("trim(  hello world  )");
-	private static readonly MString CenterInput = MModule.single("center(hi,20)");
+	private static readonly MString MidInput = MarkupText.Plain("mid(abcdefghij,2,5)");
+	private static readonly MString LjustInput = MarkupText.Plain("ljust(hello,20)");
+	private static readonly MString RjustInput = MarkupText.Plain("rjust(hello,20)");
+	private static readonly MString TrimInput = MarkupText.Plain("trim(  hello world  )");
+	private static readonly MString CenterInput = MarkupText.Plain("center(hi,20)");
 
-	private static readonly MString Left10 = MModule.single($"left({new string('x', 10)},5)");
-	private static readonly MString Left100 = MModule.single($"left({new string('x', 100)},5)");
-	private static readonly MString Left1000 = MModule.single($"left({new string('x', 1000)},5)");
+	private static readonly MString Left10 = MarkupText.Plain($"left({new string('x', 10)},5)");
+	private static readonly MString Left100 = MarkupText.Plain($"left({new string('x', 100)},5)");
+	private static readonly MString Left1000 = MarkupText.Plain($"left({new string('x', 1000)},5)");
 
-	private static readonly MString Strlen10 = MModule.single($"strlen({new string('x', 10)})");
-	private static readonly MString Strlen100 = MModule.single($"strlen({new string('x', 100)})");
-	private static readonly MString Strlen1000 = MModule.single($"strlen({new string('x', 1000)})");
+	private static readonly MString Strlen10 = MarkupText.Plain($"strlen({new string('x', 10)})");
+	private static readonly MString Strlen100 = MarkupText.Plain($"strlen({new string('x', 100)})");
+	private static readonly MString Strlen1000 = MarkupText.Plain($"strlen({new string('x', 1000)})");
 
-	private static readonly MString Cat5 = MModule.single("cat(a,b,c,d,e)");
-	private static readonly MString Cat26 = MModule.single(
+	private static readonly MString Cat5 = MarkupText.Plain("cat(a,b,c,d,e)");
+	private static readonly MString Cat26 = MarkupText.Plain(
 		$"cat({string.Join(",", Enumerable.Range('a', 26).Select(c => ((char)c).ToString()))})");
 
 	public override async ValueTask Setup()

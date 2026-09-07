@@ -17,7 +17,7 @@ public class SFunctionTests
 	[Arguments("s([ljust(a,5)])", "a")]
 	public async Task SFunction(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 
@@ -26,7 +26,7 @@ public class SFunctionTests
 	[Arguments("objeval(#1,num(me))", "#1")]
 	public async Task ObjevalFunction(string input, string expected)
 	{
-		var result = await Parser.FunctionParse(MModule.single(input));
+		var result = await Parser.FunctionParse(MarkupText.Plain(input));
 		await Assert.That(result!.Message!.ToString()).IsEqualTo(expected);
 	}
 }

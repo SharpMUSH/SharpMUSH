@@ -28,7 +28,7 @@ public class QuotaCommandTests
 	public async ValueTask SquotaCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@squota #1=100"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@squota #1=100"));
 
 		await NotifyService
 			.Received(1)
@@ -61,7 +61,7 @@ public class QuotaCommandTests
 		await Assert.That(before.AsPlayer.Quota).IsEqualTo(startingQuota);
 
 		var setResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@quota/set {name}=777"));
+			MarkupText.Plain($"@quota/set {name}=777"));
 		await Assert.That(setResult.Message).IsNotNull();
 
 		// Re-read via the SAME cached path — must reflect 777, not the stale startingQuota.

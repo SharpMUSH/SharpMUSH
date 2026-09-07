@@ -76,7 +76,7 @@ public class SoftcodeLayoutEquivalenceTests
 	/// <c>SoftcodeLayout</c>, compared against production's evaluator.
 	/// </para>
 	/// </summary>
-	private IReadOnlyList<TokenInfo> Lex(string source) => OracleParser.Tokenize(MModule.single(source));
+	private IReadOnlyList<TokenInfo> Lex(string source) => OracleParser.Tokenize(MarkupText.Plain(source));
 
 	/// <summary>Lays out and renders <paramref name="source"/> exactly as the formatter would.</summary>
 	private string Format(string source, int width, ParseType parseType = ParseType.Function)
@@ -169,7 +169,7 @@ public class SoftcodeLayoutEquivalenceTests
 		() => "lit(aaaaaaaaaa,[strcat(bbbbbbbbbb,cccccccccc)],dddddddddd)",
 
 		// Ruling 12. localize is NoParse with MaxArgs 1 (DbrefFunctions.cs:576), which returns
-		// MModule.substring over the whole function context.
+		// a substring over the whole function context.
 		() => "localize(strcat(aaaaaaaaaa,bbbbbbbbbb,cccccccccc))",
 
 		// Ruling 12, nested: a source-copying call inside a call that does evaluate its arguments. The
@@ -303,10 +303,10 @@ public class SoftcodeLayoutEquivalenceTests
 	];
 
 	private async Task<string?> Eval(string code)
-		=> (await Parser.FunctionParse(MModule.single(code)))?.Message?.ToString();
+		=> (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message?.ToString();
 
 	private async Task<string?> EvalCommandList(string code)
-		=> (await Parser.CommandListParse(MModule.single(code)))?.Message?.ToString();
+		=> (await Parser.CommandListParse(MarkupText.Plain(code)))?.Message?.ToString();
 
 	private static bool IsParseFailure(string? result) =>
 		result?.StartsWith(ErrorMessages.Returns.ParserFailure[..^3], StringComparison.Ordinal) == true;

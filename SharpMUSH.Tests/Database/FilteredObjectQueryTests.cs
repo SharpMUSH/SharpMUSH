@@ -22,8 +22,8 @@ public class FilteredObjectQueryTests
 	[Test]
 	public async ValueTask FilterByType_ReturnsOnlyMatchingTypes()
 	{
-		var roomResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@dig FilterTestRoom"));
-		var thingResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create FilterTestThing"));
+		var roomResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@dig FilterTestRoom"));
+		var thingResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterTestThing"));
 
 		var filter = new ObjectSearchFilter { Types = ["ROOM"] };
 		var rooms = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter))
@@ -38,7 +38,7 @@ public class FilteredObjectQueryTests
 	public async ValueTask FilterByName_ReturnsMatchingObjects()
 	{
 		var uniqueName = $"UniqueTestObj_{Guid.NewGuid():N}";
-		await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
 
 		var filter = new ObjectSearchFilter { NamePattern = uniqueName };
 		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
@@ -50,7 +50,7 @@ public class FilteredObjectQueryTests
 	[Test]
 	public async ValueTask FilterByDbRefRange_ReturnsObjectsInRange()
 	{
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create DbRefRangeTest"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DbRefRangeTest"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var dbRefNum = objDbRef.Number;
 
@@ -71,7 +71,7 @@ public class FilteredObjectQueryTests
 	public async ValueTask FilterByCombinedCriteria_ReturnsMatchingObjects()
 	{
 		var uniqueName = $"CombinedFilterTest_{Guid.NewGuid():N}";
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@create {uniqueName}"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		var filter = new ObjectSearchFilter
@@ -92,16 +92,16 @@ public class FilteredObjectQueryTests
 	[Test]
 	public async ValueTask FilterByZone_ReturnsZonedObjects()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create FilterZoneMaster"));
+		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create FilterZonedObject"));
+		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZonedObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Mediator.Send(new SetObjectZoneCommand(obj.Known, zoneObject.Known));
 
-		var unzonedResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single("@create FilterUnzonedObject"));
+		var unzonedResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterUnzonedObject"));
 		var unzonedDbRef = DBRef.Parse(unzonedResult.Message!.ToPlainText()!);
 
 		var filter = new ObjectSearchFilter { Zone = zoneDbRef };

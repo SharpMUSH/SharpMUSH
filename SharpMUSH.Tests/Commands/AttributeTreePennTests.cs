@@ -11,7 +11,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
-using A = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -42,7 +41,7 @@ public class AttributeTreePennTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeTrail");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO` {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO` {objDbRef}=baz"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`",
@@ -61,7 +60,7 @@ public class AttributeTreePennTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeLead");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&`BAR {objDbRef}=baz"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "`BAR",
@@ -80,7 +79,7 @@ public class AttributeTreePennTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeDbl");
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO``BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO``BAR {objDbRef}=baz"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO``BAR",
@@ -101,7 +100,7 @@ public class AttributeTreePennTests
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var objName = obj.Known.Object().Name;
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		var leafAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
 			IAttributeService.AttributeMode.Read, false);
@@ -119,9 +118,9 @@ public class AttributeTreePennTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeHas");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
-		var result = (await Parser.FunctionParse(MModule.single($"hasattr({objDbRef},FOO)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"hasattr({objDbRef},FOO)")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo("1")
 			.Because("setting foo`bar should auto-create the FOO branch attribute");
@@ -137,10 +136,10 @@ public class AttributeTreePennTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrBr");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		// Try to clear the branch FOO while it still has children (no '=' = explicit clear)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}"));
 
 		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
 			IAttributeService.AttributeMode.Read, false);
@@ -159,10 +158,10 @@ public class AttributeTreePennTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrLf");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		// Clear the leaf FOO`BAR (no '=' = explicit clear)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}"));
 
 		var leafAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
 			IAttributeService.AttributeMode.Read, false);
@@ -181,13 +180,13 @@ public class AttributeTreePennTests
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrSeq");
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}=baz"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		// Clear the leaf first (no '=' = explicit clear)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO`BAR {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}"));
 
 		// Now clear the branch (no '=' = explicit clear)
-		await Parser.CommandParse(1, ConnectionService, MModule.single($"&FOO {objDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}"));
 
 		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
 			IAttributeService.AttributeMode.Read, false);

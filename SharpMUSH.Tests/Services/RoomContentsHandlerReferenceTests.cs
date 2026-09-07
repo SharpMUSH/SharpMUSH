@@ -35,10 +35,10 @@ public class RoomContentsHandlerReferenceTests
 	private IEventService EventService => WebAppFactoryArg.Services.GetRequiredService<IEventService>();
 
 	private Task Cmd(string command) =>
-		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MModule.single(command)).AsTask();
+		WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
 
 	private async Task<string> Eval(string expression) =>
-		(await WebAppFactoryArg.FunctionParser.FunctionParse(MModule.single(expression)))!.Message!.ToPlainText();
+		(await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	/// <summary>
 	/// Clears every scratch attribute these tests install on #9. Runs in each test's finally so a

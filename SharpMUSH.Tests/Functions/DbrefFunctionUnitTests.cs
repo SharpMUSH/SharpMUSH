@@ -18,21 +18,21 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Loc()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("loc(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
 
 	[Test]
 	public async Task Controls()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("controls(%#,%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("controls(%#,%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
 	[Test]
 	public async Task Home()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("home(%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("home(%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#0:");
 	}
 
@@ -40,7 +40,7 @@ public class DbrefFunctionUnitTests
 	public async Task LocOnCurrentRoom()
 	{
 		// loc() on the current room (%l) should return drop-to or #-1
-		var result = (await Parser.FunctionParse(MModule.single("loc(%l)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("loc(%l)")))?.Message!;
 		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
 	}
 
@@ -48,7 +48,7 @@ public class DbrefFunctionUnitTests
 	public async Task HomeOnCurrentRoom()
 	{
 		// home() on the current room (%l) should return drop-to or #-1
-		var result = (await Parser.FunctionParse(MModule.single("home(%l)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("home(%l)")))?.Message!;
 		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
 	}
 
@@ -57,7 +57,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("entrances(%l)", "")]
 	public async Task Entrances(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -65,7 +65,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("followers(%#)", "")]
 	public async Task Followers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -73,7 +73,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("following(%#)", "")]
 	public async Task Following(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -83,7 +83,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("first(locate(%#,here,*),:)", "#0")]
 	public async Task Locate(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -99,8 +99,8 @@ public class DbrefFunctionUnitTests
 		// then matches an ambiguous set and a single transient create->locate miss becomes a permanent
 		// failure. A per-invocation name keeps the create->locate mapping 1:1 and lets retries re-run clean.
 		var name = $"silly-object-{Guid.NewGuid():N}";
-		var result = (await Parser.FunctionParse(MModule.single(string.Format(create, name))))?.Message!;
-		var located = (await Parser.FunctionParse(MModule.single(string.Format(locate, name))))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(string.Format(create, name))))?.Message!;
+		var located = (await Parser.FunctionParse(MarkupText.Plain(string.Format(locate, name))))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(located.ToPlainText());
 	}
@@ -109,10 +109,10 @@ public class DbrefFunctionUnitTests
 	public async Task Lock_OnFreshObject()
 	{
 		// Create a dedicated object so we don't collide with other tests that set locks on %#
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_Dbref)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObj_Dbref)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref})")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("*UNLOCKED*");
 	}
 
@@ -123,10 +123,10 @@ public class DbrefFunctionUnitTests
 	public async Task Elock_NoLock_Passes(string lockName)
 	{
 		// Create a dedicated object so parallel tests setting locks on %# don't interfere
-		var createResult = (await Parser.FunctionParse(MModule.single($"create(ElockTestObj_{lockName})")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain($"create(ElockTestObj_{lockName})")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref}/{lockName},%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref}/{lockName},%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
@@ -134,39 +134,39 @@ public class DbrefFunctionUnitTests
 	public async Task Elock_NoLock_DefaultLock_Passes()
 	{
 		// elock(obj, victim) without /lockname defaults to Basic
-		var createResult = (await Parser.FunctionParse(MModule.single("create(ElockTestObj_Default)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(ElockTestObj_Default)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref},%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref},%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
 	[Test]
 	public async Task Elock_InvalidObject_ReturnsError()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("elock(#99999,%#)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("elock(#99999,%#)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 NO MATCH");
 	}
 
 	[Test]
 	public async Task Elock_InvalidVictim_ReturnsError()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(ElockTestObj_BadVictim)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(ElockTestObj_BadVictim)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"elock({dbref}/Basic,#99999)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref}/Basic,#99999)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
 	}
 
 	[Test]
 	public async Task Lock_CaseInsensitive_LockName()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_CaseInsensitive)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObj_CaseInsensitive)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var resultBasic = (await Parser.FunctionParse(MModule.single($"lock({dbref}/Basic)")))?.Message!;
-		var resultLower = (await Parser.FunctionParse(MModule.single($"lock({dbref}/basic)")))?.Message!;
-		var resultUpper = (await Parser.FunctionParse(MModule.single($"lock({dbref}/BASIC)")))?.Message!;
+		var resultBasic = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref}/Basic)")))?.Message!;
+		var resultLower = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref}/basic)")))?.Message!;
+		var resultUpper = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref}/BASIC)")))?.Message!;
 
 		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultLower.ToPlainText());
 		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultUpper.ToPlainText());
@@ -175,21 +175,21 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Lock_EmptyLockName_AfterSlash()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockTestObj_EmptySlash)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObj_EmptySlash)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var result = (await Parser.FunctionParse(MModule.single($"lock({dbref}/)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"lock({dbref}/)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
 	[Test]
 	public async Task Lockflags_CaseInsensitive()
 	{
-		var createResult = (await Parser.FunctionParse(MModule.single("create(LockflagsTestObj_Case)")))?.Message!;
+		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockflagsTestObj_Case)")))?.Message!;
 		var dbref = createResult.ToPlainText();
 
-		var resultBasic = (await Parser.FunctionParse(MModule.single($"lockflags({dbref}/Basic)")))?.Message!;
-		var resultLower = (await Parser.FunctionParse(MModule.single($"lockflags({dbref}/basic)")))?.Message!;
+		var resultBasic = (await Parser.FunctionParse(MarkupText.Plain($"lockflags({dbref}/Basic)")))?.Message!;
+		var resultLower = (await Parser.FunctionParse(MarkupText.Plain($"lockflags({dbref}/basic)")))?.Message!;
 
 		await Assert.That(resultBasic.ToPlainText()).IsEqualTo(resultLower.ToPlainText());
 	}
@@ -199,7 +199,7 @@ public class DbrefFunctionUnitTests
 	public async Task Rloc(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -208,7 +208,7 @@ public class DbrefFunctionUnitTests
 	public async Task Slev(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -217,7 +217,7 @@ public class DbrefFunctionUnitTests
 	public async Task Stext(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message?.ToString();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
 
@@ -225,7 +225,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("llocks(%#)", "")]
 	public async Task Llocks(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -234,7 +234,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("llockflags(Basic)", "")]
 	public async Task Llockflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -242,7 +242,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("first(lockowner(%#),:)", "#1")]
 	public async Task Lockowner(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -250,7 +250,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("lockfilter(%# %l,Basic,1)", "")]
 	public async Task Lockfilter(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -267,7 +267,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("andflags(%#,WT)", "0")]      // oracle andflags.7: T=thing
 	public async Task Andflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -280,7 +280,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("orflags(%#,EP)", "1")]       // oracle orflags.6: E=exit, P=player — player matches
 	public async Task Orflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -295,7 +295,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("andlflags(%#,player connected)", "1")]    // oracle andlflags.8
 	public async Task Andlflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -309,7 +309,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("orlflags(%#,thing player)", "1")]        // oracle orlflags.7
 	public async Task Orlflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -318,7 +318,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("andlpowers(%#,Guest)", "0")]
 	public async Task Andlpowers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -326,14 +326,14 @@ public class DbrefFunctionUnitTests
 	[Arguments("orlpowers(%#,Guest)", "0")]
 	public async Task Orlpowers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
 	public async Task NextDbref_ReturnsValidDbref()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("nextdbref()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("nextdbref()")))?.Message!;
 		var dbrefStr = result.ToPlainText();
 
 		await Assert.That(dbrefStr).StartsWith("#");
@@ -347,9 +347,9 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task Lsearchr_WithRegexPattern()
 	{
-		await Parser.FunctionParse(MModule.single("create(TestObject123)"));
+		await Parser.FunctionParse(MarkupText.Plain("create(TestObject123)"));
 
-		var result = (await Parser.FunctionParse(MModule.single("lsearchr(%#,NAME=TestObject[0-9]+)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("lsearchr(%#,NAME=TestObject[0-9]+)")))?.Message!;
 		var dbrefs = result.ToPlainText();
 
 		// The result can be empty if the object wasn't visible or permissions prevented it
@@ -360,8 +360,8 @@ public class DbrefFunctionUnitTests
 	[NotInParallel]
 	public async Task Lsearchr_BehavesLikeLsearch_WhenNoRegexNeeded()
 	{
-		var lsearchResult = (await Parser.FunctionParse(MModule.single("lsearch(%#,TYPE=PLAYER)")))?.Message!;
-		var lsearchrResult = (await Parser.FunctionParse(MModule.single("lsearchr(%#,TYPE=PLAYER)")))?.Message!;
+		var lsearchResult = (await Parser.FunctionParse(MarkupText.Plain("lsearch(%#,TYPE=PLAYER)")))?.Message!;
+		var lsearchrResult = (await Parser.FunctionParse(MarkupText.Plain("lsearchr(%#,TYPE=PLAYER)")))?.Message!;
 
 		await Assert.That(lsearchrResult.ToPlainText()).IsEqualTo(lsearchResult.ToPlainText());
 	}
@@ -372,11 +372,11 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task ObjId_AcceptedByLocFunction()
 	{
-		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objIdResult = (await Parser.FunctionParse(MarkupText.Plain("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
-		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"loc({objId})")))?.Message!;
-		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("loc(%#)")))?.Message!;
+		var resultWithObjId = (await Parser.FunctionParse(MarkupText.Plain($"loc({objId})")))?.Message!;
+		var resultWithDbRef = (await Parser.FunctionParse(MarkupText.Plain("loc(%#)")))?.Message!;
 
 		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
 	}
@@ -384,11 +384,11 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task ObjId_AcceptedByNameFunction()
 	{
-		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objIdResult = (await Parser.FunctionParse(MarkupText.Plain("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
-		var resultWithObjId = (await Parser.FunctionParse(MModule.single($"name({objId})")))?.Message!;
-		var resultWithDbRef = (await Parser.FunctionParse(MModule.single("name(%#)")))?.Message!;
+		var resultWithObjId = (await Parser.FunctionParse(MarkupText.Plain($"name({objId})")))?.Message!;
+		var resultWithDbRef = (await Parser.FunctionParse(MarkupText.Plain("name(%#)")))?.Message!;
 
 		await Assert.That(resultWithObjId.ToPlainText()).IsEqualTo(resultWithDbRef.ToPlainText());
 	}
@@ -396,10 +396,10 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task ObjId_AcceptedByLocateFunction()
 	{
-		var objIdResult = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objIdResult = (await Parser.FunctionParse(MarkupText.Plain("objid(%#)")))?.Message!;
 		var objId = objIdResult.ToPlainText();
 
-		var locateResult = (await Parser.FunctionParse(MModule.single($"first(locate(%#,{objId},*),;)")))?.Message!;
+		var locateResult = (await Parser.FunctionParse(MarkupText.Plain($"first(locate(%#,{objId},*),;)")))?.Message!;
 
 		await Assert.That(locateResult.ToPlainText()).StartsWith("#1");
 	}
@@ -407,7 +407,7 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task ObjId_WithWrongTimestamp_FailsToLocate()
 	{
-		var locateResult = (await Parser.FunctionParse(MModule.single("locate(%#,#1:0,*)")))?.Message!;
+		var locateResult = (await Parser.FunctionParse(MarkupText.Plain("locate(%#,#1:0,*)")))?.Message!;
 
 		await Assert.That(locateResult.ToPlainText()).IsEqualTo("#-1");
 	}
@@ -416,12 +416,12 @@ public class DbrefFunctionUnitTests
 	public async Task PercentColon_ReturnsFullObjId()
 	{
 		// %: should return the full objid of the enactor (e.g. #1:1234567890)
-		var result = (await Parser.FunctionParse(MModule.single("%:")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("%:")))?.Message!;
 		var objId = result.ToPlainText();
 
 		await Assert.That(objId).Matches(@"^#\d+:\d+$");
 
-		var objIdFromFunc = (await Parser.FunctionParse(MModule.single("objid(%#)")))?.Message!;
+		var objIdFromFunc = (await Parser.FunctionParse(MarkupText.Plain("objid(%#)")))?.Message!;
 		await Assert.That(objId).IsEqualTo(objIdFromFunc.ToPlainText());
 	}
 
@@ -433,15 +433,15 @@ public class DbrefFunctionUnitTests
 	public async Task LocOfAnExitIsItsDestination()
 	{
 		var destName = TestIsolationHelpers.GenerateUniqueName("LocExitDest");
-		var digResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var digResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("LocExit");
 		var openResult = await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@open {exitName}={destDbRef}"));
+			MarkupText.Plain($"@open {exitName}={destDbRef}"));
 		var exitDbRef = openResult.Message!.ToPlainText()!.Trim();
 
-		var result = (await Parser.FunctionParse(MModule.single($"loc({exitDbRef})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"loc({exitDbRef})")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsEqualTo(destDbRef);
 	}
@@ -453,15 +453,15 @@ public class DbrefFunctionUnitTests
 	public async Task WhereOfAnExitIsTheRoomItSitsIn()
 	{
 		var destName = TestIsolationHelpers.GenerateUniqueName("WhereExitDest");
-		var digResult = await CommandParser.CommandParse(1, ConnectionService, MModule.single($"@dig {destName}"));
+		var digResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {destName}"));
 		var destDbRef = digResult.Message!.ToPlainText()!.Trim();
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("WhereExit");
 		var openResult = await CommandParser.CommandParse(1, ConnectionService,
-			MModule.single($"@open {exitName}={destDbRef}"));
+			MarkupText.Plain($"@open {exitName}={destDbRef}"));
 		var exitDbRef = openResult.Message!.ToPlainText()!.Trim();
 
-		var result = (await Parser.FunctionParse(MModule.single($"where({exitDbRef})")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"where({exitDbRef})")))?.Message!;
 
 		await Assert.That(result.ToPlainText()).IsNotEqualTo(destDbRef);
 	}

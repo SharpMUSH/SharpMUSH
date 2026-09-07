@@ -9,12 +9,12 @@ public class CommandParseBenchmarks : BaseBenchmark
 {
 	private IMUSHCodeParser? _parser;
 
-	private static readonly MString ThinkSimpleInput = MModule.single("think Hello World");
-	private static readonly MString ThinkSubstInput = MModule.single("think %#");
-	private static readonly MString ThinkNameSubstInput = MModule.single("think %N");
-	private static readonly MString PemitSelfInput = MModule.single("@pemit me=Hello World");
-	private static readonly MString SetAttrInput = MModule.single("@set me=SAFE");
-	private static readonly MString PemitWithFunctionInput = MModule.single("@pemit me=[add(1,2)]");
+	private static readonly MString ThinkSimpleInput = MarkupText.Plain("think Hello World");
+	private static readonly MString ThinkSubstInput = MarkupText.Plain("think %#");
+	private static readonly MString ThinkNameSubstInput = MarkupText.Plain("think %N");
+	private static readonly MString PemitSelfInput = MarkupText.Plain("@pemit me=Hello World");
+	private static readonly MString SetAttrInput = MarkupText.Plain("@set me=SAFE");
+	private static readonly MString PemitWithFunctionInput = MarkupText.Plain("@pemit me=[add(1,2)]");
 
 	public override async ValueTask Setup()
 	{

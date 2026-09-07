@@ -50,12 +50,12 @@ public class MarkupSurvivesNotificationTests
 	private async Task<IReadOnlyList<OneOf<MString, string>>> NotifiedByAsync(string command)
 	{
 		var before = Notifications.RawCountFor(God);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		return [.. Notifications.RawFor(God).Skip(before)];
 	}
 
 	private static bool CarriesEscapes(OneOf<MString, string> message) =>
-		message.Match(markup => MModule.plainText(markup).Contains(Escape), text => text.Contains(Escape));
+		message.Match(markup => markup.ToPlainText().Contains(Escape), text => text.Contains(Escape));
 
 	/// <summary>True when the message kept its markup rather than being flattened to a string.</summary>
 	private static bool IsMarkup(OneOf<MString, string> message) => message.IsT0;

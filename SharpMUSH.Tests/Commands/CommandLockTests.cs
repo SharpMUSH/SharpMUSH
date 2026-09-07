@@ -25,7 +25,7 @@ public class CommandLockTests
 	public async ValueTask PcreateCommandCreatesPlayer()
 	{
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("PcreateTest");
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@pcreate {uniqueName}=TestPassword123"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {uniqueName}=TestPassword123"));
 
 		var resultText = result.Message!.ToPlainText()!;
 		var newDb = DBRef.Parse(resultText);
@@ -44,7 +44,7 @@ public class CommandLockTests
 		var nonWizParser = Parser.Push(Parser.CurrentState with { Executor = nonWizardDbRef });
 
 		// Try to use @dump (which has CommandLock = "FLAG^WIZARD")
-		var result = await nonWizParser.CommandParse(MModule.single("@dump"));
+		var result = await nonWizParser.CommandParse(MarkupText.Plain("@dump"));
 		var resultText = result.Message?.ToPlainText() ?? "";
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
@@ -53,7 +53,7 @@ public class CommandLockTests
 	[Test]
 	public async ValueTask CommandLockAllowsWizard()
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("@dump"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dump"));
 		var resultText = result.Message?.ToPlainText() ?? "";
 
 		await Assert.That(resultText).DoesNotContain("PERMISSION DENIED");
@@ -69,7 +69,7 @@ public class CommandLockTests
 
 		// Try to use @pcreate (which has CommandLock = "FLAG^WIZARD")
 		var uniqueName = TestIsolationHelpers.GenerateUniqueName("ShouldNotCreate");
-		var result = await nonWizParser.CommandParse(MModule.single($"@pcreate {uniqueName}=TestPassword123"));
+		var result = await nonWizParser.CommandParse(MarkupText.Plain($"@pcreate {uniqueName}=TestPassword123"));
 		var resultText = result.Message?.ToPlainText() ?? "";
 
 		await Assert.That(resultText).Contains("PERMISSION DENIED");
@@ -80,7 +80,7 @@ public class CommandLockTests
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LockUseWildcard");
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single($"@lock/use {obj}=#FALSE"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/use {obj}=#FALSE"));
 		var resultText = result.Message?.ToPlainText() ?? string.Empty;
 
 		await Assert.That(resultText).DoesNotContain("#-1 INVALID SWITCH");

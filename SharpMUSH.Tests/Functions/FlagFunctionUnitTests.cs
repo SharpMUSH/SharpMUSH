@@ -22,7 +22,7 @@ public class FlagFunctionUnitTests
 	[Arguments("andflags(%#,P)", "1")]
 	public async Task Andflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -30,7 +30,7 @@ public class FlagFunctionUnitTests
 	[Arguments("orflags(%#,PW)", "1")]
 	public async Task Orflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -38,7 +38,7 @@ public class FlagFunctionUnitTests
 	[Arguments("andlflags(%#,PLAYER)", "1")]
 	public async Task Andlflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -46,7 +46,7 @@ public class FlagFunctionUnitTests
 	[Arguments("orlflags(%#,PLAYER WIZARD)", "1")]
 	public async Task Orlflags(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -54,7 +54,7 @@ public class FlagFunctionUnitTests
 	[Arguments("andlpowers(%#,)", "")]
 	public async Task Andlpowers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -62,7 +62,7 @@ public class FlagFunctionUnitTests
 	[Arguments("orlpowers(%#,)", "")]
 	public async Task Orlpowers(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -73,7 +73,7 @@ public class FlagFunctionUnitTests
 	[Arguments("hasflag(%#, puppet)", "0")]
 	public async Task Hasflag(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -88,7 +88,7 @@ public class FlagFunctionUnitTests
 	[Arguments("andlflags(%#, player connected)", "1")]
 	public async Task AndlflagsPenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -96,7 +96,7 @@ public class FlagFunctionUnitTests
 	[Test]
 	public async Task AndlflagsInvalidSyntax()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("andlflags(%#, connected ! myopic)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("andlflags(%#, connected ! myopic)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -110,7 +110,7 @@ public class FlagFunctionUnitTests
 	[Arguments("andflags(%#, WT)", "0")]
 	public async Task AndflagsPenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -118,7 +118,7 @@ public class FlagFunctionUnitTests
 	[Test]
 	public async Task AndflagsInvalidSyntax()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("andflags(%#, W!)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("andflags(%#, W!)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -132,7 +132,7 @@ public class FlagFunctionUnitTests
 	[Arguments("orlflags(%#, thing player)", "1")]
 	public async Task OrlflagsPenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -140,7 +140,7 @@ public class FlagFunctionUnitTests
 	[Test]
 	public async Task OrlflagsInvalidSyntax()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("orlflags(%#, noaccents ! myopic)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("orlflags(%#, noaccents ! myopic)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -153,7 +153,7 @@ public class FlagFunctionUnitTests
 	[Arguments("orflags(%#, EP)", "1")]
 	public async Task OrflagsPenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -161,7 +161,7 @@ public class FlagFunctionUnitTests
 	[Test]
 	public async Task OrflagsInvalidSyntax()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("orflags(%#, v!)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("orflags(%#, v!)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -171,7 +171,7 @@ public class FlagFunctionUnitTests
 	[Arguments("hastype(#1, player)", "1")]
 	public async Task HastypePenn(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -183,7 +183,7 @@ public class FlagFunctionUnitTests
 	[Arguments("haspower(%#,)", "0")]
 	public async Task Haspower(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -198,10 +198,10 @@ public class FlagFunctionUnitTests
 		await Assert.That(guestPower).IsNotNull();
 		await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player), guestPower!));
 
-		var granted = (await Parser.FunctionParse(MModule.single($"haspower(#{subject.Number}, GuEsT)")))?.Message!;
+		var granted = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, GuEsT)")))?.Message!;
 		await Assert.That(granted.ToPlainText()).IsEqualTo("1");
 
-		var other = (await Parser.FunctionParse(MModule.single($"haspower(#{subject.Number}, builder)")))?.Message!;
+		var other = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, builder)")))?.Message!;
 		await Assert.That(other.ToPlainText()).IsEqualTo("0");
 	}
 
@@ -209,7 +209,7 @@ public class FlagFunctionUnitTests
 	[Test]
 	public async Task HaspowerInvalidObject()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("haspower(#99999, guest)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("haspower(#99999, guest)")))?.Message!;
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
 	}
 
@@ -217,7 +217,7 @@ public class FlagFunctionUnitTests
 	public async Task HastypeThing()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HasTypeTest");
-		var result = (await Parser.FunctionParse(MModule.single($"hastype({objDbRef}, thing)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"hastype({objDbRef}, thing)")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 }

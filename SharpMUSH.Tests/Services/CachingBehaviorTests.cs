@@ -50,7 +50,7 @@ public class CachingBehaviorTests
 
 		// Create a unique object so no other parallel test can invalidate its specific cache key
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create QueryCachingBehavior Test Object"));
+			MarkupText.Plain("@create QueryCachingBehavior Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var result1 = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -78,7 +78,7 @@ public class CachingBehaviorTests
 
 		// Dig a unique room so no other parallel test can invalidate its specific cache key
 		var digResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@dig StreamCachingBehavior Test Room"));
+			MarkupText.Plain("@dig StreamCachingBehavior Test Room"));
 		var dbRef = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
 		var result1 = new List<AnySharpContent>();
@@ -127,7 +127,7 @@ public class CachingBehaviorTests
 
 		// Create a unique object to avoid interference from parallel tests
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create CacheInvalidation Test Object"));
+			MarkupText.Plain("@create CacheInvalidation Test Object"));
 		var dbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var before = await mediator.Send(new GetObjectNodeQuery(dbRef));
@@ -135,7 +135,7 @@ public class CachingBehaviorTests
 
 		// Rename via command — SetNameCommand invalidates object:{dbRef} cache key
 		await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@name {dbRef}=CacheInvalidation Renamed Object"));
+			MarkupText.Plain($"@name {dbRef}=CacheInvalidation Renamed Object"));
 
 		var after = await mediator.Send(new GetObjectNodeQuery(dbRef));
 		await Assert.That(after.Object()!.Name).IsEqualTo("CacheInvalidation Renamed Object");
@@ -151,7 +151,7 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 
 		var createResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single("@create CacheInvalidation Visibility Test"));
+			MarkupText.Plain("@create CacheInvalidation Visibility Test"));
 		var newDbRef = Library.Models.DBRef.Parse(createResult.Message!.ToPlainText()!);
 
 		var obj = await mediator.Send(new GetObjectNodeQuery(newDbRef));
@@ -175,7 +175,7 @@ public class CachingBehaviorTests
 		var options = WebAppFactory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
 		var digResult = await Parser.CommandParse(1, ConnectionService,
-			MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("ContentsRace")}"));
 		var room = Library.Models.DBRef.Parse(digResult.Message!.ToPlainText()!);
 
 		async Task<Library.Models.DBRef> Populate() => await mediator.Send(new Library.Commands.Database.CreatePlayerCommand(
@@ -234,7 +234,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 
@@ -279,7 +279,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 
@@ -323,7 +323,7 @@ public class CachingBehaviorTests
 		async Task<Library.Models.DBRef> Dig(string prefix)
 		{
 			var dug = await Parser.CommandParse(1, ConnectionService,
-				MModule.single($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+				MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 			return Library.Models.DBRef.Parse(dug.Message!.ToPlainText()!);
 		}
 

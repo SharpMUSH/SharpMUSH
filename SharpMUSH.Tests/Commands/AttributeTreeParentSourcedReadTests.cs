@@ -35,12 +35,12 @@ public class AttributeTreeParentSourcedReadTests
 	/// </summary>
 	private async Task<string> Eval(long handle, string expression)
 	{
-		var result = await Parser.CommandParse(handle, ConnectionService, MModule.single($"think {expression}"));
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result?.Message?.ToPlainText() ?? string.Empty;
 	}
 
 	private async Task Cmd(long handle, string command)
-		=> await Parser.CommandParse(handle, ConnectionService, MModule.single(command));
+		=> await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 
 	/// <summary>
 	/// Parent P holds a <c>mortal_dark</c> branch whose leaf is <c>visual</c>; child C is

@@ -28,7 +28,7 @@ public class AttribSetNotificationTests
 	{
 		var god = WebAppFactoryArg.ExecutorDBRef;
 		var before = Notifications.CountFor(god);
-		await Parser.CommandParse(1, ConnectionService, MModule.single(command));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		return [.. Notifications.For(god).Skip(before)];
 	}
 

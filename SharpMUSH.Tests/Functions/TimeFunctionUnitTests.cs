@@ -12,14 +12,14 @@ public class TimeFunctionUnitTests
 	[Test]
 	public async Task Secs()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("secs()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("secs()")))?.Message!;
 		await Assert.That(long.Parse(result.ToPlainText())).IsGreaterThan(0);
 	}
 
 	[Test]
 	public async Task Time()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("time()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("time()")))?.Message!;
 		// Result should be in the format "Day Mon DD HH:MM:SS YYYY"
 		Console.WriteLine(result.ToPlainText());
 		var parts = result.ToPlainText().Split(' ');
@@ -29,7 +29,7 @@ public class TimeFunctionUnitTests
 	[Test]
 	public async Task Uptime()
 	{
-		var result = (await Parser.FunctionParse(MModule.single("uptime()")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("uptime()")))?.Message!;
 		await Assert.That(long.Parse(result.ToPlainText())).IsGreaterThan(0);
 	}
 
@@ -42,7 +42,7 @@ public class TimeFunctionUnitTests
 	[Arguments("etime(61,5)", "1m")]
 	public async Task Etime(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -63,7 +63,7 @@ public class TimeFunctionUnitTests
 	[Arguments("stringsecs(5m 10s)", "310")]
 	public async Task Stringsecs(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -83,7 +83,7 @@ public class TimeFunctionUnitTests
 	[Arguments("timestring(9223372036854775807)", " 106751991167300d  15h  30m  7s")]
 	public async Task Timestring(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -91,7 +91,7 @@ public class TimeFunctionUnitTests
 	[Arguments("ctime(#0)", "")]
 	public async Task Ctime(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
@@ -114,7 +114,7 @@ public class TimeFunctionUnitTests
 	[Arguments("etimefmt($txs is $xm$xs,75)", "75s is 1m15s")]
 	public async Task Etimefmt(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -127,7 +127,7 @@ public class TimeFunctionUnitTests
 	[Arguments("timefmt($Y,0,UTC)", "1970")]
 	public async Task Timefmt(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -136,7 +136,7 @@ public class TimeFunctionUnitTests
 	[Arguments("secscalc(1d2h3m4s)", "93784")]
 	public async Task Secscalc(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
@@ -145,7 +145,7 @@ public class TimeFunctionUnitTests
 	[Arguments("timecalc(1h 2m)", "")]
 	public async Task Timecalc(string str, string expected)
 	{
-		var result = (await Parser.FunctionParse(MModule.single(str)))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 }

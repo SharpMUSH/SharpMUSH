@@ -13,7 +13,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_ValidInput_ReturnsEmpty()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2)"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("add(1,2)"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsEmpty();
 	}
@@ -21,7 +21,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_InvalidInput_ReturnsDiagnostics()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Severity).IsEqualTo(DiagnosticSeverity.Error);
@@ -30,7 +30,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_HasRange()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsNotEmpty();
 
@@ -43,7 +43,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_RangeSpansToken()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("test[unclosed"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("test[unclosed"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsNotEmpty();
 
@@ -56,7 +56,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_IncludesMessage()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Message).IsNotEmpty();
@@ -65,7 +65,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task GetDiagnostics_IncludesSource()
 	{
-		var diagnostics = Parser.GetDiagnostics(MModule.single("add(1,2"), ParseType.Function);
+		var diagnostics = Parser.GetDiagnostics(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(diagnostics).IsNotEmpty();
 		await Assert.That(diagnostics[0].Source).IsEqualTo("SharpMUSH Parser");
@@ -74,7 +74,7 @@ public class DiagnosticTests
 	[Test]
 	public async Task ParseError_ToDiagnostic_ConvertsCorrectly()
 	{
-		var errors = Parser.ValidateAndGetErrors(MModule.single("add(1,2"), ParseType.Function);
+		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 
 		await Assert.That(errors).IsNotEmpty();
 

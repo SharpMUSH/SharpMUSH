@@ -21,7 +21,7 @@ public class GameCommandTests
 	public async ValueTask BuyCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("buy sword"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("buy sword"));
 
 		await NotifyService
 			.Received(1)
@@ -34,7 +34,7 @@ public class GameCommandTests
 	public async ValueTask ScoreCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("score"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("score"));
 
 		await NotifyService
 			.Received(1)
@@ -47,7 +47,7 @@ public class GameCommandTests
 	public async ValueTask TeachCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("teach #1=skill"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("teach #1=skill"));
 
 		await NotifyService
 			.Received(1)
@@ -60,7 +60,7 @@ public class GameCommandTests
 	public async ValueTask FollowCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("follow #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("follow #1"));
 
 		await NotifyService
 			.Received(1)
@@ -73,7 +73,7 @@ public class GameCommandTests
 	public async ValueTask UnfollowCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("unfollow"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("unfollow"));
 
 		await NotifyService
 			.Received(1)
@@ -86,7 +86,7 @@ public class GameCommandTests
 	public async ValueTask DesertCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("desert"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("desert"));
 
 		await NotifyService
 			.Received(1)
@@ -99,7 +99,7 @@ public class GameCommandTests
 	public async ValueTask DismissCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("dismiss #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("dismiss #1"));
 
 		await NotifyService
 			.Received(1)
@@ -109,18 +109,18 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask EmptyCommand()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create EmptyTestContainer"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create EmptyTestItem1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create EmptyTestItem2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestContainer"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestItem1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestItem2"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set EmptyTestContainer=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set EmptyTestContainer=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("get EmptyTestContainer"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("get EmptyTestContainer"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give EmptyTestContainer=EmptyTestItem1"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give EmptyTestContainer=EmptyTestItem2"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestContainer=EmptyTestItem1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestContainer=EmptyTestItem2"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("empty EmptyTestContainer"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("empty EmptyTestContainer"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -128,16 +128,16 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask EmptyCommandSameLocation()
 	{
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create EmptyTestBox"));
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@create EmptyTestThing"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestBox"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create EmptyTestThing"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("@set EmptyTestBox=ENTER_OK"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set EmptyTestBox=ENTER_OK"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("give EmptyTestBox=EmptyTestThing"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("give EmptyTestBox=EmptyTestThing"));
 
-		await Parser.CommandParse(1, ConnectionService, MModule.single("drop EmptyTestBox"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("drop EmptyTestBox"));
 
-		var result = await Parser.CommandParse(1, ConnectionService, MModule.single("empty EmptyTestBox"));
+		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("empty EmptyTestBox"));
 
 		await Assert.That(result).IsNotNull();
 	}
@@ -148,7 +148,7 @@ public class GameCommandTests
 	public async ValueTask WithCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MModule.single("with #1"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("with #1"));
 
 		await NotifyService
 			.Received(1)
