@@ -12,7 +12,12 @@ public static class HtmlCss
 	/// <c>.ms-blink</c> animates against. Every name here is <c>ms-</c>-prefixed so dropping the
 	/// sheet into a page cannot collide with the page's own rules.
 	/// </summary>
-	public const string Fixed =
+	/// <remarks>
+	/// Deliberately not a <see langword="const"/>: a const is copied into the consumer at compile
+	/// time, so a page built against one version would keep serving that version's rules after
+	/// upgrading the package — the exact staleness this sheet exists to prevent.
+	/// </remarks>
+	public static readonly string Fixed =
 		".ms-bold { font-weight: bold; }\n" +
 		".ms-faint { opacity: 0.6; }\n" +
 		".ms-italic { font-style: italic; }\n" +

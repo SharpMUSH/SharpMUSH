@@ -83,13 +83,16 @@ public sealed partial class MarkupText
 		return segments;
 	}
 
+	/// <summary>Removes leading and/or trailing spaces from the requested end(s).</summary>
+	public MarkupText Trim(TrimType type) => Trim(type, " ");
+
 	/// <summary>Trims the plain text of <paramref name="chars"/> off the requested end(s).</summary>
 	public MarkupText Trim(TrimType type, MarkupText chars) => Trim(type, chars.Text);
 
 	/// <summary>
 	/// Removes any leading and/or trailing characters that appear in <paramref name="chars"/>.
 	/// </summary>
-	public MarkupText Trim(TrimType type, string chars = " ")
+	public MarkupText Trim(TrimType type, string chars)
 	{
 		ArgumentNullException.ThrowIfNull(chars);
 		if (Length == 0 || chars.Length == 0) return this;

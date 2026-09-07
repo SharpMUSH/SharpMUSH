@@ -58,11 +58,16 @@ public static class MarkupTextSerializer
 
 	// ── Writing ──────────────────────────────────────────────────────────────────
 
+	/// <summary>Serialises <paramref name="text"/> to a JSON string using <see cref="MarkupRegistry.Default"/>.</summary>
+	/// <param name="text">The text to serialise.</param>
+	/// <exception cref="InvalidOperationException">A markup has no codec in the registry.</exception>
+	public static string Serialize(MarkupText text) => Serialize(text, registry: null);
+
 	/// <summary>Serialises <paramref name="text"/> to a JSON string.</summary>
 	/// <param name="text">The text to serialise.</param>
 	/// <param name="registry">The codecs to use; <see cref="MarkupRegistry.Default"/> when null.</param>
 	/// <exception cref="InvalidOperationException">A markup has no codec in the registry.</exception>
-	public static string Serialize(MarkupText text, MarkupRegistry? registry = null)
+	public static string Serialize(MarkupText text, MarkupRegistry? registry)
 	{
 		ArgumentNullException.ThrowIfNull(text);
 		var buffer = new ArrayBufferWriter<byte>(text.Length + 64);
@@ -70,12 +75,21 @@ public static class MarkupTextSerializer
 		return Encoding.UTF8.GetString(buffer.WrittenSpan);
 	}
 
+	/// <summary>
+	/// Serialises <paramref name="text"/> as UTF-8 JSON into <paramref name="output"/> using
+	/// <see cref="MarkupRegistry.Default"/>.
+	/// </summary>
+	/// <param name="text">The text to serialise.</param>
+	/// <param name="output">The buffer the JSON is written to.</param>
+	/// <exception cref="InvalidOperationException">A markup has no codec in the registry.</exception>
+	public static void Serialize(MarkupText text, IBufferWriter<byte> output) => Serialize(text, output, registry: null);
+
 	/// <summary>Serialises <paramref name="text"/> as UTF-8 JSON into <paramref name="output"/>.</summary>
 	/// <param name="text">The text to serialise.</param>
 	/// <param name="output">The buffer the JSON is written to.</param>
 	/// <param name="registry">The codecs to use; <see cref="MarkupRegistry.Default"/> when null.</param>
 	/// <exception cref="InvalidOperationException">A markup has no codec in the registry.</exception>
-	public static void Serialize(MarkupText text, IBufferWriter<byte> output, MarkupRegistry? registry = null)
+	public static void Serialize(MarkupText text, IBufferWriter<byte> output, MarkupRegistry? registry)
 	{
 		ArgumentNullException.ThrowIfNull(text);
 		ArgumentNullException.ThrowIfNull(output);
@@ -182,10 +196,17 @@ public static class MarkupTextSerializer
 
 	// ── Reading ──────────────────────────────────────────────────────────────────
 
+	/// <summary>
+	/// Reads a <see cref="MarkupText"/> back from JSON using <see cref="MarkupRegistry.Default"/>.
+	/// An empty string is <see cref="MarkupText.Empty"/>.
+	/// </summary>
+	/// <param name="json">The JSON produced by <see cref="Serialize(MarkupText)"/>.</param>
+	public static MarkupText Deserialize(string json) => Deserialize(json, registry: null);
+
 	/// <summary>Reads a <see cref="MarkupText"/> back from JSON. An empty string is <see cref="MarkupText.Empty"/>.</summary>
 	/// <param name="json">The JSON produced by <see cref="Serialize(MarkupText, MarkupRegistry?)"/>.</param>
 	/// <param name="registry">The codecs to use; <see cref="MarkupRegistry.Default"/> when null.</param>
-	public static MarkupText Deserialize(string json, MarkupRegistry? registry = null)
+	public static MarkupText Deserialize(string json, MarkupRegistry? registry)
 	{
 		ArgumentNullException.ThrowIfNull(json);
 		if (json.Length == 0) return MarkupText.Empty;
@@ -194,11 +215,19 @@ public static class MarkupTextSerializer
 		return Read(document.RootElement, registry);
 	}
 
+	/// <summary>
+	/// Reads a <see cref="MarkupText"/> back from UTF-8 JSON using <see cref="MarkupRegistry.Default"/>.
+	/// An empty span is <see cref="MarkupText.Empty"/>.
+	/// </summary>
+	/// <param name="utf8Json">The UTF-8 JSON produced by <see cref="Serialize(MarkupText, IBufferWriter{byte})"/>.</param>
+	/// <exception cref="JsonException">The payload has content after the JSON value.</exception>
+	public static MarkupText Deserialize(ReadOnlySpan<byte> utf8Json) => Deserialize(utf8Json, registry: null);
+
 	/// <summary>Reads a <see cref="MarkupText"/> back from UTF-8 JSON. An empty span is <see cref="MarkupText.Empty"/>.</summary>
 	/// <param name="utf8Json">The UTF-8 JSON produced by <see cref="Serialize(MarkupText, IBufferWriter{byte}, MarkupRegistry?)"/>.</param>
 	/// <param name="registry">The codecs to use; <see cref="MarkupRegistry.Default"/> when null.</param>
 	/// <exception cref="JsonException">The payload has content after the JSON value.</exception>
-	public static MarkupText Deserialize(ReadOnlySpan<byte> utf8Json, MarkupRegistry? registry = null)
+	public static MarkupText Deserialize(ReadOnlySpan<byte> utf8Json, MarkupRegistry? registry)
 	{
 		if (utf8Json.IsEmpty) return MarkupText.Empty;
 

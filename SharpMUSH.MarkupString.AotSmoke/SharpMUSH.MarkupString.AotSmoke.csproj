@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!--
+    Rooting the three assemblies is the point of this project: without it the trimmer keeps only
+    what Program.cs reaches, and a trim- or AOT-hostile corner of the library that no smoke test
+    happens to call would publish clean. Rooted, every public entry point is analysed, so an
+    IL2xxx/IL3xxx warning surfaces here rather than in a consumer's app.
+  -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="MarkupString" />
+    <TrimmerRootAssembly Include="MarkupString.Ansi" />
+    <TrimmerRootAssembly Include="MarkupString.Html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.MarkupString\SharpMUSH.MarkupString.csproj" />
+    <ProjectReference Include="..\SharpMUSH.MarkupString.Ansi\SharpMUSH.MarkupString.Ansi.csproj" />
+    <ProjectReference Include="..\SharpMUSH.MarkupString.Html\SharpMUSH.MarkupString.Html.csproj" />
+  </ItemGroup>
+</Project>
