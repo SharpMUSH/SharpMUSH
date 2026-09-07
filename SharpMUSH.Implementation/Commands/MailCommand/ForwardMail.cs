@@ -35,7 +35,7 @@ public static class ForwardMail
 
 		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
 
-		if (!permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
+		if (!await permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
 		{
 			return MarkupText.Plain($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
 		}

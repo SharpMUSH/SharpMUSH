@@ -86,7 +86,7 @@ public class EvalLockEvaluationFailureTests
 
 		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
-		await Assert.That(parser.Compile("FAILING/expected")(one, one))
+		await Assert.That(await parser.Compile("FAILING/expected")(one, one))
 			.IsFalse()
 			.Because("PennMUSH's check_attrib_lock() returns 0 when the evaluation cannot produce a value");
 	}
@@ -106,6 +106,6 @@ public class EvalLockEvaluationFailureTests
 
 		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 
-		await Assert.That(parser.Compile("MATCHING/expected")(one, one)).IsTrue();
+		await Assert.That(await parser.Compile("MATCHING/expected")(one, one)).IsTrue();
 	}
 }

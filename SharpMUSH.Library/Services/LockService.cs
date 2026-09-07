@@ -136,31 +136,31 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 			? lockData.LockString
 			: null;
 
-	public bool Evaluate(
+	public ValueTask<bool> Evaluate(
 		string lockString,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
 	{
 		// Optimize #TRUE - no need to compile or cache
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
-			return true;
+			return ValueTask.FromResult(true);
 
 		return bep.Compile(lockString)(gated, unlocker);
 	}
 
-	public bool Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
+	public async ValueTask<bool> Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE") return true;
 
 		var compile = bep.Compile(lockString);
 		// For channel locks, we need to evaluate the lock against the unlocker
 		// Channels don't have the same object structure, so we pass a synthetic object representation
-		var channelOwner = gatedChannel.Owner.WithCancellation(CancellationToken.None).GetAwaiter().GetResult();
+		var channelOwner = await gatedChannel.Owner.WithCancellation(CancellationToken.None);
 		var syntheticGated = new AnySharpObject(channelOwner);
-		return compile(syntheticGated, unlocker);
+		return await compile(syntheticGated, unlocker);
 	}
 
-	public bool Evaluate(
+	public ValueTask<bool> Evaluate(
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
@@ -169,16 +169,16 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 
 		// Optimize #TRUE - no need to compile or cache
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
-			return true;
+			return ValueTask.FromResult(true);
 
 		return bep.Compile(lockString)(gated, unlocker);
 	}
 
-	public IEnumerable<bool> Evaluate(
+	public IAsyncEnumerable<bool> Evaluate(
 		LockType standardType,
 		IEnumerable<AnySharpObject> gated,
 		AnySharpObject unlocker)
-		=> gated.Select(g => Evaluate(standardType, g, unlocker));
+		=> gated.ToAsyncEnumerable().SelectAwait(g => Evaluate(standardType, g, unlocker));
 
 	public bool Validate(string lockString, AnySharpObject lockee)
 		=> bep.Validate(lockString, lockee);

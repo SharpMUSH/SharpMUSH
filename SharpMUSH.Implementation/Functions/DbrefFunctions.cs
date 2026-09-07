@@ -478,7 +478,7 @@ public partial class Functions
 					return new CallState("#-1");
 				}
 
-				var result = LockService.Evaluate(lockData.LockString, found, victim);
+				var result = await LockService.Evaluate(lockData.LockString, found, victim);
 				return new CallState(result ? "1" : "0");
 			});
 	}
@@ -782,7 +782,7 @@ public partial class Functions
 				continue;
 			}
 
-			var passes = LockService.Evaluate(lockData.LockString, found, executor);
+			var passes = await LockService.Evaluate(lockData.LockString, found, executor);
 
 			if (passes == shouldPass)
 			{
@@ -992,7 +992,7 @@ public partial class Functions
 
 		// Pre-compile lock strings and eval expressions for efficiency (compile once, evaluate many times)
 		// This avoids re-compiling the same lock string or expression for every object in the result set
-		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, bool>>();
+		var compiledLocks = new List<Func<AnySharpObject, AnySharpObject, ValueTask<bool>>>();
 		var compiledEvals = new List<(string evalExpression, string? typeFilter)>();
 
 		foreach (var (key, value) in appLevelCriteria)
@@ -1003,7 +1003,7 @@ public partial class Functions
 					// Optimize #TRUE - no need to compile
 					if (value is "#TRUE" or "")
 					{
-						compiledLocks.Add((_, _) => true);
+						compiledLocks.Add((_, _) => ValueTask.FromResult(true));
 					}
 					else
 					{
@@ -1080,7 +1080,7 @@ public partial class Functions
 
 			foreach (var compiledLock in compiledLocks)
 			{
-				if (!compiledLock(typedObj, executor))
+				if (!await compiledLock(typedObj, executor))
 				{
 					matches = false;
 					break;
@@ -1491,7 +1491,7 @@ public partial class Functions
 							{
 								if (!await PermissionService.Controls(executor, newParent)
 										|| (!await target.HasFlag("LINK_OK")
-												&& !PermissionService.PassesLock(executor, newParent, LockType.Parent)))
+												&& !await PermissionService.PassesLock(executor, newParent, LockType.Parent)))
 								{
 									return ErrorMessages.Returns.PermissionDenied;
 								}
@@ -1664,7 +1664,7 @@ public partial class Functions
 					}
 
 					bool canZone = await PermissionService.Controls(executor, zone);
-					if (!canZone && !LockService.Evaluate(LockType.ChZone, zone, executor))
+					if (!canZone && !await LockService.Evaluate(LockType.ChZone, zone, executor))
 					{
 						return ErrorMessages.Returns.PermissionDenied;
 					}

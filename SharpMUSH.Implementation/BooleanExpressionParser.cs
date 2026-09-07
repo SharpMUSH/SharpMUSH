@@ -4,7 +4,6 @@ using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
-using System.Linq.Expressions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Implementation;
@@ -40,10 +39,10 @@ public class BooleanExpressionParser(
 
 	/// <summary>
 	/// Returns a compiled delegate for the given lock expression text, using FusionCache to avoid
-	/// repeated ANTLR lex-parse-visit + Expression.Lambda.Compile() work on the hot path.
+	/// repeated ANTLR lex-parse-visit work on the hot path.
 	/// Entries are tagged so the entire compiled-expression set can be flushed at once.
 	/// </summary>
-	public Func<AnySharpObject, AnySharpObject, bool> Compile(string text)
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> Compile(string text)
 		=> cache.GetOrSet(
 			$"{CacheKeyPrefix}{text}",
 			_ => CompileInternal(text),
@@ -98,7 +97,7 @@ public class BooleanExpressionParser(
 		return (parser, errors);
 	}
 
-	private Func<AnySharpObject, AnySharpObject, bool> CompileInternal(string text)
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileInternal(string text)
 	{
 		var (sharpParser, errors) = CreateParser(text, nameof(Compile));
 		var chatContext = sharpParser.@lock();
@@ -110,15 +109,12 @@ public class BooleanExpressionParser(
 		// delegate that silently means something other than what was typed.
 		if (errors.HasErrors)
 		{
-			return static (_, _) => false;
+			return static (_, _) => ValueTask.FromResult(false);
 		}
 
-		var parameter = Expression.Parameter(typeof(AnySharpObject), "gated");
-		var parameter2 = Expression.Parameter(typeof(AnySharpObject), "unlocker");
-		SharpMUSHBooleanExpressionVisitor visitor = new(services, mediator, parameter, parameter2);
-		var expression = visitor.Visit(chatContext);
+		SharpMUSHBooleanExpressionVisitor visitor = new(services, mediator);
 
-		return Expression.Lambda<Func<AnySharpObject, AnySharpObject, bool>>(expression, parameter, parameter2).Compile();
+		return visitor.Visit(chatContext);
 	}
 
 	/// <summary>

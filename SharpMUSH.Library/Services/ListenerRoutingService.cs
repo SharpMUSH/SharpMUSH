@@ -126,7 +126,7 @@ public class ListenerRoutingService(
 		if (string.IsNullOrWhiteSpace(listenPattern))
 			return;
 
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
+		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
 		if (!passesListenLock)
 			return;
 
@@ -192,8 +192,8 @@ public class ListenerRoutingService(
 		if (!hasMonitor)
 			return;
 
-		var passesUseLock = lockService.Evaluate(LockType.Use, listener, speaker);
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
+		var passesUseLock = await lockService.Evaluate(LockType.Use, listener, speaker);
+		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
 
 		if (!passesUseLock || !passesListenLock)
 			return;

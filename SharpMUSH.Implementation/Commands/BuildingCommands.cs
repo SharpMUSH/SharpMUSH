@@ -694,7 +694,7 @@ public partial class Commands
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
 							{
-								var linkLockPasses = LockService.Evaluate(LockType.Link, exitObj, executor);
+								var linkLockPasses = await LockService.Evaluate(LockType.Link, exitObj, executor);
 								if (!linkLockPasses)
 								{
 									return await NotifyService.NotifyAndReturn(
@@ -895,7 +895,7 @@ public partial class Commands
 					{
 						bool canZone = await PermissionService.Controls(executor, zoneObj);
 
-						if (!canZone && !LockService.Evaluate(LockType.ChZone, zoneObj, executor))
+						if (!canZone && !await LockService.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
 							return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,

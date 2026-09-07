@@ -138,7 +138,7 @@ public static class SendMail
 
 		foreach (var player in knownPlayerList)
 		{
-			if (!permissionService.PassesLock(sender, player, LockType.Mail))
+			if (!await permissionService.PassesLock(sender, player, LockType.Mail))
 			{
 				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.", sender);
 				continue;

@@ -82,6 +82,6 @@ public sealed class LockEvaluationServices(
 		}
 	}
 
-	public bool EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker)
+	public ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker)
 		=> locks.Value.Evaluate(lockString, gated, unlocker);
 }
