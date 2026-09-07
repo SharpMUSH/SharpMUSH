@@ -6,7 +6,7 @@ Area 6 (HTTP handler / profile schema), Area 20 (package manager).
 ## Status (2026-06-13) — implemented & green
 
 Phases 1–8 landed and the full solution builds (warnings-as-errors). Backend registry
-runs on all three providers (registry tests pass on Arango via Podman); schema
+runs on both supported providers; schema
 serialization, the view-renderer bUnit test, the chargen-schema JSON-validity test, and the
 example-package manifest all pass.
 
@@ -21,7 +21,7 @@ example-package manifest all pass.
 
 Refinements since: `mstring` field values now render as portal markup (terminal pipeline);
 the form renderer does an advisory required-field check before a final submit. The REST
-surface was verified live against a bootstrapped server + ArangoDB (valid register 200 +
+surface was verified live against a bootstrapped server (valid register 200 +
 round-trip; bogus schema URL rejected by validation; unknown kind rejected).
 
 **Still open:** Phase 9 **screenshots** — the guides' `[SCREENSHOT]` markers still need
@@ -75,7 +75,7 @@ deferrals below.
 ### Phase 4: Application Registry (server, DB-backed)
 - [ ] `RegisteredApplication` model (id, slug, displayName, icon, kind, schemaUrl, dataUrl,
       submitRoute, allowedRoles, navPlacement, zones, order)
-- [ ] Persist via `ISharpDatabase` — **all three providers** (Arango/Memgraph/Surreal) at
+- [ ] Persist via `ISharpDatabase` — **both supported providers** (Lightning/Surreal) at
       parity, per-provider integration tests (mirror the Area-20 `sys_*` pattern)
 - [ ] `ApplicationsController` (`/api/applications`, `[Authorize]` Wizard+ per 10.3): list,
       get, create, update, delete
@@ -124,7 +124,7 @@ deferrals below.
 ## Testing (summary)
 - [ ] Schema (de)serialization + error-envelope binding (Phase 1)
 - [ ] Renderer control coverage + returned-schema re-render (Phases 2–3)
-- [ ] Registry CRUD + role gate on all three providers (Phase 4)
+- [ ] Registry CRUD + role gate on both supported providers (Phase 4)
 - [ ] Routing/role gating for `/apps/{slug}` (Phase 5)
 - [ ] Dynamic widget render + palette (Phase 6)
 - [ ] Example package validates + schema round-trips through the parser (Phase 8)

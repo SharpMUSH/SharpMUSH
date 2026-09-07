@@ -258,9 +258,8 @@ Temp rooms keep the "a character is always in a room" invariant for web-created
 scenes. **The entire temp-room lifecycle is softcode** (`@dig`/`@tel`/`@set`/
 `@destroy`); the only engine piece is the informational **`SCENE_ROOM`** flag.
 
-- `SCENE_ROOM` is a system `ObjectFlag` seeded in
-  `Migration_CreateDatabase.CreateInitialFlags` (and the Memgraph + Surreal flag
-  seeders), **symbol `S`** (verified free among ObjectFlags; the `safe`
+- `SCENE_ROOM` is a system `ObjectFlag` seeded for both supported providers,
+  **symbol `S`** (verified free among ObjectFlags; the `safe`
   *AttributeFlag* `S` is a different namespace, `SUSPECT` uses lowercase `s`).
   Informational only: `hasflag(<room>,SCENE_ROOM)` ⇒ 1; softcode reads it for
   `+who`/`+where`/formatters/idle-sweepers.
@@ -395,21 +394,11 @@ calendar/agenda surface. Client models use **`long` Unix-millis**
 
 ## Multi-Provider Persistence
 
-Modeled on `Migration_AddWiki` + the provider `*.Wiki.cs` files, extended to a
-graph (vertices + edge collections + the named graph), across all three
-providers (`multi-database-backends`), run via Podman Testcontainers
-(`podman-testcontainers`). `InMemorySceneService` mirrors the semantics.
+Modeled on the provider wiki implementations and covered against both supported providers.
+`InMemorySceneService` mirrors the semantics used by focused unit tests.
 
-- **ArangoDB** — `Migration_AddScenes : IArangoMigration` (`long Id`). Document
-  collections for vertices; **edge collections** for each `edge_sharp_sys_scene_*`;
-  the `graph_sharp_sys_scene` named graph with edge definitions (incl.
-  cross-collection edges into `node_rooms`/`node_players`/`node_objects`).
-  Indexes: `Scene.Status`, `Scene.ScheduledFor`, `Scene.IsPublic`. `SCENE_ROOM`
-  seed added to `CreateInitialFlags`.
-- **Memgraph** — labels + relationship types appended in
-  `MemgraphDatabase.Migration.cs` (auto-commit DDL); indexes/constraints on the
-  scene properties; `SCENE_ROOM` added to the Memgraph flag seeder.
-- **SurrealDB** — tables + `RELATE` edges in `SurrealDatabase.Migration.cs`.
+- **Lightning** — embedded records and indexes maintained by `LightningSceneStorage`.
+- **SurrealDB** — tables + `RELATE` edges supplied through the plugin migration source.
   **CBOR gotcha** (`surrealdb-net-deserialization`): `*DbRecord` property names
   must be camelCase *verbatim*; `[JsonPropertyName]` is ignored. `SCENE_ROOM`
   added to the Surreal flag seeder.
@@ -423,8 +412,8 @@ matrix.
 
 | # | Seam | Contribution type | Notes |
 |---|---|---|---|
-| 1 | `Migration_AddScenes` + graph/edge collections + `DatabaseConstants` | Schema | Arango discovers via `AddMigrations(pluginAssembly)`. |
-| 1b | `SCENE_ROOM` flag seed | Schema (flag) | *Resolved (Phase 5):* seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration on all three providers. |
+| 1 | Provider-specific scene schema | Schema | `IMigrationSource` supplies Lightning steps and SurrealDB statements. |
+| 1b | `SCENE_ROOM` flag seed | Schema (flag) | *Resolved (Phase 5):* seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration on both supported providers. |
 | 2 | `@SCENE` command + handlers | Command | `[SharpCommand]` assembly-scanned; no temp-room/building dependency (temp is softcode) → cleanly extractable. |
 | 3 | `scene…` functions | Function | `[SharpFunction]` assembly-scanned. |
 | 4 | *(no config)* | — | No `SceneOptions` by design — all knobs are softcode policy in the bootstrap; nothing to contribute. |
@@ -442,14 +431,13 @@ package-manager framework.
 
 > **Realized (plugin Phase 5).** The Scene System has been extracted into the
 > standalone `SharpMUSH.Plugins.Scene` plugin via the plugin framework's Phase-1/2a
-> seams; the `ISceneService` *storage* stays in the three DB providers
-> (`*.Scene.cs` — graph-native, cannot move). The two blockers below
+> seams; the `ISceneService` storage is supplied by the two supported provider implementations. The two blockers below
 > (`IBridgeSubscription` and `IFlagContribution`) were the gating work, and both
 > are solved by the generic Phase-2a contribution seams
 > (`IBridgeSubscriptionSource` and `IFlagSource`) — see
 > `docs/design/plugin-system.md §Phase 5 — Scene as the reference plugin`. The
 > command/function surface ships as `PluginBase`→`ICommandSource`/`IFunctionSource`
-> (generator analyzer); the Arango `Migration_AddScenes` + the Memgraph/Surreal
+> (generator analyzer); the Lightning/Surreal
 > scene schema ship as `IMigrationSource`; the `SCENE_ROOM` flag as `IFlagSource`;
 > the `game.scene.*` NATS→SignalR leg as `IBridgeSubscriptionSource`. The five
 > existing Scene test classes pass unchanged with Scene running as a plugin, which

@@ -145,7 +145,7 @@ public class AttributeService(
 	/// <see cref="ParentChainAsync"/>, and <see cref="AncestorTargetChainAsync"/> for the ancestor
 	/// fall-through - follow <c>@parent</c> only, so a zone-sourced result's source object is NOT in
 	/// the chain: the walk would run off the end and DENY (<c>attrib.c:356</c>), a fail-CLOSED
-	/// regression on zone reads that work today. All three providers really do emit
+	/// regression on zone reads that work today. both supported providers really do emit
 	/// <see cref="AttributeSource.Zone"/>, so this arm is live.
 	/// <para>
 	/// <see cref="AttributeSource.Ancestor"/> is excluded alongside it purely defensively: no
@@ -216,7 +216,7 @@ public class AttributeService(
 		// blocks the whole path - not just on the resolved leaf. Penn's atr_get_with_parent
 		// (attrib.c:1232-1252) tests AF_PRIVATE on every backtick-delimited segment while
 		// crossing an inheritance boundary, and the ancestor is such a boundary exactly like an
-		// @parent is. Task 7 fixed this shape for @parent chains in all three providers; this
+		// @parent is. Task 7 fixed this shape for @parent chains in both supported providers; this
 		// fall-through kept the old leaf-only test.
 		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
 		{
@@ -765,7 +765,6 @@ public class AttributeService(
 	/// </summary>
 	/// <remarks>
 	/// KNOWN, PRE-EXISTING, near-unreachable: the providers' own inheritance traversals run
-	/// <c>1..100</c> (e.g. <c>ArangoDatabase.Attributes.cs:911</c>) rather than to
 	/// <c>MaxParents</c>, so a leaf resolved BEYOND this cap has a source that is not in this chain.
 	/// On the read walk that now means the caller reports a permission error where Penn - whose
 	/// <c>atr_get_with_parent</c> is bounded by the same <c>MAX_PARENTS</c> - would simply not find
@@ -1669,12 +1668,11 @@ public class AttributeService(
 		// IsDirectChildOf trusts that a node's immediate parent is either `root` or another
 		// entry in `descendants` whenever that node itself is one. That invariant comes from
 		// HOW descendants is populated, not from string-parsing LongName: the underlying
-		// provider query (e.g. ArangoDB's `FOR v IN 1..99999 OUTBOUND start GRAPH
 		// GraphAttributes FILTER v.LongName =~ @pattern`) is a graph traversal along real
 		// parent->child edges, so a node can only appear in the results if every ancestor
 		// between the object root and that node has its own vertex and edge - an "FOO`BAR`BAZ
 		// exists but FOO`BAR doesn't" gap is not representable by the traversal that produced
-		// this list in the first place (all three providers share this edge-per-level model).
+		// this list in the first place (both supported providers share this edge-per-level model).
 		// If that ever stopped holding, a node whose immediate parent is missing from this set
 		// would be "nobody's child" to IsDirectChildOf and so could never block an ancestor's
 		// fullyClearable computation - the mitigation, if it were ever needed, would be to

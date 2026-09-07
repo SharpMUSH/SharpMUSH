@@ -46,16 +46,14 @@ The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMU
 docker compose up -d
 ```
 
-`surrealdb` and `lightning` are embedded and need no Docker for the database itself — `lightning`
+Both supported providers are embedded and need no Docker for the database itself — `lightning`
 opens an LMDB directory in-process. NATS is still wanted for the connection server.
 
 Key environment variables:
-- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, `surrealdb`, or `lightning`
-- `ARANGO_CONNECTION_STRING` — ArangoDB connection string
-- `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
+- `SHARPMUSH_DATABASE_PROVIDER` — `lightning` (default) or `surrealdb`
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
-- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`; **required** under `memgraph`, and under `surrealdb` on a `mem://` endpoint, since neither has a world directory to derive it from — unset there, backups report as unavailable rather than writing to the working directory)
+- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`; required under `surrealdb` on a `mem://` endpoint, since it has no world directory to derive it from)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
 - `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)
@@ -66,7 +64,7 @@ Promoting a staged import under `lightning` renames the previous world to `<path
 
 Under `lightning`, `@backup` (wizard-only) copies the live world into a timestamped directory using LMDB's own copy routine, so an external snapshot tool has a consistent one to read without the server stopping. `@backup/list` shows what is on disk. Nothing else copies a live `data.mdb` — see `deploy/README.md`.
 
-`IWorldBackupService` is the provider-agnostic seam. `WorldBackupWriter` (in `SharpMUSH.Library`) owns everything identical across providers — writing the copy into `.incoming-<id>`, moving it into place only when complete, the `latest` symlink, retention — and each provider supplies only the part that fills a directory: `lightning` an `mdb_env_copy`, `surrealdb` a `world.surql` export, `memgraph` a `world.json` capture of every node and relationship read in one transaction. `arangodb` deliberately stays unsupported: it is a server the game only talks to and its hot-backup API is Enterprise-only, so `arangodump` is the answer there, and `@backup` says so.
+`IWorldBackupService` is the provider-agnostic seam. `WorldBackupWriter` (in `SharpMUSH.Library`) owns everything identical across providers — writing the copy into `.incoming-<id>`, moving it into place only when complete, the `latest` symlink, retention — and each provider supplies only the part that fills a directory: `lightning` an `mdb_env_copy`, and `surrealdb` a `world.surql` export.
 
 Only the Lightning copy is point-in-time by construction; the other two are logical dumps taken from a running game. Don't describe them as equivalent.
 
@@ -96,8 +94,6 @@ Browser (Blazor WASM)
 | `SharpMUSH.ConnectionServer` | Raw telnet/WebSocket gateway; bridges to Server via NATS |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
-| `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
-| `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
 | `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
 | `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
@@ -241,7 +237,7 @@ fails the gate.
 
 ## Infrastructure Notes
 
-- **Logging**: Serilog; an ArangoDB sink is added only when the provider is ArangoDB (production runs `lightning`, so logs go where `appsettings.json` sends them)
+- **Logging**: Serilog, configured through `appsettings.json`
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
 - **Rate limiting**: Fixed-window limiter on `"public-api"` (30 req/window); sliding-window on `"auth"` (10 req/window)

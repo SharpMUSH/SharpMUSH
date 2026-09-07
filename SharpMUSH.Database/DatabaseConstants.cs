@@ -86,7 +86,6 @@ public static class DatabaseConstants
 	/// <c>db_top</c> to null out dangling Zone/Parent/Home/Location/Next references
 	/// (<c>src/destroy.c</c>), and this list is the graph-shaped equivalent of that scan.
 	/// <para>
-	/// <c>ArangoDeleteObjectEdgeCoverageTests</c> asserts this stays in sync with the edge
 	/// collections the migrations actually create, so a new edge type cannot silently start
 	/// surviving object deletion.
 	/// </para>
@@ -123,7 +122,6 @@ public static class DatabaseConstants
 	public const string GraphFlags = "graph_flags";
 	/// <summary>
 	/// Describes the relationship between realized objects and their attributes, and attributes and their branches.
-	/// TECH DEBT: This would have preferably been objects and attributes, but arangoDb gives trouble for some reason.
 	/// This can be done with a migration in the future if this is figured out. But for now, this works.
 	/// <see cref="verticesAll"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>
 	/// <see cref="Attributes"/> -> <see cref="HasAttribute"/> -> <see cref="Attributes"/>

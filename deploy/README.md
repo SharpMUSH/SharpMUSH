@@ -280,7 +280,7 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 |---|---|---|
 | `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
 | `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
-| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. **Required** on Memgraph, and on SurrealDB with a `mem://` endpoint: those keep no world directory to sit beside, and guessing would put the copies in the working directory, which on a container is not the mounted volume. Without it `@backup` says so rather than writing somewhere that disappears. |
+| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. Set it explicitly for an in-memory SurrealDB endpoint so backups land on the mounted volume. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
@@ -293,10 +293,6 @@ configuration above is the same whichever one you run:
 |---|---|---|
 | `lightning` (what these stacks run) | LMDB's own `mdb_env_copy` of the environment | a point-in-time snapshot by construction |
 | `surrealdb` | `world.surql`, the engine's own export, restored with `surreal import` | logical, taken from a running game — not documented as an instant |
-| `memgraph` | `world.json`, every node and relationship, read in one transaction | one consistent read, but a logical dump rather than a page-level snapshot |
-| `arangodb` | **not available** — it is a server the game only talks to and its hot backup is an Enterprise feature | use `arangodump` / `arangorestore` |
-
-On ArangoDB `@backup` says exactly that instead of doing nothing silently.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
@@ -323,11 +319,9 @@ docker compose run --rm -v restore:/restore backup \
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
 `lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
 
-> Restoring the other two is not a file copy, because their backups are exports rather than
-> directories. With the game **stopped**, load `backup/<timestamp>/world.surql` into an empty
-> SurrealDB with `surreal import --ns sharpmush --db world <file>`, or `world.json` into an empty
-> Memgraph with `MemgraphStagingDatabase.RestoreAsync`, which is the same path staging rollback
-> uses. Both replace whatever is there; neither is a merge.
+> Restoring SurrealDB is not a file copy. With the game **stopped**, load
+> `backup/<timestamp>/world.surql` into an empty database with
+> `surreal import --ns sharpmush --db world <file>`. The import replaces the database; it is not a merge.
 
 ```bash
 docker compose stop sharpmush-server connectionserver

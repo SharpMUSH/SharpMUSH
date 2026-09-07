@@ -733,11 +733,8 @@ complete, so a backup tool reading the directory never sees a half-written one.
 `@backup/list` reports the copies currently on disk, newest first, without taking one.
 
 What a copy is depends on the database. LMDB copies its environment with its own routine, which is a
-point-in-time snapshot by construction. SurrealDB and Memgraph produce a logical export instead —
-complete, and restorable, but taken from a running game rather than frozen at an instant. ArangoDB
-cannot do either: it is a database server this game only talks to, and its hot backup is an
-Enterprise feature, so `@backup` says so and does nothing — back that one up with `arangodump` and
-restore it with `arangorestore`.
+point-in-time snapshot by construction. SurrealDB produces a complete, restorable logical export from
+the running game.
 
 Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
 and whether one is also taken automatically on an interval are deployment settings on the server
@@ -5041,4 +5038,3 @@ BIRD
 
 **See Also:**
 - [suggest()]
-

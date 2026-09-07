@@ -16,7 +16,6 @@ public sealed class DatabaseAccountSessionStore(ISessionRecordStore database) : 
 	/// <remarks>
 	/// <para>Sliding on every request means a single portal page load — half a dozen concurrent calls on one
 	/// bearer — writes the same document half a dozen times simultaneously. Serialising those writes (the
-	/// exclusive transaction in the ArangoDB provider) stops them failing, but on its own it just converts
 	/// the conflict into a lock convoy: every authenticated request in the process would queue behind one
 	/// collection lock. The write has to stop happening, not merely stop colliding.</para>
 	/// <para>The quantity being compared is exactly "time since the expiry was last persisted", so this

@@ -40,9 +40,7 @@ public class PlayerDestructionTests
 	private Task<DBRef> CreateTestPlayerAsync(string namePrefix) =>
 		TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, namePrefix);
 
-	// Validates the ArangoDB ownership edge is stored correctly:
 	// FROM objects/{key} TO players/{key} (not players/{key} TO players/{key}).
-	// See: ArangoDatabase.Objects.cs CreatePlayerAsync
 	[Test]
 	public async Task Player_SelfOwnership_OwnerEqualsPlayer()
 	{

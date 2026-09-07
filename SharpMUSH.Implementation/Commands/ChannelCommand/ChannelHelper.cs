@@ -259,7 +259,6 @@ public static class ChannelHelper
 		AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
 	{
 		// Materialise the channel list BEFORE testing visibility. The test reads channel.Members, which
-		// opens its own database stream, and Core.Arango 3.12.x races when one ExecuteStreamAsync is
 		// enumerated inside another — it faults on a thread pool thread and takes the process with it.
 		// The same driver race is already worked around in HelperFunctions.HasPower.
 		var all = await channels.ToArrayAsync();

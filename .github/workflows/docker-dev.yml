@@ -70,8 +70,6 @@ jobs:
               - 'SharpMUSH.Parser.Generated/**'
               - 'SharpMUSH.CodeAnalysis/**'
               - 'SharpMUSH.Database/**'
-              - 'SharpMUSH.Database.ArangoDB/**'
-              - 'SharpMUSH.Database.Memgraph/**'
               - 'SharpMUSH.Database.SurrealDB/**'
               - 'SharpMUSH.Database.Lightning/**'
               - 'SharpMUSH.Documentation/**'

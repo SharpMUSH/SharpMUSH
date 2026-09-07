@@ -61,7 +61,7 @@
 	</Target>
 
 	<!-- Drop the built Scene plugin (DLL + deps.json + manifest) into plugins/scene/ so the booting server's
-	     PluginBootstrapService discovers it. The plugin's load-once contributions (Arango migration, SCENE_ROOM
+	     PluginBootstrapService discovers it. The plugin's load-once contributions (SCENE_ROOM
 	     flag, game.scene.* bridge) and its @scene command + scene… functions are what the scene tests exercise. -->
 	<Target Name="CopyScenePlugin" AfterTargets="Build">
 		<PropertyGroup>

@@ -427,8 +427,6 @@ public partial class LightningDatabase
 	#region Attribute helpers
 
 	/// <summary>
-	/// The bound ArangoDB spells as <c>1..100 OUTBOUND</c> on its parent and zone graphs
-	/// (<c>ArangoDatabase.Attributes.cs:936, 953-954</c>) and SurrealDB as its <c>GetParentChainAsync</c>
 	/// loop counter.
 	/// </summary>
 	private const int InheritanceHopLimit = 100;
@@ -438,8 +436,6 @@ public partial class LightningDatabase
 	/// no_inherit gate below able to fire on a branch that has no leaf.</summary>
 	private sealed record InheritanceCandidate<T>(DBRef Source, T[] Attributes);
 
-	/// <summary>The three candidate groups ArangoDB's single query returns (<c>{ self, parents, zones }</c>,
-	/// <c>ArangoDatabase.Attributes.cs:971</c>), gathered here from one LMDB snapshot instead.</summary>
 	private sealed record InheritanceCandidates<T>(
 		InheritanceCandidate<T>? Self,
 		List<InheritanceCandidate<T>> Parents,
@@ -448,8 +444,6 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Everything the inheritance walk needs, read inside a single snapshot: the object itself, then its
 	/// parent chain, then the zone chain of every member of <c>[self, parent, grandparent, …]</c> in that
-	/// order. Mirrors ArangoDB's <c>selfAttrs</c>/<c>parentCandidates</c>/<c>zoneCandidates</c>
-	/// (<c>ArangoDatabase.Attributes.cs:923-970</c>) including their two short-circuits: a complete hit on
 	/// the object itself suppresses both inherited groups, and a candidate with no prefix at all is
 	/// dropped (their <c>FILTER LENGTH(...) &gt; 0</c>).
 	/// </summary>
@@ -482,7 +476,6 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
 	/// A visited set and <see cref="InheritanceHopLimit"/> both bound it, so a parent (or zone) cycle
-	/// terminates rather than spinning — the graph traversals this replaces get that from ArangoDB's
 	/// path uniqueness and its <c>1..100</c> depth.
 	/// </summary>
 	private static List<long> EdgeChain(ITx tx, TableDef forward, long start)
@@ -506,8 +499,6 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// The C# half of ArangoDB's inheritance walk, ported rather than referenced
-	/// (<c>ArangoDatabase.Attributes.cs:996-1045</c> and its <c>EvaluateInheritanceCandidateAsync</c> at
 	/// <c>1104-1118</c>): the object's own complete hit wins outright and keeps every flag; otherwise each
 	/// parent then each zone is tested in order, where <c>no_inherit</c> anywhere on the candidate's
 	/// existing prefix aborts the whole walk (PennMUSH <c>atr_get_with_parent</c>, <c>attrib.c:1232-1252</c>,
@@ -863,7 +854,6 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// The backtick-aware glob conversion the other providers share (<c>ArangoDatabase.Attributes.cs</c>
 	/// 297-344): <c>**</c> crosses tree levels, a single <c>*</c> stays inside one (<c>[^`]*</c>),
 	/// <c>?</c> is one character, every other regex metacharacter is escaped, and a trailing backtick
 	/// means "direct children only".
@@ -887,7 +877,6 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>The regex readers take their pattern raw — no wildcard conversion, no anchoring — exactly
-	/// as ArangoDB's <c>GetAttributesByRegexAsync</c> does; a caller wanting "everything" passes <c>.*</c>.</summary>
 	private static Regex RawRegex(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]

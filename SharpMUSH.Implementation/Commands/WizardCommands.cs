@@ -1983,7 +1983,7 @@ public partial class Commands
 		{
 			await GameBroadcastService.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidInitiated), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidArangoDB), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidDatabase), executor);
 			Logger.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
 		}
 		else

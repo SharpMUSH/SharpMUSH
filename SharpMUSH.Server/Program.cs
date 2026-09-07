@@ -1,5 +1,3 @@
-using Core.Arango;
-using Core.Arango.Serilog;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
-using Serilog.Sinks.PeriodicBatching;
 using SharpMUSH.Database;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -17,7 +14,6 @@ using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
-using SharpMUSH.Server.Strategy.ArangoDB;
 
 namespace SharpMUSH.Server;
 
@@ -41,26 +37,9 @@ public class Program
 		ConfigureMarkup();
 
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var databaseProvider = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase)
-			? DatabaseProvider.Memgraph
-			: string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
-				? DatabaseProvider.SurrealDB
-				: string.Equals(dbProviderStr, "lightning", StringComparison.OrdinalIgnoreCase)
-					? DatabaseProvider.Lightning
-					: DatabaseProvider.ArangoDB;
-
-		ArangoConfiguration? arangoConfig = null;
-		string? memgraphUri = null;
-
-		if (databaseProvider == DatabaseProvider.Memgraph)
-		{
-			memgraphUri = Environment.GetEnvironmentVariable("MEMGRAPH_URI") ?? "bolt://localhost:7687";
-		}
-		else if (databaseProvider == DatabaseProvider.ArangoDB)
-		{
-			arangoConfig = await ArangoStartupStrategyProvider.GetStrategy().ConfigureArango();
-		}
-		// SurrealDB uses embedded in-memory mode, no external configuration needed
+		var databaseProvider = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
+			? DatabaseProvider.SurrealDB
+			: DatabaseProvider.Lightning;
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.
@@ -75,7 +54,7 @@ public class Program
 		}
 
 		var builder = WebApplication.CreateBuilder(args);
-		var startup = new Startup(arangoConfig, colorFile, natsUrl, databaseProvider, memgraphUri);
+		var startup = new Startup(colorFile, natsUrl, databaseProvider);
 		startup.ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
 		var app = builder.Build();
@@ -85,30 +64,6 @@ public class Program
 		// hooks run, so this is the one place that is both async and provably first. The provider's
 		// factory only constructs.
 		await app.Services.GetRequiredService<IDatabaseLifecycle>().Migrate();
-
-		if (databaseProvider == DatabaseProvider.ArangoDB)
-		{
-			var arangoContext = app.Services.GetRequiredService<IArangoContext>();
-			Log.Logger = new LoggerConfiguration()
-			.ReadFrom.Configuration(builder.Configuration)
-			.WriteTo.Sink(new PeriodicBatchingSink(
-			new ArangoSerilogSink(
-			arangoContext,
-			"CurrentSharpMUSHWorld",
-			DatabaseConstants.Logs,
-			ArangoSerilogSink.LoggingRenderStrategy.StoreTemplate,
-			indexLevel: true,
-			indexTimestamp: true,
-			indexTemplate: true),
-			new PeriodicBatchingSinkOptions
-			{
-				BatchSizeLimit = 1000,
-				QueueLimit = 100000,
-				Period = TimeSpan.FromSeconds(2),
-				EagerlyEmitFirstEvent = true,
-			}))
-			.CreateLogger();
-		}
 
 		var logger = app.Services.GetRequiredService<ILogger<Program>>();
 		logger.LogInformation("[NATS] Connected to NATS at {NatsUrl}", natsUrl);

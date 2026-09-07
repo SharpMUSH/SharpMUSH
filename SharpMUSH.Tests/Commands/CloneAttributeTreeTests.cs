@@ -317,7 +317,6 @@ public class CloneAttributeTreeTests
 	/// <summary>
 	/// The pre-existing "_"-prefix skip (orthogonal to Penn's no_clone) must propagate to a
 	/// non-"_" child the same way no_clone's skip does: otherwise SetAttributeAsync's
-	/// auto-vivification (<c>ArangoDatabase.Attributes.cs:608-675</c>) would silently recreate a
 	/// stripped, empty "_"-branch on the clone just to hang the child off of.
 	/// </summary>
 	/// <remarks>

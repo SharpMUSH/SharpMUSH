@@ -38,7 +38,6 @@ public class SurrealExtendedBenchmarks : ExtendedDatabaseBenchmarks
 		var configFile = Path.Combine(AppContext.BaseDirectory, "mushcnf.dst");
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
-			acnf: null,
 			configFile: configFile,
 			databaseProvider: DatabaseProvider.SurrealDB,
 			surrealEndpoint: "mem://");

@@ -53,7 +53,6 @@ public class SoftcodeRegexTests
 	/// The cache is one static, least-recently-used bound shared by the whole test process, and
 	/// <see cref="ConcurrentMissesDoNotPushTheCacheOverItsBound"/> fills it past capacity on purpose. Run
 	/// alongside it, the first instance here can be evicted between the two calls and the identity check
-	/// fails — which is what the memgraph CI leg hit, three attempts in a row. The three tests that
 	/// depend on cache state therefore take turns; the rest of the class still runs in parallel.
 	/// </remarks>
 	[Test, NotInParallel(CacheState)]

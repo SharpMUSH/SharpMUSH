@@ -321,15 +321,15 @@ public class BackupTests
 	[Test]
 	public async Task AProviderThatCannotCopyItsWorldRefusesWithItsOwnReason()
 	{
-		IWorldBackupService backups = new UnsupportedWorldBackupService("arangodb",
-			"is a database server this game only talks to; back it up with arangodump");
+		IWorldBackupService backups = new UnsupportedWorldBackupService("external",
+			"requires external backup tooling");
 
 		var result = await backups.CreateAsync();
 
 		await Assert.That(backups.IsSupported).IsFalse();
 		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("arangodb");
-		await Assert.That(result.AsT1.Value).Contains("arangodump");
+		await Assert.That(result.AsT1.Value).Contains("external");
+		await Assert.That(result.AsT1.Value).Contains("external backup tooling");
 		await Assert.That(backups.UnavailableReason).IsEqualTo(result.AsT1.Value);
 		await Assert.That(backups.List().Count).IsEqualTo(0);
 	}

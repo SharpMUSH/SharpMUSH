@@ -2308,8 +2308,8 @@
   <data name="ShutdownParanoidInitiated" xml:space="preserve">
     <value>PARANOID SHUTDOWN initiated.</value>
   </data>
-  <data name="ShutdownParanoidArangoDB" xml:space="preserve">
-    <value>Database state is continuously persisted in ArangoDB.</value>
+  <data name="ShutdownParanoidDatabase" xml:space="preserve">
+    <value>Database state is continuously persisted.</value>
   </data>
   <data name="ShutdownInitiated" xml:space="preserve">
     <value>SHUTDOWN initiated.</value>

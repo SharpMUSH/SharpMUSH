@@ -601,7 +601,6 @@ public class GeneralCommandTests
 		var attr = attrs.LastOrDefault();
 		await Assert.That(attr).IsNotNull();
 
-		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
 

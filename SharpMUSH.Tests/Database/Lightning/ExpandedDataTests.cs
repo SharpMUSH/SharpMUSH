@@ -95,7 +95,6 @@ public class ExpandedDataTests
 
 	/// <summary>
 	/// SetExpandedServerData replaces: unlike the object-scoped write, a null property clears the stored
-	/// one. That is how @motd clears a single message, and how the other providers behave (ArangoDB
 	/// replaces with <c>keepNull</c>, SurrealDB upserts the whole document).
 	/// </summary>
 	[Test]
