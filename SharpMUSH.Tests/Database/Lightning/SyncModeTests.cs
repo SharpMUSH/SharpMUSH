@@ -89,6 +89,39 @@ public class SyncModeTests
 		await Assert.That(store.FlushCount).IsEqualTo(0);
 	}
 
+	/// <summary>A raw job (a plugin opening its table) commits its own transaction, so the store cannot count
+	/// it — but its pages are as unflushed as any other's, and the timer must still sync them.</summary>
+	[Test]
+	public async Task ARawCommitIsFlushedByThePeriodicTimerToo()
+	{
+		using var store = Open(NewPath(), LightningSyncMode.Periodic, TimeSpan.FromMilliseconds(50));
+		store.OpenTable("plugin_raw", duplicates: false);
+
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (store.FlushCount == 0 && DateTime.UtcNow < deadline) await Task.Delay(10);
+		await Assert.That(store.FlushCount).IsEqualTo(1);
+	}
+
+	/// <summary>Bad options are rejected before the environment is opened: a throw after the open would
+	/// leave the map and lock file held with no store to dispose them. The directory not existing is the
+	/// observable — Open is what creates it.</summary>
+	[Test]
+	[Arguments(0, LightningSyncMode.Full, 1000)]
+	[Arguments(64, LightningSyncMode.Periodic, 0)]
+	public async Task InvalidOptionsAreRejectedBeforeTheEnvironmentIsOpened(int maxBatch, LightningSyncMode sync, int flushMs)
+	{
+		var path = NewPath();
+		await Assert.That(() => new LightningStore(new LightningStoreOptions
+		{
+			Path = path,
+			MapSize = 256L << 20,
+			MaxBatch = maxBatch,
+			Sync = sync,
+			FlushInterval = TimeSpan.FromMilliseconds(flushMs)
+		})).Throws<ArgumentOutOfRangeException>();
+		await Assert.That(Directory.Exists(path)).IsFalse();
+	}
+
 	[Test]
 	[Arguments("full", LightningSyncMode.Full)]
 	[Arguments("FULL", LightningSyncMode.Full)]

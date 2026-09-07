@@ -55,16 +55,23 @@ public sealed partial class LightningStore : IDisposable
 
 	public LightningStore(LightningStoreOptions options)
 	{
+		// Reject bad options before anything is acquired: a throw after Open would leave the environment
+		// mapped and its lock file held, with no store handed back to dispose them.
+		if (options.MaxBatch < 1)
+		{
+			throw new ArgumentOutOfRangeException(nameof(options), options.MaxBatch, "MaxBatch holds at least one job.");
+		}
+
+		if (options.Sync == LightningSyncMode.Periodic && options.FlushInterval <= TimeSpan.Zero)
+		{
+			throw new ArgumentOutOfRangeException(nameof(options), options.FlushInterval, "FlushInterval must be positive under Periodic sync.");
+		}
+
 		_options = options;
 		Open();
 		_writer = new LightningWriter(WriteBatch, rawWork => WriteRawInternal(rawWork), options.MaxBatch);
 		if (options.Sync == LightningSyncMode.Periodic)
 		{
-			if (options.FlushInterval <= TimeSpan.Zero)
-			{
-				throw new ArgumentOutOfRangeException(nameof(options), options.FlushInterval, "FlushInterval must be positive under Periodic sync.");
-			}
-
 			_flushTimer = new Timer(_ => FlushIfDirty(), null, options.FlushInterval, options.FlushInterval);
 		}
 	}
@@ -78,7 +85,6 @@ public sealed partial class LightningStore : IDisposable
 		if (!_gate.TryEnterReadLock(0)) { Interlocked.Exchange(ref _unflushed, 1); return; }
 		try
 		{
-			if (_disposed) return;
 			var code = _env.Flush(force: true);
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "flush");
 			Interlocked.Increment(ref _flushes);
@@ -123,24 +129,33 @@ public sealed partial class LightningStore : IDisposable
 		var openCode = tx.Commit();
 		if (openCode != MDBResultCode.Success) throw LightningStoreException.From(openCode, "open");
 		_tables = tables;
+		// A fresh environment: whatever a periodic flush failed to do belonged to the old one, and the
+		// close that ended it has already reported (or is about to report) its own result.
+		_flushFailure = null;
 	}
 
 	internal static DatabaseOpenFlags FlagsFor(TableDef def) => def.Duplicates
 		? DatabaseOpenFlags.DuplicatesSort | (def.FixedDuplicates ? DatabaseOpenFlags.DuplicatesFixed : DatabaseOpenFlags.None)
 		: DatabaseOpenFlags.None;
 
-	internal void Close()
+	/// <summary>Closes the environment and returns the result of the final forced flush the relaxed sync
+	/// modes need on the way out (<see cref="MDBResultCode.Success"/> under Full, which has nothing
+	/// unflushed). The environment is disposed whichever way that flush went; the caller decides how to
+	/// report a failure once its own cleanup is complete.</summary>
+	internal MDBResultCode Close()
 	{
 		foreach (var db in _tables.Values) db.Dispose();
 		_tables = new();
+		var flushed = MDBResultCode.Success;
 		if (_options.Sync != LightningSyncMode.Full)
 		{
 			// Whatever the relaxed mode left in the page cache goes to disk before the directory is
-			// closed, moved or deleted. Under Full there is nothing unflushed to sync.
-			_env.Flush(force: true);
+			// closed, moved or deleted.
+			flushed = _env.Flush(force: true);
 			Interlocked.Exchange(ref _unflushed, 0);
 		}
 		_env.Dispose();
+		return flushed;
 	}
 
 	/// <summary>
@@ -208,11 +223,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </summary>
 	private void WriteBatch(IReadOnlyList<LightningWriter.BatchItem> items)
 	{
-		if (_flushFailure is { } failure)
-		{
-			throw new InvalidOperationException("A periodic flush failed; the store refuses further writes until it is reopened.", failure);
-		}
-
+		ThrowIfFlushFailed();
 		_gate.EnterReadLock();
 		try
 		{
@@ -259,6 +270,14 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	private void ThrowIfFlushFailed()
+	{
+		if (_flushFailure is { } failure)
+		{
+			throw new InvalidOperationException("A periodic flush failed; the store refuses further writes until it is reopened.", failure);
+		}
+	}
+
 	private void Commit(LightningTransaction tx)
 	{
 		var code = tx.Commit();
@@ -272,11 +291,16 @@ public sealed partial class LightningStore : IDisposable
 	/// commit it itself. Only <see cref="LightningWriter"/>'s thread may call this.</summary>
 	private T WriteRawInternal<T>(Func<LightningTransaction, T> job)
 	{
+		ThrowIfFlushFailed();
 		_gate.EnterReadLock();
 		try
 		{
 			using var tx = _env.BeginTransaction();
-			return job(tx);
+			var result = job(tx);
+			// The job owns its commit, so the store cannot count it — but under Periodic the pages it wrote
+			// are unflushed like any other, and the timer must not skip them.
+			Interlocked.Exchange(ref _unflushed, 1);
+			return result;
 		}
 		finally
 		{
@@ -358,7 +382,7 @@ public sealed partial class LightningStore : IDisposable
 			_gate.EnterWriteLock();
 			try
 			{
-				Close();
+				var closed = Close();
 				try
 				{
 					onDisk();
@@ -367,6 +391,10 @@ public sealed partial class LightningStore : IDisposable
 				{
 					Open();
 				}
+
+				// Reported only now, with a live environment behind the gate again: the pages that flush
+				// failed to write were in the directory just moved or deleted, and the caller has to know.
+				if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
 			}
 			finally
 			{
@@ -413,8 +441,11 @@ public sealed partial class LightningStore : IDisposable
 			if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
 		}
 		_writer.Dispose();
-		Close();
+		var closed = Close();
 		_gate.Dispose();
+		// Every handle is released first; a failed final flush is then the one thing left to say, and
+		// silence here would let committed writes go non-durable with nobody told.
+		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
 	}
 
 	private sealed class Tx(LightningTransaction tx, Dictionary<TableDef, LmdbDb> tables) : ITx

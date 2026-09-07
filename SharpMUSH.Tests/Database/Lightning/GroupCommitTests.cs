@@ -37,12 +37,11 @@ public class GroupCommitTests
 		return Task.CompletedTask;
 	}
 
-	/// <summary>Parks the writer thread inside a job until <c>release</c> is set, so everything queued
-	/// meanwhile is guaranteed to be waiting in the channel together.</summary>
-	private static (Task<int> Blocker, ManualResetEventSlim Release, Task Started) Block(LightningStore store)
+	/// <summary>Parks the writer thread inside a job until <paramref name="release"/> is set, so everything
+	/// queued meanwhile is guaranteed to be waiting in the channel together.</summary>
+	private static (Task<int> Blocker, Task Started) Block(LightningStore store, ManualResetEventSlim release)
 	{
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var release = new ManualResetEventSlim(false);
 		var blocker = store.WriteAsync(tx =>
 		{
 			started.SetResult();
@@ -50,14 +49,15 @@ public class GroupCommitTests
 			tx.Put(Tables.Meta, Keys.Str("blocker"), Keys.Str("1"));
 			return 0;
 		}).AsTask();
-		return (blocker, release, started.Task);
+		return (blocker, started.Task);
 	}
 
 	[Test]
 	public async Task JobsQueuedBehindARunningJobCommitTogether()
 	{
 		using var store = Open();
-		var (blocker, release, started) = Block(store);
+		using var release = new ManualResetEventSlim(false);
+		var (blocker, started) = Block(store, release);
 		await started;
 
 		var burst = Enumerable.Range(0, 20).Select(i => store.WriteAsync(tx =>
@@ -79,7 +79,8 @@ public class GroupCommitTests
 	public async Task AThrowingJobInsideABatchFaultsOnlyItselfAndKeepsTheRest()
 	{
 		using var store = Open();
-		var (blocker, release, started) = Block(store);
+		using var release = new ManualResetEventSlim(false);
+		var (blocker, started) = Block(store, release);
 		await started;
 
 		var burst = Enumerable.Range(0, 20).Select(i => store.WriteAsync(tx =>
@@ -105,7 +106,8 @@ public class GroupCommitTests
 	public async Task ABatchNeverExceedsMaxBatch()
 	{
 		using var store = Open(maxBatch: 4);
-		var (blocker, release, started) = Block(store);
+		using var release = new ManualResetEventSlim(false);
+		var (blocker, started) = Block(store, release);
 		await started;
 
 		var burst = Enumerable.Range(0, 10).Select(i => store.WriteAsync(tx =>
@@ -127,7 +129,8 @@ public class GroupCommitTests
 	public async Task ACancelledJobInsideABatchIsSkippedNotRun()
 	{
 		using var store = Open();
-		var (blocker, release, started) = Block(store);
+		using var release = new ManualResetEventSlim(false);
+		var (blocker, started) = Block(store, release);
 		await started;
 		using var cts = new CancellationTokenSource();
 
@@ -151,7 +154,8 @@ public class GroupCommitTests
 	public async Task OpeningATableDuringABurstRunsAloneAndEverythingLands()
 	{
 		using var store = Open();
-		var (blocker, release, started) = Block(store);
+		using var release = new ManualResetEventSlim(false);
+		var (blocker, started) = Block(store, release);
 		await started;
 
 		var before = Enumerable.Range(0, 5).Select(i => store.WriteAsync(tx => { tx.Put(Tables.Meta, Keys.Str("a" + i), Keys.Str("1")); return i; }).AsTask()).ToArray();
