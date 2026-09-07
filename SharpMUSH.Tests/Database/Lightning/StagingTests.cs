@@ -18,8 +18,9 @@ public class StagingTests
 {
 	private static string TempPath() => Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
 
+	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
-		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>());
+		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
 	private static long? DbrefNamed(LightningDatabase db, string name)
 		=> db.Store.Read(tx => tx.Dups(Tables.ObjName, Keys.Lower(name)).Select(v => (long?)Keys.ReadDbref(v)).FirstOrDefault());

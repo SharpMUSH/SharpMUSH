@@ -69,8 +69,10 @@ public class RecoveryTests
 	{
 		var path = TempPath();
 		var backupPath = TempPath();
+		// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 		var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
-			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>());
+			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(),
+			relations: null);
 		try
 		{
 			await db.Migrate();
@@ -97,8 +99,10 @@ public class RecoveryTests
 	public async Task WipeEmptiesTheDirectoryAndReseeds()
 	{
 		var path = TempPath();
+		// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 		var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
-			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>());
+			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(),
+			relations: null);
 		try
 		{
 			await db.Migrate();

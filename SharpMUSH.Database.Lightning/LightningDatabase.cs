@@ -17,11 +17,17 @@ namespace SharpMUSH.Database.Lightning;
 /// <c>Migrate()</c>; every other file under this namespace is one interface area, per
 /// <c>docs/superpowers/specs/2026-09-06-lightning-provider-design.md</c> §4.
 /// </summary>
+/// <param name="relations">
+/// Required — the caller must state its intent explicitly, never fall through a default. The host
+/// (<c>Startup.cs</c>) always resolves and passes the live <see cref="IObjectRelationLoader"/>; only
+/// <see cref="LightningStagingDatabase"/> and unit-test fixtures that bypass the host's Mediator cache
+/// pass <see langword="null"/> — see the <see cref="_relations"/> field doc for why.
+/// </param>
 public partial class LightningDatabase(
 	ILogger<LightningDatabase> logger,
 	LightningStoreOptions options,
 	IPasswordService passwordService,
-	IObjectRelationLoader? relations = null,
+	IObjectRelationLoader? relations,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null)
 	: ISharpDatabase, IWikiService, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,

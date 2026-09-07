@@ -10,8 +10,9 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 public class MigrationTests
 {
+	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
-		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>());
+		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
 	[Test]
 	public async Task MigrateSeedsTheWorldOnceAndIsIdempotent()
