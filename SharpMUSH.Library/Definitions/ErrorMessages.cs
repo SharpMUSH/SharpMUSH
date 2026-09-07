@@ -1454,8 +1454,8 @@ public static class ErrorMessages
 		public const string SearchPlayerFilterFormat = "  Player filter: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchCriteriaFormat = "  Criteria: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchRangeFormat = "  Range: {0} to {1}";
+		public const string SearchUnknownOwner = "Unknown owner.";
+		public const string SearchNothingFound = "Nothing found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchObjectEntryFormat = "  #{0} ({1}) [{2}]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

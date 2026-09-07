@@ -3342,77 +3342,163 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@SEARCH", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
-		MinArgs = 0, MaxArgs = 3, ParameterNames = ["restriction..."])]
+		MinArgs = 0, MaxArgs = int.MaxValue, ParameterNames = ["player", "class=restriction..."])]
 	public async ValueTask<Option<CallState>> Search(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		string? playerName = null;
-		string? searchCriteria = null;
-		int? beginDbref = null;
-		int? endDbref = null;
+		var (playerText, pairs) = ParseSearchCommandArgs(args);
 
-		if (args.Count > 0 && args.ContainsKey("0"))
+		DBRef? ownerFilter;
+		if (playerText == null)
 		{
-			var arg0 = args["0"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(arg0))
+			// PennMUSH: no <player> given defaults to ANY_OWNER for wizards (See_All/Search_All), else the executor's own objects.
+			ownerFilter = await executor.IsWizard() ? null : executor.Object().DBRef;
+		}
+		else if (playerText.Equals("all", StringComparison.OrdinalIgnoreCase))
+		{
+			ownerFilter = null;
+		}
+		else if (playerText.Equals("me", StringComparison.OrdinalIgnoreCase))
+		{
+			ownerFilter = executor.Object().DBRef;
+		}
+		else
+		{
+			var maybeOwner = await LocateService.Locate(parser, executor, executor, playerText, LocateFlags.All);
+			if (!maybeOwner.IsValid())
 			{
-				playerName = arg0;
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchUnknownOwner), executor);
+				return new CallState(ErrorMessages.Returns.NotFound);
 			}
+
+			ownerFilter = maybeOwner.AsAnyObject.Object().DBRef;
 		}
 
-		if (args.Count > 1 && args.ContainsKey("1"))
-		{
-			searchCriteria = args["1"].Message?.ToPlainText();
-		}
-
-		if (args.Count > 2 && args.ContainsKey("2"))
-		{
-			var endStr = args["2"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
-			{
-				endDbref = end;
-			}
-		}
+		var matches = await SearchSpecEngine.ExecuteAsync(
+			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+			executor, ownerFilter, pairs, useRegex: false);
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor);
 
-		if (playerName != null)
+		if (playerText != null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayerFilterFormat), executor, playerName);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayerFilterFormat), executor, playerText);
 		}
 
-		if (searchCriteria != null)
+		if (pairs.Count > 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchCriteriaFormat), executor, searchCriteria);
+			var criteria = string.Join(", ", pairs.Select(p => $"{p.ClassType.ToUpperInvariant()}={p.Restriction}"));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchCriteriaFormat), executor, criteria);
 		}
 
-		if (beginDbref.HasValue || endDbref.HasValue)
+		if (matches.Count == 0)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
+			return new CallState("0");
 		}
 
-		// For now, support basic search - future enhancement can parse complex criteria
-		var filter = new ObjectSearchFilter
-		{
-			NamePattern = searchCriteria,
-			MinDbRef = beginDbref,
-			MaxDbRef = endDbref
-		};
-
-		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
-
-		var count = 0;
-		foreach (var obj in results)
+		foreach (var obj in matches)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectEntryFormat), executor, obj.Key, obj.Name, obj.Type);
-			count++;
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, count);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, matches.Count);
 
-		return new CallState(count.ToString());
+		return new CallState(matches.Count.ToString());
+	}
+
+	/// <summary>
+	/// Parses @search's own syntax, per PennMUSH's <c>do_search</c>:
+	/// <c>@search [&lt;player&gt;] [&lt;class1&gt;=&lt;restriction1&gt;[,&lt;class2&gt;=&lt;restriction2&gt;...]]</c>.
+	/// <para>The command's <c>CB.EqSplit | CB.RSArgs</c> behavior only splits the RAW text on the FIRST
+	/// top-level '=' (giving <c>args["0"]</c> the whole left side verbatim) and then comma-splits
+	/// everything right of it (<c>args["1"]</c>, <c>args["2"]</c>, ...). Unlike lsearch(), whose
+	/// positional function args are already one token per class/restriction, @search's own player name
+	/// and its first search class are both crammed into that same left-hand chunk (e.g. "all type" for
+	/// <c>@search all type=PLAYER</c>), and every restriction after the first carries its own class via
+	/// an embedded '=' inside its comma chunk (e.g. "flags=W" in "...,flags=W"). This re-splits that
+	/// left chunk on its first whitespace run, then walks the remaining chunks for their own '='.</para>
+	/// </summary>
+	private static (string? Player, List<SearchSpecEngine.SearchPair> Pairs) ParseSearchCommandArgs(
+		IReadOnlyDictionary<string, CallState> args)
+	{
+		var lhs = args.TryGetValue("0", out var arg0) ? arg0.Message?.ToPlainText() ?? "" : "";
+
+		var rhsChunks = new List<string>();
+		for (var i = 1; args.TryGetValue(i.ToString(), out var chunk); i++)
+		{
+			rhsChunks.Add(chunk.Message?.ToPlainText() ?? "");
+		}
+
+		string? player;
+		string? leadingClass = null;
+
+		if (lhs.Length == 0)
+		{
+			player = null;
+		}
+		else if (lhs[0] == '"')
+		{
+			var closeIndex = lhs.IndexOf('"', 1);
+			if (closeIndex >= 0)
+			{
+				player = lhs[1..closeIndex];
+				var remainder = lhs[(closeIndex + 1)..].TrimStart();
+				leadingClass = remainder.Length > 0 ? remainder : null;
+			}
+			else
+			{
+				player = lhs.TrimStart('"');
+			}
+		}
+		else
+		{
+			var spaceIndex = lhs.IndexOf(' ');
+			if (spaceIndex < 0)
+			{
+				// A single bare token: it's the leading class if there's a restriction waiting for it
+				// on the right of the '=' (e.g. "type=room"); otherwise it's a plain player/owner filter
+				// (e.g. "@search SomePlayer").
+				if (rhsChunks.Count > 0)
+				{
+					leadingClass = lhs;
+					player = null;
+				}
+				else
+				{
+					player = lhs;
+				}
+			}
+			else
+			{
+				player = lhs[..spaceIndex];
+				var remainder = lhs[(spaceIndex + 1)..].TrimStart();
+				leadingClass = remainder.Length > 0 ? remainder : null;
+			}
+		}
+
+		var pairs = new List<SearchSpecEngine.SearchPair>();
+		var chunkIndex = 0;
+
+		if (leadingClass != null && chunkIndex < rhsChunks.Count)
+		{
+			pairs.Add(new SearchSpecEngine.SearchPair(leadingClass, rhsChunks[chunkIndex]));
+			chunkIndex++;
+		}
+
+		for (; chunkIndex < rhsChunks.Count; chunkIndex++)
+		{
+			var chunk = rhsChunks[chunkIndex];
+			var eqIndex = chunk.IndexOf('=');
+			if (eqIndex > 0)
+			{
+				pairs.Add(new SearchSpecEngine.SearchPair(chunk[..eqIndex], chunk[(eqIndex + 1)..]));
+			}
+		}
+
+		return (player, pairs);
 	}
 
 	[SharpCommand(Name = "@WHEREIS", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["name"])]
