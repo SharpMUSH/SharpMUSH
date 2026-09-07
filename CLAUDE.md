@@ -55,6 +55,7 @@ Key environment variables:
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_LIGHTNING_SYNC` — how hard each LMDB commit pushes on the disk: `full` (default; every commit fsynced, nothing lost on power failure), `nometasync` (one fsync per commit instead of two; power failure can lose the last transaction), or `periodic` (no sync on commit; a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS`, default 1000, and power failure can lose at most that window). The file stays consistent in every mode.
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
 
 Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
@@ -88,7 +89,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
 | `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
 | `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
-| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; every commit fsynced |
+| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |

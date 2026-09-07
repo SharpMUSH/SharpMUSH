@@ -264,6 +264,50 @@ comparison narrower than about 5x as unresolved by this data.
 for the same 20 cores as the benchmark process. The results are directional: they establish which
 shapes each engine is good and bad at, not a throughput number anyone should plan capacity from.
 
+## Follow-up: group commit and sync modes
+
+The concurrent-writer row above was the case for changing how the Lightning writer commits. Two
+changes followed (`SharpMUSH.Database.Lightning/Store`): the writer thread now folds every typed job
+that queued up while the previous commit was in flight into one transaction, each job in its own
+nested transaction, one parent commit and one sync for the batch (`MaxBatch` 64); and
+`SHARPMUSH_LIGHTNING_SYNC` selects the durability mode - `full` (both fsyncs per commit, the
+default and the mode every Lightning row above ran in), `nometasync` (one fsync per commit) or
+`periodic` (no sync on commit, a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS` while
+anything is unflushed). The same 15 Lightning shapes, same CI job, same btrfs directory, run once in
+`full` and once in `periodic`.
+
+| Shape | Before (one commit per job) | Group commit, `full` | Group commit, `periodic` |
+|---|---:|---:|---:|
+| 8 concurrent writers x 25 `SetAttributeAsync` | 924.0 ms | 251.7 ms | 1.588 ms |
+| `SetAttributeAsync` on #1 | 5.384 ms | 5.051 ms | 14.59 μs |
+| `CreateThingAsync` | 4.413 ms | 4.632 ms | 47.82 μs |
+| `WipeAttributeAsync`, 50-leaf subtree | 4.250 ms | 5.014 ms | 267.5 μs |
+| `DeleteObjectAsync`, 20 attributes | 5.917 ms | 6.286 ms | 577.6 μs |
+| `GetAttributeAsync(#1, AADESC)` | 479.1 ns | 539.5 ns | 489.2 ns |
+| `GetAttributesAsync(ATTR1*)` | 118.6 μs | 117.7 μs | 107.8 μs |
+
+**Group commit under `full`.** The contended shape drops from 924 ms to 252 ms, 3.7x. Not 8x,
+and the reason is the benchmark's own shape: each of the eight writers awaits its commit before
+issuing its next write, so at most eight jobs can ever be waiting, and a writer's continuation has
+to be scheduled and reach the channel before the writer thread takes the next batch. At the 4.6 ms
+per sync the single-write rows show, 252 ms is about 55 syncs for 200 writes - batches of three to
+four on average (inferred from the timing; the commit counter is not exposed to the benchmark). A
+workload that queues writes without waiting on each one, such as a `@dolist` over attributes or a
+mail delivery fan-out, would fill batches to the cap. Every uncontended row is unchanged within its
+error bar: a lone job still runs straight in the top-level transaction and pays its own sync.
+
+**`periodic`.** With the per-commit sync gone, every write shape lands where the tmpfs run put it
+(`CreateThingAsync` 36.9 μs and `SetAttributeAsync` 14.6 μs there against 47.8 μs and 14.6 μs
+here), which confirms that the sync was the entire write cost and nothing else in the provider was
+hiding behind it. This mode gives the same guarantee the SurrealDB-RocksDB rows were measured
+under - a crash loses the unflushed window, the file stays consistent - so those are the fair
+comparison: 1.59 ms against 20.2 ms for the concurrent writers (12.7x), 14.6 μs against 2.13 ms for
+one attribute set, 267 μs against 56.3 ms for the subtree wipe. Against Memgraph, the fastest of
+the server-backed providers on writes, one attribute set is 14.6 μs against 394 μs.
+
+Reads are unaffected by either change, as they should be: the sync mode only changes what commit
+does, and a read transaction never commits.
+
 ## Reproducing
 
 ```bash
@@ -287,6 +331,8 @@ Other variables:
   nightly job (`Job.Default`), which is far slower and much tighter.
 - `SHARPMUSH_SURREALDB_BENCH_ENDPOINT` defaults to `mem://`. Point it at
   `rocksdb://<absolute path>` on a real (non-tmpfs) filesystem to measure the production engine.
+- `SHARPMUSH_LIGHTNING_SYNC=periodic` (or `nometasync`) runs the Lightning benchmarks in that sync
+  mode; the benchmark host reads it exactly as the server does. Unset means `full`.
 - `SHARPMUSH_LIGHTNING_BENCH_PATH` overrides the LMDB data-directory root; a fresh GUID
   subdirectory is still created beneath it. It defaults to `LocalApplicationData`, never
   `Path.GetTempPath`, so that fsync cost is measured rather than hidden by tmpfs.
