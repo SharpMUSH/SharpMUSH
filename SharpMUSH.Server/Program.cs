@@ -30,7 +30,9 @@ public class Program
 			? DatabaseProvider.Memgraph
 			: string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
 				? DatabaseProvider.SurrealDB
-				: DatabaseProvider.ArangoDB;
+				: string.Equals(dbProviderStr, "lightning", StringComparison.OrdinalIgnoreCase)
+					? DatabaseProvider.Lightning
+					: DatabaseProvider.ArangoDB;
 
 		ArangoConfiguration? arangoConfig = null;
 		string? memgraphUri = null;

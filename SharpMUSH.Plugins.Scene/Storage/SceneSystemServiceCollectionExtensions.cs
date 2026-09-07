@@ -15,6 +15,7 @@ public static class SceneSystemServiceCollectionExtensions
 	public const string ArangoKey = "arangodb";
 	public const string MemgraphKey = "memgraph";
 	public const string SurrealKey = "surrealdb";
+	public const string LightningKey = "lightning";
 
 	private const string ProviderConfigKey = "SHARPMUSH_DATABASE_PROVIDER";
 
@@ -36,6 +37,11 @@ public static class SceneSystemServiceCollectionExtensions
 			(sp, _) => new MemgraphSceneStorage(sp.GetRequiredService<IMemgraphStorageAccessor>()));
 		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
 			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
+		// Lightning scene storage arrives in Task 19; a factory that throws (rather than omitting the
+		// key) keeps the switch below exhaustive and gives a clear message if a caller resolves it early,
+		// instead of the key silently falling through to ArangoDB's storage.
+		services.AddKeyedSingleton<ISceneStorage>(LightningKey,
+			(_, _) => throw new NotSupportedException("Lightning scene storage arrives in Task 19"));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
@@ -75,6 +81,7 @@ public static class SceneSystemServiceCollectionExtensions
 		{
 			var p when string.Equals(p, "memgraph", StringComparison.OrdinalIgnoreCase) => MemgraphKey,
 			var p when string.Equals(p, "surrealdb", StringComparison.OrdinalIgnoreCase) => SurrealKey,
+			var p when string.Equals(p, "lightning", StringComparison.OrdinalIgnoreCase) => LightningKey,
 			_ => ArangoKey
 		};
 	}

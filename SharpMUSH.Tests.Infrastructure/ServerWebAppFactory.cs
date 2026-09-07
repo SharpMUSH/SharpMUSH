@@ -74,6 +74,8 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
+	/// <summary>Set when this run created its own Lightning data directory (no SHARPMUSH_LIGHTNING_PATH was already set), so DisposeAsync can delete it. Null when a caller supplied their own path — that one outlives the factory.</summary>
+	private string? _ownLightningPath;
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -208,6 +210,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
 		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
+		var useLightning = string.Equals(dbProviderStr, "lightning", StringComparison.OrdinalIgnoreCase);
 
 		if (useMemgraph)
 		{
@@ -226,6 +229,18 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			{
 				Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT",
 					SurrealDbTestServer.IsEnabled ? SurrealDbTestServer.Endpoint : "mem://");
+			}
+		}
+		else if (useLightning)
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
+			// No container, no shared server: LMDB is a plain directory. Give each run its own unless a
+			// caller already pinned one (e.g. to inspect the data after the test), and clean up only the
+			// directory this run created itself.
+			if (Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
+			{
+				_ownLightningPath = Path.Combine(Path.GetTempPath(), "sharpmush-lightning-tests-" + Guid.NewGuid().ToString("N"));
+				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", _ownLightningPath);
 			}
 		}
 
@@ -262,6 +277,20 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	public new async ValueTask DisposeAsync()
 	{
 		_meterListener?.Dispose();
+
+		if (_ownLightningPath is not null && Directory.Exists(_ownLightningPath))
+		{
+			try
+			{
+				Directory.Delete(_ownLightningPath, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort: a lingering LMDB lock file (mdb.lck) can outlive the writer thread's join
+				// by a few milliseconds under load. Leaving the temp directory behind costs disk, not
+				// correctness, and the next run gets its own directory regardless.
+			}
+		}
 
 		if (_server?.Services != null)
 		{

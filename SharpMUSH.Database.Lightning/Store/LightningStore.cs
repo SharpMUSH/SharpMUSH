@@ -14,6 +14,7 @@ public sealed partial class LightningStore : IDisposable
 {
 	private readonly LightningStoreOptions _options;
 	private readonly ReaderWriterLockSlim _gate = new(LockRecursionPolicy.NoRecursion);
+	private readonly object _openTableLock = new();
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 	private Dictionary<TableDef, LmdbDb> _tables = new();
@@ -63,6 +64,43 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	internal void Reopen() => Open();
+
+	/// <summary>
+	/// Opens (creating if needed) a table this environment's own <see cref="Tables"/> catalogue does not
+	/// know about — a plugin's own tables, opened on the plugin's first use rather than baked into the
+	/// core schema. Idempotent by name: a second call for the same name returns the existing definition
+	/// rather than reopening the handle. Runs its own write transaction directly on the calling thread
+	/// (LMDB serializes writers with an environment-wide mutex, so this is safe even while the writer
+	/// thread has jobs in flight) because opening a sub-database needs the raw <c>LightningTransaction</c>,
+	/// which <see cref="ITx"/> does not expose.
+	/// </summary>
+	internal TableDef OpenTable(string name, bool duplicates)
+	{
+		lock (_openTableLock)
+		{
+			var existing = _tables.Keys.FirstOrDefault(t => t.Name == name);
+			if (existing is not null)
+			{
+				return existing;
+			}
+
+			var def = TableDef.Index(name, duplicates: duplicates);
+			_gate.EnterReadLock();
+			try
+			{
+				using var tx = _env.BeginTransaction();
+				var handle = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
+				var code = tx.Commit();
+				if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
+				_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
+				return def;
+			}
+			finally
+			{
+				_gate.ExitReadLock();
+			}
+		}
+	}
 
 	public T Read<T>(Func<ITx, T> read)
 	{

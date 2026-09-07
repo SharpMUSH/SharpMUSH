@@ -47,9 +47,11 @@ docker compose up -d
 ```
 
 Key environment variables:
-- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, or `surrealdb`
+- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, `surrealdb`, or `lightning`
 - `ARANGO_CONNECTION_STRING` — ArangoDB connection string
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
+- `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
+- `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
 
 First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
@@ -81,6 +83,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
 | `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
 | `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
+| `SharpMUSH.Database.Lightning` | LMDB provider (Lightning.NET), embedded in-process; one data directory per world |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.MarkupString` | ANSI/MXP markup string type used throughout the engine |

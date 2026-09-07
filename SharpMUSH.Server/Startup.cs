@@ -33,6 +33,8 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
+using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Memgraph;
 using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
@@ -268,6 +270,30 @@ public class Startup(
 			RegisterDatabaseProvider<SurrealDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
 				sp.GetRequiredService<SurrealDatabase>());
+		}
+		else if (databaseProvider == DatabaseProvider.Lightning)
+		{
+			// Config-driven path/map-size so production picks a durable location while tests default to a
+			// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
+			// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB.
+			var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
+				?? configuration["Lightning:Path"]
+				?? "lightning-data";
+			var lightningMapSize = long.TryParse(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE"), out var parsedMapSize)
+				? parsedMapSize
+				: 64L << 30;
+			services.AddSingleton<LightningDatabase>(x =>
+			{
+				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
+				var password = x.GetRequiredService<IPasswordService>();
+				var db = new LightningDatabase(dbLogger,
+					new LightningStoreOptions { Path = lightningPath, MapSize = lightningMapSize },
+					password, pluginMigrationSources, pluginFlags);
+				return db;
+			});
+			RegisterDatabaseProvider<LightningDatabase>(services);
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
+				sp.GetRequiredService<LightningDatabase>());
 		}
 		else
 		{

@@ -56,6 +56,7 @@
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
     <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
