@@ -38,7 +38,12 @@ internal static class BenchmarkHelpers
 	public static ILogger CreateBenchmarkLogger()
 	{
 		var configured = Environment.GetEnvironmentVariable("SHARPMUSH_BENCHMARK_LOG_LEVEL");
+
+		// Enum.TryParse says yes to any number, so "999" would parse to an undefined level that sits
+		// above Fatal and silences even the fatal a benchmark host needs to report. Take the value
+		// only when it names a real level; a typo falls back to the default rather than going quiet.
 		var level = Enum.TryParse<LogEventLevel>(configured, ignoreCase: true, out var parsed)
+				&& Enum.IsDefined(parsed)
 			? parsed
 			: LogEventLevel.Fatal;
 
