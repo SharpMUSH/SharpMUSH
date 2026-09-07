@@ -18,7 +18,6 @@
 		<!-- Mocking and assertions -->
 		<PackageReference Include="NSubstitute" Version="5.3.0" />
 		<!-- Test containers -->
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.14.0" />
 		<PackageReference Include="Testcontainers.MySql" Version="4.14.0" />
 		<PackageReference Include="Testcontainers.Nats" Version="4.14.0" />
 		<PackageReference Include="Testcontainers.PostgreSql" Version="4.14.0" />
@@ -34,8 +33,7 @@
 		<ProjectReference Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 		<ProjectReference Include="..\SharpMUSH.ConnectionServer\SharpMUSH.ConnectionServer.csproj" />
-    <ProjectReference Include="..\SharpMUSH.SocketServer\SharpMUSH.SocketServer.csproj" />
-		<ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
+		<ProjectReference Include="..\SharpMUSH.SocketServer\SharpMUSH.SocketServer.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Documentation\SharpMUSH.Documentation.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
@@ -43,7 +41,6 @@
 		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
 		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
 		<ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
-		<ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
 	</ItemGroup>

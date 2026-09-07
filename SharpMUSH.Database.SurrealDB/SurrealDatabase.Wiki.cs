@@ -628,7 +628,6 @@ public partial class SurrealDatabase : IWikiService
 		// The row this call itself wrote. Building the result and the revision entry from the write's
 		// own return is what keeps the revision log honest: a read-back after a successful write can
 		// pick up a *later* writer's content and file it under this caller's dbref and edit summary.
-		// Arango reads its RETURN NEW and Memgraph reads its own returned node for the same reason.
 		WikiTranslation? saved = null;
 
 		try

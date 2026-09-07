@@ -7,7 +7,7 @@ namespace SharpMUSH.Benchmarks;
 /// <see cref="IMUSHCodeParser.CommandParse(MString)"/>.
 /// </summary>
 [BenchmarkCategory("Substitution & Registers")]
-public class SubstitutionBenchmarks : BaseBenchmark
+public class SubstitutionBenchmarks : LightningBaseBenchmark
 {
 	private static readonly MString ExecDbRefCmd = MarkupText.Plain("think %#");
 	private static readonly MString ExecNameCmd = MarkupText.Plain("think %N");

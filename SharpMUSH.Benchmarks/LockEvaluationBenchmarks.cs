@@ -8,7 +8,7 @@ namespace SharpMUSH.Benchmarks;
 /// from <em>evaluate</em> (call pre-compiled delegate) costs.
 /// </summary>
 [BenchmarkCategory("Lock/Boolean Expression")]
-public class LockEvaluationBenchmarks : BaseBenchmark
+public class LockEvaluationBenchmarks : LightningBaseBenchmark
 {
 	private IBooleanExpressionParser? _lockParser;
 	private AnySharpObject? _godPlayer;

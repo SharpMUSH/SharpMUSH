@@ -394,7 +394,6 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// Evaluates every populated predicate of <paramref name="filter"/> against one already-decoded row, inside
-	/// the same <see cref="ITx"/> the caller opened to read it — mirrors <c>ArangoDatabase.Objects.cs</c>'
 	/// <c>GetFilteredObjectsAsync</c> predicate-for-predicate; see that method and the doc comment on
 	/// <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
 	/// </summary>
@@ -658,7 +657,6 @@ public partial class LightningDatabase
 				return false;
 			}
 
-			// True BFS over both edge types with one global visited set, matching the ArangoDB
 			// reference traversal (`uniqueVertices: 'global', order: 'bfs'` over has_parent and
 			// has_zone). A single-path parent-precedence walk can dead-end down the parent chain
 			// and miss a target that's only reachable by branching through a zone somewhere

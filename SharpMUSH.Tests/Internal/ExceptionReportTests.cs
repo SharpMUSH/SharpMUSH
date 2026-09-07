@@ -25,7 +25,7 @@ public class ExceptionReportTests
 		try
 		{
 			throw new InvalidOperationException(LeakyMessage,
-				new IOException("/var/lib/sharpmush/arangodb.sock is unavailable"));
+				new IOException("/var/lib/sharpmush/database.sock is unavailable"));
 		}
 		catch (InvalidOperationException caught)
 		{
@@ -76,7 +76,7 @@ public class ExceptionReportTests
 		await Assert.That(payload).DoesNotContain("/opt/sharpmush");
 		await Assert.That(payload).DoesNotContain("C:\\SharpMUSH");
 		await Assert.That(payload).DoesNotContain("Password=");
-		await Assert.That(payload).DoesNotContain("arangodb.sock");
+		await Assert.That(payload).DoesNotContain("database.sock");
 		await Assert.That(payload).DoesNotContain(nameof(IOException));
 
 		// No stack frames: neither the "at Namespace.Type.Method" form nor a source-line reference.
@@ -109,7 +109,7 @@ public class ExceptionReportTests
 		await Assert.That(inner.GetArrayLength()).IsEqualTo(1);
 		await Assert.That(inner[0].GetProperty("type").GetString()).IsEqualTo(nameof(IOException));
 		await Assert.That(inner[0].GetProperty("message").GetString())
-			.IsEqualTo("/var/lib/sharpmush/arangodb.sock is unavailable");
+			.IsEqualTo("/var/lib/sharpmush/database.sock is unavailable");
 	}
 
 	[Test]

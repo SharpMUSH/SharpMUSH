@@ -34,13 +34,8 @@ participate in the object namespace, containment hierarchy, or flag system.
 
 | Backend   | Wiki Pages             | Wiki Revisions          | Indexes                    |
 |-----------|------------------------|-------------------------|----------------------------|
-| ArangoDB  | `wiki_pages` collection| `wiki_revisions` coll.  | ArangoSearch view on body  |
+| Lightning | embedded records       | embedded records        | Local searchable projection |
 | SurrealDB | `wiki_page` table      | `wiki_revision` table   | Native FTS on body         |
-| Memgraph  | `:WikiPage` nodes      | `:WikiRevision` nodes   | In-memory text index       |
-
-Note: Even in Memgraph (a graph DB), wiki pages are their own labeled nodes with
-no edges into the game object graph. They reference game objects by storing DBRef
-values as properties, not via graph edges.
 
 ### WikiPage Schema
 
@@ -572,17 +567,8 @@ Games have full freedom to unify, keep separate, or create hybrid approaches.
 
 ### Full-Text Search (Database Layer)
 
-ArangoDB: Use ArangoSearch (built-in) with an analyzer for English stemming:
-```aql
-FOR page IN wikiPagesView
-  SEARCH ANALYZER(page.body IN TOKENS(@query, "text_en"), "text_en")
-  SORT BM25(page) DESC
-  LIMIT 20
-  RETURN { slug: page.slug, title: page.title, score: BM25(page) }
-```
-
-SurrealDB: Native full-text search via `SEARCH` keyword.
-Memgraph: Would need an external search index (or in-memory Lucene.NET).
+SurrealDB uses its native full-text search. Lightning evaluates the same provider-neutral
+search contract over its local searchable projection.
 
 ### In-Game Search
 

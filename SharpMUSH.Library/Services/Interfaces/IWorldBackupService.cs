@@ -11,7 +11,6 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <para>What that costs differs by provider. The Lightning provider copies its LMDB environment
 /// with the routine LMDB supplies for exactly this, which is consistent by construction. A provider
 /// whose database is a server this process only talks to may have no way to produce such a copy at
-/// all — ArangoDB's hot-backup API is Enterprise-only, and its Community answer is <c>arangodump</c>
 /// run outside the game. Those register an implementation reporting <see cref="IsSupported"/> false
 /// and saying why in <see cref="UnavailableReason"/>, rather than one blanket claim that fits none of
 /// them.</para>

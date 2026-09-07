@@ -1,4 +1,3 @@
-using Core.Arango;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf;
@@ -23,23 +22,18 @@ namespace SharpMUSH.Tests.ScenePlugin;
 public class SceneSystemRegistrationTests
 {
 	[Test]
-	public async Task AddSceneSystem_SelectsStorageMatchingConfiguredProvider()
+	public async Task AddSceneSystem_DefaultsToLightningStorage()
 	{
 		var services = new ServiceCollection();
-		// Only the Arango accessor is present (as the host does for the active provider). The factory must
-		// pick the "arangodb"-keyed ArangoSceneStorage and never touch the other two keys.
-		services.AddSingleton<IArangoStorageAccessor>(new FakeArangoAccessor());
-
-		var config = new ConfigurationBuilder()
-			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "arangodb" })
-			.Build();
+		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
+		var config = new ConfigurationBuilder().Build();
 
 		services.AddSceneSystem(config);
 
 		await using var sp = services.BuildServiceProvider();
 		var svc = sp.GetRequiredService<ISceneService>();
 
-		await Assert.That(svc).IsTypeOf<ArangoSceneStorage>();
+		await Assert.That(svc).IsTypeOf<LightningSceneStorage>();
 	}
 
 	[Test]
@@ -87,14 +81,6 @@ public class SceneSystemRegistrationTests
 
 		// Last-added behavior is outermost: Second wraps First wraps the storage core.
 		await Assert.That(calls).IsEquivalentTo(new[] { "second", "first", "core" });
-	}
-
-	private sealed class FakeArangoAccessor : IArangoStorageAccessor
-	{
-		public IArangoContext Context => throw new NotSupportedException();
-		public ArangoHandle Handle => throw new NotSupportedException();
-		public ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default) =>
-			throw new NotSupportedException();
 	}
 
 	/// <summary>

@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Services;
 /// carries that flag, through the ordinary <c>@set</c> path and a real database.
 ///
 /// <para>VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are <c>has_flag_by_name</c> calls in
-/// <c>hdrs/dbdefs.h:132-162</c> and are seeded as flags by all three providers. The predicates asked
+/// <c>hdrs/dbdefs.h:132-162</c> and are seeded as flags by both supported providers. The predicates asked
 /// <c>Powers</c>, which has never held an entry by any of those names, so each one returned false for
 /// every object that has ever existed — DARK hid nothing from <c>look</c> or <c>WHO</c>, VISUAL
 /// granted no examine, and <c>IsAlive()</c>'s puppet and audible terms never fired (issue #796).</para>

@@ -54,7 +54,6 @@ public static class SharpAttributeExtensions
 	/// <para>
 	/// Compares case-insensitively: flag names are resolved from a canonical, case-normalised
 	/// catalog under the ordinary <c>@set</c> path, but this is the one place every provider's
-	/// inheritance gate (ArangoDB, Memgraph, SurrealDB, and the parent-boundary re-resolution in
 	/// <c>GetAttributeQueryHandler</c>) tests for it - a hand-rolled ordinal comparison at any of
 	/// those sites would silently diverge from the others the moment stored casing wasn't
 	/// canonical (imported data, a hand-edited record). Route every gate through here instead.

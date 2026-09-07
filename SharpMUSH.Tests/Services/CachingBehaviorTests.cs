@@ -248,7 +248,6 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
-	/// Powers ride with the object the same way flags do. The Memgraph projection once bound its
 	/// pattern-comprehension variables as <c>f</c> and <c>p</c>, and any query that had already bound
 	/// <c>p</c> (a player lookup binds it to the Player node) got an empty power list back, so no
 	/// player ever had a power when found by name or listed - <c>connect guest</c> found no guests.
@@ -395,7 +394,6 @@ public class CachingBehaviorTests
 			room, room, (int)options.CurrentValue.Limit.StartingQuota));
 
 		// The window is as wide as the read is slow, and a contents read costs one round trip per occupant
-		// on Memgraph. An empty room is read faster than a creation commits and races nothing.
 		for (var i = 0; i < 60; i++) await Populate();
 
 		// One creation followed at once by a read of the room, which is what FOLLOW does.

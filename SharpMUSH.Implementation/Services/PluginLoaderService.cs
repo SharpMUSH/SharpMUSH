@@ -82,16 +82,13 @@ public static class PluginLoaderService
 
 	/// <summary>
 	/// Host assembly NAMES shared into <b>every</b> plugin's ALC by default, in addition to any a plugin
-	/// declares in its manifest. These are the three DB-client assemblies the host already loads (it
-	/// references all three providers); sharing them by name lets a storage plugin use a provider connection
+	/// declares in its manifest. Sharing a provider client by name lets a storage plugin use its connection
 	/// returned through a host-shared accessor without a type-identity mismatch — and without the plugin
 	/// framework itself referencing the client packages. Kept deliberately small and explicit (never
 	/// <c>PreferSharedTypes=true</c>, which would be far too broad).
 	/// </summary>
 	public static readonly IReadOnlyList<string> DefaultSharedAssemblyNames =
 	[
-		"Core.Arango",
-		"Neo4j.Driver",
 		"SurrealDb.Net"
 		// The Scene plugin is now fully self-contained: its models + ISceneService + SceneEventMessage live
 		// INSIDE SharpMUSH.Plugins.Scene (no shared Contracts assembly). Every host↔plugin and client↔plugin

@@ -1,21 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using System.Diagnostics;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]</c>.
-/// Boots the same host as the benchmarks, then runs each scenario in a tight loop and reports
-/// operations per second, managed bytes allocated per operation, and ArangoDB HTTP requests per
-/// operation (read from the server's <c>/_admin/statistics</c> counter, so it counts what actually
-/// crossed the wire). <c>--wait</c> pauses before the measured loop and prints the PID so
-/// <c>dotnet-trace collect -p</c> can attach to a steady-state process.
+/// Boots the Lightning-backed benchmark host and reports operations per second, managed bytes
+/// allocated per operation, and generation-zero collections per thousand operations.
 /// </summary>
-public sealed class ProfileHarness : BaseBenchmark
+public sealed class ProfileHarness : LightningBaseBenchmark
 {
 	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false);
 
@@ -33,13 +28,9 @@ public sealed class ProfileHarness : BaseBenchmark
 		new("ufun", "[u(me/PROFILE_FN,5)]", false),
 		new("get", "[get(me/PROFILE_FN)]", false),
 		new("haspower", "[haspower(me,see_all)]", false),
-		// Object-shaped cached results: a location answer, and a contents list of the fifty things
-		// the setup creates in the executor's inventory, with and without a per-object read.
 		new("loc", "[loc(me)]", false),
 		new("lcon", "[lcon(me)]", false),
 		new("lcon-names", "[iter(lcon(me),name(##))]", false),
-		// A write invalidates the attribute caches, so the read that follows is a cache miss: this
-		// scenario counts what one uncached attribute listing costs on the wire.
 		new("set", "&PROFILE_X me=x", true),
 		new("set+lattr", "&PROFILE_X me=x;think [lattr(me)]", true, IsCommandList: true),
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
@@ -96,21 +87,9 @@ public sealed class ProfileHarness : BaseBenchmark
 		var god = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer!;
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
-		await _database!.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
+		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
 		for (var i = 0; i < 50; i++)
-		{
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
-		}
-
-		using var http = new HttpClient { BaseAddress = new Uri(ArangoBaseAddress!) };
-		http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
-			Convert.ToBase64String(Encoding.ASCII.GetBytes("root:password")));
-
-		async Task<long> ArangoRequestsAsync()
-		{
-			using var doc = JsonDocument.Parse(await http.GetStringAsync("/_admin/statistics"));
-			return doc.RootElement.GetProperty("http").GetProperty("requestsTotal").GetInt64();
-		}
 
 		foreach (var scenario in scenarios)
 		{
@@ -125,11 +104,10 @@ public sealed class ProfileHarness : BaseBenchmark
 		}
 
 		Console.WriteLine();
-		Console.WriteLine($"{"scenario",-12} {"ops/s",10} {"us/op",10} {"KB/op",9} {"arango req/op",14} {"gen0/kop",9}");
+		Console.WriteLine($"{"scenario",-12} {"ops/s",10} {"us/op",10} {"KB/op",9} {"gen0/kop",9}");
 		foreach (var scenario in scenarios)
 		{
 			var input = MarkupText.Plain(scenario.Input);
-			var reqBefore = await ArangoRequestsAsync();
 			var allocBefore = GC.GetTotalAllocatedBytes(precise: true);
 			var gen0Before = GC.CollectionCount(0);
 			var sw = Stopwatch.StartNew();
@@ -143,16 +121,13 @@ public sealed class ProfileHarness : BaseBenchmark
 			sw.Stop();
 			var alloc = GC.GetTotalAllocatedBytes(precise: true) - allocBefore;
 			var gen0 = GC.CollectionCount(0) - gen0Before;
-			// Minus the statistics call itself, which is the one request between the two reads.
-			var req = await ArangoRequestsAsync() - reqBefore - 1;
 			Console.WriteLine(
-				$"{scenario.Name,-12} {ops / sw.Elapsed.TotalSeconds,10:N0} {sw.Elapsed.TotalMilliseconds * 1000 / ops,10:N1} {alloc / 1024.0 / ops,9:N1} {(double)req / ops,14:N2} {gen0 * 1000.0 / ops,9:N2}");
+				$"{scenario.Name,-12} {ops / sw.Elapsed.TotalSeconds,10:N0} {sw.Elapsed.TotalMilliseconds * 1000 / ops,10:N1} {alloc / 1024.0 / ops,9:N1} {gen0 * 1000.0 / ops,9:N2}");
 		}
 	}
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)
 	{
-		// A fresh state per operation, as every player command gets: the invocation counters live on it.
 		var parser = baseParser.FromState(BenchmarkHelpers.FreshState(one));
 		if (scenario.IsCommandList)
 			await parser.CommandListParse(input);

@@ -26,7 +26,7 @@ namespace SharpMUSH.Tests.Commands;
 /// destructive by nature. PennMUSH's purge walks the whole database, so these free every
 /// GOING_TWICE object in the shared session database, not just their own — including fixtures
 /// another test created, destroyed and has not finished asserting on. The window is small and six
-/// consecutive full-suite runs across all three providers were clean, but a test that leaves an
+/// consecutive full-suite runs across both supported providers were clean, but a test that leaves an
 /// object GOING and then reads it back is racing this.
 /// </para>
 /// </summary>

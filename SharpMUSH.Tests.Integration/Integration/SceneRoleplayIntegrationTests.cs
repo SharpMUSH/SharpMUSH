@@ -16,7 +16,6 @@ namespace SharpMUSH.Tests.Integration;
 /// <summary>
 /// Full-body narrative integration test of the SharpMUSH Scene System, driven from a
 /// TEXT-BASED (in-game player) perspective — the Scene equivalent of
-/// <see cref="MyrddinBBSIntegrationTests"/>. It boots the real server (default Arango),
 /// confirms the <c>SharpMUSH.Plugins.Scene</c> plugin + the bundled <c>scene</c> softcode
 /// package are present, then runs a realistic multi-character roleplay scene end to end
 /// purely through GAME commands (the <c>+scene/*</c> player verbs and native
@@ -837,7 +836,6 @@ public class SceneRoleplayIntegrationTests
 	}
 
 	/// <summary>
-	/// Scene IDs and pose IDs come from 1-based incrementing counters (not GUIDs or ArangoDB's
 	/// server-wide HLC key sequence): two scenes created back-to-back get consecutive numeric ids,
 	/// and two poses in a scene likewise.
 	/// </summary>
@@ -859,7 +857,6 @@ public class SceneRoleplayIntegrationTests
 		var idA = await Eval($"get({bea}/MY.SID)");
 		await RunAndCollectAs(81L, $"+scene/create SeqB_{Tag}");
 		var idB = await Eval($"get({bea}/MY.SID)");
-		// Providers format the id differently (Arango/Memgraph bare "N"; SurrealDB "scene:N"/"scene_pose:N");
 		// the 1-based counter is the trailing numeric segment in all cases.
 		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
 		await Assert.That(int.TryParse(idA.Split(':')[^1], out _)).IsTrue()

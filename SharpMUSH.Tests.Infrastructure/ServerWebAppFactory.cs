@@ -1,5 +1,3 @@
-using Core.Arango;
-using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -30,12 +28,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
-
-	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
-	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
-
-	[ClassDataSource<MemgraphTestServer>(Shared = SharedType.PerTestSession)]
-	public required MemgraphTestServer MemgraphTestServer { get; init; }
 
 	[ClassDataSource<SurrealDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required SurrealDbTestServer SurrealDbTestServer { get; init; }
@@ -90,16 +82,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	protected string? _customSqlConnectionString;
 	private readonly string _sqlPlatform;
-	private readonly string? _customDatabaseName;
-
-	public ServerWebAppFactory() : this(null, null, "mysql")
+	public ServerWebAppFactory() : this(null, "mysql")
 	{
 	}
 
-	public ServerWebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
+	public ServerWebAppFactory(string? sqlConnectionString, string sqlPlatform = "mysql")
 	{
 		_customSqlConnectionString = sqlConnectionString;
-		_customDatabaseName = databaseName;
 		_sqlPlatform = sqlPlatform;
 	}
 
@@ -208,16 +197,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		Log.Logger = log;
 
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
 		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
-		var useLightning = string.Equals(dbProviderStr, "lightning", StringComparison.OrdinalIgnoreCase);
 
-		if (useMemgraph)
-		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
-			Environment.SetEnvironmentVariable("MEMGRAPH_URI", MemgraphTestServer.BoltUri);
-		}
-		else if (useSurrealDb)
+		if (useSurrealDb)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
 			// Tests run the embedded in-memory engine for isolation/speed; production defaults to a
@@ -231,7 +213,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 					SurrealDbTestServer.IsEnabled ? SurrealDbTestServer.Endpoint : "mem://");
 			}
 		}
-		else if (useLightning)
+		else
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
 			// No container, no shared server: LMDB is a plain directory. Give each run its own unless a
@@ -254,7 +236,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
 			TestHelpers.CreateNotifyServiceSubstitute(Notifications),
-			_customDatabaseName,
 			_sqlPlatform);
 
 		var provider = _server.Services;

@@ -5,7 +5,7 @@ namespace SharpMUSH.Benchmarks;
 /// Exercises <see cref="IMUSHCodeParser.FunctionParse(MString)"/> with common string operations.
 /// </summary>
 [BenchmarkCategory("String Functions")]
-public class StringFunctionBenchmarks : BaseBenchmark
+public class StringFunctionBenchmarks : LightningBaseBenchmark
 {
 	private static readonly MString MidInput = MarkupText.Plain("mid(abcdefghij,2,5)");
 	private static readonly MString LjustInput = MarkupText.Plain("ljust(hello,20)");

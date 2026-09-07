@@ -1,4 +1,3 @@
-using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -21,35 +20,26 @@ namespace SharpMUSH.Benchmarks;
 /// host-builder path.
 /// </summary>
 public class TestWebApplicationBuilderFactory<TProgram>(
-		ArangoConfiguration? acnf,
 		string configFile,
-		DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
-		string? memgraphUri = null,
+		DatabaseProvider databaseProvider = DatabaseProvider.Lightning,
 		string? surrealEndpoint = null,
 		string? lightningPath = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		// Wire database configuration via environment variables that Server.Program's
-		// ArangoStartupStrategyProvider / Startup constructor will pick up.
+		// Wire database configuration through the environment variables read by Server.Program.
 		// This is the same approach the test suite uses (ServerWebAppFactory) and avoids
 		// calling startup.ConfigureServices() a second time, which would double-register
 		// the "compiled-expressions" FusionCache and throw at first resolution.
-		if (databaseProvider == DatabaseProvider.Memgraph)
-		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
-			if (!string.IsNullOrEmpty(memgraphUri))
-				Environment.SetEnvironmentVariable("MEMGRAPH_URI", memgraphUri);
-		}
-		else if (databaseProvider == DatabaseProvider.SurrealDB)
+		if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
 			// No Testcontainer: SurrealDB runs embedded in-process. mem:// keeps benchmark runs
 			// isolated and disk-free, matching the test suite's default.
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
 			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", surrealEndpoint ?? "mem://");
 		}
-		else if (databaseProvider == DatabaseProvider.Lightning)
+		else
 		{
 			// No Testcontainer: LMDB is a plain directory. The caller (LightningBaseBenchmark)
 			// owns the directory's lifetime, matching the test suite's ServerWebAppFactory.
@@ -57,16 +47,6 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			if (!string.IsNullOrEmpty(lightningPath))
 				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", lightningPath);
 		}
-		else
-		{
-			if (acnf is null)
-				throw new ArgumentNullException(nameof(acnf), "Arango configuration is required for ArangoDB benchmarks.");
-
-			// Pass the test-container connection string through the env var that
-			// ArangoKubernetesStartupStrategy reads.
-			Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", acnf.ConnectionString);
-		}
-
 		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
 
 		// Only override services that benchmarks specifically need to differ from production.
@@ -91,9 +71,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	{
 		if (disposing)
 		{
-			Environment.SetEnvironmentVariable("ARANGO_CONNECTION_STRING", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", null);
-			Environment.SetEnvironmentVariable("MEMGRAPH_URI", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", null);
 		}

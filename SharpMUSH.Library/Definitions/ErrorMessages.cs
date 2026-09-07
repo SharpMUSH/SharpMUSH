@@ -1592,7 +1592,7 @@ public static class ErrorMessages
 		public const string ShutdownRebootStandalone = "- For standalone: Restart the web application";
 		public const string ShutdownRebootRedis = "- Player connections will be preserved via Redis state store";
 		public const string ShutdownParanoidInitiated = "PARANOID SHUTDOWN initiated.";
-		public const string ShutdownParanoidArangoDB = "Database state is continuously persisted in ArangoDB.";
+		public const string ShutdownParanoidDatabase = "Database state is continuously persisted.";
 		public const string ShutdownInitiated = "SHUTDOWN initiated.";
 		public const string ShutdownNoteWebApp = "Note: SharpMUSH runs as a web application. Traditional shutdown is not applicable.";
 		public const string ShutdownNoteOrchestration = "In cloud/container deployments, use your orchestration tools to manage server lifecycle.";

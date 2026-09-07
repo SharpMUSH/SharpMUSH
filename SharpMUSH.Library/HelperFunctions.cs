@@ -141,7 +141,7 @@ public static partial class HelperFunctions
 	}
 
 	// VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are flags in PennMUSH (hdrs/dbdefs.h:132-162,
-	// each one a has_flag_by_name call) and are seeded as flags by all three providers. They used to be
+	// each one a has_flag_by_name call) and are seeded as flags by both supported providers. They used to be
 	// asked of Powers, a collection that has never held an entry by any of those names, so every one of
 	// them answered false unconditionally — DARK objects were listed by look and WHO, VISUAL granted
 	// nothing, IsAlive()'s puppet and audible terms never fired. See issue #796. Can_Dark, See_All,
@@ -193,8 +193,6 @@ public static partial class HelperFunctions
 
 	/// <summary>
 	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
-	/// <see cref="InvalidOperationException"/>, blamed on a Core.Arango disposal race. The race was
-	/// ours: the ArangoDB provider cached one <c>async IAsyncEnumerable</c> state machine per object
 	/// property and handed it to every consumer, so one consumer's disposal could land on another's
 	/// live enumeration. <c>FreshAsyncEnumerable</c> gives each enumeration its own machine, and the
 	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
@@ -283,7 +281,7 @@ public static partial class HelperFunctions
 	/// <para>
 	/// The database-level <c>HasFlag</c> predicate in
 	/// <see cref="IObjectStore.GetFilteredObjectsAsync"/> is defined to agree with this helper and is
-	/// pinned against it on all three providers, so the two move together.
+	/// pinned against it on both supported providers, so the two move together.
 	/// </para>
 	/// <para>
 	/// Not ported from <c>flag_hash_lookup</c>: its single-character fallback to a flag's <em>letter</em>,
@@ -439,7 +437,6 @@ public static partial class HelperFunctions
 			return RelationshipSafety.SelfReference;
 		}
 
-		// Use ArangoDB graph traversal to check if adding the relationship would create a cycle.
 		// If start is reachable FROM newRelated via parent/zone edges, then adding the relationship
 		// would complete a cycle: start -> newRelated -> ... -> start
 		var isReachable = await database.IsReachableViaParentOrZoneAsync(newRelated, start, cancellationToken: cancellationToken);

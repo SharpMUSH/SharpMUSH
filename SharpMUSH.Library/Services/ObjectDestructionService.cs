@@ -153,7 +153,7 @@ public class ObjectDestructionService(
 			// Belt and braces over the pushdown, deliberately kept despite being redundant with the
 			// query above. A provider that silently ignores HasFlag hands back the entire database, and
 			// with no second opinion this loop would then mark every object in the game GOING_TWICE and
-			// start freeing them on the following pass. All three providers ignored or broke that
+			// start freeing them on the following pass. both supported providers ignored or broke that
 			// predicate until it was fixed and pinned (ObjectSearchFilterPushdownTests); the cost of not
 			// trusting it here is one flag read on an already-small set.
 			if (!await candidate.HasFlag(GoingFlag)) continue;

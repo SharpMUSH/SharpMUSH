@@ -9,7 +9,7 @@ namespace SharpMUSH.Benchmarks;
 /// measure end-to-end message-bus latency from notify call to publish acknowledgement.
 /// </summary>
 [BenchmarkCategory("Output Pipeline")]
-public class NotifyPipelineBenchmarks : BaseBenchmark
+public class NotifyPipelineBenchmarks : LightningBaseBenchmark
 {
 	private INotifyService? _notifyService;
 	private static readonly MString ShortMsg = MarkupText.Plain("Hello World");

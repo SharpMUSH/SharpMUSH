@@ -1,5 +1,4 @@
 using Asp.Versioning;
-using Core.Arango;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -10,11 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Neo4j.Driver;
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Authentication;
@@ -33,10 +30,8 @@ using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
-using SharpMUSH.Database.ArangoDB;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.Memgraph;
 using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
@@ -61,11 +56,9 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 namespace SharpMUSH.Server;
 
 public class Startup(
-	ArangoConfiguration? arangoConfig,
 	string colorFile,
 	string natsUrl,
-	DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
-	string? memgraphUri = null)
+	DatabaseProvider databaseProvider = DatabaseProvider.Lightning)
 {
 	// Cache name for the dedicated compiled boolean-lock expression cache.
 	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
@@ -160,7 +153,7 @@ public class Startup(
 	/// </summary>
 	/// <param name="worldPath">
 	/// The provider's own on-disk world, when it has one, used only to derive the default root. Null
-	/// for a provider that keeps nothing locally — Memgraph, or SurrealDB on a <c>mem://</c> endpoint.
+	/// for a provider that keeps nothing locally — SurrealDB on a <c>mem://</c> endpoint.
 	/// Those get no default: returns null unless <c>SHARPMUSH_BACKUP_PATH</c> names somewhere, because
 	/// guessing puts the copies in the working directory, which on a container is not the mounted
 	/// volume — backups that look like they are being taken and are gone at the next recreate.
@@ -329,39 +322,7 @@ public class Startup(
 		// of the cache.
 		services.AddSingleton<IObjectRelationLoader, Implementation.Services.MediatorObjectRelationLoader>();
 
-		if (databaseProvider == DatabaseProvider.Memgraph)
-		{
-			services.AddSingleton<IDriver>(_ =>
-				GraphDatabase.Driver(
-					memgraphUri ?? "bolt://localhost:7687",
-					o => o.WithEncryptionLevel(EncryptionLevel.None)));
-			services.AddSingleton<MemgraphDatabase>(x =>
-			{
-				var dbLogger = x.GetRequiredService<ILogger<MemgraphDatabase>>();
-				var neo4JDriver = x.GetRequiredService<IDriver>();
-				var password = x.GetRequiredService<IPasswordService>();
-				var db = new MemgraphDatabase(dbLogger, neo4JDriver, password,
-					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
-				return db;
-			});
-			RegisterDatabaseProvider<MemgraphDatabase>(services);
-			// Host-shared storage accessor for storage plugins (e.g. the Scene plugin). Generic seam over the
-			// active provider's connection; carries no subsystem concept.
-			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
-				sp.GetRequiredService<MemgraphDatabase>());
-
-			// Memgraph is a server this process only reaches over Bolt, so there is no world path to
-			// derive a backup location from: SHARPMUSH_BACKUP_PATH has to say, or backups stay off.
-			services.AddSingleton<IWorldBackupService>(sp =>
-			{
-				var options = ResolveBackupOptions(worldPath: null, sp.GetRequiredService<ILogger<MemgraphDatabase>>());
-				return options is null
-					? new UnsupportedWorldBackupService("memgraph", NoBackupLocation)
-					: new MemgraphWorldBackupService(sp.GetRequiredService<IDriver>(), options,
-						sp.GetRequiredService<ILogger<MemgraphWorldBackupService>>());
-			});
-		}
-		else if (databaseProvider == DatabaseProvider.SurrealDB)
+		if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
 			// Config-driven endpoint so production persists to disk (RocksDB) while tests stay in-memory.
 			// Resolution: SHARPMUSH_SURREALDB_ENDPOINT env → appsettings "SurrealDb:Endpoint" → file-backed default.
@@ -403,7 +364,7 @@ public class Startup(
 						sp.GetRequiredService<ILogger<SurrealWorldBackupService>>());
 			});
 		}
-		else if (databaseProvider == DatabaseProvider.Lightning)
+		else
 		{
 			// Config-driven path/map-size so production picks a durable location while tests default to a
 			// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
@@ -446,37 +407,6 @@ public class Startup(
 				compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
 				sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 		}
-		else
-		{
-			services.AddSingleton<ArangoDatabase>(x =>
-			{
-				var dbLogger = x.GetRequiredService<ILogger<ArangoDatabase>>();
-				var context = x.GetRequiredService<IArangoContext>();
-				var handle = x.GetRequiredService<ArangoHandle>();
-				var relations = x.GetRequiredService<IObjectRelationLoader>();
-				var password = x.GetRequiredService<IPasswordService>();
-				var db = new ArangoDatabase(dbLogger, context, handle, relations, password, pluginMigrationSources, pluginFlags);
-				return db;
-			});
-			RegisterDatabaseProvider<ArangoDatabase>(services);
-			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor>(sp =>
-				sp.GetRequiredService<ArangoDatabase>());
-		}
-
-		// Whatever the chosen provider did not register above — in practice ArangoDB, the one provider
-		// with no way to produce a copy from inside this process: its hot-backup API is Enterprise-only
-		// and the Community answer is a tool run outside the game. Registered as TryAdd so a provider
-		// that DID register its own implementation keeps it.
-		services.TryAddSingleton<IWorldBackupService>(_ => new UnsupportedWorldBackupService(
-			databaseProvider.ToString().ToLowerInvariant(),
-			databaseProvider switch
-			{
-				DatabaseProvider.ArangoDB =>
-					"is a database server this game only talks to, and its hot-backup API is Enterprise-only; "
-					+ "back it up with arangodump and restore it with arangorestore",
-				_ => "does not have world backup implemented; back it up with that database's own tools"
-			}));
-
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 		/*
 		 * PennMUSH Password Compatibility - IMPLEMENTED
@@ -645,7 +575,6 @@ public class Startup(
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CacheInvalidationBehavior<,>));
 		services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(QueryCachingBehavior<,>));
 		services.AddSingleton(typeof(IStreamPipelineBehavior<,>), typeof(StreamQueryCachingBehavior<,>));
-		services.AddSingleton(new ArangoHandle("CurrentSharpMUSHWorld"));
 		services.AddSingleton<IMUSHCodeParser, MUSHCodeParser>();
 		// Lazy<T> for the services only reachable through a cycle: the lock service owns the expression
 		// parser, and the locate and attribute services reach the lock service through permissions.
@@ -677,16 +606,6 @@ public class Startup(
 																 | System.Net.DecompressionMethods.Brotli
 			});
 		services.AddMediator();
-
-		if (databaseProvider == DatabaseProvider.ArangoDB && arangoConfig is not null)
-		{
-			services.AddArango((_, arango) =>
-			{
-				arango.ConnectionString = arangoConfig.ConnectionString;
-				arango.HttpClient = arangoConfig.HttpClient;
-				arango.Serializer = arangoConfig.Serializer;
-			});
-		}
 
 		services.AddLogging(logging =>
 		{
