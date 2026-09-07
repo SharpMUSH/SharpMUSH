@@ -62,7 +62,7 @@ together.**
     <!-- The source generator, referenced as an analyzer. Your plugin's [SharpCommand]/[SharpFunction]
          methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
          FunctionLibrary.Functions inside YOUR assembly, which PluginBase reflects at load time. -->
-    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.0.0"
+    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="2.0.0"
                       PrivateAssets="all" />
   </ItemGroup>
 </Project>
