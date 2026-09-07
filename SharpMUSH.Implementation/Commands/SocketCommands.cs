@@ -536,6 +536,8 @@ public partial class Commands
 			connectionCount.ToString(),
 			handle.ToString());
 
+		await ConnectionAnnounceService.AnnounceConnectAsync(parser, new AnySharpObject(player), connectionCount);
+
 		// Refresh everyone in the room the player just appeared in.
 		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);
 		await EventService.TriggerEventAsync(

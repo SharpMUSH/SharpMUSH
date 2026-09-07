@@ -50,6 +50,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IEventService EventService { get; }
 
+	private IConnectionAnnounceService ConnectionAnnounceService { get; }
+
 	private ITelemetryService TelemetryService { get; }
 
 	private IWarningService WarningService { get; }
@@ -103,6 +105,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ILogger<Commands> logger,
 		IHookService hookService,
 		IEventService eventService,
+		IConnectionAnnounceService connectionAnnounceService,
 		ITelemetryService telemetryService,
 		IWarningService warningService,
 		ITextFileService textFileService,
@@ -139,6 +142,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		Logger = logger;
 		HookService = hookService;
 		EventService = eventService;
+		ConnectionAnnounceService = connectionAnnounceService;
 		TelemetryService = telemetryService;
 		WarningService = warningService;
 		TextFileService = textFileService;
