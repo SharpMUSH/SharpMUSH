@@ -1,5 +1,6 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using Neo4j.Driver;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -40,9 +41,27 @@ public class MemgraphTestServer : IAsyncInitializer, IAsyncDisposable
 
 	public async Task InitializeAsync()
 	{
-		if (IsMemgraphEnabled)
+		if (!IsMemgraphEnabled) return;
+
+		await Instance.StartAsync();
+
+		// Memgraph logs its banner — the readiness check above — before Bolt reliably accepts a
+		// session, so a test connecting immediately after start can be met with a connection reset.
+		// Retrying the handshake here holds the container until it is actually usable; without it the
+		// whole memgraph leg fails on timing rather than on anything under test, intermittently.
+		await using var driver = GraphDatabase.Driver(BoltUri, o => o.WithEncryptionLevel(EncryptionLevel.None));
+		var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+		while (true)
 		{
-			await Instance.StartAsync();
+			try
+			{
+				await driver.VerifyConnectivityAsync();
+				return;
+			}
+			catch (Exception ex) when ((ex is Neo4jException or IOException) && DateTime.UtcNow < deadline)
+			{
+				await Task.Delay(250);
+			}
 		}
 	}
 

@@ -2345,8 +2345,8 @@
   </data>
 
   <!-- @backup -->
-  <data name="BackupUnsupported" xml:space="preserve">
-    <value>This game's database has no world directory to copy. Back it up with that database's own tools.</value>
+  <data name="BackupUnavailableFormat" xml:space="preserve">
+    <value>@backup is not available here: {0}.</value>
   </data>
   <data name="BackupStarted" xml:space="preserve">
     <value>Copying the world. The game keeps running; this may take a while.</value>

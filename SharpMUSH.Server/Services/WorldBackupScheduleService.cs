@@ -9,8 +9,8 @@ namespace SharpMUSH.Server.Services;
 /// external snapshot tool always finds a recent consistent one instead of reading the live database
 /// out from under the writer.
 ///
-/// <para>Off unless an interval is configured, and inert on a provider with no world directory to
-/// copy. Set the interval to comfortably less than the snapshot tool's own period: the copy the
+/// <para>Off unless an interval is configured, and inert on a provider that cannot copy its own
+/// world. Set the interval to comfortably less than the snapshot tool's own period: the copy the
 /// snapshot picks up is as stale as the last run, and it costs a full copy each time.</para>
 /// </summary>
 public sealed class WorldBackupScheduleService(
@@ -21,7 +21,7 @@ public sealed class WorldBackupScheduleService(
 	{
 		if (!backups.IsSupported)
 		{
-			logger.LogDebug("Scheduled world backups are unavailable: this provider has no world directory to copy");
+			logger.LogDebug("Scheduled world backups are unavailable: {Reason}", backups.UnavailableReason);
 			return;
 		}
 

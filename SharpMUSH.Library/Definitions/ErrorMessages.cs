@@ -1614,8 +1614,10 @@ public static class ErrorMessages
 
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
-		/// <summary>Reported by <c>@backup</c> on a provider whose world is not a directory this process owns.</summary>
-		public const string BackupUnsupported = "This game's database has no world directory to copy. Back it up with that database's own tools.";
+		/// <summary>Reported by <c>@backup</c> on a provider that cannot copy its own world; the reason
+		/// comes from the provider, because they differ.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupUnavailableFormat = "@backup is not available here: {0}.";
 		public const string BackupStarted = "Copying the world. The game keeps running; this may take a while.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
