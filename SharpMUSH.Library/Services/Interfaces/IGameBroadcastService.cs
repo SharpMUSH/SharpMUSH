@@ -22,6 +22,16 @@ public interface IGameBroadcastService
 	ValueTask BroadcastToFlagAsync(string flagName, string message);
 
 	/// <summary>
+	/// Broadcast a message to connected players who have any flag in <paramref name="anyOfFlags"/>
+	/// (or unconditionally, if null) AND have <paramref name="requiredFlag"/>.
+	/// Equivalent to PennMUSH's <c>flag_broadcast("ROYALTY WIZARD", "HEAR_CONNECT", T("..."))</c>.
+	/// </summary>
+	/// <param name="anyOfFlags">Optional "any of these" flag group; null means no restriction on this group.</param>
+	/// <param name="requiredFlag">Flag that the recipient must have (e.g., "HEAR_CONNECT").</param>
+	/// <param name="message">The message text to send.</param>
+	ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, string message);
+
+	/// <summary>
 	/// Broadcast a shutdown or reboot notification to all connected players.
 	/// Uses <see cref="SharpMUSH.Library.Definitions.ErrorMessages.Notifications"/> constants.
 	/// </summary>
