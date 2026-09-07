@@ -174,11 +174,16 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 		return bep.Compile(lockString)(gated, unlocker);
 	}
 
-	public IAsyncEnumerable<bool> Evaluate(
+	public async IAsyncEnumerable<bool> Evaluate(
 		LockType standardType,
 		IEnumerable<AnySharpObject> gated,
 		AnySharpObject unlocker)
-		=> gated.ToAsyncEnumerable().SelectAwait(g => Evaluate(standardType, g, unlocker));
+	{
+		foreach (var one in gated)
+		{
+			yield return await Evaluate(standardType, one, unlocker);
+		}
+	}
 
 	public bool Validate(string lockString, AnySharpObject lockee)
 		=> bep.Validate(lockString, lockee);

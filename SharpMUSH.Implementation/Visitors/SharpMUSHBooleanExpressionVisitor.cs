@@ -50,6 +50,20 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> dbRef.Object().Powers.Value
 			.AnyAsync(x => x.Name == power || x.Alias == power, CancellationToken.None);
 
+	/// <summary>
+	/// A lock's operands are fixed the moment it is compiled, so the work of reading them is too.
+	/// <c>ParseDbRef</c> is a regex match, and running it per evaluation was the dominant cost of a
+	/// lock check — measured at 129 ns and 592 B for every <c>#1</c> leaf, against a composition that
+	/// costs single-digit nanoseconds. Doing it here puts it behind the compiled-expression cache,
+	/// where it is paid once per lock string.
+	/// </summary>
+	/// <returns>The dbref the operand names, or <c>null</c> when it names something else.</returns>
+	private static DBRef? ParsedAtCompileTime(string target)
+	{
+		var parsed = HelperFunctions.ParseDbRef(target);
+		return parsed.IsSome() ? parsed.AsValue() : null;
+	}
+
 	// A lock is evaluated on every movement and every permission check, so the pattern is built once
 	// and shared rather than rebuilt per evaluation, and it carries the wildcard match bound with it.
 	private static bool MatchesName(AnySharpObject dbRef, string pattern)
@@ -165,6 +179,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override LockPredicate VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
 		var target = context.@string().GetText();
+		var targetDbRef = ParsedAtCompileTime(target);
 
 		// For owner locks, check if the unlocker is owned by the owner of the named object
 		return async (gatedObj, unlockerObj) =>
@@ -182,12 +197,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 				}
 
 				// If target is a DBRef or objid like "#123" or "#123:timestamp", compare owner DBRefs
-				var parsedTargetOpt = HelperFunctions.ParseDbRef(target);
-				if (parsedTargetOpt.IsSome())
+				if (targetDbRef.HasValue)
 				{
 					// Get the target object by DBRef (validates creation timestamp if objid format)
 					var targetObjResult = await med.Send(
-						new GetObjectNodeQuery(parsedTargetOpt.AsValue()),
+						new GetObjectNodeQuery(targetDbRef.Value),
 						CancellationToken.None);
 
 					if (targetObjResult.IsNone())
@@ -221,19 +235,19 @@ public class SharpMUSHBooleanExpressionVisitor(
 	public override LockPredicate VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
 		var target = context.@string().GetText();
+		var targetDbRef = ParsedAtCompileTime(target);
 
 		// PennMUSH OP_TCARRY: passes ONLY if unlocker CARRIES the target (not if IS the target)
 		return async (_, unlockerObj) =>
 		{
 			// If target is a DBRef or objid like "#123" or "#123:timestamp", check if carrying that specific object
-			var parsedCarryOpt = HelperFunctions.ParseDbRef(target);
-			if (parsedCarryOpt.IsSome())
+			if (targetDbRef.HasValue)
 			{
 				try
 				{
 					if (unlockerObj.IsContainer)
 					{
-						var searchDbRef = parsedCarryOpt.AsValue();
+						var searchDbRef = targetDbRef.Value;
 						return await unlockerObj.AsContainer.Content(med)
 							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), CancellationToken.None);
 					}
@@ -424,8 +438,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 		=> BuildExactObjectPredicate(context.@string().GetText());
 
 	private LockPredicate BuildExactObjectPredicate(string target)
+	{
+		var targetDbRef = ParsedAtCompileTime(target);
+
 		// PennMUSH OP_TCONST: passes if unlocker IS the target OR unlocker CARRIES the target
-		=> async (gatedObj, unlockerObj) =>
+		return async (gatedObj, unlockerObj) =>
 		{
 			// If target is "me", it refers to the gated object's owner
 			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
@@ -434,11 +451,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
 
-			// Try to parse as DBRef (supports both #123 and #123:timestamp formats)
-			var parsedDbRef = HelperFunctions.ParseDbRef(target);
-			if (parsedDbRef.IsSome())
+			// Read as a DBRef (both #123 and #123:timestamp formats) when the lock was compiled
+			if (targetDbRef.HasValue)
 			{
-				var lockDbRef = parsedDbRef.AsValue();
+				var lockDbRef = targetDbRef.Value;
 				var unlockerDbRef = unlockerObj.Object().DBRef;
 
 				// Check if unlocker IS the target
@@ -472,6 +488,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			// treat as no match, matching PennMUSH behavior.
 			return false;
 		};
+	}
 
 	public override LockPredicate VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
@@ -541,6 +558,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	{
 		var target = context.@string(0).GetText();
 		var lockType = context.@string().Length > 1 ? context.@string(1).GetText() : "Basic"; // Default to Basic lock if not specified
+		var targetDbRef = ParsedAtCompileTime(target);
 
 		// Indirect locks check another object's lock
 		// @object means check the Basic lock on object
@@ -552,12 +570,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 				AnySharpObject targetObj;
 
 				// If target is a DBRef or objid like "#123" or "#123:timestamp", resolve it
-				var parsedIndirectOpt = HelperFunctions.ParseDbRef(target);
-				if (parsedIndirectOpt.IsSome())
+				if (targetDbRef.HasValue)
 				{
 					// Validates creation timestamp if objid format
 					var targetObjResult = await med.Send(
-						new GetObjectNodeQuery(parsedIndirectOpt.AsValue()),
+						new GetObjectNodeQuery(targetDbRef.Value),
 						CancellationToken.None);
 
 					if (targetObjResult.IsNone())
