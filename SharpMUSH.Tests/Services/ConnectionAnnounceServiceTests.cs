@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using OneOf;
 using OneOf.Types;
@@ -144,6 +145,13 @@ public class ConnectionAnnounceServiceTests
 		return mediator;
 	}
 
+	/// <summary>
+	/// Builds a fresh <see cref="ILogger{ConnectionAnnounceService}"/> substitute for the service's
+	/// constructor. Tests that expect an exception to be swallowed assert against this directly.
+	/// </summary>
+	private static ILogger<ConnectionAnnounceService> FakeLogger() =>
+		Substitute.For<ILogger<ConnectionAnnounceService>>();
+
 	[Test]
 	public async Task AnnounceConnectAsync_FirstConnection_BroadcastsHasConnected()
 	{
@@ -154,7 +162,8 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -181,7 +190,8 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
@@ -221,7 +231,7 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, mediator);
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -242,7 +252,8 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -263,7 +274,8 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 
 		var service = new ConnectionAnnounceService(
-			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -272,5 +284,80 @@ public class ConnectionAnnounceServiceTests
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
 		await attributeService.DidNotReceive().SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+	}
+
+	/// <summary>
+	/// Task 7 fix: a thrown exception anywhere inside <c>AnnounceConnectAsync</c> (here, a mocked
+	/// <see cref="ICommunicationService.SendToRoomAsync"/> failure standing in for a buggy ACONNECT
+	/// hook or a transient DB failure) must be caught and logged, not propagated — so the caller's
+	/// subsequent code (e.g. the room-contents refresh) still runs.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_DependencyThrows_ExceptionIsCaughtAndLogged()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		communicationService.SendToRoomAsync(
+				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
+				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<INotifyService.NotificationType>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), logger);
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1);
+
+		logger.Received(1).Log(
+			LogLevel.Error,
+			Arg.Any<EventId>(),
+			Arg.Any<object>(),
+			Arg.Any<Exception>(),
+			Arg.Any<Func<object, Exception?, string>>());
+	}
+
+	/// <summary>
+	/// Task 7 fix: same guarantee as above, for <c>AnnounceDisconnectAsync</c>.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_DependencyThrows_ExceptionIsCaughtAndLogged()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		communicationService.SendToRoomAsync(
+				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
+				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<INotifyService.NotificationType>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
+			.Returns(_ => throw new InvalidOperationException("boom"));
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), logger);
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0);
+
+		logger.Received(1).Log(
+			LogLevel.Error,
+			Arg.Any<EventId>(),
+			Arg.Any<object>(),
+			Arg.Any<Exception>(),
+			Arg.Any<Func<object, Exception?, string>>());
 	}
 }

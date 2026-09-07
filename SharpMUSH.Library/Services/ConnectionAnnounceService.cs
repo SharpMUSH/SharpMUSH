@@ -1,5 +1,6 @@
 using System.Globalization;
 using Mediator;
+using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -22,122 +23,143 @@ public class ConnectionAnnounceService(
 	IGameBroadcastService gameBroadcastService,
 	IAttributeService attributeService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IMediator mediator) : IConnectionAnnounceService
+	IMediator mediator,
+	ILogger<ConnectionAnnounceService> logger) : IConnectionAnnounceService
 {
 	/// <inheritdoc />
 	public async ValueTask AnnounceConnectAsync(IMUSHCodeParser parser, AnySharpObject player, int connectionCount)
 	{
-		var isDark = await player.IsDark();
-		var name = player.Object().Name;
-		var wording = connectionCount > 1
-			? ErrorMessages.Notifications.GameHasReconnected
-			: ErrorMessages.Notifications.GameHasConnected;
-		var fullMessage = $"{name} {wording}";
-
-		if (await player.HasFlag("SUSPECT"))
+		try
 		{
-			await gameBroadcastService.BroadcastToFlagAsync(
-				"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
-		}
+			var isDark = await player.IsDark();
+			var name = player.Object().Name;
+			var wording = connectionCount > 1
+				? ErrorMessages.Notifications.GameHasReconnected
+				: ErrorMessages.Notifications.GameHasConnected;
+			var fullMessage = $"{name} {wording}";
 
-		var gameLine = $"GAME: {fullMessage}";
-		if (isDark)
-		{
-			await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
-		}
-		else
-		{
-			await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
-		}
+			if (await player.HasFlag("SUSPECT"))
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(
+					"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
+			}
 
-		if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
-		{
-			await communicationService.SendToRoomAsync(
-				player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+			var gameLine = $"GAME: {fullMessage}";
+			if (isDark)
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
+			}
+			else
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
+			}
 
-			if (!isDark)
+			if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
+			{
+				await communicationService.SendToRoomAsync(
+					player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+
+				if (!isDark)
+				{
+					var loc = await player.Where();
+					await communicationService.SendToRoomAsync(
+						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
+						excludeObjects: [player]);
+				}
+			}
+
+			await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
+
+			if (configuration.CurrentValue.Attribute.RoomConnects)
 			{
 				var loc = await player.Where();
-				await communicationService.SendToRoomAsync(
-					player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
-					excludeObjects: [player]);
+				var locObj = loc.WithExitOption();
+				if (locObj.IsRoom || locObj.IsThing)
+				{
+					await QueueHookAsync(parser, locObj, player, "ACONNECT", connectionCount.ToString());
+				}
 			}
+
+			await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ACONNECT", connectionCount.ToString());
 		}
-
-		await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
-
-		if (configuration.CurrentValue.Attribute.RoomConnects)
+		catch (Exception ex)
 		{
-			var loc = await player.Where();
-			var locObj = loc.WithExitOption();
-			if (locObj.IsRoom || locObj.IsThing)
-			{
-				await QueueHookAsync(parser, locObj, player, "ACONNECT", connectionCount.ToString());
-			}
+			// Log error but don't propagate - a broken ACONNECT hook (or a transient failure
+			// resolving the player's zone/master room) shouldn't skip whatever the caller runs
+			// after this, most concretely the room-contents refresh other players depend on.
+			logger.LogError(ex, "Error announcing connect for player {Player}", player.Object().DBRef);
 		}
-
-		await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ACONNECT", connectionCount.ToString());
 	}
 
 	/// <inheritdoc />
 	public async ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections)
 	{
-		var isDark = await player.IsDark();
-		var name = player.Object().Name;
-		var wording = remainingConnections > 0
-			? ErrorMessages.Notifications.GameHasPartiallyDisconnected
-			: ErrorMessages.Notifications.GameHasDisconnected;
-		var fullMessage = $"{name} {wording}";
-
-		if (await player.HasFlag("SUSPECT"))
+		try
 		{
-			await gameBroadcastService.BroadcastToFlagAsync(
-				"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
-		}
+			var isDark = await player.IsDark();
+			var name = player.Object().Name;
+			var wording = remainingConnections > 0
+				? ErrorMessages.Notifications.GameHasPartiallyDisconnected
+				: ErrorMessages.Notifications.GameHasDisconnected;
+			var fullMessage = $"{name} {wording}";
 
-		var gameLine = $"GAME: {fullMessage}";
-		if (isDark)
-		{
-			await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
-		}
-		else
-		{
-			await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
-		}
+			if (await player.HasFlag("SUSPECT"))
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(
+					"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
+			}
 
-		if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
-		{
-			await communicationService.SendToRoomAsync(
-				player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+			var gameLine = $"GAME: {fullMessage}";
+			if (isDark)
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
+			}
+			else
+			{
+				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
+			}
 
-			if (!isDark)
+			if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
+			{
+				await communicationService.SendToRoomAsync(
+					player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+
+				if (!isDark)
+				{
+					var loc = await player.Where();
+					await communicationService.SendToRoomAsync(
+						player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
+						excludeObjects: [player]);
+				}
+			}
+
+			await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
+
+			if (configuration.CurrentValue.Attribute.RoomConnects)
 			{
 				var loc = await player.Where();
-				await communicationService.SendToRoomAsync(
-					player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
-					excludeObjects: [player]);
+				var locObj = loc.WithExitOption();
+				if (locObj.IsRoom || locObj.IsThing)
+				{
+					await QueueHookAsync(parser, locObj, player, "ADISCONNECT", remainingConnections.ToString());
+				}
 			}
-		}
 
-		await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
+			await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ADISCONNECT", remainingConnections.ToString());
 
-		if (configuration.CurrentValue.Attribute.RoomConnects)
-		{
-			var loc = await player.Where();
-			var locObj = loc.WithExitOption();
-			if (locObj.IsRoom || locObj.IsThing)
+			if (remainingConnections == 0)
 			{
-				await QueueHookAsync(parser, locObj, player, "ADISCONNECT", remainingConnections.ToString());
+				var lastLogout = DateTimeOffset.UtcNow.ToLocalTime()
+					.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
+				await attributeService.SetAttributeAsync(player, player, "LASTLOGOUT", MarkupText.Plain(lastLogout));
 			}
 		}
-
-		await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ADISCONNECT", remainingConnections.ToString());
-
-		if (remainingConnections == 0)
+		catch (Exception ex)
 		{
-			var lastLogout = DateTimeOffset.UtcNow.ToLocalTime()
-				.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
-			await attributeService.SetAttributeAsync(player, player, "LASTLOGOUT", MarkupText.Plain(lastLogout));
+			// Log error but don't propagate - a broken ADISCONNECT hook (or a transient failure
+			// resolving the player's zone/master room) shouldn't skip whatever the caller runs
+			// after this, most concretely the room-contents refresh other players depend on.
+			logger.LogError(ex, "Error announcing disconnect for player {Player}", player.Object().DBRef);
 		}
 	}
 
