@@ -138,6 +138,11 @@ public partial class Functions
 
 			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 		catch (ArgumentException)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpInvalid));
@@ -231,6 +236,11 @@ public partial class Functions
 				return ValueTask.FromResult<CallState>(firstMatch ?? MModule.empty());
 			}
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+		}
 		catch (ArgumentException)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpInvalid));
@@ -280,6 +290,11 @@ public partial class Functions
 
 				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
 			}
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
 		}
 		catch (ArgumentException)
 		{

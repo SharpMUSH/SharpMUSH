@@ -74,9 +74,24 @@ public class ListenerRoutingService(
 		var listener = targetResult.WithoutNone();
 
 		// Only when there is no speaker at all, which NotifyService never does: it routes nothing
-		// without one. The location stands in for the speaker, as it did when this walked the room.
-		var actualSender = sender ?? (await mediator.Send(new GetObjectNodeQuery(context.Location.Value)))
-			.WithoutNone();
+		// without one. The location stands in for the speaker, as it did when this walked the room —
+		// including the part where a location that resolves to nothing ends the pass rather than
+		// throwing its way out of it.
+		AnySharpObject actualSender;
+		if (sender is not null)
+		{
+			actualSender = sender;
+		}
+		else
+		{
+			var location = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
+			if (location.IsNone())
+			{
+				return;
+			}
+
+			actualSender = location.WithoutNone();
+		}
 
 		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
 			return;
@@ -118,7 +133,9 @@ public class ListenerRoutingService(
 			MModule.getWildcardMatchAsRegex(MModule.single(listenPattern)),
 			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-		if (!regex.IsMatch(message))
+		// Not the raw IsMatch: a LISTEN pattern that cannot finish must not take the puppet relay below
+		// down with it, and NotifyService would swallow the exception without either happening.
+		if (!SoftcodeRegex.IsMatch(regex, message))
 			return;
 
 		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;

@@ -59,6 +59,35 @@ public class OptionsValidationTests
 		await Assert.That(thrown!.Failures).IsEquivalentTo(new[] { "first", "second" });
 	}
 
+	/// <summary>
+	/// A rejected default must not reach the database. It would be reloaded on the next start, fail the
+	/// same validation, and there would be no way to correct it without repairing the document by hand:
+	/// the code path that writes a fresh default only runs when there is nothing stored.
+	/// </summary>
+	[Test]
+	public async Task DefaultsAreNotStoredWhenValidationRejectsThem()
+	{
+		var store = StoreWithNoSavedOptions();
+		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Fail("no"))]);
+
+		Assert.Throws<OptionsValidationException>(() => service.Create(Options.DefaultName));
+
+		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task ValidDefaultsAreStored()
+	{
+		var store = StoreWithNoSavedOptions();
+		var service = new OptionsService(store, [new StubValidator(ValidateOptionsResult.Success)]);
+
+		service.Create(Options.DefaultName);
+
+		await store.Received(1).SetExpandedServerData(nameof(SharpMUSHOptions), Arg.Any<object>(),
+			Arg.Any<CancellationToken>());
+	}
+
 	[Test]
 	public async Task AValidConfigurationIsReturned()
 	{

@@ -30,12 +30,15 @@ public class OptionsService(
 			return Validated(name, data);
 		}
 
-		var defaultSettings = Default();
+		// Validated BEFORE it is stored. This branch only runs when nothing is stored, so a rejected
+		// default written here would be reloaded on every later start, fail the same validation, and
+		// leave no path back that does not repair the document by hand.
+		var defaultSettings = Validated(name, Default());
 
 		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettings)
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
-		return Validated(name, defaultSettings);
+		return defaultSettings;
 	}
 
 	/// <summary>

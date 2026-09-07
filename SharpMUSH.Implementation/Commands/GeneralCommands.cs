@@ -3884,6 +3884,11 @@ public partial class Commands
 
 			return text;
 		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// Same answer as an unusable pattern: the text comes back as it went in.
+			return text;
+		}
 		catch (ArgumentException)
 		{
 			return text;
@@ -4760,6 +4765,11 @@ public partial class Commands
 						var regex = SoftcodeRegex.Create(pattern, RegexOptions.None);
 						matches = regex.IsMatch(testString);
 					}
+					catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
+						continue;
+					}
 					catch (ArgumentException)
 					{
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
@@ -4770,7 +4780,7 @@ public partial class Commands
 				{
 					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
 					var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
-					matches = regex.IsMatch(testString);
+					matches = SoftcodeRegex.IsMatch(regex, testString);
 				}
 
 				if (matches && action != null)
@@ -4969,7 +4979,7 @@ public partial class Commands
 				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
 				var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.None);
 
-				if (regex.IsMatch(testString))
+				if (SoftcodeRegex.IsMatch(regex, testString))
 				{
 					matchFound = true;
 					break;

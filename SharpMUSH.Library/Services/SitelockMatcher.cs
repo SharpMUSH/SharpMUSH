@@ -102,5 +102,5 @@ public static class SitelockMatcher
 		=> SoftcodeRegex.Create(
 				"^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$",
 				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
-			.IsMatch(text);
+			is var glob && SoftcodeRegex.IsMatch(glob, text);
 }

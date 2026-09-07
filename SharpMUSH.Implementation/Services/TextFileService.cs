@@ -186,7 +186,7 @@ public class TextFileService : ITextFileService
 					.Distinct(StringComparer.OrdinalIgnoreCase);
 			}
 
-			return entries.Where(e => regex.IsMatch(e)).ToList();
+			return entries.Where(e => SoftcodeRegex.IsMatch(regex, e)).ToList();
 		}
 	}
 

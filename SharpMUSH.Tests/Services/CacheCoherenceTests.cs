@@ -345,5 +345,33 @@ public class CacheCoherenceTests
 		await Assert.That((await cache.TryGetAsync<string>(read.CacheKey)).HasValue).IsFalse();
 	}
 
+	/// <summary>
+	/// The command and listen sets are built by walking the object's parent chain, so a write to an
+	/// ANCESTOR changes them — and the write only names the object it wrote. Without a tag the child
+	/// kept answering with the ancestor's old $-commands until its entry expired: a builder adds a
+	/// $-command to a parent and the children ignore it for ten minutes.
+	/// </summary>
+	[Test]
+	public async Task AWriteToAnAncestorExpiresADescendantsCommandAndListenSets()
+	{
+		using var cache = NewCache();
+		var factory = new TestObjectFactory();
+		var child = factory.CreateThing(8, "Child");
+		var commands = new GetCommandAttributesQuery(child);
+		var listens = new GetListenAttributesQuery(child);
+
+		await cache.SetAsync(commands.CacheKey, "the ancestor's old $-commands", CacheEntryProfiles.Tagged,
+			tags: commands.CacheTags);
+		await cache.SetAsync(listens.CacheKey, "the ancestor's old ^-patterns", CacheEntryProfiles.Tagged,
+			tags: listens.CacheTags);
+
+		// #7 is the ancestor. The write names only itself; nothing about #8 appears in its keys.
+		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
+			.Handle(new SetAttributeCommand(Seven, ["CMD"], MModule.single("$foo:@pemit %#=bar"), null!),
+				(_, _) => ValueTask.FromResult(true), CancellationToken.None);
+
+		await Assert.That(await Surviving(cache, [commands.CacheKey, listens.CacheKey])).IsEmpty();
+	}
+
 	#endregion
 }

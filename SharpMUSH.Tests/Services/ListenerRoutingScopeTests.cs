@@ -171,6 +171,27 @@ public class ListenerRoutingScopeTests
 	}
 
 	/// <summary>
+	/// The interface takes a nullable sender, and with none the location stands in for the speaker.
+	/// Resolving it can answer nothing — the pass used to return early when it did, and must still.
+	/// </summary>
+	[Test]
+	public async Task ANullSenderWithAnUnresolvableLocationIsNotAnError()
+	{
+		var target = Occupant(2);
+		ResolveObjectsThroughMediator(target);
+		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == Room.Object.DBRef.Number),
+				Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new OneOf.Types.None()));
+		var service = NewService();
+
+		await service.ProcessNotificationAsync(
+			new NotificationContext(target.Object().DBRef, Room.Object.DBRef, []),
+			"nobody said this", null, INotifyService.NotificationType.Say);
+
+		await Assert.That(ListenReadsFor(target)).IsEqualTo(0);
+	}
+
+	/// <summary>
 	/// How many times the LISTEN attribute of <paramref name="listener"/> was read. Counted by dbref:
 	/// the service re-wraps each object in a fresh union, so the argument is never the same instance.
 	/// </summary>

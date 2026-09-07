@@ -973,6 +973,11 @@ public partial class Functions
 					}
 				}
 			}
+			catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+			{
+				// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+				return new CallState(ErrorMessages.Returns.RegexpTimeout);
+			}
 			catch (ArgumentException)
 			{
 				return new CallState(ErrorMessages.Returns.RegexpInvalid);
@@ -1057,6 +1062,11 @@ public partial class Functions
 
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
 		}
 		catch (ArgumentException)
 		{

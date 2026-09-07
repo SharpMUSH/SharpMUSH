@@ -1001,7 +1001,7 @@ public partial class Commands
 					continue;
 				}
 
-				if (patternRegex is not null && !patternRegex.IsMatch(power.Name))
+				if (patternRegex is not null && !SoftcodeRegex.IsMatch(patternRegex, power.Name))
 				{
 					continue;
 				}

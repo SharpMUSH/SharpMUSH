@@ -36,9 +36,19 @@ public static class SoftcodeRegex
 	/// How many compiled patterns to keep. Past this the cache stops admitting new ones rather than
 	/// growing: the excess is recompiled per use, which is the old behaviour and still bounded work.
 	/// </summary>
-	private const int Capacity = 1024;
+	public const int Capacity = 1024;
+
+	/// <summary>How many are held. For the test that the bound holds under concurrent misses.</summary>
+	public static int CachedCount => Cache.Count;
 
 	private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex> Cache = new();
+
+	/// <summary>
+	/// Held only across the count-and-admit on a miss. Reading the count and then adding are two steps,
+	/// and concurrent misses could each see room and each insert, putting the cache over its bound for
+	/// the life of the process. Hits never reach it.
+	/// </summary>
+	private static readonly Lock Admission = new();
 
 	/// <summary>
 	/// A regex for <paramref name="pattern"/>, time-bounded and shared with other callers asking for
@@ -56,8 +66,48 @@ public static class SoftcodeRegex
 		// by every subsequent request, and so the constructor never runs under a dictionary lock.
 		var regex = new Regex(pattern, options, MatchTimeout);
 
-		return Cache.Count >= Capacity
-			? regex
-			: Cache.GetOrAdd((pattern, options), regex);
+		lock (Admission)
+		{
+			return Cache.Count >= Capacity
+				? regex
+				: Cache.GetOrAdd((pattern, options), regex);
+		}
+	}
+
+	/// <summary>
+	/// <paramref name="regex"/> against <paramref name="input"/>, where a pattern that cannot finish in
+	/// <see cref="MatchTimeout"/> does not match.
+	/// </summary>
+	/// <remarks>
+	/// For the engine's own matching — command discovery, listen patterns, sitelock, help search — where
+	/// there is no player waiting on a result to be told anything. Bounding the match turned a hang into
+	/// a <see cref="RegexMatchTimeoutException"/>, and an exception nobody catches on those paths is a
+	/// different outage, not a fix: it would abort command matching rather than let the next pattern be
+	/// tried. Softcode functions do NOT use this — they have an answer to give, and say
+	/// <c>#-1 REGEXP TIMEOUT</c>.
+	/// </remarks>
+	public static bool IsMatch(Regex regex, string input)
+	{
+		try
+		{
+			return regex.IsMatch(input);
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return false;
+		}
+	}
+
+	/// <summary><see cref="IsMatch"/>, for the callers that need the groups. Null when it timed out.</summary>
+	public static Match? Match(Regex regex, string input)
+	{
+		try
+		{
+			return regex.Match(input);
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return null;
+		}
 	}
 }

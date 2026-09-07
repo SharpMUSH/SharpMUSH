@@ -721,7 +721,7 @@ public partial class Functions
 		{
 			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
 			var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase);
-			filteredFunctions = allFunctions.Where(name => regex.IsMatch(name));
+			filteredFunctions = allFunctions.Where(name => SoftcodeRegex.IsMatch(regex, name));
 		}
 
 		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));

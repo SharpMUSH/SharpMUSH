@@ -123,7 +123,7 @@ public partial class ValidateService(
 	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
 		var reg = _regexCache.GetOrAdd(name, _ => SoftcodeRegex.Create(regex, RegexOptions.Compiled));
-		return reg.IsMatch(value);
+		return SoftcodeRegex.IsMatch(reg, value);
 	}
 
 	/// <summary>
@@ -200,7 +200,7 @@ public partial class ValidateService(
 				return SoftcodeRegex.Create(regexPattern, RegexOptions.Compiled);
 			});
 
-			if (regex.IsMatch(value))
+			if (SoftcodeRegex.IsMatch(regex, value))
 			{
 				return true;
 			}

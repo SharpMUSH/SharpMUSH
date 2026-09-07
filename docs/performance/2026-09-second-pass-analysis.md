@@ -14,8 +14,9 @@ fixed, in a place it did not look.
 > **Status.** Fixed on `claude/attribute-cache-tags-and-gc`, with tests: findings 1, 3, 4, 5, 9, 11,
 > 12, 13, 14, and 2 in part. Finding 2 is fixed for the attribute reads that consult one object; the
 > inherited reads keep a game-wide tag deliberately (see `CacheKeys.AttributesTag`), and closing that
-> needs the providers to project the objects a read visited — the same prerequisite as the
-> `commands:`/`listens:` parent-chain gap recorded on those queries.
+> needs the providers to project the objects a read visited. The `commands:`/`listens:` parent-chain
+> gap is closed — those handlers walk the chain in managed code, not AQL, so an earlier note saying
+> they needed the same provider work was wrong; they now carry the game-wide inherited tag.
 >
 > **6** (`WaitForSync`): durability is unchanged and stays on. What went was the per-operation flags
 > *inside* a stream transaction, which cannot sync anything — see that section. **7**: the Arango
