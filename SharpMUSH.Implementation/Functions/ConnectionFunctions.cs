@@ -106,7 +106,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (int.TryParse(arg0, out var port))
+		if (long.TryParse(arg0, out var port))
 		{
 			var data2 = ConnectionService.Get(port);
 			if (data2 is null || data2.Ref is null)
@@ -427,7 +427,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (int.TryParse(arg0, out var port))
+		if (long.TryParse(arg0, out var port))
 		{
 			var data2 = ConnectionService.Get(port);
 			if (data2 is null || data2.Ref is null)

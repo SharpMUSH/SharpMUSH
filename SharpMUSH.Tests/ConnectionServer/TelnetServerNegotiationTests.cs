@@ -37,6 +37,35 @@ public class TelnetServerNegotiationTests
 
 	private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
+	[Test]
+	public async Task RegistrationFailureReleasesAllocatedDescriptor()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		service.RegisterAsync(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<Encoding>>(),
+			Arg.Any<Action>(), Arg.Any<Func<string, string, ValueTask>>(), Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(),
+			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("registration failed")));
+		var descriptors = Substitute.For<IDescriptorGeneratorService>();
+		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var input = new Pipe();
+		var output = new Pipe();
+		using var cancellation = new CancellationTokenSource();
+		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), cancellation.Token);
+		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
+			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions());
+		try
+		{
+			await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout)).Throws<IOException>();
+			descriptors.Received(1).ReleaseTelnetDescriptor(42);
+		}
+		finally
+		{
+			cancellation.Cancel();
+			await input.Writer.CompleteAsync();
+			await output.Reader.CompleteAsync();
+		}
+	}
+
 	/// <summary>A builder factory in server mode, standing in for the one DI registers.</summary>
 	private sealed class ServerBuilderFactory : ITelnetInterpreterFactory
 	{
@@ -83,7 +112,7 @@ public class TelnetServerNegotiationTests
 			});
 
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
-		descriptors.GetNextTelnetDescriptor().Returns(42L);
+		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
 
 		var server = new TelnetServer(
 			NullLogger<TelnetServer>.Instance,
@@ -286,7 +315,7 @@ public class TelnetServerNegotiationTests
 				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
 				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
 				Arg.Any<Func<string, string, ValueTask>>(),
-				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>())
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
 			.Returns(async _ =>
 			{
 				registrationStarted.TrySetResult();
@@ -356,7 +385,7 @@ public class TelnetServerNegotiationTests
 				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
 				Arg.Any<Func<string, string, ValueTask>>(),
 				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(),
-				isSecure: false);
+				isSecure: false, cancellationToken: Arg.Any<CancellationToken>());
 		}
 		finally
 		{

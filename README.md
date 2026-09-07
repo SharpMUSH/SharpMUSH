@@ -34,7 +34,8 @@ We are still in the early stages of development, and are working on getting a st
 # Docker Deployment
 SharpMUSH is available as Docker images on DockerHub:
 - `sharpmush/sharpmush-server` - Main server
-- `sharpmush/sharpmush-connectionserver` - Connection server
+- `sharpmush/sharpmush-socketserver` - Stable telnet/WebSocket socket owner
+- `sharpmush/sharpmush-connectionserver` - Replaceable rendering worker
 
 For information on setting up automatic DockerHub publishing when new versions are released, see [DockerHub Setup Guide](./docs/DOCKERHUB_SETUP.md).
 
@@ -61,6 +62,14 @@ dotnet test
 
 The main entrypoint to set as a Startup Project is [`SharpMUSH.Server`](./SharpMUSH.Server).
 
-For full integration, you will also need to run [`SharpMUSH.ConnectionServer`](./SharpMUSH.ConnectionServer), which handles client connections.
+For full integration, run [`SharpMUSH.SocketServer`](./SharpMUSH.SocketServer), which owns client sockets, and [`SharpMUSH.ConnectionServer`](./SharpMUSH.ConnectionServer), which renders output over a shared Unix socket. The local Compose stack wires all three processes and persistent NATS storage:
+
+```bash
+docker compose up --build
+```
+
+When launching projects separately on Linux, set `Rendering__SocketPath` to the same writable path (for example `/tmp/sharpmush-render.sock`) for both SocketServer and ConnectionServer, and provide `NATS_URL` to SocketServer and the main server. For quick images from Release binaries, use `Dockerfile.socketserver.local` for SocketServer and `Dockerfile.connectionserver.local` for the renderer; mount their shared socket directory.
+
+See [connection updates and recovery](./deploy/connection-updates.md) for migration and restart behavior. The [development Kubernetes manifest](./kubernetes/dev-k8s.yaml) keeps SocketServer and renderer in one Pod: updating either image replaces that Pod and drops sockets. Use the single-host Compose deployment for independent renderer updates that retain client sockets.
 
 Additionally, a Blazor web client is available at [`SharpMUSH.Client`](./SharpMUSH.Client).

@@ -147,8 +147,13 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	/// <summary>Telnet port assigned to the ConnectionServer during initialisation.</summary>
 	public int TelnetPort { get; private set; }
 
+	public IServiceProvider ConnectionServerServices => _connectionServerApp!.Services;
+	public IServiceProvider ServerServices => _serverFactory!.Services;
+
 	private TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>? _serverFactory;
 	private WebApplication? _connectionServerApp;
+	private WebApplication? _renderingWorkerApp;
+	private readonly string _renderingDirectory = Path.Combine(Path.GetTempPath(), "sm-integration-" + Guid.NewGuid().ToString("N"));
 
 	public async Task InitializeAsync()
 	{
@@ -174,15 +179,20 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 
 		TelnetPort = FindFreePort();
 		var httpPort = FindFreePort();
+		var renderingSocket = Path.Combine(_renderingDirectory, "render.sock");
+		_renderingWorkerApp = SharpMUSH.RenderingWorker.Program.CreateApplication([], renderingSocket);
+		await _renderingWorkerApp.StartAsync();
 
 		var csArgs = new[]
 		{
 			$"--ConnectionServer:TelnetPort={TelnetPort}",
 			$"--ConnectionServer:HttpPort={httpPort}",
 			"--ConnectionServer:PuebloEnabled=true",
-			"--ConnectionServer:MxpEnabled=true"
+			"--ConnectionServer:MxpEnabled=true",
+			"--Rendering:SocketPath=" + renderingSocket
 		};
 
+		// Integration tests exercise the production Unix-socket rendering path, including Pueblo/MXP.
 		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl);
 
 		_connectionServerApp.UseWebSockets();
@@ -207,6 +217,13 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 			await _connectionServerApp.StopAsync();
 			await _connectionServerApp.DisposeAsync();
 		}
+
+		if (_renderingWorkerApp != null)
+		{
+			await _renderingWorkerApp.StopAsync();
+			await _renderingWorkerApp.DisposeAsync();
+		}
+		if (Directory.Exists(_renderingDirectory)) Directory.Delete(_renderingDirectory, recursive: true);
 
 		if (_serverFactory != null)
 		{

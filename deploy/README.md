@@ -43,6 +43,25 @@ The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on por
 Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
 account linked to `#1`.
 
+### Socket worker identity and connection capacity
+
+SocketServer and renderer run as UID/GID `1654:1654`. New `render-socket` volumes
+inherit that ownership from the images; the Kubernetes example uses `fsGroup: 1654`.
+When upgrading an existing root-owned socket volume, stop both services and change
+its ownership before starting the new images (this maintenance disconnects clients):
+
+```bash
+docker compose -f docker-compose.prod.yml stop connectionserver renderer
+docker compose -f docker-compose.prod.yml run --rm --no-deps --user 0:0 --entrypoint chown renderer -R 1654:1654 /run/sharpmush
+docker compose -f docker-compose.prod.yml up -d connectionserver renderer
+```
+
+Use your selected Compose file for all three commands. SocketServer waits for the
+renderer to answer an HTTP/2 health request on the shared Unix socket before startup.
+Its WebSocket capacity defaults to 10,000 concurrent upgraded connections; set the
+positive `ConnectionServer__MaxConcurrentUpgradedConnections` environment variable
+to tune that limit. This limit does not apply to raw Telnet sockets.
+
 ### The database
 
 The world is an LMDB environment at `/app/data/lightning` on the `app-data` volume: one
@@ -356,9 +375,11 @@ complete.
 ## Updating
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
-publishes `sharpmush/sharpmush-server:dev` and `sharpmush/sharpmush-connectionserver:dev` to
-Docker Hub (`.github/workflows/docker-dev.yml`); the `watchtower` service polls Docker Hub every
-5 minutes and recreates the two labeled services when the tag moves, pruning superseded images.
+publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
+`sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
+for the renderer, and `sharpmush/sharpmush-socketserver:dev` for the socket owner. The
+`watchtower` service polls every 5 minutes and recreates each of these three labeled services
+when its image tag changes, pruning superseded images. Socket owner replacement drops live sockets.
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
 image — the Blazor WASM portal is baked into the server image at build time.
 
@@ -373,3 +394,7 @@ docker compose up -d
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
 are recorded in the database and re-applied only when new, so unattended restarts are safe.
+
+## Updates and live connections
+
+See [Connections during deployment](connection-updates.md) for lifecycle notices, PR deployment-impact checks, stop grace, session recovery limits and rollout options.

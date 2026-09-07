@@ -6,6 +6,38 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class DetachedSessionTrackerTests
 {
 	[Test]
+	public async Task DisposedTrackerRejectsNewAndAlreadyQueuedTimers()
+	{
+		var scheduler = new ManualScheduler();
+		var tracker = new DetachedSessionTracker(scheduler);
+		var fired = 0;
+		tracker.Detach(7, () => { fired++; return Task.CompletedTask; }, TimeSpan.FromMinutes(1));
+		var queued = scheduler.Captured!;
+		tracker.Dispose();
+		tracker.Detach(8, () => { fired++; return Task.CompletedTask; }, TimeSpan.Zero);
+		await queued();
+		await Assert.That(fired).IsEqualTo(0);
+		await Assert.That(scheduler.Disposed).IsTrue();
+		await Assert.That(tracker.IsDetached(8)).IsFalse();
+	}
+
+	[Test]
+	public async Task ReplacedTimerCannotExpireItsReplacement()
+	{
+		var scheduler = new ManualScheduler();
+		using var tracker = new DetachedSessionTracker(scheduler);
+		var fired = 0;
+		tracker.Detach(7, () => { fired++; return Task.CompletedTask; }, TimeSpan.FromMinutes(1));
+		var previous = scheduler.Captured!;
+		tracker.Detach(7, () => { fired += 10; return Task.CompletedTask; }, TimeSpan.FromMinutes(1));
+		await previous();
+		await Assert.That(fired).IsEqualTo(0);
+		await Assert.That(tracker.IsDetached(7)).IsTrue();
+		await scheduler.Captured!();
+		await Assert.That(fired).IsEqualTo(10);
+	}
+
+	[Test]
 	public async Task Detach_then_grace_expiry_fires_onGraceExpired_once()
 	{
 		var sched = new ManualScheduler();
