@@ -59,6 +59,9 @@ else to run, tune or connect to. Three settings on `sharpmush-server` matter:
 memory — the file is sparse and only grows as the world does. Raise it before a world reaches it;
 the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
 
+Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
+that is safe to read, have the server make one: see [Backups](#backups-restic).
+
 #### Switching a box that ran SurrealDB
 
 There is no data migration: the world starts fresh and the first visitor to `/setup` claims the
@@ -261,11 +264,28 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots the `app-data` volume (the LMDB world + wiki
-assets — i.e. the entire game) to your bucket every night at 03:30, keeping 7 daily and 4
-weekly snapshots. The volume is mounted **read-only**, so a backup run can never corrupt live
-data. `lock.mdb` is excluded: it is the live reader table, meaningless in a snapshot and wrong
-to restore.
+Once enabled, the `backup` service snapshots `/data/backup` and `/data/wiki-assets` to your
+bucket every night at 03:30, keeping 7 daily and 4 weekly snapshots. The volume is mounted
+**read-only**, so a backup run can never corrupt live data.
+
+**What it snapshots is a copy, not the live world.** restic reads `data.mdb` front to back
+while commits keep landing, and LMDB does not promise such a copy opens. So the server takes
+its own copies instead, with the routine LMDB supplies for exactly this (`mdb_env_copy`): each
+one is a complete environment, written into `/app/data/backup/<timestamp>` while the game keeps
+running, with `latest` pointing at the newest. `SHARPMUSH_LIGHTNING_BACKUP_INTERVAL=6h` on
+`sharpmush-server` takes one every six hours, so the 03:30 run always finds a recent one. The
+live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCES`.
+
+| Setting on `sharpmush-server` | Default | What it does |
+|---|---|---|
+| `SHARPMUSH_LIGHTNING_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
+| `SHARPMUSH_LIGHTNING_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
+| `SHARPMUSH_LIGHTNING_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
+| `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
+
+A wizard can take one at any time in-game with `@backup`, and list what is on disk with
+`@backup/list`. Both are Lightning-only — no other provider keeps the world in a directory this
+process owns, and on those `@backup` says so.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
@@ -288,19 +308,24 @@ docker compose run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
-**To restore for real:** stop the stack, restore the snapshot's `/data` contents back
-into the `app-data` volume, then start again. The game reads whatever is in the volume
-on boot. Delete any `lightning.previous` directory the snapshot carried; it is a
-superseded world from a staging promotion, not part of the live one.
+**To restore for real:** stop the stack, then put the snapshot's contents back into the
+`app-data` volume — one of the `backup/<timestamp>` directories becomes `lightning`, and
+`wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
 
-> **Stop the server for the backup window.** restic reads `data.mdb` front to back while
-> commits keep landing, and LMDB does not promise that such a copy opens: its supported hot
-> backup is its own copy routine (`mdb_env_copy`), which the server exposes to plugins as
-> `CopyToAsync` but not yet as a command or an endpoint. Until it does, the supported path is
-> `docker compose stop sharpmush-server` before the 03:30 run and `start` after it — stopping
-> flushes everything and closes the environment cleanly, and a hobby game can afford the minute.
-> A snapshot taken from a running server will usually be fine, and you will not know when it
-> is not until you need it.
+```bash
+docker compose stop sharpmush-server connectionserver
+docker compose run --rm backup restic restore latest --target /restore   # into a scratch mount
+# copy backup/<timestamp>/ over the volume's lightning/ , then:
+docker compose start connectionserver sharpmush-server
+```
+
+A restored copy carries no `lock.mdb` — LMDB writes a fresh one on open — and no
+`lightning.previous`, which is a superseded world from a staging promotion and never part of a
+copy.
+
+The server does **not** need to stop for the nightly run: what restic reads is a finished copy,
+and a copy still being written is named `.incoming-*` and excluded until it is moved into place
+complete.
 
 ## Updating
 

@@ -278,11 +278,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	{
 		_meterListener?.Dispose();
 
-		if (_ownLightningPath is not null && Directory.Exists(_ownLightningPath))
+		// Both the world and the hot-backup root the server derives from its path (<world>.backups).
+		foreach (var owned in _ownLightningPath is null ? [] : new[] { _ownLightningPath, _ownLightningPath + ".backups" })
 		{
+			if (!Directory.Exists(owned)) continue;
 			try
 			{
-				Directory.Delete(_ownLightningPath, recursive: true);
+				Directory.Delete(owned, recursive: true);
 			}
 			catch (IOException)
 			{

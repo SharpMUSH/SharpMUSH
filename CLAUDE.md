@@ -55,10 +55,16 @@ Key environment variables:
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_LIGHTNING_BACKUP_PATH` — where `@backup` writes hot copies of the world (default: `<lightning path>.backups`)
+- `SHARPMUSH_LIGHTNING_BACKUP_KEEP` — how many copies stay on disk (default: 2)
+- `SHARPMUSH_LIGHTNING_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
+- `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — `false` to skip compaction, for faster and larger copies (default: on)
 - `SHARPMUSH_LIGHTNING_SYNC` — how hard each LMDB commit pushes on the disk: `full` (default; every commit fsynced, nothing lost on power failure), `nometasync` (one fsync per commit instead of two; power failure can lose the last transaction), or `periodic` (no sync on commit; a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS`, default 1000, and power failure can lose at most that window). The file stays consistent in every mode.
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
 
 Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
+
+Under `lightning`, `@backup` (wizard-only) copies the live world into a timestamped directory using LMDB's own copy routine, so an external snapshot tool has a consistent one to read without the server stopping. `@backup/list` shows what is on disk. Nothing else copies a live `data.mdb` — see `deploy/README.md`.
 
 First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
 

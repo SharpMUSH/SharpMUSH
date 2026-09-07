@@ -1614,6 +1614,19 @@ public static class ErrorMessages
 
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
 
+		/// <summary>Reported by <c>@backup</c> on a provider whose world is not a directory this process owns.</summary>
+		public const string BackupUnsupported = "This game's database has no world directory to copy. Back it up with that database's own tools.";
+		public const string BackupStarted = "Copying the world. The game keeps running; this may take a while.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupFailedFormat = "Backup failed: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupListHeaderFormat = "Backups in {0}:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupListRowFormat = "  {0}  {1}";
+		public const string BackupListEmpty = "No backups have been taken yet.";
+
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
