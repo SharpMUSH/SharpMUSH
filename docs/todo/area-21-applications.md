@@ -56,7 +56,7 @@ deferrals below.
       `DynamicConfig.razor:346-429` control switch with select/radio/multiselect/slider/
       date/textarea/mstring
 - [ ] Reuse change tracking (`RecalculateChanges`), sticky save bar, structured-error bind
-- [ ] `mstring` fields render via the markup pipeline (`WrapAsHtmlClass`)
+- [ ] `mstring` fields render via the markup pipeline (`MarkupText.Render(MarkupFormat.Html)`)
 - [ ] Multi-page navigation affordances (next/prev) — progression driven by softcode
       (partial submit + returned `schema`), not client predicates
 - [ ] Wrap renders in `WidgetErrorBoundary`

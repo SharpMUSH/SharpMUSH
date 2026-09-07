@@ -76,7 +76,7 @@ public partial class RecursiveMarkdownRenderer
 		var content = MarkupText.Join(MarkupText.Plain("\n"), parts);
 
 		// Add 2-space indentation to each line via plain-text split.
-		// TextAlignerModule.align cannot be used here because it expects exactly
+		// TextAligner.Align cannot be used here because it expects exactly
 		// N items for an N-column spec; parts has a variable count.
 		var plainText = content.ToPlainText();
 		if (string.IsNullOrEmpty(plainText)) return MarkupText.Empty;

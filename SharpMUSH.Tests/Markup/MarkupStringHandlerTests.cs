@@ -577,7 +577,7 @@ public class MarkupStringHandlerTests
 	[Test]
 	public async Task Hilight_String_ProducesBoldBrightWhite()
 	{
-		// Hilight() uses AnsiCodeParser.Parse("hw") → AnsiColor.ANSI([1, 37])
+		// Hilight() uses AnsiCodeParser.Parse("hw") → AnsiColor.Standard(7, true)
 		// which renders as ESC[1;37m (bold + SGR bright white).
 		MString result = "hello".Hilight();
 		await Assert.That(result.ToPlainText()).IsEqualTo("hello");

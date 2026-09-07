@@ -177,10 +177,9 @@ public class SemanticTokenRendererTests
 		// Exactly the source's length so the single token covers [0, end) with no surrounding gap —
 		// isolates the run count to what EmitStyledRuns produces for this one span.
 		var src = MarkupText.Plain("add(");
-		// AnsiCodeParser.ParseCodes allocates a fresh AnsiMarkup (and, for single-letter codes like
-		// "r", a fresh backing byte[] inside AnsiColor.ANSI) on every call — the "obvious way to
-		// write it" for a caller like Task 5's error-span override. If run-merging depended on
-		// ReferenceEquals (round 1) or on AnsiColor.ANSI's pre-fix reference-equal array field, every
+		// AnsiCodeParser.Parse allocates a fresh AnsiMarkup on every call — the "obvious way to
+		// write it" for a caller like Task 5's error-span override. Run-merging must rely on
+		// value equality (AnsiMarkup and AnsiColor are records), not ReferenceEquals, or every
 		// character here would re-fragment into its own run despite being visually identical.
 		Func<int, AnsiMarkup?> freshRedEachCall = _ => AnsiCodeParser.Parse("r");
 		var result = SemanticTokenRenderer.Render(src,
