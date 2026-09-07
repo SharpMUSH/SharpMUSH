@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using TUnit.Assertions.Enums;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Parser;
@@ -144,7 +145,9 @@ public class LockShortCircuitTests
 
 			_ = await parser.Compile(lockString)(one, one);
 
-			await Assert.That(services.Evaluated).IsEquivalentTo(new[] { first, second })
+			// CollectionOrdering.Matching, because IsEquivalentTo ignores order by default and this test
+			// is entirely about order — without it a transposition passes.
+			await Assert.That(services.Evaluated).IsEquivalentTo(new[] { first, second }, CollectionOrdering.Matching)
 				.Because($"the left operand did not settle the answer, so both sides run — left to right ({Route(leavesSuspend)})");
 		}
 	}
@@ -161,11 +164,30 @@ public class LockShortCircuitTests
 	private async ValueTask<AnySharpObject> God()
 		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
-	private static (BooleanExpressionParser Parser, RecordingEvaluationServices Services) Build(bool leavesSuspend)
+	/// <summary>
+	/// A parser per case, over its own cache: these tests compile the same lock text under both
+	/// completion routes, and a shared compiled-expression cache would hand the second one the first
+	/// one's delegate.
+	/// </summary>
+	private (BooleanExpressionParser Parser, RecordingEvaluationServices Services) Build(bool leavesSuspend)
 	{
 		var services = new RecordingEvaluationServices(leavesSuspend, "PASSES");
-		return (new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions())),
-			services);
+		var cache = new FusionCache(new FusionCacheOptions());
+		_caches.Add(cache);
+		return (new BooleanExpressionParser(services, Substitute.For<IMediator>(), cache), services);
+	}
+
+	private readonly List<FusionCache> _caches = [];
+
+	[After(Test)]
+	public void DisposeCaches()
+	{
+		foreach (var cache in _caches)
+		{
+			cache.Dispose();
+		}
+
+		_caches.Clear();
 	}
 
 	/// <summary>

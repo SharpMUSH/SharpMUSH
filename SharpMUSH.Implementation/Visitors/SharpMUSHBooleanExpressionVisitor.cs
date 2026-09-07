@@ -279,13 +279,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
-		var flag = context.@string().GetText().ToUpper().Trim();
+		var flag = context.@string().GetText().ToUpperInvariant().Trim();
 		return (_, unlockerObj) => HasFlag(unlockerObj, flag);
 	}
 
 	public override LockPredicate VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
-		var power = context.@string().GetText().ToUpper().Trim();
+		var power = context.@string().GetText().ToUpperInvariant().Trim();
 		return (_, unlockerObj) => HasPower(unlockerObj, power);
 	}
 
