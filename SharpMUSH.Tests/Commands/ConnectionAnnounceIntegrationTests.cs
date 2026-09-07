@@ -393,4 +393,58 @@ public class ConnectionAnnounceIntegrationTests
 			.Because("channels with the Quiet privilege must not carry the connect announcement");
 		await Assert.That(roomMessages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
+
+	// --- Test 10: ACONNECT hook actually executes, and reaches a zoned room's contents ------------
+
+	/// <summary>
+	/// Every other test in this file only proves the room/channel BROADCAST paths. None of them ever
+	/// caused an ACONNECT/ADISCONNECT hook attribute to actually run, because none of them set one -
+	/// so <c>QueueHookAsync</c>'s attribute-execution branch (the 15-argument <c>ParserState</c> push,
+	/// %1 binding, <c>CommandListParse</c> on the attribute body) went untested end-to-end. This is
+	/// also the regression test for the zone-dispatch bug fixed in
+	/// <c>ConnectionAnnounceService.DispatchZoneAndMasterRoomHooksAsync</c>: that method used to read
+	/// the connecting PLAYER's own Zone (almost always unset - zones are attached to rooms in
+	/// practice) instead of the zone of the player's LOCATION (PennMUSH bsd.c:5992,
+	/// <c>loc = Location(player)</c>), so a zoned room's contents never got their hook queued at all.
+	///
+	/// <para>Setup: a "zone room" holds a Thing with <c>&amp;ACONNECT thing=@emit ...%1...</c>; a
+	/// separate "player room" (chzoned to the zone room, and NOT itself the zone room) is where the
+	/// connecting player actually lands. A witness sits in the zone room. If the hook never executes,
+	/// or the zone dispatch still reads the player's own Zone instead of their location's, the witness
+	/// sees nothing.</para>
+	/// </summary>
+	[Test]
+	public async ValueTask Connect_PlayerInZonedRoom_ExecutesZonedRoomContentsAconnectHook()
+	{
+		var zoneRoom = await DigRoomAsync("AnnounceZoneRoom10");
+		var playerRoom = await DigRoomAsync("AnnounceRoom10");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {playerRoom}={zoneRoom}"));
+
+		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceZoneWitness10");
+		await TeleportAsync(witness.DbRef, zoneRoom);
+
+		var hookThingResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@create AnnounceHookThing10"));
+		var hookThing = DBRef.Parse(hookThingResult.Message!.ToPlainText());
+		await TeleportAsync(hookThing, zoneRoom);
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&ACONNECT {hookThing}=@emit Zone hook fired for connection %1"));
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnounceZoneConn10");
+		await TeleportAsync(playerRef, playerRoom);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+
+		var messages = MessagesTo(witness.DbRef, before);
+
+		await Assert.That(messages).Contains("Zone hook fired for connection 1")
+			.Because("the zone room's contents' ACONNECT must fire, proving both that QueueHookAsync " +
+				"actually executes hook attributes and that DispatchZoneAndMasterRoomHooksAsync reads " +
+				"the player's LOCATION's zone rather than the player's own (almost always unset) zone");
+	}
 }

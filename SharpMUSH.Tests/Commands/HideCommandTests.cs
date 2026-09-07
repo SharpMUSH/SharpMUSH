@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -140,5 +141,67 @@ public class HideCommandTests
 		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
 		await Assert.That(await connectedPlayer.HasFlag("DARK")).IsEqualTo(expectDark);
 		await Assert.That(ConnectionService.Get(handle)?.IsHidden).IsEqualTo(expectHidden);
+	}
+
+	/// <summary>
+	/// PennMUSH's set_flag special-cases DARK: only a Wizard or a player with the Can_Dark power may
+	/// set it on a living player (flags.c ~1793-1798) - <c>cd</c> must respect that gate rather than
+	/// force DARK on unconditionally. Unlike the WIZARD-granted scenario covered by
+	/// <see cref="ConnectAlias_SetsExpectedDarkAndHiddenState"/>, this player has neither privilege nor
+	/// the Can_Dark power, so the login must still succeed but DARK must be left untouched.
+	/// </summary>
+	[Test]
+	public async ValueTask ConnectDark_ViaCd_DoesNotSetDarkForAnUnprivilegedPlayer()
+	{
+		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "CdNoPriv");
+
+		var handle = Random.Shared.NextInt64(800_000, 899_999);
+		await ConnectionService.Register(handle, "localhost", "localhost", "test",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
+
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"cd {playerDbRef} TestPassword123"));
+
+		// The login must have actually bound the handle - otherwise CanDark() never ran and this
+		// assertion would be vacuous.
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsEqualTo(playerDbRef);
+
+		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		await Assert.That(await connectedPlayer.HasFlag("DARK")).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>logout_sock</c> explicitly resets <c>d-&gt;hide = 0</c> (bsd.c:2248). Without that
+	/// reset in <see cref="SharpMUSH.Library.Services.ConnectionService.Unbind"/>, a wizard who
+	/// <c>@hide</c>s then <c>LOGOUT</c>s would leave the socket's <c>Hidden</c> metadata set for
+	/// whoever connects next on that same handle - including a mortal with no permission to hide
+	/// themselves, who would then show up excluded from WHO/mwho() despite never having run
+	/// <c>@hide</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask Hide_ThenLogout_DoesNotLeakHiddenStateToTheNextLogin()
+	{
+		var firstPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideLogoutFirst");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {firstPlayer.DbRef}=WIZARD"));
+		await Parser.CommandParse(firstPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
+		await Assert.That(ConnectionService.Get(firstPlayer.Handle)?.IsHidden).IsTrue();
+
+		await Parser.CommandParse(firstPlayer.Handle, ConnectionService, MarkupText.Plain("LOGOUT"));
+
+		// Unbind must have cleared Hidden immediately, even before anyone reconnects on the handle.
+		await Assert.That(ConnectionService.Get(firstPlayer.Handle)?.IsHidden).IsFalse();
+
+		// A second, unprivileged player then connects on the SAME handle (mirroring a real socket
+		// reused for a new login at the connect screen) and must not inherit the hidden state.
+		var secondPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "HideLogoutSecond");
+		var secondPlayerName = (await Mediator.Send(new GetObjectNodeQuery(secondPlayerDbRef))).Known.Object().Name;
+
+		await Parser.CommandParse(firstPlayer.Handle, ConnectionService,
+			MarkupText.Plain($"CONNECT {secondPlayerName} TestPassword123"));
+
+		await Assert.That(ConnectionService.Get(firstPlayer.Handle)?.Ref).IsEqualTo(secondPlayerDbRef);
+		await Assert.That(ConnectionService.Get(firstPlayer.Handle)?.IsHidden).IsFalse()
+			.Because("the previous occupant's @hide must not leak across LOGOUT to the next login on the same handle");
 	}
 }

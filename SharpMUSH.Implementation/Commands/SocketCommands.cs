@@ -305,7 +305,16 @@ public partial class Commands
 				{
 					if (mode == ConnectMode.Dark)
 					{
-						await Mediator.Send(new SetObjectFlagCommand(connectedPlayer, darkFlag));
+						// PennMUSH's set_flag special-cases DARK: only a Wizard or a player with the
+						// Can_Dark power may set it on a living player (flags.c ~1793-1798) - cd must
+						// respect the same gate rather than force DARK on unconditionally. cv (clearing
+						// DARK) has no such special case in PennMUSH - clearing your own flag only needs
+						// ordinary self-set permission, which every player already has - so it stays
+						// ungated here.
+						if (await connectedPlayer.CanDark())
+						{
+							await Mediator.Send(new SetObjectFlagCommand(connectedPlayer, darkFlag));
+						}
 					}
 					else
 					{

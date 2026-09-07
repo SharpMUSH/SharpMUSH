@@ -186,7 +186,10 @@ public class ConnectionAnnounceService(
 	private async ValueTask DispatchZoneAndMasterRoomHooksAsync(
 		IMUSHCodeParser parser, AnySharpObject player, string attrName, string countArg)
 	{
-		var zoneRelation = await player.Object().Zone.WithCancellation(CancellationToken.None);
+		// PennMUSH zones the player's LOCATION, not the player itself (bsd.c:5992, loc = Location(player)) -
+		// zones are attached to rooms, so reading player.Object().Zone directly was dead code in practice.
+		var loc = await player.Where();
+		var zoneRelation = await loc.Object().Zone.WithCancellation(CancellationToken.None);
 		if (!zoneRelation.IsNone)
 		{
 			var zone = zoneRelation.Known;
@@ -248,52 +251,70 @@ public class ConnectionAnnounceService(
 	/// count. <paramref name="owner"/> is the hook's executor/%!; <paramref name="player"/> (the
 	/// connecting/disconnecting player) is both enactor/%# and caller/%@.
 	/// </summary>
+	/// <remarks>
+	/// PennMUSH queues each hook independently, so one broken global object (a bad ACONNECT on a
+	/// zone or master-room object) can't take out the others. Catching here - rather than only in
+	/// the outer <c>AnnounceConnectAsync</c>/<c>AnnounceDisconnectAsync</c> try/catch - means a
+	/// throwing hook never stops the caller from reaching its later hooks or (on disconnect)
+	/// LASTLOGOUT.
+	/// </remarks>
 	private async ValueTask QueueHookAsync(
 		IMUSHCodeParser parser, AnySharpObject owner, AnySharpObject player, string attrName, string countArg)
 	{
-		var attrResult = await attributeService.GetAttributeAsync(
-			player, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
-
-		if (!attrResult.IsAttribute || attrResult.AsAttribute.Length == 0)
+		try
 		{
-			return;
+			var attrResult = await attributeService.GetAttributeAsync(
+				player, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
+
+			if (!attrResult.IsAttribute || attrResult.AsAttribute.Length == 0)
+			{
+				return;
+			}
+
+			// %0 is reserved (PennMUSH leaves it unset for ACONNECT/ADISCONNECT), %1 is the connection count.
+			var argsDict = new Dictionary<string, CallState> { ["0"] = new(string.Empty), ["1"] = new(countArg) };
+
+			var ownerRef = owner.Object().DBRef;
+			var playerRef = player.Object().DBRef;
+			var isEmpty = parser.State.IsEmpty;
+
+			var evalParser = parser.Push(new ParserState(
+				Registers: new([[]]),
+				IterationRegisters: [],
+				RegexRegisters: [],
+				SwitchStack: [],
+				ExecutionStack: [],
+				EnvironmentRegisters: argsDict,
+				CurrentEvaluation: null,
+				ParserFunctionDepth: 0,
+				Function: null,
+				Command: null,
+				CommandInvoker: isEmpty
+					? _ => ValueTask.FromResult(new Option<CallState>(new None()))
+					: parser.CurrentState.CommandInvoker,
+				Switches: [],
+				Arguments: argsDict,
+				Executor: ownerRef,
+				Enactor: playerRef,
+				Caller: playerRef,
+				Handle: isEmpty ? null : parser.CurrentState.Handle,
+				CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
+				FunctionRecursionDepths: isEmpty
+					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
+
+			var attributeText = attrResult.AsAttribute.Last().Value.ToPlainText();
+			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
 		}
-
-		// %0 is reserved (PennMUSH leaves it unset for ACONNECT/ADISCONNECT), %1 is the connection count.
-		var argsDict = new Dictionary<string, CallState> { ["0"] = new(string.Empty), ["1"] = new(countArg) };
-
-		var ownerRef = owner.Object().DBRef;
-		var playerRef = player.Object().DBRef;
-		var isEmpty = parser.State.IsEmpty;
-
-		var evalParser = parser.Push(new ParserState(
-			Registers: new([[]]),
-			IterationRegisters: [],
-			RegexRegisters: [],
-			SwitchStack: [],
-			ExecutionStack: [],
-			EnvironmentRegisters: argsDict,
-			CurrentEvaluation: null,
-			ParserFunctionDepth: 0,
-			Function: null,
-			Command: null,
-			CommandInvoker: isEmpty
-				? _ => ValueTask.FromResult(new Option<CallState>(new None()))
-				: parser.CurrentState.CommandInvoker,
-			Switches: [],
-			Arguments: argsDict,
-			Executor: ownerRef,
-			Enactor: playerRef,
-			Caller: playerRef,
-			Handle: isEmpty ? null : parser.CurrentState.Handle,
-			CallDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.CallDepth ?? new InvocationCounter(),
-			FunctionRecursionDepths: isEmpty
-				? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-				: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-			TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-			LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
-
-		var attributeText = attrResult.AsAttribute.Last().Value.ToPlainText();
-		await evalParser.CommandListParse(MarkupText.Plain(attributeText));
+		catch (Exception ex)
+		{
+			// Log error but don't propagate - a broken hook on one object (player/room/zone/master
+			// room object) must not prevent the caller from queuing the next hook or, on disconnect,
+			// writing LASTLOGOUT.
+			logger.LogError(ex, "Error running {AttrName} hook on {Owner} for player {Player}",
+				attrName, owner.Object().DBRef, player.Object().DBRef);
+		}
 	}
 }

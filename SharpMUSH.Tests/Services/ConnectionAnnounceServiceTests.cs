@@ -266,6 +266,116 @@ public class ConnectionAnnounceServiceTests
 			player, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
 	}
 
+	/// <summary>
+	/// Finding 6 of the final whole-branch review: PennMUSH queues each hook independently, so one
+	/// broken global object can't take out the others. Before this fix, <c>QueueHookAsync</c> had no
+	/// per-hook try/catch of its own, so a throwing lookup on one master-room object's ACONNECT would
+	/// propagate out of <c>DispatchZoneAndMasterRoomHooksAsync</c>'s <c>await foreach</c> and skip
+	/// every hook target still to come. This master room has two objects; the first's ACONNECT lookup
+	/// throws, and the test proves the second's is still queued.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_OneMasterRoomHookThrows_LaterHookInTheSameRoomStillQueued()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var factory = new TestObjectFactory();
+		var masterRoom = factory.CreateRoom(2, "Master Room");
+		var throwingHookTarget = factory.CreateThing(50, "Throwing Hookable Thing", location: masterRoom);
+		var laterHookTarget = factory.CreateThing(51, "Later Hookable Thing", location: masterRoom);
+
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		mediator.Send(
+				Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == masterRoom.Object.Key),
+				Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(masterRoom));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
+		mediator.CreateStream(
+				Arg.Is<GetContentsQuery>(q =>
+					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+				Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { throwingHookTarget, laterHookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
+
+		var player = FakeConnectedPlayer("Bob");
+
+		attributeService.GetAttributeAsync(
+				player, throwingHookTarget, "ACONNECT", Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+			.Returns<OptionalSharpAttributeOrError>(_ => throw new InvalidOperationException("boom"));
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, logger);
+
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+
+		await attributeService.Received(1).GetAttributeAsync(
+			player, laterHookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+		logger.Received(1).Log(
+			LogLevel.Error,
+			Arg.Any<EventId>(),
+			Arg.Any<object>(),
+			Arg.Any<Exception>(),
+			Arg.Any<Func<object, Exception?, string>>());
+	}
+
+	/// <summary>
+	/// Finding 6, disconnect side: LASTLOGOUT is written as the LAST statement inside
+	/// <c>AnnounceDisconnectAsync</c>'s hook-dispatch sequence, so before this fix a throwing hook
+	/// anywhere earlier (the player's own ADISCONNECT, here) would skip it entirely. The per-hook
+	/// catch inside <c>QueueHookAsync</c> means the throw never reaches <c>AnnounceDisconnectAsync</c>
+	/// at all, so LASTLOGOUT still gets written.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_PlayerHookThrows_LastLogoutStillGetsSet()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		var configuration = FakeOptionsWrapper();
+		var logger = FakeLogger();
+
+		var player = FakeConnectedPlayer("Bob");
+
+		// Every hook lookup throws - player's own ADISCONNECT, the room's (RoomConnects is on in the
+		// test config), the zone's (none, per FakeConnectedPlayer), and the master room's (none
+		// resolvable via FakeMediatorWithNoMasterRoom).
+		attributeService.GetAttributeAsync(
+				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
+				Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+			.Returns<OptionalSharpAttributeOrError>(_ => throw new InvalidOperationException("boom"));
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), logger);
+
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
+
+		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+		// Two hooks throw (the player's own ADISCONNECT, then the room's - RoomConnects is on in the
+		// test config and FakeConnectedPlayer's location is a Room); the zone is unset and the master
+		// room is unresolvable per FakeMediatorWithNoMasterRoom, so neither is attempted. Each throw is
+		// caught and logged inside QueueHookAsync without propagating.
+		logger.Received(2).Log(
+			LogLevel.Error,
+			Arg.Any<EventId>(),
+			Arg.Any<object>(),
+			Arg.Any<Exception>(),
+			Arg.Any<Func<object, Exception?, string>>());
+	}
+
 	[Test]
 	public async Task AnnounceDisconnectAsync_LastConnection_BroadcastsHasDisconnectedAndSetsLastLogout()
 	{

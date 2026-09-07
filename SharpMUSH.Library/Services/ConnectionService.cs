@@ -111,7 +111,14 @@ public class ConnectionService(
 		// for the player's remaining connections does not count the one that is leaving.
 		_sessionState.AddOrUpdate(handle,
 			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
-			(_, y) => y with { Ref = null, State = IConnectionService.ConnectionState.Connected });
+			(_, y) =>
+			{
+				// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a
+				// wizard who @hides then LOGOUTs would leave the socket hidden for whoever connects
+				// next on it, including a mortal with no permission to hide themselves.
+				y.Metadata.TryRemove("Hidden", out var removedHiddenValue);
+				return y with { Ref = null, State = IConnectionService.ConnectionState.Connected };
+			});
 
 		if (stateStore != null)
 		{
@@ -119,6 +126,7 @@ public class ConnectionService(
 			// with it, or a restart would restore a handle that claims to be logged in with no player.
 			await stateStore.SetPlayerBindingAsync(handle, null);
 			await stateStore.UpdateMetadataAsync(handle, "State", nameof(IConnectionService.ConnectionState.Connected));
+			await stateStore.UpdateMetadataAsync(handle, "Hidden", "0");
 		}
 
 		foreach (var handler in _handlers)

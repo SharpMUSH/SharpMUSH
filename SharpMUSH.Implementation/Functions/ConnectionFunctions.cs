@@ -757,7 +757,11 @@ public partial class Functions
 		ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
+				&& x.PresenceClass != PresenceClasses.Portal
+				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+				// this whole WHO family exactly as DARK always did - see WHO's own row filtering in
+				// SocketCommands.cs for the same isHiddenRow = isDark || connection.IsHidden pattern.
+				&& !x.IsHidden)
 			.Select(x => x.Ref!.Value)
 			.DistinctBy(x => x.Number)
 			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
@@ -773,6 +777,12 @@ public partial class Functions
 		ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+			// this whole WHO family exactly as DARK always did, unless the looker is privileged -
+			// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503), powered
+			// being Priv_Who (IsSee_All here). See WHO's own row filtering in SocketCommands.cs for the
+			// same isHiddenRow = isDark || connection.IsHidden pattern.
+			.Where(async (x, _) => !x.IsHidden || await looker.IsSee_All())
 			.Select(x => x.Ref!.Value)
 			.DistinctBy(x => x.Number)
 			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
