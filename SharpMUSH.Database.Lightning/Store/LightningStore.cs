@@ -46,7 +46,8 @@ public sealed partial class LightningStore : IDisposable
 		{
 			tables[def] = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
 		}
-		tx.Commit().ThrowOnError();
+		var openCode = tx.Commit();
+		if (openCode != MDBResultCode.Success) throw LightningStoreException.From(openCode, "open");
 		_tables = tables;
 	}
 
@@ -109,7 +110,8 @@ public sealed partial class LightningStore : IDisposable
 	public void CopyTo(string path, bool compact = true)
 	{
 		Directory.CreateDirectory(path);
-		_env.CopyTo(path, compact);
+		var code = _env.CopyTo(path, compact);
+		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "copy");
 	}
 
 	public void Dispose()

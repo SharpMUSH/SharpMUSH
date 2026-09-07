@@ -14,7 +14,7 @@ public sealed record TableDef(string Name, bool Duplicates, bool FixedDuplicates
 	public override int GetHashCode() => Name.GetHashCode();
 
 	public static TableDef Node(string name) => new(name, false, false, TableKind.Node);
-	public static TableDef Index(string name, bool duplicates = false) => new(name, duplicates, false, TableKind.Index);
+	public static TableDef Index(string name, bool duplicates = false, bool fixedDuplicates = false) => new(name, duplicates, fixedDuplicates, TableKind.Index);
 
 	public static (TableDef Forward, TableDef Reverse) Edge(string name, bool fixedDuplicates)
 	{

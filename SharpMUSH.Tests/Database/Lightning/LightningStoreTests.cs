@@ -58,4 +58,20 @@ public class LightningStoreTests
 		var after = store.Read(tx => tx.Dups(Tables.RevLocation, Keys.Dbref(1)).Select(v => Keys.ReadDbref(v)).ToArray());
 		await Assert.That(after).IsEquivalentTo(new long[] { 30 });
 	}
+
+	[Test]
+	public async Task ObjNameOpensWithFixedDuplicatesForItsDbrefValues()
+	{
+		await Assert.That(Tables.ObjName.FixedDuplicates).IsTrue();
+
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.ObjName, Keys.Str("BOB"), Keys.Dbref(20));
+			tx.Put(Tables.ObjName, Keys.Str("BOB"), Keys.Dbref(10));
+			return 0;
+		});
+		var dbrefs = store.Read(tx => tx.Dups(Tables.ObjName, Keys.Str("BOB")).Select(v => Keys.ReadDbref(v)).ToArray());
+		await Assert.That(dbrefs).IsEquivalentTo(new long[] { 10, 20 });
+	}
 }

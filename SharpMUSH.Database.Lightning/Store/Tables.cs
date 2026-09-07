@@ -11,7 +11,7 @@ public static class Tables
 {
 	public static readonly TableDef Meta = TableDef.Node("meta");
 	public static readonly TableDef Obj = TableDef.Node("obj");
-	public static readonly TableDef ObjName = TableDef.Index("obj.name", duplicates: true);
+	public static readonly TableDef ObjName = TableDef.Index("obj.name", duplicates: true, fixedDuplicates: true);
 	public static readonly TableDef AttrMeta = TableDef.Node("attr.meta");
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");
