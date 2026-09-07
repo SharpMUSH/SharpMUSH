@@ -143,7 +143,10 @@ public partial class Commands
 
 				// If rename was successful, trigger OBJECT`RENAME event
 				// PennMUSH spec: object`rename (objid, new name, old name)
-				if (result.Message?.ToPlainText() != ErrorMessages.Returns.PermissionDenied)
+				// SetName returns a dbref on success and an "#-1 ..." error string on any failure
+				// (permission denied, name/alias already in use), so gate on that prefix rather than
+				// a single literal error message.
+				if (result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) != true)
 				{
 					await EventService!.TriggerEventAsync(
 						parser,

@@ -45,7 +45,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 			{
 				var regex = isRegex
 					? new Regex(pattern, RegexOptions.Compiled)
-					: new Regex(MushText.Glob.ToRegex(MarkupText.Plain(pattern).ToPlainText()), RegexOptions.Compiled);
+					: new Regex(MushText.Glob.ToRegex(pattern), RegexOptions.Compiled);
 
 				listenAttributes.Add(new ListenAttributeCache(
 					attr,

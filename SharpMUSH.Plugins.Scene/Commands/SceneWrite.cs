@@ -18,7 +18,7 @@ public static class SceneWrite
 		MString? args)
 	{
 		// <roomDbref>,<ownerDbref>[,<title>] — roomDbref empty → roomless scheduled scene.
-		var fields = SceneCommandHelper.SplitFields(args ?? MarkupText.Plain(string.Empty), 3);
+		var fields = SceneCommandHelper.SplitFields(args ?? MarkupText.Empty, 3);
 		// here/me/name resolve through the engine LocateService (room empty stays empty = roomless scene).
 		var roomDbref = await SceneLocate.ObjectOrSelf(parser, fields[0]);
 		var ownerDbref = await SceneLocate.PlayerOrSelf(parser, fields[1]);

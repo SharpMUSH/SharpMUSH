@@ -218,7 +218,7 @@ public partial class Functions
 			}
 
 			var regex = new Regex(pattern, options);
-			var splitList = MushText.SplitList(delimiter, list) ?? [];
+			var splitList = MushText.SplitList(delimiter, list);
 
 			if (all)
 			{
@@ -259,7 +259,7 @@ public partial class Functions
 			}
 
 			var regex = new Regex(pattern, options);
-			var splitList = MushText.SplitList(delimiter, list) ?? [];
+			var splitList = MushText.SplitList(delimiter, list);
 
 			if (all)
 			{

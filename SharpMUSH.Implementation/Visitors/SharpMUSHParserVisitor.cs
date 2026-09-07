@@ -2316,7 +2316,7 @@ public class SharpMUSHParserVisitor(
 		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
 		if (argCallState is { Arguments: null })
 		{
-			var errorText = (argCallState.Message ?? MarkupText.Empty).ToPlainText().ToString();
+			var errorText = (argCallState.Message ?? MarkupText.Empty).ToPlainText();
 			return new Error<string>(errorText);
 		}
 
@@ -2484,7 +2484,7 @@ public class SharpMUSHParserVisitor(
 
 		if (emitSubstDebug)
 		{
-			var rawText = argument.ToPlainText().ToString();
+			var rawText = argument.ToPlainText();
 			await MUSHCodeParser.EmitSubstitutionOnlyDebugTraceAsync(
 				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.DidEmitFunctionDebug);
 		}

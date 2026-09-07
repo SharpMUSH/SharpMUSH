@@ -25,7 +25,7 @@ public static class SceneRead
 		if (scenes.Count == 0)
 		{
 			await notifyService.Notify(executor, "SCENE: No scenes match.");
-			return MarkupText.Plain(string.Empty);
+			return MarkupText.Empty;
 		}
 
 		await notifyService.Notify(executor, $"SCENE: {scenes.Count} scene(s).");

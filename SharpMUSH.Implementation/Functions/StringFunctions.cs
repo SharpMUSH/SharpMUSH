@@ -351,6 +351,8 @@ public partial class Functions
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public static ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		// PennMUSH cat() keeps empty arguments as list items rather than dropping them, hence
+		// Join with a fallback to MarkupText.Empty instead of filtering nulls out first.
 		=> ValueTask.FromResult<CallState>(MarkupText.Join(MarkupText.Space, parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message ?? MarkupText.Empty)));
 
 	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "template"])]
@@ -1837,7 +1839,7 @@ public partial class Functions
 			{
 				var expression = await expressionKv.Value.ParsedMessage();
 
-				if (MushText.IsWildcardMatch((arg0 ?? MarkupText.Empty), (expression ?? MarkupText.Empty)))
+				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
 				{
 					return await listKv.Value.ParsedMessage();
 				}
@@ -1888,7 +1890,7 @@ public partial class Functions
 			{
 				var expression = await expressionKv.Value.ParsedMessage();
 
-				if (MushText.IsWildcardMatch((arg0 ?? MarkupText.Empty), (expression ?? MarkupText.Empty)))
+				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
 				{
 					resultList.Add(await listKv.Value.ParsedMessage() ?? MarkupText.Empty);
 					continue;
@@ -2137,7 +2139,7 @@ public partial class Functions
 			return ErrorMessages.Returns.Integer;
 		}
 
-		var firstLine = str.Substring(0, firstLineInt)!;
+		var firstLine = str.Substring(0, firstLineInt);
 
 		var remainingLength = strlen - firstLine.Length;
 		if (remainingLength <= 0)
@@ -2147,7 +2149,7 @@ public partial class Functions
 
 		var list = Enumerable
 			.Range(1, remainingLength / widthInt + 2)
-			.Select(line => str.Substring(line * widthInt, widthInt)!)
+			.Select(line => str.Substring(line * widthInt, widthInt))
 			.Prepend(firstLine);
 
 		return string.Join(lineSeparator, list);
