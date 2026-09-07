@@ -445,6 +445,14 @@ public partial class Functions
 		return new CallState(accumulator);
 	}
 
+	/// <summary>
+	/// What a list function answers when the player's glob could not finish inside
+	/// <see cref="SoftcodeRegex.MatchTimeout"/>. Not an empty list: these are softcode functions, and
+	/// "no element matched" and "your pattern could not be evaluated" are different answers.
+	/// </summary>
+	private static ValueTask<CallState> TimedOut
+		=> ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
+
 	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -456,8 +464,15 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.splitList(delimiter, list) ?? [];
 
-		return ValueTask.FromResult<CallState>(splitList
-			.FirstOrDefault(x => SoftcodeRegex.IsMatch(regex, x.ToPlainText())) ?? MModule.empty());
+		try
+		{
+			return ValueTask.FromResult<CallState>(splitList
+				.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MModule.empty());
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return TimedOut;
+		}
 	}
 
 	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
@@ -472,8 +487,15 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
 		var splitList = MModule.splitList(delimiter, list) ?? [];
 
-		return ValueTask.FromResult<CallState>(
-			MModule.multipleWithDelimiter(outputSep, splitList.Where(x => SoftcodeRegex.IsMatch(regex, x.ToPlainText()))));
+		try
+		{
+			return ValueTask.FromResult<CallState>(
+				MModule.multipleWithDelimiter(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return TimedOut;
+		}
 	}
 
 	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "element", "delimiter"])]
@@ -792,11 +814,18 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.splitList(delimiter, list) ?? [];
 
-		var index = splitList
-			.Select((item, i) => (item, pos: i + 1))
-			.FirstOrDefault(pair => SoftcodeRegex.IsMatch(regex, pair.item.ToPlainText()));
+		try
+		{
+			var index = splitList
+				.Select((item, i) => (item, pos: i + 1))
+				.FirstOrDefault(pair => regex.IsMatch(pair.item.ToPlainText()));
 
-		return ValueTask.FromResult<CallState>(index.pos.ToString());
+			return ValueTask.FromResult<CallState>(index.pos.ToString());
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return TimedOut;
+		}
 	}
 
 	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter", "outsep"])]
@@ -811,12 +840,19 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
 		var splitList = MModule.splitList(delimiter, list) ?? [];
 
-		var positions = splitList
-			.Select((item, i) => (item, pos: i + 1))
-			.Where(pair => SoftcodeRegex.IsMatch(regex, pair.item.ToPlainText()))
-			.Select(pair => MModule.single(pair.pos.ToString()));
+		try
+		{
+			var positions = splitList
+				.Select((item, i) => (item, pos: i + 1))
+				.Where(pair => regex.IsMatch(pair.item.ToPlainText()))
+				.Select(pair => MModule.single(pair.pos.ToString()));
 
-		return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
+			return ValueTask.FromResult<CallState>(MModule.multipleWithDelimiter(outputSep, positions));
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return TimedOut;
+		}
 	}
 
 	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi, ParameterNames = ["list", "element", "delimiter"])]

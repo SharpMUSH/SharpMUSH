@@ -346,13 +346,20 @@ public class CacheCoherenceTests
 	}
 
 	/// <summary>
-	/// The command and listen sets are built by walking the object's parent chain, so a write to an
-	/// ANCESTOR changes them — and the write only names the object it wrote. Without a tag the child
-	/// kept answering with the ancestor's old $-commands until its entry expired: a builder adds a
-	/// $-command to a parent and the children ignore it for ten minutes.
+	/// An attribute write expires the command and listen sets of every object, not only the one written.
 	/// </summary>
+	/// <remarks>
+	/// Those sets are built by walking the written object's parent chain, so a write to an ancestor
+	/// changes what a descendant answers — and the write names only itself. The invalidation is the
+	/// game-wide <see cref="CacheTags.InheritedAttributes"/> tag and consults no chain, which is why
+	/// this test does not build one: a real parent link would not change the outcome, and pretending
+	/// otherwise would claim a scoping that does not exist. What it pins is the breadth, which is the
+	/// thing that would be lost if someone narrowed the tag without also recording the chain a read
+	/// walked. Before it, a builder added a $-command to a parent and the children ignored it until
+	/// the entry expired.
+	/// </remarks>
 	[Test]
-	public async Task AWriteToAnAncestorExpiresADescendantsCommandAndListenSets()
+	public async Task AnAttributeWriteExpiresEveryObjectsCommandAndListenSets()
 	{
 		using var cache = NewCache();
 		var factory = new TestObjectFactory();
@@ -365,7 +372,7 @@ public class CacheCoherenceTests
 		await cache.SetAsync(listens.CacheKey, "the ancestor's old ^-patterns", CacheEntryProfiles.Tagged,
 			tags: listens.CacheTags);
 
-		// #7 is the ancestor. The write names only itself; nothing about #8 appears in its keys.
+		// The write names only itself; nothing about #8 appears in its keys.
 		await new CacheInvalidationBehavior<SetAttributeCommand, bool>(cache, new ObjectVersions())
 			.Handle(new SetAttributeCommand(Seven, ["CMD"], MModule.single("$foo:@pemit %#=bar"), null!),
 				(_, _) => ValueTask.FromResult(true), CancellationToken.None);

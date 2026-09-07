@@ -25,6 +25,18 @@ public class OptionsValidationTests
 		}
 	}
 
+	private static IExpandedDataStore StoreWith(SharpMUSHOptions stored)
+	{
+		var store = Substitute.For<IExpandedDataStore>();
+		store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<SharpMUSHOptions?>(stored));
+		return store;
+	}
+
+	/// <summary>The document a running game has: whatever was stored last, valid or not.</summary>
+	private static SharpMUSHOptions SomeStoredConfiguration()
+		=> new OptionsService(StoreWithNoSavedOptions(), []).Create(Options.DefaultName);
+
 	private static IExpandedDataStore StoreWithNoSavedOptions()
 	{
 		var store = Substitute.For<IExpandedDataStore>();
@@ -86,6 +98,34 @@ public class OptionsValidationTests
 
 		await store.Received(1).SetExpandedServerData(nameof(SharpMUSHOptions), Arg.Any<object>(),
 			Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The branch a running game actually takes. Every other test here goes through the
+	/// nothing-is-stored path, which is only ever hit once in a database's life.
+	/// </summary>
+	[Test]
+	public async Task AStoredConfigurationIsValidatedToo()
+	{
+		var validator = new StubValidator(ValidateOptionsResult.Fail("wiki_default_locale is not a locale"));
+		var store = StoreWith(SomeStoredConfiguration());
+		var service = new OptionsService(store, [validator]);
+
+		var thrown = Assert.Throws<OptionsValidationException>(() => service.Create(Options.DefaultName));
+
+		await Assert.That(validator.Calls).IsEqualTo(1);
+		await Assert.That(thrown!.Failures).Contains("wiki_default_locale is not a locale");
+		await store.DidNotReceive().SetExpandedServerData(Arg.Any<string>(), Arg.Any<object>(),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task AValidStoredConfigurationIsReturnedUnchanged()
+	{
+		var stored = SomeStoredConfiguration();
+		var service = new OptionsService(StoreWith(stored), [new StubValidator(ValidateOptionsResult.Success)]);
+
+		await Assert.That(service.Create(Options.DefaultName)).IsEqualTo(stored);
 	}
 
 	[Test]

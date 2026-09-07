@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Utilities;
@@ -85,12 +86,18 @@ public static class SitelockMatcher
 	}
 
 	/// <summary>
-	/// Compiled glob patterns, keyed by the rule text they came from. Matching now runs on the
+	/// Compiled glob patterns, keyed by the rule text they came from. Matching runs on the
 	/// authentication path of every authenticated request, not only at login, so rebuilding the pattern
-	/// string and re-parsing it once per rule per call is worth avoiding. The rule set is admin-authored
-	/// and small, and every caller passes a rule as the pattern, so its keys are bounded by the rule set
-	/// and this never grows unbounded.
+	/// string and re-parsing it once per rule per call is worth avoiding.
 	/// </summary>
+	/// <remarks>
+	/// A cache of its own rather than relying on the bounded one inside <see cref="SoftcodeRegex"/>:
+	/// that one stops admitting once player-authored patterns have filled it, and a sitelock rule first
+	/// seen after that would be recompiled on every request — on the path that decides whether a
+	/// connection is allowed. Its keys are admin-authored rules, so this is bounded by the rule set.
+	/// The patterns still come from <see cref="SoftcodeRegex"/>, so they still carry its match timeout.
+	/// </remarks>
+	private static readonly ConcurrentDictionary<string, Regex> GlobCache = new();
 
 	/// <summary>
 	/// Simple wildcard matching for sitelock patterns (<c>*</c> and <c>?</c> wildcards), lifted
@@ -98,8 +105,9 @@ public static class SitelockMatcher
 	/// connect-time check and ban-enforcement matchers.
 	/// </summary>
 	private static bool WildcardMatch(string text, string pattern)
-		=> SoftcodeRegex.Create(
-				"^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$",
-				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
-			is var glob && SoftcodeRegex.IsMatch(glob, text);
+		=> SoftcodeRegex.IsMatch(
+			GlobCache.GetOrAdd(pattern, static p => SoftcodeRegex.Create(
+				"^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)),
+			text);
 }
