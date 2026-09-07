@@ -1,0 +1,25 @@
+name: Deployment impact
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deployment-impact:
+    name: SocketServer restart and deployment impact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test image input policy
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - name: Report affected images and live connection impact
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || 'HEAD^' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 .github/scripts/image_impact.py --base "$BASE_SHA" --head "$HEAD_SHA" --merge-base

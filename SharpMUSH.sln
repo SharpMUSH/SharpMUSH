@@ -81,6 +81,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Contracts", "Shar
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Database.Lightning", "SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj", "{94AEF198-5E67-4045-8859-81DFB14F9891}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.SocketServer", "SharpMUSH.SocketServer\SharpMUSH.SocketServer.csproj", "{DDDB3281-C612-47DD-B963-46A78806F451}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -439,6 +441,18 @@ Global
 		{94AEF198-5E67-4045-8859-81DFB14F9891}.Release|x64.Build.0 = Release|Any CPU
 		{94AEF198-5E67-4045-8859-81DFB14F9891}.Release|x86.ActiveCfg = Release|Any CPU
 		{94AEF198-5E67-4045-8859-81DFB14F9891}.Release|x86.Build.0 = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|x64.Build.0 = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Debug|x86.Build.0 = Debug|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|x64.ActiveCfg = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|x64.Build.0 = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|x86.ActiveCfg = Release|Any CPU
+		{DDDB3281-C612-47DD-B963-46A78806F451}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -42,48 +42,50 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 			return;
 		}
 
-		NatsConnection? nats = null;
-		try
+		while (!stoppingToken.IsCancellationRequested)
 		{
-			_logger.LogInformation("[NATS-CONSUMER] Connecting to NATS at {Url}", _options.Url);
-			nats = new NatsConnection(new NatsOpts { Url = _options.Url });
-			await nats.ConnectAsync();
-			_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.GetConsumeStreamName());
+			NatsConnection? nats = null;
+			try
+			{
+				_logger.LogInformation("[NATS-CONSUMER] Connecting to NATS at {Url}", _options.Url);
+				nats = new NatsConnection(new NatsOpts { Url = _options.Url });
+				await nats.ConnectAsync();
+				_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.GetConsumeStreamName());
 
-			var js = new NatsJSContext(nats);
+				var js = new NatsJSContext(nats);
 
-			await js.CreateOrUpdateStreamAsync(
-				new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
-				{
-					MaxAge = _options.MaxAge,
-				},
-				stoppingToken);
+				await js.CreateOrUpdateStreamAsync(
+					new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
+					{
+						MaxAge = _options.MaxAge,
+						MaxMsgSize = _options.MaxMsgSize,
+					},
+					stoppingToken);
 
-			_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
-				_registry.Registrations.Count, _options.GetConsumeStreamName());
+				_logger.LogInformation("[NATS-CONSUMER] Starting {Count} consumer(s) on stream {Stream}",
+					_registry.Registrations.Count, _options.GetConsumeStreamName());
 
-			var tasks = _registry.Registrations
-				.Select(reg => ConsumeAsync(js, reg, stoppingToken))
-				.ToList();
+				var tasks = _registry.Registrations
+					.Select(reg => ConsumeAsync(js, reg, stoppingToken))
+					.ToList();
 
-			await Task.WhenAll(tasks);
-		}
-		catch (OperationCanceledException)
-		{
-			_logger.LogInformation("[NATS-CONSUMER] Consumer service shutting down.");
-		}
-		catch (Exception ex)
-		{
-			// Log the error but do NOT rethrow. Rethrowing from a BackgroundService causes
-			// ASP.NET Core to shut down the entire host (StopHost behaviour in .NET 6+),
-			// which disposes all singletons (including FusionCache) and breaks other in-flight
-			// tests or requests. The consumer simply exits; the host remains healthy.
-			_logger.LogError(ex, "[NATS-CONSUMER] Consumer service failed during setup or execution.");
-		}
-		finally
-		{
-			if (nats is not null)
-				await nats.DisposeAsync();
+				await Task.WhenAll(tasks);
+			}
+			catch (OperationCanceledException)
+			{
+				_logger.LogInformation("[NATS-CONSUMER] Consumer service shutting down.");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[NATS-CONSUMER] Setup failed; retrying without stopping the host.");
+			}
+			finally
+			{
+				if (nats is not null)
+					await nats.DisposeAsync();
+			}
+			try { await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken); }
+			catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
 		}
 	}
 
@@ -92,59 +94,68 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		_logger.LogInformation("[NATS-CONSUMER] Consumer starting — subject: {Subject}, durable: {Durable}",
 			reg.Subject, reg.DurableName);
 
-		try
+		while (!ct.IsCancellationRequested)
 		{
-			var consumer = await js.CreateOrUpdateConsumerAsync(
-				_options.GetConsumeStreamName(),
-				new ConsumerConfig(reg.DurableName)
-				{
-					FilterSubject = reg.Subject,
-					DeliverPolicy = ConsumerConfigDeliverPolicy.New,
-					AckPolicy = ConsumerConfigAckPolicy.Explicit,
-				},
-				ct);
-
-			_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
-				reg.Subject, reg.DurableName);
-
-			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
+			try
 			{
-				try
-				{
-					if (msg.Data.ValueKind == JsonValueKind.Undefined || msg.Data.ValueKind == JsonValueKind.Null)
+				await js.CreateOrUpdateStreamAsync(
+					new StreamConfig(_options.GetConsumeStreamName(), [$"{_options.GetConsumeSubjectPrefix()}.>"])
+					{ MaxAge = _options.MaxAge, MaxMsgSize = _options.MaxMsgSize }, ct);
+				var consumer = await js.CreateOrUpdateConsumerAsync(
+					_options.GetConsumeStreamName(),
+					new ConsumerConfig(reg.DurableName)
 					{
-						_logger.LogWarning("[NATS-CONSUMER] Null payload on subject {Subject}; acking and skipping.", reg.Subject);
-						await msg.AckAsync(cancellationToken: ct);
-						continue;
-					}
+						FilterSubject = reg.Subject,
+						DeliverPolicy = ConsumerConfigDeliverPolicy.New,
+						AckPolicy = ConsumerConfigAckPolicy.Explicit,
+					},
+					ct);
 
-					var message = msg.Data.Deserialize(reg.MessageType);
-					if (message is null)
-					{
-						_logger.LogWarning("[NATS-CONSUMER] Deserialisation returned null on subject {Subject}; acking and skipping.", reg.Subject);
-						await msg.AckAsync(cancellationToken: ct);
-						continue;
-					}
+				_registry.MarkActive(reg.DurableName);
+				_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
+					reg.Subject, reg.DurableName);
 
-					_logger.LogDebug("[NATS-CONSUMER] Received message on subject {Subject} ({Type})", reg.Subject, reg.MessageType.Name);
-					using var scope = _serviceProvider.CreateScope();
-					await reg.Handler(scope.ServiceProvider, message, ct);
-					await msg.AckAsync(cancellationToken: ct);
-				}
-				catch (Exception ex) when (ex is not OperationCanceledException)
+				await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
 				{
-					_logger.LogError(ex, "[NATS-CONSUMER] Error handling message on subject {Subject}", reg.Subject);
-					await msg.AckAsync(cancellationToken: ct);
+					try
+					{
+						if (msg.Data.ValueKind == JsonValueKind.Undefined || msg.Data.ValueKind == JsonValueKind.Null)
+						{
+							_logger.LogWarning("[NATS-CONSUMER] Null payload on subject {Subject}; acking and skipping.", reg.Subject);
+							await msg.AckAsync(cancellationToken: ct);
+							continue;
+						}
+
+						var message = msg.Data.Deserialize(reg.MessageType);
+						if (message is null)
+						{
+							_logger.LogWarning("[NATS-CONSUMER] Deserialisation returned null on subject {Subject}; acking and skipping.", reg.Subject);
+							await msg.AckAsync(cancellationToken: ct);
+							continue;
+						}
+
+						_logger.LogDebug("[NATS-CONSUMER] Received message on subject {Subject} ({Type})", reg.Subject, reg.MessageType.Name);
+						using var scope = _serviceProvider.CreateScope();
+						await reg.Handler(scope.ServiceProvider, message, ct);
+						await msg.AckAsync(cancellationToken: ct);
+					}
+					catch (Exception ex) when (ex is not OperationCanceledException)
+					{
+						_logger.LogError(ex, "[NATS-CONSUMER] Error handling message on subject {Subject}", reg.Subject);
+						await msg.AckAsync(cancellationToken: ct);
+					}
 				}
 			}
-		}
-		catch (OperationCanceledException)
-		{
-			_logger.LogInformation("[NATS-CONSUMER] Consumer for subject {Subject} stopped (cancelled).", reg.Subject);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "[NATS-CONSUMER] Consumer for subject {Subject} failed fatally.", reg.Subject);
+			catch (OperationCanceledException)
+			{
+				_logger.LogInformation("[NATS-CONSUMER] Consumer for subject {Subject} stopped (cancelled).", reg.Subject);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[NATS-CONSUMER] Consumer for subject {Subject} failed; retrying.", reg.Subject);
+			}
+			try { await Task.Delay(TimeSpan.FromSeconds(2), ct); }
+			catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
 		}
 	}
 }

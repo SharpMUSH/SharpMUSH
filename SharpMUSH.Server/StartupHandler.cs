@@ -16,8 +16,9 @@ public class StartupHandler(
 	IExpandedObjectDataService data,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IWikiService wikiService,
-	IMessageBus messageBus)
-	: IHostedService
+	IMessageBus messageBus,
+	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null)
+	: IHostedLifecycleService
 {
 	private const string ServerVersion = "1.0.0";
 
@@ -486,8 +487,6 @@ public class StartupHandler(
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
 
-		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
-		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
 	}
 
 	/// <summary>
@@ -570,7 +569,19 @@ public class StartupHandler(
 			logger.LogWarning("{Page} wiki page could not be seeded: {Msg}", page, error);
 	}
 
-	public async Task StopAsync(CancellationToken cancellationToken)
+	public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public async Task StartedAsync(CancellationToken cancellationToken)
+	{
+		if (consumers is not null) await consumers.WaitUntilReadyAsync(cancellationToken);
+		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
+	}
+
+	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public async Task StoppingAsync(CancellationToken cancellationToken)
 	{
 		logger.LogInformation("Publishing MainProcessShutdownMessage to ConnectionServer.");
 		try

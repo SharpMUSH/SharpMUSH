@@ -173,7 +173,8 @@ public class TelnetServer : ConnectionHandler
 					return;
 				}
 
-				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
+				await ConnectionInputPublisher.PublishAsync(_publishEndpoint, _connectionService, _logger,
+					nextPort, new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct);
 			})
 			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 			// which asks every plugin rather than just the one that fired: reaching any of them means

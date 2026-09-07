@@ -53,7 +53,7 @@ public sealed class TimerGraceScheduler(ILogger<TimerGraceScheduler>? logger = n
 /// expiry the scheduled <c>onGraceExpired</c> (the real disconnect) runs; a reconnect within the
 /// window cancels it via <see cref="Reattach"/>.
 /// </summary>
-public sealed class DetachedSessionTracker(IGraceScheduler scheduler)
+public sealed class DetachedSessionTracker(IGraceScheduler scheduler) : IDisposable
 {
 	private readonly ConcurrentDictionary<long, IDisposable> _pending = new();
 
@@ -80,4 +80,9 @@ public sealed class DetachedSessionTracker(IGraceScheduler scheduler)
 	}
 
 	public bool IsDetached(long handle) => _pending.ContainsKey(handle);
+	public void Dispose()
+	{
+		foreach (var handle in _pending.Keys) Reattach(handle);
+	}
+
 }

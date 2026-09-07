@@ -709,6 +709,7 @@ public class Startup(
 				x.AddConsumer<Consumers.NAWSUpdateConsumer, NAWSUpdateMessage>();
 				x.AddConsumer<Consumers.ConnectionEstablishedConsumer, ConnectionEstablishedMessage>();
 				x.AddConsumer<Consumers.ConnectionClosedConsumer, ConnectionClosedMessage>();
+				x.AddConsumer<Consumers.SessionResumeConsumer, SessionResumeRequestMessage>();
 				x.AddConsumer<Consumers.PuebloNegotiatedConsumer, PuebloNegotiatedMessage>();
 				x.AddConsumer<Consumers.MxpNegotiatedConsumer, MxpNegotiatedMessage>();
 				x.AddConsumer<Consumers.TerminalTypeNegotiatedConsumer, TerminalTypeNegotiatedMessage>();

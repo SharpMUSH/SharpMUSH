@@ -11,8 +11,14 @@ public interface IResumeTokenStore
 {
 	ValueTask<string> MintAsync(long handle, string session, CancellationToken ct = default);
 
-	/// <summary>Resolves a token to its handle and session id if present and unexpired.</summary>
+	/// <summary>Read-only inspection. Never use this to authorize a resume; use TryConsumeAsync.</summary>
 	ValueTask<(bool Found, long Handle, string Session)> TryResolveAsync(string token, CancellationToken ct = default);
+
+	/// <summary>Atomically spends an unexpired token; at most one caller receives its binding.</summary>
+	ValueTask<(bool Found, long Handle, string Session)> TryConsumeAsync(string token, CancellationToken ct = default);
+
+	/// <summary>Revokes every token belonging to a session after logout, boot, or grace expiry.</summary>
+	ValueTask RevokeSessionAsync(string session, CancellationToken ct = default);
 
 	ValueTask InvalidateAsync(string token, CancellationToken ct = default);
 }

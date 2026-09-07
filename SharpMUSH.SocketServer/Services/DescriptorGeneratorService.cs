@@ -15,6 +15,8 @@ public interface IDescriptorGeneratorService
 	/// </summary>
 	long GetNextWebSocketDescriptor();
 
+	void ReserveWebSocketDescriptor(long descriptor);
+
 	/// <summary>
 	/// Release a previously allocated Telnet descriptor so it can be reused
 	/// </summary>
@@ -34,6 +36,7 @@ public class DescriptorGeneratorService : IDescriptorGeneratorService
 	private readonly NextUnoccupiedNumberGenerator _telnetGenerator;
 	private readonly NextUnoccupiedNumberGenerator _webSocketGenerator;
 	private readonly object _lock = new();
+	private readonly HashSet<long> _occupiedWebSockets = [];
 
 	public DescriptorGeneratorService(Configuration.ConnectionServerOptions options)
 	{
@@ -53,8 +56,16 @@ public class DescriptorGeneratorService : IDescriptorGeneratorService
 	{
 		lock (_lock)
 		{
-			return _webSocketGenerator.Get().First();
+			var next = _webSocketGenerator.Get().First();
+			while (_occupiedWebSockets.Contains(next)) next = _webSocketGenerator.Get().First();
+			_occupiedWebSockets.Add(next);
+			return next;
 		}
+	}
+
+	public void ReserveWebSocketDescriptor(long descriptor)
+	{
+		lock (_lock) _occupiedWebSockets.Add(descriptor);
 	}
 
 	public void ReleaseTelnetDescriptor(long descriptor)
@@ -69,7 +80,7 @@ public class DescriptorGeneratorService : IDescriptorGeneratorService
 	{
 		lock (_lock)
 		{
-			_webSocketGenerator.Release(descriptor);
+			if (_occupiedWebSockets.Remove(descriptor)) _webSocketGenerator.Release(descriptor);
 		}
 	}
 }

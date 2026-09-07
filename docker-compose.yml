@@ -3,8 +3,9 @@ services:
     image: nats:2-alpine
     container_name: sharpmush-nats
     # -c: max_payload (6 MB) — a server-level limit with no CLI flag, so it needs a config file.
-    command: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+    command: ["-js", "-sd", "/data", "-m", "8222", "-c", "/etc/nats/nats.conf"]
     volumes:
+      - nats-data:/data
       - ./nats.conf:/etc/nats/nats.conf:ro
     ports:
       - "4222:4222"   # NATS client port
@@ -20,20 +21,44 @@ services:
   connectionserver:
     build:
       context: ./
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+      dockerfile: SharpMUSH.SocketServer/Dockerfile
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    stop_grace_period: 60s
+    volumes:
+      - render-socket:/run/sharpmush
     environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
     depends_on:
+      renderer:
+        condition: service_started
       nats:
         condition: service_healthy
     ports:
       - "4201:4201" # Telnet
-      - "4202:4202" # ConnectionServer HTTP API
+      - "4202:4202" # SocketServer WebSocket API
       - "9091:9091" # Metrics endpoint (for external monitoring tools)
     networks:
       - sharpmush-net
 
+  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  renderer:
+    build:
+      context: ./
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    stop_grace_period: 60s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
+    volumes:
+      - render-socket:/run/sharpmush
+    network_mode: none
+    restart: unless-stopped
+
   sharpmush-server:
+    stop_grace_period: 60s
     build:
       context: ./
       dockerfile: Dockerfile
@@ -57,6 +82,8 @@ services:
       - sharpmush-net
 
 volumes:
+  nats-data: # Durable connection state, resume credentials and replay
+  render-socket: # Private Unix socket shared only by socket owner and rendering worker
   app-data:   # LMDB world + wiki assets
 
 networks:

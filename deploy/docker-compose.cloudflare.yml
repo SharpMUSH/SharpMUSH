@@ -46,13 +46,19 @@ services:
   connectionserver:
     # CI-published image (docker-dev.yml pushes :dev on every main merge, gated on the full test
     # suite). The box never builds — watchtower below pulls and recreates when the tag moves.
-    image: sharpmush/sharpmush-connectionserver:dev
+    image: sharpmush/sharpmush-socketserver:dev
     container_name: sharpmush-connectionserver
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    stop_grace_period: 60s
+    volumes:
+      - render-socket:/run/sharpmush
     environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
     depends_on:
+      renderer:
+        condition: service_started
       nats:
         condition: service_healthy
     ports:
@@ -63,10 +69,24 @@ services:
     cpus: 1.0
     restart: unless-stopped
 
+  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  renderer:
+    image: sharpmush/sharpmush-connectionserver:dev
+    stop_grace_period: 60s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
+    volumes:
+      - render-socket:/run/sharpmush
+    network_mode: none
+    restart: unless-stopped
+
   sharpmush-server:
     # CI-published image; includes the Blazor WASM client (baked into /app/wwwroot at build time).
     image: sharpmush/sharpmush-server:dev
     container_name: sharpmush-server
+    stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true
     environment:
@@ -159,6 +179,8 @@ services:
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=300
+      # Allow hosted stopping notifications and game shutdown to finish before SIGKILL.
+      - WATCHTOWER_TIMEOUT=60s
     networks:
       - sharpmush-net
     mem_limit: 128m
@@ -208,6 +230,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  render-socket: # Private Unix socket shared only by socket owner and rendering worker
   app-data:
   nats-data:
 

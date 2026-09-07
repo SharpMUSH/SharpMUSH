@@ -32,7 +32,7 @@ public class MarkupOutputConsumer(
 
 		try
 		{
-			var rendered = renderer.Render(message.Markup, connection);
+			var rendered = await renderer.RenderAsync(message.Markup, connection, cancellationToken);
 			var data = rendered.ApplyOutputTransform
 				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences)
 				: rendered.Data;
@@ -72,7 +72,7 @@ public class MarkupPromptConsumer(
 
 		try
 		{
-			var rendered = renderer.Render(message.Markup, connection);
+			var rendered = await renderer.RenderAsync(message.Markup, connection, cancellationToken);
 			var data = rendered.ApplyOutputTransform
 				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences)
 				: rendered.Data;

@@ -1,3 +1,8 @@
+# Development-only Kubernetes example. SocketServer and renderer share a Pod for their Unix socket.
+# Any Pod rollout, including a renderer image change, replaces SocketServer and drops client sockets.
+# Container crash/restart alone can recover through the shared emptyDir; this is not an independent
+# renderer rollout topology. Use the supplied single-host Compose stack for that guarantee.
+# Keep replicas=1: shared connection state currently supports only one socket owner.
 # NATS server config. max_payload is a server-level limit with no command-line flag, so it
 # can only come from a config file — see ../nats.conf, which this mirrors for the compose
 # stacks. Left at the 1 MB default, a single @wiki page of syntax-highlighted markup
@@ -23,6 +28,18 @@ spec:
     requests:
       storage: 30Gi
 ---
+# Persist resume tokens, session bindings and replay across NATS Pod replacement.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sharpmush-nats-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+---
 # NATS (JetStream)
 apiVersion: apps/v1
 kind: Deployment
@@ -30,6 +47,8 @@ metadata:
   name: sharpmush-infra
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sharpmush-infra
@@ -41,8 +60,10 @@ spec:
       containers:
         - name: nats
           image: nats:2-alpine
-          args: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+          args: ["-js", "-sd", "/data", "-m", "8222", "-c", "/etc/nats/nats.conf"]
           volumeMounts:
+            - name: nats-data
+              mountPath: /data
             - name: nats-config
               mountPath: /etc/nats
               readOnly: true
@@ -71,6 +92,9 @@ spec:
               cpu: "500m"
               memory: "256Mi"
       volumes:
+        - name: nats-data
+          persistentVolumeClaim:
+            claimName: sharpmush-nats-pvc
         - name: nats-config
           configMap:
             name: nats-config
@@ -114,6 +138,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      terminationGracePeriodSeconds: 60
       initContainers:
         - name: cert-generator
           image: alpine/openssl:latest
@@ -202,13 +227,15 @@ spec:
       targetPort: 9092
   type: ClusterIP
 ---
-# ConnectionServer
+# Stable SocketServer with development-only renderer sidecar
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: connectionserver
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: connectionserver
@@ -221,10 +248,17 @@ spec:
         prometheus.io/port: "4202"
         prometheus.io/path: "/metrics"
     spec:
+      terminationGracePeriodSeconds: 60
+      volumes:
+        - name: render-socket
+          emptyDir: {}
       containers:
-        - name: connectionserver
-          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+        - name: socketserver
+          image: docker.io/sharpmush/sharpmush-socketserver:dev
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: render-socket
+              mountPath: /run/sharpmush
           ports:
             - containerPort: 4201
               name: telnet
@@ -233,6 +267,8 @@ spec:
             - containerPort: 9091
               name: metrics
           env:
+            - name: Rendering__SocketPath
+              value: /run/sharpmush/render.sock
             - name: NATS_URL
               value: "nats://nats:4222"
             - name: SHARPMUSH_HOST
@@ -244,6 +280,23 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+        - name: renderer
+          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: Rendering__SocketPath
+              value: /run/sharpmush/render.sock
+          volumeMounts:
+            - name: render-socket
+              mountPath: /run/sharpmush
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
 ---
 apiVersion: v1
 kind: Service

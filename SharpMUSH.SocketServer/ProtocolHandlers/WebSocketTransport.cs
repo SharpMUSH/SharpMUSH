@@ -7,6 +7,8 @@ namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string hostname, bool isSecure = false)
 	: IDuplexTransport
 {
+	private readonly SemaphoreSlim _sendLock = new(1, 1);
+
 	public string Kind => "websocket";
 	public string RemoteIp => remoteIp;
 	public string Hostname => hostname;
@@ -14,8 +16,16 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 
 	public async Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
 	{
-		if (socket.State == WebSocketState.Open)
-			await socket.SendAsync(data, WebSocketMessageType.Text, true, ct);
+		await _sendLock.WaitAsync(ct);
+		try
+		{
+			if (socket.State == WebSocketState.Open)
+				await socket.SendAsync(data, WebSocketMessageType.Text, true, ct);
+		}
+		finally
+		{
+			_sendLock.Release();
+		}
 	}
 
 	public async Task<string?> ReceiveTextAsync(CancellationToken ct)
@@ -34,7 +44,7 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 
 			if (result.MessageType == WebSocketMessageType.Close)
 			{
-				await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", ct);
+				await CloseOutputAsync(ct);
 				return null;
 			}
 
@@ -45,10 +55,20 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 		return messageBuffer.Length > 0 ? Encoding.UTF8.GetString(messageBuffer.ToArray()) : string.Empty;
 	}
 
-	public Task CloseAsync()
+	public Task CloseAsync() => CloseOutputAsync(CancellationToken.None);
+
+	private async Task CloseOutputAsync(CancellationToken ct)
 	{
-		if (socket.State == WebSocketState.Open)
-			_ = socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", CancellationToken.None);
-		return Task.CompletedTask;
+		await _sendLock.WaitAsync(ct);
+		try
+		{
+			// The receive loop owns incoming frames, including the peer's close response.
+			if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
+				await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", ct);
+		}
+		finally
+		{
+			_sendLock.Release();
+		}
 	}
 }

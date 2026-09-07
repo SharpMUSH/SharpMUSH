@@ -67,7 +67,25 @@ jobs:
             sharpmush/sharpmush-connectionserver:latest
           labels: |
             org.opencontainers.image.title=SharpMUSH ConnectionServer
-            org.opencontainers.image.description=Connection server for SharpMUSH
+            org.opencontainers.image.description=Rendering worker for SharpMUSH
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push SocketServer
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./SharpMUSH.SocketServer/Dockerfile
+          push: true
+          tags: |
+            sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}
+            sharpmush/sharpmush-socketserver:latest
+          labels: |
+            org.opencontainers.image.title=SharpMUSH SocketServer
+            org.opencontainers.image.description=Stable socket owner for SharpMUSH
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -87,3 +105,7 @@ jobs:
           echo "### ConnectionServer" >> $GITHUB_STEP_SUMMARY
           echo "- \`sharpmush/sharpmush-connectionserver:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`sharpmush/sharpmush-connectionserver:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### SocketServer — replacement drops live connections" >> $GITHUB_STEP_SUMMARY
+          echo "- \`sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> $GITHUB_STEP_SUMMARY

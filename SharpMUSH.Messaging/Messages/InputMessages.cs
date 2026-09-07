@@ -3,7 +3,7 @@ namespace SharpMUSH.Messaging.Messages;
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a player submits input
 /// </summary>
-public record TelnetInputMessage(long Handle, string Input) : IHandleMessage;
+public record TelnetInputMessage(long Handle, string Input, string? SessionId = null) : IHandleMessage;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess for GMCP signals
@@ -41,18 +41,19 @@ public record ConnectionEstablishedMessage(
 	string ConnectionType,
 	DateTimeOffset Timestamp,
 	string PresenceClass = "play",
-	bool IsSecure = false
+	bool IsSecure = false,
+	string? SessionId = null
 ) : IHandleMessage;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a connection is closed
 /// </summary>
-public record ConnectionClosedMessage(long Handle, DateTimeOffset Timestamp) : IHandleMessage;
+public record ConnectionClosedMessage(long Handle, DateTimeOffset Timestamp, string? SessionId = null) : IHandleMessage;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a WebSocket client submits input
 /// </summary>
-public record WebSocketInputMessage(long Handle, string Input) : IHandleMessage;
+public record WebSocketInputMessage(long Handle, string Input, string? SessionId = null) : IHandleMessage;
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when Pueblo handshake is detected.

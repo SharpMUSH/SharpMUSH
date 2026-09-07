@@ -10,6 +10,10 @@ namespace SharpMUSH.ConnectionServer.Services;
 public sealed class SessionSink
 {
 	private volatile IDuplexTransport? _current;
+	public string SessionId { get; set; } = "";
+	public DateTimeOffset TokenIssuedAt { get; set; }
+	public SemaphoreSlim OutputGate { get; } = new(1, 1);
+	public SemaphoreSlim ResumeGate { get; } = new(1, 1);
 
 	public IDuplexTransport? Current => _current;
 

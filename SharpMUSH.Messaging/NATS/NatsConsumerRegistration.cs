@@ -16,4 +16,18 @@ public record NatsConsumerRegistration(
 public sealed class NatsConsumerRegistry
 {
 	public List<NatsConsumerRegistration> Registrations { get; } = [];
+	private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	private readonly HashSet<string> _active = [];
+
+	public Task WaitUntilReadyAsync(CancellationToken ct) =>
+		Registrations.Count == 0 ? Task.CompletedTask : _ready.Task.WaitAsync(ct);
+
+	internal void MarkActive(string durableName)
+	{
+		lock (_active)
+		{
+			_active.Add(durableName);
+			if (_active.Count == Registrations.Count) _ready.TrySetResult();
+		}
+	}
 }

@@ -379,3 +379,7 @@ docker compose up -d
 
 The `app-data` volume persists across updates, so the world is untouched. Database migrations
 are recorded in the database and re-applied only when new, so unattended restarts are safe.
+
+## Updates and live connections
+
+See [Connections during deployment](connection-updates.md) for lifecycle notices, PR deployment-impact checks, stop grace, session recovery limits and rollout options.

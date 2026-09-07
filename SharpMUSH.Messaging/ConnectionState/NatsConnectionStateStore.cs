@@ -11,9 +11,7 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// NATS JetStream Key-Value-backed implementation of connection state store.
-/// Adapter alongside <see cref="RedisConnectionStateStore"/> for performance comparison.
-/// Uses a JetStream KV bucket with 24-hour TTL; CAS-based optimistic concurrency
-/// mirrors the Redis WATCH/transaction pattern in the Redis implementation.
+/// Uses a JetStream KV bucket with 24-hour TTL and revision-checked mutations.
 /// </summary>
 public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisposable
 {
@@ -24,7 +22,7 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 	private readonly INatsKVStore _store;
 	private readonly ILogger<NatsConnectionStateStore> _logger;
 
-	private NatsConnectionStateStore(NatsConnection nats, INatsKVStore store, ILogger<NatsConnectionStateStore> logger)
+	internal NatsConnectionStateStore(NatsConnection nats, INatsKVStore store, ILogger<NatsConnectionStateStore> logger)
 	{
 		_nats = nats;
 		_store = store;
@@ -72,6 +70,8 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			var result = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
 			if (!result.Success)
 			{
+				if (result.Error is not (NatsKVKeyNotFoundException or NatsKVKeyDeletedException))
+					throw result.Error;
 				_logger.LogTrace("No connection state found for handle {Handle}", handle);
 				return null;
 			}
@@ -148,63 +148,79 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		}
 	}
 
-	public async Task SetPlayerBindingAsync(long handle, string? playerObjid, CancellationToken ct = default)
-	{
-		try
+	public Task SetPlayerBindingAsync(long handle, string? playerObjid, CancellationToken ct = default) =>
+		MutateAsync(handle, data =>
 		{
-			var data = await GetConnectionAsync(handle, ct);
-			if (data is null)
-			{
-				_logger.LogWarning("Cannot set player binding for non-existent connection {Handle}", handle);
-				return;
-			}
-
 			data.PlayerObjid = playerObjid;
 			data.State = playerObjid is not null ? "LoggedIn" : "Connected";
-			data.LastSeen = DateTimeOffset.UtcNow;
-			await SetConnectionAsync(handle, data, ct);
-			_logger.LogTrace("Updated player binding for handle {Handle} to {PlayerObjid}", handle, playerObjid);
-		}
-		catch (Exception ex)
+		}, ct);
+
+	public Task UpdateMetadataAsync(long handle, string key, string value, CancellationToken ct = default) =>
+		MutateAsync(handle, data =>
 		{
-			_logger.LogError(ex, "Failed to set player binding for handle {Handle}", handle);
-			throw;
+			data.Metadata[key] = value;
+			if (key == "State") data.State = value;
+		}, ct);
+
+	public async Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
+		string ip, string host, bool secure, CancellationToken ct = default)
+	{
+		if (string.IsNullOrWhiteSpace(sessionId)) return false;
+		for (var attempt = 0; attempt < 16; attempt++)
+		{
+			var entry = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
+			if (!entry.Success)
+			{
+				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return false;
+				throw entry.Error;
+			}
+			var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value.Value!)!;
+			if (data.Handle != handle || data.Metadata.GetValueOrDefault("SessionId") != sessionId
+				|| data.Metadata.GetValueOrDefault("ResumeRevoked") == "1"
+				|| data.PlayerObjid != playerObjid || data.State != state || data.ConnectionType != "websocket"
+				|| (!secure && data.Metadata.GetValueOrDefault("SSL") == "1")) return false;
+			if (data.Metadata.TryGetValue("ResumeExpiresAt", out var expiry)
+				&& (!long.TryParse(expiry, out var expiresAt) || expiresAt < 0
+				|| (expiresAt > 0 && expiresAt <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())))
+				return false;
+
+			data.Metadata["InternetProtocolAddress"] = ip;
+			data.Metadata["HostName"] = host;
+			data.Metadata["SSL"] = secure ? "1" : "0";
+			data.LastSeen = DateTimeOffset.UtcNow;
+			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),
+				entry.Value.Revision, cancellationToken: ct);
+			if (result.Success) return true;
+			if (result.Error is not NatsKVWrongLastRevisionException) throw result.Error;
+			await Task.Delay(SharpMUSH.Library.Utilities.ConnectionRetryPolicy.Delay, ct);
 		}
+		throw new InvalidOperationException($"Connection {handle} changed repeatedly while resuming transport.");
 	}
 
-	public async Task UpdateMetadataAsync(long handle, string key, string value, CancellationToken ct = default)
+	private async Task MutateAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct)
 	{
-		try
+		DateTimeOffset? incarnation = null;
+		for (var attempt = 0; attempt < 16; attempt++)
 		{
-			var connectionKey = GetKey(handle);
-
-			var readResult = await _store.TryGetEntryAsync<string>(connectionKey, cancellationToken: ct);
-			if (!readResult.Success)
+			var entry = await _store.TryGetEntryAsync<string>(GetKey(handle), cancellationToken: ct);
+			if (!entry.Success)
 			{
-				_logger.LogWarning("Cannot update metadata for non-existent connection {Handle}", handle);
-				return;
+				if (entry.Error is NatsKVKeyNotFoundException or NatsKVKeyDeletedException) return;
+				throw entry.Error;
 			}
-
-			var data = JsonSerializer.Deserialize<ConnectionStateData>(readResult.Value.Value!)!;
-			data.Metadata[key] = value;
+			var data = JsonSerializer.Deserialize<ConnectionStateData>(entry.Value.Value!)!;
+			// Never apply a retry to a later occupant of a recycled descriptor.
+			if (incarnation is not null && incarnation != data.ConnectedAt) return;
+			incarnation = data.ConnectedAt;
+			mutate(data);
 			data.LastSeen = DateTimeOffset.UtcNow;
-			var newJson = JsonSerializer.Serialize(data);
-
-			// Use a revision-checked update so a connection deleted or changed after the read
-			// is not recreated/resurrected by this metadata write. If the conditional update
-			// fails, another actor won the race (including deletion), so treat it as a no-op.
-			var updated = await _store.TryUpdateAsync(connectionKey, newJson, readResult.Value.Revision, cancellationToken: ct);
-			if (!updated.Success)
-			{
-				return;
-			}
-			_logger.LogTrace("Updated metadata for handle {Handle}: {Key}={Value}", handle, key, value);
+			var result = await _store.TryUpdateAsync(GetKey(handle), JsonSerializer.Serialize(data),
+				entry.Value.Revision, cancellationToken: ct);
+			if (result.Success) return;
+			if (result.Error is not NatsKVWrongLastRevisionException) throw result.Error;
+			await Task.Delay(SharpMUSH.Library.Utilities.ConnectionRetryPolicy.Delay, ct);
 		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Failed to update metadata for handle {Handle}", handle);
-			throw;
-		}
+		throw new InvalidOperationException($"Connection {handle} changed repeatedly while updating state.");
 	}
 
 	private static string GetKey(long handle) => $"{KeyPrefix}{handle}";

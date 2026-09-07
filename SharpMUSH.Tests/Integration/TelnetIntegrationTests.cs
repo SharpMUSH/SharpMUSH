@@ -183,7 +183,11 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 			"--ConnectionServer:MxpEnabled=true"
 		};
 
-		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl);
+		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl, services =>
+		{
+			services.AddSingleton<SharpMUSH.ConnectionServer.Services.IMarkupOutputRenderer, SharpMUSH.ConnectionServer.Services.MarkupOutputRenderer>();
+			services.AddSingleton<SharpMUSH.ConnectionServer.Services.IOutputTransformService, SharpMUSH.ConnectionServer.Services.OutputTransformService>();
+		});
 
 		_connectionServerApp.UseWebSockets();
 		var wsHandler = _connectionServerApp.Services.GetRequiredService<WebSocketServer>();

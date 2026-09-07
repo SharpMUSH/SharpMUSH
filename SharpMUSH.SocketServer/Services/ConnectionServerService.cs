@@ -30,8 +30,10 @@ public class ConnectionServerService(
 		Func<string, string, ValueTask>? gmcpFunction = null,
 		ProtocolCapabilities? capabilities = null,
 		string presenceClass = "play",
-		bool isSecure = false)
+		bool isSecure = false,
+		string? sessionId = null)
 	{
+		sessionId ??= Guid.NewGuid().ToString("N");
 		try
 		{
 			var data = new ConnectionData(
@@ -46,7 +48,7 @@ public class ConnectionServerService(
 				capabilities ?? new ProtocolCapabilities(),
 				null,
 				connectionType,
-				presenceClass);
+				presenceClass, sessionId);
 
 			_sessionState.AddOrUpdate(handle, data, (_, _) =>
 				throw new InvalidOperationException("Handle already registered"));
@@ -76,13 +78,15 @@ public class ConnectionServerService(
 							// IConnectionService default of "play", so a portal-class socket comes
 							// back visible to mortal WHO. It is the one field of the established
 							// message that the store did not carry.
-							{ "PresenceClass", presenceClass }
+							{ "PresenceClass", presenceClass },
+							{ "SessionId", sessionId ?? "" },
+							{ "SSL", isSecure ? "1" : "0" }
 						}
 					});
 				}
 				catch (Exception ex)
 				{
-					logger.LogWarning(ex, "Failed to persist connection state to Redis for handle {Handle}; continuing with publish", handle);
+					logger.LogWarning(ex, "Failed to persist connection state to NATS KV for handle {Handle}; continuing with publish", handle);
 				}
 			}
 
@@ -96,7 +100,8 @@ public class ConnectionServerService(
 				connectionType,
 				DateTimeOffset.UtcNow,
 				presenceClass,
-				isSecure
+				isSecure,
+				sessionId
 			));
 
 			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
@@ -106,6 +111,16 @@ public class ConnectionServerService(
 			logger.LogError(ex, "Error registering connection handle: {Handle}", handle);
 			await outputFunction(Encoding.UTF8.GetBytes(ex.ToString()));
 		}
+	}
+
+	public void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect)
+	{
+		if (!_sessionState.TryAdd(data.Handle, new ConnectionData(data.Handle, data.PlayerObjid,
+			data.PlayerObjid is null ? ConnectionState.Connected : ConnectionState.LoggedIn,
+			output, output, () => Encoding.UTF8, disconnect, null, new ProtocolCapabilities(), null,
+			data.ConnectionType, data.Metadata.GetValueOrDefault("PresenceClass", "play"),
+			data.Metadata.GetValueOrDefault("SessionId", ""))))
+			throw new InvalidOperationException("A live connection already owns the restored descriptor.");
 	}
 
 	public async Task DisconnectAsync(long handle)
@@ -122,22 +137,28 @@ public class ConnectionServerService(
 				}
 				catch (Exception ex)
 				{
-					logger.LogWarning(ex, "Failed to remove connection state from Redis for handle {Handle}; continuing with publish", handle);
+					logger.LogWarning(ex, "Failed to remove connection state from NATS KV for handle {Handle}; continuing with publish", handle);
 				}
 			}
 
 			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionClosedMessage - Handle: {Handle}, Timestamp: {Timestamp}",
 				handle, DateTimeOffset.UtcNow);
 
-			await publishEndpoint.Publish(new ConnectionClosedMessage(
-				handle,
-				DateTimeOffset.UtcNow
-			));
+			try
+			{
+				await publishEndpoint.Publish(new ConnectionClosedMessage(handle, DateTimeOffset.UtcNow, data.SessionId));
+			}
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Could not publish disconnect for {Handle}; completing local cleanup", handle);
+			}
+			finally
+			{
+				data.DisconnectFunction();
+			}
 
-			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionClosedMessage - Handle: {Handle}", handle);
 		}
 
-		data?.DisconnectFunction();
 	}
 
 	public ConnectionData? Get(long handle) =>
@@ -204,7 +225,8 @@ public class ConnectionServerService(
 		ProtocolCapabilities Capabilities,
 		PlayerOutputPreferences? Preferences,
 		string ConnectionType = "telnet",
-		string PresenceClass = "play");
+		string PresenceClass = "play",
+		string SessionId = "");
 
 	public enum ConnectionState
 	{
@@ -223,7 +245,10 @@ public interface IConnectionServerService
 		Func<string, string, ValueTask>? gmcpFunction = null,
 		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null,
 		string presenceClass = "play",
-		bool isSecure = false);
+		bool isSecure = false,
+		string? sessionId = null);
+
+	void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect);
 
 	Task DisconnectAsync(long handle);
 

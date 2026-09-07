@@ -169,7 +169,8 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Do<Action>(a => forcedDisconnect = a),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>());
 
 		var pump = MakePump(bus, conn, desc);
 		// Fire the captured forced-disconnect while the socket is still attached to the sink (before the
@@ -219,7 +220,8 @@ public class ConnectionPumpTests
 			Arg.Any<Func<byte[], ValueTask>>(),
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>());
 
 		var pump = MakePump(bus, conn, desc, replay);
 		using var cts = new CancellationTokenSource();
@@ -237,7 +239,7 @@ public class ConnectionPumpTests
 	}
 
 	[Test]
-	public async Task Resume_to_dead_replays_the_tokens_session_not_the_reused_handle()
+	public async Task Resume_to_dead_does_not_replay_without_a_current_session()
 	{
 		var bus = Substitute.For<IMessageBus>();
 		var conn = Substitute.For<IConnectionServerService>();
@@ -258,12 +260,12 @@ public class ConnectionPumpTests
 
 		await pump.RunAsync(transport, candidateHandle: 5, CancellationToken.None);
 
-		// The dead incarnation's post-ack frame is replayed (keyed by the token's session, not the handle).
+		// A token alone cannot reveal history after its session is gone or revoked.
 		var seqs = transport.Sent
 			.Where(b => SeqEnvelope.TryReadSeq(b, out _))
 			.Select(SeqEnvelope.ReadSeq)
 			.ToArray();
-		await Assert.That(seqs).IsEquivalentTo(new[] { 2L });
+		await Assert.That(seqs).IsEmpty();
 
 		// The consumed token is spent (single-use), so a retry can't re-fetch the buffer.
 		var (stillValid, _, _) = await resume.TryResolveAsync(deadToken);
@@ -307,7 +309,8 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>());
 	}
 
 	[Test]
@@ -329,7 +332,7 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			"portal");
+			"portal", sessionId: Arg.Any<string?>());
 	}
 
 	[Test]
@@ -351,7 +354,7 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			"play");
+			"play", sessionId: Arg.Any<string?>());
 	}
 
 	[Test]
@@ -374,6 +377,7 @@ public class ConnectionPumpTests
 		var sink9 = registry.GetOrCreate(9);
 		sink9.Detach();
 		const string session9 = "live-incarnation-9";
+		sink9.SessionId = session9;
 		await replay.AppendAsync(session9, System.Text.Encoding.UTF8.GetBytes("one")); // seq 1
 		await replay.AppendAsync(session9, System.Text.Encoding.UTF8.GetBytes("two")); // seq 2
 		var token = await resume.MintAsync(9, session9);
@@ -389,7 +393,8 @@ public class ConnectionPumpTests
 			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>());
+			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>());
 		desc.Received(1).ReleaseWebSocketDescriptor(99);
 
 		// The reconnecting transport received the reattach ack (proves it was attached to session 9
@@ -423,6 +428,7 @@ public class ConnectionPumpTests
 			() => System.Text.Encoding.UTF8, () => { }, null,
 			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
 		registry.GetOrCreate(9).Detach();
+		registry.GetOrCreate(9).SessionId = "live-incarnation-9";
 		var oldToken = await resume.MintAsync(9, "live-incarnation-9");
 
 		var pump = MakePump(bus, conn, desc, replay, resume, registry);

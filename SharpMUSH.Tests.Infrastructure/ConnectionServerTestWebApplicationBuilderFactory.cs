@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.ConnectionServer.Services;
 using Microsoft.AspNetCore.TestHost;
 using Serilog;
 using Serilog.Events;
@@ -44,6 +46,8 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 
 		builder.ConfigureTestServices(sc =>
 		{
+			sc.AddSingleton<IMarkupOutputRenderer, MarkupOutputRenderer>();
+			sc.AddSingleton<IOutputTransformService, OutputTransformService>();
 		});
 	}
 }
