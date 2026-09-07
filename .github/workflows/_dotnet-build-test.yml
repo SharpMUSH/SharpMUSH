@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 70
     strategy:
       matrix:
-        database: [arangodb, memgraph, surrealdb]
+        database: [arangodb, memgraph, surrealdb, lightning]
 
     steps:
       - uses: actions/checkout@v6
@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        database: [arangodb, memgraph, surrealdb]
+        database: [arangodb, memgraph, surrealdb, lightning]
 
     steps:
       - uses: actions/checkout@v6

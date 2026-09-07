@@ -15,6 +15,7 @@ public static class SceneSystemServiceCollectionExtensions
 	public const string ArangoKey = "arangodb";
 	public const string MemgraphKey = "memgraph";
 	public const string SurrealKey = "surrealdb";
+	public const string LightningKey = "lightning";
 
 	private const string ProviderConfigKey = "SHARPMUSH_DATABASE_PROVIDER";
 
@@ -36,6 +37,8 @@ public static class SceneSystemServiceCollectionExtensions
 			(sp, _) => new MemgraphSceneStorage(sp.GetRequiredService<IMemgraphStorageAccessor>()));
 		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
 			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
+		services.AddKeyedSingleton<ISceneStorage>(LightningKey,
+			(sp, _) => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
@@ -75,6 +78,7 @@ public static class SceneSystemServiceCollectionExtensions
 		{
 			var p when string.Equals(p, "memgraph", StringComparison.OrdinalIgnoreCase) => MemgraphKey,
 			var p when string.Equals(p, "surrealdb", StringComparison.OrdinalIgnoreCase) => SurrealKey,
+			var p when string.Equals(p, "lightning", StringComparison.OrdinalIgnoreCase) => LightningKey,
 			_ => ArangoKey
 		};
 	}

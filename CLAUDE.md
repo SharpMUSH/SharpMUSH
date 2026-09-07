@@ -46,11 +46,18 @@ The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMU
 docker compose up -d
 ```
 
+`surrealdb` and `lightning` are embedded and need no Docker for the database itself — `lightning`
+opens an LMDB directory in-process. NATS is still wanted for the connection server.
+
 Key environment variables:
-- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, or `surrealdb`
+- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, `surrealdb`, or `lightning`
 - `ARANGO_CONNECTION_STRING` — ArangoDB connection string
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
+- `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
+- `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
+
+Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
 
 First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
 
@@ -80,7 +87,8 @@ Browser (Blazor WASM)
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
 | `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
 | `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
-| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded in-memory provider |
+| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
+| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; every commit fsynced |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |

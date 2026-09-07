@@ -25,7 +25,8 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		string configFile,
 		DatabaseProvider databaseProvider = DatabaseProvider.ArangoDB,
 		string? memgraphUri = null,
-		string? surrealEndpoint = null) :
+		string? surrealEndpoint = null,
+		string? lightningPath = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -47,6 +48,14 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			// isolated and disk-free, matching the test suite's default.
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
 			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", surrealEndpoint ?? "mem://");
+		}
+		else if (databaseProvider == DatabaseProvider.Lightning)
+		{
+			// No Testcontainer: LMDB is a plain directory. The caller (LightningBaseBenchmark)
+			// owns the directory's lifetime, matching the test suite's ServerWebAppFactory.
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
+			if (!string.IsNullOrEmpty(lightningPath))
+				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", lightningPath);
 		}
 		else
 		{
@@ -86,6 +95,7 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", null);
 			Environment.SetEnvironmentVariable("MEMGRAPH_URI", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", null);
+			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", null);
 		}
 
 		base.Dispose(disposing);

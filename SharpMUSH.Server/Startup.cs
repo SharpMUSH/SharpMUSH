@@ -33,6 +33,8 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.ArangoDB;
+using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Memgraph;
 using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
@@ -106,6 +108,21 @@ public class Startup(
 				sp.GetRequiredService<TProvider>(),
 				sp.GetRequiredService<Implementation.Services.PluginCatalog>(),
 				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
+	}
+
+	/// <summary>LMDB's map size is a hard ceiling on the environment, so a typo in
+	/// <c>SHARPMUSH_LIGHTNING_MAPSIZE</c> silently capping the world at the default would be the worst
+	/// possible failure mode to keep quiet about. Falls back to 64 GiB, saying so.</summary>
+	private static long ResolveLightningMapSize(string? setting, ILogger<LightningDatabase> logger)
+	{
+		const long defaultMapSize = 64L << 30;
+		if (string.IsNullOrWhiteSpace(setting)) return defaultMapSize;
+		if (long.TryParse(setting, out var parsed)) return parsed;
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_MAPSIZE is set to '{Setting}', which is not a byte count; using the default of {DefaultMapSize} bytes",
+			setting, defaultMapSize);
+		return defaultMapSize;
 	}
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -268,6 +285,29 @@ public class Startup(
 			RegisterDatabaseProvider<SurrealDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
 				sp.GetRequiredService<SurrealDatabase>());
+		}
+		else if (databaseProvider == DatabaseProvider.Lightning)
+		{
+			// Config-driven path/map-size so production picks a durable location while tests default to a
+			// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
+			// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB.
+			var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
+				?? configuration["Lightning:Path"]
+				?? "lightning-data";
+			var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
+			services.AddSingleton<LightningDatabase>(x =>
+			{
+				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
+				var password = x.GetRequiredService<IPasswordService>();
+				var relations = x.GetRequiredService<IObjectRelationLoader>();
+				var db = new LightningDatabase(dbLogger,
+					new LightningStoreOptions { Path = lightningPath, MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger) },
+					password, relations, pluginMigrationSources, pluginFlags);
+				return db;
+			});
+			RegisterDatabaseProvider<LightningDatabase>(services);
+			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
+				sp.GetRequiredService<LightningDatabase>());
 		}
 		else
 		{
