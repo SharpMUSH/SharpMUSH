@@ -101,7 +101,7 @@ public class ConnectionStateEventHandler(
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
 					remainingConnections.ToString(),
-					"0", // hidden? (0 = not hidden, 1 = hidden)
+					connectionData.IsHidden ? "1" : "0", // hidden? (0 = not hidden, 1 = hidden)
 					notification.NewState == IConnectionService.ConnectionState.Connected
 						? "logout"
 						: "quit", // cause of disconnection
