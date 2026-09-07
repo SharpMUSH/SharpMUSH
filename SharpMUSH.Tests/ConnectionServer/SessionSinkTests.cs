@@ -10,6 +10,7 @@ public class SessionSinkTests
 		public string Kind => "fake";
 		public string RemoteIp => "ip";
 		public string Hostname => "host";
+		public bool IsSecure => false;
 		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct) => Task.CompletedTask;
 		public Task<string?> ReceiveTextAsync(CancellationToken ct) => Task.FromResult<string?>(null);
 		public Task CloseAsync() => Task.CompletedTask;

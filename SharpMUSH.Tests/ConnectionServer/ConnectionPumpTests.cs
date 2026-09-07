@@ -18,6 +18,7 @@ public class ConnectionPumpTests
 		public string Kind => "fake";
 		public string RemoteIp => "1.2.3.4";
 		public string Hostname => "host";
+		public bool IsSecure => false;
 
 		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
 		{
@@ -47,6 +48,7 @@ public class ConnectionPumpTests
 		public string Kind => "fake";
 		public string RemoteIp => "1.2.3.4";
 		public string Hostname => "host";
+		public bool IsSecure => false;
 
 		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
 		{

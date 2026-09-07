@@ -208,7 +208,8 @@ public sealed class ConnectionPump(
 					await current.CloseAsync();
 				},
 				ex => logger.LogError(ex, "Error closing transport on forced disconnect for handle {Handle}", handle)),
-			presenceClass: presenceClass);
+			presenceClass: presenceClass,
+			isSecure: transport.IsSecure);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);

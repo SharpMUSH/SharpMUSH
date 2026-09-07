@@ -225,7 +225,10 @@ public class ConnectionEstablishedConsumer(
 				{ "InternetProtocolAddress", message.IpAddress },
 				{ "HostName", message.Hostname },
 				{ "ConnectionType", message.ConnectionType },
-				{ "PresenceClass", message.PresenceClass }
+				{ "PresenceClass", message.PresenceClass },
+				// PennMUSH's CONN_SSL: what ssl() answers and terminfo()'s "ssl" token. Established at
+				// accept time from the transport, so it is known before the connection can ask.
+				{ "SSL", message.IsSecure ? "1" : "0" }
 			}));
 	}
 }

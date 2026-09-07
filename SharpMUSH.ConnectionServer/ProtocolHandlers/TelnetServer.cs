@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections.Features;
 using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.Library.Utilities;
@@ -217,6 +218,11 @@ public class TelnetServer : ConnectionHandler
 			await telnet.SendAsync(PuebloHelloBytes);
 		}
 
+		// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
+		// terminated TLS, so this is the handshake that happened rather than anything the client says
+		// about itself — and it is false, correctly, on the plaintext listener.
+		var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
+
 		await _connectionService.RegisterAsync(
 			nextPort,
 			remoteIp,
@@ -267,7 +273,8 @@ public class TelnetServer : ConnectionHandler
 		async (module, message) =>
 		{
 			await telnet.SendGMCPCommand(module, message);
-		});
+		},
+		isSecure: isSecure);
 
 		try
 		{

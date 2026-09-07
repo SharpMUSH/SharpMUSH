@@ -29,7 +29,8 @@ public class ConnectionServerService(
 		Action disconnectFunction,
 		Func<string, string, ValueTask>? gmcpFunction = null,
 		ProtocolCapabilities? capabilities = null,
-		string presenceClass = "play")
+		string presenceClass = "play",
+		bool isSecure = false)
 	{
 		try
 		{
@@ -94,7 +95,8 @@ public class ConnectionServerService(
 				hostname,
 				connectionType,
 				DateTimeOffset.UtcNow,
-				presenceClass
+				presenceClass,
+				isSecure
 			));
 
 			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
@@ -220,7 +222,8 @@ public interface IConnectionServerService
 		Action disconnectFunction,
 		Func<string, string, ValueTask>? gmcpFunction = null,
 		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null,
-		string presenceClass = "play");
+		string presenceClass = "play",
+		bool isSecure = false);
 
 	Task DisconnectAsync(long handle);
 

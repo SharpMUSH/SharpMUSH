@@ -28,13 +28,20 @@ public record NAWSUpdateMessage(long Handle, int Height, int Width) : IHandleMes
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a connection is established
 /// </summary>
+/// <param name="IsSecure">
+/// Whether the transport is TLS-encrypted — PennMUSH's CONN_SSL, what <c>ssl()</c> answers and the
+/// "ssl" token in <c>terminfo()</c>. Determined at accept time from the transport itself (the TLS
+/// handshake feature for telnet, the request scheme for WebSockets), never from anything the client
+/// claims about itself.
+/// </param>
 public record ConnectionEstablishedMessage(
 	long Handle,
 	string IpAddress,
 	string Hostname,
 	string ConnectionType,
 	DateTimeOffset Timestamp,
-	string PresenceClass = "play"
+	string PresenceClass = "play",
+	bool IsSecure = false
 ) : IHandleMessage;
 
 /// <summary>

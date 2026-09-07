@@ -4,11 +4,13 @@ using System.Text;
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
 /// <summary>Adapts a <see cref="WebSocket"/> to <see cref="IDuplexTransport"/> using native text framing.</summary>
-public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string hostname) : IDuplexTransport
+public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string hostname, bool isSecure = false)
+	: IDuplexTransport
 {
 	public string Kind => "websocket";
 	public string RemoteIp => remoteIp;
 	public string Hostname => hostname;
+	public bool IsSecure => isSecure;
 
 	public async Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
 	{

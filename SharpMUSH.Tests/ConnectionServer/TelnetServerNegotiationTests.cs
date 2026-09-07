@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Configuration;
+using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messaging.Abstractions;
@@ -244,6 +245,36 @@ public class TelnetServerNegotiationTests
 			await Assert.That(message!.Handle).IsEqualTo(42L);
 			await Assert.That(message.TerminalTypes).Contains("SharpMUTerm")
 				.Because("terminfo() reports the first reported terminal type as the client");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// The plaintext listener attaches no ITlsHandshakeFeature, so a connection on it must report
+	/// ssl() as false. The claim is made from the handshake that happened, never from the port
+	/// number — a TLS endpoint is what makes it true, and there is none here.
+	/// </summary>
+	[Test]
+	public async Task PlaintextListener_DoesNotClaimSsl()
+	{
+		var connectionService = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+
+			await connectionService.Received(1).RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), "telnet",
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(),
+				isSecure: false);
 		}
 		finally
 		{

@@ -16,6 +16,19 @@ public class ConnectionServerOptions
 	public int HttpPort { get; set; } = 4202;
 
 	/// <summary>
+	/// Port for TLS-encrypted Telnet connections (PennMUSH's <c>ssl_port</c>), or 0 to open no such
+	/// listener. Defaults to 0: opening it needs a certificate, and Kestrel fails to start rather
+	/// than serving an endpoint without one, so it stays opt-in.
+	/// <para>
+	/// The certificate comes from Kestrel's own configuration — <c>Kestrel:Certificates:Default</c>
+	/// in appsettings.json, or the ASPNETCORE_Kestrel__Certificates__Default__* environment
+	/// variables — rather than a SharpMUSH-specific setting, so it is configured the same way as any
+	/// other .NET service and can be rotated without a code change.
+	/// </para>
+	/// </summary>
+	public int TelnetSslPort { get; set; } = 0;
+
+	/// <summary>
 	/// Starting descriptor number for Telnet connections
 	/// </summary>
 	public long TelnetDescriptorStart { get; set; } = 0;
