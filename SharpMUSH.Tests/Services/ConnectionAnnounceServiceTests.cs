@@ -168,7 +168,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1);
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
 		await communicationService.Received(1).SendToRoomAsync(
 			player, player.AsContainer,
@@ -195,7 +195,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 2);
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 2, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
 			null, "HEAR_CONNECT", "GAME: Bob has reconnected.");
@@ -236,7 +236,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1);
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
 		await attributeService.Received(1).GetAttributeAsync(
 			player, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
@@ -258,7 +258,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0);
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has disconnected.");
 		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
@@ -280,7 +280,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 1);
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 1, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
 		await attributeService.DidNotReceive().SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
@@ -315,7 +315,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceConnectAsync(parser, player, connectionCount: 1);
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
 		logger.Received(1).Log(
 			LogLevel.Error,
@@ -351,7 +351,7 @@ public class ConnectionAnnounceServiceTests
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
 
-		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0);
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
 
 		logger.Received(1).Log(
 			LogLevel.Error,
@@ -359,5 +359,57 @@ public class ConnectionAnnounceServiceTests
 			Arg.Any<object>(),
 			Arg.Any<Exception>(),
 			Arg.Any<Func<object, Exception?, string>>());
+	}
+
+	/// <summary>
+	/// Task 12: a Hidden connection (PennMUSH DESC.hide, distinct from the DARK flag) gets its own
+	/// HIDDEN- wording, selected by the caller-supplied <c>isHiddenConnection</c> flag rather than
+	/// re-derived from the player object.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_HiddenConnection_UsesHiddenConnectedWording()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: true);
+
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
+			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-connected.");
+	}
+
+	/// <summary>
+	/// Task 12: same guarantee as above for the disconnect side's HIDDEN-disconnected wording.
+	/// </summary>
+	[Test]
+	public async Task AnnounceDisconnectAsync_HiddenConnection_UsesHiddenDisconnectedWording()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration,
+			FakeMediatorWithNoMasterRoom(), FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: true);
+
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
+			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-disconnected.");
 	}
 }

@@ -59,6 +59,10 @@ public partial class Commands
 				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
 				var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 				var isDark = await known.HasFlag("DARK");
+				// A row is treated as hidden-from-mortals either because the object itself is DARK,
+				// or because this specific connection is Hidden (PennMUSH DESC.hide / @HIDE) — the
+				// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
+				var isHiddenRow = isDark || player.IsHidden;
 
 				string line;
 				if (isWizard)
@@ -66,8 +70,8 @@ public partial class Commands
 					var location = known.IsContent
 						? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
 						: "#-1";
-					// Host truncated + " (Dark)" for dark players, else truncated to 27 (PennMUSH).
-					var host = isDark
+					// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH).
+					var host = isHiddenRow
 						? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
 						: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
 					// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
@@ -79,16 +83,19 @@ public partial class Commands
 					// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
 					// listing exists to show.
 					var doingText = await GetDoingText(executor ?? known, known);
-					line = $"{namePadded} {onFor,10}   {idle,4}{(isDark ? 'D' : ' ')} {doingText}";
+					line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
 				}
 
-				return (Line: line, Known: known);
+				return (Line: line, Known: known, HiddenRow: isHiddenRow);
 			})
-			// CanSee needs a viewer; an anonymous connect-screen viewer has none and is neither
-			// privileged nor SEE_ALL, so it reduces to the DARK check CanSee would have made.
+			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
+			// which only knows about the DARK flag. HiddenRow folds in the per-connection Hidden
+			// state too (see above), so the row is visible when either CanSee's own privilege
+			// exemption applies, or the row isn't hidden by either mechanism. An anonymous
+			// connect-screen viewer has no executor and is never privileged.
 			.Where(async (player, _) => executor is null
-				? !await player.Known.IsDark()
-				: await PermissionService.CanSee(executor, player.Known))
+				? !player.HiddenRow
+				: !player.HiddenRow || await executor.IsPriv() || await executor.IsSee_All())
 			.ToListAsync();
 
 		var count = filteredPlayers.Count;
@@ -598,7 +605,8 @@ public partial class Commands
 			connectionCount.ToString(),
 			handle.ToString());
 
-		await ConnectionAnnounceService.AnnounceConnectAsync(parser, new AnySharpObject(player), connectionCount);
+		await ConnectionAnnounceService.AnnounceConnectAsync(
+			parser, new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
 
 		// Refresh everyone in the room the player just appeared in.
 		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);

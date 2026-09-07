@@ -27,15 +27,19 @@ public class ConnectionAnnounceService(
 	ILogger<ConnectionAnnounceService> logger) : IConnectionAnnounceService
 {
 	/// <inheritdoc />
-	public async ValueTask AnnounceConnectAsync(IMUSHCodeParser parser, AnySharpObject player, int connectionCount)
+	public async ValueTask AnnounceConnectAsync(IMUSHCodeParser parser, AnySharpObject player, int connectionCount, bool isHiddenConnection)
 	{
 		try
 		{
 			var isDark = await player.IsDark();
 			var name = player.Object().Name;
-			var wording = connectionCount > 1
-				? ErrorMessages.Notifications.GameHasReconnected
-				: ErrorMessages.Notifications.GameHasConnected;
+			var wording = (isHiddenConnection, connectionCount > 1) switch
+			{
+				(true, true) => ErrorMessages.Notifications.GameHasHiddenReconnected,
+				(true, false) => ErrorMessages.Notifications.GameHasHiddenConnected,
+				(false, true) => ErrorMessages.Notifications.GameHasReconnected,
+				(false, false) => ErrorMessages.Notifications.GameHasConnected,
+			};
 			var fullMessage = $"{name} {wording}";
 
 			if (await player.HasFlag("SUSPECT"))
@@ -92,15 +96,19 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections)
+	public async ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections, bool isHiddenConnection)
 	{
 		try
 		{
 			var isDark = await player.IsDark();
 			var name = player.Object().Name;
-			var wording = remainingConnections > 0
-				? ErrorMessages.Notifications.GameHasPartiallyDisconnected
-				: ErrorMessages.Notifications.GameHasDisconnected;
+			var wording = (isHiddenConnection, remainingConnections > 0) switch
+			{
+				(true, true) => ErrorMessages.Notifications.GameHasPartiallyHiddenDisconnected,
+				(true, false) => ErrorMessages.Notifications.GameHasHiddenDisconnected,
+				(false, true) => ErrorMessages.Notifications.GameHasPartiallyDisconnected,
+				(false, false) => ErrorMessages.Notifications.GameHasDisconnected,
+			};
 			var fullMessage = $"{name} {wording}";
 
 			if (await player.HasFlag("SUSPECT"))

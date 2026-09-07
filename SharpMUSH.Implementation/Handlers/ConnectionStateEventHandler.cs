@@ -119,7 +119,8 @@ public class ConnectionStateEventHandler(
 					await connectionAnnounceService.AnnounceDisconnectAsync(
 						parser,
 						new AnySharpObject(playerNode.AsPlayer),
-						remainingConnections);
+						remainingConnections,
+						connectionData.IsHidden);
 
 					// Refresh the room's remaining occupants after the player disconnects.
 					var roomContainer = await playerNode.AsPlayer.Location.WithCancellation(CancellationToken.None);

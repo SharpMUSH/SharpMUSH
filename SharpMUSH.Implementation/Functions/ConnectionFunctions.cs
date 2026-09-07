@@ -1469,7 +1469,7 @@ public partial class Functions
 			}
 
 			var player = await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value));
-			var isHidden = await player.Known.HasFlag("DARK");
+			var isHidden = data.IsHidden || await player.Known.HasFlag("DARK");
 			return new CallState(isHidden ? "1" : "0");
 		}
 
@@ -1480,7 +1480,8 @@ public partial class Functions
 		}
 
 		var located = maybeLocate.AsPlayer;
-		var isHiddenPlayer = await new AnySharpObject(located).HasFlag("DARK");
+		var isHiddenPlayer = await ConnectionService.IsPlayerHiddenAsync(located.Object.DBRef)
+			|| await new AnySharpObject(located).HasFlag("DARK");
 		return new CallState(isHiddenPlayer ? "1" : "0");
 	}
 

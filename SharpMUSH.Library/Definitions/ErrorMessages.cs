@@ -541,6 +541,10 @@ public static class ErrorMessages
 		public const string GameHasReconnected = "has reconnected.";
 		public const string GameHasDisconnected = "has disconnected.";
 		public const string GameHasPartiallyDisconnected = "has partially disconnected.";
+		public const string GameHasHiddenConnected = "has HIDDEN-connected.";
+		public const string GameHasHiddenReconnected = "has HIDDEN-reconnected.";
+		public const string GameHasHiddenDisconnected = "has HIDDEN-disconnected.";
+		public const string GameHasPartiallyHiddenDisconnected = "has partially HIDDEN-disconnected.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
 		public const string GameRebootFinished = "GAME: Reboot finished.";
