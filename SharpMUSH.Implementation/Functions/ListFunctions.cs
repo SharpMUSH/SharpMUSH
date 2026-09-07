@@ -1769,14 +1769,21 @@ public partial class Functions
 		{
 			return new CallState(ErrorMessages.Returns.FieldWidthExceedsLineWidth);
 		}
-		var list = MushText.SplitList(delimiterArg, listArg ?? MarkupText.Empty);
-		var resultFields = list.Select(x =>
-			x.Pad(MarkupText.Space, fieldWidth, fieldAlignment switch
+		// Alignment rather than PadType: PadType names the side the *fill* lands on, which is the
+		// opposite of the side the text lands on, and this read the two the wrong way round.
+		var field = new ColumnFormat
+		{
+			Width = fieldWidth,
+			Alignment = fieldAlignment switch
 			{
-				">" => global::MarkupString.PadType.Right,
-				"-" => global::MarkupString.PadType.Center,
-				_ => global::MarkupString.PadType.Left
-			}, global::MarkupString.TruncationType.Truncate));
+				">" => Alignment.Right,
+				"-" => Alignment.Center,
+				_ => Alignment.Left,
+			},
+		};
+
+		var list = MushText.SplitList(delimiterArg, listArg ?? MarkupText.Empty);
+		var resultFields = list.Select(x => x.FormatColumn(field)[0]);
 
 		var lines = resultFields.Chunk(fieldsPerLine);
 		var linesWithSeparators = lines.Select(x => MarkupText.Join(separatorArg, x));

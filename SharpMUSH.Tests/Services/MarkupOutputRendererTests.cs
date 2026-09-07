@@ -51,7 +51,10 @@ public partial class MarkupOutputRendererTests
 		var text = Encoding.UTF8.GetString(result.Data);
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
-		await Assert.That(text).Contains("&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+		// MarkupString 2.0 encodes only the characters that are markup in HTML text — < > & — and
+		// leaves quotes alone. A quote is markup inside an attribute value, and this encoding is
+		// never applied to one.
+		await Assert.That(text).Contains("&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
 	}
 
 	[Test]
@@ -63,7 +66,7 @@ public partial class MarkupOutputRendererTests
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
 		await Assert.That(text).Contains(
-			$"{ProtocolConstants.MxpLineSecure}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+			$"{ProtocolConstants.MxpLineSecure}&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
 	}
 
 	[Test]
