@@ -31,7 +31,7 @@ public class SessionResumeConsumerTests
 		public readonly IConnectionService.ConnectionData Current;
 		public readonly SessionResumeConsumer Consumer;
 
-		public Harness()
+		public Harness(Microsoft.Extensions.Hosting.IHostApplicationLifetime? lifetime = null)
 		{
 			Current = new(42, null, IConnectionService.ConnectionState.AccountMode,
 				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
@@ -47,12 +47,36 @@ public class SessionResumeConsumerTests
 			var baseline = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst");
 			config.CurrentValue.Returns(baseline with { Net = baseline.Net with { Logins = true } });
 			Consumer = new(Store, Connections, Accounts, Substitute.For<IMediator>(), config, Bus,
-				NullLogger<SessionResumeConsumer>.Instance);
+				NullLogger<SessionResumeConsumer>.Instance, lifetime);
 		}
 
 		public Task AssertResponse(bool accepted) => Bus.Received(1).Publish(
 			Arg.Is<SessionResumeResponseMessage>(m => m.Accepted == accepted && m.RequestId == Request.RequestId
 				&& m.Handle == 42 && m.SessionId == "session"), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task StartupReturnsRetryableWithoutInspectingUnreconciledBindings()
+	{
+		var lifetime = Substitute.For<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+		var h = new Harness(lifetime);
+		h.Store.ClearReceivedCalls();
+		await h.Consumer.HandleAsync(h.Request);
+		await h.Store.DidNotReceive().GetConnectionAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+		await h.Bus.Received(1).Publish(Arg.Is<SessionResumeResponseMessage>(response =>
+			!response.Accepted && response.Retryable), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task InfrastructureFailureReturnsRetryableDenial()
+	{
+		var h = new Harness();
+		h.Store.GetConnectionAsync(42, Arg.Any<CancellationToken>())
+			.Returns(Task.FromException<ConnectionStateData?>(new IOException("broker unavailable")));
+		await h.Consumer.HandleAsync(h.Request);
+		await h.Bus.Received(1).Publish(Arg.Is<SessionResumeResponseMessage>(response =>
+			!response.Accepted && response.Retryable && response.RequestId == h.Request.RequestId),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]

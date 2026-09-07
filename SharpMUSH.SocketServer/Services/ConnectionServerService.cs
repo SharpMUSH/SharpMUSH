@@ -14,7 +14,8 @@ namespace SharpMUSH.ConnectionServer.Services;
 public class ConnectionServerService(
 	ILogger<ConnectionServerService> logger,
 	IMessageBus publishEndpoint,
-	IConnectionStateStore? stateStore = null) : IConnectionServerService
+	IConnectionStateStore? stateStore = null,
+	IHostApplicationLifetime? lifetime = null) : IConnectionServerService
 {
 	private readonly ConcurrentDictionary<long, ConnectionData> _sessionState = [];
 
@@ -31,85 +32,105 @@ public class ConnectionServerService(
 		ProtocolCapabilities? capabilities = null,
 		string presenceClass = "play",
 		bool isSecure = false,
-		string? sessionId = null)
+		string? sessionId = null,
+		CancellationToken cancellationToken = default)
 	{
 		sessionId ??= Guid.NewGuid().ToString("N");
+		var connectedAt = DateTimeOffset.UtcNow;
+		var data = new ConnectionData(handle, null, ConnectionState.Connected, outputFunction,
+			promptOutputFunction, encodingFunction, disconnectFunction, gmcpFunction,
+			capabilities ?? new ProtocolCapabilities(), null, connectionType, presenceClass, sessionId);
+		if (!_sessionState.TryAdd(handle, data)) throw new InvalidOperationException("Handle already registered");
+
+		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
+			lifetime?.ApplicationStopping ?? CancellationToken.None);
+		deadline.CancelAfter(TimeSpan.FromSeconds(30));
+		var publishAttempted = false;
 		try
 		{
-			var data = new ConnectionData(
-				handle,
-				null,
-				ConnectionState.Connected,
-				outputFunction,
-				promptOutputFunction,
-				encodingFunction,
-				disconnectFunction,
-				gmcpFunction,
-				capabilities ?? new ProtocolCapabilities(),
-				null,
-				connectionType,
-				presenceClass, sessionId);
-
-			_sessionState.AddOrUpdate(handle, data, (_, _) =>
-				throw new InvalidOperationException("Handle already registered"));
-			logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
-			if (stateStore != null)
+			if (stateStore is not null)
 			{
-				try
+				var persisted = new ConnectionStateData
 				{
-					await stateStore.SetConnectionAsync(handle, new ConnectionStateData
+					Handle = handle,
+					PlayerObjid = null,
+					State = "Connected",
+					IpAddress = ipAddress,
+					Hostname = hostname,
+					ConnectionType = connectionType,
+					ConnectedAt = connectedAt,
+					LastSeen = connectedAt,
+					Metadata = new Dictionary<string, string>
 					{
-						Handle = handle,
-						PlayerObjid = null,
-						State = "Connected",
-						IpAddress = ipAddress,
-						Hostname = hostname,
-						ConnectionType = connectionType,
-						ConnectedAt = DateTimeOffset.UtcNow,
-						LastSeen = DateTimeOffset.UtcNow,
-						Metadata = new Dictionary<string, string>
-						{
-							{ "ConnectionStartTime", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-							{ "LastConnectionSignal", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString() },
-							{ "InternetProtocolAddress", ipAddress },
-							{ "HostName", hostname },
-							{ "ConnectionType", connectionType },
-							// Without this the engine rebuilds a reconciled connection with the
-							// IConnectionService default of "play", so a portal-class socket comes
-							// back visible to mortal WHO. It is the one field of the established
-							// message that the store did not carry.
-							{ "PresenceClass", presenceClass },
-							{ "SessionId", sessionId ?? "" },
-							{ "SSL", isSecure ? "1" : "0" }
-						}
-					});
-				}
-				catch (Exception ex)
-				{
-					logger.LogWarning(ex, "Failed to persist connection state to NATS KV for handle {Handle}; continuing with publish", handle);
-				}
+						{ "ConnectionStartTime", connectedAt.ToUnixTimeMilliseconds().ToString() },
+						{ "LastConnectionSignal", connectedAt.ToUnixTimeMilliseconds().ToString() },
+						{ "InternetProtocolAddress", ipAddress },
+						{ "HostName", hostname },
+						{ "ConnectionType", connectionType },
+						{ "PresenceClass", presenceClass },
+						{ "SessionId", sessionId },
+						{ "SSL", isSecure ? "1" : "0" }
+					}
+				};
+				// The engine rejects registration without this authoritative record. Complete the
+				// durable phase before publishing; retries use the same incarnation and timestamps.
+				await RetryRegistrationStepAsync(handle, "persist", ct => stateStore.SetConnectionAsync(handle, persisted, ct), deadline.Token);
 			}
 
-			logger.LogDebug("[NATS-PUBLISH] Publishing ConnectionEstablishedMessage - Handle: {Handle}, IP: {IpAddress}, Hostname: {Hostname}, Type: {ConnectionType}, Timestamp: {Timestamp}",
-				handle, ipAddress, hostname, connectionType, DateTimeOffset.UtcNow);
-
-			await publishEndpoint.Publish(new ConnectionEstablishedMessage(
-				handle,
-				ipAddress,
-				hostname,
-				connectionType,
-				DateTimeOffset.UtcNow,
-				presenceClass,
-				isSecure,
-				sessionId
-			));
-
-			logger.LogDebug("[NATS-PUBLISH] Successfully published ConnectionEstablishedMessage - Handle: {Handle}", handle);
+			var established = new ConnectionEstablishedMessage(handle, ipAddress, hostname,
+				connectionType, connectedAt, presenceClass, isSecure, sessionId);
+			publishAttempted = true;
+			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
+			// idempotent event, but never overwrite KV again after the engine can bind a player.
+			await RetryRegistrationStepAsync(handle, "publish", ct => publishEndpoint.Publish(established, ct), deadline.Token);
+			logger.LogInformation("Registered connection handle {Handle} from {IpAddress} ({Type})", handle, ipAddress, connectionType);
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "Error registering connection handle: {Handle}", handle);
-			await outputFunction(Encoding.UTF8.GetBytes(ex.ToString()));
+			logger.LogWarning(ex, "Connection registration failed for {Handle}; closing the incomplete session", handle);
+			while (_sessionState.TryGetValue(handle, out var current) && current.SessionId == sessionId)
+			{
+				if (!_sessionState.TryRemove(new KeyValuePair<long, ConnectionData>(handle, current))) continue;
+				try { current.DisconnectFunction(); }
+				catch (Exception closeError) { logger.LogWarning(closeError, "Could not close incomplete connection {Handle}", handle); }
+				break;
+			}
+			using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+			try
+			{
+				if (stateStore is not null)
+					await stateStore.RemoveConnectionAsync(handle, cleanup.Token).WaitAsync(cleanup.Token);
+			}
+			catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Could not remove incomplete state for {Handle}", handle); }
+			if (publishAttempted)
+			{
+				try
+				{
+					await publishEndpoint.Publish(new ConnectionClosedMessage(handle, DateTimeOffset.UtcNow, sessionId), cleanup.Token)
+						.WaitAsync(cleanup.Token);
+				}
+				catch (Exception cleanupError) { logger.LogWarning(cleanupError, "Could not announce incomplete session closure for {Handle}", handle); }
+			}
+			throw;
+		}
+	}
+
+	private async Task RetryRegistrationStepAsync(long handle, string step,
+		Func<CancellationToken, Task> operation, CancellationToken ct)
+	{
+		for (var attempt = 0; ; attempt++)
+		{
+			ct.ThrowIfCancellationRequested();
+			try
+			{
+				await operation(ct).WaitAsync(ct);
+				return;
+			}
+			catch (Exception ex) when (!ct.IsCancellationRequested && attempt + 1 < ConnectionRetryPolicy.MaxAttempts)
+			{
+				logger.LogWarning(ex, "Could not {Step} connection {Handle}; retrying registration ({Attempt})", step, handle, attempt + 1);
+				await Task.Delay(ConnectionRetryPolicy.Delay, ct);
+			}
 		}
 	}
 
@@ -246,7 +267,8 @@ public interface IConnectionServerService
 		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null,
 		string presenceClass = "play",
 		bool isSecure = false,
-		string? sessionId = null);
+		string? sessionId = null,
+		CancellationToken cancellationToken = default);
 
 	void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect);
 

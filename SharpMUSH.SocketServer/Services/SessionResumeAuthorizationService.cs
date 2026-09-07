@@ -27,7 +27,9 @@ public sealed class SessionResumeAuthorizationService(IMessageBus bus, NatsConsu
 			await bus.Publish(new SessionResumeRequestMessage(id, handle, session,
 				transport.RemoteIp, transport.Hostname, transport.IsSecure), ct);
 			var response = await completion.Task.WaitAsync(TimeSpan.FromSeconds(15), ct);
-			return response.Handle == handle && response.SessionId == session && response.Accepted;
+			if (response.Handle != handle || response.SessionId != session) return false;
+			if (response.Retryable) throw new IOException("Engine authorization is temporarily unavailable.");
+			return response.Accepted;
 		}
 		finally { _pending.TryRemove(id, out _); }
 	}

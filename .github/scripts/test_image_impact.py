@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from image_impact import analyze, report, source_patterns
+from image_impact import analyze, report
 
 
 class ImageImpactTests(unittest.TestCase):

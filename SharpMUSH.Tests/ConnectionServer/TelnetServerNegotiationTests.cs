@@ -286,7 +286,7 @@ public class TelnetServerNegotiationTests
 				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
 				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
 				Arg.Any<Func<string, string, ValueTask>>(),
-				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>())
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
 			.Returns(async _ =>
 			{
 				registrationStarted.TrySetResult();
@@ -356,7 +356,7 @@ public class TelnetServerNegotiationTests
 				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
 				Arg.Any<Func<string, string, ValueTask>>(),
 				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(),
-				isSecure: false);
+				isSecure: false, cancellationToken: Arg.Any<CancellationToken>());
 		}
 		finally
 		{

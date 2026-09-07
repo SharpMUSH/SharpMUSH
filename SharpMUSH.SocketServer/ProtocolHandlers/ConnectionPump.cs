@@ -55,14 +55,15 @@ public sealed class ConnectionPump(
 		}
 
 		var resume = SeqEnvelope.TryReadResume(firstFrame, out var token, out var lastSeq);
-		var claim = resume ? await resumeTokens.TryConsumeAsync(token, ct) : (Found: false, Handle: 0L, Session: "");
-		if (claim.Found && await TryRebindAsync(transport, claim.Handle, claim.Session, lastSeq, ct) is { } rebound)
+		var claim = resume ? await resumeTokens.TryResolveAsync(token, ct) : (Found: false, Handle: 0L, Session: "");
+		if (claim.Found && await TryRebindAsync(transport, claim.Handle, claim.Session, token, lastSeq, ct) is { } rebound)
 		{
 			descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
 			(handle, session) = rebound;
 		}
 		else
 		{
+			if (claim.Found) await resumeTokens.InvalidateAsync(token, ct);
 			handle = candidateHandle;
 			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), ct);
 			// A failed authorization must not reveal old output. Fresh registration has its own token.
@@ -119,7 +120,7 @@ public sealed class ConnectionPump(
 
 	/// <summary>Rebind to a live handle; returns the (handle, session), or null to fall back to the fresh path.</summary>
 	private async Task<(long Handle, string Session)?> TryRebindAsync(IDuplexTransport transport,
-		long oldHandle, string oldSession, long lastSeq, CancellationToken ct)
+		long oldHandle, string oldSession, string token, long lastSeq, CancellationToken ct)
 	{
 		var sink = sinkRegistry.Get(oldHandle);
 		if (sink is null || sink.SessionId != oldSession || connectionService.Get(oldHandle) is null) return null;
@@ -138,12 +139,15 @@ public sealed class ConnectionPump(
 			try
 			{
 				if (connectionService.Get(oldHandle) is null) return null;
+				var frames = await replayStore.AfterAsync(oldSession, lastSeq, ct);
+				var consumed = await resumeTokens.TryConsumeAsync(token, ct);
+				if (!consumed.Found || consumed.Handle != oldHandle || consumed.Session != oldSession) return null;
 				detachedTracker.Reattach(oldHandle);
 				var previous = sink.Current;
 				sink.Detach();
 				if (previous is not null) await previous.CloseAsync();
 				await transport.SendAsync(SeqEnvelope.Reattached(), ct);
-				foreach (var frame in await replayStore.AfterAsync(oldSession, lastSeq, ct))
+				foreach (var frame in frames)
 					await transport.SendAsync(frame, ct);
 				var newToken = await resumeTokens.MintAsync(oldHandle, oldSession, ct);
 				await transport.SendAsync(SeqEnvelope.ResumeToken(newToken), ct);
@@ -272,7 +276,7 @@ public sealed class ConnectionPump(
 		var output = CreateOutput(session, sink);
 		await connectionService.RegisterAsync(handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			output, output, () => Encoding.UTF8, CreateDisconnect(handle, session, sink),
-			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session);
+			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, cancellationToken: ct);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await transport.SendAsync(SeqEnvelope.ResumeToken(token), ct);

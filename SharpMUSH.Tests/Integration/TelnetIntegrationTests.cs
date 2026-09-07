@@ -147,6 +147,9 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	/// <summary>Telnet port assigned to the ConnectionServer during initialisation.</summary>
 	public int TelnetPort { get; private set; }
 
+	public IServiceProvider ConnectionServerServices => _connectionServerApp!.Services;
+	public IServiceProvider ServerServices => _serverFactory!.Services;
+
 	private TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>? _serverFactory;
 	private WebApplication? _connectionServerApp;
 

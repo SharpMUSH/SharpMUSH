@@ -14,6 +14,40 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class DurableSessionResumeTests
 {
 	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task AuthorizationOutagePreservesCredentialForNextAttempt(bool timeout)
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var connections = new ConnectionServerService(NullLogger<ConnectionServerService>.Instance, bus);
+		var tokens = new ResumeTokenService();
+		var authorization = Substitute.For<ISessionResumeAuthorizationService>();
+		authorization.AuthorizeAsync(9, "session", Arg.Any<IDuplexTransport>(), Arg.Any<CancellationToken>())
+			.Returns(Task.FromException<bool>(timeout ? new TimeoutException() : new IOException("temporary failure")));
+		var pump = new ConnectionPump(NullLogger<ConnectionPump>.Instance, connections, bus,
+			new DescriptorGeneratorService(new ConnectionServerOptions()), new TerminalReplayStore(), tokens,
+			new SessionSinkRegistry(), new DetachedSessionTracker(new ManualScheduler()), TimeSpan.FromMinutes(2),
+			authorization: authorization);
+		await pump.RestoreDormantAsync(new ConnectionStateData
+		{
+			Handle = 9, PlayerObjid = "#5:1234", State = "LoggedIn", IpAddress = "old", Hostname = "old",
+			ConnectionType = "websocket", ConnectedAt = DateTimeOffset.UtcNow, LastSeen = DateTimeOffset.UtcNow,
+			Metadata = new() { ["SessionId"] = "session" }
+		}, DateTimeOffset.UtcNow.AddMinutes(1), default);
+		var token = await tokens.MintAsync(9, "session");
+		var first = new ResumeTransport(token);
+		await pump.RunAsync(first, 10, default);
+		await Assert.That((await tokens.TryResolveAsync(token)).Found).IsTrue();
+		await Assert.That(first.Sent.Count).IsEqualTo(0);
+		await Assert.That(connections.Get(10)).IsNull();
+		authorization.AuthorizeAsync(9, "session", Arg.Any<IDuplexTransport>(), Arg.Any<CancellationToken>()).Returns(true);
+		var retry = new ResumeTransport(token);
+		await pump.RunAsync(retry, 11, default);
+		await Assert.That(retry.Sent.Any(frame => frame.Contains("reattached"))).IsTrue();
+		await Assert.That((await tokens.TryResolveAsync(token)).Found).IsFalse();
+	}
+
+	[Test]
 	public async Task RecreatedOwnerRestoresBindingWithoutFreshRegistrationAndAuthorizesBeforeReplay()
 	{
 		var bus = Substitute.For<IMessageBus>();

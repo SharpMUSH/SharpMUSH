@@ -21,22 +21,27 @@ public sealed class SessionResumeConsumer(
 	IMediator mediator,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IMessageBus bus,
-	ILogger<SessionResumeConsumer> logger) : IMessageConsumer<SessionResumeRequestMessage>
+	ILogger<SessionResumeConsumer> logger,
+	Microsoft.Extensions.Hosting.IHostApplicationLifetime? lifetime = null) : IMessageConsumer<SessionResumeRequestMessage>
 {
 	public async Task HandleAsync(SessionResumeRequestMessage message, CancellationToken cancellationToken = default)
 	{
 		var accepted = false;
+		var retryable = false;
 		try
 		{
+			if (lifetime is not null && (!lifetime.ApplicationStarted.IsCancellationRequested || lifetime.ApplicationStopping.IsCancellationRequested))
+				throw new IOException("Engine startup or shutdown is in progress.");
 			accepted = await AuthorizeAsync(message, cancellationToken);
 		}
 		catch (Exception ex)
 		{
+			retryable = true;
 			logger.LogWarning(ex, "Session resume authorization failed for handle {Handle}", message.Handle);
 		}
 
 		await bus.Publish(new SessionResumeResponseMessage(message.RequestId, message.Handle,
-			message.SessionId, accepted), cancellationToken);
+			message.SessionId, accepted, retryable), cancellationToken);
 	}
 
 	private async Task<bool> AuthorizeAsync(SessionResumeRequestMessage request, CancellationToken ct)

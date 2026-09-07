@@ -321,7 +321,7 @@ public class TelnetServer : ConnectionHandler
 		{
 			await telnet.SendGMCPCommand(module, message);
 		},
-		isSecure: isSecure);
+		isSecure: isSecure, cancellationToken: ct);
 
 		// The handle exists in the main process from here on, so everything negotiation produced before
 		// now can go out and land on a connection that is there to receive it.

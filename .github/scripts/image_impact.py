@@ -103,10 +103,10 @@ def report(result):
     drops = bool(result["socketserver"])
     lines = ["## Deployment impact", "",
              "**SocketServer restart / live connection drops: " + ("YES" if drops else "NO") + "**", "",
-             "On merge to main, changed image inputs are published after successful validation. "
-             "Watchtower will replace the corresponding container when its image digest changes.", "",
-             "SocketServer replacement disconnects its TCP and WebSocket clients. "
-             "Game-server and ConnectionServer rendering-worker updates retain client sockets in SocketServer.", ""]
+             ("On merge to main, changed image inputs are published after successful validation. "
+             "Watchtower will replace the corresponding container when its image digest changes."), "",
+             ("SocketServer replacement disconnects its TCP and WebSocket clients. "
+             "Game-server and ConnectionServer rendering-worker updates retain client sockets in SocketServer."), ""]
     for image, paths in result.items():
         lines.extend([f"### {image}: {'publish' if paths else 'unchanged'}", ""])
         lines.extend(f"- <code>{html.escape(path)}</code>" for path in paths)

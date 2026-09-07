@@ -170,7 +170,7 @@ public class ConnectionPumpTests
 			Arg.Do<Action>(a => forcedDisconnect = a),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			sessionId: Arg.Any<string?>());
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 
 		var pump = MakePump(bus, conn, desc);
 		// Fire the captured forced-disconnect while the socket is still attached to the sink (before the
@@ -221,7 +221,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			sessionId: Arg.Any<string?>());
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 
 		var pump = MakePump(bus, conn, desc, replay);
 		using var cts = new CancellationTokenSource();
@@ -310,7 +310,7 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			sessionId: Arg.Any<string?>());
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -332,7 +332,7 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			"portal", sessionId: Arg.Any<string?>());
+			"portal", sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -354,7 +354,7 @@ public class ConnectionPumpTests
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			"play", sessionId: Arg.Any<string?>());
+			"play", sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -394,7 +394,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
 			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
-			sessionId: Arg.Any<string?>());
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 		desc.Received(1).ReleaseWebSocketDescriptor(99);
 
 		// The reconnecting transport received the reattach ack (proves it was attached to session 9
