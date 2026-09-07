@@ -207,7 +207,6 @@ public class MyrddinBBSIntegrationTests
 
 		// Wait for delayed @wait callbacks in the BBS install to complete
 		// The install script uses @wait 1={...} and @wait 3={...} at the end.
-		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Task.Delay(10000);
 
 		// Create a regular (non-God) player for BBS tests that need a normal user.
@@ -653,7 +652,6 @@ public class MyrddinBBSIntegrationTests
 			.Because("+bbnewgroup command should not produce any ANTLR parser errors");
 
 		// Execute +bbnewgroup and wait for the @wait 1={...} callback to complete.
-		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(newGroupCmd));
 		await Task.Delay(10000);
 
@@ -856,7 +854,6 @@ public class MyrddinBBSIntegrationTests
 			throw;
 		}
 		// Wait for any @wait callbacks in the post flow.
-		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Task.Delay(10000);
 
 		var postPostNotifications = NotifyService.ReceivedCalls()
@@ -922,7 +919,6 @@ public class MyrddinBBSIntegrationTests
 
 		// Wait for async @dolist callbacks to complete (the BBS +bbread uses @dolist without
 		// INLINE/INPLACE, so each iteration body is queued asynchronously via the scheduler).
-		// Using 10s to give Memgraph (which is ~50% slower than ArangoDB) enough margin.
 		await Task.Delay(10000);
 		var postReadNotifications = NotifyService.ReceivedCalls()
 			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));

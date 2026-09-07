@@ -2,7 +2,6 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Database read benchmarks backed by <b>Lightning</b> (LMDB).
-/// Mirrors <see cref="ArangoDBReadBenchmarks"/>/<see cref="MemgraphReadBenchmarks"/>/<see cref="SurrealDBReadBenchmarks"/> -
 /// compare results to quantify backend differences.
 /// </summary>
 [BenchmarkCategory("Database Read", "Lightning")]
@@ -45,7 +44,6 @@ public class LightningReadBenchmarks : LightningBaseBenchmark
 
 /// <summary>
 /// Database write benchmarks backed by <b>Lightning</b> (LMDB).
-/// Mirrors <see cref="ArangoDBWriteBenchmarks"/>/<see cref="MemgraphWriteBenchmarks"/>/<see cref="SurrealDBWriteBenchmarks"/> -
 /// compare results to quantify backend differences. Each iteration uses a unique name to avoid key
 /// collisions.
 /// </summary>

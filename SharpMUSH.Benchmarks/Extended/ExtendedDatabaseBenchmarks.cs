@@ -6,13 +6,9 @@ namespace SharpMUSH.Benchmarks;
 /// <summary>
 /// Shared bodies for the "uncached storage shape" benchmarks: the eight operations the plain
 /// per-provider read/write benchmark pairs (<c>LightningReadBenchmarks</c>/<c>LightningWriteBenchmarks</c>,
-/// <c>SurrealDBReadBenchmarks</c>/<c>SurrealDBWriteBenchmarks</c>, and their ArangoDB/Memgraph
 /// equivalents) don't exercise - inheritance-chain resolution, wildcard/regex attribute
 /// listing, a pushed-down filtered search, cascading subtree/object deletes, graph reachability,
-/// and concurrent writers. One per-provider concrete subclass (<c>ArangoExtendedBenchmarks</c>,
-/// <c>MemgraphExtendedBenchmarks</c>, <c>SurrealExtendedBenchmarks</c>,
 /// <c>LightningExtendedBenchmarks</c>) supplies <see cref="Database"/> and does its own provider
-/// bootstrap - this class can't itself derive from <c>BaseBenchmark</c>/<c>MemgraphBaseBenchmark</c>/
 /// <c>SurrealBaseBenchmark</c>/<c>LightningBaseBenchmark</c> (single inheritance, and those four
 /// share no common ancestor), so each concrete class re-does that one provider's short bootstrap
 /// sequence itself and calls <see cref="SeedAsync"/> once it has a live <see cref="Database"/>.

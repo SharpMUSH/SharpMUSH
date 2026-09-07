@@ -61,7 +61,6 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Unlike <see cref="SetExpandedObjectData"/> this replaces the stored document rather than merging
 	/// over it, so a null property clears the stored one — the write @motd uses to clear a single message,
-	/// and what the other providers do (ArangoDB replaces with <c>keepNull</c>, SurrealDB upserts the whole
 	/// document).
 	/// </summary>
 	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default)

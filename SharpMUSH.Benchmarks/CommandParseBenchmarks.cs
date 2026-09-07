@@ -5,7 +5,7 @@ namespace SharpMUSH.Benchmarks;
 /// Covers the hot path from raw input → ANTLR4 parse → command lookup (trie) → command execution.
 /// </summary>
 [BenchmarkCategory("Command Dispatch")]
-public class CommandParseBenchmarks : BaseBenchmark
+public class CommandParseBenchmarks : LightningBaseBenchmark
 {
 	private static readonly MString ThinkSimpleInput = MarkupText.Plain("think Hello World");
 	private static readonly MString ThinkSubstInput = MarkupText.Plain("think %#");

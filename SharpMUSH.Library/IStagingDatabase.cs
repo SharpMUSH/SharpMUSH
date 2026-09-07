@@ -5,8 +5,6 @@ namespace SharpMUSH.Library;
 /// The staging database is a separate, isolated database instance that can be
 /// populated and validated before being promoted to the live database.
 ///
-/// For providers that support named databases (ArangoDB, SurrealDB), this creates
-/// a parallel database. For single-database providers (Memgraph), this creates a
 /// backup of the current state and works in-place with rollback capability.
 /// </summary>
 public interface IStagingDatabase : ISharpDatabase, IAsyncDisposable

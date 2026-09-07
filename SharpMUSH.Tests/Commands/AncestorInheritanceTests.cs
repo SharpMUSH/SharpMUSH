@@ -93,7 +93,7 @@ public class AncestorInheritanceTests
 	}
 
 	/// <summary>
-	/// Task 7 fixed exactly this shape for <c>@parent</c> chains in all three providers: a
+	/// Task 7 fixed exactly this shape for <c>@parent</c> chains in both supported providers: a
 	/// <c>no_inherit</c> flag on ANY level of the branch blocks the whole path across an
 	/// inheritance boundary (Penn's <c>atr_get_with_parent</c>, <c>attrib.c:1232-1252</c>, tests
 	/// AF_PRIVATE on every backtick-delimited segment). The type-ancestor fall-through kept the

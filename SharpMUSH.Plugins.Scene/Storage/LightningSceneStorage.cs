@@ -47,7 +47,6 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// </list>
 ///
 /// <para><b>Ids.</b> Scene and pose ids are 1-based decimal strings drawn from the <c>scene.meta</c>
-/// counters inside the same write job that creates the record — how ArangoDB's autoincrement key generator
 /// and SurrealDB's <c>counter:scene_id</c>/<c>counter:pose_id</c> allocate. Plot and pose-edit ids are
 /// GUIDs (<c>"N"</c>), as SurrealDB's are. Every id leaves this class bare, with no table prefix: players
 /// type scene ids and they are a path segment in <c>/scenes/{id}/live</c>.</para>

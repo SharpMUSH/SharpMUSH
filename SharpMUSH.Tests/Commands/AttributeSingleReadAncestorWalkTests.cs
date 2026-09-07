@@ -29,7 +29,6 @@ namespace SharpMUSH.Tests.Commands;
 /// <item>
 /// The same applies to an INTERMEDIATE object in a longer chain. The provider treats a parent that
 /// holds only part of the path as "incomplete" and quietly walks on to the grandparent
-/// (<c>ArangoDatabase.Attributes.cs</c>, <c>EvaluateInheritanceCandidateAsync</c>); only
 /// <c>no_inherit</c> aborts. Penn instead flag-tests that partial prefix and denies on it.
 /// </item>
 /// </list>

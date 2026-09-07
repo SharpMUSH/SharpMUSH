@@ -78,7 +78,7 @@ public class SessionStoreDbTests
 	/// <summary>
 	/// Ban enforcement asks the store which origin IPs it holds so it can decide which of them a glob or
 	/// CIDR sitelock rule matches — <c>DeleteSessionsForIpAsync</c> only knows one literal address at a
-	/// time. All three providers must answer the same question the same way, so this runs on each leg of
+	/// time. both supported providers must answer the same question the same way, so this runs on each leg of
 	/// the matrix.
 	/// </summary>
 	[Test, NotInParallel(nameof(SessionStoreDbTests))]

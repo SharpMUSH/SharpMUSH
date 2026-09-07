@@ -61,7 +61,6 @@ public sealed class Plugin : PluginBase
 	//   IEndpointContributor     → map your own ASP.NET endpoints/SignalR hubs into the host pipeline
 	//   IApplicationSource       → contribute portal UI: schema-driven Application(s) + NavBar entries
 	//   IFlagSource              → seed engine object flags during DB migration
-	//   IMigrationSource         → provider-tagged DB migrations (Arango/Memgraph/Surreal)
 	//   IBridgeSubscriptionSource→ a NATS→SignalR background subscription
 	//   ICommandInterceptor      → before/override/after a command (the C# analog of softcode @hook)
 	//   IConnectionHook          → connect/login/disconnect

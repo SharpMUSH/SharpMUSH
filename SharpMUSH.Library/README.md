@@ -35,7 +35,7 @@ Phase 2b engine-extension hooks
 
 ## Contract-version alignment
 
-The package `Version` is aligned to `PluginContractVersion.Current` (currently **1.0.0**). A managed
+The package `Version` is aligned to `PluginContractVersion.Current` (currently **2.0.0**). A managed
 package's `binaries.min_server_version` is checked against this value at load time, so a plugin built
 against a newer contract is refused by an older server rather than failing obscurely. **When the plugin
 contract surface changes, bump both `PluginContractVersion.Current` and the package `<Version>`
@@ -55,14 +55,14 @@ together.**
   <ItemGroup>
     <!-- The contract surface. ExcludeAssets=runtime keeps the host's copy authoritative at load time;
          the loader's SharedContractTypes unifies the types across the isolation boundary. -->
-    <PackageReference Include="SharpMUSH.Library" Version="1.0.0">
+    <PackageReference Include="SharpMUSH.Library" Version="2.0.0">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
 
     <!-- The source generator, referenced as an analyzer. Your plugin's [SharpCommand]/[SharpFunction]
          methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
          FunctionLibrary.Functions inside YOUR assembly, which PluginBase reflects at load time. -->
-    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.0.0"
+    <PackageReference Include="SharpMUSH.Implementation.Generated" Version="2.0.0"
                       PrivateAssets="all" />
   </ItemGroup>
 </Project>
