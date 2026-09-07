@@ -24,6 +24,10 @@ public partial class OutputTransformService : IOutputTransformService
 	[GeneratedRegex(@"\x1b\[([34])8;5;(\d+)m")]
 	private static partial Regex Xterm256ColorRegex();
 
+	/// <summary>24-bit RGB SGR: <c>ESC[38;2;r;g;b m</c> for foreground, <c>48</c> for background.</summary>
+	[GeneratedRegex(@"\x1b\[([34])8;2;(\d+);(\d+);(\d+)m")]
+	private static partial Regex TruecolorRegex();
+
 	public OutputTransformService(ILogger<OutputTransformService> logger)
 	{
 		_logger = logger;
@@ -78,9 +82,20 @@ public partial class OutputTransformService : IOutputTransformService
 			return StripAnsiCodes(text);
 		}
 
-		if ((preferences != null && !preferences.Xterm256Enabled) || !capabilities.SupportsXterm256)
+		// Colour depth is a ladder, and the rungs have to be walked in order. The renderer emits
+		// 24-bit RGB freely — every hex ansi() code and every syntax-highlighted help block does —
+		// so a client that stops at 256 needs those mapped into the palette before the palette is
+		// mapped into the basic sixteen. Skipping a rung leaves sequences the client cannot read.
+		var deepColorAllowed = preferences is null or { Xterm256Enabled: true };
+
+		if (!deepColorAllowed || !capabilities.SupportsTruecolor)
 		{
-			return DowngradeXterm256To16Color(text);
+			text = DowngradeTruecolorToXterm256(text);
+		}
+
+		if (!deepColorAllowed || !capabilities.SupportsXterm256)
+		{
+			text = DowngradeXterm256To16Color(text);
 		}
 
 		return text;
@@ -114,6 +129,62 @@ public partial class OutputTransformService : IOutputTransformService
 
 			return $"\x1b[{fgOrBg}{basicColor}m";
 		});
+	}
+
+	/// <summary>
+	/// Rewrites <c>ESC[38;2;r;g;b m</c> as its nearest xterm-256 palette entry, so a client that never
+	/// claimed 24-bit colour sees an approximation rather than a sequence it cannot parse.
+	/// </summary>
+	private string DowngradeTruecolorToXterm256(string text)
+	{
+		return TruecolorRegex().Replace(text, match =>
+		{
+			var fgOrBg = match.Groups[1].Value; // "3" for foreground, "4" for background
+
+			// A malformed component is left alone rather than guessed at: dropping the sequence would
+			// leave the rest of the line coloured by whatever came before it.
+			if (!byte.TryParse(match.Groups[2].Value, out var r)
+					|| !byte.TryParse(match.Groups[3].Value, out var g)
+					|| !byte.TryParse(match.Groups[4].Value, out var b))
+			{
+				return match.Value;
+			}
+
+			return $"\x1b[{fgOrBg}8;5;{MapRgbTo256Color(r, g, b)}m";
+		});
+	}
+
+	/// <summary>
+	/// The standard xterm-256 quantisation: the 6×6×6 colour cube for anything with a hue, and the
+	/// 24-step grey ramp for anything close enough to neutral, which is visibly better than forcing a
+	/// grey through the cube's coarse levels.
+	/// </summary>
+	private static int MapRgbTo256Color(byte r, byte g, byte b)
+	{
+		// The grey ramp's own spacing: entries 232..255 run 8, 18, 28 ... 238.
+		if (Math.Abs(r - g) < 8 && Math.Abs(g - b) < 8 && Math.Abs(r - b) < 8)
+		{
+			var level = (r + g + b) / 3;
+
+			if (level < 8) return 16; // Cube black; the ramp does not reach it.
+			if (level > 238) return 231; // Cube white, likewise.
+
+			return 232 + (level - 8) / 10;
+		}
+
+		return 16 + (36 * CubeIndex(r)) + (6 * CubeIndex(g)) + CubeIndex(b);
+
+		// The cube's six levels are 0, 95, 135, 175, 215, 255 — unevenly spaced, so the boundaries are
+		// the midpoints between them rather than a division.
+		static int CubeIndex(byte component) => component switch
+		{
+			< 48 => 0,
+			< 115 => 1,
+			< 155 => 2,
+			< 195 => 3,
+			< 235 => 4,
+			_ => 5
+		};
 	}
 
 	private static int Map256ColorTo16Color(int color256)

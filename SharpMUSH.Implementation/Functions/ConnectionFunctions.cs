@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using SharpMUSH.Library.Markup;
 
@@ -1564,11 +1565,10 @@ public partial class Functions
 			terminfo.Add("stripaccents");
 		}
 
-		var colorStyle = metadata.GetValueOrDefault("COLORSTYLE", "");
-		if (!string.IsNullOrEmpty(colorStyle))
-		{
-			terminfo.Add(colorStyle);
-		}
+		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
+		// client that pinned nothing still reports what it is being rendered at. An explicit
+		// "SOCKSET colorstyle" wins; otherwise it is read back out of the client's own MTTS claims.
+		terminfo.Add(TerminalCapabilityReader.ColorStyleFor(metadata));
 
 		return string.Join(" ", terminfo);
 	}

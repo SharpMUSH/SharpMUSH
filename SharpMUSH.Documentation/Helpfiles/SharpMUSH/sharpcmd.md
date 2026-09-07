@@ -3693,7 +3693,10 @@ Colorstyle options are:
 - hilite: You only receive hilite text. No colors, just ansi-hilite.
 - 16color: You receive hilite text and the ANSI 16 colors.
 - xterm256: You receive xterm-style 256 colors for text and background.
+- truecolor: You receive 24-bit RGB colors for text and background. Also accepted as 'rgb' or '24bit'.
 - auto: go back to what SharpMUSH determined was your client's capabilities.
+
+SharpMUSH determines 'auto' from the terminal type your client reports (RFC 1091), including the MTTS capability bits when your client sends them. terminfo() shows the style in effect.
 
 In the event that your client receives a color that it is unable to display, SharpMUSH will attempt to find a close match that can fit your client's capabilities.
 

@@ -574,7 +574,7 @@ public static class ErrorMessages
 		public const string SocksetStripAccentsOn = "Accents will be stripped.";
 		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
 		public const string SocksetUnknownColorStyle =
-			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.";
+			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256', 'truecolor'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

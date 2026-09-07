@@ -65,7 +65,7 @@ public class TelnetServerNegotiationTests
 	/// what the server wrote back, and the handler's own task.
 	/// </summary>
 	private static (PipeWriter ToServer, PipeReader FromServer, Task Handler, List<object> Published, CancellationTokenSource Cts)
-		StartServer(ConnectionServerOptions? options = null)
+		StartServer(ConnectionServerOptions? options = null, IConnectionServerService? connectionService = null)
 	{
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
@@ -85,7 +85,7 @@ public class TelnetServerNegotiationTests
 
 		var server = new TelnetServer(
 			NullLogger<TelnetServer>.Instance,
-			Substitute.For<IConnectionServerService>(),
+			connectionService ?? Substitute.For<IConnectionServerService>(),
 			bus,
 			descriptors,
 			new ServerBuilderFactory(),

@@ -157,8 +157,18 @@ public class TelnetServer : ConnectionHandler
 			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 			// terminfo() reports as the client. Without it every connection is "unknown".
 			.AddPlugin(new ObservableTerminalTypeProtocol(
-				async terminalTypes => await _publishEndpoint.Publish(
-					new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct),
+				async terminalTypes =>
+				{
+					// MTTS is the only thing that ever tells us a client can render more than 16 colours.
+					// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of
+					// false for every telnet connection, and OutputTransformService dutifully downgraded
+					// every xterm256 sequence the game produced — for clients that had said, in the one
+					// place there is to say it, that they could display them.
+					TryApplyTerminalCapabilities(nextPort, terminalTypes);
+
+					await _publishEndpoint.Publish(
+						new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct);
+				},
 				// A client that agreed to TTYPE has proved it speaks telnet, and it may never send a
 				// line — a crawler reads the login screen and leaves — so do not wait for OnSubmit.
 				async _ => await AnnounceTelnetIfNegotiatedAsync()));
@@ -280,6 +290,47 @@ public class TelnetServer : ConnectionHandler
 
 		await _connectionService.DisconnectAsync(nextPort);
 		_descriptorGenerator.ReleaseTelnetDescriptor(nextPort);
+	}
+
+	/// <summary>
+	/// Records what the client's terminal types say it can display, so <see cref="OutputTransformService"/>
+	/// stops downgrading what it can in fact render.
+	/// <para>
+	/// Unlike the format updates, this does not wait for registration: TTYPE is answered in the
+	/// opening burst, usually before the main process has registered the connection, and the types
+	/// are reported again for every entry in the client's list — so the next one lands after
+	/// registration and carries the same conclusion. Missing the first is harmless; blocking the
+	/// negotiation read loop on a retry loop would not be.
+	/// </para>
+	/// </summary>
+	private void TryApplyTerminalCapabilities(long handle, IReadOnlyList<string> terminalTypes)
+	{
+		var connection = _connectionService.Get(handle);
+		if (connection is null)
+		{
+			return;
+		}
+
+		var reported = TerminalCapabilityReader.Read(terminalTypes);
+		var updated = connection.Capabilities with
+		{
+			SupportsAnsi = reported.Ansi && !reported.ScreenReader,
+			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
+			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
+			SupportsUtf8 = reported.Utf8
+		};
+
+		if (updated == connection.Capabilities)
+		{
+			return;
+		}
+
+		if (_connectionService.UpdateCapabilities(handle, updated))
+		{
+			_logger.LogDebug(
+				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}",
+				handle, updated.SupportsAnsi, updated.SupportsXterm256, updated.SupportsTruecolor, updated.SupportsUtf8);
+		}
 	}
 
 	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)

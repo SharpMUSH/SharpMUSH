@@ -358,8 +358,10 @@ public class TerminalTypeNegotiatedConsumer(
 		// what PennMUSH's terminfo() calls the client, so that is the one @sockset and terminfo() read.
 		connectionService.Update(message.Handle, "TerminalType", message.TerminalTypes[0]);
 
-		// The rest is kept whole for anything that wants the capability claims rather than the name.
-		connectionService.Update(message.Handle, "TerminalTypes", string.Join(" ", message.TerminalTypes));
+		// The whole list, for the capability claims rather than the name: TelnetNegotiationCore has
+		// already expanded an MTTS bitvector into names by this point, so this is where "256 COLORS",
+		// "TRUECOLOR" and "SCREEN_READER" arrive. Tab-separated because those names contain spaces.
+		connectionService.Update(message.Handle, "TerminalTypes", string.Join("\t", message.TerminalTypes));
 	}
 }
 

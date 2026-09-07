@@ -17,7 +17,8 @@ public enum OutputFormat
 /// Represents the protocol capabilities supported by a client connection
 /// </summary>
 /// <param name="SupportsAnsi">Whether the client supports basic 16-color ANSI codes</param>
-/// <param name="SupportsXterm256">Whether the client supports 256-color ANSI codes</param>
+/// <param name="SupportsXterm256">Whether the client supports 256-color ANSI codes (ESC[38;5;n)</param>
+/// <param name="SupportsTruecolor">Whether the client supports 24-bit RGB ANSI codes (ESC[38;2;r;g;b)</param>
 /// <param name="SupportsUtf8">Whether the client supports UTF-8 encoding</param>
 /// <param name="Charset">The character set used by the client (e.g., "UTF-8", "ASCII", "LATIN-1")</param>
 /// <param name="MaxLineLength">Maximum line length supported by the client (-1 = unlimited)</param>
@@ -25,6 +26,7 @@ public enum OutputFormat
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
+	bool SupportsTruecolor = false,
 	bool SupportsUtf8 = true,
 	string Charset = "UTF-8",
 	int MaxLineLength = -1,
