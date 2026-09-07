@@ -63,7 +63,39 @@ public partial class MarkupOutputRendererTests
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
 		await Assert.That(text).Contains(
-			$"{ProtocolConstants.MxpLineOpen}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+			$"{ProtocolConstants.MxpLineSecure}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+	}
+
+	[Test]
+	public async Task Mxp_HelpLinksUseSecureModeOnEveryLine()
+	{
+		var link = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("[newbie]");
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Concat(MarkupText.Concat(link, MarkupText.Plain("\n")), link));
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp));
+		var lines = Encoding.UTF8.GetString(result.Data).Split("\r\n");
+
+		await Assert.That(lines.Length).IsEqualTo(2);
+		foreach (var line in lines)
+		{
+			await Assert.That(line.StartsWith(ProtocolConstants.MxpLineSecure)).IsTrue();
+			await Assert.That(line).Contains("<SEND HREF=\"help newbie\">newbie</SEND>");
+		}
+	}
+
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Mxp_ModeSurvivesDisablingAnsi(bool supportsAnsi)
+	{
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: supportsAnsi, Format: OutputFormat.Mxp);
+		var preferences = supportsAnsi ? new PlayerOutputPreferences(AnsiEnabled: false) : null;
+		var transform = new OutputTransformService(
+			Microsoft.Extensions.Logging.Abstractions.NullLogger<OutputTransformService>.Instance);
+		var text = Encoding.UTF8.GetString(transform.Transform(
+			Encoding.UTF8.GetBytes("\x1b[1z<SEND HREF=\"help newbie\">\x1b[31mnewbie\x1b[0m</SEND>"),
+			capabilities, preferences));
+
+		await Assert.That(text).IsEqualTo("\x1b[1z<SEND HREF=\"help newbie\">newbie</SEND>");
 	}
 
 	[Test]

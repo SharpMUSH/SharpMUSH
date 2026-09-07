@@ -74,12 +74,12 @@ public partial class OutputTransformService : IOutputTransformService
 
 		if (preferences is { AnsiEnabled: false } or { ColorEnabled: false })
 		{
-			return StripAnsiCodes(text);
+			return StripAnsiCodes(text, capabilities.Format == OutputFormat.Mxp);
 		}
 
 		if (!capabilities.SupportsAnsi)
 		{
-			return StripAnsiCodes(text);
+			return StripAnsiCodes(text, capabilities.Format == OutputFormat.Mxp);
 		}
 
 		// Colour depth is a ladder, and the rungs have to be walked in order. The renderer emits
@@ -108,9 +108,11 @@ public partial class OutputTransformService : IOutputTransformService
 		return text;
 	}
 
-	private string StripAnsiCodes(string text)
+	private string StripAnsiCodes(string text, bool preserveMxp)
 	{
-		return AnsiEscapeSequenceRegex().Replace(text, string.Empty);
+		// MXP line modes share CSI syntax with ANSI, but are needed even with colour disabled.
+		return AnsiEscapeSequenceRegex().Replace(text, match =>
+			preserveMxp && match.Value.EndsWith('z') ? match.Value : string.Empty);
 	}
 
 	private string StripOsc8Hyperlinks(string text)
