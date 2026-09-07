@@ -12,13 +12,13 @@ namespace SharpMUSH.Database.Lightning;
 /// <summary>
 /// <see cref="INavigationStore"/>: graph traversal between objects. Ported from
 /// <c>SurrealDatabase.Navigation.cs</c> (and, for exits/entrances/homed-at, <c>SurrealDatabase.Objects.cs</c>)
-/// onto the edge tables Task 7 built in <c>LightningDatabase.Objects.cs</c>:
+/// onto the edge tables declared in <c>LightningDatabase.Objects.cs</c>:
 /// <see cref="Tables.Location"/> (object → its container, reverse → contents),
 /// <see cref="Tables.Home"/> (object → its home/drop-to/destination, reverse → what homes there),
 /// <see cref="Tables.Exit"/> (room → its exits, no reverse walk needed), and
 /// <see cref="Tables.Parent"/>/<see cref="Tables.Zone"/> (object → parent/zone, reverse → children/zoned objects).
 /// <see cref="IsReachableViaParentOrZoneAsync"/> lives in <c>LightningDatabase.Objects.cs</c> — it is part of
-/// <c>IObjectStore</c>, not this store, and was already ported alongside object deletion (Task 7).
+/// <c>IObjectStore</c>, not this store, and sits alongside object deletion.
 /// </summary>
 public partial class LightningDatabase
 {
@@ -107,7 +107,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypeExit)
-			.Select(found => Hydrate(tx, found!.Value.Dbref, found.Value.Record).AsExit)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsExit)
 			.ToList());
 
 		foreach (var exit in exits)
@@ -129,7 +129,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null && found.Value.Record.Type != DatabaseConstants.TypeRoom)
-			.Select(found => Hydrate(tx, found!.Value.Dbref, found.Value.Record).AsContent)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsContent)
 			.ToList());
 
 		foreach (var content in contents)
@@ -248,7 +248,7 @@ public partial class LightningDatabase
 
 		// .AsContainer throws for an exit, same as the SurrealDB Match's "Invalid Location: Exit" branch —
 		// a location chain should never land on an exit, since exits carry no location edge of their own.
-		return Hydrate(tx, found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
+		return Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	}
 
 	public IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, CancellationToken cancellationToken = default)
@@ -263,7 +263,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null && found.Value.Record.Type != DatabaseConstants.TypeRoom)
-			.Select(found => Hydrate(tx, found!.Value.Dbref, found.Value.Record).AsContent)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsContent)
 			.ToList());
 
 		foreach (var content in contents)
@@ -288,7 +288,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null)
-			.Select(found => Hydrate(tx, found!.Value.Dbref, found.Value.Record).AsExit)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsExit)
 			.ToList());
 
 		foreach (var exit in exits)

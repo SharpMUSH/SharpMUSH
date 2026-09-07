@@ -17,7 +17,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <c>Keys.Upper(name)</c>, reverse key <c>Keys.Upper(name)</c> -&gt; value <c>Keys.Dbref(dbref)</c> —
 /// both opened <c>fixedDuplicates: false</c> since a name is variable-length. <see cref="ReadObjectFlags"/>
 /// and <see cref="ReadObjectPowers"/> are the shared per-object reads <c>Hydrate</c> (in
-/// <c>LightningDatabase.Objects.cs</c>) and Task 12's flag predicate both use.
+/// <c>LightningDatabase.Objects.cs</c>) and the object-search flag predicate both use.
 /// </summary>
 public partial class LightningDatabase
 {

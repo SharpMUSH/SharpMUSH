@@ -102,9 +102,11 @@ internal sealed class LightningWriter : IDisposable
 				continue;
 			}
 
-			_resume.Wait();
 			try
 			{
+				// Inside the try: Dispose can race a job that is parked here, and an ObjectDisposedException
+				// off the resume event has to fault that job's caller, not tear the process down.
+				_resume.Wait();
 				job.Completion.TrySetResult(job.Work());
 			}
 			catch (Exception ex)
@@ -114,11 +116,14 @@ internal sealed class LightningWriter : IDisposable
 		}
 	}
 
+	/// <summary>Closes the queue, wakes a parked writer and waits for the thread to finish the job it is on.
+	/// The resume event is disposed only once that thread has actually exited — a job still running would
+	/// otherwise wait on a disposed event.</summary>
 	public void Dispose()
 	{
 		_queue.Writer.TryComplete();
 		_resume.Set();
-		if (Thread.CurrentThread != _thread) _thread.Join(TimeSpan.FromSeconds(10));
-		_resume.Dispose();
+		if (Thread.CurrentThread == _thread) return;
+		if (_thread.Join(TimeSpan.FromSeconds(10))) _resume.Dispose();
 	}
 }

@@ -61,7 +61,7 @@ public partial class LightningDatabase
 	{
 		var found = ReadObject(tx, ownerDbref)
 			?? throw new InvalidOperationException($"No owner found for channel '{channelName}'");
-		return Hydrate(tx, found.Dbref, found.Record).AsPlayer;
+		return Hydrate(found.Dbref, found.Record).AsPlayer;
 	});
 
 	private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersCoreAsync(byte[] key,
@@ -87,7 +87,7 @@ public partial class LightningDatabase
 					Mute: memberRecord.Mute,
 					Title: MModule.deserialize(memberRecord.Title));
 
-				return new SharpChannel.MemberAndStatus(Hydrate(tx, found.Value.Dbref, found.Value.Record), status);
+				return new SharpChannel.MemberAndStatus(Hydrate(found.Value.Dbref, found.Value.Record), status);
 			})
 			.Where(entry => entry is not null)
 			.Select(entry => entry!)

@@ -550,7 +550,7 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Point-reads each prefix of <paramref name="path"/> in turn and stops at the first segment with no
 	/// row. A result shorter than <paramref name="path"/> means the walk stopped early — the caller decides
-	/// whether that is a miss (<see cref="GetAttributeAsync"/>) or a usable partial (Task 10's inheritance).
+	/// whether that is a miss (<see cref="GetAttributeAsync"/>) or a usable partial (the inheritance walk).
 	/// </summary>
 	internal IReadOnlyList<(string LongName, AttrMetaRecord Meta)> ReadPathPrefixes(ITx tx, long dbref, string[] path)
 	{
@@ -633,7 +633,7 @@ public partial class LightningDatabase
 		return Store.Read<SharpPlayer?>(tx =>
 		{
 			var found = ReadObject(tx, ownerDbref);
-			return found is null ? null : Hydrate(tx, found.Value.Dbref, found.Value.Record).AsPlayer;
+			return found is null ? null : Hydrate(found.Value.Dbref, found.Value.Record).AsPlayer;
 		});
 	}
 

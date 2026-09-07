@@ -110,6 +110,21 @@ public class Startup(
 				sp.GetRequiredService<ILogger<Implementation.Services.PluginApplicationRegistryDecorator>>()));
 	}
 
+	/// <summary>LMDB's map size is a hard ceiling on the environment, so a typo in
+	/// <c>SHARPMUSH_LIGHTNING_MAPSIZE</c> silently capping the world at the default would be the worst
+	/// possible failure mode to keep quiet about. Falls back to 64 GiB, saying so.</summary>
+	private static long ResolveLightningMapSize(string? setting, ILogger<LightningDatabase> logger)
+	{
+		const long defaultMapSize = 64L << 30;
+		if (string.IsNullOrWhiteSpace(setting)) return defaultMapSize;
+		if (long.TryParse(setting, out var parsed)) return parsed;
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_MAPSIZE is set to '{Setting}', which is not a byte count; using the default of {DefaultMapSize} bytes",
+			setting, defaultMapSize);
+		return defaultMapSize;
+	}
+
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
@@ -279,16 +294,14 @@ public class Startup(
 			var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
 				?? configuration["Lightning:Path"]
 				?? "lightning-data";
-			var lightningMapSize = long.TryParse(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE"), out var parsedMapSize)
-				? parsedMapSize
-				: 64L << 30;
+			var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
 			services.AddSingleton<LightningDatabase>(x =>
 			{
 				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
 				var password = x.GetRequiredService<IPasswordService>();
 				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var db = new LightningDatabase(dbLogger,
-					new LightningStoreOptions { Path = lightningPath, MapSize = lightningMapSize },
+					new LightningStoreOptions { Path = lightningPath, MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger) },
 					password, relations, pluginMigrationSources, pluginFlags);
 				return db;
 			});

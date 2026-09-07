@@ -4,7 +4,7 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="Library.Plugins.Storage.ILightningStorageAccessor"/>: the host-shared seam a storage
-/// plugin (the Scene plugin's Lightning backend, Task 19) reads and writes the store through. Every
+/// plugin (the Scene plugin's Lightning backend) reads and writes the store through. Every
 /// member forwards straight to <see cref="Store"/> — the provider itself uses no other path.
 /// </summary>
 public partial class LightningDatabase

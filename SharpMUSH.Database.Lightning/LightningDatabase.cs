@@ -31,7 +31,7 @@ public partial class LightningDatabase(
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null)
 	: ISharpDatabase, IWikiService, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
-		IApplicationRegistryService, ILightningStorageAccessor
+		IApplicationRegistryService, ILightningStorageAccessor, IAsyncDisposable
 {
 	/// <summary>Serializes <c>Migrate()</c> across concurrent callers; migration itself is idempotent, but
 	/// running two passes concurrently could interleave the "is this id applied yet" check with its write.</summary>
@@ -55,6 +55,18 @@ public partial class LightningDatabase(
 	private readonly IReadOnlyList<PluginFlag> _pluginFlags = pluginFlags ?? [];
 
 	internal LightningStore Store { get; } = new(options);
+
+	/// <summary>
+	/// Closes the store this instance owns — the LMDB environment, its lock file and the writer thread.
+	/// The provider is a singleton, so in the host this runs when the container is disposed at shutdown
+	/// (<c>ServiceProvider</c> disposes singletons implementing <see cref="IAsyncDisposable"/>); tests own
+	/// their instance and dispose it themselves. Idempotent, as is the store's own disposal.
+	/// </summary>
+	public virtual ValueTask DisposeAsync()
+	{
+		Store.Dispose();
+		return ValueTask.CompletedTask;
+	}
 
 	/// <summary>Parses either a bare dbref string ("5") or a typed one ("PLAYER/5") into its numeric id.</summary>
 	internal static long ParseDbref(string id) => long.Parse(id.Contains('/') ? id[(id.IndexOf('/') + 1)..] : id.TrimStart('#'));

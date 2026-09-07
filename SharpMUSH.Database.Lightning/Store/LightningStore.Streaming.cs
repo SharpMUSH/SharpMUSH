@@ -32,7 +32,9 @@ public sealed partial class LightningStore
 	/// <summary>
 	/// As <see cref="RangeAsync"/>, but the scan starts at <paramref name="startKey"/> (inclusive) instead of the
 	/// start of the table, with no prefix restriction on where it ends — the caller stops the enumeration itself
-	/// once the keys run past whatever upper bound it cares about.
+	/// once the keys run past whatever upper bound it cares about. Every page after the first re-seeks to the
+	/// last entry it yielded, which is <paramref name="startKey"/>'s own semantics carried forward: a start key
+	/// and no prefix bound. The empty prefix below says exactly that — not "scan the table from the top".
 	/// </summary>
 	public async IAsyncEnumerable<(byte[] Key, byte[] Value)> RangeFromKeyAsync(TableDef table, byte[] startKey,
 		int pageSize = 256, [EnumeratorCancellation] CancellationToken ct = default)
@@ -44,7 +46,7 @@ public sealed partial class LightningStore
 		{
 			ct.ThrowIfCancellationRequested();
 			var page = Read(tx =>
-				(lastKey is null ? tx.RangeFromKey(table, startKey) : tx.RangeFrom(table, [], lastKey, dup ? lastValue : null))
+				(lastKey is null ? tx.RangeFromKey(table, startKey) : tx.RangeFrom(table, prefix: [], lastKey, dup ? lastValue : null))
 					.Take(pageSize).ToList());
 			foreach (var entry in page) yield return entry;
 			if (page.Count < pageSize) yield break;

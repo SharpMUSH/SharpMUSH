@@ -5,7 +5,8 @@ namespace SharpMUSH.Database.Lightning.Store;
 /// <summary>
 /// The schema. Every table the provider touches is declared here so the store can open them all at
 /// startup and the delete cascade can enumerate the edge pairs. Names are stable on disk; renaming one
-/// is a migration. Plugin-owned tables are opened through the accessor and appended to <see cref="All"/>.
+/// is a migration. Plugin-owned tables are not declared here at all: they are opened on first use through
+/// the accessor and tracked by the store itself, so <see cref="All"/> stays the core schema.
 /// </summary>
 public static class Tables
 {

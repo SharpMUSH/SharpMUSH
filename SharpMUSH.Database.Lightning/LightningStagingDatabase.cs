@@ -18,7 +18,6 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 	private readonly LightningDatabase _live;
 	private readonly ILogger _logger;
 	private bool _aborted;
-	private bool _storeClosed;
 
 	public string StagingId { get; }
 
@@ -61,7 +60,7 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 
 		// Must be fully closed before the move: LMDB writes its lock file and pending pages into this
 		// directory, and the live environment is about to open it as its own.
-		CloseStore();
+		await base.DisposeAsync();
 		var previousPath = _live.Store.Path + ".previous";
 		_live.Store.SwapDirectory(StagingPath, previousPath);
 
@@ -76,12 +75,12 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 
 	/// <summary>Closes and deletes this world. The live one is never touched. Idempotent, and a no-op
 	/// after a promotion.</summary>
-	public Task AbortAsync(CancellationToken ct = default)
+	public async Task AbortAsync(CancellationToken ct = default)
 	{
-		if (IsPromoted || _aborted) return Task.CompletedTask;
+		if (IsPromoted || _aborted) return;
 		_aborted = true;
 
-		CloseStore();
+		await base.DisposeAsync();
 		try
 		{
 			if (Directory.Exists(StagingPath)) Directory.Delete(StagingPath, recursive: true);
@@ -94,18 +93,10 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 		}
 
 		_logger.LogInformation("Lightning staging database {StagingId} aborted", StagingId);
-		return Task.CompletedTask;
 	}
 
-	public async ValueTask DisposeAsync() => await AbortAsync();
-
-	/// <summary>Disposes the store at most once. A promotion that fails after the store is closed still
-	/// leaves this instance to be disposed, and <see cref="LightningStore.Dispose"/> is not idempotent:
-	/// a second call signals an already-disposed event and throws.</summary>
-	private void CloseStore()
-	{
-		if (_storeClosed) return;
-		_storeClosed = true;
-		Store.Dispose();
-	}
+	/// <summary>Disposing a staging world is aborting it: closing the store and deleting the directory.
+	/// After a promotion the directory is the live one's, so the abort is a no-op and the store was
+	/// already closed by <see cref="PromoteToLiveAsync"/>.</summary>
+	public override async ValueTask DisposeAsync() => await AbortAsync();
 }

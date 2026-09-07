@@ -280,7 +280,7 @@ public partial class LightningDatabase
 				return new None();
 			}
 
-			return Hydrate(tx, found.Value.Dbref, found.Value.Record).WithNoneOption();
+			return Hydrate(found.Value.Dbref, found.Value.Record).WithNoneOption();
 		});
 		return ValueTask.FromResult(result);
 	}
@@ -314,7 +314,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(dbref => ReadObject(tx, dbref))
 			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypePlayer)
-			.Select(found => Hydrate(tx, found!.Value.Dbref, found.Value.Record).AsPlayer)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsPlayer)
 			.ToList());
 
 		foreach (var player in players)
@@ -344,7 +344,7 @@ public partial class LightningDatabase
 		{
 			var dbref = Keys.ReadDbref(key);
 			var record = Codec.Deserialize<ObjectRecord>(value);
-			yield return Store.Read(tx => Hydrate(tx, dbref, record));
+			yield return Hydrate(dbref, record);
 		}
 	}
 
@@ -471,7 +471,7 @@ public partial class LightningDatabase
 			}
 
 			var dbref = Keys.ReadDbref(key);
-			yield return Store.Read(tx => Hydrate(tx, dbref, record).AsPlayer);
+			yield return Hydrate(dbref, record).AsPlayer;
 		}
 	}
 
@@ -713,10 +713,10 @@ public partial class LightningDatabase
 	/// Builds the typed Library model for an object already read from <see cref="Tables.Obj"/>. Every
 	/// relation to another object (owner, location, home, parent, zone, flags, powers, children) is a
 	/// lazy loader that opens its own <see cref="LightningStore.Read{T}"/> when a caller actually asks
-	/// for it — never a captured <paramref name="tx"/>, which is only valid for the duration of the
-	/// call that produced <paramref name="record"/>.
+	/// for it. Nothing here reads the store, so this takes no transaction: a caller already holding one
+	/// passes nothing, and a scan hydrating row by row needs to open none.
 	/// </summary>
-	internal AnySharpObject Hydrate(ITx tx, long dbref, ObjectRecord record)
+	internal AnySharpObject Hydrate(long dbref, ObjectRecord record)
 	{
 		var sharpObj = MapToSharpObject(dbref, record);
 
@@ -852,7 +852,7 @@ public partial class LightningDatabase
 			?? throw new InvalidOperationException($"No owner found for #{dbref}");
 		var found = ReadObject(tx, ownerDbref)
 			?? throw new InvalidOperationException($"No object record found for owner of #{dbref}");
-		return Hydrate(tx, found.Dbref, found.Record).AsPlayer;
+		return Hydrate(found.Dbref, found.Record).AsPlayer;
 	});
 
 	private AnyOptionalSharpObject GetOptionalRelatedCore(TableDef forward, long dbref) => Store.Read<AnyOptionalSharpObject>(tx =>
@@ -866,7 +866,7 @@ public partial class LightningDatabase
 		var found = ReadObject(tx, relatedDbref.Value);
 		return found is null
 			? new None()
-			: Hydrate(tx, found.Value.Dbref, found.Value.Record).WithNoneOption();
+			: Hydrate(found.Value.Dbref, found.Value.Record).WithNoneOption();
 	});
 
 	private AnySharpContainer GetRequiredContainerRelation(TableDef forward, long dbref) => Store.Read(tx =>
@@ -875,7 +875,7 @@ public partial class LightningDatabase
 			?? throw new InvalidOperationException($"No location found for #{dbref}");
 		var found = ReadObject(tx, destDbref)
 			?? throw new InvalidOperationException($"No object record found for #{destDbref}");
-		return Hydrate(tx, found.Dbref, found.Record).AsContainer;
+		return Hydrate(found.Dbref, found.Record).AsContainer;
 	});
 
 	private AnyOptionalSharpContainer GetOptionalContainerRelation(TableDef forward, long dbref) => Store.Read<AnyOptionalSharpContainer>(tx =>
@@ -889,7 +889,7 @@ public partial class LightningDatabase
 		var found = ReadObject(tx, destDbref.Value);
 		return found is null
 			? new None()
-			: Hydrate(tx, found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
+			: Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	});
 
 	private async IAsyncEnumerable<SharpObject> GetChildrenCoreAsync(long dbref, [EnumeratorCancellation] CancellationToken ct)

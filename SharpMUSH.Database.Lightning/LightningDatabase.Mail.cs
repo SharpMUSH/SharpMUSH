@@ -82,7 +82,7 @@ public partial class LightningDatabase
 	private SharpMail MapRecordToMail(ITx tx, long mailId, MailRecord record)
 	{
 		var from = ReadObject(tx, record.Sender) is { } found
-			? Hydrate(tx, found.Dbref, found.Record).WithNoneOption()
+			? Hydrate(found.Dbref, found.Record).WithNoneOption()
 			: (AnyOptionalSharpObject)new None();
 
 		return new SharpMail
@@ -288,30 +288,11 @@ public partial class LightningDatabase
 
 	private async IAsyncEnumerable<SharpMail> GetAllSystemMailCoreAsync([EnumeratorCancellation] CancellationToken ct)
 	{
-		byte[]? lastKey = null;
-		const int pageSize = 256;
-
-		while (true)
+		await foreach (var (key, value) in Store.RangeAsync(Tables.Mail, [], ct: ct))
 		{
-			ct.ThrowIfCancellationRequested();
-			var page = Store.Read(tx =>
-				(lastKey is null ? tx.Range(Tables.Mail, []) : tx.RangeFrom(Tables.Mail, [], lastKey, null))
-					.Take(pageSize)
-					.Select(entry => (entry.Key,
-						Mail: MapRecordToMail(tx, Keys.ReadDbref(entry.Key), Codec.Deserialize<MailRecord>(entry.Value))))
-					.ToList());
-
-			foreach (var (_, mail) in page)
-			{
-				yield return mail;
-			}
-
-			if (page.Count < pageSize)
-			{
-				yield break;
-			}
-
-			lastKey = page[^1].Key;
+			var mailId = Keys.ReadDbref(key);
+			var record = Codec.Deserialize<MailRecord>(value);
+			yield return Store.Read(tx => MapRecordToMail(tx, mailId, record));
 		}
 	}
 }

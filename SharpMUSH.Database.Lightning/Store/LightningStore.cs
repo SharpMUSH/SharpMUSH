@@ -17,7 +17,12 @@ public sealed partial class LightningStore : IDisposable
 	private readonly ReaderWriterLockSlim _gate = new(LockRecursionPolicy.NoRecursion);
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
-	private Dictionary<TableDef, LmdbDb> _tables = new();
+
+	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> swap in a whole
+	/// new dictionary, and reader threads outside the gate's write lock must see the swap, never a stale one.</summary>
+	private volatile Dictionary<TableDef, LmdbDb> _tables = new();
+
+	private bool _disposed;
 
 	/// <summary>Tables opened through <see cref="OpenTable"/> rather than declared in <see cref="Tables"/>
 	/// — a plugin's own. Kept across <see cref="Close"/> so <see cref="Open"/> reopens them too: after a
@@ -273,8 +278,12 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
+	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()
 	{
+		if (_disposed) return;
+		_disposed = true;
 		_writer.Dispose();
 		Close();
 		_gate.Dispose();
@@ -332,15 +341,41 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
+		/// <summary>
+		/// <see cref="Range"/> resumed after the entry (<paramref name="afterKey"/>, <paramref name="afterValue"/>):
+		/// the cursor seeks straight to <paramref name="afterKey"/> rather than rescanning the prefix from its
+		/// start, so a paged scan costs one seek per page instead of one re-read of everything already yielded.
+		/// Landing exactly on <paramref name="afterKey"/> means part of that key was yielded already — its
+		/// duplicate run is walked forward until past <paramref name="afterValue"/>, or the whole key is stepped
+		/// over when <paramref name="afterValue"/> is <see langword="null"/> (a table with no duplicates, or a
+		/// caller resuming on the key alone).
+		/// </summary>
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFrom(TableDef table, byte[] prefix, byte[] afterKey, byte[]? afterValue)
 		{
-			foreach (var entry in Range(table, prefix))
+			using var cursor = tx.CreateCursor(Db(table));
+			// A resume point before the prefix cannot be seeked to without dropping the rows between the two;
+			// start at the prefix instead, where nothing has been yielded yet and nothing needs skipping.
+			var resumeIsInsidePrefix = afterKey.AsSpan().SequenceCompareTo(prefix) >= 0;
+			var positioned = resumeIsInsidePrefix ? cursor.SetRange(afterKey) : cursor.SetRange(prefix);
+			if (positioned != MDBResultCode.Success) yield break;
+
+			while (resumeIsInsidePrefix)
 			{
-				var keyCompare = entry.Key.AsSpan().SequenceCompareTo(afterKey);
-				if (keyCompare < 0) continue;
-				if (keyCompare == 0 && (afterValue is null || entry.Value.AsSpan().SequenceCompareTo(afterValue) <= 0)) continue;
-				yield return entry;
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				if (!k.CopyToNewArray().AsSpan().SequenceEqual(afterKey)) break;
+				if (afterValue is not null && v.CopyToNewArray().AsSpan().SequenceCompareTo(afterValue) > 0) break;
+				if (cursor.Next().resultCode != MDBResultCode.Success) yield break;
 			}
+
+			do
+			{
+				var (code, k, v) = cursor.GetCurrent();
+				if (code != MDBResultCode.Success) yield break;
+				var key = k.CopyToNewArray();
+				if (!Keys.StartsWith(key, prefix)) yield break;
+				yield return (key, v.CopyToNewArray());
+			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
 		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey)

@@ -4,7 +4,7 @@ namespace SharpMUSH.Library.Plugins.Storage;
 
 /// <summary>
 /// Host-shared seam that exposes the Lightning provider's store to a storage plugin (the Scene plugin's
-/// Lightning backend, arriving in Task 19). Carries no subsystem concept: a plugin reads and writes
+/// Lightning backend). Carries no subsystem concept: a plugin reads and writes
 /// through the same <see cref="ITx"/>/<see cref="TableDef"/> types the provider uses on itself, and
 /// opens its own tables on first use rather than the provider's catalogue knowing about them.
 /// </summary>
