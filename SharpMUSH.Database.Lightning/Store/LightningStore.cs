@@ -161,7 +161,8 @@ public sealed partial class LightningStore : IDisposable
 		public IEnumerable<(byte[] Key, byte[] Value)> Range(TableDef table, byte[] prefix)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.SetRange(prefix) != MDBResultCode.Success) yield break;
+			var positioned = prefix.Length == 0 ? cursor.First().resultCode : cursor.SetRange(prefix);
+			if (positioned != MDBResultCode.Success) yield break;
 			do
 			{
 				var (code, k, v) = cursor.GetCurrent();

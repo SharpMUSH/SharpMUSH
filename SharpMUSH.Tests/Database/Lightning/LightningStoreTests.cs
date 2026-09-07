@@ -60,6 +60,31 @@ public class LightningStoreTests
 	}
 
 	[Test]
+	public async Task EmptyPrefixRangeScansTheWholeTable()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.Obj, Keys.Dbref(1), Keys.Str("one"));
+			tx.Put(Tables.Obj, Keys.Dbref(2), Keys.Str("two"));
+			tx.Put(Tables.Obj, Keys.Dbref(3), Keys.Str("three"));
+			tx.Put(Tables.Meta, Keys.Dbref(100), Keys.Str("meta-a"));
+			tx.Put(Tables.Meta, Keys.Dbref(101), Keys.Str("meta-b"));
+			return 0;
+		});
+
+		var count = store.Read(tx => tx.Range(Tables.Obj, []).Count());
+		await Assert.That(count).IsEqualTo(3);
+
+		var keys = new List<byte[]>();
+		await foreach (var (key, _) in store.RangeAsync(Tables.Obj, [], pageSize: 2))
+		{
+			keys.Add(key);
+		}
+		await Assert.That(string.Join(",", keys.Select(k => Keys.ReadDbref(k)))).IsEqualTo("1,2,3");
+	}
+
+	[Test]
 	public async Task ObjNameOpensWithFixedDuplicatesForItsDbrefValues()
 	{
 		await Assert.That(Tables.ObjName.FixedDuplicates).IsTrue();
