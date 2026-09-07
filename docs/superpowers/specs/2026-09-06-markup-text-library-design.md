@@ -1,7 +1,12 @@
 # MarkupText library: core + kind packages
 
 **Date:** 2026-09-06
-**Status:** approved, in progress
+**Status:** shipped
+
+The packages this describes are no longer built here. They live in
+[SharpMUSH/MarkupString](https://github.com/SharpMUSH/MarkupString) and reach SharpMUSH from
+nuget.org, so the `SharpMUSH.MarkupString*` project paths below name directories that this
+repository no longer has.
 
 ## Problem
 

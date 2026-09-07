@@ -655,8 +655,8 @@ room at a time (no multi-scene participation).
 
 ### 8.1 MString Is the Shared Library
 
-**Decision:** MString (`SharpMUSH.MarkupString` core + the `.Ansi`/`.Html` kind
-packages) renders any registered format via `.Render(MarkupFormat.Ansi | .Html
+**Decision:** MString (the `MarkupString` core package + the `.Ansi`/`.Html`
+kind packages) renders any registered format via `.Render(MarkupFormat.Ansi | .Html
 | .Pueblo | .Mxp | .BBCode)`, plus `.ToPlainText()`. Web portal references the
 same packages. No separate ANSI-to-HTML parser needed — MString handles it
 natively.
@@ -1176,13 +1176,24 @@ new `kind`/`application` keys. Decision: confirmed 2026-06-13.
 
 ## Area 22: Markup Packages
 
+### 22.0 The Packages Live in Their Own Repository
+
+**Decision:** the three packages are developed and released from
+[SharpMUSH/MarkupString](https://github.com/SharpMUSH/MarkupString), not from this
+tree, and reach SharpMUSH from nuget.org. Nothing in them is MUSH-specific — that
+policy layer is `SharpMUSH.Library/Markup/` — so tying their release to a game
+server's release cadence bought nothing and cost them an audience. Their version is
+pinned once here, as `$(MarkupStringVersion)` in `Directory.Build.props`; the trio
+shares one version by construction upstream, and a mismatch would restore two copies
+of the core assembly.
+
 ### 22.1 Core + Kind Split
 
 **Decision:** `MarkupText` (`MString`) and the rendering machinery (registry,
 formats, serializer, grapheme/display-width helpers) live in a core package,
-`SharpMUSH.MarkupString`, with zero rendering opinions. Each kind of markup —
+`MarkupString`, with zero rendering opinions. Each kind of markup —
 ANSI/terminal styling, raw HTML/MXP tags — ships as its own package
-(`SharpMUSH.MarkupString.Ansi`, `SharpMUSH.MarkupString.Html`) that registers
+(`MarkupString.Ansi`, `MarkupString.Html`) that registers
 its own emitters for every format it supports. This is a dependency boundary
 and an extension path (a plugin can add a markup kind of its own without
 touching core), **not** a WASM bundle-size reduction: every game stream can
@@ -1201,7 +1212,7 @@ attributes for markup kinds. Each host process assigns the result to
 deserializing before that assignment throws rather than silently falling back
 to plain text. No reflection, no dynamic code, no source generators anywhere
 in the three packages — this is what keeps them AOT- and trim-clean, verified
-by a dedicated `SharpMUSH.MarkupString.AotSmoke` publish in CI.
+by a native-AOT publish in the MarkupString repository's own CI.
 
 ### 22.3 Formats Are Core Values
 

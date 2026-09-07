@@ -3,7 +3,7 @@
 ## Overview
 
 Content rendering in SharpMUSH uses a shared library approach. MString (`MarkupText`
-from `SharpMUSH.MarkupString`, plus the `SharpMUSH.MarkupString.Ansi`/`.Html` kind
+from the `MarkupString` package, plus the `MarkupString.Ansi`/`.Html` kind
 packages) renders to any registered format via `Render(MarkupFormat)`. Markdown
 rendering uses Markdig (same library on server and client). No duplication — one
 path per format.
@@ -45,10 +45,11 @@ path per format.
 
 MString (`MarkupText`, aliased via `global using MString = global::MarkupString.MarkupText;`)
 is the game's native rich text type: a plain string plus a set of coalesced,
-non-overlapping runs of markup layers. It ships as three packages —
-`SharpMUSH.MarkupString` (the core type, the registry, the renderer) plus the
-`SharpMUSH.MarkupString.Ansi` and `SharpMUSH.MarkupString.Html` kind packages,
-which supply the actual emitters — all referenced by both server and client code.
+non-overlapping runs of markup layers. It is not built in this repository: it comes
+from [SharpMUSH/MarkupString](https://github.com/SharpMUSH/MarkupString) as three
+NuGet packages — `MarkupString` (the core type, the registry, the renderer) plus the
+`MarkupString.Ansi` and `MarkupString.Html` kind packages, which supply the actual
+emitters — all referenced by both server and client code at `$(MarkupStringVersion)`.
 
 Every host process (`SharpMUSH.Server`, `ConnectionServer`, `Client`) sets
 `MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();` once at

@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    The three MarkupString packages are cut from one repository, released together, and share a
+    version by construction (https://github.com/SharpMUSH/MarkupString). Pinning that version in
+    one place is what keeps the thirteen projects that reference them from drifting apart: a
+    mismatched trio restores two copies of the core assembly and fails on the first render.
+  -->
+  <PropertyGroup>
+    <MarkupStringVersion>1.0.0</MarkupStringVersion>
+  </PropertyGroup>
+
+</Project>

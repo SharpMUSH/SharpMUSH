@@ -50,7 +50,7 @@ jobs:
               - 'SharpMUSH.sln'
               - 'SharpMUSH.ConnectionServer/**'
               - 'SharpMUSH.Messaging/**'
-              - 'SharpMUSH.MarkupString/**'
+              - 'Directory.Build.props'
               - 'global.json'
             server:
               - '.github/workflows/docker-dev.yml'
@@ -63,7 +63,7 @@ jobs:
               - 'SharpMUSH.Implementation.Generated/**'
               - 'SharpMUSH.Library/**'
               - 'SharpMUSH.Messaging/**'
-              - 'SharpMUSH.MarkupString/**'
+              - 'Directory.Build.props'
               - 'SharpMUSH.Configuration/**'
               - 'SharpMUSH.Configuration.Generated/**'
               - 'SharpMUSH.Contracts/**'

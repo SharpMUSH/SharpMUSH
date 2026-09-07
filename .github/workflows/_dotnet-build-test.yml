@@ -34,25 +34,6 @@ jobs:
               exit 1
             }
 
-      # The MarkupString packages promise IsAotCompatible. Publishing the smoke app with
-      # PublishAot is the only thing that proves it: the trimmer roots all three assemblies, so a
-      # trim-hostile corner anywhere in their public surface shows up as an IL2xxx/IL3xxx warning
-      # here rather than in a consumer's app. Running the binary then checks the library still
-      # renders and round-trips once ILC has been over it.
-      #
-      # This job, not `build`: it is a fast standalone publish that needs no database, and the
-      # format job is already the cheap "does the tree hold together" gate.
-      - name: AOT smoke test
-        shell: bash
-        run: |
-          dotnet publish SharpMUSH.MarkupString.AotSmoke -c Release -r linux-x64 \
-            -p:SkipFormatVerification=true 2>&1 | tee aot.log
-          if grep -E 'IL[0-9]{4}' aot.log; then
-            echo "::error::Trim/AOT warnings from the MarkupString packages (see the lines above)"
-            exit 1
-          fi
-          ./SharpMUSH.MarkupString.AotSmoke/bin/Release/net10.0/linux-x64/publish/SharpMUSH.MarkupString.AotSmoke
-
   build:
     runs-on: ubuntu-latest
 

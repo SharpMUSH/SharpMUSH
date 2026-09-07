@@ -29,9 +29,6 @@ dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MyTests/*" --out
 # Run Blazor component tests (bUnit + TUnit)
 dotnet run --project SharpMUSH.Tests.BUnit
 
-# Run the markup packages' own test suite (unit, snapshot, property-based)
-dotnet run --project SharpMUSH.MarkupString.Tests
-
 # Enable console logging during tests (off by default)
 SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING=true dotnet run --project SharpMUSH.Tests
 
@@ -86,18 +83,13 @@ Browser (Blazor WASM)
 | `SharpMUSH.Database.SurrealDB` | SurrealDB embedded in-memory provider |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
-| `SharpMUSH.MarkupString` | Core markup text type (`MarkupText`/`MString`, `Run`, `MarkupSet`, `MarkupFormat`, `MarkupRegistry`, emitter/codec interfaces, `MarkupTextSerializer`, `Graphemes`, `DisplayWidth`) |
-| `SharpMUSH.MarkupString.Ansi` | ANSI/terminal markup kind (`AnsiMarkup`, `AnsiStyle`, `AnsiColor`, `AnsiCodeParser`, `AnsiEscapeParser`, `SgrWriter`); registers emitters for Ansi/Html/Pueblo/Mxp/BBCode via `WithAnsi()` |
-| `SharpMUSH.MarkupString.Html` | Raw HTML/MXP tag markup kind (`HtmlMarkup`); registers emitters for Html/Pueblo/Mxp via `WithHtml()`, folds `b`/`i`/`u`/`s` into ANSI styling |
-| `SharpMUSH.MarkupString.Tests` | TUnit tests for the three markup packages (unit, snapshot, property-based) |
-| `SharpMUSH.MarkupString.AotSmoke` | AOT-publish smoke console app proving the markup packages trim/AOT clean |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |
 | `SharpMUSH.Tests.BUnit` | bUnit component tests for Blazor pages and components |
 | `SharpMUSH.Tests.Infrastructure` | Shared test helpers, `ServerWebAppFactory`, DB test servers |
 
 ### Markup
 
-Styled text is `MarkupText` (aliased as `MString` via `global using MString = global::MarkupString.MarkupText;` in each project's `GlobalUsings.cs`) — a plain string plus a set of coalesced, non-overlapping runs of `IMarkup` layers. It lives in `SharpMUSH.MarkupString`; the ANSI and HTML markup kinds ship in the separate `SharpMUSH.MarkupString.Ansi`/`SharpMUSH.MarkupString.Html` packages so the core has no rendering opinions baked in. Every host wires the two kinds into the registry once at startup: `MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();` (`SharpMUSH.Server`, `ConnectionServer`, `Client`, the Tests infrastructure, Benchmarks, LanguageServer). `MarkupFormat` has six values: `Plain`, `Ansi`, `Html`, `Pueblo`, `Mxp`, `BBCode` (plus `MarkupFormat.Custom(name, encoding)` for your own).
+Styled text is `MarkupText` (aliased as `MString` via `global using MString = global::MarkupString.MarkupText;` in each project's `GlobalUsings.cs`) — a plain string plus a set of coalesced, non-overlapping runs of `IMarkup` layers. It is **not in this repository**: it ships from [SharpMUSH/MarkupString](https://github.com/SharpMUSH/MarkupString) as three NuGet packages — `MarkupString` (the core, with no rendering opinions), `MarkupString.Ansi` and `MarkupString.Html` (the two markup kinds). Their version is pinned once, as `$(MarkupStringVersion)` in `Directory.Build.props`; the thirteen projects that reference them all use that property, because a mismatched trio restores two copies of the core assembly. Every host wires the two kinds into the registry once at startup: `MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();` (`SharpMUSH.Server`, `ConnectionServer`, `Client`, the Tests infrastructure, Benchmarks, LanguageServer). `MarkupFormat` has six values: `Plain`, `Ansi`, `Html`, `Pueblo`, `Mxp`, `BBCode` (plus `MarkupFormat.Custom(name, encoding)` for your own).
 
 `MString.ToString()` is always plain text (equivalent to `ToPlainText()`) — it is never format-specific. To produce output for a client, render explicitly: `text.Render(MarkupFormat.Ansi)`, `.Render(MarkupFormat.Html)`, etc. There is no `ToAnsi()`/`ToHtml()`.
 
