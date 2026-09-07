@@ -10,12 +10,6 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// <summary>Connection type value used by the WebSocket gateway when registering connections.</summary>
 	public const string WebSocketConnectionType = "websocket";
 
-	/// <summary>
-	/// MXP open line prefix: ESC[0z — signals an MXP client that the line may contain standard
-	/// open-mode MXP tags. Without it, MXP clients default to locked mode and ignore tags.
-	/// </summary>
-	private const string MxpOpenLinePrefix = ProtocolConstants.MxpLineOpen;
-
 	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection) =>
 		Render(markup, new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences));
 
@@ -44,14 +38,14 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	}
 
 	/// <summary>
-	/// Prepends the MXP open line prefix (ESC[0z) to each non-empty line so MXP clients interpret
-	/// open-mode tags on every line.
+	/// Prepends secure mode (ESC[1z) on each non-empty line so SEND links are interpreted.
+	/// The markup renderer encodes plain text; only explicit markup spans emit tags.
 	/// </summary>
 	private static string ApplyMxpLinePrefix(string text)
 	{
 		var lines = text.Split('\n');
 		return string.Join('\n', lines.Select(line =>
-			line.Length == 0 || line == "\r" ? line : MxpOpenLinePrefix + line));
+			line.Length == 0 || line == "\r" ? line : ProtocolConstants.MxpLineSecure + line));
 	}
 
 	/// <summary>

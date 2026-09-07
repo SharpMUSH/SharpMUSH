@@ -47,6 +47,9 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
+      - name: Test portal startup helpers
+        run: node --test tools/client-tests/*.test.mjs
+
       - name: Restore dependencies
         run: dotnet restore
 
