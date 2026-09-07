@@ -469,7 +469,11 @@ public class Startup(
 		// ValidateSharpOptions, not the generated validator directly: it delegates to the generated one and
 		// adds the checks the generator cannot express (currently Wiki.DefaultLocale being a real culture).
 		// Registering the generated validator here would silently skip those.
-		services.AddScoped<IValidateOptions<SharpMUSHOptions>, ValidateSharpOptions>();
+		//
+		// Singleton, because the only thing that resolves it is the singleton OptionsService — see its
+		// remarks for why that factory runs the validators itself. A scoped validator is a captive
+		// dependency of a singleton factory, and nothing noticed while nothing ran it.
+		services.AddSingleton<IValidateOptions<SharpMUSHOptions>, ValidateSharpOptions>();
 		services.AddOptions<ColorsOptions>().ValidateOnStart();
 		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>, Library.Services.OptionsWrapper<SharpMUSHOptions>>();
 		services.AddSingleton<IOptionsWrapper<ColorsOptions>, Library.Services.OptionsWrapper<ColorsOptions>>();

@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -450,7 +451,7 @@ public partial class Functions
 		var list = parser.CurrentState.Arguments["0"].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+		var regex = SoftcodeRegex.Create(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.splitList(delimiter, list) ?? [];
@@ -465,7 +466,7 @@ public partial class Functions
 		var list = parser.CurrentState.Arguments["0"].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+		var regex = SoftcodeRegex.Create(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
@@ -786,7 +787,7 @@ public partial class Functions
 		var list = parser.CurrentState.Arguments["0"].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+		var regex = SoftcodeRegex.Create(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var splitList = MModule.splitList(delimiter, list) ?? [];
@@ -804,7 +805,7 @@ public partial class Functions
 		var list = parser.CurrentState.Arguments["0"].Message;
 		var globPattern = MModule.plainText(parser.CurrentState.Arguments["1"].Message)!;
 		var regPattern = globPattern.GlobToRegex();
-		var regex = new System.Text.RegularExpressions.Regex(regPattern,
+		var regex = SoftcodeRegex.Create(regPattern,
 			System.Text.RegularExpressions.RegexOptions.Singleline);
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);

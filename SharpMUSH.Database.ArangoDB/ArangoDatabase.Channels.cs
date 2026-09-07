@@ -44,29 +44,51 @@ public partial class ArangoDatabase
 		return owner.AsPlayer;
 	}
 
-	private IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersAsync(
-		string channelId, CancellationToken ct = default)
+	/// <summary>
+	/// A channel's members, with each member's per-channel status.
+	/// </summary>
+	/// <remarks>
+	/// One round trip for the whole list. It used to be one for the edges and then one more per member
+	/// — <c>GetObjectNodeAsync</c> for each — which is paid on every channel message, because
+	/// <see cref="SharpChannel.Members"/> re-runs on every enumeration by design and the channel itself
+	/// is not cached. A hundred-member channel meant a hundred round trips per line of chat.
+	/// <para>
+	/// The membership edge points at the member's Objects document, so the typed vertex (Thing, Player,
+	/// Room, Exit) is one inbound hop from it. Both are projected here and handed to the same builder
+	/// the single-object load uses.
+	/// </para>
+	/// </remarks>
+	private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersAsync(
+		string channelId, [EnumeratorCancellation] CancellationToken ct = default)
 	{
-		var stream = arangoDb.Query.ExecuteStreamAsync<SharpChannelMemberListQueryResult>(handle,
-			$"FOR v,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} RETURN {{Id: v._id, Status: e}}",
+		var rows = await arangoDb.Query.ExecuteAsync<SharpChannelMemberQueryResult>(handle,
+			$"FOR member,e IN 1..1 INBOUND @startVertex GRAPH {DatabaseConstants.GraphChannels} "
+			+ $"LET typed = FIRST(FOR t IN 1..1 INBOUND member GRAPH {DatabaseConstants.GraphObjects} RETURN t) "
+			+ "FILTER typed != null "
+			+ $"RETURN {{ Typed: typed, Object: {ObjectWithRelations("member")}, Status: e }}",
 			bindVars: new Dictionary<string, object>
 			{
 				{ "startVertex", channelId }
 			},
 			cancellationToken: ct);
 
-		var result = stream
-			.Select<SharpChannelMemberListQueryResult, SharpChannel.MemberAndStatus>(async (x, cancelToken) =>
-				new SharpChannel.MemberAndStatus((await GetObjectNodeAsync(x.Id, cancelToken)).Known(),
-					new SharpChannelStatus(
-						Combine: x.Status.Combine,
-						Gagged: x.Status.Gagged,
-						Hide: x.Status.Hide,
-						Mute: x.Status.Mute,
-						Title: MModule.deserialize(x.Status.Title ?? string.Empty)
-					)));
+		foreach (var row in rows)
+		{
+			var member = BuildObjectNode(row.Typed, row.Object);
+			if (member.IsNone)
+			{
+				continue;
+			}
 
-		return result;
+			yield return new SharpChannel.MemberAndStatus(member.Known(),
+				new SharpChannelStatus(
+					Combine: row.Status.Combine,
+					Gagged: row.Status.Gagged,
+					Hide: row.Status.Hide,
+					Mute: row.Status.Mute,
+					Title: MModule.deserialize(row.Status.Title ?? string.Empty)
+				));
+		}
 	}
 
 	private SharpChannel SharpChannelQueryToSharpChannel(SharpChannelQueryResult x) =>

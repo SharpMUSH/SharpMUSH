@@ -20,6 +20,7 @@ using System.Drawing;
 using System.Text.RegularExpressions;
 using static ANSILibrary.ANSI;
 using StringExtensions = ANSILibrary.StringExtensions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -719,7 +720,7 @@ public partial class Functions
 		else
 		{
 			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-			var regex = new Regex(regexPattern, RegexOptions.IgnoreCase);
+			var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase);
 			filteredFunctions = allFunctions.Where(name => regex.IsMatch(name));
 		}
 

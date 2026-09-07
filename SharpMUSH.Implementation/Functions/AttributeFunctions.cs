@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -945,7 +946,7 @@ public partial class Functions
 
 			try
 			{
-				var regex = new Regex(patternStr, options);
+				var regex = SoftcodeRegex.Create(patternStr, options);
 
 				if (all)
 				{
@@ -1025,7 +1026,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(regexpPattern, options);
+			var regex = SoftcodeRegex.Create(regexpPattern, options);
 
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, objectStr, LocateFlags.All,

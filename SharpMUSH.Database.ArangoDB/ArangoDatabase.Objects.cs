@@ -538,11 +538,21 @@ public partial class ArangoDatabase
 				cache: true, cancellationToken: cancellationToken);
 		}
 
-		if (query.Count < 2) return new None();
+		return query.Count < 2 ? new None() : BuildObjectNode(query.First(), query.Last());
+	}
 
-		var res = query.First();
-		var obj = query.Last();
-
+	/// <summary>
+	/// One object, from the two documents that describe it: its typed vertex (a Thing, Player, Room or
+	/// Exit) and its Objects document with its flags and powers merged in by
+	/// <see cref="ObjectWithRelations"/>.
+	/// </summary>
+	/// <remarks>
+	/// Separate from the query that usually fetches those two so that a caller loading MANY objects can
+	/// project them all in one round trip and build each one here, rather than asking the database once
+	/// per object. See <c>GetChannelMembersAsync</c>.
+	/// </remarks>
+	private AnyOptionalSharpObject BuildObjectNode(System.Text.Json.JsonElement res, System.Text.Json.JsonElement obj)
+	{
 		var id = res.GetProperty("_id").GetString()!;
 		var collection = id.Split("/")[0];
 
