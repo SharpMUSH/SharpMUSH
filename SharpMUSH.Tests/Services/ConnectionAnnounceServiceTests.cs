@@ -15,8 +15,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// Unit tests for <see cref="ConnectionAnnounceService"/>'s connect-side broadcasts (Task 3) and
-/// zone/master-room ACONNECT dispatch (Task 4). Disconnect (Task 5) is a stub and is not exercised here.
+/// Unit tests for <see cref="ConnectionAnnounceService"/>'s connect-side broadcasts (Task 3),
+/// zone/master-room ACONNECT dispatch (Task 4), and disconnect-side broadcasts plus LASTLOGOUT (Task 5).
 /// </summary>
 public class ConnectionAnnounceServiceTests
 {
@@ -230,5 +230,47 @@ public class ConnectionAnnounceServiceTests
 
 		await attributeService.Received(1).GetAttributeAsync(
 			player, hookTarget, "ACONNECT", IAttributeService.AttributeMode.Execute, true);
+	}
+
+	[Test]
+	public async Task AnnounceDisconnectAsync_LastConnection_BroadcastsHasDisconnectedAndSetsLastLogout()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0);
+
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has disconnected.");
+		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+	}
+
+	[Test]
+	public async Task AnnounceDisconnectAsync_OtherConnectionsRemain_UsesPartiallyDisconnectedWordingAndSkipsLastLogout()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, FakeMediatorWithNoMasterRoom());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 1);
+
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
+		await attributeService.DidNotReceive().SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
 	}
 }

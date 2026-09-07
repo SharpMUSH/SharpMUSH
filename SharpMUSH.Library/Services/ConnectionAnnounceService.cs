@@ -1,3 +1,4 @@
+using System.Globalization;
 using Mediator;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
@@ -79,8 +80,66 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <inheritdoc />
-	public ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections)
-		=> throw new NotImplementedException("Implemented in Task 5");
+	public async ValueTask AnnounceDisconnectAsync(IMUSHCodeParser parser, AnySharpObject player, int remainingConnections)
+	{
+		var isDark = await player.IsDark();
+		var name = player.Object().Name;
+		var wording = remainingConnections > 0
+			? ErrorMessages.Notifications.GameHasPartiallyDisconnected
+			: ErrorMessages.Notifications.GameHasDisconnected;
+		var fullMessage = $"{name} {wording}";
+
+		if (await player.HasFlag("SUSPECT"))
+		{
+			await gameBroadcastService.BroadcastToFlagAsync(
+				"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
+		}
+
+		var gameLine = $"GAME: {fullMessage}";
+		if (isDark)
+		{
+			await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
+		}
+		else
+		{
+			await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
+		}
+
+		if (configuration.CurrentValue.Cosmetic.AnnounceConnects)
+		{
+			await communicationService.SendToRoomAsync(
+				player, player.AsContainer, _ => fullMessage, INotifyService.NotificationType.Announce);
+
+			if (!isDark)
+			{
+				var loc = await player.Where();
+				await communicationService.SendToRoomAsync(
+					player, loc, _ => fullMessage, INotifyService.NotificationType.Announce,
+					excludeObjects: [player]);
+			}
+		}
+
+		await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
+
+		if (configuration.CurrentValue.Attribute.RoomConnects)
+		{
+			var loc = await player.Where();
+			var locObj = loc.WithExitOption();
+			if (locObj.IsRoom || locObj.IsThing)
+			{
+				await QueueHookAsync(parser, locObj, player, "ADISCONNECT", remainingConnections.ToString());
+			}
+		}
+
+		await DispatchZoneAndMasterRoomHooksAsync(parser, player, "ADISCONNECT", remainingConnections.ToString());
+
+		if (remainingConnections == 0)
+		{
+			var lastLogout = DateTimeOffset.UtcNow.ToLocalTime()
+				.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
+			await attributeService.SetAttributeAsync(player, player, "LASTLOGOUT", MarkupText.Plain(lastLogout));
+		}
+	}
 
 	/// <summary>
 	/// Ports the zone (src/bsd.c:5994-6011) and master-room (src/bsd.c:6012-6015) traversal from
