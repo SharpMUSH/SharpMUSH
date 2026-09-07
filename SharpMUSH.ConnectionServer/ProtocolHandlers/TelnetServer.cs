@@ -76,6 +76,47 @@ public class TelnetServer : ConnectionHandler
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
 
+		// Anything that writes connection metadata in the main process has to arrive after the handle
+		// is registered there, because every one of those consumers gives up on an unregistered handle
+		// after ConnectionRetryPolicy's five 50ms attempts. The read loop starts at BuildAndStartAsync,
+		// which is before the RegisterAsync below, so a client that answers TTYPE within one round trip
+		// can outrun its own registration and have its terminal type silently dropped. Widening the
+		// consumers' retry window would only make that less likely; holding the messages here makes the
+		// ordering a fact. Null once registration has happened, after which publishing is direct.
+		var pendingLock = new object();
+		List<Func<Task>>? pendingPublishes = [];
+
+		async ValueTask PublishAfterRegistrationAsync(Func<Task> publish)
+		{
+			lock (pendingLock)
+			{
+				if (pendingPublishes is not null)
+				{
+					pendingPublishes.Add(publish);
+					return;
+				}
+			}
+
+			await publish();
+		}
+
+		async ValueTask FlushPendingPublishesAsync()
+		{
+			Func<Task>[] queued;
+			lock (pendingLock)
+			{
+				queued = [.. pendingPublishes ?? []];
+				pendingPublishes = null;
+			}
+
+			// In the order they were produced: a client's terminal-type list is reported once per entry,
+			// and the last report is the complete one.
+			foreach (var publish in queued)
+			{
+				await publish();
+			}
+		}
+
 		// Reports the client as speaking telnet the first time any option has genuinely negotiated.
 		// TelnetNegotiationCore tracks that per plugin as ITelnetProtocolPlugin.IsNegotiated — set at
 		// the state where a WILL/DO exchange resolves, so it is an answer from the client rather than
@@ -91,7 +132,8 @@ public class TelnetServer : ConnectionHandler
 			}
 
 			_logger.LogDebug("Telnet negotiation confirmed on handle {Handle}", nextPort);
-			await _publishEndpoint.Publish(new TelnetNegotiatedMessage(nextPort), ct);
+			await PublishAfterRegistrationAsync(
+				() => _publishEndpoint.Publish(new TelnetNegotiatedMessage(nextPort), ct));
 		}
 
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
@@ -124,8 +166,8 @@ public class TelnetServer : ConnectionHandler
 						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
 					}
 
-					await _publishEndpoint.Publish(
-						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct);
+					await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
+						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct));
 
 					// Suppress this line from reaching the command parser
 					return;
@@ -139,18 +181,21 @@ public class TelnetServer : ConnectionHandler
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
 			{
 				await AnnounceTelnetIfNegotiatedAsync();
-				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct);
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct));
 			})
 			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _msspConfig).OnMSSP(async _ =>
 			{
 				await AnnounceTelnetIfNegotiatedAsync();
 				// Not Yet Implemented. Need to turn config into a dictionary
-				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct);
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct));
 			})
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
 			{
 				await AnnounceTelnetIfNegotiatedAsync();
-				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct);
+				await PublishAfterRegistrationAsync(
+					() => _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct));
 			})
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
@@ -167,8 +212,8 @@ public class TelnetServer : ConnectionHandler
 					// place there is to say it, that they could display them.
 					TryApplyTerminalCapabilities(nextPort, terminalTypes);
 
-					await _publishEndpoint.Publish(
-						new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct);
+					await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
+						new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct));
 				},
 				// A client that agreed to TTYPE has proved it speaks telnet, and it may never send a
 				// line — a crawler reads the login screen and leaves — so do not wait for OnSubmit.
@@ -193,7 +238,8 @@ public class TelnetServer : ConnectionHandler
 						_logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", nextPort);
 					}
 
-					await _publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct);
+					await PublishAfterRegistrationAsync(
+						() => _publishEndpoint.Publish(new MxpNegotiatedMessage(nextPort), ct));
 				}
 
 				return DoMxpSetup();
@@ -275,6 +321,10 @@ public class TelnetServer : ConnectionHandler
 			await telnet.SendGMCPCommand(module, message);
 		},
 		isSecure: isSecure);
+
+		// The handle exists in the main process from here on, so everything negotiation produced before
+		// now can go out and land on a connection that is there to receive it.
+		await FlushPendingPublishesAsync();
 
 		try
 		{

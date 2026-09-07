@@ -6,6 +6,7 @@ using SharpMUSH.ConnectionServer.Configuration;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 using System.IO.Pipelines;
@@ -179,6 +180,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -197,6 +199,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -217,6 +220,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -251,6 +255,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -259,6 +264,83 @@ public class TelnetServerNegotiationTests
 	/// ssl() as false. The claim is made from the handshake that happened, never from the port
 	/// number — a TLS endpoint is what makes it true, and there is none here.
 	/// </summary>
+	/// <summary>
+	/// The race CodeRabbit flagged, made deterministic: the read loop starts at BuildAndStartAsync,
+	/// which is before RegisterAsync, so a client answering TTYPE inside one round trip can outrun its
+	/// own registration. Every consumer that writes connection metadata gives up on an unregistered
+	/// handle after ConnectionRetryPolicy's five 50ms attempts, so anything published in that window
+	/// used to be dropped — the client's terminal type silently lost, and terminfo() back to "unknown"
+	/// for exactly the clients that answered. Here registration is held well past that budget; nothing
+	/// may leave until it completes.
+	/// </summary>
+	[Test]
+	public async Task NegotiationBeforeRegistration_IsHeldRatherThanDropped()
+	{
+		var registrationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>())
+			.Returns(async _ =>
+			{
+				registrationStarted.TrySetResult();
+				await releaseRegistration.Task;
+			});
+
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await registrationStarted.Task.WaitAsync(Timeout);
+
+			// A complete TTYPE exchange while registration is still in flight.
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			var name = Encoding.ASCII.GetBytes("SharpMUTerm");
+			foreach (var _ in Enumerable.Range(0, 2))
+			{
+				await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+				await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. name, IAC, SE]);
+			}
+
+			// Longer than the consumers would wait for a registration that had not happened.
+			await Task.Delay(ConnectionRetryPolicy.MaxAttempts * ConnectionRetryPolicy.Delay * 2);
+
+			lock (published)
+			{
+				var leaked = published
+					.Where(message => message is not TelnetInputMessage)
+					.ToArray();
+
+				Assert.That(leaked).IsEmpty()
+					.Because("a consumer would drop these: the handle is not registered yet")
+					.GetAwaiter().GetResult();
+			}
+
+			releaseRegistration.TrySetResult();
+
+			var terminalType = await WaitForPublishedAsync<TerminalTypeNegotiatedMessage>(published);
+			await Assert.That(terminalType).IsNotNull()
+				.Because("held is not dropped — it goes out once the handle exists to receive it");
+			await Assert.That(terminalType!.TerminalTypes).Contains("SharpMUTerm");
+
+			await Assert.That(await WaitForPublishedAsync<TelnetNegotiatedMessage>(published)).IsNotNull();
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
 	[Test]
 	public async Task PlaintextListener_DoesNotClaimSsl()
 	{
@@ -281,6 +363,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -305,6 +388,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 
@@ -337,6 +421,7 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
+			cts.Dispose();
 		}
 	}
 }
