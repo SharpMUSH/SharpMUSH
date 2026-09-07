@@ -61,13 +61,15 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 			AvailableLocales = ["en", "fr"],
 		};
 
-	private IRenderedComponent<WikiDisplay> RenderDisplay(WikiArticle article, string slug = "dragons") =>
+	private IRenderedComponent<WikiDisplay> RenderDisplay(
+		WikiArticle article, string slug = "dragons", bool embedded = false) =>
 		Render<WikiDisplay>(p => p
 			.Add(c => c.Slug, slug)
 			.Add(c => c.Namespace, "main")
 			.Add(c => c.Category, "general")
 			.Add(c => c.Locale, "fr")
 			.Add(c => c.Article, article)
+			.Add(c => c.Embedded, embedded)
 			.Add(c => c.ActivateEditMode, () => Task.CompletedTask));
 
 	[Test]
@@ -89,9 +91,10 @@ public class WikiDisplayFallbackTests : TrackingBunitContext
 	[Test]
 	public async Task Notice_rendersOnTheHeroBranchToo()
 	{
-		// DisplayAsHero is slug == "home"; it has its own body markup, so it needs its own notice.
-		var cut = RenderDisplay(Article(isFallback: true), slug: "home");
+		// DisplayAsHero is an embedded "home"; it has its own body markup, so it needs its own notice.
+		var cut = RenderDisplay(Article(isFallback: true), slug: "home", embedded: true);
 
+		await Assert.That(cut.FindAll(".WikiContent--hero")).IsNotEmpty();
 		await Assert.That(cut.Markup).Contains("WikiFallbackNotice");
 	}
 
