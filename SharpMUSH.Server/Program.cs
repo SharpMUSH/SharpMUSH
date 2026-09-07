@@ -37,9 +37,7 @@ public class Program
 		ConfigureMarkup();
 
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var databaseProvider = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase)
-			? DatabaseProvider.SurrealDB
-			: DatabaseProvider.Lightning;
+		var databaseProvider = DatabaseProviderResolver.Resolve(dbProviderStr);
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.

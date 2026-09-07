@@ -14,8 +14,7 @@ namespace SharpMUSH.Database.Lightning;
 /// database lifecycle (<see cref="WipeDatabaseAsync"/>, <see cref="CreateStagingAsync"/>) and the small
 /// helpers every area partial shares for allocating dbrefs and maintaining the single- and multi-valued
 /// dbref-to-dbref edge tables. <see cref="Migration.LightningMigration"/> (a partial of this class) holds
-/// <c>Migrate()</c>; every other file under this namespace is one interface area, per
-/// <c>docs/superpowers/specs/2026-09-06-lightning-provider-design.md</c> §4.
+/// <c>Migrate()</c>; every other file under this namespace implements one storage interface area.
 /// </summary>
 /// <param name="relations">
 /// Required — the caller must state its intent explicitly, never fall through a default. The host

@@ -2,8 +2,7 @@
 
 Binding decisions for how the game engine reads and writes state, how services are wired, and
 what the cache may assume. The portal decisions live in `architectural-decisions.md`; this
-document covers the engine underneath them. Performance evidence for these choices is in
-`../performance/2026-09-parser-and-database-analysis.md`.
+document covers the engine underneath them.
 
 ## 1. The Mediator is the data trunk
 

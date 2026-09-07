@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -68,10 +69,11 @@ public static class SceneSystemServiceCollectionExtensions
 		var provider = configuration?[ProviderConfigKey]
 									 ?? Environment.GetEnvironmentVariable(ProviderConfigKey);
 
-		return provider switch
+		return DatabaseProviderResolver.Resolve(provider) switch
 		{
-			var p when string.Equals(p, "surrealdb", StringComparison.OrdinalIgnoreCase) => SurrealKey,
-			_ => LightningKey
+			DatabaseProvider.SurrealDB => SurrealKey,
+			DatabaseProvider.Lightning => LightningKey,
+			_ => throw new ArgumentOutOfRangeException(nameof(provider))
 		};
 	}
 }
