@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -136,7 +137,20 @@ public class ConnectionAnnounceService(
 			{
 				var lastLogout = DateTimeOffset.UtcNow.ToLocalTime()
 					.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
-				await attributeService.SetAttributeAsync(player, player, "LASTLOGOUT", MarkupText.Plain(lastLogout));
+
+				// LASTLOGOUT is engine-maintained bookkeeping, not a player-authored write - PennMUSH
+				// stamps it with GOD's ownership (src/bsd.c:6162: atr_add(player, "LASTLOGOUT", ..., GOD,
+				// 0)), matching this codebase's convention for other automatic attribute writes (see e.g.
+				// GeneralCommands.cs's SetAttributeCommand call sites, all stamped with #1/God). Going
+				// through AttributeService.SetAttributeAsync's permission-gated wrapper is wrong here:
+				// LASTLOGOUT is seeded wizard-flagged (AttributeEntrySeed.cs), so once the attribute exists
+				// (created by the player's first-ever disconnect), PermissionService.CanSetInternal denies
+				// every subsequent write from a mortal player - freezing LASTLOGOUT after one update.
+				// Sending SetAttributeCommand directly bypasses that permission gate entirely, the same
+				// way the engine's other automatic bookkeeping writes do.
+				var god = await HelperFunctions.GetGod(mediator);
+				await mediator.Send(new SetAttributeCommand(
+					player.Object().DBRef, ["LASTLOGOUT"], MarkupText.Plain(lastLogout), god.AsPlayer));
 			}
 		}
 		catch (Exception ex)

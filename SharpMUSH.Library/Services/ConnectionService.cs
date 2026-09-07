@@ -22,10 +22,39 @@ public class ConnectionService(
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
+	/// <summary>
+	/// Guards <see cref="Disconnect"/>'s remaining-connections computation against a race between two
+	/// of the same player's handles disconnecting at genuinely the same time. Handles the disconnecting
+	/// handle is removed from <see cref="_sessionState"/> only after the state-change notification is
+	/// published (so the handler can still look up this handle's own metadata - see the comment in
+	/// <see cref="Disconnect"/>), so a plain count of "other handles still in <see cref="_sessionState"/>
+	/// for this player" would let two concurrent disconnects each see the other as still connected.
+	/// <see cref="_pendingDisconnects"/> plus this lock close that gap: a handle is marked pending the
+	/// instant it starts computing its remaining count, so a second, concurrent <see cref="Disconnect"/>
+	/// call for the same player - whichever one actually runs second - correctly excludes the first as
+	/// already gone, even though the first hasn't removed itself from <see cref="_sessionState"/> yet.
+	/// </summary>
+	private readonly Lock _disconnectLock = new();
+	private readonly HashSet<long> _pendingDisconnects = [];
+
 	public async ValueTask Disconnect(long handle)
 	{
 		var get = Get(handle);
 		if (get is null) return;
+
+		int? remainingConnections = null;
+		if (get.Ref is { } playerRef)
+		{
+			lock (_disconnectLock)
+			{
+				_pendingDisconnects.Add(handle);
+				remainingConnections = _sessionState.Values.Count(x =>
+					x.Handle != handle &&
+					x.Ref.HasValue &&
+					x.Ref.Value.Equals(playerRef) &&
+					!_pendingDisconnects.Contains(x.Handle));
+			}
+		}
 
 		foreach (var handler in _handlers)
 		{
@@ -33,9 +62,17 @@ public class ConnectionService(
 		}
 
 		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
-			IConnectionService.ConnectionState.Disconnected));
+			IConnectionService.ConnectionState.Disconnected, RemainingConnections: remainingConnections));
 
 		_sessionState.Remove(handle, out _);
+
+		if (get.Ref is not null)
+		{
+			lock (_disconnectLock)
+			{
+				_pendingDisconnects.Remove(handle);
+			}
+		}
 
 		if (stateStore != null)
 		{

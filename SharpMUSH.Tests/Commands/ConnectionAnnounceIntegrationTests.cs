@@ -547,4 +547,79 @@ public class ConnectionAnnounceIntegrationTests
 				"wording always sees it already cleared, producing the ordinary (non-hidden) wording " +
 				"instead");
 	}
+
+	// --- Test 13: LASTLOGOUT keeps updating past the player's first-ever disconnect (Codex round 2, Finding 1) ---
+
+	/// <summary>
+	/// Regression test for the Codex review's Finding 1 on PR #902 (second round): LASTLOGOUT is
+	/// seeded wizard-flagged (<c>AttributeEntrySeed.cs</c>: <c>("LASTLOGOUT", ["no_clone","wizard",
+	/// "locked","prefixmatch"])</c>). Before the fix, <c>AnnounceDisconnectAsync</c> wrote it via
+	/// <c>IAttributeService.SetAttributeAsync(player, player, "LASTLOGOUT", ...)</c> - the PLAYER's
+	/// own authority. A player's first-ever disconnect creates the attribute (the pre-set permission
+	/// check is a no-op against a non-existent attribute) with the seeded wizard flag baked into its
+	/// instance flags. Every disconnect after that hit <c>PermissionService.CanSetInternal</c>'s
+	/// <c>attribute.Any(a =&gt; a.IsWizard()) return false</c> guard, silently freezing LASTLOGOUT at
+	/// its first-ever value forever for a non-wizard player. This test proves the value is genuinely
+	/// updated on a SECOND disconnect, not merely that the call didn't throw - by (1) independently
+	/// confirming a mortal's own <c>SetAttributeAsync</c> attempt against the now-existing attribute is
+	/// denied (establishing the bug's exact mechanism would otherwise apply here), and (2) polling for
+	/// the stored value to actually change after a second QUIT.
+	/// </summary>
+	[Test]
+	public async ValueTask Quit_Twice_UpdatesLastLogoutOnTheSecondDisconnectToo()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceTwice13");
+
+		var playerObj = await KnownObjectAsync(testPlayer.DbRef);
+		var playerName = playerObj.Object().Name;
+
+		// First-ever disconnect: LASTLOGOUT does not exist yet, so it gets created here - along with
+		// the seeded wizard flag PennMUSH's own attribute-entry table stamps onto it.
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("QUIT"));
+		await TestHelpers.WaitForAttribute(AttributeService, playerObj, "LASTLOGOUT");
+
+		var firstLogout = await AttributeService.GetAttributeAsync(
+			playerObj, playerObj, "LASTLOGOUT", IAttributeService.AttributeMode.Read, false);
+		await Assert.That(firstLogout.IsAttribute).IsTrue();
+		var firstValue = firstLogout.AsAttribute.Last().Value.ToPlainText();
+
+		// Confirms the exact mechanism of the bug: now that LASTLOGOUT exists and carries the seeded
+		// wizard flag, a mortal player's OWN authority is denied from overwriting it. This is exactly
+		// the permission gate AnnounceDisconnectAsync must bypass (via a direct SetAttributeCommand,
+		// not IAttributeService.SetAttributeAsync) for the real disconnect flow to keep working.
+		var mortalAttempt = await AttributeService.SetAttributeAsync(
+			playerObj, playerObj, "LASTLOGOUT", MarkupText.Plain("mortal write should be denied"));
+		await Assert.That(mortalAttempt.IsT1).IsTrue()
+			.Because("LASTLOGOUT is seeded wizard-flagged, so once it exists a mortal player's own " +
+				"authority must be denied - proving AnnounceDisconnectAsync would silently freeze " +
+				"LASTLOGOUT after one update if it wrote through this same path");
+
+		// Sleep past the one-second granularity of LASTLOGOUT's timestamp format so a real update is
+		// distinguishable from a frozen value by more than coincidence.
+		await Task.Delay(TimeSpan.FromSeconds(1.1));
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("QUIT"));
+
+		var deadline = DateTime.UtcNow.AddSeconds(10);
+		var secondValue = firstValue;
+		while (DateTime.UtcNow < deadline)
+		{
+			var attr = await AttributeService.GetAttributeAsync(
+				playerObj, playerObj, "LASTLOGOUT", IAttributeService.AttributeMode.Read, false);
+			if (attr.IsAttribute)
+			{
+				secondValue = attr.AsAttribute.Last().Value.ToPlainText();
+				if (secondValue != firstValue) break;
+			}
+			await Task.Delay(100);
+		}
+
+		await Assert.That(secondValue).IsNotEqualTo(firstValue)
+			.Because("the SECOND disconnect must actually update LASTLOGOUT - before the fix, writing " +
+				"through IAttributeService.SetAttributeAsync as the player's own authority silently " +
+				"failed once the attribute existed, freezing it at its first-ever value forever");
+	}
 }

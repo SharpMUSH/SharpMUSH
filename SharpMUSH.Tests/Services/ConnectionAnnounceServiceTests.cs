@@ -5,6 +5,7 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -150,8 +151,13 @@ public class ConnectionAnnounceServiceTests
 
 	/// <summary>
 	/// Builds an <see cref="IMediator"/> substitute whose <c>GetObjectNodeQuery</c> answers "no such
-	/// object" for everything, so <c>DispatchZoneAndMasterRoomHooksAsync</c>'s unconditional master-room
-	/// lookup (test config's <c>master_room</c> is <c>#2</c>) is a no-op for tests that don't care about it.
+	/// object" for everything except <c>#1</c> (God), so <c>DispatchZoneAndMasterRoomHooksAsync</c>'s
+	/// unconditional master-room lookup (test config's <c>master_room</c> is <c>#2</c>) is a no-op for
+	/// tests that don't care about it. <c>#1</c> resolves to a stand-in God player because
+	/// <c>AnnounceDisconnectAsync</c>'s LASTLOGOUT write (<c>remainingConnections == 0</c>) calls
+	/// <c>HelperFunctions.GetGod</c> to stamp the attribute's owner - leaving <c>#1</c> unresolvable
+	/// would make that write throw and get swallowed by the outer catch, silently breaking LASTLOGOUT
+	/// and inflating the logged-error count in tests that assert on it.
 	/// Also stubs <c>GetOnChannelQuery</c> to an empty stream, since NSubstitute has no built-in default
 	/// for <see cref="IAsyncEnumerable{T}"/> — an unconfigured call returns <see langword="null"/>, and
 	/// <c>AnnounceOnChannelsAsync</c>'s <c>await foreach</c> over that would NRE inside the caller's
@@ -162,10 +168,19 @@ public class ConnectionAnnounceServiceTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 1), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(FakeGod()));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<SharpChannel>());
 		return mediator;
 	}
+
+	/// <summary>
+	/// A stand-in for God (<c>#1</c>) - the owner LASTLOGOUT is stamped with when
+	/// <c>AnnounceDisconnectAsync</c> writes it directly via <c>SetAttributeCommand</c>, bypassing
+	/// <c>IAttributeService.SetAttributeAsync</c>'s permission gate (see the comment at that call site).
+	/// </summary>
+	private static AnyOptionalSharpObject FakeGod() => new TestObjectFactory().CreatePlayer(1, "God").WithNoneOption();
 
 	/// <summary>
 	/// Builds a fresh <see cref="ILogger{ConnectionAnnounceService}"/> substitute for the service's
@@ -358,15 +373,23 @@ public class ConnectionAnnounceServiceTests
 				Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
 			.Returns<OptionalSharpAttributeOrError>(_ => throw new InvalidOperationException("boom"));
 
+		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), logger);
+			mediator, logger);
 
 		var parser = Substitute.For<IMUSHCodeParser>();
 
 		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
 
-		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+		// LASTLOGOUT is engine-maintained bookkeeping, written directly via SetAttributeCommand (stamped
+		// with God's ownership) rather than through IAttributeService.SetAttributeAsync's permission
+		// gate - see the comment at that call site in ConnectionAnnounceService.
+		await mediator.Received(1).Send(
+			Arg.Is<SetAttributeCommand>(c =>
+				c.DBRef.Equals(player.Object().DBRef) &&
+				c.Attribute.SequenceEqual(new[] { "LASTLOGOUT" })),
+			Arg.Any<CancellationToken>());
 		// Two hooks throw (the player's own ADISCONNECT, then the room's - RoomConnects is on in the
 		// test config and FakeConnectedPlayer's location is a Room); the zone is unset and the master
 		// room is unresolvable per FakeMediatorWithNoMasterRoom, so neither is attempted. Each throw is
@@ -388,9 +411,10 @@ public class ConnectionAnnounceServiceTests
 		StubNoAconnectAttribute(attributeService);
 		var configuration = FakeOptionsWrapper();
 
+		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			mediator, FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -398,7 +422,11 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 0, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has disconnected.");
-		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+		await mediator.Received(1).Send(
+			Arg.Is<SetAttributeCommand>(c =>
+				c.DBRef.Equals(player.Object().DBRef) &&
+				c.Attribute.SequenceEqual(new[] { "LASTLOGOUT" })),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -410,9 +438,10 @@ public class ConnectionAnnounceServiceTests
 		StubNoAconnectAttribute(attributeService);
 		var configuration = FakeOptionsWrapper();
 
+		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), FakeLogger());
+			mediator, FakeLogger());
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -420,7 +449,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceDisconnectAsync(parser, player, remainingConnections: 1, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
-		await attributeService.DidNotReceive().SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+		await mediator.DidNotReceive().Send(Arg.Any<SetAttributeCommand>(), Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>
@@ -556,9 +585,10 @@ public class ConnectionAnnounceServiceTests
 		var configuration = FakeOptionsWrapper();
 		var logger = FakeLogger();
 
+		var mediator = FakeMediatorWithNoMasterRoom();
 		var service = new ConnectionAnnounceService(
 			communicationService, gameBroadcastService, attributeService, configuration,
-			FakeMediatorWithNoMasterRoom(), logger);
+			mediator, logger);
 
 		var player = FakeConnectedPlayer("Bob");
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -567,7 +597,11 @@ public class ConnectionAnnounceServiceTests
 
 		await attributeService.Received(1).GetAttributeAsync(
 			player, player, "ADISCONNECT", IAttributeService.AttributeMode.Execute, true);
-		await attributeService.Received(1).SetAttributeAsync(player, player, "LASTLOGOUT", Arg.Any<MString>());
+		await mediator.Received(1).Send(
+			Arg.Is<SetAttributeCommand>(c =>
+				c.DBRef.Equals(player.Object().DBRef) &&
+				c.Attribute.SequenceEqual(new[] { "LASTLOGOUT" })),
+			Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>
