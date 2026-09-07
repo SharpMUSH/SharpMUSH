@@ -2378,6 +2378,16 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		var pageType = messageArg.ToPlainText()[0] switch
+		{
+			':' => PageMessageType.Pose,
+			';' => PageMessageType.SemiPose,
+			_ => PageMessageType.Speech
+		};
+		var message = pageType == PageMessageType.Speech
+			? messageArg
+			: messageArg.Substring(1, messageArg.Length - 1);
+
 		var recipientNames = recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulRecipients = new List<AnySharpObject>();
 
@@ -2464,16 +2474,79 @@ public partial class Commands
 				}
 			}
 
-			var pageMessage = $"From afar, {executor.Object().Name} pages: {messageArg}";
-			await NotifyService.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
-
 			successfulRecipients.Add(recipient);
 		}
 
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
-			await NotifyService.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
+			var recipientList = MessageHelpers.FormatWithOxfordComma(
+				successfulRecipients.Select(r => r.Object().Name).ToArray());
+			var recipientRefs = string.Join(" ",
+				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
+			var pageAlias = executor.IsPlayer
+				? executor.AsPlayer.Aliases?.FirstOrDefault() ?? string.Empty
+				: string.Empty;
+			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
+				? $"{executor.Object().Name} ({pageAlias})"
+				: executor.Object().Name;
+			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
+
+			var incomingDefault = pageType switch
+			{
+				PageMessageType.Speech => MarkupText.Concat([
+					MarkupText.Plain(successfulRecipients.Count > 1
+						? $"{senderName} pages {recipientList}: "
+						: $"{senderName} pages: "),
+					message
+				]),
+				PageMessageType.Pose => MarkupText.Concat([
+					MarkupText.Plain($"From afar{recipientSuffix}, {senderName} "),
+					message
+				]),
+				_ => MarkupText.Concat([
+					MarkupText.Plain($"From afar{recipientSuffix}, {senderName}"),
+					message
+				])
+			};
+			var outgoingDefault = pageType switch
+			{
+				PageMessageType.Speech => MarkupText.Concat([
+					MarkupText.Plain($"You paged {recipientList} with '"),
+					message,
+					MarkupText.Plain("'")
+				]),
+				PageMessageType.Pose => MarkupText.Concat([
+					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name} "),
+					message
+				]),
+				_ => MarkupText.Concat([
+					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name}"),
+					message
+				])
+			};
+			var pageTypeToken = pageType switch
+			{
+				PageMessageType.Pose => ":",
+				PageMessageType.SemiPose => ";",
+				_ => "\""
+			};
+
+			var outPageFormatArgs = PageFormatArguments(
+				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
+			var outgoing = await AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService, parser, executor, executor, "OUTPAGEFORMAT",
+				outPageFormatArgs, outgoingDefault, checkParents: true);
+			await NotifyService.Notify(executor, outgoing, executor);
+
+			foreach (var recipient in successfulRecipients)
+			{
+				var pageFormatArgs = PageFormatArguments(
+					message, pageTypeToken, pageAlias, recipientRefs, incomingDefault);
+				var incoming = await AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, parser, recipient, recipient, "PAGEFORMAT",
+					pageFormatArgs, incomingDefault, checkParents: true);
+				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
+			}
 
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
 			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
@@ -2484,6 +2557,23 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	private static Dictionary<string, CallState> PageFormatArguments(
+		MString message, string pageType, string alias, string recipientRefs, MString defaultMessage) => new()
+		{
+			["0"] = new CallState(message),
+			["1"] = new CallState(pageType),
+			["2"] = new CallState(alias),
+			["3"] = new CallState(recipientRefs),
+			["4"] = new CallState(defaultMessage)
+		};
+
+	private enum PageMessageType
+	{
+		Speech,
+		Pose,
+		SemiPose
 	}
 
 	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
