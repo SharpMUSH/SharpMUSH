@@ -153,16 +153,13 @@ public class ConnectionAnnounceIntegrationTests
 	// --- Test 3: disconnect a player's only connection --------------------------------------------
 
 	/// <summary>
-	/// KNOWN FAILING as of Task 14 — production bug, not a test-harness issue, and intentionally left
-	/// red rather than weakened (see this file's task report). <see cref="ConnectionService.Disconnect"/>
-	/// publishes the <c>ConnectionStateChangeNotification</c> BEFORE removing the handle from its
-	/// session-state dictionary (unlike <c>Unbind</c>, which does the opposite and says so in a
-	/// comment). <c>ConnectionStateEventHandler.Handle</c> computes <c>remainingConnections</c> via
-	/// <c>connectionService.Get(playerRef).CountAsync()</c> while handling that notification, so for a
-	/// player's ONLY connection it counts the about-to-be-removed handle too and gets 1, not 0 — the
-	/// broadcast reads "has partially disconnected." instead of "has disconnected.", and LASTLOGOUT
-	/// (gated on <c>remainingConnections == 0</c>) never gets set. Test 4 (two connections, one
-	/// disconnects) is unaffected: 1 vs. 2 remaining both land in the same "&gt;0" wording bucket.
+	/// Exercises the single-connection count edge case: <see cref="ConnectionService.Disconnect"/>
+	/// publishes the <c>ConnectionStateChangeNotification</c> before it removes the handle from its
+	/// session-state dictionary, so <c>ConnectionStateEventHandler.Handle</c> must exclude the
+	/// disconnecting handle itself (by handle, not by relying on removal order) when it counts the
+	/// player's remaining connections — otherwise a player's ONLY connection is counted as 1
+	/// remaining instead of 0, and the broadcast reads "has partially disconnected." instead of
+	/// "has disconnected.", with LASTLOGOUT (gated on <c>remainingConnections == 0</c>) never set.
 	/// </summary>
 	[Test]
 	public async ValueTask Quit_OnlyConnection_BroadcastsHasDisconnectedAndSetsLastLogout()
@@ -304,10 +301,11 @@ public class ConnectionAnnounceIntegrationTests
 	// --- Test 7: @hide, then disconnect ---------------------------------------------------------------
 
 	/// <summary>
-	/// KNOWN FAILING as of Task 14 — same production bug as
-	/// <see cref="Quit_OnlyConnection_BroadcastsHasDisconnectedAndSetsLastLogout"/>: this is again a
-	/// player's only connection, so <c>remainingConnections</c> is overcounted to 1 and the broadcast
-	/// reads "has partially HIDDEN-disconnected." instead of "has HIDDEN-disconnected."
+	/// Same single-connection count edge case as
+	/// <see cref="Quit_OnlyConnection_BroadcastsHasDisconnectedAndSetsLastLogout"/>, on the HIDDEN
+	/// wording branch: without excluding the disconnecting handle from the remaining-connections
+	/// count, this player's only connection would be overcounted to 1 and the broadcast would read
+	/// "has partially HIDDEN-disconnected." instead of "has HIDDEN-disconnected."
 	/// </summary>
 	[Test]
 	public async ValueTask Hide_ThenQuit_BroadcastsHiddenDisconnected()

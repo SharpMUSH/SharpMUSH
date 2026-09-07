@@ -87,7 +87,13 @@ public class ConnectionStateEventHandler(
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
 
-				var remainingConnections = await connectionService.Get(notification.PlayerRef.Value).CountAsync();
+				// ConnectionService.Disconnect publishes this notification before it removes the
+				// disconnecting handle from its session-state dictionary (Unbind does the opposite,
+				// and says so in a comment there), so a naive count of the player's connections here
+				// would still include the one that is on its way out. Exclude it by handle instead of
+				// relying on removal order — correct however the two ever end up sequenced.
+				var remainingConnections = await connectionService.Get(notification.PlayerRef.Value)
+					.CountAsync(c => c.Handle != notification.Handle);
 
 				var connectedSecs = connectionData.Connected?.TotalSeconds.ToString("F0") ?? "0";
 				var idleSecs = connectionData.Idle?.TotalSeconds.ToString("F0") ?? "0";
