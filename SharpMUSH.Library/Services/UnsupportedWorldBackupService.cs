@@ -6,14 +6,20 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// <see cref="IWorldBackupService"/> for a provider whose world lives in a database server rather
-/// than a directory this process owns. Registered so the command, the scheduled service and anything
-/// else can depend on the interface unconditionally and say why nothing happened, instead of each of
-/// them having to know which provider is running.
+/// <see cref="IWorldBackupService"/> for a provider that cannot copy its own world. Registered so the
+/// command and the scheduled service can depend on the interface unconditionally and say why nothing
+/// happened, instead of each of them having to know which provider is running.
+///
+/// <para><paramref name="reason"/> is carried per provider rather than stated once here, because the
+/// reasons genuinely differ — a database this process only reaches over the network is not the same
+/// situation as one whose support is simply not written yet, and an operator reading the refusal
+/// needs to know which of those they are looking at.</para>
 /// </summary>
-public sealed class UnsupportedWorldBackupService(string provider) : IWorldBackupService
+public sealed class UnsupportedWorldBackupService(string provider, string reason) : IWorldBackupService
 {
 	public bool IsSupported => false;
+
+	public string UnavailableReason => $"the {provider} provider {reason}";
 
 	public string Root => string.Empty;
 
@@ -22,8 +28,7 @@ public sealed class UnsupportedWorldBackupService(string provider) : IWorldBacku
 	public TimeSpan ScheduledInterval => TimeSpan.Zero;
 
 	public ValueTask<OneOf<WorldBackup, Error<string>>> CreateAsync(CancellationToken ct = default)
-		=> ValueTask.FromResult<OneOf<WorldBackup, Error<string>>>(new Error<string>(
-			$"The {provider} provider keeps no world directory to copy; back it up with that database's own tools."));
+		=> ValueTask.FromResult<OneOf<WorldBackup, Error<string>>>(new Error<string>(UnavailableReason));
 
 	public IReadOnlyList<WorldBackup> List() => [];
 }

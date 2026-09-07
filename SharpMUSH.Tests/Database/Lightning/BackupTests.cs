@@ -44,7 +44,7 @@ public class BackupTests
 			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(),
 			relations: null);
 		var backups = new LightningWorldBackupService(db,
-			new LightningBackupOptions { Root = root, Keep = keep, Compact = compact },
+			new WorldBackupOptions { Root = root, Keep = keep }, compact,
 			NullLogger<LightningWorldBackupService>.Instance);
 		return (db, backups);
 	}
@@ -312,17 +312,46 @@ public class BackupTests
 		}
 	}
 
+	/// <summary>
+	/// A provider that cannot copy its own world refuses with its own reason, naming the provider and
+	/// what to use instead. The reason is carried per provider rather than stated once, because a
+	/// database server the game only talks to is a different situation from one whose support is not
+	/// written yet, and one blanket sentence would be wrong about at least one of them.
+	/// </summary>
 	[Test]
-	public async Task AProviderWithNoWorldDirectoryReportsBackupsAsUnsupported()
+	public async Task AProviderThatCannotCopyItsWorldRefusesWithItsOwnReason()
 	{
-		IWorldBackupService backups = new UnsupportedWorldBackupService("arangodb");
+		IWorldBackupService backups = new UnsupportedWorldBackupService("arangodb",
+			"is a database server this game only talks to; back it up with arangodump");
 
 		var result = await backups.CreateAsync();
 
 		await Assert.That(backups.IsSupported).IsFalse();
 		await Assert.That(result.IsT1).IsTrue();
 		await Assert.That(result.AsT1.Value).Contains("arangodb");
+		await Assert.That(result.AsT1.Value).Contains("arangodump");
+		await Assert.That(backups.UnavailableReason).IsEqualTo(result.AsT1.Value);
 		await Assert.That(backups.List().Count).IsEqualTo(0);
+	}
+
+	/// <summary>A provider that can copy its world has no reason to give, and must not invent one.</summary>
+	[Test]
+	public async Task ASupportedProviderReportsNoUnavailableReason()
+	{
+		var path = TempPath();
+		var root = TempPath();
+		var (db, backups) = Fixture(path, root);
+		try
+		{
+			await Assert.That(backups.IsSupported).IsTrue();
+			await Assert.That(backups.UnavailableReason).IsEmpty();
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			Delete(path);
+			Delete(root);
+		}
 	}
 
 	/// <summary>
@@ -336,7 +365,7 @@ public class BackupTests
 	[Arguments("data/lightning/", "data/lightning.backups")]
 	[Arguments("lightning-data", "lightning-data.backups")]
 	public async Task TheDefaultRootIsNamedAfterTheWorldDirectory(string world, string expected)
-		=> await Assert.That(LightningBackupOptions.DefaultRootFor(world))
+		=> await Assert.That(WorldBackupOptions.DefaultRootFor(world))
 			.IsEqualTo(expected.Replace('/', Path.DirectorySeparatorChar));
 
 	[Test]
@@ -351,7 +380,7 @@ public class BackupTests
 	[Arguments(null, 0)]
 	public async Task AnIntervalSettingParsesToItsDuration(string? setting, int seconds)
 	{
-		await Assert.That(LightningBackupOptions.TryParseInterval(setting, out var interval)).IsTrue();
+		await Assert.That(WorldBackupOptions.TryParseInterval(setting, out var interval)).IsTrue();
 		await Assert.That(interval).IsEqualTo(TimeSpan.FromSeconds(seconds));
 	}
 
@@ -366,7 +395,7 @@ public class BackupTests
 	[Arguments("400d")]
 	public async Task AnUnreadableIntervalSettingIsRejectedAndLeavesSchedulingOff(string setting)
 	{
-		await Assert.That(LightningBackupOptions.TryParseInterval(setting, out var interval)).IsFalse();
+		await Assert.That(WorldBackupOptions.TryParseInterval(setting, out var interval)).IsFalse();
 		await Assert.That(interval).IsEqualTo(TimeSpan.Zero);
 	}
 

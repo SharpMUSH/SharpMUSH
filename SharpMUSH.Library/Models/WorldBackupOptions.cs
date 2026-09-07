@@ -1,14 +1,14 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace SharpMUSH.Database.Lightning;
+namespace SharpMUSH.Library.Models;
 
 /// <summary>
-/// Where hot copies of the world go, how many are kept and how often one is taken on a schedule.
-/// Read from the environment alongside the rest of the Lightning settings, because this is a
+/// Where copies of the world go, how many are kept and how often one is taken on a schedule. Shared
+/// by every provider that can back itself up, because none of this is provider-specific: it is a
 /// deployment concern — the size of the disk the copies land on — rather than game configuration.
 /// </summary>
-public sealed partial record LightningBackupOptions
+public sealed partial record WorldBackupOptions
 {
 	/// <summary>Directory the timestamped copies are written into. Created on first use.</summary>
 	public required string Root { get; init; }
@@ -28,17 +28,10 @@ public sealed partial record LightningBackupOptions
 	public TimeSpan Interval { get; init; } = TimeSpan.Zero;
 
 	/// <summary>
-	/// Whether the copy omits free pages. A compacted copy is smaller — often much smaller on a world
-	/// that has seen a lot of deletion — and slower to produce, because every page is rewritten rather
-	/// than the file being copied through.
-	/// </summary>
-	public bool Compact { get; init; } = true;
-
-	/// <summary>
 	/// The backup root for a world at <paramref name="worldPath"/>: <c>&lt;worldPath&gt;.backups</c>,
-	/// following the same convention as a staging promotion's <c>.previous</c>. Beside the world, so a
-	/// deployment mounting one volume for its data gets both under that mount without configuring
-	/// anything, and named after it, so two worlds on one box never share a root.
+	/// following the same convention as a Lightning staging promotion's <c>.previous</c>. Beside the
+	/// world, so a deployment mounting one volume for its data gets both under that mount without
+	/// configuring anything, and named after it, so two worlds on one box never share a root.
 	/// </summary>
 	public static string DefaultRootFor(string worldPath)
 		=> worldPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".backups";

@@ -2162,8 +2162,9 @@ public partial class Commands
 	/// one to read while the game runs. This is what <c>@dump</c> would be if SharpMUSH kept the world
 	/// in memory: it does not, so <c>@dump</c> has nothing to write out and this copies instead.
 	///
-	/// <para><c>/LIST</c> reports the copies already on disk, newest first. Only a provider holding
-	/// the world in a directory of its own can do either.</para>
+	/// <para><c>/LIST</c> reports the copies already on disk, newest first. A provider that cannot copy
+	/// its own world says why, in its own terms — a database server this game only talks to is not the
+	/// same situation as one whose support is not written yet.</para>
 	/// </summary>
 	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
@@ -2173,7 +2174,8 @@ public partial class Commands
 
 		if (!WorldBackupService.IsSupported)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnsupported), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
+				executor, WorldBackupService.UnavailableReason);
 			return new None();
 		}
 

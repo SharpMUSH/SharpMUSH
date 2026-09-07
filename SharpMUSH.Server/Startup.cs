@@ -153,34 +153,50 @@ public class Startup(
 	}
 
 	/// <summary>
-	/// How many hot copies of the world survive a backup run. A typo must not silently mean "keep one"
-	/// on a box sized for several, nor grow unbounded, so an unreadable setting falls back loudly.
+	/// Where the copies go, how many are kept and how often one is taken, for whichever provider can
+	/// back itself up. Provider-neutral (<c>SHARPMUSH_BACKUP_*</c>) because three of them can, and the
+	/// operator setting a retention count does not care which engine is underneath.
+	/// <paramref name="worldPath"/> only supplies the default root.
 	/// </summary>
-	private static int ResolveLightningBackupKeep(string? setting, ILogger<LightningDatabase> logger)
+	private static WorldBackupOptions ResolveBackupOptions(string worldPath, Microsoft.Extensions.Logging.ILogger logger)
 	{
+		var keepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_KEEP");
+		var intervalSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_INTERVAL");
+
 		const int defaultKeep = 2;
-		if (string.IsNullOrWhiteSpace(setting)) return defaultKeep;
-		if (int.TryParse(setting, out var parsed) && parsed > 0) return parsed;
+		var keep = defaultKeep;
+		if (!string.IsNullOrWhiteSpace(keepSetting))
+		{
+			// A typo must not silently mean "keep one" on a box sized for several, so it falls back loudly.
+			if (int.TryParse(keepSetting, out var parsed) && parsed > 0)
+			{
+				keep = parsed;
+			}
+			else
+			{
+				logger.LogWarning(
+					"SHARPMUSH_BACKUP_KEEP is set to '{Setting}', which is not a positive count; keeping {DefaultKeep}",
+					keepSetting, defaultKeep);
+			}
+		}
 
-		logger.LogWarning(
-			"SHARPMUSH_LIGHTNING_BACKUP_KEEP is set to '{Setting}', which is not a positive count; keeping {DefaultKeep}",
-			setting, defaultKeep);
-		return defaultKeep;
-	}
+		// Unset means no scheduled backup, so an unreadable setting leaves scheduling off — and says so,
+		// because the operator who set it is relying on it.
+		if (!WorldBackupOptions.TryParseInterval(intervalSetting, out var interval))
+		{
+			logger.LogWarning(
+				"SHARPMUSH_BACKUP_INTERVAL is set to '{Setting}', which is not an interval like 6h, 90m or a "
+				+ "count of seconds; scheduled backups stay off",
+				intervalSetting);
+		}
 
-	/// <summary>
-	/// How often the scheduled hot copy runs. Unset means no scheduled backup, so an unreadable setting
-	/// leaves scheduling off — and says so, because the operator who set it is relying on it.
-	/// </summary>
-	private static TimeSpan ResolveLightningBackupInterval(string? setting, ILogger<LightningDatabase> logger)
-	{
-		if (LightningBackupOptions.TryParseInterval(setting, out var interval)) return interval;
-
-		logger.LogWarning(
-			"SHARPMUSH_LIGHTNING_BACKUP_INTERVAL is set to '{Setting}', which is not an interval like 6h, 90m or a "
-			+ "count of seconds; scheduled backups stay off",
-			setting);
-		return TimeSpan.Zero;
+		return new WorldBackupOptions
+		{
+			Root = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_PATH")
+				?? WorldBackupOptions.DefaultRootFor(worldPath),
+			Keep = keep,
+			Interval = interval
+		};
 	}
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -316,6 +332,14 @@ public class Startup(
 			// active provider's connection; carries no subsystem concept.
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
 				sp.GetRequiredService<MemgraphDatabase>());
+
+			// Memgraph is a server this process only reaches over Bolt, so there is no world path to name
+			// the backup root after; it goes where SHARPMUSH_BACKUP_PATH says, or beside the working
+			// directory by default.
+			services.AddSingleton<IWorldBackupService>(sp => new MemgraphWorldBackupService(
+				sp.GetRequiredService<IDriver>(),
+				ResolveBackupOptions("memgraph-world", sp.GetRequiredService<ILogger<MemgraphDatabase>>()),
+				sp.GetRequiredService<ILogger<MemgraphWorldBackupService>>()));
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
@@ -343,6 +367,16 @@ public class Startup(
 			RegisterDatabaseProvider<SurrealDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
 				sp.GetRequiredService<SurrealDatabase>());
+
+			// The default root is derived from the endpoint's own path when it has one (rocksdb://…), so
+			// the export lands beside the world rather than in the working directory.
+			var surrealWorldPath = surrealEndpoint.StartsWith("rocksdb://", StringComparison.OrdinalIgnoreCase)
+				? surrealEndpoint["rocksdb://".Length..]
+				: "surrealdb-data";
+			services.AddSingleton<IWorldBackupService>(sp => new SurrealWorldBackupService(
+				sp.GetRequiredService<ISurrealDbClient>(),
+				ResolveBackupOptions(surrealWorldPath, sp.GetRequiredService<ILogger<SurrealDatabase>>()),
+				sp.GetRequiredService<ILogger<SurrealWorldBackupService>>()));
 		}
 		else if (databaseProvider == DatabaseProvider.Lightning)
 		{
@@ -376,29 +410,15 @@ public class Startup(
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
 				sp.GetRequiredService<LightningDatabase>());
 
-			// Hot backup. SHARPMUSH_LIGHTNING_BACKUP_PATH → a "backup" directory beside the world;
-			// SHARPMUSH_LIGHTNING_BACKUP_KEEP → 2; SHARPMUSH_LIGHTNING_BACKUP_INTERVAL → off;
-			// SHARPMUSH_LIGHTNING_BACKUP_COMPACT → on.
-			var backupRoot = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_PATH")
-				?? configuration["Lightning:BackupPath"]
-				?? LightningBackupOptions.DefaultRootFor(lightningPath);
-			var backupKeepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_KEEP");
-			var backupIntervalSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_INTERVAL");
-			var backupCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
-			services.AddSingleton<IWorldBackupService>(sp =>
-			{
-				var dbLogger = sp.GetRequiredService<ILogger<LightningDatabase>>();
-				return new LightningWorldBackupService(
-					sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
-					new LightningBackupOptions
-					{
-						Root = backupRoot,
-						Keep = ResolveLightningBackupKeep(backupKeepSetting, dbLogger),
-						Interval = ResolveLightningBackupInterval(backupIntervalSetting, dbLogger),
-						Compact = !string.Equals(backupCompactSetting, "false", StringComparison.OrdinalIgnoreCase)
-					},
-					sp.GetRequiredService<ILogger<LightningWorldBackupService>>());
-			});
+			// World backup. SHARPMUSH_BACKUP_{PATH,KEEP,INTERVAL} are shared with the other providers that
+			// can back themselves up; compaction is Lightning's alone, because only a page-level copy has
+			// free pages to omit.
+			var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
+			services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
+				sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
+				ResolveBackupOptions(lightningPath, sp.GetRequiredService<ILogger<LightningDatabase>>()),
+				compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
+				sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 		}
 		else
 		{
@@ -417,11 +437,19 @@ public class Startup(
 				sp.GetRequiredService<ArangoDatabase>());
 		}
 
-		// Only a provider holding the world in a directory of its own can hot-copy it. The rest get an
-		// implementation that says so, so @backup and the scheduled service depend on the interface
-		// unconditionally instead of each of them knowing which provider is running.
-		services.TryAddSingleton<IWorldBackupService>(
-			_ => new UnsupportedWorldBackupService(databaseProvider.ToString().ToLowerInvariant()));
+		// Whatever the chosen provider did not register above — in practice ArangoDB, the one provider
+		// with no way to produce a copy from inside this process: its hot-backup API is Enterprise-only
+		// and the Community answer is a tool run outside the game. Registered as TryAdd so a provider
+		// that DID register its own implementation keeps it.
+		services.TryAddSingleton<IWorldBackupService>(_ => new UnsupportedWorldBackupService(
+			databaseProvider.ToString().ToLowerInvariant(),
+			databaseProvider switch
+			{
+				DatabaseProvider.ArangoDB =>
+					"is a database server this game only talks to, and its hot-backup API is Enterprise-only; "
+					+ "back it up with arangodump and restore it with arangorestore",
+				_ => "does not have world backup implemented; back it up with that database's own tools"
+			}));
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 		/*

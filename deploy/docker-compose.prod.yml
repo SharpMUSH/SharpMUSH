@@ -74,11 +74,11 @@ services:
       # keeps running, into /app/data/backup. This is what the restic sidecar snapshots — it must never
       # read the live world. Six-hourly, so the 03:30 run always finds a copy at most six hours old;
       # @backup takes one on demand. Each copy is a whole world, so KEEP is what the disk can afford.
-      - SHARPMUSH_LIGHTNING_BACKUP_INTERVAL=6h
-      - SHARPMUSH_LIGHTNING_BACKUP_KEEP=2
-      # Set rather than left to default (data/lightning.backups) so the copies sit at a path the
+      - SHARPMUSH_BACKUP_INTERVAL=6h
+      - SHARPMUSH_BACKUP_KEEP=2
+      # Set rather than left to default (<world>.backups) so the copies sit at a path the
       # restic service names, well away from the live world it must not read.
-      - SHARPMUSH_LIGHTNING_BACKUP_PATH=data/backup
+      - SHARPMUSH_BACKUP_PATH=data/backup
       # Wiki asset uploads (filesystem) land in the same persisted volume.
       - Wiki__AssetRoot=/app/data/wiki-assets
       # --- Messaging ---
@@ -132,7 +132,7 @@ services:
       # The hot copies the server writes, NOT the live world at /data/lightning. restic reads a file
       # front to back while commits keep landing under it, and LMDB does not promise such a copy
       # opens; /data/backup holds copies taken with LMDB's own copy routine, each one a complete
-      # environment. SHARPMUSH_LIGHTNING_BACKUP_INTERVAL on sharpmush-server keeps them fresh.
+      # environment. SHARPMUSH_BACKUP_INTERVAL on sharpmush-server keeps them fresh.
       - RESTIC_BACKUP_SOURCES=/data/backup /data/wiki-assets
       # A copy still being written is named .incoming-*; it is moved into place only when complete, so
       # excluding it keeps a half-written world out of the snapshot even mid-copy.

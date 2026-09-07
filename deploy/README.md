@@ -272,20 +272,31 @@ bucket every night at 03:30, keeping 7 daily and 4 weekly snapshots. The volume 
 while commits keep landing, and LMDB does not promise such a copy opens. So the server takes
 its own copies instead, with the routine LMDB supplies for exactly this (`mdb_env_copy`): each
 one is a complete environment, written into `/app/data/backup/<timestamp>` while the game keeps
-running, with `latest` pointing at the newest. `SHARPMUSH_LIGHTNING_BACKUP_INTERVAL=6h` on
+running, with `latest` pointing at the newest. `SHARPMUSH_BACKUP_INTERVAL=6h` on
 `sharpmush-server` takes one every six hours, so the 03:30 run always finds a recent one. The
 live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCES`.
 
 | Setting on `sharpmush-server` | Default | What it does |
 |---|---|---|
-| `SHARPMUSH_LIGHTNING_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
-| `SHARPMUSH_LIGHTNING_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
-| `SHARPMUSH_LIGHTNING_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
+| `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
+| `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
+| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
-`@backup/list`. Both are Lightning-only — no other provider keeps the world in a directory this
-process owns, and on those `@backup` says so.
+`@backup/list`.
+
+Every database that can copy its own world does so into the same directory layout, so the restic
+configuration above is the same whichever one you run:
+
+| Database | What a backup is | Consistency |
+|---|---|---|
+| `lightning` (what these stacks run) | LMDB's own `mdb_env_copy` of the environment | a point-in-time snapshot by construction |
+| `surrealdb` | `world.surql`, the engine's own export, restored with `surreal import` | logical, taken from a running game — not documented as an instant |
+| `memgraph` | `world.json`, every node and relationship, read in one transaction | one consistent read, but a logical dump rather than a page-level snapshot |
+| `arangodb` | **not available** — it is a server the game only talks to and its hot backup is an Enterprise feature | use `arangodump` / `arangorestore` |
+
+On ArangoDB `@backup` says exactly that instead of doing nothing silently.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
