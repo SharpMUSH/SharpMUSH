@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using MModule = MarkupString.MarkupStringModule;
+using MarkupString;
 using Range = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.CodeAnalysis;
@@ -60,7 +60,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 	{
 		try
 		{
-			var tokens = parser.Tokenize(MModule.single(code));
+			var tokens = parser.Tokenize(MarkupText.Plain(code));
 			if (tokens.Count == 0)
 			{
 				return code;
@@ -91,7 +91,7 @@ public partial class MushCodeAnalyzer(IMUSHCodeParser parser) : IMushCodeAnalyze
 	{
 		try
 		{
-			return parser.GetDiagnostics(MModule.single(code), parseType);
+			return parser.GetDiagnostics(MarkupText.Plain(code), parseType);
 		}
 		catch (Exception ex)
 		{

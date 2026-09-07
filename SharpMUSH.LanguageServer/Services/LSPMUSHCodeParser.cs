@@ -1,7 +1,6 @@
 using SharpMUSH.CodeAnalysis;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
-using MModule = MarkupString.MarkupStringModule;
 
 namespace SharpMUSH.LanguageServer.Services;
 
@@ -37,7 +36,7 @@ public class LSPMUSHCodeParser
 	{
 		try
 		{
-			return _parser.GetSemanticTokensData(MModule.single(text), parseType);
+			return _parser.GetSemanticTokensData(MarkupText.Plain(text), parseType);
 		}
 		catch (Exception ex)
 		{

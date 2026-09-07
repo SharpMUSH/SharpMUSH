@@ -1,4 +1,4 @@
-using MModule = MarkupString.MarkupStringModule;
+using MarkupString;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 
@@ -65,7 +65,7 @@ public static class AncestorSeed
 
 		foreach (var (path, value) in Formats)
 		{
-			await database.SetAttributeAsync(AncestorPlayer, path, MModule.single(value), owner, ct);
+			await database.SetAttributeAsync(AncestorPlayer, path, MarkupText.Plain(value), owner, ct);
 		}
 	}
 }

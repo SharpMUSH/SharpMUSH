@@ -66,8 +66,8 @@ public partial class ArangoDatabase
 		{
 			Id = x.Id,
 			DateSent = DateTimeOffset.FromUnixTimeMilliseconds(x.DateSent),
-			Content = MModule.deserialize(x.Content),
-			Subject = MModule.deserialize(x.Subject),
+			Content = MarkupTextSerializer.Deserialize(x.Content),
+			Subject = MarkupTextSerializer.Deserialize(x.Subject),
 			Folder = x.Folder,
 			Cleared = x.Cleared,
 			Fresh = x.Fresh,
@@ -118,8 +118,8 @@ public partial class ArangoDatabase
 
 		var newMail = new SharpMailCreateRequest(
 			DateSent: mail.DateSent.ToUnixTimeMilliseconds(),
-			Content: MModule.serialize(mail.Content),
-			Subject: MModule.serialize(mail.Subject),
+			Content: MarkupTextSerializer.Serialize(mail.Content),
+			Subject: MarkupTextSerializer.Serialize(mail.Subject),
 			Folder: mail.Folder,
 			Fresh: mail.Fresh,
 			Read: mail.Read,

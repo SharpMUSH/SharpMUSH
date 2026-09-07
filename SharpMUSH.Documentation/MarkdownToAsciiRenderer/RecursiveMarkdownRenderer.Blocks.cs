@@ -16,7 +16,7 @@ public partial class RecursiveMarkdownRenderer
 		};
 
 		var content = RenderInlines(heading.Inline);
-		return MModule.MarkupSingle(style, content.ToPlainText());
+		return MarkupText.Wrap(style, content.ToPlainText());
 	}
 
 	private MString RenderParagraph(ParagraphBlock para)
@@ -24,7 +24,7 @@ public partial class RecursiveMarkdownRenderer
 		// Trim trailing whitespace because EnableTrackTrivia appends a soft
 		// LineBreakInline (rendered as " ") at the end of many paragraphs.
 		var content = RenderInlines(para.Inline);
-		return MModule.trim(content, " ", TrimType.TrimEnd);
+		return content.Trim(TrimType.TrimEnd, " ");
 	}
 
 	/// <summary>One item per line, each with a marker; an ordered list numbers from its own start.</summary>
@@ -36,7 +36,7 @@ public partial class RecursiveMarkdownRenderer
 			.Select(listItem => RenderListItem(listItem, itemIndex++, list.IsOrdered))
 			.ToList();
 
-		return MModule.multipleWithDelimiter(MModule.single("\n"), items);
+		return MarkupText.Join(MarkupText.Plain("\n"), items);
 	}
 
 	/// <summary>
@@ -47,7 +47,7 @@ public partial class RecursiveMarkdownRenderer
 		=> list.IsOrdered && int.TryParse(list.OrderedStart, out var start) ? start - 1 : 0;
 
 	protected MString ListMarker(int index, bool isOrdered)
-		=> MModule.MarkupSingle(_dimStyle, isOrdered ? $"{index + 1}. " : "* ");
+		=> MarkupText.Wrap(_dimStyle, isOrdered ? $"{index + 1}. " : "* ");
 
 	/// <summary>
 	/// An item's rendered content, WITHOUT its marker, so a renderer that supplies its own marker —
@@ -60,11 +60,11 @@ public partial class RecursiveMarkdownRenderer
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		return MModule.trim(MModule.multiple(parts), " ", TrimType.TrimBoth);
+		return MarkupText.Concat(parts).Trim(TrimType.TrimBoth, " ");
 	}
 
 	protected virtual MString RenderListItem(ListItemBlock listItem, int index = 0, bool isOrdered = false)
-		=> MModule.concat(ListMarker(index, isOrdered), RenderListItemContent(listItem));
+		=> MarkupText.Concat(ListMarker(index, isOrdered), RenderListItemContent(listItem));
 
 	protected virtual MString RenderQuote(QuoteBlock quote)
 	{
@@ -73,23 +73,23 @@ public partial class RecursiveMarkdownRenderer
 			.Where(rendered => rendered.Length > 0)
 			.ToList();
 
-		var content = MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		var content = MarkupText.Join(MarkupText.Plain("\n"), parts);
 
 		// Add 2-space indentation to each line via plain-text split.
 		// TextAlignerModule.align cannot be used here because it expects exactly
 		// N items for an N-column spec; parts has a variable count.
 		var plainText = content.ToPlainText();
-		if (string.IsNullOrEmpty(plainText)) return MModule.empty();
+		if (string.IsNullOrEmpty(plainText)) return MarkupText.Empty;
 
 		var lines = plainText.Split('\n');
 		var indentedParts = lines
-			.Select(line => MModule.single("  " + line))
+			.Select(line => MarkupText.Plain("  " + line))
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), indentedParts);
+		return MarkupText.Join(MarkupText.Plain("\n"), indentedParts);
 	}
 
 	private MString RenderThematicBreak()
-		=> MModule.MarkupSingle(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
+		=> MarkupText.Wrap(_dimStyle, string.Concat(Enumerable.Repeat("-", _maxWidth)));
 
 	/// <summary>Wiki directive names that render live listings on the web portal.</summary>
 	private static readonly HashSet<string> WikiDirectiveNames =
@@ -113,14 +113,14 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var arg = tokens.Length > 1 ? tokens[1] : string.Empty;
 			var label = string.IsNullOrEmpty(arg) ? name : $"{name} {arg}";
-			return MModule.MarkupSingle(_dimStyle, $"[live listing: {label} — see the web portal]");
+			return MarkupText.Wrap(_dimStyle, $"[live listing: {label} — see the web portal]");
 		}
 
 		var parts = container
 			.Select(child => Render(child))
 			.Where(IsNonWhitespace)
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		return MarkupText.Join(MarkupText.Plain("\n"), parts);
 	}
 
 	private MString RenderHtmlBlock(HtmlBlock html)
@@ -131,7 +131,7 @@ public partial class RecursiveMarkdownRenderer
 			.Take(html.Lines.Count)
 			.Select(line => line.Slice.ToString()));
 		return string.IsNullOrWhiteSpace(htmlContent)
-			? MModule.empty()
-			: MModule.single(htmlContent);
+			? MarkupText.Empty
+			: MarkupText.Plain(htmlContent);
 	}
 }

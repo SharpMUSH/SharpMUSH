@@ -594,7 +594,7 @@ RETURN o, p
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)))
 		{
-			Value = MModule.deserialize(
+			Value = MarkupTextSerializer.Deserialize(
 		node.Properties.ContainsKey("value") ? node["value"].As<string>() ?? "" : "")
 		};
 	}
@@ -615,7 +615,7 @@ RETURN o, p
 		new AsyncLazy<SharpPlayer?>(async innerCt => await GetAttributeOwnerAsync(id, innerCt)),
 		new AsyncLazy<SharpAttributeEntry?>(async innerCt => await GetRelatedAttributeEntryAsync(id, innerCt)),
 		Value: new AsyncLazy<MString>(innerCt =>
-		Task.FromResult(MModule.deserialize(
+		Task.FromResult(MarkupTextSerializer.Deserialize(
 		node.Properties.ContainsKey("value") ? node["value"].As<string>() ?? "" : ""))));
 	}
 

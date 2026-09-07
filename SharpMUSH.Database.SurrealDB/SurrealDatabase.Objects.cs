@@ -665,7 +665,7 @@ public partial class SurrealDatabase
 		var parameters = new Dictionary<string, object?>
 		{
 			["key"] = obj.Object().Key,
-			["name"] = MModule.plainText(value)
+			["name"] = value.ToPlainText()
 		};
 		await ExecuteAsync("UPDATE object:$key SET name = $name", parameters, cancellationToken);
 	}

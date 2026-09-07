@@ -63,7 +63,7 @@ public partial class ArangoDatabase
 						Gagged: x.Status.Gagged,
 						Hide: x.Status.Hide,
 						Mute: x.Status.Mute,
-						Title: MModule.deserialize(x.Status.Title ?? string.Empty)
+						Title: MarkupTextSerializer.Deserialize(x.Status.Title ?? string.Empty)
 					)));
 
 		return result;
@@ -73,8 +73,8 @@ public partial class ArangoDatabase
 		new()
 		{
 			Id = x.Id,
-			Name = MModule.deserialize(x.MarkedUpName),
-			Description = MModule.deserialize(x.Description ?? string.Empty),
+			Name = MarkupTextSerializer.Deserialize(x.MarkedUpName),
+			Description = MarkupTextSerializer.Deserialize(x.Description ?? string.Empty),
 			Privs = x.Privs,
 			JoinLock = x.JoinLock,
 			SpeakLock = x.SpeakLock,
@@ -166,7 +166,7 @@ public partial class ArangoDatabase
 
 			var newChannel = new SharpChannelCreateRequest(
 				Name: channelName,
-				MarkedUpName: MModule.serialize(channel),
+				MarkedUpName: MarkupTextSerializer.Serialize(channel),
 				Privs: privs
 			);
 
@@ -224,11 +224,11 @@ public partial class ArangoDatabase
 					? name.ToPlainText()
 					: channel.Name.ToPlainText(),
 				MarkedUpName = name is not null
-					? MModule.serialize(name)
-					: MModule.serialize(channel.Name),
+					? MarkupTextSerializer.Serialize(name)
+					: MarkupTextSerializer.Serialize(channel.Name),
 				Description = description is not null
-					? MModule.serialize(description)
-					: MModule.serialize(channel.Description),
+					? MarkupTextSerializer.Serialize(description)
+					: MarkupTextSerializer.Serialize(channel.Description),
 				Privs = privs ?? channel.Privs,
 				JoinLock = joinLock ?? channel.JoinLock,
 				SpeakLock = speakLock ?? channel.SpeakLock,
@@ -322,7 +322,7 @@ public partial class ArangoDatabase
 
 		if (status.Title is { } title)
 		{
-			updates[nameof(status.Title)] = MModule.serialize(title);
+			updates[nameof(status.Title)] = MarkupTextSerializer.Serialize(title);
 		}
 
 		await arangoDb.Graph.Edge.UpdateAsync(handle, DatabaseConstants.GraphChannels, DatabaseConstants.OnChannel,

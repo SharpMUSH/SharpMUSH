@@ -134,7 +134,7 @@ public partial class RecursiveMarkdownRenderer
 			// Default case - try to render children if it's a container block
 			ContainerBlock container => RenderContainerBlock(container),
 
-			_ => MModule.empty()
+			_ => MarkupText.Empty
 		};
 	}
 
@@ -147,7 +147,7 @@ public partial class RecursiveMarkdownRenderer
 			.Select(child => Render(child))
 			.Where(IsNonWhitespace)
 			.ToList();
-		return MModule.multipleWithDelimiter(MModule.single("\n"), parts);
+		return MarkupText.Join(MarkupText.Plain("\n"), parts);
 	}
 
 	private MString RenderDocument(MarkdownDocument doc)
@@ -161,7 +161,7 @@ public partial class RecursiveMarkdownRenderer
 			.Where(x => IsNonWhitespace(x.rendered))
 			.ToList();
 
-		if (items.Count == 0) return MModule.empty();
+		if (items.Count == 0) return MarkupText.Empty;
 
 		var result = new List<MString> { items[0].rendered };
 		for (var i = 1; i < items.Count; i++)
@@ -169,11 +169,11 @@ public partial class RecursiveMarkdownRenderer
 			var blankLines = (items[i - 1].block.LinesAfter?.Count ?? 0)
 										 + (items[i].block.LinesBefore?.Count ?? 0);
 			var delimiter = "\n" + new string('\n', blankLines);
-			result.Add(MModule.single(delimiter));
+			result.Add(MarkupText.Plain(delimiter));
 			result.Add(items[i].rendered);
 		}
 
-		return MModule.multiple(result);
+		return MarkupText.Concat(result);
 	}
 
 	private MString RenderInlines(Inline? inline)
@@ -188,7 +188,7 @@ public partial class RecursiveMarkdownRenderer
 			}
 			inline = inline.NextSibling;
 		}
-		return MModule.multiple(parts);
+		return MarkupText.Concat(parts);
 	}
 
 	private MString RenderContainerInline(ContainerInline container)
@@ -200,5 +200,5 @@ public partial class RecursiveMarkdownRenderer
 	// between document blocks. Only hard breaks (two trailing spaces or backslash)
 	// produce actual newlines.
 	private MString RenderLineBreak(LineBreakInline lineBreak)
-	=> lineBreak.IsHard ? MModule.single("\n") : MModule.single(" ");
+	=> lineBreak.IsHard ? MarkupText.Plain("\n") : MarkupText.Plain(" ");
 }
