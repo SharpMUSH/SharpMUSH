@@ -2340,6 +2340,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
+		var isList = parser.CurrentState.Switches.Contains("LIST");
 
 		var recipientsArg = isNoEval
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
@@ -2351,10 +2352,14 @@ public partial class Commands
 
 		string recipientsText;
 
-		// If no recipients provided, use last paged
-		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
+		// If no recipients are provided, use the last successful page targets.
+		if ((string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
+				 !string.IsNullOrWhiteSpace(messageArg.ToPlainText())) ||
+			(isList && string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
+			 string.IsNullOrWhiteSpace(messageArg.ToPlainText())))
 		{
-			var lastPagedAttr = await AttributeService.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
+			var lastPagedAttr = await AttributeService.GetAttributeAsync(
+				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
 			recipientsText = lastPagedAttr.Match(
 				attr => attr.Last().Value.ToPlainText(),
 				_ => string.Empty,
@@ -2370,6 +2375,36 @@ public partial class Commands
 		else
 		{
 			recipientsText = recipientsArg.ToPlainText();
+		}
+
+		if (isList && string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
+		{
+			var lastPagedNames = new List<string>();
+			foreach (var recipientRef in recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			{
+				if (!DBRef.TryParse(recipientRef, out var dbref))
+				{
+					continue;
+				}
+
+				var recipient = await Mediator.Send(new GetObjectNodeQuery(dbref!.Value));
+				if (!recipient.IsNone)
+				{
+					lastPagedNames.Add(recipient.Known.Object().Name);
+				}
+			}
+
+			if (lastPagedNames.Count == 0)
+			{
+				await NotifyService.Notify(executor, "I can't find who you last paged.", executor);
+			}
+			else
+			{
+				var recipientList = MessageHelpers.FormatWithOxfordComma(lastPagedNames.ToArray());
+				await NotifyService.Notify(executor, $"You last paged {recipientList}.", executor);
+			}
+
+			return CallState.Empty;
 		}
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
@@ -2531,7 +2566,13 @@ public partial class Commands
 				_ => "\""
 			};
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
+			var lastPagedResult = await AttributeService.SetAttributeAsync(
+				await HelperFunctions.GetGod(Mediator), executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
+			if (lastPagedResult.IsT1)
+			{
+				await NotifyService.Notify(executor, lastPagedResult.AsT1.Value, executor);
+				return CallState.Empty;
+			}
 
 			var outPageFormatArgs = PageFormatArguments(
 				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
@@ -2544,9 +2585,16 @@ public partial class Commands
 			{
 				var pageFormatArgs = PageFormatArguments(
 					message, pageTypeToken, pageAlias, recipientRefs, incomingDefault);
-				var incoming = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, recipient, recipient, "PAGEFORMAT",
-					pageFormatArgs, incomingDefault, checkParents: true);
+				var incoming = await parser.With(
+					state => state with
+					{
+						Executor = recipient.Object().DBRef,
+						Caller = recipient.Object().DBRef,
+						Enactor = executor.Object().DBRef
+					},
+					pageParser => AttributeHelpers.EvaluateFormatAttribute(
+						AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
+						pageFormatArgs, incomingDefault, checkParents: true));
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
 		}
