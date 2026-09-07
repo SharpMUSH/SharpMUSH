@@ -7,6 +7,18 @@
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!--
+		  This project is Microsoft.NET.Sdk with a FrameworkReference, not Microsoft.NET.Sdk.Web, and it
+		  is the Web SDK that turns this on. So the engine — the process that builds an ANTLR parse tree,
+		  a markup graph and a set of cache entries for every command — ran on the workstation collector,
+		  while SharpMUSH.ConnectionServer, a byte pump on the Web SDK, got the server one.
+
+		  On .NET 9+ enabling server GC also enables DATAS, which sizes the heap to what the process is
+		  actually using rather than to the core count. That is what makes this safe under the CPU and
+		  memory caps in deploy/docker-compose.cloudflare.yml (1.5 CPU / 768 MB) instead of trading one
+		  problem for a larger heap. HostRuntimeConfigurationTests reads the emitted runtimeconfig.json.
+		-->
+		<ServerGarbageCollection>true</ServerGarbageCollection>
 	</PropertyGroup>
 	
 	<ItemGroup>
