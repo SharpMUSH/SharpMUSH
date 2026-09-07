@@ -51,7 +51,9 @@ public partial class MarkupOutputRendererTests
 		var text = Encoding.UTF8.GetString(result.Data);
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
-		await Assert.That(text).Contains("&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+		// Only < > & are entities: a quote is markup inside an attribute value, and nothing puts plain
+		// text there. MarkupString 2.0.0 stopped encoding " and ' for that reason.
+		await Assert.That(text).Contains("&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
 	}
 
 	[Test]
@@ -63,7 +65,7 @@ public partial class MarkupOutputRendererTests
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
 		await Assert.That(text).Contains(
-			$"{ProtocolConstants.MxpLineSecure}&lt;send href=&quot;look&quot;&gt;Tom &amp; &quot;Sue&quot;&lt;/send&gt;");
+			$"{ProtocolConstants.MxpLineSecure}&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
 	}
 
 	[Test]

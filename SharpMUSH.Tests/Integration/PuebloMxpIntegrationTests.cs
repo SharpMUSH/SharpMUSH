@@ -198,7 +198,13 @@ public class PuebloMxpIntegrationTests
 		await stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
 		await stream.FlushAsync(cancellationToken);
 
-		await Task.Delay(500, cancellationToken);
+		var rawMarker = await ReadRawUntilAsync(stream,
+			bytes => ContainsSequence(bytes, MxpStartMarker),
+			cancellationToken,
+			timeoutMs: 10_000);
+
+		await Assert.That(ContainsSequence(rawMarker, MxpStartMarker)).IsTrue()
+			.Because("everything below is only true of a client that entered MXP mode, which the marker is what does");
 
 		var loginScreen = await ReadUntilAsync(stream,
 			s => s.Contains("Welcome to SharpMUSH"), cancellationToken);
@@ -216,6 +222,47 @@ public class PuebloMxpIntegrationTests
 			.Because("MXP output lines should be prefixed with ESC[1z secure mode");
 		await Assert.That(postLogin).Contains("<send")
 			.Because("MXP output should still include send tags when the client accepts MXP");
+	}
+
+	/// <summary>IAC SB MXP IAC SE — the marker that starts MXP mode.</summary>
+	private static readonly byte[] MxpStartMarker = [0xFF, 0xFA, 0x5B, 0xFF, 0xF0];
+
+	/// <summary>
+	/// The step whose absence let entity-encoded output ship. WILL/DO settles the telnet option;
+	/// MXP itself does not begin until the server sends IAC SB MXP IAC SE, and MUSHclient — among
+	/// others — stays in plain telnet until it arrives, printing every tag and entity verbatim and
+	/// discarding the ESC[1z prefixes as an unrecognised escape.
+	/// <para>
+	/// The tests either side of this one assert what the server <i>renders</i> after DO, which was
+	/// always correct. Nothing asserted that the client was ever told to start reading it that way.
+	/// </para>
+	/// </summary>
+	[Test]
+	[Timeout(60_000)]
+	public async Task MxpNegotiation_ClientAccepts_ServerSendsStartMarker(CancellationToken cancellationToken)
+	{
+		using var client = new TcpClient();
+		await client.ConnectAsync(IPAddress.Loopback, Fixture.TelnetPort);
+		client.ReceiveTimeout = ReceiveTimeoutMs;
+
+		await using var stream = client.GetStream();
+
+		await ReadRawUntilAsync(stream,
+			bytes => ContainsSequence(bytes, [0xFF, 0xFB, 0x5B]),
+			cancellationToken,
+			timeoutMs: 10_000);
+
+		// IAC DO MXP
+		await stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
+		await stream.FlushAsync(cancellationToken);
+
+		var raw = await ReadRawUntilAsync(stream,
+			bytes => ContainsSequence(bytes, MxpStartMarker),
+			cancellationToken,
+			timeoutMs: 10_000);
+
+		await Assert.That(ContainsSequence(raw, MxpStartMarker)).IsTrue()
+			.Because("the server must answer IAC DO MXP with IAC SB MXP IAC SE, which is what puts the client into MXP mode");
 	}
 
 	/// <summary>
