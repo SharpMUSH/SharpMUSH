@@ -597,6 +597,11 @@ public partial class ArangoDatabase
 		ArgumentException.ThrowIfNullOrEmpty(owner.Id);
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
 
+		// WaitForSync on the TRANSACTION, and nowhere inside it. RocksDB applies a transaction's
+		// operations in memory and writes them to the write-ahead log only on commit, so a waitForSync
+		// on an individual create or update inside one cannot sync anything: there is nothing written
+		// yet to sync. The commit below is the durability point, and this flag is what makes it wait
+		// for the disk. Durability is unchanged by their absence; what they cost was the reading.
 		var transactionHandle = await arangoDb.Transaction.BeginAsync(handle, new ArangoTransaction
 		{
 			LockTimeout = DatabaseBehaviorConstants.TransactionTimeout,
@@ -670,7 +675,7 @@ public partial class ArangoDatabase
 						? MModule.serialize(value)
 						: string.Empty,
 					longName),
-				waitForSync: true, cancellationToken: ct, returnNew: true);
+				cancellationToken: ct, returnNew: true);
 
 			foreach (var flag in resolvedFlags)
 			{
@@ -679,7 +684,7 @@ public partial class ArangoDatabase
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributes,
 					DatabaseConstants.HasAttribute,
-					new SharpEdgeCreateRequest(lastId, newOne.Id), waitForSync: true, cancellationToken: ct);
+					new SharpEdgeCreateRequest(lastId, newOne.Id), cancellationToken: ct);
 
 			// Set branch flag on parent attribute node if it doesn't already have it
 			// Only for attribute nodes (not the root object node)
@@ -704,7 +709,7 @@ public partial class ArangoDatabase
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,
-				new SharpEdgeCreateRequest(newOne.Id, owner.Id!), waitForSync: true, cancellationToken: ct);
+				new SharpEdgeCreateRequest(newOne.Id, owner.Id!), cancellationToken: ct);
 
 			lastId = newOne.Id;
 		}
@@ -712,12 +717,12 @@ public partial class ArangoDatabase
 		if (remaining.Length == 0)
 		{
 			await arangoDb.Document.UpdateAsync(transactionHandle, DatabaseConstants.Attributes,
-				new { Key = lastId.Split('/')[1], Value = MModule.serialize(value) }, waitForSync: true,
+				new { Key = lastId.Split('/')[1], Value = MModule.serialize(value) },
 				mergeObjects: true, cancellationToken: ct);
 
 			await arangoDb.Graph.Edge.CreateAsync(transactionHandle, DatabaseConstants.GraphAttributeOwners,
 				DatabaseConstants.HasAttributeOwner,
-				new SharpEdgeCreateRequest(lastId, owner.Id!), waitForSync: true, cancellationToken: ct);
+				new SharpEdgeCreateRequest(lastId, owner.Id!), cancellationToken: ct);
 		}
 
 		await arangoDb.Transaction.CommitAsync(transactionHandle, ct);
