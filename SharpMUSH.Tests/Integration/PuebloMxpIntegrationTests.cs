@@ -175,7 +175,7 @@ public class PuebloMxpIntegrationTests
 
 	/// <summary>
 	/// Verifies that when the client responds with IAC DO MXP, and then logs in,
-	/// the output includes MXP open line prefixes (ESC[0z).
+	/// the output includes MXP secure line prefixes (ESC[1z).
 	/// </summary>
 	[Test]
 	[Timeout(120_000)]
@@ -212,8 +212,8 @@ public class PuebloMxpIntegrationTests
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After login with MXP, should see Room Zero");
 
-		await Assert.That(postLogin).Contains("\x1b[0z")
-			.Because("MXP output lines should be prefixed with ESC[0z open mode");
+		await Assert.That(postLogin).Contains("\x1b[1z")
+			.Because("MXP output lines should be prefixed with ESC[1z secure mode");
 		await Assert.That(postLogin).Contains("<send")
 			.Because("MXP output should still include send tags when the client accepts MXP");
 	}
@@ -252,7 +252,8 @@ public class PuebloMxpIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero");
 
-		await Assert.That(postLogin).DoesNotContain("\x1b[0z")
+		await Assert.That(postLogin).DoesNotContain("\x1b[0z");
+		await Assert.That(postLogin).DoesNotContain("\x1b[1z")
 			.Because("ANSI output should not contain MXP line prefixes");
 		await Assert.That(postLogin).DoesNotContain("<SEND")
 			.Because("ANSI output should not contain MXP SEND tags");
