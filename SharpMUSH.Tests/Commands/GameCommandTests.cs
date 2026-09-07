@@ -2,7 +2,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -75,16 +77,28 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask TeachCommandEchoesReportedSetFormToExecutor()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		const string taughtCommand = "@set me=color";
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TeachSetPlayer");
+		try
+		{
+			var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+			var playerName = playerObject.Object().Name;
+			const string taughtCommand = "@set me=color";
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
+			NotifyService.ClearReceivedCalls();
+			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+			await NotifyService
+				.Received(1)
+				.Notify(TestHelpers.MatchingObject(player.DbRef),
+					TestHelpers.MatchingMessage($"{playerName} types --> {taughtCommand}"),
+					TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Emit);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
 	}
 
 	[Test]
