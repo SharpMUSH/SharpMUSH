@@ -3,7 +3,9 @@ using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
+using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
@@ -41,6 +43,10 @@ public class AccountsAndSessionsTests
 			}
 		}
 	}
+
+	/// <summary>Strips the "node_accounts/" prefix off a <see cref="SharpAccount.Id"/> to get the raw key
+	/// that <c>Tables.AccountEmail</c>/<c>Tables.AccountUser</c> index values store.</summary>
+	private static string RawKey(string accountId) => accountId[(accountId.IndexOf('/') + 1)..];
 
 	private static SharpSession MakeSession(string token, string accountId, string originIp) => new()
 	{
@@ -118,6 +124,146 @@ public class AccountsAndSessionsTests
 
 		await Assert.That(charactersAfterUnlink).IsEmpty();
 		await Assert.That(ownerAfterUnlink).IsNull();
+	}
+
+	[Test]
+	public async Task UpdateAccountEmailAsyncClearingEmailRemovesTheOldIndexEntryAndAddsNone()
+	{
+		var account = await _db.CreateAccountAsync("Carol", "carol@example.com", "hash");
+
+		await _db.UpdateAccountEmailAsync(account.Id!, null);
+
+		var oldIndexed = _db.Store.Read(tx => tx.TryGet(Tables.AccountEmail, Keys.Lower("carol@example.com"), out _));
+		await Assert.That(oldIndexed).IsFalse();
+		await Assert.That(await _db.GetAccountByEmailAsync("carol@example.com")).IsNull();
+
+		var byId = await _db.GetAccountByIdAsync(account.Id!);
+		await Assert.That(byId!.Email).IsNull();
+	}
+
+	[Test]
+	public async Task UpdateAccountEmailAsyncReassigningEmailMovesTheIndexEntry()
+	{
+		var account = await _db.CreateAccountAsync("Dave", "dave-old@example.com", "hash");
+
+		await _db.UpdateAccountEmailAsync(account.Id!, "dave-new@example.com");
+
+		var oldIndexed = _db.Store.Read(tx => tx.TryGet(Tables.AccountEmail, Keys.Lower("dave-old@example.com"), out _));
+		var newIndexed = _db.Store.Read(tx => tx.TryGet(Tables.AccountEmail, Keys.Lower("dave-new@example.com"), out _));
+		await Assert.That(oldIndexed).IsFalse();
+		await Assert.That(newIndexed).IsTrue();
+
+		await Assert.That(await _db.GetAccountByEmailAsync("dave-old@example.com")).IsNull();
+		var byNewEmail = await _db.GetAccountByEmailAsync("dave-new@example.com");
+		await Assert.That(byNewEmail).IsNotNull();
+		await Assert.That(byNewEmail!.Id).IsEqualTo(account.Id);
+	}
+
+	[Test]
+	public async Task UpdateAccountUsernameAsyncRenamingMovesTheIndexEntry()
+	{
+		var account = await _db.CreateAccountAsync("Erin", null, "hash");
+
+		await _db.UpdateAccountUsernameAsync(account.Id!, "ErinRenamed");
+
+		var oldIndexed = _db.Store.Read(tx => tx.TryGet(Tables.AccountUser, Keys.Lower("Erin"), out _));
+		var newIndexed = _db.Store.Read(tx => tx.TryGet(Tables.AccountUser, Keys.Lower("ErinRenamed"), out _));
+		await Assert.That(oldIndexed).IsFalse();
+		await Assert.That(newIndexed).IsTrue();
+
+		await Assert.That(await _db.GetAccountByUsernameAsync("Erin")).IsNull();
+		var byNewUsername = await _db.GetAccountByUsernameAsync("ErinRenamed");
+		await Assert.That(byNewUsername).IsNotNull();
+		await Assert.That(byNewUsername!.Id).IsEqualTo(account.Id);
+	}
+
+	[Test]
+	public async Task UpdateAccountEmailAsyncRenamingToAnotherAccountsEmailThrowsAndLeavesBothAccountsUnchanged()
+	{
+		var owner = await _db.CreateAccountAsync("Frank", "frank@example.com", "hash-frank");
+		var renamer = await _db.CreateAccountAsync("Grace", "grace@example.com", "hash-grace");
+
+		await Assert.ThrowsAsync<InvalidOperationException>(async ()
+			=> await _db.UpdateAccountEmailAsync(renamer.Id!, "frank@example.com"));
+
+		var ownerAfter = await _db.GetAccountByIdAsync(owner.Id!);
+		var renamerAfter = await _db.GetAccountByIdAsync(renamer.Id!);
+		await Assert.That(ownerAfter!.Email).IsEqualTo("frank@example.com");
+		await Assert.That(renamerAfter!.Email).IsEqualTo("grace@example.com");
+
+		var frankIndexedOwner = _db.Store.Read(tx => tx.TryGet(Tables.AccountEmail, Keys.Lower("frank@example.com"), out var v) ? Keys.ReadStr(v) : null);
+		var graceIndexedOwner = _db.Store.Read(tx => tx.TryGet(Tables.AccountEmail, Keys.Lower("grace@example.com"), out var v) ? Keys.ReadStr(v) : null);
+		await Assert.That(frankIndexedOwner).IsEqualTo(RawKey(owner.Id!));
+		await Assert.That(graceIndexedOwner).IsEqualTo(RawKey(renamer.Id!));
+	}
+
+	[Test]
+	public async Task UpdateAccountUsernameAsyncRenamingToAnotherAccountsUsernameThrowsAndLeavesBothAccountsUnchanged()
+	{
+		var owner = await _db.CreateAccountAsync("Hank", null, "hash-hank");
+		var renamer = await _db.CreateAccountAsync("Irene", null, "hash-irene");
+
+		await Assert.ThrowsAsync<InvalidOperationException>(async ()
+			=> await _db.UpdateAccountUsernameAsync(renamer.Id!, "Hank"));
+
+		var ownerAfter = await _db.GetAccountByIdAsync(owner.Id!);
+		var renamerAfter = await _db.GetAccountByIdAsync(renamer.Id!);
+		await Assert.That(ownerAfter!.Username).IsEqualTo("Hank");
+		await Assert.That(renamerAfter!.Username).IsEqualTo("Irene");
+
+		var hankIndexedOwner = _db.Store.Read(tx => tx.TryGet(Tables.AccountUser, Keys.Lower("Hank"), out var v) ? Keys.ReadStr(v) : null);
+		var ireneIndexedOwner = _db.Store.Read(tx => tx.TryGet(Tables.AccountUser, Keys.Lower("Irene"), out var v) ? Keys.ReadStr(v) : null);
+		await Assert.That(hankIndexedOwner).IsEqualTo(RawKey(owner.Id!));
+		await Assert.That(ireneIndexedOwner).IsEqualTo(RawKey(renamer.Id!));
+	}
+
+	[Test]
+	public async Task UpdateAccountStatusAsyncRoundTrips()
+	{
+		var account = await _db.CreateAccountAsync("Judy", null, "hash");
+
+		await _db.UpdateAccountStatusAsync(account.Id!, AccountStatus.Disabled);
+
+		var byId = await _db.GetAccountByIdAsync(account.Id!);
+		await Assert.That(byId!.Status).IsEqualTo(AccountStatus.Disabled);
+	}
+
+	[Test]
+	public async Task UpdateAccountPasswordAsyncRoundTrips()
+	{
+		var account = await _db.CreateAccountAsync("Karl", null, "old-hash");
+
+		await _db.UpdateAccountPasswordAsync(account.Id!, "new-hash");
+
+		var byId = await _db.GetAccountByIdAsync(account.Id!);
+		await Assert.That(byId!.PasswordHash).IsEqualTo("new-hash");
+	}
+
+	[Test]
+	public async Task UpdateAccountMustChangePasswordAsyncRoundTrips()
+	{
+		var account = await _db.CreateAccountAsync("Liam", null, "hash");
+		await Assert.That(account.MustChangePassword).IsFalse();
+
+		await _db.UpdateAccountMustChangePasswordAsync(account.Id!, true);
+
+		var byId = await _db.GetAccountByIdAsync(account.Id!);
+		await Assert.That(byId!.MustChangePassword).IsTrue();
+	}
+
+	[Test]
+	public async Task GetAllAccountsAsyncOrdersUsernamesOrdinallyWithUppercaseBeforeLowercase()
+	{
+		// StringComparer.Ordinal sorts by UTF-16 code unit, so 'B' (0x42) sorts before 'a' (0x61):
+		// this asserts the exact order LightningDatabase.GetAllAccountsAsync produces, not a
+		// case-insensitive alphabetical order.
+		await _db.CreateAccountAsync("charlie", null, "hash");
+		await _db.CreateAccountAsync("adam", null, "hash");
+		await _db.CreateAccountAsync("Bob", null, "hash");
+
+		var all = await _db.GetAllAccountsAsync();
+
+		await Assert.That(all.Select(a => a.Username)).IsEquivalentTo(["Bob", "adam", "charlie"], CollectionOrdering.Matching);
 	}
 
 	[Test]
