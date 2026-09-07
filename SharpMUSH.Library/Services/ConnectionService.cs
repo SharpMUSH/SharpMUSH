@@ -59,6 +59,18 @@ public class ConnectionService(
 		_sessionState.Values
 			.ToAsyncEnumerable();
 
+	public async ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef)
+	{
+		await foreach (var conn in Get(playerRef))
+		{
+			if (conn.IsHidden)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
 
