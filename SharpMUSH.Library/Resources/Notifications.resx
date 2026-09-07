@@ -2032,8 +2032,11 @@
   <data name="SearchCriteriaFormat" xml:space="preserve">
     <value>  Criteria: {0}</value>
   </data>
-  <data name="SearchRangeFormat" xml:space="preserve">
-    <value>  Range: {0} to {1}</value>
+  <data name="SearchUnknownOwner" xml:space="preserve">
+    <value>Unknown owner.</value>
+  </data>
+  <data name="SearchNothingFound" xml:space="preserve">
+    <value>Nothing found.</value>
   </data>
   <data name="SearchObjectEntryFormat" xml:space="preserve">
     <value>  #{0} ({1}) [{2}]</value>
