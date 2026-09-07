@@ -1,8 +1,8 @@
 # Deploying SharpMUSH (hobby scale, single host)
 
 This stack runs the whole game on one small VM (~€4–6/mo on a budget VPS such as
-Hetzner CX22/CAX11, or $0 on Oracle Cloud Always Free ARM). It uses **SurrealDB
-embedded** (a RocksDB directory on disk — no separate database server), **NATS**
+Hetzner CX22/CAX11, or $0 on Oracle Cloud Always Free ARM). It uses **LMDB embedded**
+through Lightning.NET (one directory on disk — no separate database server), **NATS**
 for messaging, and a **restic** sidecar for nightly encrypted backups.
 
 Everything runs under Docker Compose. **Kubernetes is not needed** at this scale.
@@ -40,7 +40,41 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 The web portal comes up on `https://<your-domain>` (via Caddy) and telnet on port `4201`.
-The God/admin character named in `.env` is created on first boot.
+Then open `https://<your-domain>/setup` straight away: the first visitor claims the admin
+account linked to `#1`.
+
+### The database
+
+The world is an LMDB environment at `/app/data/lightning` on the `app-data` volume: one
+`data.mdb` file plus a `lock.mdb` reader table, written by the server process itself. Nothing
+else to run, tune or connect to. Three settings on `sharpmush-server` matter:
+
+| Variable | Set to | Why |
+|---|---|---|
+| `SHARPMUSH_DATABASE_PROVIDER` | `lightning` | selects the provider |
+| `SHARPMUSH_LIGHTNING_PATH` | `data/lightning` | relative to `/app`, so it lands on the volume |
+| `SHARPMUSH_LIGHTNING_SYNC` | `periodic` | sync to disk once a second rather than on every commit; a power loss costs at most that second and the file stays consistent. `full` syncs every commit at roughly 5 ms each. |
+
+`SHARPMUSH_LIGHTNING_MAPSIZE` (bytes, default 64 GiB) is the ceiling on the file's size, not
+memory — the file is sparse and only grows as the world does. Raise it before a world reaches it;
+the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
+
+#### Switching a box that ran SurrealDB
+
+There is no data migration: the world starts fresh and the first visitor to `/setup` claims the
+admin again. Wiki asset uploads live in the same volume and are kept.
+
+```bash
+cd deploy
+export COMPOSE_FILE=docker-compose.cloudflare.yml   # or docker-compose.prod.yml
+git pull                                           # brings in the compose change
+docker compose stop sharpmush-server
+docker run --rm -v deploy_app-data:/data alpine rm -rf /data/surreal   # the old RocksDB store
+docker compose up -d                               # recreates the server on lightning
+```
+
+`deploy_app-data` is the volume's name when the stack is started from this directory; check
+with `docker volume ls` if you started it from elsewhere.
 
 ### Pointing the in-browser terminal at the right place
 
@@ -227,10 +261,11 @@ To enable it, fill in the restic settings in `.env` and uncomment:
 COMPOSE_PROFILES=backup
 ```
 
-Once enabled, the `backup` service snapshots the `app-data` volume (the SurrealDB RocksDB
-store + wiki assets — i.e. the entire game) to your bucket every night at 03:30, keeping 7
-daily and 4 weekly snapshots. The volume is mounted **read-only**, so a backup run can
-never corrupt live data.
+Once enabled, the `backup` service snapshots the `app-data` volume (the LMDB world + wiki
+assets — i.e. the entire game) to your bucket every night at 03:30, keeping 7 daily and 4
+weekly snapshots. The volume is mounted **read-only**, so a backup run can never corrupt live
+data. `lock.mdb` is excluded: it is the live reader table, meaningless in a snapshot and wrong
+to restore.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
@@ -255,12 +290,17 @@ docker compose run --rm -v restore:/restore backup \
 
 **To restore for real:** stop the stack, restore the snapshot's `/data` contents back
 into the `app-data` volume, then start again. The game reads whatever is in the volume
-on boot.
+on boot. Delete any `lightning.previous` directory the snapshot carried; it is a
+superseded world from a staging promotion, not part of the live one.
 
-> Note: restic copies the live RocksDB files while the server runs. RocksDB is
-> crash-consistent and recovers from its own write-ahead log, so this is fine for hobby
-> use. For a guaranteed-quiet snapshot, `docker compose stop sharpmush-server` before the
-> backup and start it after.
+> **Stop the server for the backup window.** restic reads `data.mdb` front to back while
+> commits keep landing, and LMDB does not promise that such a copy opens: its supported hot
+> backup is its own copy routine (`mdb_env_copy`), which the server exposes to plugins as
+> `CopyToAsync` but not yet as a command or an endpoint. Until it does, the supported path is
+> `docker compose stop sharpmush-server` before the 03:30 run and `start` after it — stopping
+> flushes everything and closes the environment cleanly, and a hobby game can afford the minute.
+> A snapshot taken from a running server will usually be fine, and you will not know when it
+> is not until you need it.
 
 ## Updating
 

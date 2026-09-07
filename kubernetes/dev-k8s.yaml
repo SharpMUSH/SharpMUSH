@@ -10,11 +10,12 @@ data:
   nats.conf: |
     max_payload: 6291456
 ---
-# Persistent Volume for the infrastructure pod
+# The game's data: the LMDB world (data/lightning) plus wiki asset uploads. One writer process, so
+# ReadWriteOnce is correct and the server deployment below recreates rather than rolls.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sharpmush-infra-pvc
+  name: sharpmush-data-pvc
 spec:
   accessModes:
     - ReadWriteOnce
@@ -22,7 +23,7 @@ spec:
     requests:
       storage: 30Gi
 ---
-# ArangoDB and NATS (JetStream)
+# NATS (JetStream)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -37,27 +38,7 @@ spec:
       labels:
         app: sharpmush-infra
     spec:
-      securityContext:
-        fsGroup: 101
       containers:
-        - name: arangodb
-          image: arangodb:latest
-          ports:
-            - containerPort: 8529
-          volumeMounts:
-            - name: infra-storage
-              mountPath: /var/lib/arangodb3
-              subPath: arangodb
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "1Gi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-          env:
-            - name: ARANGO_ROOT_PASSWORD
-              value: "password"
         - name: nats
           image: nats:2-alpine
           args: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
@@ -90,24 +71,9 @@ spec:
               cpu: "500m"
               memory: "256Mi"
       volumes:
-        - name: infra-storage
-          persistentVolumeClaim:
-            claimName: sharpmush-infra-pvc
         - name: nats-config
           configMap:
             name: nats-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: arangodb
-spec:
-  selector:
-    app: sharpmush-infra
-  ports:
-    - port: 8529
-      targetPort: 8529
-  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -132,6 +98,10 @@ metadata:
   name: sharpmush
 spec:
   replicas: 1
+  # The LMDB world admits one process; a rolling update would briefly run two against the same
+  # volume, so the old pod goes away before the new one starts.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sharpmush
@@ -178,6 +148,8 @@ spec:
           volumeMounts:
             - name: cert-volume
               mountPath: /app/certs
+            - name: data
+              mountPath: /app/data
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080;https://+:8081"
@@ -185,8 +157,15 @@ spec:
               value: "/app/certs/sharpmush-dev.pfx"
             - name: ASPNETCORE_Kestrel__Certificates__Default__Password
               value: "DevPassword123!"
-            - name: ARANGO_CONNECTION_STRING
-              value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
+            # Embedded LMDB world on the data PVC. See deploy/README.md for the settings.
+            - name: SHARPMUSH_DATABASE_PROVIDER
+              value: "lightning"
+            - name: SHARPMUSH_LIGHTNING_PATH
+              value: "data/lightning"
+            - name: SHARPMUSH_LIGHTNING_SYNC
+              value: "periodic"
+            - name: Wiki__AssetRoot
+              value: "/app/data/wiki-assets"
             - name: NATS_URL
               value: "nats://nats:4222"
           resources:
@@ -199,6 +178,9 @@ spec:
       volumes:
         - name: cert-volume
           emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: sharpmush-data-pvc
 ---
 # SharpMUSH Service (for Prometheus scraping and HTTP API)
 apiVersion: v1

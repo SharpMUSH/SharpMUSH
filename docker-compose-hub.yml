@@ -1,17 +1,4 @@
 services:
-  arangodb:
-    image: arangodb:latest
-    container_name: arangodb
-    environment:
-      - ARANGO_ROOT_PASSWORD=password
-    ports:
-      - "8529:8529"
-    volumes:
-      - arangodb-socket:/var/run/arangodb3
-    command: ["arangod", "--server.endpoint", "tcp://0.0.0.0:8529", "--server.endpoint", "unix:///var/run/arangodb3/arangodb.sock"]
-    networks:
-      - sharpmush-net
-
   nats:
     image: nats:2-alpine
     container_name: sharpmush-nats
@@ -46,23 +33,25 @@ services:
   sharpmush-server:
     image: sharpmush/sharpmush-server:dev
     environment:
-      - ARANGO_CONNECTION_STRING=Server=http://unusedschim:8529;User=root;Password=password;
+      # Embedded LMDB world on the app-data volume; no database container needed. See deploy/README.md
+      # for the durability setting and the map-size ceiling.
+      - SHARPMUSH_DATABASE_PROVIDER=lightning
+      - SHARPMUSH_LIGHTNING_PATH=data/lightning
+      - SHARPMUSH_LIGHTNING_SYNC=periodic
       - NATS_URL=nats://nats:4222
     depends_on:
-      arangodb:
-        condition: service_started
       nats:
         condition: service_healthy
       connectionserver:
         condition: service_started
     volumes:
-      - arangodb-socket:/var/run/arangodb3
+      - app-data:/app/data
     networks:
       - sharpmush-net
-      
+
 volumes:
-  arangodb-socket:
-  
+  app-data:   # LMDB world + wiki assets
+
 networks:
   sharpmush-net:
     driver: bridge

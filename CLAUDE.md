@@ -40,7 +40,7 @@ The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` f
 
 ## Running the Server
 
-The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. Infrastructure (ArangoDB + NATS) is available via Docker:
+The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. The compose stack runs both on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
 
 ```bash
 docker compose up -d
@@ -231,7 +231,7 @@ fails the gate.
 
 ## Infrastructure Notes
 
-- **Logging**: Serilog; ArangoDB sink enabled in production for persistent logs
+- **Logging**: Serilog; an ArangoDB sink is added only when the provider is ArangoDB (production runs `lightning`, so logs go where `appsettings.json` sends them)
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
 - **Rate limiting**: Fixed-window limiter on `"public-api"` (30 req/window); sliding-window on `"auth"` (10 req/window)
