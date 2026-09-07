@@ -5,11 +5,32 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 public class LightningWriterTests
 {
-	private static LightningStore Open() => new(new LightningStoreOptions
+	private readonly List<string> _paths = [];
+
+	private LightningStore Open()
 	{
-		Path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N")),
-		MapSize = 256L << 20
-	});
+		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_paths.Add(path);
+		return new LightningStore(new LightningStoreOptions { Path = path, MapSize = 256L << 20 });
+	}
+
+	[After(Test)]
+	public Task Cleanup()
+	{
+		foreach (var path in _paths.Where(Directory.Exists))
+		{
+			try
+			{
+				Directory.Delete(path, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
+			}
+		}
+
+		return Task.CompletedTask;
+	}
 
 	[Test]
 	public async Task JobsRunInSubmissionOrderOnOneThread()
@@ -42,6 +63,51 @@ public class LightningWriterTests
 		await Assert.That(await good).IsEqualTo(1);
 		var hasGhost = store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("ghost"), out _));
 		await Assert.That(hasGhost).IsFalse();
+	}
+
+	/// <summary>
+	/// Disposing the store while the writer thread is mid-job must not take the process with it. Dispose
+	/// completes the queue and signals the resume event; if it then disposed that event while the thread
+	/// was still inside a job, the thread's next wait on it throws <see cref="ObjectDisposedException"/> on
+	/// a thread with no handler — an unhandled exception, which is process death, not a failed test. The
+	/// job below sleeps long enough that Dispose lands while it runs; the assertion is simply that we are
+	/// still here afterwards and its task reached a terminal state. Dispose's join outlasts a job this
+	/// short, so this guards the contract rather than reproducing the join-timeout path itself — which
+	/// cannot be provoked without holding a job past the ten-second join and tearing the environment down
+	/// under a live transaction.
+	/// </summary>
+	[Test]
+	public async Task DisposingWhileAJobIsRunningDoesNotKillTheProcess()
+	{
+		var store = Open();
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var slow = store.WriteAsync(tx =>
+		{
+			started.SetResult();
+			Thread.Sleep(200);
+			tx.Put(Tables.Meta, Keys.Str("slow"), Keys.Str("done"));
+			return 1;
+		}).AsTask();
+
+		await started.Task;
+		store.Dispose();
+
+		var finished = await Task.WhenAny(slow, Task.Delay(TimeSpan.FromSeconds(10)));
+		await Assert.That(ReferenceEquals(finished, slow)).IsTrue();
+		await Assert.That(slow.IsCompleted).IsTrue();
+	}
+
+	/// <summary>The store is owned by <c>LightningDatabase</c>, which the host's container disposes at
+	/// shutdown and a fixture disposes itself — so a second disposal has to be a no-op by construction,
+	/// not by luck in which of the three owned handles tolerates being closed twice.</summary>
+	[Test]
+	public async Task DisposingTwiceIsANoOp()
+	{
+		var store = Open();
+		await store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("k"), Keys.Str("v")));
+
+		store.Dispose();
+		await Assert.That(() => store.Dispose()).ThrowsNothing();
 	}
 
 	[Test]

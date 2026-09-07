@@ -89,7 +89,7 @@ public class RecoveryTests
 		}
 		finally
 		{
-			db.Store.Dispose();
+			await db.DisposeAsync();
 			Delete(path);
 			Delete(backupPath);
 		}
@@ -115,7 +115,7 @@ public class RecoveryTests
 		}
 		finally
 		{
-			db.Store.Dispose();
+			await db.DisposeAsync();
 			Delete(path);
 		}
 	}

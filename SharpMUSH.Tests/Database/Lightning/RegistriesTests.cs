@@ -13,7 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
-/// Round-trip coverage for the four registries ported in Task 16 (layouts, applications, roles,
+/// Round-trip coverage for the four registries (layouts, applications, roles,
 /// packages), directly against a <see cref="LightningDatabase"/> instance — no host, no DI —
 /// mirroring <see cref="MigrationTests"/>'s fixture. The full-stack suites under
 /// <c>SharpMUSH.Tests/Database</c> (LayoutRegistryTests, ApplicationRegistryTests, RoleRegistryTests,
@@ -38,7 +38,7 @@ public class RegistriesTests
 		}
 		finally
 		{
-			db.Store.Dispose();
+			await db.DisposeAsync();
 			if (Directory.Exists(path))
 			{
 				try

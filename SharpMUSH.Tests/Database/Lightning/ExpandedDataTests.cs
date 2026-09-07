@@ -24,9 +24,9 @@ public class ExpandedDataTests
 	}
 
 	[After(Test)]
-	public void Cleanup()
+	public async Task Cleanup()
 	{
-		_db.Store.Dispose();
+		await _db.DisposeAsync();
 		if (Directory.Exists(_path))
 		{
 			try

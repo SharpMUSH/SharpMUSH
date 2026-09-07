@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
-/// The Lightning wiki area (Task 17) directly against a <see cref="LightningDatabase"/> instance — no
+/// The Lightning wiki area directly against a <see cref="LightningDatabase"/> instance — no
 /// host, no DI — mirroring <see cref="MigrationTests"/>'s fixture. <c>WikiServiceIntegrationTests</c> and
 /// <c>WikiTranslationIntegrationTests</c> already run this interface's whole contract against whichever
 /// provider is configured; what this class adds is assertions against the <em>storage shape</em> — the
@@ -33,7 +33,7 @@ public class WikiTests
 		}
 		finally
 		{
-			db.Store.Dispose();
+			await db.DisposeAsync();
 			if (Directory.Exists(path))
 			{
 				try

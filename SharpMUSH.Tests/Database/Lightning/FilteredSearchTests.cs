@@ -24,13 +24,31 @@ public class FilteredSearchTests
 		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
 	private LightningDatabase _db = null!;
+	private string _path = null!;
 
 	[Before(Test)]
 	public async Task Setup()
 	{
-		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
-		_db = Create(path);
+		_path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_db = Create(_path);
 		await _db.Migrate();
+	}
+
+	[After(Test)]
+	public async Task Cleanup()
+	{
+		await _db.DisposeAsync();
+		if (Directory.Exists(_path))
+		{
+			try
+			{
+				Directory.Delete(_path, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
+			}
+		}
 	}
 
 	[Test]

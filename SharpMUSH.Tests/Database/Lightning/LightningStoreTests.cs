@@ -5,11 +5,32 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 public class LightningStoreTests
 {
-	private static LightningStore Open() => new(new LightningStoreOptions
+	private readonly List<string> _paths = [];
+
+	private LightningStore Open()
 	{
-		Path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N")),
-		MapSize = 256L << 20
-	});
+		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_paths.Add(path);
+		return new LightningStore(new LightningStoreOptions { Path = path, MapSize = 256L << 20 });
+	}
+
+	[After(Test)]
+	public Task Cleanup()
+	{
+		foreach (var path in _paths.Where(Directory.Exists))
+		{
+			try
+			{
+				Directory.Delete(path, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
+			}
+		}
+
+		return Task.CompletedTask;
+	}
 
 	[Test]
 	public async Task OpensEveryCatalogueTable()

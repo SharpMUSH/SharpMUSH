@@ -39,7 +39,7 @@ public class MigrationTests
 		}
 		finally
 		{
-			db.Store.Dispose();
+			await db.DisposeAsync();
 			if (Directory.Exists(path))
 			{
 				try

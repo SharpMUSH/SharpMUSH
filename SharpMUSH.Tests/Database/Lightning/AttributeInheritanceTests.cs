@@ -33,9 +33,9 @@ public class AttributeInheritanceTests
 	}
 
 	[After(Test)]
-	public Task Cleanup()
+	public async Task Cleanup()
 	{
-		_db.Store.Dispose();
+		await _db.DisposeAsync();
 		if (Directory.Exists(_path))
 		{
 			try
@@ -47,8 +47,6 @@ public class AttributeInheritanceTests
 				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
 			}
 		}
-
-		return Task.CompletedTask;
 	}
 
 	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
@@ -119,6 +117,33 @@ public class AttributeInheritanceTests
 		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
 		await Assert.That(found.SourceObject.Number).IsEqualTo(grandparent.Number);
 		await Assert.That(found.Attributes.Select(a => a.LongName)).IsEquivalentTo(new[] { "FOO", "FOO`BAR" });
+	}
+
+	/// <summary>
+	/// The ladder is "the whole parent chain, then the zones" — not "the first parent, then the zones".
+	/// <see cref="ParentBeatsTheObjectsZone"/> only proves the immediate parent outranks the object's own
+	/// zone, which a walk that gave up after one hop would also satisfy; this one puts the value two hops
+	/// up the chain, with the object's own zone holding a competing value, so only a chain walked to its
+	/// end before any zone is consulted returns the grandparent's.
+	/// </summary>
+	[Test]
+	public async Task AGrandparentBeatsTheObjectsOwnZone()
+	{
+		var d = await Thing("D");
+		var c = await Thing("C");
+		var b = await Thing("B");
+		var z = await Thing("Z");
+		await Parent(d, c);
+		await Parent(c, b);
+		await Zone(d, z);
+		await Set(b, ["DESC"], "from the grandparent");
+		await Set(z, ["DESC"], "from the zone");
+
+		var found = await _db.GetAttributeWithInheritanceAsync(d, ["DESC"]).SingleAsync();
+
+		await Assert.That(found.Source).IsEqualTo(AttributeSource.Parent);
+		await Assert.That(found.SourceObject.Number).IsEqualTo(b.Number);
+		await Assert.That(MModule.plainText(found.Attributes[^1].Value)).IsEqualTo("from the grandparent");
 	}
 
 	[Test]

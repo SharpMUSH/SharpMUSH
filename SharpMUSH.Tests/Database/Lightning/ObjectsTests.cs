@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
-using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -17,13 +16,31 @@ public class ObjectsTests
 		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
 	private LightningDatabase _db = null!;
+	private string _path = null!;
 
 	[Before(Test)]
 	public async Task Setup()
 	{
-		var path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
-		_db = Create(path);
+		_path = Path.Combine(Path.GetTempPath(), "sharpmush-lmdb-" + Guid.NewGuid().ToString("N"));
+		_db = Create(_path);
 		await _db.Migrate();
+	}
+
+	[After(Test)]
+	public async Task Cleanup()
+	{
+		await _db.DisposeAsync();
+		if (Directory.Exists(_path))
+		{
+			try
+			{
+				Directory.Delete(_path, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
+			}
+		}
 	}
 
 	[Test]
@@ -46,13 +63,8 @@ public class ObjectsTests
 		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
 		var dbref = await _db.CreateThingAsync("Doomed", room, god, room);
 
-		// SetAttributeAsync is Task 9; seed the attribute rows the cascade must delete directly.
 		var n = dbref.Number;
-		await _db.Store.WriteAsync(tx =>
-		{
-			tx.Put(Tables.AttrMeta, Keys.Attr(n, "DESC"), Codec.Serialize(new AttrMetaRecord { Flags = [] }));
-			tx.Put(Tables.AttrVal, Keys.Attr(n, "DESC"), "x"u8);
-		});
+		await _db.SetAttributeAsync(dbref, ["DESC"], MModule.single("x"), god);
 
 		await _db.DeleteObjectAsync(dbref);
 

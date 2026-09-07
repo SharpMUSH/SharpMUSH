@@ -31,16 +31,10 @@ public class StagingTests
 	private static async Task<SharpPlayer> GodAsync(ISharpDatabase db)
 		=> (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 
-	private static void Cleanup(LightningDatabase db, string path)
+	private static async Task Cleanup(LightningDatabase db, string path)
 	{
-		try
-		{
-			db.Store.Dispose();
-		}
-		catch (ObjectDisposedException)
-		{
-			// A promoted staging database disposed its own store already.
-		}
+		// Idempotent: a promoted staging database closed its own store already.
+		await db.DisposeAsync();
 
 		foreach (var directory in new[] { path, path + ".previous" })
 		{
@@ -86,7 +80,7 @@ public class StagingTests
 		}
 		finally
 		{
-			Cleanup(live, path);
+			await Cleanup(live, path);
 		}
 	}
 
@@ -130,7 +124,7 @@ public class StagingTests
 		}
 		finally
 		{
-			Cleanup(live, path);
+			await Cleanup(live, path);
 		}
 	}
 
@@ -160,7 +154,7 @@ public class StagingTests
 		}
 		finally
 		{
-			Cleanup(live, path);
+			await Cleanup(live, path);
 		}
 	}
 
@@ -184,7 +178,7 @@ public class StagingTests
 		}
 		finally
 		{
-			Cleanup(live, path);
+			await Cleanup(live, path);
 		}
 	}
 
@@ -280,7 +274,7 @@ public class StagingTests
 			read?.Join(TimeSpan.FromSeconds(30));
 			holding.Dispose();
 			release.Dispose();
-			Cleanup(live, path);
+			await Cleanup(live, path);
 		}
 	}
 

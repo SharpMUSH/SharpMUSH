@@ -27,9 +27,9 @@ public class AttributesTests
 	}
 
 	[After(Test)]
-	public Task Cleanup()
+	public async Task Cleanup()
 	{
-		_db.Store.Dispose();
+		await _db.DisposeAsync();
 		if (Directory.Exists(_path))
 		{
 			try
@@ -41,8 +41,6 @@ public class AttributesTests
 				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
 			}
 		}
-
-		return Task.CompletedTask;
 	}
 
 	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
@@ -151,10 +149,8 @@ public class AttributesTests
 	public async Task ReassignAttributeOwnerMovesOwnership()
 	{
 		var god = await God();
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
 		var newOwnerRef = await _db.CreatePlayerAsync("Heir", "pw", new DBRef(2), new DBRef(2), 0);
 		var heir = (await _db.GetObjectNodeAsync(newOwnerRef)).Known.AsPlayer;
-		_ = room;
 
 		await _db.SetAttributeAsync(new DBRef(1), ["OWNED"], MModule.single("v"), god);
 		var before = await _db.GetAttributeAsync(new DBRef(1), ["OWNED"]).FirstAsync();

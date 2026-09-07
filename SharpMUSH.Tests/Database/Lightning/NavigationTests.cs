@@ -31,9 +31,9 @@ public class NavigationTests
 	}
 
 	[After(Test)]
-	public Task Cleanup()
+	public async Task Cleanup()
 	{
-		_db.Store.Dispose();
+		await _db.DisposeAsync();
 		if (Directory.Exists(_path))
 		{
 			try
@@ -45,8 +45,6 @@ public class NavigationTests
 				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
 			}
 		}
-
-		return Task.CompletedTask;
 	}
 
 	[Test]
@@ -170,7 +168,7 @@ public class NavigationTests
 
 		var thingRef = await _db.CreateThingAsync("Wanderer", room, god, home);
 
-		// An exit's destination reuses the same home edge (Task 7's LinkExitAsync), same as a
+		// An exit's destination reuses the same home edge (LinkExitAsync), same as a
 		// room's drop-to — it must show up here, unlike the room case below.
 		var exitRef = await _db.CreateExitAsync("Out", ["O"], room, god);
 		var exit = (await _db.GetObjectNodeAsync(exitRef)).Known.AsExit;

@@ -187,10 +187,10 @@ public class FlagsAndPowersTests
 	}
 
 	[After(Test)]
-	public void Cleanup()
+	public async Task Cleanup()
 	{
 		var path = _db.Store.Path;
-		_db.Store.Dispose();
+		await _db.DisposeAsync();
 		if (Directory.Exists(path))
 		{
 			try
