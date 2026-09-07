@@ -33,8 +33,13 @@ namespace SharpMUSH.Tests.Parser;
 /// re-check any rewriter before it is reached for again.</para>
 ///
 /// <para>The leaves here are eval locks (<c>ATTR/yes</c>) over a recording
-/// <see cref="ILockEvaluationServices"/>: each one names itself when evaluated and suspends for real
-/// before answering, so both the order and the fact of evaluation are observable.</para>
+/// <see cref="ILockEvaluationServices"/>: each one names itself when evaluated, so both the order and
+/// the fact of evaluation are observable.</para>
+///
+/// <para>Every case runs twice, against a leaf that suspends and a leaf that answers synchronously.
+/// The combinators take a different route through each — a leaf that is already complete skips the
+/// async state machine entirely — and the short-circuit has to survive both. A cache hit is the
+/// synchronous case, which is to say the common one.</para>
 /// </summary>
 public class LockShortCircuitTests
 {
@@ -64,13 +69,16 @@ public class LockShortCircuitTests
 	[Test]
 	public async Task TruthTableOverAsyncLeaves(string lockString, bool expected)
 	{
-		var (parser, services) = Build();
-		var one = await God();
+		foreach (var leavesSuspend in BothRoutes)
+		{
+			var (parser, services) = Build(leavesSuspend);
+			var one = await God();
 
-		await Assert.That(await parser.Compile(lockString)(one, one))
-			.IsEqualTo(expected)
-			.Because($"{lockString} is {expected}");
-		await Assert.That(services.Evaluated).IsNotEmpty();
+			await Assert.That(await parser.Compile(lockString)(one, one))
+				.IsEqualTo(expected)
+				.Because($"{lockString} is {expected} ({Route(leavesSuspend)})");
+			await Assert.That(services.Evaluated).IsNotEmpty();
+		}
 	}
 
 	[Arguments($"({Fails} | {Passes}) & {Passes}", true)]
@@ -84,34 +92,43 @@ public class LockShortCircuitTests
 	[Test]
 	public async Task NestingDoesNotTransposeOperands(string lockString, bool expected)
 	{
-		var (parser, _) = Build();
-		var one = await God();
+		foreach (var leavesSuspend in BothRoutes)
+		{
+			var (parser, _) = Build(leavesSuspend);
+			var one = await God();
 
-		await Assert.That(await parser.Compile(lockString)(one, one))
-			.IsEqualTo(expected)
-			.Because($"{lockString} is {expected}");
+			await Assert.That(await parser.Compile(lockString)(one, one))
+				.IsEqualTo(expected)
+				.Because($"{lockString} is {expected} ({Route(leavesSuspend)})");
+		}
 	}
 
 	[Test]
 	public async Task AndDoesNotEvaluateItsRightOperandWhenTheLeftIsFalse()
 	{
-		var (parser, services) = Build();
-		var one = await God();
+		foreach (var leavesSuspend in BothRoutes)
+		{
+			var (parser, services) = Build(leavesSuspend);
+			var one = await God();
 
-		await Assert.That(await parser.Compile($"{Fails} & {Passes}")(one, one)).IsFalse();
-		await Assert.That(services.Evaluated).IsEquivalentTo(new[] { "FAILS" })
-			.Because("the answer was settled by the left operand, so the right one names a database read nobody needs");
+			await Assert.That(await parser.Compile($"{Fails} & {Passes}")(one, one)).IsFalse();
+			await Assert.That(services.Evaluated).IsEquivalentTo(new[] { "FAILS" })
+				.Because($"the answer was settled by the left operand, so the right one names a database read nobody needs ({Route(leavesSuspend)})");
+		}
 	}
 
 	[Test]
 	public async Task OrDoesNotEvaluateItsRightOperandWhenTheLeftIsTrue()
 	{
-		var (parser, services) = Build();
-		var one = await God();
+		foreach (var leavesSuspend in BothRoutes)
+		{
+			var (parser, services) = Build(leavesSuspend);
+			var one = await God();
 
-		await Assert.That(await parser.Compile($"{Passes} | {Fails}")(one, one)).IsTrue();
-		await Assert.That(services.Evaluated).IsEquivalentTo(new[] { "PASSES" })
-			.Because("the answer was settled by the left operand, so the right one names a database read nobody needs");
+			await Assert.That(await parser.Compile($"{Passes} | {Fails}")(one, one)).IsTrue();
+			await Assert.That(services.Evaluated).IsEquivalentTo(new[] { "PASSES" })
+				.Because($"the answer was settled by the left operand, so the right one names a database read nobody needs ({Route(leavesSuspend)})");
+		}
 	}
 
 	[Arguments($"{Passes} & {Fails}", "PASSES", "FAILS")]
@@ -120,31 +137,47 @@ public class LockShortCircuitTests
 	public async Task AnOperandTheAnswerStillDependsOnIsEvaluated_InSourceOrder(
 		string lockString, string first, string second)
 	{
-		var (parser, services) = Build();
-		var one = await God();
+		foreach (var leavesSuspend in BothRoutes)
+		{
+			var (parser, services) = Build(leavesSuspend);
+			var one = await God();
 
-		_ = await parser.Compile(lockString)(one, one);
+			_ = await parser.Compile(lockString)(one, one);
 
-		await Assert.That(services.Evaluated).IsEquivalentTo(new[] { first, second })
-			.Because("the left operand did not settle the answer, so both sides run — left to right");
+			await Assert.That(services.Evaluated).IsEquivalentTo(new[] { first, second })
+				.Because($"the left operand did not settle the answer, so both sides run — left to right ({Route(leavesSuspend)})");
+		}
 	}
+
+	/// <summary>
+	/// A leaf that suspends and a leaf that answers synchronously take different routes through the
+	/// combinators — the completed one skips the async state machine — and every property here has to
+	/// hold on both. A cache hit is the synchronous route, which is to say the common one.
+	/// </summary>
+	private static readonly bool[] BothRoutes = [true, false];
+
+	private static string Route(bool leavesSuspend) => leavesSuspend ? "suspending leaves" : "completed leaves";
 
 	private async ValueTask<AnySharpObject> God()
 		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
-	private static (BooleanExpressionParser Parser, RecordingEvaluationServices Services) Build()
+	private static (BooleanExpressionParser Parser, RecordingEvaluationServices Services) Build(bool leavesSuspend)
 	{
-		var services = new RecordingEvaluationServices("PASSES");
+		var services = new RecordingEvaluationServices(leavesSuspend, "PASSES");
 		return (new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions())),
 			services);
 	}
 
 	/// <summary>
-	/// Answers eval-lock leaves by name, recording each one as it is asked. Every answer suspends
-	/// before returning, so a leaf that is awaited out of order — or awaited at all when it should not
-	/// have been — shows up in <see cref="Evaluated"/>.
+	/// Answers eval-lock leaves by name, recording each one as it is asked, so a leaf that runs out of
+	/// order — or runs at all when it should not have — shows up in <see cref="Evaluated"/>.
+	/// <para>
+	/// <paramref name="suspend"/> picks which route through the combinators the answer takes: a leaf
+	/// that yields drives the async slow path, one that answers synchronously drives the completed-
+	/// operand fast path. Both have to short-circuit.
+	/// </para>
 	/// </summary>
-	private sealed class RecordingEvaluationServices(params string[] passing) : ILockEvaluationServices
+	private sealed class RecordingEvaluationServices(bool suspend, params string[] passing) : ILockEvaluationServices
 	{
 		private readonly List<string> _evaluated = [];
 
@@ -161,7 +194,10 @@ public class LockShortCircuitTests
 				_evaluated.Add(attributeName);
 			}
 
-			await Task.Yield();
+			if (suspend)
+			{
+				await Task.Yield();
+			}
 
 			return passing.Contains(attributeName, StringComparer.OrdinalIgnoreCase) ? "yes" : "no";
 		}
