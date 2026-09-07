@@ -54,7 +54,7 @@ public partial class Commands
 				var player = entry.Player;
 				var known = entry.Object.Known;
 				var name = known.Object().Name;
-				var namePadded = name.Length < 16 ? name.PadRight(16) : name;
+				var namePadded = name.PadToColumns(16);
 				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
 				var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 				var isDark = await known.HasFlag("DARK");

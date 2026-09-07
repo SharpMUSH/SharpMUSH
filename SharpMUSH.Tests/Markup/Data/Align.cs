@@ -261,14 +261,16 @@ public static class Align
 			MarkupText.Plain("left      |  center  |     right")
 		);
 
-		// Paragraph justification (same as right for this implementation)
+		// Paragraph justification. A line that ends its paragraph keeps its natural spacing rather
+		// than being stretched, so a single line is left-aligned. The previous implementation
+		// treated '=' as plain right-justification, which is not what PennMUSH means by it.
 		yield return () => new(
 			"=15",
 			[MarkupText.Plain("text")],
 			MarkupText.Space,
 			MarkupText.Space,
 			MarkupText.Plain("\n"),
-			MarkupText.Plain("           text")
+			MarkupText.Plain("text           ")
 		);
 	}
 }

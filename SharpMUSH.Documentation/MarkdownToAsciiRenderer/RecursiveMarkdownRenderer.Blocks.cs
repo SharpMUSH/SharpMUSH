@@ -75,17 +75,17 @@ public partial class RecursiveMarkdownRenderer
 
 		var content = MarkupText.Join(MarkupText.Plain("\n"), parts);
 
-		// Add 2-space indentation to each line via plain-text split.
-		// TextAligner.Align cannot be used here because it expects exactly
-		// N items for an N-column spec; parts has a variable count.
-		var plainText = content.ToPlainText();
-		if (string.IsNullOrEmpty(plainText)) return MarkupText.Empty;
+		// Indent every line by two columns. MarkupText.Split carries the markup across, so a
+		// quote keeps its styling; going through ToPlainText here used to throw all of it away.
+		if (content.Length == 0) return MarkupText.Empty;
 
-		var lines = plainText.Split('\n');
-		var indentedParts = lines
-			.Select(line => MarkupText.Plain("  " + line))
-			.ToList();
-		return MarkupText.Join(MarkupText.Plain("\n"), indentedParts);
+		var indent = MarkupText.Plain("  ");
+		var indented = content
+			.Split("\n")
+			.Select(line => MarkupText.Concat(indent, line))
+			.ToArray();
+
+		return MarkupText.Join(MarkupText.NewLine, indented);
 	}
 
 	private MString RenderThematicBreak()

@@ -1811,7 +1811,10 @@ public partial class Functions
 
 	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Length);
+		// Display cells, not UTF-16 code units: softcode measures a string to lay it out against
+		// something else, and a combining mark or a wide character makes those two numbers differ
+		// wildly — "Text Editor" under a pile of diacritics is 66 code units and 11 columns.
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.DisplayWidth);
 
 	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -2123,37 +2126,46 @@ public partial class Functions
 	public async ValueTask<CallState> Wrap(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
-		var str = parser.CurrentState.Arguments["0"].Message!;
-		var width = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var firstLineWidth = parser.CurrentState.Arguments.TryGetValue("2", out var arg2Value)
-			? arg2Value.Message!.ToPlainText()
-			: width;
-		var lineSeparator = parser.CurrentState.Arguments.TryGetValue("3", out var arg3Value)
-			? arg3Value.Message!.ToPlainText()
-			: "\n";
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var str = args["0"].Message!;
+		var width = args["1"].Message!.ToPlainText();
+		var firstLineWidth = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Plain(width)).ToPlainText();
+		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
-		var strlen = str.Length;
-
-		if (!int.TryParse(width, out var widthInt)
-				|| !int.TryParse(firstLineWidth, out var firstLineInt))
+		if (!int.TryParse(width, out var widthInt) || !int.TryParse(firstLineWidth, out var firstLineInt))
 		{
 			return ErrorMessages.Returns.Integer;
 		}
 
-		var firstLine = str.Substring(0, firstLineInt);
-
-		var remainingLength = strlen - firstLine.Length;
-		if (remainingLength <= 0)
+		if (widthInt <= 0 || firstLineInt <= 0)
 		{
-			return firstLine;
+			return ErrorMessages.Returns.PositiveInteger;
 		}
 
-		var list = Enumerable
-			.Range(1, remainingLength / widthInt + 2)
-			.Select(line => str.Substring(line * widthInt, widthInt))
-			.Prepend(firstLine);
+		return MarkupText.Join(lineSeparator, WrapLines(str, widthInt, firstLineInt));
+	}
 
-		return string.Join(lineSeparator, list);
+	/// <summary>
+	/// Word-wraps <paramref name="text"/> to <paramref name="width"/> display cells, with a first
+	/// line of <paramref name="firstLineWidth"/> cells.
+	/// </summary>
+	/// <remarks>
+	/// The two widths are done as two passes rather than one, because the first line is wrapped
+	/// against a width the rest of the text never sees. The break between them consumed exactly
+	/// one space, which is what the second pass has to step over to pick up where the first
+	/// stopped.
+	/// </remarks>
+	private static MarkupText[] WrapLines(MarkupText text, int width, int firstLineWidth)
+	{
+		if (firstLineWidth == width) return text.WrapLines(width, WrapMode.Word);
+
+		var head = text.WrapLines(firstLineWidth, WrapMode.Word);
+		if (head.Length <= 1) return head;
+
+		var consumed = head[0].Length;
+		if (consumed < text.Length && text.Text[consumed] == ' ') consumed++;
+
+		return [head[0], .. text.Substring(consumed).WrapLines(width, WrapMode.Word)];
 	}
 
 	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "length"])]

@@ -1,3 +1,4 @@
+global using MarkupString.Layout;
 global using Ansi = global::MarkupString.Ansi.AnsiMarkup;
 global using MarkupString;
 global using MString = global::MarkupString.MarkupText;
