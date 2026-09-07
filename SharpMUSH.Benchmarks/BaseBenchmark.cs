@@ -19,10 +19,7 @@ namespace SharpMUSH.Benchmarks;
 public class BaseBenchmark
 {
 	public BaseBenchmark() =>
-		Log.Logger = new LoggerConfiguration()
-			.WriteTo.Console()
-			.MinimumLevel.Information()
-			.CreateLogger();
+		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
 
 	protected TestWebApplicationBuilderFactory<Server.Program>? _server;
 	protected ISharpDatabase? _database;

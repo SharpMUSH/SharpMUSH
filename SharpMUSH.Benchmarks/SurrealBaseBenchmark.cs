@@ -16,10 +16,7 @@ namespace SharpMUSH.Benchmarks;
 public class SurrealBaseBenchmark
 {
 	public SurrealBaseBenchmark() =>
-		Log.Logger = new LoggerConfiguration()
-			.WriteTo.Console()
-			.MinimumLevel.Information()
-			.CreateLogger();
+		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
 
 	protected TestWebApplicationBuilderFactory<Server.Program>? _server;
 	protected ISharpDatabase? _database;

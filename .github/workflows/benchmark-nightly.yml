@@ -9,10 +9,89 @@ on:
 permissions:
   contents: read
 
+# A nightly that is still running when the next one fires would put two full fan-outs of
+# container-backed benchmark processes on the queue at once. Let the running one finish.
+concurrency:
+  group: benchmark-nightly
+  cancel-in-progress: false
+
 jobs:
-  benchmark:
-    name: BenchmarkDotNet (Job.Default)
+  # The shard list is derived from the assembly rather than written out here, so a benchmark
+  # class added tomorrow is benchmarked tomorrow. A hardcoded matrix would silently stop
+  # covering it, and nobody would notice until someone went looking for the numbers.
+  discover:
+    name: Discover benchmark classes
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      classes: ${{ steps.list.outputs.classes }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Java (required for ANTLR parser generation)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build (Release)
+        run: dotnet build --no-restore --configuration Release
+
+      # --list does not construct benchmarks, so this costs nothing and starts no containers.
+      - name: List benchmark classes
+        id: list
+        run: |
+          set -euo pipefail
+          classes=$(dotnet run \
+            --project SharpMUSH.Benchmarks \
+            --configuration Release \
+            --no-build \
+            -- --list flat \
+            | { grep -E '^SharpMUSH\.Benchmarks\.[A-Za-z0-9_]+\.[A-Za-z0-9_]+$' || true; } \
+            | sed -E 's/^SharpMUSH\.Benchmarks\.([A-Za-z0-9_]+)\..*$/\1/' \
+            | sort -u \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          if [ "$(echo "$classes" | jq 'length')" -eq 0 ]; then
+            echo "::error::--list flat produced no benchmark classes; the shard matrix would be empty."
+            exit 1
+          fi
+
+          echo "Sharding across: $classes"
+          echo "classes=$classes" >> "$GITHUB_OUTPUT"
+
+  # One runner per benchmark class. The suite used to run as a single ~2 hour job and never once
+  # reached the end: every scheduled run from at least 2026-08-24 died mid-flight, either with
+  # "the hosted runner lost communication with the server" or with the runner taking a shutdown
+  # signal. Each benchmark case starts its own database and NATS containers plus a full ASP.NET
+  # host, so a single VM absorbed a hundred of those back to back. Per-class jobs keep each
+  # runner's lifetime and container churn to a fraction of that, and one bad class no longer
+  # costs the whole night's numbers.
+  benchmark:
+    name: ${{ matrix.class }}
+    needs: discover
+    runs-on: ubuntu-latest
+    # Backstop, not a target: the largest class is ~13 cases at roughly a minute each under
+    # Job.Default, plus ~7 minutes of checkout, restore and build. A shard that blows past this
+    # is stuck, and failing it here produces a log that says so — the old job instead ran until
+    # GitHub reaped the runner, which reports as infrastructure failure and tells you nothing.
+    timeout-minutes: 45
+    strategy:
+      # Every class is independent, and a failure in one is a result worth having for the rest.
+      fail-fast: false
+      matrix:
+        class: ${{ fromJSON(needs.discover.outputs.classes) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -39,40 +118,39 @@ jobs:
       # SHARPMUSH_CI_BENCHMARK is intentionally NOT set here so that
       # AdaptiveBenchmarkConfig selects Job.Default (full nightly run).
       - name: Run Benchmarks
+        env:
+          BENCHMARK_CLASS: ${{ matrix.class }}
         run: >
           dotnet run
           --project SharpMUSH.Benchmarks
           --configuration Release
           --no-build
-          -- --filter '*'
+          -- --filter "SharpMUSH.Benchmarks.$BENCHMARK_CLASS.*"
 
       - name: Publish Results to Step Summary
         if: always()
+        env:
+          BENCHMARK_CLASS: ${{ matrix.class }}
         run: |
-          echo "## Benchmark Results" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Full BenchmarkDotNet reports are available in the uploaded artifact \`benchmark-results-${{ github.run_id }}\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "## $BENCHMARK_CLASS" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           found_any=false
-          for f in BenchmarkDotNet.Artifacts/results/*.md; do
-            if [ -f "$f" ]; then
-              if [ "$found_any" = false ]; then
-                echo "### Result files" >> "$GITHUB_STEP_SUMMARY"
-                found_any=true
-              fi
-              echo "- \`$(basename "$f")\`" >> "$GITHUB_STEP_SUMMARY"
-            fi
+          for f in BenchmarkDotNet.Artifacts/results/*-report-github.md; do
+            [ -f "$f" ] || continue
+            found_any=true
+            cat "$f" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
           done
 
           if [ "$found_any" = false ]; then
-            echo "_No markdown benchmark result files were found in \`BenchmarkDotNet.Artifacts/results\`._" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No benchmark results were produced. See the job log._" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload Benchmark Artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: benchmark-results-${{ github.run_id }}
+          name: benchmark-results-${{ github.run_id }}-${{ matrix.class }}
           path: BenchmarkDotNet.Artifacts/
           if-no-files-found: warn
