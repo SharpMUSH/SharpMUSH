@@ -482,7 +482,7 @@ public partial class LightningDatabase
 	public async ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)obj.Object().Key;
-		var plain = MModule.plainText(value);
+		var plain = value.ToPlainText();
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");

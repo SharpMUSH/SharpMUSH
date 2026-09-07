@@ -68,7 +68,7 @@ public abstract class ExtendedDatabaseBenchmarks
 		await Database.SetObjectZone(b, z).ConfigureAwait(false);
 		await Database.SetObjectParent(c, b).ConfigureAwait(false);
 		await Database.SetObjectParent(d, c).ConfigureAwait(false);
-		await Database.SetAttributeAsync(zRef, ["DESC"], MModule.single("zone description"), _god).ConfigureAwait(false);
+		await Database.SetAttributeAsync(zRef, ["DESC"], MarkupText.Plain("zone description"), _god).ConfigureAwait(false);
 
 		_inheritanceD = dRef;
 	}
@@ -94,12 +94,12 @@ public abstract class ExtendedDatabaseBenchmarks
 
 		for (var i = 1; i <= 200; i++)
 		{
-			await Database.SetAttributeAsync(wideRef, [$"ATTR{i:D3}"], MModule.single($"v{i}"), _god).ConfigureAwait(false);
+			await Database.SetAttributeAsync(wideRef, [$"ATTR{i:D3}"], MarkupText.Plain($"v{i}"), _god).ConfigureAwait(false);
 		}
 
 		for (var i = 1; i <= 50; i++)
 		{
-			await Database.SetAttributeAsync(wideRef, ["TREE", $"{i}"], MModule.single($"v{i}"), _god).ConfigureAwait(false);
+			await Database.SetAttributeAsync(wideRef, ["TREE", $"{i}"], MarkupText.Plain($"v{i}"), _god).ConfigureAwait(false);
 		}
 
 		_wideAttrsObject = wideRef;
@@ -180,7 +180,7 @@ public abstract class ExtendedDatabaseBenchmarks
 
 		for (var i = 1; i <= 50; i++)
 		{
-			await Database.SetAttributeAsync(dbref, ["SUB", $"{i}"], MModule.single($"v{i}"), _god).ConfigureAwait(false);
+			await Database.SetAttributeAsync(dbref, ["SUB", $"{i}"], MarkupText.Plain($"v{i}"), _god).ConfigureAwait(false);
 		}
 
 		return dbref;
@@ -208,7 +208,7 @@ public abstract class ExtendedDatabaseBenchmarks
 
 		for (var i = 1; i <= 20; i++)
 		{
-			await Database.SetAttributeAsync(dbref, [$"ATTR{i:D2}"], MModule.single($"v{i}"), _god).ConfigureAwait(false);
+			await Database.SetAttributeAsync(dbref, [$"ATTR{i:D2}"], MarkupText.Plain($"v{i}"), _god).ConfigureAwait(false);
 		}
 
 		return dbref;
@@ -278,7 +278,7 @@ public abstract class ExtendedDatabaseBenchmarks
 				await Database.SetAttributeAsync(
 					target,
 					["CONCURRENT_ATTR"],
-					MModule.single($"v{Interlocked.Increment(ref _counter)}"),
+					MarkupText.Plain($"v{Interlocked.Increment(ref _counter)}"),
 					_god).ConfigureAwait(false);
 			}
 		}));

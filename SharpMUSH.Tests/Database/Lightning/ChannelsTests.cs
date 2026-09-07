@@ -63,8 +63,8 @@ public class ChannelsTests
 	{
 		var god = await God();
 
-		var first = await _db.CreateChannelAsync(MModule.single("Newbie"), ["Player"], god);
-		var second = await _db.CreateChannelAsync(MModule.single("Newbie"), ["Player"], god);
+		var first = await _db.CreateChannelAsync(MarkupText.Plain("Newbie"), ["Player"], god);
+		var second = await _db.CreateChannelAsync(MarkupText.Plain("Newbie"), ["Player"], god);
 
 		await Assert.That(first.IsSuccess).IsTrue();
 		await Assert.That(second.IsNameTaken).IsTrue();
@@ -85,7 +85,7 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var alice = await NewPlayer("Alice");
-		await _db.CreateChannelAsync(MModule.single("JoinLeave"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("JoinLeave"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("JoinLeave"))!;
 
 		await _db.AddUserToChannelAsync(channel, alice);
@@ -111,11 +111,11 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var alice = await NewPlayer("Bob");
-		await _db.CreateChannelAsync(MModule.single("StatusChan"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("StatusChan"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("StatusChan"))!;
 		await _db.AddUserToChannelAsync(channel, alice);
 
-		var title = MModule.single("<Bob>");
+		var title = MarkupText.Plain("<Bob>");
 		await _db.UpdateChannelUserStatusAsync(channel, alice,
 			new SharpChannelStatus(Combine: true, Gagged: true, Hide: true, Mute: true, Title: title));
 
@@ -146,7 +146,7 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var alice = await NewPlayer("Carol");
-		await _db.CreateChannelAsync(MModule.single("DoomedChan"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("DoomedChan"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("DoomedChan"))!;
 		await _db.AddUserToChannelAsync(channel, alice);
 
@@ -170,7 +170,7 @@ public class ChannelsTests
 		var god = await God();
 		var dbref = await _db.CreatePlayerAsync("Dave", "pw", new DBRef(0), new DBRef(0), 0);
 		var dave = (await _db.GetObjectNodeAsync(dbref)).Known.AsPlayer;
-		await _db.CreateChannelAsync(MModule.single("CascadeChan"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("CascadeChan"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("CascadeChan"))!;
 		await _db.AddUserToChannelAsync(channel, dave);
 
@@ -189,11 +189,11 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var alice = await NewPlayer("Eve");
-		await _db.CreateChannelAsync(MModule.single("OldName"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("OldName"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("OldName"))!;
 		await _db.AddUserToChannelAsync(channel, alice);
 
-		await _db.UpdateChannelAsync(channel, MModule.single("NewName"), null, null, null, null, null, null, null, null, null);
+		await _db.UpdateChannelAsync(channel, MarkupText.Plain("NewName"), null, null, null, null, null, null, null, null, null);
 
 		await Assert.That(await _db.GetChannelAsync("OldName")).IsNull();
 		var renamed = await _db.GetChannelAsync("NewName");
@@ -215,7 +215,7 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var alice = await NewPlayer("Frank");
-		await _db.CreateChannelAsync(MModule.single("OwnedByGod"), ["Player"], god);
+		await _db.CreateChannelAsync(MarkupText.Plain("OwnedByGod"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("OwnedByGod"))!;
 		await _db.AddUserToChannelAsync(channel, alice);
 

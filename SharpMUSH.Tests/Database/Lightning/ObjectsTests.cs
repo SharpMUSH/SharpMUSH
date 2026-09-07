@@ -64,7 +64,7 @@ public class ObjectsTests
 		var dbref = await _db.CreateThingAsync("Doomed", room, god, room);
 
 		var n = dbref.Number;
-		await _db.SetAttributeAsync(dbref, ["DESC"], MModule.single("x"), god);
+		await _db.SetAttributeAsync(dbref, ["DESC"], MarkupText.Plain("x"), god);
 
 		await _db.DeleteObjectAsync(dbref);
 

@@ -96,8 +96,8 @@ public partial class LightningDatabase
 			Forwarded = record.Forwarded,
 			Cleared = record.Cleared,
 			Folder = record.Folder,
-			Content = MModule.deserialize(record.Content),
-			Subject = MModule.deserialize(record.Subject),
+			Content = MarkupTextSerializer.Deserialize(record.Content),
+			Subject = MarkupTextSerializer.Deserialize(record.Subject),
 			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from))
 		};
 	}
@@ -197,8 +197,8 @@ public partial class LightningDatabase
 				Forwarded = mail.Forwarded,
 				Cleared = mail.Cleared,
 				Folder = mail.Folder,
-				Content = MModule.serialize(mail.Content),
-				Subject = MModule.serialize(mail.Subject)
+				Content = MarkupTextSerializer.Serialize(mail.Content),
+				Subject = MarkupTextSerializer.Serialize(mail.Subject)
 			};
 
 			tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record));

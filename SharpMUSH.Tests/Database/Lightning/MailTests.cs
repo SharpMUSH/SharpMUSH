@@ -68,8 +68,8 @@ public class MailTests
 		Forwarded = false,
 		Cleared = false,
 		Folder = folder,
-		Content = MModule.single(content),
-		Subject = MModule.single(subject),
+		Content = MarkupText.Plain(content),
+		Subject = MarkupText.Plain(subject),
 		From = new AsyncLazy<AnyOptionalSharpObject>(_ => throw new InvalidOperationException("unused on send"))
 	};
 
