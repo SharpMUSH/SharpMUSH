@@ -130,10 +130,16 @@ behind `ReplaceAll` and `compressSpaces`), `ReplaceAll(string search, MarkupText
 (same-length transforms keep runs, else the result is plain), `Map(Func<MarkupText,MarkupText>)`
 (per-run, today's `Apply2`), `AttachTail(MarkupText)` (today's `concatAttach`),
 `ToPlainText()`, `ToString()` = `ToPlainText()`, `DisplayWidth`.
+`Split("")` returns the text as a single segment (an empty delimiter matches nothing); splitting
+into characters is the caller's job.
 
 Unicode: `Substring`, `Split`, `Trim`, `Pad`, `Remove`, `Splice` never cut inside a grapheme
-cluster. A cut index inside a cluster snaps outward to the cluster start (for an end index,
-the cluster end). `Graphemes` wraps `StringInfo.GetNextTextElementLength` and is only consulted
+cluster. Which way a cut index moves depends on what the operation is: **extractions**
+(`Substring`, `Split`, `Trim`, `Pad`/`Center` truncation) snap **inward** — the start back to
+its cluster start, and the end, measured from that snapped start, back as well — so a result
+never exceeds the requested length and may be shorter (empty, when the window sits inside one
+cluster); **edits** (`Splice`, `Remove`, `Replace`, `Insert`) snap **outward** — start back,
+end forward — so a replaced range never leaves half a cluster behind. `Graphemes` wraps `StringInfo.GetNextTextElementLength` and is only consulted
 when the code unit at the cut is a surrogate, a combining mark, ZWJ, or variation selector
 (`Rune.GetUnicodeCategory` check first, so ASCII pays one branch). `DisplayWidth` uses a
 generated East Asian Width range table (Unicode 16, `W` and `F` = 2; `Mn`, `Me`, `Cf`
