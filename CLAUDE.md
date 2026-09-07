@@ -80,7 +80,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
 | `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
 | `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
-| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded in-memory provider |
+| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.MarkupString` | ANSI/MXP markup string type used throughout the engine |

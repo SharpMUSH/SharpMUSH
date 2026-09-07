@@ -16,7 +16,7 @@ public enum DatabaseProvider
 	Memgraph,
 
 	/// <summary>
-	/// SurrealDB - a multi-model database using embedded in-memory mode.
+	/// SurrealDB - a multi-model database embedded in-process; RocksDB on disk in production, in-memory in tests.
 	/// </summary>
 	SurrealDB
 }
