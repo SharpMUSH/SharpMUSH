@@ -55,7 +55,7 @@ Key environment variables:
 - `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
-- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
+- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`; **required** under `memgraph`, and under `surrealdb` on a `mem://` endpoint, since neither has a world directory to derive it from — unset there, backups report as unavailable rather than writing to the working directory)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
 - `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)

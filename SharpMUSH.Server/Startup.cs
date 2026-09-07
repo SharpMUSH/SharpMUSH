@@ -158,8 +158,19 @@ public class Startup(
 	/// operator setting a retention count does not care which engine is underneath.
 	/// <paramref name="worldPath"/> only supplies the default root.
 	/// </summary>
-	private static WorldBackupOptions ResolveBackupOptions(string worldPath, Microsoft.Extensions.Logging.ILogger logger)
+	/// <param name="worldPath">
+	/// The provider's own on-disk world, when it has one, used only to derive the default root. Null
+	/// for a provider that keeps nothing locally — Memgraph, or SurrealDB on a <c>mem://</c> endpoint.
+	/// Those get no default: returns null unless <c>SHARPMUSH_BACKUP_PATH</c> names somewhere, because
+	/// guessing puts the copies in the working directory, which on a container is not the mounted
+	/// volume — backups that look like they are being taken and are gone at the next recreate.
+	/// </param>
+	/// <returns>Null when there is nowhere sensible to write, which the caller reports as unsupported.</returns>
+	private static WorldBackupOptions? ResolveBackupOptions(string? worldPath, Microsoft.Extensions.Logging.ILogger logger)
 	{
+		var configuredRoot = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_PATH");
+		if (string.IsNullOrWhiteSpace(configuredRoot) && string.IsNullOrWhiteSpace(worldPath)) return null;
+
 		var keepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_KEEP");
 		var intervalSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_INTERVAL");
 
@@ -192,12 +203,18 @@ public class Startup(
 
 		return new WorldBackupOptions
 		{
-			Root = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_PATH")
-				?? WorldBackupOptions.DefaultRootFor(worldPath),
+			Root = string.IsNullOrWhiteSpace(configuredRoot)
+				? WorldBackupOptions.DefaultRootFor(worldPath!)
+				: configuredRoot,
 			Keep = keep,
 			Interval = interval
 		};
 	}
+
+	/// <summary>Why a provider that could otherwise back itself up is switched off.</summary>
+	private const string NoBackupLocation =
+		"can back itself up, but has no world directory to derive a location from; "
+		+ "set SHARPMUSH_BACKUP_PATH to somewhere durable to enable it";
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
@@ -333,13 +350,16 @@ public class Startup(
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IMemgraphStorageAccessor>(sp =>
 				sp.GetRequiredService<MemgraphDatabase>());
 
-			// Memgraph is a server this process only reaches over Bolt, so there is no world path to name
-			// the backup root after; it goes where SHARPMUSH_BACKUP_PATH says, or beside the working
-			// directory by default.
-			services.AddSingleton<IWorldBackupService>(sp => new MemgraphWorldBackupService(
-				sp.GetRequiredService<IDriver>(),
-				ResolveBackupOptions("memgraph-world", sp.GetRequiredService<ILogger<MemgraphDatabase>>()),
-				sp.GetRequiredService<ILogger<MemgraphWorldBackupService>>()));
+			// Memgraph is a server this process only reaches over Bolt, so there is no world path to
+			// derive a backup location from: SHARPMUSH_BACKUP_PATH has to say, or backups stay off.
+			services.AddSingleton<IWorldBackupService>(sp =>
+			{
+				var options = ResolveBackupOptions(worldPath: null, sp.GetRequiredService<ILogger<MemgraphDatabase>>());
+				return options is null
+					? new UnsupportedWorldBackupService("memgraph", NoBackupLocation)
+					: new MemgraphWorldBackupService(sp.GetRequiredService<IDriver>(), options,
+						sp.GetRequiredService<ILogger<MemgraphWorldBackupService>>());
+			});
 		}
 		else if (databaseProvider == DatabaseProvider.SurrealDB)
 		{
@@ -368,15 +388,20 @@ public class Startup(
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
 				sp.GetRequiredService<SurrealDatabase>());
 
-			// The default root is derived from the endpoint's own path when it has one (rocksdb://…), so
-			// the export lands beside the world rather than in the working directory.
+			// The default root is derived from the endpoint's own path when it is file-backed, so the
+			// export lands beside the world. A mem:// endpoint has no world on disk and gets no default:
+			// there is nothing durable to sit beside, and the working directory is the wrong guess.
 			var surrealWorldPath = surrealEndpoint.StartsWith("rocksdb://", StringComparison.OrdinalIgnoreCase)
 				? surrealEndpoint["rocksdb://".Length..]
-				: "surrealdb-data";
-			services.AddSingleton<IWorldBackupService>(sp => new SurrealWorldBackupService(
-				sp.GetRequiredService<ISurrealDbClient>(),
-				ResolveBackupOptions(surrealWorldPath, sp.GetRequiredService<ILogger<SurrealDatabase>>()),
-				sp.GetRequiredService<ILogger<SurrealWorldBackupService>>()));
+				: null;
+			services.AddSingleton<IWorldBackupService>(sp =>
+			{
+				var options = ResolveBackupOptions(surrealWorldPath, sp.GetRequiredService<ILogger<SurrealDatabase>>());
+				return options is null
+					? new UnsupportedWorldBackupService("surrealdb", NoBackupLocation)
+					: new SurrealWorldBackupService(sp.GetRequiredService<ISurrealDbClient>(), options,
+						sp.GetRequiredService<ILogger<SurrealWorldBackupService>>());
+			});
 		}
 		else if (databaseProvider == DatabaseProvider.Lightning)
 		{
@@ -416,7 +441,8 @@ public class Startup(
 			var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
 			services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
 				sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
-				ResolveBackupOptions(lightningPath, sp.GetRequiredService<ILogger<LightningDatabase>>()),
+				// Never null: Lightning always has a world directory to name the default root after.
+				ResolveBackupOptions(lightningPath, sp.GetRequiredService<ILogger<LightningDatabase>>())!,
 				compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
 				sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 		}
