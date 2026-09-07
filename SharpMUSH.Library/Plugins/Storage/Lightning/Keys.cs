@@ -54,6 +54,7 @@ public static class Keys
 	public static byte[] Composite(long dbref, string second) => Concat(Dbref(dbref), Sep, Str(second));
 	public static byte[] Composite(string first, long dbref) => Concat(Str(first), Sep, Dbref(dbref));
 	public static byte[] Composite(string first, string second) => Concat(Str(first), Sep, Str(second));
+	public static byte[] Composite(string first, string second, string third) => Concat(Str(first), Sep, Str(second), Sep, Str(third));
 
 	public static byte[] Composite(string first, string second, uint number)
 	{
