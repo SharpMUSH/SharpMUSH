@@ -301,12 +301,19 @@ Revisit if:
 
 ## Action items
 
+**Status, 2026-09-07:** the embedded provider landed as LMDB (`SharpMUSH.Database.Lightning`,
+appendix Option F substrate) rather than SQLite; items 3, 5 and 6 are done against it, and the
+whole unit and integration suite runs under `SHARPMUSH_DATABASE_PROVIDER=lightning` in CI beside
+the other three. Items 1, 2, 4, 7-10 are open, and the "adopt SQLite" decision above is
+superseded for the engine choice while its consequences (one embedded provider, no Docker,
+retire the rest) still stand.
+
 1. [ ] Fix the stale "in-memory" wording in `CLAUDE.md` and `DatabaseProvider.cs`; state that production runs SurrealDB on RocksDB.
 2. [ ] Extend `SharpMUSH.Benchmarks/DatabaseBenchmarks.cs` with the uncached shapes before comparing engines: inheritance walk, wildcard and regex `lattr`, `GetFilteredObjectsAsync`, `WipeAttributeAsync`, `DeleteObjectAsync`, `IsReachableViaParentOrZoneAsync`, and a concurrent-writer scenario.
-3. [ ] Prototype the SQLite schema (objects, typed tables or a `type` column, flat `attributes` with `UNIQUE(object_id, long_name)`, edge tables with properties, JSON1 for locks/expanded data) and implement `GetAttributeAsync`, `GetAttributesAsync`, `GetAttributeWithInheritanceAsync` and `IsReachableViaParentOrZoneAsync` against it; run the parity tests for those four.
+3. [x] Prototype the SQLite schema (objects, typed tables or a `type` column, flat `attributes` with `UNIQUE(object_id, long_name)`, edge tables with properties, JSON1 for locks/expanded data) and implement `GetAttributeAsync`, `GetAttributesAsync`, `GetAttributeWithInheritanceAsync` and `IsReachableViaParentOrZoneAsync` against it; run the parity tests for those four. **Done as LMDB:** `SharpMUSH.Database.Lightning` implements the whole surface — a flat dbref-prefixed attribute keyspace, edge tables with `DUPSORT` reverse indexes, and all four of those methods — and passes the full unit and integration suites.
 4. [ ] Register a .NET-backed `REGEXP` function and confirm `GLOB` prefix seeks use the `long_name` index (`EXPLAIN QUERY PLAN`).
-5. [ ] Implement `IStagingDatabase` as a second file with rename-on-promote.
-6. [ ] Make the parent-before-child ordering of `GetAttributesByRegexAsync` an explicit `ORDER BY long_name` contract and test it, rather than relying on traversal order.
+5. [x] Implement `IStagingDatabase` as a second file with rename-on-promote. **Done as LMDB:** `LightningStagingDatabase` is a second directory, and promotion swaps directories under the live store's gate, keeping the outgoing world at `<path>.previous`.
+6. [x] Make the parent-before-child ordering of `GetAttributesByRegexAsync` an explicit contract and test it, rather than relying on traversal order. **Done as LMDB:** the ordering is the byte order of the attribute keyspace, stated on the method and pinned by test.
 7. [ ] Add batching to `PennMUSHDatabaseConverter` (independent of engine).
 8. [ ] Delete or fix `LazilyGetAttributePatternAsync` (zero callers, three divergent implementations).
 9. [ ] Once SQLite passes the full suite: flip the default provider, then retire Memgraph and ArangoDB, and move `Core.Arango` out of the shared `SharpMUSH.Database` project (today every provider transitively depends on it).

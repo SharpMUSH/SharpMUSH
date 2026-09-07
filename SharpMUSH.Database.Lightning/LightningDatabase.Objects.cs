@@ -752,9 +752,15 @@ public partial class LightningDatabase
 			LazyAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(ct => TopLevelLazyAttributesCoreAsync(dbref, ct))),
 			AllAttributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(ct => AllAttributesCoreAsync(dbref, ct))),
 			LazyAllAttributes = new(() => new FreshAsyncEnumerable<LazySharpAttribute>(ct => AllLazyAttributesCoreAsync(dbref, ct))),
-			Owner = new(_ => Task.FromResult(GetOwnerCore(dbref))),
-			Parent = new(_ => Task.FromResult(GetOptionalRelatedCore(Tables.Parent.Forward, dbref))),
-			Zone = new(_ => Task.FromResult(GetOptionalRelatedCore(Tables.Zone.Forward, dbref))),
+			Owner = new(ct => _relations is { } r
+				? r.OwnerOf(dbref.ToString(), (int)dbref, ct)
+				: Task.FromResult(GetOwnerCore(dbref))),
+			Parent = new(ct => _relations is { } r
+				? r.ParentOf(dbref.ToString(), (int)dbref, ct)
+				: Task.FromResult(GetOptionalRelatedCore(Tables.Parent.Forward, dbref))),
+			Zone = new(ct => _relations is { } r
+				? r.ZoneOf(dbref.ToString(), (int)dbref, ct)
+				: Task.FromResult(GetOptionalRelatedCore(Tables.Zone.Forward, dbref))),
 			Children = new(() => new FreshAsyncEnumerable<SharpObject>(ct => GetChildrenCoreAsync(dbref, ct)))
 		};
 	}
@@ -767,8 +773,8 @@ public partial class LightningDatabase
 		PasswordHash = record.PasswordHash ?? "",
 		PasswordSalt = record.PasswordSalt,
 		Quota = (int)record.Quota,
-		Location = new(_ => Task.FromResult(GetRequiredContainerRelation(Tables.Location.Forward, dbref))),
-		Home = new(_ => Task.FromResult(GetRequiredContainerRelation(Tables.Home.Forward, dbref)))
+		Location = new(ct => LocationRelation(dbref, ct)),
+		Home = new(ct => HomeRelation(dbref, ct))
 	};
 
 	private SharpRoom BuildRoom(long dbref, SharpObject sharpObj) => new()
@@ -777,15 +783,17 @@ public partial class LightningDatabase
 		Object = sharpObj,
 		// A room's "Location" is its drop-to, which reuses the home edge exactly as SurrealDB's
 		// DropToOf/GetDropToAsync does — there is no distinct drop-to table.
-		Location = new(_ => Task.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, dbref)))
+		Location = new(ct => _relations is { } r
+			? r.DropToOf(dbref.ToString(), dbref.ToString(), (int)dbref, ct)
+			: Task.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, dbref)))
 	};
 
 	private SharpThing BuildThing(long dbref, SharpObject sharpObj) => new()
 	{
 		Id = dbref.ToString(),
 		Object = sharpObj,
-		Location = new(_ => Task.FromResult(GetRequiredContainerRelation(Tables.Location.Forward, dbref))),
-		Home = new(_ => Task.FromResult(GetRequiredContainerRelation(Tables.Home.Forward, dbref)))
+		Location = new(ct => LocationRelation(dbref, ct)),
+		Home = new(ct => HomeRelation(dbref, ct))
 	};
 
 	private SharpExit BuildExit(long dbref, ObjectRecord record, SharpObject sharpObj) => new()
@@ -794,11 +802,29 @@ public partial class LightningDatabase
 		Object = sharpObj,
 		Aliases = record.Aliases,
 		// Source room: the at_location edge, same as a player/thing's Location.
-		Location = new(_ => Task.FromResult(GetRequiredContainerRelation(Tables.Location.Forward, dbref))),
+		Location = new(ct => LocationRelation(dbref, ct)),
 		// Destination: the has_home edge, absent on a freshly @open'd or @unlink'd exit — same edge
 		// SurrealDB's ExitDestinationOf reuses rather than a dedicated "e.dest" table.
-		Home = new(_ => Task.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, dbref)))
+		Home = new(ct => _relations is { } r
+			? r.ExitDestinationOf(dbref.ToString(), dbref.ToString(), (int)dbref, ct)
+			: Task.FromResult(GetOptionalContainerRelation(Tables.Home.Forward, dbref)))
 	};
+
+	/// <summary>
+	/// The container an object sits in, through <see cref="IObjectRelationLoader"/> when the host supplied
+	/// one so the answer comes from the object cache rather than a fresh hydration, and straight off the
+	/// location edge otherwise (a staging world, which has no host cache to answer from).
+	/// </summary>
+	private Task<AnySharpContainer> LocationRelation(long dbref, CancellationToken ct)
+		=> _relations is { } r
+			? r.LocationOf(dbref.ToString(), dbref.ToString(), ct)
+			: Task.FromResult(GetRequiredContainerRelation(Tables.Location.Forward, dbref));
+
+	/// <summary>Same routing as <see cref="LocationRelation"/>, for the home edge.</summary>
+	private Task<AnySharpContainer> HomeRelation(long dbref, CancellationToken ct)
+		=> _relations is { } r
+			? r.HomeOf(dbref.ToString(), dbref.ToString(), (int)dbref, ct)
+			: Task.FromResult(GetRequiredContainerRelation(Tables.Home.Forward, dbref));
 
 	private SharpPlayer GetOwnerCore(long dbref) => Store.Read(tx =>
 	{

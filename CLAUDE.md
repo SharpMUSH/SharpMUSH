@@ -46,6 +46,9 @@ The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMU
 docker compose up -d
 ```
 
+`surrealdb` and `lightning` are embedded and need no Docker for the database itself — `lightning`
+opens an LMDB directory in-process. NATS is still wanted for the connection server.
+
 Key environment variables:
 - `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, `surrealdb`, or `lightning`
 - `ARANGO_CONNECTION_STRING` — ArangoDB connection string
@@ -83,7 +86,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
 | `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
 | `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
-| `SharpMUSH.Database.Lightning` | LMDB provider (Lightning.NET), embedded in-process; one data directory per world |
+| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; every commit fsynced |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.MarkupString` | ANSI/MXP markup string type used throughout the engine |

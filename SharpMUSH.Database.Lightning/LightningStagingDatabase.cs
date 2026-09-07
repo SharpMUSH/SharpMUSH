@@ -36,7 +36,11 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 		string stagingId,
 		IReadOnlyList<IMigrationSource>? migrationSources,
 		IReadOnlyList<PluginFlag>? pluginFlags)
-		: base(logger, stagingOptions, passwordService, migrationSources, pluginFlags)
+		// No relation loader: a staged object's location, home, owner, parent and zone have to resolve
+		// inside this directory. The host's loader answers out of the Mediator's object cache, which
+		// fronts the live world.
+		: base(logger, stagingOptions, passwordService, relations: null, migrationSources: migrationSources,
+			pluginFlags: pluginFlags)
 	{
 		_live = live;
 		_logger = logger;

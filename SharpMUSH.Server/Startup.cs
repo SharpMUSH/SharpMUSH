@@ -286,9 +286,10 @@ public class Startup(
 			{
 				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
 				var password = x.GetRequiredService<IPasswordService>();
+				var relations = x.GetRequiredService<IObjectRelationLoader>();
 				var db = new LightningDatabase(dbLogger,
 					new LightningStoreOptions { Path = lightningPath, MapSize = lightningMapSize },
-					password, pluginMigrationSources, pluginFlags);
+					password, relations, pluginMigrationSources, pluginFlags);
 				return db;
 			});
 			RegisterDatabaseProvider<LightningDatabase>(services);

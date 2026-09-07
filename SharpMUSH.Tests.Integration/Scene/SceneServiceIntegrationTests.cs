@@ -287,7 +287,10 @@ public class SceneServiceIntegrationTests
 	[Test]
 	public async Task SetSceneMeta_Room_UpdatesTheActiveSceneInRoomIndex()
 	{
-		const string oldRoom = "#0";
+		// #3 (Ancestor Room), not #0: other classes in this session drive `+scene/create` as players
+		// standing in Room Zero, so #0 accumulates other people's active scenes and the "no scene here
+		// any more" assertion below would read one of those instead. Nothing else puts a scene in #3.
+		const string oldRoom = "#3";
 		var newRoom = God;
 		var id = await Eval($"scenecreate({oldRoom},{God},RoomIndex {Guid.NewGuid():N})");
 		await Eval($"sceneset({id},public,1)");

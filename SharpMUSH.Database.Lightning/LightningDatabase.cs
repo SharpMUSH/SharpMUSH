@@ -21,6 +21,7 @@ public partial class LightningDatabase(
 	ILogger<LightningDatabase> logger,
 	LightningStoreOptions options,
 	IPasswordService passwordService,
+	IObjectRelationLoader? relations = null,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null)
 	: ISharpDatabase, IWikiService, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
@@ -33,6 +34,17 @@ public partial class LightningDatabase(
 	private readonly ILogger<LightningDatabase> _logger = logger;
 	private readonly LightningStoreOptions _options = options;
 	private readonly IPasswordService _passwordService = passwordService;
+
+	/// <summary>
+	/// How an object this provider builds resolves the relations that point at other objects — location,
+	/// home, owner, parent, zone, drop-to, exit destination. The host's loader answers through the
+	/// Mediator's object cache, so the object handed back is the one every other reader already holds and
+	/// follows the same invalidation; without it each read would hydrate a private snapshot from LMDB.
+	/// <para>Null for a staging world, deliberately: its relations must resolve inside its own directory,
+	/// and the host's cache fronts the live one.</para>
+	/// </summary>
+	private readonly IObjectRelationLoader? _relations = relations;
+
 	private readonly IReadOnlyList<IMigrationSource> _migrationSources = migrationSources ?? [];
 	private readonly IReadOnlyList<PluginFlag> _pluginFlags = pluginFlags ?? [];
 
