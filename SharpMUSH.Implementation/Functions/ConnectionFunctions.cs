@@ -1504,9 +1504,12 @@ public partial class Functions
 	/// </summary>
 	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
 	{
+		// The RFC 1091 terminal type, which is where PennMUSH gets the client name too — set by TTYPE
+		// negotiation, by MSDP's TERMINAL_TYPE, or by hand with "@sockset terminaltype". The same key
+		// SocketOptions reads, so SOCKSET and terminfo() cannot disagree about who the client is.
 		var terminfo = new List<string>
 		{
-			metadata.GetValueOrDefault("CLIENT", "unknown")
+			metadata.GetValueOrDefault("TerminalType", "unknown")
 		};
 
 		if (!includeDetails)
@@ -1524,6 +1527,8 @@ public partial class Functions
 			terminfo.Add("mxp");
 		}
 
+		// Set once the client genuinely answers a telnet option, not merely because it arrived on the
+		// telnet port — PennMUSH's CONN_TELNET means the same thing, and a raw socket must not claim it.
 		if (metadata.GetValueOrDefault("TELNET", "0") == "1")
 		{
 			terminfo.Add("telnet");

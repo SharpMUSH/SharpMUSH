@@ -391,7 +391,9 @@ public static class SocketOptions
 		}
 
 		Row("Pueblo", YesNo(connection.Metadata.GetValueOrDefault("PUEBLO") == "1"));
-		Row("Telnet", YesNo(connection.ConnectionType == "telnet"));
+		// Whether the client answered telnet negotiation, not which port it arrived on — the same
+		// CONN_TELNET terminfo() reports, so the two cannot disagree about a raw socket.
+		Row("Telnet", YesNo(connection.Metadata.GetValueOrDefault("TELNET") == "1"));
 		Row("Width", connection.Metadata.GetValueOrDefault("WIDTH", "78"));
 		Row("Height", connection.Metadata.GetValueOrDefault("HEIGHT", "24"));
 		Row("Terminal Type", connection.Metadata.GetValueOrDefault("TerminalType", "unknown"));

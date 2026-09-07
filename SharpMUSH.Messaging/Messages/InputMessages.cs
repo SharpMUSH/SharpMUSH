@@ -58,3 +58,17 @@ public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHan
 /// MXP is a superset of Pueblo — if both negotiate, MXP takes priority.
 /// </summary>
 public record MxpNegotiatedMessage(long Handle) : IHandleMessage;
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess when a client answers RFC 1091 terminal type
+/// negotiation. <paramref name="TerminalTypes"/> is the list as the client reported it, in order:
+/// MTTS reads the first entry as the client's name, which is what <c>terminfo()</c> reports.
+/// </summary>
+public record TerminalTypeNegotiatedMessage(long Handle, IReadOnlyList<string> TerminalTypes) : IHandleMessage;
+
+/// <summary>
+/// Message sent from ConnectionServer to MainProcess the first time a client genuinely answers a
+/// telnet option — PennMUSH's CONN_TELNET, and the "telnet" token in <c>terminfo()</c>. Arriving on
+/// the telnet port is not enough on its own: a raw socket never negotiates anything.
+/// </summary>
+public record TelnetNegotiatedMessage(long Handle) : IHandleMessage;

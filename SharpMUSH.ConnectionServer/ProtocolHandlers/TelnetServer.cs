@@ -69,10 +69,37 @@ public class TelnetServer : ConnectionHandler
 	{
 		var nextPort = _descriptorGenerator.GetNextTelnetDescriptor();
 		var ct = connection.ConnectionClosed;
+
+		// Assigned once BuildAndStartAsync returns; the callbacks below only run after that, since the
+		// interpreter has to exist before it can hand any of them anything.
+		TelnetInterpreter? telnetInterpreter = null;
+		var telnetAnnounced = 0;
+
+		// Reports the client as speaking telnet the first time any option has genuinely negotiated.
+		// TelnetNegotiationCore tracks that per plugin as ITelnetProtocolPlugin.IsNegotiated — set at
+		// the state where a WILL/DO exchange resolves, so it is an answer from the client rather than
+		// an option we merely offered. Sampling beats subscribing here: the library raises no event for
+		// "some option settled", and the flag is monotonic, so one publish per connection is enough.
+		async ValueTask AnnounceTelnetIfNegotiatedAsync()
+		{
+			if (Volatile.Read(ref telnetAnnounced) != 0
+					|| telnetInterpreter?.PluginManager?.GetAllPlugins().Any(plugin => plugin.IsNegotiated) != true
+					|| Interlocked.Exchange(ref telnetAnnounced, 1) != 0)
+			{
+				return;
+			}
+
+			_logger.LogDebug("Telnet negotiation confirmed on handle {Handle}", nextPort);
+			await _publishEndpoint.Publish(new TelnetNegotiatedMessage(nextPort), ct);
+		}
+
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
 			{
 				var input = encoding.GetString(byteArray);
+
+				// By the time a client has sent a line, whatever it was going to negotiate has settled.
+				await AnnounceTelnetIfNegotiatedAsync();
 
 				// PUEBLOCLIENT is a socket command, not a one-shot greeting: PennMUSH answers it in
 				// do_command (src/bsd.c) on any line, at any point in the session, and a client whose
@@ -105,16 +132,36 @@ public class TelnetServer : ConnectionHandler
 
 				await _publishEndpoint.Publish(new TelnetInputMessage(nextPort, input), ct);
 			})
+			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
+			// which asks every plugin rather than just the one that fired: reaching any of them means
+			// some option settled, and a client that answers only NAWS still speaks telnet.
 			.AddPlugin<GMCPProtocol>().OnGMCPMessage(async data =>
-				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct))
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
+				await _publishEndpoint.Publish(new GMCPSignalMessage(nextPort, data.Package, data.Info), ct);
+			})
 			.AddPlugin<MSSPProtocol>().WithMSSPConfig(() => _msspConfig).OnMSSP(async _ =>
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
 				// Not Yet Implemented. Need to turn config into a dictionary
-				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct))
+				await _publishEndpoint.Publish(new MSSPUpdateMessage(nextPort, []), ct);
+			})
 			.AddPlugin<NAWSProtocol>().OnNAWS(async (newHeight, newWidth) =>
-				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct))
+			{
+				await AnnounceTelnetIfNegotiatedAsync();
+				await _publishEndpoint.Publish(new NAWSUpdateMessage(nextPort, newHeight, newWidth), ct);
+			})
 			.AddPlugin<MSDPProtocol>().OnMSDPMessage(MSDPCallback(connection))
 			.AddPlugin<CharsetProtocol>().WithCharsetOrder(Encoding.GetEncoding("utf-8"), Encoding.GetEncoding("iso-8859-1"))
-			.AddPlugin<MCCPProtocol>();
+			.AddPlugin<MCCPProtocol>()
+			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
+			// terminfo() reports as the client. Without it every connection is "unknown".
+			.AddPlugin(new ObservableTerminalTypeProtocol(
+				async terminalTypes => await _publishEndpoint.Publish(
+					new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct),
+				// A client that agreed to TTYPE has proved it speaks telnet, and it may never send a
+				// line — a crawler reads the login screen and leaves — so do not wait for OnSubmit.
+				async _ => await AnnounceTelnetIfNegotiatedAsync()));
 
 		if (_options.MxpEnabled)
 		{
@@ -124,6 +171,8 @@ public class TelnetServer : ConnectionHandler
 
 				async ValueTask DoMxpSetup()
 				{
+					await AnnounceTelnetIfNegotiatedAsync();
+
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Mxp, ct))
 					{
 						_logger.LogDebug("Updated MXP capabilities for handle {Handle}", nextPort);
@@ -141,6 +190,11 @@ public class TelnetServer : ConnectionHandler
 		}
 
 		var (telnet, readTask) = await builder.BuildAndStartAsync(connection.Transport, ct);
+		telnetInterpreter = telnet;
+
+		// The read loop is already running by now, so a fast client could have negotiated in the gap
+		// above and found nothing to sample. Re-sampling here closes it without needing a lock.
+		await AnnounceTelnetIfNegotiatedAsync();
 
 		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 			? "unknown"
