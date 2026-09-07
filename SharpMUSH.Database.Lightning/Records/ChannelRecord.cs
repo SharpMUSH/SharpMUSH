@@ -2,7 +2,9 @@ namespace SharpMUSH.Database.Lightning.Records;
 
 /// <summary>
 /// Mirrors <c>SurrealDatabase.ChannelDbRecord</c>. <c>Name</c> is the plain-text name used for lookup;
-/// <c>MarkedUpName</c> and <c>Description</c> are <c>MModule.serialize</c> output.
+/// <c>MarkedUpName</c> and <c>Description</c> are <c>MModule.serialize</c> output. Unlike SurrealDB and
+/// the graph providers, there is no <c>owner_of_channel</c> edge here — <c>Owner</c> is a plain dbref
+/// field on the record, since a channel has exactly one owner and Lightning has no graph to hold it in.
 /// </summary>
 public sealed record ChannelRecord
 {
@@ -17,6 +19,7 @@ public sealed record ChannelRecord
 	public string ModLock { get; init; } = "";
 	public string Mogrifier { get; init; } = "";
 	public int Buffer { get; init; }
+	public long Owner { get; init; }
 }
 
 /// <summary>
