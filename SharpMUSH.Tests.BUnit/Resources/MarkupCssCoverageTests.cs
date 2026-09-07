@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
-using MarkupString.Html;
+using MarkupString.Ansi;
 
 namespace SharpMUSH.Tests.BUnit.Resources;
 
 /// <summary>
 /// The HTML emitters write bare <c>ms-*</c> classes for every attribute with a fixed rendering, and
-/// <see cref="HtmlCss.Fixed"/> is the package's own stylesheet for them. The portal does not include
+/// <see cref="AnsiCss.Fixed"/> is the package's own stylesheet for them. The portal does not include
 /// that string — it carries its own copy in shell.css — so a class added to the package, or a value
 /// changed in one, would silently diverge from what the terminal renders. This pins the two
 /// together: every rule the package defines must appear in shell.css with the same declarations.
@@ -17,12 +17,12 @@ public class MarkupCssCoverageTests
 	private static readonly string ShellCss = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
 
 	/// <summary>
-	/// Every (selector, declaration) pair in <see cref="HtmlCss.Fixed"/>. A nested block — the
+	/// Every (selector, declaration) pair in <see cref="AnsiCss.Fixed"/>. A nested block — the
 	/// <c>@keyframes</c> body — survives as a single declaration, because the split only cuts on
 	/// semicolons outside braces.
 	/// </summary>
 	public static IEnumerable<Func<(string Selector, string Declaration)>> FixedDeclarations() =>
-		CssRules(HtmlCss.Fixed)
+		CssRules(AnsiCss.Fixed)
 			.SelectMany(rule => Declarations(rule.Body).Select(d => (rule.Selector, Declaration: d)))
 			.Select(Func<(string, string)> (pair) => () => pair);
 
@@ -36,7 +36,7 @@ public class MarkupCssCoverageTests
 			.ToArray();
 
 		await Assert.That(shellDeclarations).Contains(rule.Declaration)
-			.Because($"HtmlCss.Fixed declares `{rule.Selector} {{ {rule.Declaration}; }}` and shell.css must match it");
+			.Because($"AnsiCss.Fixed declares `{rule.Selector} {{ {rule.Declaration}; }}` and shell.css must match it");
 	}
 
 	/// <summary>

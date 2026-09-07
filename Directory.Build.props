@@ -7,7 +7,7 @@
     mismatched trio restores two copies of the core assembly and fails on the first render.
   -->
   <PropertyGroup>
-    <MarkupStringVersion>1.0.0</MarkupStringVersion>
+    <MarkupStringVersion>1.1.0</MarkupStringVersion>
   </PropertyGroup>
 
 </Project>
