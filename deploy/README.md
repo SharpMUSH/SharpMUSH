@@ -314,9 +314,24 @@ docker compose run --rm -v restore:/restore backup \
 
 ```bash
 docker compose stop sharpmush-server connectionserver
-docker compose run --rm backup restic restore latest --target /restore   # into a scratch mount
-# copy backup/<timestamp>/ over the volume's lightning/ , then:
+
+# 1. Restore into a scratch volume. The -v is what makes the files outlive the container;
+#    without it restic writes into the container's own filesystem and they are gone.
+docker compose run --rm -v restore:/restore backup \
+  restic restore latest --target /restore
+
+# 2. See which copies the snapshot carried and pick one.
+docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server \
+  -c 'ls /restore/data/backup'
+
+# 3. Put it in place. The app image mounts app-data read-write, unlike the backup service.
+docker compose run --rm --no-deps -v restore:/restore --entrypoint sh sharpmush-server -c '
+  rm -rf /app/data/lightning &&
+  cp -a /restore/data/backup/<timestamp> /app/data/lightning &&
+  cp -a /restore/data/wiki-assets/. /app/data/wiki-assets/'
+
 docker compose start connectionserver sharpmush-server
+docker volume rm restore    # once the game is up and you are satisfied
 ```
 
 A restored copy carries no `lock.mdb` — LMDB writes a fresh one on open — and no
