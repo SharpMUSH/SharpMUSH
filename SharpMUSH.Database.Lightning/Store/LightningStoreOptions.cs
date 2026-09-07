@@ -11,5 +11,12 @@ public sealed record LightningStoreOptions
 	public long MapSize { get; init; } = 64L << 30;
 	public int MaxReaders { get; init; } = 256;
 	public int PageSize { get; init; } = 16384;
-	public int MaxDatabases { get; init; } = 64;
+	/// <summary>
+	/// How many named sub-databases the environment may hold. The catalogue in <c>Tables</c> is 57 of
+	/// them, and the rest is headroom for the tables storage PLUGINS open through the accessor — the
+	/// Scene plugin alone opens eight. LMDB fixes this at environment-open time and refuses the open of
+	/// the table that goes over with <c>MDB_DBS_FULL</c>, so the ceiling has to lead the schema rather
+	/// than track it.
+	/// </summary>
+	public int MaxDatabases { get; init; } = 128;
 }

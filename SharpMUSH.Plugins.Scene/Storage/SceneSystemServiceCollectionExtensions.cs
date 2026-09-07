@@ -37,11 +37,8 @@ public static class SceneSystemServiceCollectionExtensions
 			(sp, _) => new MemgraphSceneStorage(sp.GetRequiredService<IMemgraphStorageAccessor>()));
 		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
 			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
-		// Lightning scene storage arrives in Task 19; a factory that throws (rather than omitting the
-		// key) keeps the switch below exhaustive and gives a clear message if a caller resolves it early,
-		// instead of the key silently falling through to ArangoDB's storage.
 		services.AddKeyedSingleton<ISceneStorage>(LightningKey,
-			(_, _) => throw new NotSupportedException("Lightning scene storage arrives in Task 19"));
+			(sp, _) => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
