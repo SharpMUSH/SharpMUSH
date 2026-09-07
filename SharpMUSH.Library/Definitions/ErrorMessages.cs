@@ -550,6 +550,8 @@ public static class ErrorMessages
 		public const string GameDbConsistencyDone = "GAME: Database consistency check complete.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameSuspectActivity = "GAME: Suspect {0}";
 
 		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
 
