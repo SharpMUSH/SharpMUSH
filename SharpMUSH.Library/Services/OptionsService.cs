@@ -4,17 +4,30 @@ using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Library.Services;
 
-public class OptionsService(IExpandedDataStore database) : IOptionsFactory<SharpMUSHOptions>
+/// <summary>
+/// The engine's configuration is a database document, not a configuration section, so this replaces
+/// the framework's <c>IOptionsFactory</c> rather than configuring it.
+/// </summary>
+/// <remarks>
+/// It runs the registered <see cref="IValidateOptions{TOptions}"/> itself, because replacing the
+/// framework factory replaces the only thing that ran them: a closed <c>IOptionsFactory&lt;T&gt;</c>
+/// registration wins over the open generic <c>AddOptions()</c> adds, so nothing else ever calls a
+/// validator — <c>ValidateOnStart()</c> included, which asks the monitor for the value and therefore
+/// asks this. Until this ran them, a stored configuration that could not be used started the server
+/// anyway and failed later, wherever it was first read.
+/// </remarks>
+public class OptionsService(
+	IExpandedDataStore database,
+	IEnumerable<IValidateOptions<SharpMUSHOptions>> validations) : IOptionsFactory<SharpMUSHOptions>
 {
-	public SharpMUSHOptions Create(string _)
+	public SharpMUSHOptions Create(string name)
 	{
 		var data = database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
-
 		if (data is not null)
 		{
-			return data;
+			return Validated(name, data);
 		}
 
 		var defaultSettings = Default();
@@ -22,7 +35,30 @@ public class OptionsService(IExpandedDataStore database) : IOptionsFactory<Sharp
 		database.SetExpandedServerData(nameof(SharpMUSHOptions), defaultSettings)
 			.AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
 
-		return defaultSettings;
+		return Validated(name, defaultSettings);
+	}
+
+	/// <summary>
+	/// Every validator runs and their failures are reported together, the same way
+	/// <c>OptionsFactory&lt;T&gt;</c> does it: stopping at the first one means learning about a broken
+	/// configuration one edit at a time.
+	/// </summary>
+	private SharpMUSHOptions Validated(string name, SharpMUSHOptions options)
+	{
+		List<string>? failures = null;
+
+		foreach (var validation in validations)
+		{
+			var result = validation.Validate(name, options);
+			if (result.Failed)
+			{
+				(failures ??= []).AddRange(result.Failures ?? []);
+			}
+		}
+
+		return failures is null
+			? options
+			: throw new OptionsValidationException(name, typeof(SharpMUSHOptions), failures);
 	}
 
 	private SharpMUSHOptions Default()
