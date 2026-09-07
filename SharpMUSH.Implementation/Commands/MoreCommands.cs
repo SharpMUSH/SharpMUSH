@@ -2610,7 +2610,7 @@ public partial class Commands
 			var executorLocation = await executor.Where();
 			await CommunicationService.SendToRoomAsync(executor, executorLocation,
 				_ => MarkupText.Plain($"{executor.Object().Name} types --> {actionList}"),
-				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+				INotifyService.NotificationType.Emit);
 
 			await parser.CommandListParse(MarkupText.Plain(actionList));
 
@@ -2628,7 +2628,7 @@ public partial class Commands
 		var location = await executor.Where();
 		await CommunicationService.SendToRoomAsync(executor, location,
 			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
-			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+			INotifyService.NotificationType.Emit);
 
 		await parser.CommandParse(MarkupText.Plain(command));
 

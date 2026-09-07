@@ -6,6 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class GameCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -42,16 +43,45 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask TeachCommand()
+	public async ValueTask TeachCommandEchoesToExecutorAndExecutesOnce()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("teach #1=skill"));
+		var marker = $"TeachSelf_{Guid.NewGuid():N}";
+		var taughtCommand = $"think {marker}";
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Teach what?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(marker),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	public async ValueTask TeachListEchoesToExecutorAndExecutesOnce()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var marker = $"TeachListSelf_{Guid.NewGuid():N}";
+		var taughtActionList = $"think {marker}";
+
+		NotifyService.ClearReceivedCalls();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach/list {taughtActionList}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtActionList}"),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(marker),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
