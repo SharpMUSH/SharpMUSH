@@ -14,6 +14,8 @@ public class SoftcodeRegexTests
 	// (a+)+$ against a long run of 'a' with no terminator: the classic exponential backtrack.
 	private const string Catastrophic = "(a+)+$";
 	private static readonly string Adversarial = new string('a', 40) + "!";
+	/// <summary>Constraint key for the tests that read or flood the shared pattern cache.</summary>
+	private const string CacheState = nameof(SoftcodeRegexTests) + ".CacheState";
 
 	[Test]
 	public async Task APatternThatCannotFinishInTimeStopsInsteadOfHangingTheGame()
@@ -47,7 +49,14 @@ public class SoftcodeRegexTests
 	/// The same pattern text asked for twice hands back the same instance: a wildcard <c>lattr</c> or a
 	/// LISTEN pattern is recompiled on every message otherwise, and construction is the expensive part.
 	/// </summary>
-	[Test]
+	/// <remarks>
+	/// The cache is one static, least-recently-used bound shared by the whole test process, and
+	/// <see cref="ConcurrentMissesDoNotPushTheCacheOverItsBound"/> fills it past capacity on purpose. Run
+	/// alongside it, the first instance here can be evicted between the two calls and the identity check
+	/// fails — which is what the memgraph CI leg hit, three attempts in a row. The three tests that
+	/// depend on cache state therefore take turns; the rest of the class still runs in parallel.
+	/// </remarks>
+	[Test, NotInParallel(CacheState)]
 	public async Task TheSamePatternIsOnlyBuiltOnce()
 	{
 		var first = SoftcodeRegex.Create("^cached (.*)$", RegexOptions.IgnoreCase);
@@ -56,7 +65,7 @@ public class SoftcodeRegexTests
 		await Assert.That(ReferenceEquals(first, second)).IsTrue();
 	}
 
-	[Test]
+	[Test, NotInParallel(CacheState)]
 	public async Task PatternsThatDifferOnlyInOptionsAreNotShared()
 	{
 		var sensitive = SoftcodeRegex.Create("^opts (.*)$", RegexOptions.None);
@@ -73,7 +82,7 @@ public class SoftcodeRegexTests
 	/// patterns a server saw lock out every pattern after them, including the ones actually being used.
 	/// So this both fills it past capacity and then checks a fresh pattern still gets in.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel(CacheState)]
 	public async Task ConcurrentMissesDoNotPushTheCacheOverItsBound()
 	{
 		await Task.WhenAll(Enumerable.Range(0, Environment.ProcessorCount * 4).Select(worker =>
