@@ -4,6 +4,7 @@ using DotNext.Threading;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -24,7 +25,8 @@ namespace SharpMUSH.Database.Lightning;
 /// <para>
 /// Semantics are ported from <c>SurrealDatabase.Attributes.cs</c>. The inheritance members
 /// (<see cref="GetAttributeWithInheritanceAsync"/>, <see cref="GetLazyAttributeWithInheritanceAsync"/>)
-/// are Task 10 and still throw.
+/// resolve their whole candidate set inside one snapshot — see
+/// <see cref="CollectInheritanceCandidates{T}"/>.
 /// </para>
 /// </summary>
 public sealed partial class LightningDatabase
@@ -133,11 +135,45 @@ public sealed partial class LightningDatabase
 
 	public IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException("Attribute inheritance lands in Task 10.");
+		=> new FreshAsyncEnumerable<AttributeWithInheritance>(ct =>
+			GetAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, ct));
+
+	private async IAsyncEnumerable<AttributeWithInheritance> GetAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
+		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
+	{
+		var candidates = Store.Read(tx => CollectInheritanceCandidates(tx, (long)dbref.Number, attribute, checkParent,
+			(readTx, owner, longName, meta) => HydrateAttribute(readTx, owner, longName, meta, ReadAttributeValue(readTx, owner, longName))));
+
+		var resolved = ResolveInheritance(candidates, attribute.Length, static a => a.IsNoInherit(), static a => a.Flags,
+			static (attrs, source, kind, flags) => new AttributeWithInheritance(attrs, source, kind, flags));
+
+		if (resolved is not null)
+		{
+			ct.ThrowIfCancellationRequested();
+			yield return resolved;
+		}
+	}
 
 	public IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceAsync(DBRef dbref, string[] attribute,
 		bool checkParent = true, CancellationToken cancellationToken = default)
-		=> throw new NotImplementedException("Attribute inheritance lands in Task 10.");
+		=> new FreshAsyncEnumerable<LazyAttributeWithInheritance>(ct =>
+			GetLazyAttributeWithInheritanceCoreAsync(dbref, attribute, checkParent, ct));
+
+	/// <inheritdoc cref="GetAttributeWithInheritanceCoreAsync"/>
+	private async IAsyncEnumerable<LazyAttributeWithInheritance> GetLazyAttributeWithInheritanceCoreAsync(DBRef dbref, string[] attribute,
+		bool checkParent, [EnumeratorCancellation] CancellationToken ct)
+	{
+		var candidates = Store.Read(tx => CollectInheritanceCandidates(tx, (long)dbref.Number, attribute, checkParent, HydrateLazyAttribute));
+
+		var resolved = ResolveInheritance(candidates, attribute.Length, static a => a.IsNoInherit(), static a => a.Flags,
+			static (attrs, source, kind, flags) => new LazyAttributeWithInheritance(attrs, source, kind, flags));
+
+		if (resolved is not null)
+		{
+			ct.ThrowIfCancellationRequested();
+			yield return resolved;
+		}
+	}
 
 	#endregion
 
@@ -389,6 +425,127 @@ public sealed partial class LightningDatabase
 	#endregion
 
 	#region Attribute helpers
+
+	/// <summary>
+	/// The bound ArangoDB spells as <c>1..100 OUTBOUND</c> on its parent and zone graphs
+	/// (<c>ArangoDatabase.Attributes.cs:936, 953-954</c>) and SurrealDB as its <c>GetParentChainAsync</c>
+	/// loop counter.
+	/// </summary>
+	private const int InheritanceHopLimit = 100;
+
+	/// <summary>One object the inheritance walk may resolve against, carrying whatever prefix of the
+	/// requested path actually exists on it — possibly shorter than the path, which is what makes the
+	/// no_inherit gate below able to fire on a branch that has no leaf.</summary>
+	private sealed record InheritanceCandidate<T>(DBRef Source, T[] Attributes);
+
+	/// <summary>The three candidate groups ArangoDB's single query returns (<c>{ self, parents, zones }</c>,
+	/// <c>ArangoDatabase.Attributes.cs:971</c>), gathered here from one LMDB snapshot instead.</summary>
+	private sealed record InheritanceCandidates<T>(
+		InheritanceCandidate<T>? Self,
+		List<InheritanceCandidate<T>> Parents,
+		List<InheritanceCandidate<T>> Zones);
+
+	/// <summary>
+	/// Everything the inheritance walk needs, read inside a single snapshot: the object itself, then its
+	/// parent chain, then the zone chain of every member of <c>[self, parent, grandparent, …]</c> in that
+	/// order. Mirrors ArangoDB's <c>selfAttrs</c>/<c>parentCandidates</c>/<c>zoneCandidates</c>
+	/// (<c>ArangoDatabase.Attributes.cs:923-970</c>) including their two short-circuits: a complete hit on
+	/// the object itself suppresses both inherited groups, and a candidate with no prefix at all is
+	/// dropped (their <c>FILTER LENGTH(...) &gt; 0</c>).
+	/// </summary>
+	private InheritanceCandidates<T> CollectInheritanceCandidates<T>(ITx tx, long dbref, string[] path, bool checkParent,
+		Func<ITx, long, string, AttrMetaRecord, T> hydrate)
+	{
+		InheritanceCandidate<T> CandidateOf(long owner) => new(new DBRef((int)owner),
+			[.. ReadPathPrefixes(tx, owner, path).Select(entry => hydrate(tx, owner, entry.LongName, entry.Meta))]);
+
+		var self = CandidateOf(dbref);
+		if (self.Attributes.Length == path.Length)
+		{
+			return new InheritanceCandidates<T>(self, [], []);
+		}
+
+		if (!checkParent)
+		{
+			return new InheritanceCandidates<T>(null, [], []);
+		}
+
+		var chain = EdgeChain(tx, Tables.Parent.Forward, dbref);
+
+		return new InheritanceCandidates<T>(
+			null,
+			[.. chain.Skip(1).Select(CandidateOf).Where(candidate => candidate.Attributes.Length > 0)],
+			[.. chain.SelectMany(member => EdgeChain(tx, Tables.Zone.Forward, member).Skip(1))
+				.Select(CandidateOf).Where(candidate => candidate.Attributes.Length > 0)]);
+	}
+
+	/// <summary>
+	/// Follows a single-valued edge from <paramref name="start"/>, returning <c>[start, next, next-of-next, …]</c>.
+	/// A visited set and <see cref="InheritanceHopLimit"/> both bound it, so a parent (or zone) cycle
+	/// terminates rather than spinning — the graph traversals this replaces get that from ArangoDB's
+	/// path uniqueness and its <c>1..100</c> depth.
+	/// </summary>
+	private static List<long> EdgeChain(ITx tx, TableDef forward, long start)
+	{
+		var chain = new List<long> { start };
+		var visited = new HashSet<long> { start };
+		var current = start;
+
+		for (var hop = 0; hop < InheritanceHopLimit; hop++)
+		{
+			if (GetSingleEdge(tx, forward, current) is not { } next || !visited.Add(next))
+			{
+				break;
+			}
+
+			chain.Add(next);
+			current = next;
+		}
+
+		return chain;
+	}
+
+	/// <summary>
+	/// The C# half of ArangoDB's inheritance walk, ported rather than referenced
+	/// (<c>ArangoDatabase.Attributes.cs:996-1045</c> and its <c>EvaluateInheritanceCandidateAsync</c> at
+	/// <c>1104-1118</c>): the object's own complete hit wins outright and keeps every flag; otherwise each
+	/// parent then each zone is tested in order, where <c>no_inherit</c> anywhere on the candidate's
+	/// existing prefix aborts the whole walk (PennMUSH <c>atr_get_with_parent</c>, <c>attrib.c:1232-1252</c>,
+	/// returns NULL rather than falling through to a more distant ancestor) and only a prefix reaching the
+	/// requested length is a match, contributing just its inheritable flags.
+	/// </summary>
+	private static TResult? ResolveInheritance<T, TResult>(
+		InheritanceCandidates<T> candidates,
+		int expectedLength,
+		Func<T, bool> isNoInherit,
+		Func<T, IEnumerable<SharpAttributeFlag>> flagsOf,
+		Func<T[], DBRef, AttributeSource, IEnumerable<SharpAttributeFlag>, TResult> build)
+		where TResult : class
+	{
+		if (candidates.Self is { } self)
+		{
+			return build(self.Attributes, self.Source, AttributeSource.Self, flagsOf(self.Attributes[^1]));
+		}
+
+		var inherited = candidates.Parents.Select(candidate => (candidate, Kind: AttributeSource.Parent))
+			.Concat(candidates.Zones.Select(candidate => (candidate, Kind: AttributeSource.Zone)));
+
+		foreach (var (candidate, kind) in inherited)
+		{
+			if (candidate.Attributes.Any(isNoInherit))
+			{
+				return null;
+			}
+
+			if (candidate.Attributes.Length == expectedLength)
+			{
+				return build(candidate.Attributes, candidate.Source, kind,
+					flagsOf(candidate.Attributes[^1]).Where(flag => flag.Inheritable));
+			}
+		}
+
+		return null;
+	}
 
 	/// <summary>
 	/// Point-reads each prefix of <paramref name="path"/> in turn and stops at the first segment with no
