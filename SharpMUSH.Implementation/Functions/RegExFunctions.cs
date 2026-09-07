@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -120,7 +121,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var match = regex.Match(str);
 
 			// Check if the entire string matches (not just a substring)
@@ -136,6 +137,11 @@ public partial class Functions
 			}
 
 			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
 		}
 		catch (ArgumentException)
 		{
@@ -216,7 +222,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
@@ -229,6 +235,11 @@ public partial class Functions
 				var firstMatch = splitList.FirstOrDefault(x => regex.IsMatch(x.ToPlainText()));
 				return ValueTask.FromResult<CallState>(firstMatch ?? MModule.empty());
 			}
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
 		}
 		catch (ArgumentException)
 		{
@@ -257,7 +268,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 			var splitList = MModule.splitList(delimiter, list) ?? [];
 
 			if (all)
@@ -279,6 +290,11 @@ public partial class Functions
 
 				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
 			}
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
 		}
 		catch (ArgumentException)
 		{
@@ -321,7 +337,7 @@ public partial class Functions
 
 				try
 				{
-					var regex = new Regex(patternStr, options);
+					var regex = SoftcodeRegex.Create(patternStr, options);
 					var match = regex.Match(str!);
 
 					if (match.Success)

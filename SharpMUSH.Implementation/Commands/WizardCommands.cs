@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -984,7 +985,7 @@ public partial class Commands
 				: string.Empty;
 			var patternRegex = string.IsNullOrEmpty(pattern)
 				? null
-				: new Regex(MModule.getWildcardMatchAsRegex2(pattern), RegexOptions.IgnoreCase);
+				: SoftcodeRegex.Wildcard(pattern);
 			var showDisabled = executor.IsGod();
 
 			var output = new System.Text.StringBuilder();
@@ -1000,7 +1001,7 @@ public partial class Commands
 					continue;
 				}
 
-				if (patternRegex is not null && !patternRegex.IsMatch(power.Name))
+				if (patternRegex is not null && !SoftcodeRegex.IsMatch(patternRegex, power.Name))
 				{
 					continue;
 				}

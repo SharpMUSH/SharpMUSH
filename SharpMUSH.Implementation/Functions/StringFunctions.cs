@@ -239,7 +239,7 @@ public partial class Functions
 			var safeOpen = Regex.Escape(open.ToPlainText());
 			var safeClose = Regex.Escape(close.ToPlainText());
 			var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
-				_ => new Regex($"{safeOpen}(?<Content>[^{safeClose}]){safeClose}")
+				_ => SoftcodeRegex.Create($"{safeOpen}(?<Content>[^{safeClose}]){safeClose}", RegexOptions.None)
 			);
 
 			var contents = pattern.Matches(speakString.ToPlainText());
@@ -1826,7 +1826,7 @@ public partial class Functions
 
 		// Not an exact match. PennMUSH is conscious of the ANSI to look for.
 		// Also, this technically acts more like a replace than a true squish.
-		var regex = new Regex($"{Regex.Escape(arg1.ToPlainText())}+");
+		var regex = SoftcodeRegex.Create($"{Regex.Escape(arg1.ToPlainText())}+", RegexOptions.None);
 
 		return ValueTask.FromResult<CallState>(regex.Matches(arg0Plain)
 			.Reverse()

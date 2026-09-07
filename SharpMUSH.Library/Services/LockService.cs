@@ -1,15 +1,23 @@
-﻿using Mediator;
-using SharpMUSH.Library.Commands.Database;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Library.Services;
 
-public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMediator med) : ILockService
+/// <summary>
+/// Reads and evaluates the standard locks.
+/// </summary>
+/// <remarks>
+/// It does not cache compiled expressions. <see cref="IBooleanExpressionParser.Compile"/> already
+/// does, keyed by the expression text, in the bounded cache Startup registers for it. This used to
+/// cache the delegate a second time in the engine cache keyed by object and lock type, which cannot
+/// be right — the delegate depends on the lock string and nothing else, so an object-keyed entry
+/// outlives the text that produced it — and it did not even save the inner lookup, because the value
+/// argument of GetOrSet is evaluated before the call.
+/// </remarks>
+public class LockService(IBooleanExpressionParser bep) : ILockService
 {
 	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new(StringComparer.OrdinalIgnoreCase)
 	{
@@ -163,34 +171,17 @@ public class LockService(IFusionCache cache, IBooleanExpressionParser bep, IMedi
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
 			return true;
 
-		return cache.GetOrSet($"lock:{gated.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString))(
-			gated, unlocker);
+		return bep.Compile(lockString)(gated, unlocker);
 	}
 
 	public IEnumerable<bool> Evaluate(
 		LockType standardType,
 		IEnumerable<AnySharpObject> gated,
 		AnySharpObject unlocker)
-		=> gated.Select(g =>
-			cache.GetOrSet($"lock:{g.Object().DBRef}:{standardType.ToString()}", bep.Compile(Get(standardType, g)))(g,
-				unlocker));
+		=> gated.Select(g => Evaluate(standardType, g, unlocker));
 
 	public bool Validate(string lockString, AnySharpObject lockee)
 		=> bep.Validate(lockString, lockee);
-
-	public bool Set(
-		LockType standardType,
-		string lockString,
-		AnySharpObject lockee)
-	{
-		// BEP is in charge of notifying as of this current draft.
-		if (!bep.Validate(lockString, lockee)) return false;
-
-		cache.Set($"lock:{lockee.Object().DBRef}:{standardType.ToString()}", bep.Compile(lockString));
-		_ = med.Send(new SetLockCommand(lockee.Object(), standardType.ToString(), lockString)).AsTask().Result;
-
-		return true;
-	}
 
 	/// <summary>
 	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)

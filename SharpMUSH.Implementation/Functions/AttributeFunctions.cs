@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -945,7 +946,7 @@ public partial class Functions
 
 			try
 			{
-				var regex = new Regex(patternStr, options);
+				var regex = SoftcodeRegex.Create(patternStr, options);
 
 				if (all)
 				{
@@ -971,6 +972,11 @@ public partial class Functions
 						str = mstr.ToPlainText();
 					}
 				}
+			}
+			catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+			{
+				// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+				return new CallState(ErrorMessages.Returns.RegexpTimeout);
 			}
 			catch (ArgumentException)
 			{
@@ -1025,7 +1031,7 @@ public partial class Functions
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(regexpPattern, options);
+			var regex = SoftcodeRegex.Create(regexpPattern, options);
 
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser, executor, executor, objectStr, LocateFlags.All,
@@ -1056,6 +1062,11 @@ public partial class Functions
 
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
 		}
 		catch (ArgumentException)
 		{

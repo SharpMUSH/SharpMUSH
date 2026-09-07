@@ -3860,7 +3860,7 @@ public partial class Commands
 				options |= RegexOptions.IgnoreCase;
 			}
 
-			var regex = new Regex(pattern, options);
+			var regex = SoftcodeRegex.Create(pattern, options);
 
 			if (all)
 			{
@@ -3882,6 +3882,11 @@ public partial class Commands
 				}
 			}
 
+			return text;
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// Same answer as an unusable pattern: the text comes back as it went in.
 			return text;
 		}
 		catch (ArgumentException)
@@ -4757,8 +4762,13 @@ public partial class Commands
 				{
 					try
 					{
-						var regex = new Regex(pattern, RegexOptions.None);
+						var regex = SoftcodeRegex.Create(pattern, RegexOptions.None);
 						matches = regex.IsMatch(testString);
+					}
+					catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
+						continue;
 					}
 					catch (ArgumentException)
 					{
@@ -4768,9 +4778,8 @@ public partial class Commands
 				}
 				else
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-					var regex = new Regex(regexPattern, RegexOptions.None);
-					matches = regex.IsMatch(testString);
+					var regex = SoftcodeRegex.Wildcard(pattern);
+					matches = SoftcodeRegex.IsMatch(regex, testString);
 				}
 
 				if (matches && action != null)
@@ -4966,10 +4975,9 @@ public partial class Commands
 				var trimmedPattern = pattern.Trim();
 				if (string.IsNullOrEmpty(trimmedPattern)) continue;
 
-				var regexPattern = MModule.getWildcardMatchAsRegex2(trimmedPattern);
-				var regex = new Regex(regexPattern, RegexOptions.None);
+				var regex = SoftcodeRegex.Wildcard(trimmedPattern);
 
-				if (regex.IsMatch(testString))
+				if (SoftcodeRegex.IsMatch(regex, testString))
 				{
 					matchFound = true;
 					break;
@@ -6143,9 +6151,10 @@ public partial class Commands
 			{
 				try
 				{
-					var regexPattern = MModule.getWildcardMatchAsRegex2(pattern);
-					var regexOptions = isNoCase ? System.Text.RegularExpressions.RegexOptions.IgnoreCase : System.Text.RegularExpressions.RegexOptions.None;
-					matches = System.Text.RegularExpressions.Regex.IsMatch(attrValue, regexPattern, regexOptions, TimeSpan.FromSeconds(1));
+					// grep_util passes cs = ((flags & GREP_NOCASE) == 0), so the wildcard grep is
+					// case-SENSITIVE unless this is the "i" variant — unlike every other wildcard in
+					// the game, which goes through quick_wild and its cs = 0.
+					matches = SoftcodeRegex.Wildcard(pattern, caseSensitive: !isNoCase).IsMatch(attrValue);
 				}
 				catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{

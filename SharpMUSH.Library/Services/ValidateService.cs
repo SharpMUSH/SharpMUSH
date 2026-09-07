@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -121,8 +122,8 @@ public partial class ValidateService(
 
 	private bool CheckAttributeRegex(string name, string regex, string value)
 	{
-		var reg = _regexCache.GetOrAdd(name, _ => new Regex(regex, RegexOptions.Compiled));
-		return reg.IsMatch(value);
+		var reg = _regexCache.GetOrAdd(name, _ => SoftcodeRegex.Create(regex, RegexOptions.Compiled));
+		return SoftcodeRegex.IsMatch(reg, value);
 	}
 
 	/// <summary>
@@ -196,10 +197,10 @@ public partial class ValidateService(
 					.Replace("\\?", ".")   // ? matches single character
 					+ "$";
 
-				return new Regex(regexPattern, RegexOptions.Compiled);
+				return SoftcodeRegex.Create(regexPattern, RegexOptions.Compiled);
 			});
 
-			if (regex.IsMatch(value))
+			if (SoftcodeRegex.IsMatch(regex, value))
 			{
 				return true;
 			}

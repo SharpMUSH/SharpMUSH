@@ -949,6 +949,10 @@ public static partial class MarkupStringModule
 	[GeneratedRegex(@"\\\\\\\?")]
 	private static partial Regex KindPattern2Regex();
 
+	/// <summary>Two or more consecutive translated globs, which PennMUSH treats as one.</summary>
+	[GeneratedRegex(@"(?:\(\.\*\?\)){2,}")]
+	private static partial Regex ConsecutiveGlobsRegex();
+
 	/// <summary>
 	/// Inline single-line mode, so the <c>.</c> that <c>*</c> and <c>?</c> compile to also matches a
 	/// newline.
@@ -962,12 +966,35 @@ public static partial class MarkupStringModule
 	/// the <c>$</c>-command patterns itself, and that is the path where it showed: a multi-line
 	/// argument matched no <c>$</c>-command at all and the player got a bare "Huh?".
 	/// </remarks>
+	// (?s) so '.' covers a newline, as PennMUSH's matcher covers any character. Case is deliberately
+	// NOT folded here: wild_match_test takes cs as an argument, and while quick_wild passes 0 (so
+	// $-commands, @listen and grab() are case-insensitive), grep_util passes 1 unless the caller asked
+	// for the "i" variant. Baking it in would take that choice away from wildgrep.
 	private const string SingleLineMode = "(?s)";
+
+	/// <summary>
+	/// A run of <c>*</c> is one glob, as it is in PennMUSH: <c>case '*'</c> skips past consecutive
+	/// globs in a single loop. It still takes a capture register for each star it skips, and only the
+	/// last of the run ever grows, so the extras are kept as empty groups — <c>%0</c> and <c>%1</c> have
+	/// to go on meaning what they meant.
+	/// </summary>
+	/// <remarks>
+	/// Left alone, each star became its own lazy quantifier, and nesting them is what made a pattern
+	/// able to run for seconds: six stars against a sixty-character subject measured at 2.3 seconds
+	/// before this, and nothing at all after it.
+	/// </remarks>
+	private static string CollapseConsecutiveGlobs(string pat)
+		=> ConsecutiveGlobsRegex().Replace(pat, match =>
+			string.Concat(Enumerable.Repeat("()", (match.Length / GlobGroupLength) - 1)) + GlobGroup);
+
+	private const string GlobGroup = "(.*?)";
+	private const int GlobGroupLength = 5;
 
 	private static string ApplyRegexPattern(string pat)
 	{
 		pat = GlobPatternRegex().Replace(pat, @"(.*?)");
 		pat = QuestionPatternRegex().Replace(pat, @"(.)");
+		pat = CollapseConsecutiveGlobs(pat);
 		pat = KindPatternRegex().Replace(pat, @"\*");
 		pat = KindPattern2Regex().Replace(pat, @"\?");
 		return SingleLineMode + pat;
