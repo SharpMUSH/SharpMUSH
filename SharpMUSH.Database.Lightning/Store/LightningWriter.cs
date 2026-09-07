@@ -61,6 +61,31 @@ internal sealed class LightningWriter : IDisposable
 	public void Pause() => _resume.Reset();
 	public void Resume() => _resume.Set();
 
+	/// <summary>
+	/// Drains and pauses in one step: completes once every job queued before this call has finished and
+	/// the writer thread is parked, with nothing queued afterwards started until <see cref="Resume"/>.
+	/// Draining and pausing as two calls cannot do this — pausing first would park the writer before it
+	/// reaches the drain job, and draining first leaves a window in which a newly queued job starts.
+	/// The park is itself a queued job, so the queue's own order is what makes the pair atomic; it runs
+	/// outside any transaction, so a parked writer holds no store lock and a directory swap can take the
+	/// store's write lock while it waits here.
+	/// </summary>
+	public async Task PauseAndDrainAsync(CancellationToken ct = default)
+	{
+		var parked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var park = new Job(() =>
+		{
+			_resume.Reset();
+			parked.SetResult();
+			_resume.Wait();
+			return null;
+		}, completion, CancellationToken.None);
+
+		await _queue.Writer.WriteAsync(park, ct).ConfigureAwait(false);
+		await parked.Task.ConfigureAwait(false);
+	}
+
 	private void Run()
 	{
 		var reader = _queue.Reader;

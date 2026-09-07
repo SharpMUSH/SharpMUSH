@@ -10,7 +10,7 @@ namespace SharpMUSH.Database.Lightning;
 /// fixed <c>state</c> row that <c>Migrate()</c>'s <see cref="Migration.LightningMigration"/> partial
 /// (<c>EnsureServerState</c>) guarantees exists after migration.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static readonly byte[] ServerStateKey = Keys.Str("state");
 

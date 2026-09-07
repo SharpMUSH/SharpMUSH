@@ -36,4 +36,13 @@ public interface ILightningStorageAccessor
 	/// <see cref="WriteAsync{T}"/> — this <b>must not be called from inside a write job</b>.
 	/// </summary>
 	TableDef OpenTable(string name, bool duplicates);
+
+	/// <summary>
+	/// Hot-copies the whole environment — every table, the plugin's own included — into
+	/// <paramref name="path"/>, which is created if it does not exist and must otherwise be empty. A
+	/// read-side operation: writes continue while it runs and the copy is a consistent snapshot as of the
+	/// transaction it opens. <paramref name="compact"/> omits free pages, which makes the copy smaller and
+	/// the operation slower.
+	/// </summary>
+	ValueTask CopyToAsync(string path, bool compact = true, CancellationToken ct = default);
 }

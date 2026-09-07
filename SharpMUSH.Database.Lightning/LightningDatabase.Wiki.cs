@@ -35,7 +35,7 @@ namespace SharpMUSH.Database.Lightning;
 /// loser leaves no revision behind.
 /// </para>
 /// </remarks>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static readonly WikiMarkdigPipeline WikiRenderer = new();
 

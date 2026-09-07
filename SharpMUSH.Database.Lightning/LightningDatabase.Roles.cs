@@ -15,7 +15,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <see cref="Tables.AccountRole"/> keyed by account id with the role slug as the duplicate value —
 /// idempotent for free, since LMDB's dupsort tables collapse an exact (key, value) pair written twice.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static RoleRecord ToRoleRecord(SharpRole role) => new()
 	{

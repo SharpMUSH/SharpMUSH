@@ -19,7 +19,7 @@ namespace SharpMUSH.Database.Lightning;
 /// and <see cref="ReadObjectPowers"/> are the shared per-object reads <c>Hydrate</c> (in
 /// <c>LightningDatabase.Objects.cs</c>) and Task 12's flag predicate both use.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	#region Flags and Powers
 

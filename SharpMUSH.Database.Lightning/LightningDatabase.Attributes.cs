@@ -29,7 +29,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <see cref="CollectInheritanceCandidates{T}"/>.
 /// </para>
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private const string BranchFlag = "branch";
 

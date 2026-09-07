@@ -7,7 +7,7 @@ namespace SharpMUSH.Database.Lightning;
 /// plugin (the Scene plugin's Lightning backend, Task 19) reads and writes the store through. Every
 /// member forwards straight to <see cref="Store"/> — the provider itself uses no other path.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	public T Read<T>(Func<ITx, T> read) => Store.Read(read);
 

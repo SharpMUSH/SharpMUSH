@@ -13,7 +13,7 @@ namespace SharpMUSH.Database.Lightning;
 /// registry (Area 21). Ported from <c>SurrealDatabase.Applications.cs</c>; keyed by
 /// <see cref="RegisteredApplication.Slug"/> in <see cref="Tables.App"/>.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static ApplicationRecord ToApplicationRecord(RegisteredApplication application) => new()
 	{

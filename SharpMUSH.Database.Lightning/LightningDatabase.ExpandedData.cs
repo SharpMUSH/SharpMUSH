@@ -11,7 +11,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <c>dynamic</c> value comes through the interface, not one of <see cref="LightningJsonContext"/>'s
 /// fixed set of provider record types.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static readonly JsonSerializerOptions ExpandedDataJsonOptions = new() { PropertyNamingPolicy = null };
 
@@ -58,16 +58,18 @@ public sealed partial class LightningDatabase
 		return ValueTask.FromResult(bytes is null ? default : JsonSerializer.Deserialize<T>(bytes, ExpandedDataJsonOptions));
 	}
 
+	/// <summary>
+	/// Unlike <see cref="SetExpandedObjectData"/> this replaces the stored document rather than merging
+	/// over it, so a null property clears the stored one — the write @motd uses to clear a single message,
+	/// and what the other providers do (ArangoDB replaces with <c>keepNull</c>, SurrealDB upserts the whole
+	/// document).
+	/// </summary>
 	public async ValueTask SetExpandedServerData(string dataType, dynamic data, CancellationToken cancellationToken = default)
 	{
 		var key = Keys.Str(dataType);
 		var newBytes = JsonSerializer.SerializeToUtf8Bytes((object)data, ExpandedDataJsonOptions);
 
-		await Store.WriteAsync(tx =>
-		{
-			var bytes = tx.TryGet(Tables.ExpandedSrv, key, out var existing) ? MergeExpandedData(existing, newBytes) : newBytes;
-			tx.Put(Tables.ExpandedSrv, key, bytes);
-		}, cancellationToken);
+		await Store.WriteAsync(tx => tx.Put(Tables.ExpandedSrv, key, newBytes), cancellationToken);
 	}
 
 	public ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default)

@@ -22,7 +22,7 @@ namespace SharpMUSH.Database.Lightning;
 /// id, so <see cref="GetPackageDependentsAsync"/> — the reverse direction — scans the table and
 /// filters, same as <see cref="GetAccountIdsForRoleAsync"/> does for role assignments.
 /// </remarks>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static DateTimeOffset ParsePackageTimestamp(string iso)
 		=> DateTimeOffset.Parse(iso, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);

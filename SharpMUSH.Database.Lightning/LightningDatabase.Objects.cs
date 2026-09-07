@@ -20,7 +20,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <c>SurrealDatabase.Objects.cs</c>; see that file and the hydration helpers in
 /// <c>SurrealDatabase.cs</c> for the semantics this mirrors.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	#region Object CRUD
 

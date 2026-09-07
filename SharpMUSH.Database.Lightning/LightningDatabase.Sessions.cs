@@ -11,7 +11,7 @@ namespace SharpMUSH.Database.Lightning;
 /// are secondary duplicate indexes (accountId/originIp → token) kept in step with <see cref="Tables.Session"/>
 /// inside the same writer job as every mutation that touches them.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static SharpSession MapToSharpSession(string token, SessionRecord record) => new()
 	{

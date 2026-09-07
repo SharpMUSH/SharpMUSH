@@ -5,7 +5,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Database.Lightning;
 
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private const string InitialSeedMigrationId = "0001_initial_seed";
 	private const string AncestorFormatsMigrationId = "0002_ancestor_formats";
@@ -169,25 +169,7 @@ public sealed partial class LightningDatabase
 	}
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
-	private static void RecomputeNextDbref(ITx tx)
-	{
-		var highest = -1L;
-		foreach (var (key, _) in tx.Range(Tables.Obj, []))
-		{
-			var dbref = Keys.ReadDbref(key);
-			if (dbref > highest)
-			{
-				highest = dbref;
-			}
-		}
-
-		var candidate = highest + 1;
-		var current = tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : 0;
-		if (candidate > current)
-		{
-			tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(candidate));
-		}
-	}
+	private static void RecomputeNextDbref(ITx tx) => RecomputeCounter(tx, "next_dbref", Tables.Obj);
 
 	private static void EnsureServerState(ITx tx)
 	{

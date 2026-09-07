@@ -12,7 +12,7 @@ namespace SharpMUSH.Database.Lightning;
 /// enforced here inside the writer job (<c>TryGet</c> before <c>Put</c> on <see cref="Tables.AccountEmail"/>
 /// / <see cref="Tables.AccountUser"/>) because there is exactly one writer, so check-then-put is atomic.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	/// <summary>Parses either a bare account key ("5") or a typed id ("node_accounts/5") into its raw key.</summary>
 	private static string ParseAccountId(string accountId) => accountId.Contains('/') ? accountId[(accountId.IndexOf('/') + 1)..] : accountId;

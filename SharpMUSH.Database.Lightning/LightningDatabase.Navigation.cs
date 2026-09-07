@@ -20,7 +20,7 @@ namespace SharpMUSH.Database.Lightning;
 /// <see cref="IsReachableViaParentOrZoneAsync"/> lives in <c>LightningDatabase.Objects.cs</c> — it is part of
 /// <c>IObjectStore</c>, not this store, and was already ported alongside object deletion (Task 7).
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	public ValueTask<AnyOptionalSharpObject> GetParentAsync(string id, CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(GetOptionalRelatedCore(Tables.Parent.Forward, ParseDbref(id)));

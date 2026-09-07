@@ -25,7 +25,7 @@ namespace SharpMUSH.Database.Lightning;
 /// so a <c>TryGet</c> immediately followed by a <c>Put</c> inside one job is already atomic with respect
 /// to every other create.</para>
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static byte[] ChanKey(string name) => Keys.Upper(name);
 

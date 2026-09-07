@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using LightningDB;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
@@ -17,6 +18,12 @@ public sealed partial class LightningStore : IDisposable
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 	private Dictionary<TableDef, LmdbDb> _tables = new();
+
+	/// <summary>Tables opened through <see cref="OpenTable"/> rather than declared in <see cref="Tables"/>
+	/// — a plugin's own. Kept across <see cref="Close"/> so <see cref="Open"/> reopens them too: after a
+	/// directory swap a plugin still holds the <see cref="TableDef"/> it was handed, and that definition
+	/// has to keep resolving to a live handle.</summary>
+	private ImmutableDictionary<string, TableDef> _pluginTables = ImmutableDictionary<string, TableDef>.Empty;
 
 	public string Path => _options.Path;
 	internal ReaderWriterLockSlim Gate => _gate;
@@ -42,7 +49,7 @@ public sealed partial class LightningStore : IDisposable
 
 		using var tx = _env.BeginTransaction();
 		var tables = new Dictionary<TableDef, LmdbDb>();
-		foreach (var def in Tables.All)
+		foreach (var def in Tables.All.Concat(_pluginTables.Values))
 		{
 			tables[def] = tx.OpenDatabase(def.Name, new DatabaseConfiguration { Flags = FlagsFor(def) | DatabaseOpenFlags.Create });
 		}
@@ -97,6 +104,7 @@ public sealed partial class LightningStore : IDisposable
 			var code = tx.Commit();
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"open table {name}");
 			_tables = new Dictionary<TableDef, LmdbDb>(_tables) { [def] = handle };
+			_pluginTables = _pluginTables.SetItem(name, def);
 			return def;
 		});
 	}
@@ -172,13 +180,91 @@ public sealed partial class LightningStore : IDisposable
 	internal void PauseWriter() => _writer.Pause();
 	internal void ResumeWriter() => _writer.Resume();
 
+	/// <summary>
+	/// Replaces this environment's directory with <paramref name="incomingPath"/>, keeping the outgoing
+	/// one at <paramref name="previousPath"/> (an older copy there is deleted first). The sequence is:
+	/// drain and park the writer, take the gate's write lock, close the environment, move live aside,
+	/// move the incoming directory into the live path, reopen (every catalogue table and every
+	/// plugin-opened one), release the lock, resume the writer. Reads that arrive meanwhile block on the
+	/// gate and then run against the swapped-in environment; they never see a closed one and never fail.
+	/// Blocks the calling thread, which must not be the writer thread.
+	/// </summary>
+	internal void SwapDirectory(string incomingPath, string previousPath)
+	{
+		if (!Directory.Exists(incomingPath))
+		{
+			throw new DirectoryNotFoundException($"Cannot swap in '{incomingPath}': the directory does not exist.");
+		}
+
+		WhileClosed(() =>
+		{
+			if (Directory.Exists(previousPath)) Directory.Delete(previousPath, recursive: true);
+			Directory.Move(_options.Path, previousPath);
+			try
+			{
+				Directory.Move(incomingPath, _options.Path);
+			}
+			catch
+			{
+				// The live directory is already aside and the environment is closed: put it back so the
+				// caller is left with a working store rather than no directory at all.
+				Directory.Move(previousPath, _options.Path);
+				throw;
+			}
+		});
+	}
+
+	/// <summary>Closes the environment, deletes the directory and reopens it empty. Same writer and gate
+	/// discipline as <see cref="SwapDirectory"/>; the caller re-migrates.</summary>
+	internal void WipeDirectory() => WhileClosed(() =>
+	{
+		if (Directory.Exists(_options.Path)) Directory.Delete(_options.Path, recursive: true);
+	});
+
+	/// <summary>Runs <paramref name="onDisk"/> with no writer running, no reader inside a transaction and
+	/// the environment closed, then reopens it. The writer is drained and parked first so no committed
+	/// write is left behind in the directory being moved away.</summary>
+	private void WhileClosed(Action onDisk)
+	{
+		_writer.PauseAndDrainAsync().GetAwaiter().GetResult();
+		try
+		{
+			_gate.EnterWriteLock();
+			try
+			{
+				Close();
+				onDisk();
+				Open();
+			}
+			finally
+			{
+				_gate.ExitWriteLock();
+			}
+		}
+		finally
+		{
+			ResumeWriter();
+		}
+	}
+
 	public long Count(TableDef table) => Read(tx => tx.Count(table));
 
+	/// <summary>Hot backup of the whole environment into <paramref name="path"/>. A read-side operation:
+	/// it takes the gate's read lock (so it cannot race a swap) and never touches the writer, so writes
+	/// continue while it runs and the copy is the snapshot of the transaction it opens.</summary>
 	public void CopyTo(string path, bool compact = true)
 	{
 		Directory.CreateDirectory(path);
-		var code = _env.CopyTo(path, compact);
-		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "copy");
+		_gate.EnterReadLock();
+		try
+		{
+			var code = _env.CopyTo(path, compact);
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "copy");
+		}
+		finally
+		{
+			_gate.ExitReadLock();
+		}
 	}
 
 	public void Dispose()

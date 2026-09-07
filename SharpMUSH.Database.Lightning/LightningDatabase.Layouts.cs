@@ -12,7 +12,7 @@ namespace SharpMUSH.Database.Lightning;
 /// as a single JSON blob (via <see cref="LayoutSerialization"/>) keyed by scope, so no record type or
 /// JSON-context registration is needed for this area.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	public async Task UpsertLayoutAsync(string scope, LayoutConfiguration layout)
 		=> await Store.WriteAsync(tx => tx.Put(Tables.Layout, Keys.Str(scope), Keys.Str(LayoutSerialization.Serialize(layout))));

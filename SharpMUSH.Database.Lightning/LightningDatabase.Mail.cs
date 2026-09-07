@@ -20,7 +20,7 @@ namespace SharpMUSH.Database.Lightning;
 /// positional access is "the Nth entry of the recipient's <see cref="Tables.MailBox"/> range, filtered to
 /// the requested folder" rather than a stored ordinal.
 /// </summary>
-public sealed partial class LightningDatabase
+public partial class LightningDatabase
 {
 	private static byte[] MailKey(long mailId) => Keys.Dbref(mailId);
 

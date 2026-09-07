@@ -92,6 +92,22 @@ public class ExpandedDataTests
 		await Assert.That(result).IsEquivalentTo(new PartialUpdateExample("Cat", "Bark"));
 	}
 
+	/// <summary>
+	/// SetExpandedServerData replaces: unlike the object-scoped write, a null property clears the stored
+	/// one. That is how @motd clears a single message, and how the other providers behave (ArangoDB
+	/// replaces with <c>keepNull</c>, SurrealDB upserts the whole document).
+	/// </summary>
+	[Test]
+	public async Task ServerDataWriteReplacesTheDocumentSoANullPropertyClearsIt()
+	{
+		await _db.SetExpandedServerData("PartialUpdateExample", new PartialUpdateExample("Dog", "Bark"));
+		await _db.SetExpandedServerData("PartialUpdateExample", new PartialUpdateExample(null, "Bark"));
+
+		var result = await _db.GetExpandedServerData<PartialUpdateExample>("PartialUpdateExample");
+
+		await Assert.That(result).IsEquivalentTo(new PartialUpdateExample(null, "Bark"));
+	}
+
 	[Test]
 	public async Task GetServerStateAsyncReturnsSetupNotCompletedAfterMigration()
 	{
