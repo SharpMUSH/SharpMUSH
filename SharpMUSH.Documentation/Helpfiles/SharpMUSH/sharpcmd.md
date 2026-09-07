@@ -718,6 +718,32 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 **See Also:**
 - [@idle]
 - [@haven]
+# @backup
+`@backup`<br>
+`@backup/list`
+
+Wizard-only. Takes a copy of the world, into a timestamped directory under the game's backup
+directory, and reports the name and size of what it wrote. This is a SharpMUSH command; PennMUSH
+has no equivalent, because PennMUSH holds the database in memory and `@dump` writes it out.
+
+The game keeps running throughout. The copy is a snapshot as of the moment it starts: everything
+committed before then is in it, nothing after. It is written aside and moved into place only once
+complete, so a backup tool reading the directory never sees a half-written one.
+
+`@backup/list` reports the copies currently on disk, newest first, without taking one.
+
+Only a database that keeps the world in a directory this game owns can do this — the `lightning`
+provider. On any other, `@backup` says so and does nothing; back those up with the database
+server's own tools.
+
+Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
+and whether one is also taken automatically on an interval are deployment settings on the server
+process, not `@config` options. See `deploy/README.md`.
+
+
+**See Also:**
+- [@dump]
+- [@shutdown]
 # @boot
 `@boot[/silent] <player>`<br>
 `@boot/port[/silent] <descriptor number>`<br>
@@ -1571,8 +1597,11 @@ If the `/paranoid` switch is given, the game performs additional consistency che
 
 These switches should ONLY be used if a normal @dump is not being done correctly. They should generally only be done by wizards with access to the account on which the MUSH is running, since others will not have access to the checkpoint log file.
 
+In SharpMUSH `@dump` does nothing. There is no in-memory copy to write out: every change is committed to the database as it is made, so the game on disk is already current. To take a copy of it that is safe to read while the game runs, use `@backup`.
+
 
 **See Also:**
+- [@backup]
 - [@shutdown]
 # @ealias
 # @lalias

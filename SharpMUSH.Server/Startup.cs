@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -149,6 +150,37 @@ public class Startup(
 			"SHARPMUSH_LIGHTNING_FLUSH_MS is set to '{Setting}', which is not a positive millisecond count; using {DefaultMs} ms",
 			setting, defaultInterval.TotalMilliseconds);
 		return defaultInterval;
+	}
+
+	/// <summary>
+	/// How many hot copies of the world survive a backup run. A typo must not silently mean "keep one"
+	/// on a box sized for several, nor grow unbounded, so an unreadable setting falls back loudly.
+	/// </summary>
+	private static int ResolveLightningBackupKeep(string? setting, ILogger<LightningDatabase> logger)
+	{
+		const int defaultKeep = 2;
+		if (string.IsNullOrWhiteSpace(setting)) return defaultKeep;
+		if (int.TryParse(setting, out var parsed) && parsed > 0) return parsed;
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_BACKUP_KEEP is set to '{Setting}', which is not a positive count; keeping {DefaultKeep}",
+			setting, defaultKeep);
+		return defaultKeep;
+	}
+
+	/// <summary>
+	/// How often the scheduled hot copy runs. Unset means no scheduled backup, so an unreadable setting
+	/// leaves scheduling off — and says so, because the operator who set it is relying on it.
+	/// </summary>
+	private static TimeSpan ResolveLightningBackupInterval(string? setting, ILogger<LightningDatabase> logger)
+	{
+		if (LightningBackupOptions.TryParseInterval(setting, out var interval)) return interval;
+
+		logger.LogWarning(
+			"SHARPMUSH_LIGHTNING_BACKUP_INTERVAL is set to '{Setting}', which is not an interval like 6h, 90m or a "
+			+ "count of seconds; scheduled backups stay off",
+			setting);
+		return TimeSpan.Zero;
 	}
 
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -343,6 +375,30 @@ public class Startup(
 			RegisterDatabaseProvider<LightningDatabase>(services);
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
 				sp.GetRequiredService<LightningDatabase>());
+
+			// Hot backup. SHARPMUSH_LIGHTNING_BACKUP_PATH → a "backup" directory beside the world;
+			// SHARPMUSH_LIGHTNING_BACKUP_KEEP → 2; SHARPMUSH_LIGHTNING_BACKUP_INTERVAL → off;
+			// SHARPMUSH_LIGHTNING_BACKUP_COMPACT → on.
+			var backupRoot = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_PATH")
+				?? configuration["Lightning:BackupPath"]
+				?? LightningBackupOptions.DefaultRootFor(lightningPath);
+			var backupKeepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_KEEP");
+			var backupIntervalSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_INTERVAL");
+			var backupCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
+			services.AddSingleton<IWorldBackupService>(sp =>
+			{
+				var dbLogger = sp.GetRequiredService<ILogger<LightningDatabase>>();
+				return new LightningWorldBackupService(
+					sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
+					new LightningBackupOptions
+					{
+						Root = backupRoot,
+						Keep = ResolveLightningBackupKeep(backupKeepSetting, dbLogger),
+						Interval = ResolveLightningBackupInterval(backupIntervalSetting, dbLogger),
+						Compact = !string.Equals(backupCompactSetting, "false", StringComparison.OrdinalIgnoreCase)
+					},
+					sp.GetRequiredService<ILogger<LightningWorldBackupService>>());
+			});
 		}
 		else
 		{
@@ -360,6 +416,12 @@ public class Startup(
 			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.IArangoStorageAccessor>(sp =>
 				sp.GetRequiredService<ArangoDatabase>());
 		}
+
+		// Only a provider holding the world in a directory of its own can hot-copy it. The rest get an
+		// implementation that says so, so @backup and the scheduled service depend on the interface
+		// unconditionally instead of each of them knowing which provider is running.
+		services.TryAddSingleton<IWorldBackupService>(
+			_ => new UnsupportedWorldBackupService(databaseProvider.ToString().ToLowerInvariant()));
 
 		services.AddSingleton<PasswordHasher<string>, PasswordHasher<string>>(_ => new PasswordHasher<string>()
 		/*
@@ -733,6 +795,7 @@ public class Startup(
 		services.AddHostedService<Services.HealthMonitoringService>();
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
+		services.AddHostedService<Services.WorldBackupScheduleService>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection

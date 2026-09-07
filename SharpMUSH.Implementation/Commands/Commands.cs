@@ -68,6 +68,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IBanEnforcer BanEnforcer { get; }
 
+	private IWorldBackupService WorldBackupService { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -112,6 +114,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IGameBroadcastService gameBroadcastService,
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
+		IWorldBackupService worldBackupService,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -148,6 +151,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		GameBroadcastService = gameBroadcastService;
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
+		WorldBackupService = worldBackupService;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

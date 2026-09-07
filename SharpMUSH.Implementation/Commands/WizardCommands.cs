@@ -2157,6 +2157,72 @@ public partial class Commands
 		return new None();
 	}
 
+	/// <summary>
+	/// Takes a hot copy of the world into the backup directory, so a snapshot tool has a consistent
+	/// one to read while the game runs. This is what <c>@dump</c> would be if SharpMUSH kept the world
+	/// in memory: it does not, so <c>@dump</c> has nothing to write out and this copies instead.
+	///
+	/// <para><c>/LIST</c> reports the copies already on disk, newest first. Only a provider holding
+	/// the world in a directory of its own can do either.</para>
+	/// </summary>
+	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	public async ValueTask<Option<CallState>> Backup(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (!WorldBackupService.IsSupported)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnsupported), executor);
+			return new None();
+		}
+
+		if (parser.CurrentState.Switches.Contains("LIST"))
+		{
+			var existing = WorldBackupService.List();
+			if (existing.Count == 0)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
+				return new None();
+			}
+
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
+				executor, WorldBackupService.Root);
+			foreach (var backup in existing)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
+					executor, backup.Name, DescribeBytes(backup.SizeBytes));
+			}
+
+			return new None();
+		}
+
+		// Said before the copy starts, because a large world takes long enough that silence reads as a
+		// wedged command.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
+
+		var result = await WorldBackupService.CreateAsync();
+		if (result.TryPickT0(out var written, out var error))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
+				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
+			return new CallState(written.Name);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
+			error.Value);
+		return new None();
+	}
+
+	/// <summary>Byte count at a size a wizard reading it in a terminal can take in at a glance.</summary>
+	private static string DescribeBytes(long bytes) => bytes switch
+	{
+		>= 1024L * 1024 * 1024 => $"{bytes / (double)(1024L * 1024 * 1024):F1} GB",
+		>= 1024 * 1024 => $"{bytes / (double)(1024 * 1024):F1} MB",
+		>= 1024 => $"{bytes / 1024.0:F1} KB",
+		_ => $"{bytes} B"
+	};
+
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
 	/// </remarks>

@@ -2341,6 +2341,29 @@
     <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
   </data>
 
+  <!-- @backup -->
+  <data name="BackupUnsupported" xml:space="preserve">
+    <value>This game's database has no world directory to copy. Back it up with that database's own tools.</value>
+  </data>
+  <data name="BackupStarted" xml:space="preserve">
+    <value>Copying the world. The game keeps running; this may take a while.</value>
+  </data>
+  <data name="BackupCompleteFormat" xml:space="preserve">
+    <value>Backup {0} written ({1}). Keeping {2}.</value>
+  </data>
+  <data name="BackupFailedFormat" xml:space="preserve">
+    <value>Backup failed: {0}</value>
+  </data>
+  <data name="BackupListHeaderFormat" xml:space="preserve">
+    <value>Backups in {0}:</value>
+  </data>
+  <data name="BackupListRowFormat" xml:space="preserve">
+    <value>  {0}  {1}</value>
+  </data>
+  <data name="BackupListEmpty" xml:space="preserve">
+    <value>No backups have been taken yet.</value>
+  </data>
+
   <!-- @pcreate -->
   <data name="PlayerCreateInvalidName" xml:space="preserve">
     <value>That is not a valid player name.</value>
