@@ -319,9 +319,15 @@ docker compose run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
-**To restore for real:** stop the stack, then put the snapshot's contents back into the
-`app-data` volume — one of the `backup/<timestamp>` directories becomes `lightning`, and
-`wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
+**To restore for real** (these stacks run `lightning`): stop the stack, then put the snapshot's
+contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
+`lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
+
+> Restoring the other two is not a file copy, because their backups are exports rather than
+> directories. With the game **stopped**, load `backup/<timestamp>/world.surql` into an empty
+> SurrealDB with `surreal import --ns sharpmush --db world <file>`, or `world.json` into an empty
+> Memgraph with `MemgraphStagingDatabase.RestoreAsync`, which is the same path staging rollback
+> uses. Both replace whatever is there; neither is a merge.
 
 ```bash
 docker compose stop sharpmush-server connectionserver
