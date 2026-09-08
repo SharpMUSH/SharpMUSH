@@ -679,7 +679,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		var expectedMessage = $"adesc_{token}_from_#{roomDbRef.Number}";
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, expectedMessage);
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, expectedMessage);
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
@@ -701,14 +701,14 @@ public class BuildingCommandTests
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain($"@adesc here=@pemit %#=halted_adesc_{token}"));
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@set here=HALT"));
+			MarkupText.Plain($"@adesc {roomDbRef}=@pemit %#=halted_adesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@set {roomDbRef}=HALT"));
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"look_barrier_{token}");
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains($"look_barrier_{token}");
@@ -797,7 +797,7 @@ public class BuildingCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force {player.DbRef}=look"));
 
 		var playerRef = $"#{player.DbRef.Number}";
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef,
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef,
 			$"action_{token}:{playerRef}:{playerRef}:#{roomDbRef.Number}");
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
@@ -873,7 +873,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@dolist 1={{look; @adesc here=@pemit %#=snapshot_new_{token}}}"));
 
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"snapshot_old_{token}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"snapshot_old_{token}");
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
 			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
@@ -950,7 +950,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// The @descformat evaluation is queued, so it can land after CommandParse returns.
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"THINGDESC_{token.ToUpper()}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"THINGDESC_{token.ToUpper()}");
 
 		await NotifyService
 			.Received()
@@ -987,7 +987,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"look_barrier_{token}");
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains($"inside_format_{token}:1:outer_{token}");
@@ -1019,7 +1019,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		// The @idescformat evaluation is queued, so it can land after CommandParse returns.
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"INSIDEDESC_{token.ToUpper()}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"INSIDEDESC_{token.ToUpper()}");
 
 		await NotifyService
 			.Received()
@@ -1052,7 +1052,7 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
-		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"look_barrier_{token}");
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains($"look_barrier_{token}");

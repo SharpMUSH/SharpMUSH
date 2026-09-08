@@ -77,6 +77,27 @@ public class GameCommandTests
 	}
 
 	[Test]
+	[Arguments("teach", "Teach what?")]
+	[Arguments("teach/list", "Teach what action list?")]
+	public async ValueTask TeachWithoutArgumentReportsExpectedError(string command, string expectedMessage)
+	{
+		var executor = await CreatePlayerAsync("TeachMissingArgumentExecutor");
+		try
+		{
+			var start = Notifications.CountFor(executor.DbRef);
+
+			await CommandAsAsync(executor, command);
+
+			var messages = Notifications.For(executor.DbRef).Skip(start).ToArray();
+			await Assert.That(messages).IsEquivalentTo([expectedMessage]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
+	}
+
+	[Test]
 	public async ValueTask TeachCommandEchoesReportedSetFormToExecutor()
 	{
 		var player = await CreatePlayerAsync("TeachSetPlayer");

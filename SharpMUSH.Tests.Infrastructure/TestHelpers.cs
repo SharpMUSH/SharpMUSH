@@ -138,6 +138,23 @@ public static class TestHelpers
 		public int CountFor(DBRef who)
 			=> _byRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
 
+		/// <summary>
+		/// Waits until <paramref name="who"/> receives a message containing
+		/// <paramref name="containsText"/>, or fails after <paramref name="timeout"/>.
+		/// </summary>
+		public async Task WaitForAsync(DBRef who, string containsText, TimeSpan? timeout = null)
+		{
+			var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			var limit = timeout ?? TimeSpan.FromSeconds(5);
+			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
+			{
+				if (For(who).Any(message => message.Contains(containsText, StringComparison.Ordinal))) return;
+				await Task.Delay(50);
+			}
+
+			throw new TimeoutException($"No notification containing '{containsText}' arrived for {who} within {limit}.");
+		}
+
 		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>
 		public List<OneOf<MString, string>> RawFor(DBRef who)
 			=> _rawByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
@@ -271,37 +288,6 @@ public static class TestHelpers
 
 	private static string PlainText(OneOf<MString, string> msg) =>
 		msg.Match(ms => ms.ToPlainText(), s => s);
-
-	/// <summary>
-	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
-	/// the given <paramref name="executor"/> DBRef and <paramref name="containsText"/> is recorded,
-	/// or until <paramref name="timeoutMs"/> elapses.  This replaces fragile <c>Task.Delay</c>
-	/// waits for asynchronously-queued attribute executions (e.g. @mapsql think callbacks).
-	/// </summary>
-	public static async Task WaitForNotification(
-		INotifyService notifyService,
-		DBRef executor,
-		string containsText,
-		int timeoutMs = 5000)
-	{
-		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-		while (DateTime.UtcNow < deadline)
-		{
-			var calls = notifyService.ReceivedCalls();
-			foreach (var call in calls)
-			{
-				var args = call.GetArguments();
-				if (args.Length < 2) continue;
-				if (args[0] is not AnySharpObject obj) continue;
-				if (obj.Object().DBRef != executor) continue;
-				if (args[1] is not OneOf<MString, string> msg) continue;
-				var text = msg.Match(ms => ms.ToString(), s => s);
-				if (text.Contains(containsText)) return;
-			}
-			await Task.Delay(50);
-		}
-		// Timeout reached — let the caller's assertion produce the diagnostic message
-	}
 
 	/// <summary>
 	/// Polls the attribute service until the specified attribute exists on the target object,
