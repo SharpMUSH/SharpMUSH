@@ -35,11 +35,11 @@ jobs:
         run: |
           # Extract version from tag (e.g., v1.0.0 -> 1.0.0)
           VERSION=${GITHUB_REF#refs/tags/v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version: $VERSION"
 
       - name: Build and push SharpMUSH Server
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./Dockerfile
@@ -57,7 +57,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push ConnectionServer
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: ./SharpMUSH.ConnectionServer/Dockerfile
@@ -67,7 +67,25 @@ jobs:
             sharpmush/sharpmush-connectionserver:latest
           labels: |
             org.opencontainers.image.title=SharpMUSH ConnectionServer
-            org.opencontainers.image.description=Connection server for SharpMUSH
+            org.opencontainers.image.description=Rendering worker for SharpMUSH
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push SocketServer
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: ./SharpMUSH.SocketServer/Dockerfile
+          push: true
+          tags: |
+            sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}
+            sharpmush/sharpmush-socketserver:latest
+          labels: |
+            org.opencontainers.image.title=SharpMUSH SocketServer
+            org.opencontainers.image.description=Stable socket owner for SharpMUSH
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
@@ -75,15 +93,21 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Summary
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          echo "## 🐳 Docker Images Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully built and pushed images to DockerHub:" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### SharpMUSH Server" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-server:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-server:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ConnectionServer" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-connectionserver:${{ steps.meta.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`sharpmush/sharpmush-connectionserver:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Images Published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Successfully built and pushed images to DockerHub:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SharpMUSH Server" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-server:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-server:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### ConnectionServer" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-connectionserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-connectionserver:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SocketServer — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-socketserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> "$GITHUB_STEP_SUMMARY"

@@ -7,8 +7,8 @@ using SharpMUSH.Messaging.Abstractions;
 namespace SharpMUSH.Server.Services;
 
 /// <summary>
-/// Service that reconciles connection state from Redis on startup.
-/// Rebuilds the in-memory connection list from the shared Redis state store.
+/// Service that reconciles connection state from NATS KV on startup.
+/// Rebuilds the in-memory connection list from the shared NATS KV state store.
 /// </summary>
 public class ConnectionReconciliationService : IHostedService
 {
@@ -28,7 +28,7 @@ public class ConnectionReconciliationService : IHostedService
 
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		_logger.LogInformation("Starting connection state reconciliation from Redis...");
+		_logger.LogInformation("Starting connection state reconciliation from NATS KV...");
 
 		try
 		{
@@ -42,8 +42,9 @@ public class ConnectionReconciliationService : IHostedService
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Failed to reconcile connection state from Redis");
-			// Don't throw - allow the application to start even if reconciliation fails
+			_logger.LogError(ex, "Failed to reconcile connection state from NATS KV");
+			// Never announce readiness with missing player bindings.
+			throw;
 		}
 	}
 

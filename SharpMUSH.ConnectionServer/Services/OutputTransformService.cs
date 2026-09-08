@@ -36,8 +36,10 @@ public partial class OutputTransformService : IOutputTransformService
 	public ValueTask<byte[]> TransformAsync(
 		byte[] rawOutput,
 		ProtocolCapabilities capabilities,
-		PlayerOutputPreferences? preferences)
+		PlayerOutputPreferences? preferences,
+		CancellationToken ct = default)
 	{
+		ct.ThrowIfCancellationRequested();
 		var result = Transform(rawOutput, capabilities, preferences);
 		return ValueTask.FromResult(result);
 	}

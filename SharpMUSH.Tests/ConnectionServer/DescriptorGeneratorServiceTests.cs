@@ -9,6 +9,17 @@ namespace SharpMUSH.Tests.ConnectionServer;
 public class DescriptorGeneratorServiceTests
 {
 	[Test]
+	public async Task ReleasingTailAlsoRecoversContiguousEarlierHoles()
+	{
+		var generator = new NextUnoccupiedNumberGenerator(1);
+		var allocated = generator.Get().Take(4).ToArray();
+		generator.Release(allocated[1]);
+		generator.Release(allocated[2]);
+		generator.Release(allocated[3]);
+		await Assert.That(generator.Get().Take(4).SequenceEqual([2L, 3L, 4L, 5L])).IsTrue();
+	}
+
+	[Test]
 	public async Task TelnetDescriptorsAreUnique()
 	{
 		var options = new ConnectionServerOptions
