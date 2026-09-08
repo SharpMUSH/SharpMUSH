@@ -166,9 +166,9 @@ public class PackageInstallService(
 					Want(targetObjid, attrName);
 				}
 
-				foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+				foreach (var reference in PackageRefIndirection.RefsUsedIn(obj, obj.IsAttach ? manifest.Name : null))
 				{
-					Want(targetObjid, PackageRefIndirection.AttributeNameFor(reference));
+					Want(targetObjid, PackageRefIndirection.AttributeNameFor(reference, obj.IsAttach ? manifest.Name : null));
 				}
 
 				continue;
@@ -189,9 +189,9 @@ public class PackageInstallService(
 
 			// Engine-managed ref attrs (decision 20.21) — the plan engine
 			// three-way-compares them like any other managed attribute.
-			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj, obj.IsAttach ? manifest.Name : null))
 			{
-				Want(record.Objid, PackageRefIndirection.AttributeNameFor(reference));
+				Want(record.Objid, PackageRefIndirection.AttributeNameFor(reference, obj.IsAttach ? manifest.Name : null));
 			}
 		}
 
@@ -420,10 +420,9 @@ public class PackageInstallService(
 			if (attrSpec is not null)
 			{
 				// Code: tokens become [v(PM`REFS`...)] recalls — never dbrefs (20.21).
-				newValue = PackageRefIndirection.TransformCode(attrSpec.Value);
+				newValue = PackageRefIndirection.TransformCode(attrSpec.Value, spec!.IsAttach ? manifest.Name : null);
 			}
-			else if (change.NewValue is not null && change.Attribute.StartsWith(
-				$"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase))
+			else if (change.NewValue is not null && PackageRefIndirection.IsRefAttribute(change.Attribute))
 			{
 				// Engine-managed ref attr: the value IS the resolution. A token
 				// that still cannot resolve here (unanswered configure) is fatal.
@@ -806,12 +805,12 @@ public class PackageInstallService(
 
 		async Task WriteAsync(string value)
 		{
-			if (change.LiveValue is not null)
+			if (change.LiveValue is not null && change.PreviousAttribute is null)
 			{
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue));
 			}
 
-			await attributeStore.SetAttributeAsync(target, path, MarkupText.Plain(value), pmWizard, cancellationToken);
+			await mediator.Send(new SetAttributeCommand(target, path, MarkupText.Plain(value), pmWizard), cancellationToken);
 		}
 
 		async Task BaselineAsync(string packageValue, string? effectiveValue)
@@ -838,7 +837,12 @@ public class PackageInstallService(
 			case PackageAttributeAction.NoChange:
 			case PackageAttributeAction.Adopt:
 			case PackageAttributeAction.KeepLocal:
-				// No write; the baseline still advances to the package's value
+				if (change.PreviousAttribute is not null && change.LiveValue is not null)
+				{
+					await WriteAsync(change.LiveValue);
+				}
+
+				// The baseline still advances to the package's value
 				// (dpkg semantics: local drift stays visible, no re-prompting).
 				// A preserved local deletion (LiveValue null) stays deleted.
 				await BaselineAsync(newValue!, change.LiveValue ?? (change.Action == PackageAttributeAction.KeepLocal ? null : newValue));
@@ -846,7 +850,7 @@ public class PackageInstallService(
 
 			case PackageAttributeAction.Delete:
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-				await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
+				await mediator.Send(new ClearAttributeCommand(target, path), cancellationToken);
 				await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 				return null;
 
@@ -862,7 +866,7 @@ public class PackageInstallService(
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
 							// "Theirs" is the deletion.
 							preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-							await attributeStore.ClearAttributeAsync(target, path, cancellationToken);
+							await mediator.Send(new ClearAttributeCommand(target, path), cancellationToken);
 							await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 							return null;
 						case PackageConflictResolution.TakeTheirs:
@@ -882,6 +886,11 @@ public class PackageInstallService(
 								await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 								notes.Add($"{change.TargetRef}/{change.Attribute}: kept local value; no longer package-managed.");
 								return null;
+							}
+
+							if (change.PreviousAttribute is not null && change.LiveValue is not null)
+							{
+								await WriteAsync(change.LiveValue);
 							}
 
 							// DeleteModify + KeepMine keeps the deletion: baseline advances, nothing live.
@@ -1133,13 +1142,21 @@ public class PackageInstallService(
 		}
 
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
-		foreach (var managed in (await registry.GetManagedAttributesAsync(packageId))
-			.Where(m => !ownObjids.Contains(m.Objid)))
+		foreach (var group in (await registry.GetManagedAttributesAsync(packageId))
+			.Where(m => !ownObjids.Contains(m.Objid)).GroupBy(m => m.Objid))
 		{
-			var dbref = ParseObjid(managed.Objid);
-			if (dbref is not null)
+			var otherRefs = (await registry.GetManagedAttributesForObjectAsync(group.Key))
+				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute))
+				.Select(a => a.Attribute).ToHashSet(StringComparer.OrdinalIgnoreCase);
+			var dbref = ParseObjid(group.Key);
+			if (dbref is null)
 			{
-				await attributeStore.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
+				continue;
+			}
+
+			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute)))
+			{
+				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
 			}
 		}
 
@@ -1185,6 +1202,35 @@ public class PackageInstallService(
 			return new Error<string>($"Revision {revision} has no usable snapshot.");
 		}
 
+		var managedAttributes = await registry.GetManagedAttributesAsync(packageId);
+		var sharedRefs = new HashSet<(string Objid, string Attribute)>();
+		foreach (var objid in snapshot.Attributes.Select(a => a.Objid)
+			.Concat(managedAttributes.Select(a => a.Objid)).Distinct(StringComparer.Ordinal))
+		{
+			foreach (var shared in (await registry.GetManagedAttributesForObjectAsync(objid))
+				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute)))
+			{
+				sharedRefs.Add((objid, shared.Attribute.ToUpperInvariant()));
+			}
+		}
+
+		// Validate shared legacy restores before writing even the first snapshot attribute.
+		// A rollback must not redirect another package's code to our historical resolution.
+		foreach (var attribute in snapshot.Attributes.Where(a => sharedRefs.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
+		{
+			var dbref = ParseObjid(attribute.Objid);
+			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone())
+			{
+				continue;
+			}
+			var live = await attributeStore.GetAttributeAsync(dbref.Value, attribute.Attribute.Split('`'), cancellationToken)
+				.LastOrDefaultAsync(cancellationToken);
+			if (live?.Value.ToPlainText() != attribute.Value)
+			{
+				return new Error<string>($"Cannot roll back '{packageId}': {attribute.Objid}/{attribute.Attribute} is shared with another package and differs from revision {revision}.");
+			}
+		}
+
 		var notes = new List<string>();
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
 		var restoredKeys = new HashSet<(string, string)>();
@@ -1198,8 +1244,8 @@ public class PackageInstallService(
 				continue;
 			}
 
-			await attributeStore.SetAttributeAsync(
-				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard, cancellationToken);
+			await mediator.Send(new SetAttributeCommand(
+				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
 				attribute.Value, Hash(attribute.Value), snapshot.Version));
@@ -1207,17 +1253,20 @@ public class PackageInstallService(
 		}
 
 		// Attributes managed now but absent from the snapshot: remove to match the old state.
-		foreach (var managed in (await registry.GetManagedAttributesAsync(packageId))
+		foreach (var managed in managedAttributes
 			.Where(m => !restoredKeys.Contains((m.Objid, m.Attribute.ToUpperInvariant()))))
 		{
+			var shared = sharedRefs.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
 			var dbref = ParseObjid(managed.Objid);
-			if (dbref is not null)
+			if (dbref is not null && !shared)
 			{
-				await attributeStore.ClearAttributeAsync(dbref.Value, managed.Attribute.Split('`'), cancellationToken);
+				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
 			}
 
 			await registry.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
-			notes.Add($"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
+			notes.Add(shared
+				? $"Released ownership of shared ref {managed.Objid}/{managed.Attribute}; its value was retained."
+				: $"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
 		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);

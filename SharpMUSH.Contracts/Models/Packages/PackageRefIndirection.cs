@@ -19,40 +19,52 @@ public static class PackageRefIndirection
 	/// <summary>The branch holding ref values: <c>PM`REFS`NAME</c>.</summary>
 	public const string RefsBranch = "PM`REFS";
 
+	/// <summary>Refs used by attached code are isolated by the attaching package.</summary>
+	public const string AttachedRefsBranch = "PM`ATTACHED_REFS";
+
 	/// <summary>
 	/// The attribute name a ref's value lives under. Same-package refs of any
 	/// kind share one namespace (<c>PM`REFS`NAME</c> — manifest validation
 	/// rejects cross-kind name collisions); cross-package refs are namespaced
 	/// by the dependency id (<c>PM`REFS`WHO-WHERE`WW_FUNCTIONS</c>).
+	/// Attached code uses <c>PM`ATTACHED_REFS`PACKAGE`...</c> for every ref kind.
 	/// </summary>
-	public static string AttributeNameFor(PackageRef reference) =>
-		reference is { Kind: PackageRefKind.Internal, Package: not null }
-			? $"{RefsBranch}`{reference.Package.ToUpperInvariant()}`{reference.Name.ToUpperInvariant()}"
-			: $"{RefsBranch}`{reference.Name.ToUpperInvariant()}";
+	public static string AttributeNameFor(PackageRef reference, string? attachingPackage = null)
+	{
+		var branch = attachingPackage is null ? RefsBranch : $"{AttachedRefsBranch}`{attachingPackage.ToUpperInvariant()}";
+		return reference is { Kind: PackageRefKind.Internal, Package: not null }
+			? $"{branch}`{reference.Package.ToUpperInvariant()}`{reference.Name.ToUpperInvariant()}"
+			: $"{branch}`{reference.Name.ToUpperInvariant()}";
+	}
+
+	/// <summary>True for a synthesized reference value in either owned or attached code.</summary>
+	public static bool IsRefAttribute(string attribute) =>
+		attribute.StartsWith($"{RefsBranch}`", StringComparison.OrdinalIgnoreCase)
+		|| attribute.StartsWith($"{AttachedRefsBranch}`", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>The softcode that recalls a ref's value at runtime.</summary>
-	public static string IndirectionFor(PackageRef reference) =>
-		$"[v({AttributeNameFor(reference)})]";
+	public static string IndirectionFor(PackageRef reference, string? attachingPackage = null) =>
+		$"[v({AttributeNameFor(reference, attachingPackage)})]";
 
 	/// <summary>
 	/// Transforms MUSHcode for installation: every <c>{{ref}}</c> token
 	/// becomes its <c>[v(PM`REFS`...)]</c> recall, and <c>{{{{</c> escapes
 	/// become literal <c>{{</c>. Total — the output never contains ref tokens.
 	/// </summary>
-	public static string TransformCode(string value) =>
-		PackageRefSubstitution.Substitute(value, reference => IndirectionFor(reference), out _);
+	public static string TransformCode(string value, string? attachingPackage = null) =>
+		PackageRefSubstitution.Substitute(value, reference => IndirectionFor(reference, attachingPackage), out _);
 
 	/// <summary>
 	/// The distinct refs used in an object's attribute values, i.e. the
 	/// <c>PM`REFS</c> entries that object needs.
 	/// </summary>
-	public static IReadOnlyList<PackageRef> RefsUsedIn(PackageObjectSpec spec) =>
+	public static IReadOnlyList<PackageRef> RefsUsedIn(PackageObjectSpec spec, string? attachingPackage = null) =>
 		spec.Attributes.Values
 			.SelectMany(attr => PackageRefScanner.Scan(attr.Value))
 			.Where(token => token.Ref is not null)
 			.Select(token => token.Ref!)
-			.DistinctBy(reference => AttributeNameFor(reference))
-			.OrderBy(reference => AttributeNameFor(reference), StringComparer.Ordinal)
+			.DistinctBy(reference => AttributeNameFor(reference, attachingPackage))
+			.OrderBy(reference => AttributeNameFor(reference, attachingPackage), StringComparer.Ordinal)
 			.ToList();
 
 	/// <summary>True when an attribute name is inside the engine-reserved <c>PM</c> tree.</summary>

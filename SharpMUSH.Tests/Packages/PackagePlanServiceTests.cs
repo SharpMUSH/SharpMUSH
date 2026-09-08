@@ -58,6 +58,178 @@ public class PackagePlanServiceTests
 		      FN_X: "value-new"
 		""";
 
+	[Test]
+	public async Task AttachedRefUpgrade_RequiresChoiceForAmbiguousLegacyValue()
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SRC: "{{$god}}"
+			""");
+		var inputs = Inputs(manifest, installed: Installed("probe"),
+			baselines: [new ManagedAttributeRecord("probe", "#0:0", "PM`REFS`GOD", "#1:0", "hash", "1.0")],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#0:0"] = LiveObject("#0:0", "Room", ("PM`REFS`GOD", "#99:0"))
+			})) with
+		{ WellKnownObjids = new Dictionary<string, string> { ["room_zero"] = "#0:0", ["god"] = "#1:0" } };
+		var changes = _service.ComputeChangeset(inputs);
+		var migrated = changes.Attributes.Single(a => a.Attribute == "PM`ATTACHED_REFS`PROBE`GOD");
+		await Assert.That(migrated.Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(migrated.PreviousAttribute).IsEqualTo("PM`REFS`GOD");
+		await Assert.That(migrated.LiveValue).IsEqualTo("#99:0");
+		await Assert.That(migrated.NewValue).IsEqualTo("#1:0");
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`GOD").Action)
+			.IsEqualTo(PackageAttributeAction.RemoveBaseline);
+	}
+
+	[Test]
+	public async Task EmptyManagedWellKnownRef_IsRepairedButConfigureAndNonemptyRepointsSurvive()
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			configure:
+			  greeting:
+			    label: Greeting
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Ref Probe
+			    attributes:
+			      FN_X: "{{$package_manager}} {{$god}} {{?greeting}}"
+			""");
+		var inputs = Inputs(manifest, installed: Installed("probe"),
+			installedObjects: [new PackageObjectRecord("probe", "a", "#10:1", "thing")],
+			baselines:
+			[
+				new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`PACKAGE_MANAGER", "#7:0", "h", "1.0"),
+				new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`GOD", "#1:0", "h", "1.0"),
+				new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`GREETING", "hello", "h", "1.0")
+			],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#10:1"] = LiveObject("#10:1", "Ref Probe", ("PM`REFS`PACKAGE_MANAGER", ""),
+					("PM`REFS`GOD", "#99:0"), ("PM`REFS`GREETING", ""))
+			}), configure: new Dictionary<string, string> { ["greeting"] = "hello" }) with
+		{ WellKnownObjids = new Dictionary<string, string> { ["package_manager"] = "#7:0", ["god"] = "#1:0" } };
+		var changes = _service.ComputeChangeset(inputs);
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").Action)
+			.IsEqualTo(PackageAttributeAction.AutoUpgrade);
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`GOD").Action)
+			.IsEqualTo(PackageAttributeAction.KeepLocal);
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`GREETING").Action)
+			.IsEqualTo(PackageAttributeAction.KeepLocal);
+	}
+
+	[Test]
+	public async Task AttachedCode_ScopesEveryRefKindAndCrossPackageDependency()
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.0"
+			depends:
+			  - provider: ">=1.0"
+			configure:
+			  setting:
+			    label: Setting
+			objects:
+			  - ref: own
+			    type: thing
+			    name: Own
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SRC: "{{own}} {{?setting}} {{$god}} {{provider/remote}}"
+			""");
+		var changes = _service.ComputeChangeset(Inputs(manifest,
+			allInstalled: [Installed("provider")], configure: new Dictionary<string, string> { ["setting"] = "answer" }) with
+		{
+			WellKnownObjids = new Dictionary<string, string> { ["room_zero"] = "#0:0", ["god"] = "#1:0" },
+			CrossPackageObjids = new Dictionary<string, string> { ["provider/remote"] = "#99:0" }
+		});
+		await Assert.That(changes.IsBlocked).IsFalse();
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "SRC").NewValue).IsEqualTo(
+			"[v(PM`ATTACHED_REFS`PROBE`OWN)] [v(PM`ATTACHED_REFS`PROBE`SETTING)] [v(PM`ATTACHED_REFS`PROBE`GOD)] [v(PM`ATTACHED_REFS`PROBE`PROVIDER`REMOTE)]");
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`ATTACHED_REFS`PROBE`SETTING").NewValue).IsEqualTo("answer");
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`ATTACHED_REFS`PROBE`GOD").NewValue).IsEqualTo("#1:0");
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`ATTACHED_REFS`PROBE`PROVIDER`REMOTE").NewValue).IsEqualTo("#99:0");
+	}
+
+	[Test]
+	public async Task OwnedRefRemoval_IsNotMistakenForLegacyAttachmentOnSameObject()
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			configure:
+			  target:
+			    label: Target
+			objects:
+			  - ref: own
+			    type: thing
+			    name: Own
+			    attributes:
+			      FN_OWN: "no longer uses a ref"
+			  - ref: registration
+			    target: "{{?target}}"
+			    attributes:
+			      SRC: "attached code without refs"
+			""");
+		var changes = _service.ComputeChangeset(Inputs(manifest, installed: Installed("probe"),
+			installedObjects: [new PackageObjectRecord("probe", "own", "#10:1", "thing")],
+			baselines: [new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`ROOM_ZERO", "#0:0", "h", "1.0")],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#10:1"] = LiveObject("#10:1", "Own", ("PM`REFS`ROOM_ZERO", "#99:0"))
+			}), configure: new Dictionary<string, string> { ["target"] = "#10:1" }));
+		var removed = changes.Attributes.Single(a => a.Attribute == "PM`REFS`ROOM_ZERO");
+		await Assert.That(removed.Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(removed.Conflict).IsEqualTo(PackageConflictKind.ModifyDelete);
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task RemovedLegacyRef_RemainsAvailableToLocallyEditedAttachedCode(bool ownsTarget, bool removeAttachment)
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: own
+			    type: thing
+			    name: Own
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SRC: "replacement no longer uses a ref"
+			""");
+		if (removeAttachment)
+		{
+			manifest = manifest with { Objects = manifest.Objects.Where(o => !o.IsAttach).ToList() };
+		}
+		var changes = _service.ComputeChangeset(Inputs(manifest, installed: Installed("probe"),
+			installedObjects: ownsTarget ? [new PackageObjectRecord("probe", "own", "#0:0", "thing")] : [],
+			baselines:
+			[
+				new ManagedAttributeRecord("probe", "#0:0", "SRC", "[v(PM`REFS`GOD)]", "h", "1.0"),
+				new ManagedAttributeRecord("probe", "#0:0", "PM`REFS`GOD", "#1:0", "h", "1.0")
+			],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#0:0"] = LiveObject("#0:0", "Own", ("SRC", "local [v(PM`REFS`GOD)]"), ("PM`REFS`GOD", "#1:0"))
+			})));
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "SRC").Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`GOD").Action).IsEqualTo(PackageAttributeAction.RemoveBaseline);
+	}
+
 	#region Fresh install
 
 	[Test]
