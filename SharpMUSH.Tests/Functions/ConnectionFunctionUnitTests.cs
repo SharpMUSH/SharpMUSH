@@ -1,4 +1,7 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -8,6 +11,65 @@ public class ConnectionFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>
+	/// Regression test for the WHO-family Hidden-visibility fix in
+	/// <c>Functions.MortalWhoPlayers</c>/<c>VisibleWhoPlayers</c> (SharpMUSH.Implementation/Functions/
+	/// ConnectionFunctions.cs): a connection made Hidden via <c>@hide</c> (per-connection state,
+	/// distinct from the DARK flag) must disappear from the mortal-audience family (mwho/nmwho/etc,
+	/// always unpowered - PennMUSH bsd.c's <c>fun_lwho</c> with <c>called_as[1] == 'M'</c>), and from
+	/// the caller-scoped family (nwho/xwho) UNLESS the looker is privileged (Priv_Who: wizard/royalty/
+	/// See_All - bsd.c:6438,6503 <c>if (!Hidden(d) || powered)</c>).
+	///
+	/// <para>Checks list MEMBERSHIP of this test's own player rather than a global count/list identity
+	/// - this test class shares its server session with every other test in the run, so other tests'
+	/// connections come and go concurrently and a bare count would be flaky.</para>
+	/// </summary>
+	[Test]
+	public async Task HiddenConnection_ExcludedFromMwho_ButVisibleToAPrivilegedXwhoidLooker()
+	{
+		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConnFnHidden");
+		var mwhoEntry = $"#{testPlayer.DbRef.Number}";
+
+		await Assert.That(await MwhoContains(mwhoEntry)).IsTrue()
+			.Because("the connection must be listed before it is hidden");
+		await Assert.That(await XwhoidContainsAsPrivilegedLooker(testPlayer.DbRef.Number)).IsTrue()
+			.Because("the connection must be listed before it is hidden");
+
+		ConnectionService.Update(testPlayer.Handle, "Hidden", "1");
+
+		await Assert.That(await MwhoContains(mwhoEntry)).IsFalse()
+			.Because("mwho() (mortal-audience, always unpowered) must exclude a Hidden connection");
+		await Assert.That(await XwhoidContainsAsPrivilegedLooker(testPlayer.DbRef.Number)).IsTrue()
+			.Because("xwhoid() as a privileged (See_All) looker must still list a Hidden connection");
+
+		ConnectionService.Update(testPlayer.Handle, "Hidden", "0");
+
+		await Assert.That(await MwhoContains(mwhoEntry)).IsTrue()
+			.Because("clearing Hidden must restore the connection to mwho()");
+
+		async Task<bool> MwhoContains(string entry)
+		{
+			var result = (await Parser.FunctionParse(MarkupText.Plain("mwho()")))?.Message!;
+			return result.ToPlainText().Split(' ').Contains(entry);
+		}
+
+		// God (#1, the FunctionParser's executor) is always privileged, so xwhoid() with no victim
+		// argument (looker defaults to the executor) exercises the Priv_Who branch. The range is wide
+		// enough to include every connection in the shared test session.
+		async Task<bool> XwhoidContainsAsPrivilegedLooker(int dbrefNumber)
+		{
+			var result = (await Parser.FunctionParse(MarkupText.Plain("xwhoid(1,100000)")))?.Message!;
+			// Entries are full DBRef.ToString() ("#N" or "#N:creation"), so match on the "#N" prefix
+			// rather than requiring an exact token match.
+			var needle = $"#{dbrefNumber}";
+			return result.ToPlainText().Split(' ')
+				.Any(token => token == needle || token.StartsWith(needle + ":"));
+		}
+	}
 
 	[Test]
 	public async Task Idle()

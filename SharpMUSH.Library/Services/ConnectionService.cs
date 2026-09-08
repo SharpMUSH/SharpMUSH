@@ -20,11 +20,29 @@ public class ConnectionService(
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
+	/// <summary>
+	/// Guards <see cref="Disconnect"/>'s atomic remove-and-count against a race between two of the same
+	/// player's handles disconnecting at genuinely the same time. Both the removal from
+	/// <see cref="_sessionState"/> and the subsequent count of the player's remaining connections happen
+	/// inside this lock, so whichever of two concurrent <see cref="Disconnect"/> calls for the same
+	/// player runs second always sees the first one's handle already gone, never as "still connected."
+	/// </summary>
+	private readonly Lock _disconnectLock = new();
+
 	public async ValueTask Disconnect(long handle, string? sessionId = null)
 	{
 		var get = Get(handle);
 		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
-		if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
+
+		int? remainingConnections;
+		lock (_disconnectLock)
+		{
+			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
+
+			remainingConnections = get.Ref is { } playerRef
+				? _sessionState.Values.Count(x => x.Ref.HasValue && x.Ref.Value.Equals(playerRef))
+				: null;
+		}
 
 		foreach (var handler in _handlers)
 		{
@@ -32,7 +50,7 @@ public class ConnectionService(
 		}
 
 		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
-			IConnectionService.ConnectionState.Disconnected, FormerConnection: get));
+			IConnectionService.ConnectionState.Disconnected, RemainingConnections: remainingConnections, FormerConnection: get));
 
 		// The socket owner already deleted a fenced close. A second delete could erase its replacement.
 		if (stateStore != null && string.IsNullOrEmpty(sessionId))
@@ -56,6 +74,18 @@ public class ConnectionService(
 	public IAsyncEnumerable<IConnectionService.ConnectionData> GetAll() =>
 		_sessionState.Values
 			.ToAsyncEnumerable();
+
+	public async ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef)
+	{
+		await foreach (var conn in Get(playerRef))
+		{
+			if (conn.IsHidden)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
@@ -115,6 +145,27 @@ public class ConnectionService(
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, formerRef, get.State,
 			IConnectionService.ConnectionState.Connected));
+
+		// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a wizard who
+		// @hides then LOGOUTs would leave the socket hidden for whoever connects next on it, including a
+		// mortal with no permission to hide themselves. This clear runs AFTER the notification publish
+		// (rather than folded into the AddOrUpdate above) so a PLAYER`DISCONNECT handler reading
+		// Get(handle).IsHidden while handling that notification still observes the pre-logout Hidden
+		// value for its "hidden?" argument and for ConnectionAnnounceService's disconnect wording -
+		// clearing it beforehand made every LOGOUT (as opposed to QUIT) report as an ordinary,
+		// non-hidden disconnect regardless of the player's actual Hidden state.
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
+			(_, y) =>
+			{
+				y.Metadata.TryRemove("Hidden", out var removedHiddenValue);
+				return y;
+			});
+
+		if (stateStore != null)
+		{
+			await stateStore.UpdateMetadataAsync(handle, "Hidden", "0");
+		}
 	}
 
 	public async ValueTask BindAccount(long handle, string accountId)

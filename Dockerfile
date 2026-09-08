@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/nightly/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY . .
 # Restore once for the whole solution, then publish with --no-restore so neither publish re-restores.
@@ -16,7 +16,7 @@ RUN if [ -f SharpMUSH.Server/sharpmush-dev.pfx ]; then \
     fi
 
 # Stage 2: Run
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
 EXPOSE 8080 8081 4201 4202 4203 9092

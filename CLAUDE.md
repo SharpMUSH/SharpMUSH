@@ -8,6 +8,23 @@ SharpMUSH is a modern .NET 10 MUSH server (text-based multiplayer role-playing) 
 
 ## Build & Test Commands
 
+`global.json` pins the SDK to the **10.0.4xx** feature band with `allowPrerelease: false`, so a
+10.0.3xx SDK or a .NET 11 preview will not satisfy it — `dotnet` fails with "A compatible .NET SDK
+was not found" before any project is read. Install 10.0.400 or newer within that band:
+
+```bash
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.400
+```
+
+The pin is not cosmetic: the two source-generator projects reference `Microsoft.CodeAnalysis.CSharp`
+5.9.0, which is the Roslyn that ships inside 10.0.400. An older SDK carries an older compiler and
+rejects the generators with CS9057.
+
+`global.json` is the only place the SDK version is written down. Every workflow resolves it with
+`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping the band is a one-line change
+here; the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:10.0` tag and fail loudly
+against `global.json` if that tag ever lags the pin.
+
 ```bash
 # Build everything
 dotnet build
@@ -215,9 +232,10 @@ Two things to know before changing this:
   `dotnet_diagnostic.IDE0055.severity = error` reports nothing for indentation on this SDK —
   verified against a file with 93 space-indented lines, which built clean. It looks like a
   gate and enforces nothing. That is why the check shells out to `dotnet format` instead.
-- **Use `--folder`, not the solution.** `dotnet format` cannot load `SharpMUSH.sln` on the
-  .NET 11 SDK; the MSBuild build host crashes. Whitespace rules are syntactic, so folder mode
-  loses nothing.
+- **Use `--folder`, not the solution.** Whitespace rules are syntactic, so folder mode loses
+  nothing, and it does not load MSBuild projects at all: ~2s for the whole repo against ~14s
+  for `SharpMUSH.sln`. Solution mode is also unsafe as a gate — it exits 0 even when MSBuild
+  fails to load a project, silently dropping that project's files from the check.
 
 `csharp_new_line_before_members_in_object_initializers = false` (`.editorconfig:13`) is **not**
 honoured by folder-mode formatting — it is a semantic option. Compact anonymous-object

@@ -92,11 +92,40 @@ public class PuebloMxpIntegrationTests
 		await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(new byte[] { 0xFF, 0xFB, 0x5B }) >= 0,
 			cancellationToken);
 		await client.Stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
+		// The marker, not the format flip, is what puts the client into MXP mode -- everything below is
+		// only true of a client that got it.
+		await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(MxpStartMarker) >= 0, cancellationToken);
 		await WaitForFormatAsync(client.Handle, OutputFormat.Mxp, cancellationToken);
 
 		var output = await PublishKnownMarkupAsync(client, cancellationToken);
 		await Assert.That(output).Contains("\x1b[1z");
 		await Assert.That(output.ToUpperInvariant()).Contains("<SEND");
+	}
+
+	/// <summary>IAC SB MXP IAC SE -- the marker that starts MXP mode.</summary>
+	private static readonly byte[] MxpStartMarker = [0xFF, 0xFA, 0x5B, 0xFF, 0xF0];
+
+	/// <summary>
+	/// The step whose absence let entity-encoded output ship. WILL/DO settles the telnet option; MXP
+	/// itself does not begin until the server sends IAC SB MXP IAC SE, and MUSHclient -- among others
+	/// -- stays in plain telnet until it arrives, printing every tag and entity verbatim and dropping
+	/// the ESC[1z prefixes as an unrecognised escape. The tests either side of this one assert what
+	/// the server renders after DO, which was always correct; nothing asserted the client was ever
+	/// told to start reading it that way.
+	/// </summary>
+	[Test]
+	[Timeout(60_000)]
+	public async Task MxpNegotiation_ClientAccepts_ServerSendsStartMarker(CancellationToken cancellationToken)
+	{
+		await using var client = await ConnectAsync(cancellationToken);
+		await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(new byte[] { 0xFF, 0xFB, 0x5B }) >= 0,
+			cancellationToken);
+		await client.Stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
+
+		var bytes = await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(MxpStartMarker) >= 0,
+			cancellationToken);
+
+		await Assert.That(bytes.AsSpan().IndexOf(MxpStartMarker) >= 0).IsTrue();
 	}
 
 	[Test]

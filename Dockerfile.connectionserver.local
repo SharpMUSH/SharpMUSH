@@ -1,5 +1,5 @@
 # Quick local renderer image: copy pre-built binaries; shares /run/sharpmush with SocketServer.
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY SharpMUSH.ConnectionServer/bin/Release/net10.0/ ./
 ENV Rendering__SocketPath=/run/sharpmush/render.sock

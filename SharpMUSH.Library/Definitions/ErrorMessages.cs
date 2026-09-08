@@ -541,6 +541,10 @@ public static class ErrorMessages
 		public const string GameHasReconnected = "has reconnected.";
 		public const string GameHasDisconnected = "has disconnected.";
 		public const string GameHasPartiallyDisconnected = "has partially disconnected.";
+		public const string GameHasHiddenConnected = "has HIDDEN-connected.";
+		public const string GameHasHiddenReconnected = "has HIDDEN-reconnected.";
+		public const string GameHasHiddenDisconnected = "has HIDDEN-disconnected.";
+		public const string GameHasPartiallyHiddenDisconnected = "has partially HIDDEN-disconnected.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
 		public const string GameRebootFinished = "GAME: Reboot finished.";
@@ -550,6 +554,8 @@ public static class ErrorMessages
 		public const string GameDbConsistencyDone = "GAME: Database consistency check complete.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameSuspectActivity = "GAME: Suspect {0}";
 
 		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
 
@@ -987,11 +993,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
-		public const string ErrorDarkFlagNotFound = "Error: DARK flag not found in database.";
-		public const string NowHiddenFromWho = "You are now hidden from the WHO list.";
-		public const string NoLongerHiddenFromWho = "You are no longer hidden from the WHO list.";
-		public const string AlreadyHiddenFromWho = "You are already hidden from the WHO list.";
-		public const string AlreadyVisibleOnWho = "You are already visible on the WHO list.";
+		// PennMUSH bsd.c:7239,7246 (hide_player's self-target branch, the only one @hide implements).
+		public const string NoLongerAppearOnWho = "You no longer appear on the WHO list.";
+		public const string NowAppearOnWho = "You now appear on the WHO list.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MotdClearedFormat = "{0} MOTD cleared.";

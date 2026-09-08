@@ -10,4 +10,14 @@
     <MarkupStringVersion>2.0.0</MarkupStringVersion>
   </PropertyGroup>
 
+  <!--
+    TelnetNegotiationCore, for the same reason and after the same lesson: the three projects that
+    referenced it each carried their own literal, and all three sat on 2.9.1 long after upstream
+    reached 2.15.0 - so the MXP start-marker fix (2.16.0) had three places to be applied and no one
+    place to look. One property, three references.
+  -->
+  <PropertyGroup>
+    <TelnetNegotiationCoreVersion>2.16.0</TelnetNegotiationCoreVersion>
+  </PropertyGroup>
+
 </Project>

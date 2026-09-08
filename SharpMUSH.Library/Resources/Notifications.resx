@@ -1136,20 +1136,11 @@
   <data name="NotSupportedForSharpMUSH" xml:space="preserve">
     <value>Not Supported for SharpMUSH.</value>
   </data>
-  <data name="ErrorDarkFlagNotFound" xml:space="preserve">
-    <value>Error: DARK flag not found in database.</value>
+  <data name="NoLongerAppearOnWho" xml:space="preserve">
+    <value>You no longer appear on the WHO list.</value>
   </data>
-  <data name="NowHiddenFromWho" xml:space="preserve">
-    <value>You are now hidden from the WHO list.</value>
-  </data>
-  <data name="NoLongerHiddenFromWho" xml:space="preserve">
-    <value>You are no longer hidden from the WHO list.</value>
-  </data>
-  <data name="AlreadyHiddenFromWho" xml:space="preserve">
-    <value>You are already hidden from the WHO list.</value>
-  </data>
-  <data name="AlreadyVisibleOnWho" xml:space="preserve">
-    <value>You are already visible on the WHO list.</value>
+  <data name="NowAppearOnWho" xml:space="preserve">
+    <value>You now appear on the WHO list.</value>
   </data>
   <data name="NeedAnnouncePower" xml:space="preserve">
     <value>Permission denied. You need the Announce power.</value>
