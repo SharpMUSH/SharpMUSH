@@ -626,5 +626,3 @@ With great power comes great responsibility!
 **See Also:**
 - [wizhelp]
 - [@admin]
-
-This concludes the comprehensive list of SharpMUSH flags and their descriptions.

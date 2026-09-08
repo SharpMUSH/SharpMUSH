@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Consumers;
+using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -10,6 +11,15 @@ namespace SharpMUSH.Tests.ConnectionServer;
 
 public class UpdatePlayerPreferencesConsumerTests
 {
+	[Test]
+	public async Task PlayerOutputPreferences_PreservesExistingPositionalLocaleParameter()
+	{
+		var preferences = new PlayerOutputPreferences(true, true, true, "fr");
+
+		await Assert.That(preferences.Locale).IsEqualTo("fr");
+		await Assert.That(preferences.TruecolorEnabled).IsFalse();
+	}
+
 	[Test]
 	public async Task HandleAsync_UpdatesAllPlayerColorFlagsForActiveConnection()
 	{
