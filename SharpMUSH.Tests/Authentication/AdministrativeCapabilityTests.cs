@@ -85,6 +85,18 @@ public class AdministrativeCapabilityTests
 		await Assert.That(explanation.Roles.Single()).IsEqualTo("exception");
 	}
 
+	[Test]
+	[Arguments(99, true)]
+	[Arguments(100, false)]
+	[Arguments(101, false)]
+	public async Task RoleEditsCannotDenyGodRecovery(int priority, bool expected)
+	{
+		var god = Role("god", 100, PortalPermission.RolesAdmin, PermissionState.Allow);
+		var restricted = Role("restricted", priority, PortalPermission.RolesAdmin, PermissionState.Deny);
+		await Assert.That(RoleRecoveryPolicy.PreservesRecovery(restricted, [god])).IsEqualTo(expected);
+		await Assert.That(RoleRecoveryPolicy.PreservesRecovery(god, [restricted])).IsEqualTo(expected);
+	}
+
 	private static SharpPlayer Player(int number) => new()
 	{
 		PasswordHash = "", Quota = 0, Home = null!, Location = null!,

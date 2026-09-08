@@ -112,9 +112,8 @@ public class RolesController(
 		};
 
 		if (!await CanChangeAsync(existing ?? role) || !await CanChangeAsync(role)) return Forbid();
-		// Preserve the recovery role, including its authority and identity.
-		if (slug == "god" && (!role.Permissions.TryGetValue(PortalPermission.RolesAdmin, out var recovery) || recovery != PermissionState.Allow))
-			return BadRequest(new { error = "The God recovery role must retain roles.admin." });
+		if (!RoleRecoveryPolicy.PreservesRecovery(role, await roles.GetRolesAsync()))
+			return BadRequest(new { error = "The God recovery grant must remain above every roles.admin denial." });
 		await roles.UpsertRoleAsync(role);
 		logger.LogInformation("Upserted role '{Slug}' (system: {IsSystem}).", role.Slug, role.IsSystem);
 		return Ok(ToDto(role));

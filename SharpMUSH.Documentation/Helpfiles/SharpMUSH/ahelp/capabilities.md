@@ -30,7 +30,8 @@ unlink, disable and revocation therefore apply when queued work executes.
 Delegated role managers can manage lower-priority grants they already hold. They cannot
 edit assigned roles, change their own assignments, modify system roles or remove deny
 restrictions. The account linked to player #1 administers those changes. The God role
-must retain roles.admin to preserve recovery. Existing roles and assignments are not
+must retain roles.admin above every explicit roles.admin denial to preserve recovery,
+including roles that might be assigned in the future. Existing roles and assignments are not
 rewritten on upgrade; explicitly grant newly introduced scopes on existing installations.
 The effective-permission API reports the winning priority and role slugs, explicit or
 implied resolution, and default denial. The portal permission matrix uses the same scope
