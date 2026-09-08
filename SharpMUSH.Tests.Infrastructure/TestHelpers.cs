@@ -103,9 +103,16 @@ public static class TestHelpers
 	/// </summary>
 	public sealed class NotificationRecorder
 	{
+		public sealed record Delivery(
+			DBRef Recipient,
+			string Message,
+			DBRef? Sender,
+			INotifyService.NotificationType Type);
+
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<string>> _byRecipient = new();
 		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<OneOf<MString, string>>> _rawByRecipient = new();
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<Delivery>> _deliveriesByRecipient = new();
 
 		internal void Record(DBRef recipient, string message)
 			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
@@ -120,6 +127,15 @@ public static class TestHelpers
 		/// </summary>
 		internal void RecordRaw(DBRef recipient, OneOf<MString, string> message)
 			=> _rawByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<OneOf<MString, string>>()).Enqueue(message);
+
+		internal void RecordDelivery(
+			DBRef recipient,
+			string message,
+			AnySharpObject? sender,
+			INotifyService.NotificationType type)
+			=> _deliveriesByRecipient
+				.GetOrAdd(recipient, _ => new ConcurrentQueue<Delivery>())
+				.Enqueue(new Delivery(recipient, message, sender?.Object().DBRef, type));
 
 		/// <summary>
 		/// Records output aimed at a connection rather than at an object. Socket commands (INFO,
@@ -163,6 +179,14 @@ public static class TestHelpers
 		public int RawCountFor(DBRef who)
 			=> _rawByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
 
+		/// <summary>Every notification delivered to <paramref name="who"/>, including its sender.</summary>
+		public List<Delivery> DeliveriesFor(DBRef who)
+			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many sender-aware deliveries <paramref name="who"/> has had, for windowing.</summary>
+		public int DeliveryCountFor(DBRef who)
+			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
+
 		/// <summary>Everything sent to connection <paramref name="handle"/> so far, in order.</summary>
 		public List<string> ForHandle(long handle)
 			=> _byHandle.TryGetValue(handle, out var queue) ? [.. queue] : [];
@@ -191,19 +215,30 @@ public static class TestHelpers
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
-		void Deliver(DBRef recipient, string message)
+		void Deliver(
+			DBRef recipient,
+			string message,
+			AnySharpObject? sender = null,
+			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
 			capture.TryCapture(recipient.Number, message);
 			recorder?.Record(recipient, message);
+			recorder?.RecordDelivery(recipient, message, sender, type);
 		}
 
 		// Only the Notify overloads carry the union; NotifyLocalized formats a string before it ever
 		// reaches here, so there is no unflattened form of those to keep.
-		void DeliverRaw(DBRef recipient, OneOf<MString, string> message)
+		void DeliverRaw(
+			DBRef recipient,
+			OneOf<MString, string> message,
+			AnySharpObject? sender,
+			INotifyService.NotificationType type)
 		{
-			capture.TryCapture(recipient.Number, PlainText(message));
-			recorder?.Record(recipient, PlainText(message));
+			var text = PlainText(message);
+			capture.TryCapture(recipient.Number, text);
+			recorder?.Record(recipient, text);
 			recorder?.RecordRaw(recipient, message);
+			recorder?.RecordDelivery(recipient, text, sender, type);
 		}
 
 		void DeliverToHandle(long handle, string message) => recorder?.RecordHandle(handle, message);
@@ -213,7 +248,9 @@ public static class TestHelpers
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
 				call.ArgAt<DBRef>(0),
-				call.ArgAt<OneOf<MString, string>>(1)));
+				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<AnySharpObject?>(2),
+				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// The real service's AnySharpObject overload delegates to the DBRef overload; a substitute
 		// does not, so hook both.
@@ -222,7 +259,9 @@ public static class TestHelpers
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef,
-				call.ArgAt<OneOf<MString, string>>(1)));
+				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<AnySharpObject?>(2),
+				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
 		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
@@ -242,13 +281,15 @@ public static class TestHelpers
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<DBRef>(0),
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
+				call.ArgAt<AnySharpObject?>(2)));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef,
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
+				call.ArgAt<AnySharpObject?>(2)));
 
 		// Handle-addressed output: the descriptor overloads. These have no DBRef to capture against —
 		// a connect-screen socket has no object behind it — so they are recorded by handle instead.
