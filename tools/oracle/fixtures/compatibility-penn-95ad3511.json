@@ -1,0 +1,557 @@
+{
+  "reference": "https://github.com/pennmush/pennmush",
+  "commit": "95ad3511d0410b9e132f140fabc4ca7afec433da",
+  "captured": "2026-09-08",
+  "platform": "Linux x86_64, system ICU, default numeric types",
+  "cases": [
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(-0)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0.0)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0e10)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(%b)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(%t)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(ansi(r,-0.0))",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0text)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0x0)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(-0x0.0p100)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0e-9999)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(1e-9999)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0%b)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(%b0)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "neq(1,2)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "neq(1,1.0)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "neq(1,2,1)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "eq(1,2,1)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "if(-0,yes,no)",
+      "expected": "no",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(probe,)][cand(0.0,setq(probe,changed))]%q<probe>",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "condall(0 1,yes,no)",
+      "expected": "yes",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "ncondall(1 1,a,0 1,b,c)",
+      "expected": "c",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(,2)",
+      "expected": "2",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(foo,2)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(1e2,2)",
+      "expected": "102",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "div(9223372036854775807,1)",
+      "expected": "9223372036854775807",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "div(-9223372036854775808,-1)",
+      "expected": "#-1 DOMAIN ERROR",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "trim(%babc%b)",
+      "expected": "abc",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "trim(xxabcxx,x)",
+      "expected": "abc",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "not(1,2)",
+      "expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2",
+      "intent": "intentional error wording difference; argument-count behavior is covered separately"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[cat(setq(probe,a),setq(probe,b))]%q<probe>",
+      "expected": " b",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "iter(a|b,%i0,|,;)",
+      "expected": "a;b",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(text)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0.1)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(1.2foo)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(-1text)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(4294967296)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(0x1)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(9223372036854775807)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(-9223372036854775808)",
+      "expected": "0",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": true,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "t(18446744073709551616)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(,2)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(foo,2)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "eq(,0)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(foo,2)",
+      "expected": "2",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(12foo,2)",
+      "expected": "14",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(1.5foo,2)",
+      "expected": "3.5",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": false
+      },
+      "expression": "add(,2)",
+      "expected": "2",
+      "intent": "parity",
+      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true
+      },
+      "expression": "trim(xxabcxx,x)",
+      "expected": "xxabcxx",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true
+      },
+      "expression": "trim(%babc%b)",
+      "expected": "abc",
+      "intent": "parity"
+    }
+  ]
+}

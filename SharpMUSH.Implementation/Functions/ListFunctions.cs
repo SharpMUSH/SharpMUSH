@@ -201,7 +201,7 @@ public partial class Functions
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
-				.Where(pair => pair.boolResult.Truthy())
+				.Where(pair => pair.boolResult.Truthy(parser))
 				.Select(pair => pair.item);
 
 			return new CallState(MarkupText.Join(sep, filteredItems));
@@ -269,7 +269,7 @@ public partial class Functions
 						["0"] = new CallState(item)
 					}
 				});
-				return (await newParser.FunctionParse(attrValue))!.Message!.Truthy();
+				return (await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser);
 			})
 			.ToListAsync();
 
@@ -300,7 +300,7 @@ public partial class Functions
 		{
 			var parsed = await arg.Value.ParsedMessage();
 			lastValue = parsed;
-			if (parsed.Truthy())
+			if (parsed.Truthy(parser))
 			{
 				return parsed;
 			}
