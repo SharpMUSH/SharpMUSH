@@ -22,10 +22,17 @@ namespace SharpMUSH.Library.Notifications;
 /// nulls its handle's <c>Ref</c> before publishing, so a concurrent <c>Get(playerRef)</c> naturally
 /// excludes it without this field).
 /// </param>
+/// <param name="FormerConnection">
+/// A snapshot of the connection's data taken before <see cref="ConnectionService.Disconnect"/> removes
+/// it from session state - the disconnecting handle is gone from that state by the time this
+/// notification is handled, so <c>Get(handle)</c> would otherwise return nothing. Null for every other
+/// transition, whose handler can still resolve the handle live.
+/// </param>
 public record ConnectionStateChangeNotification(
 	long Handle,
 	DBRef? PlayerRef,
 	IConnectionService.ConnectionState OldState,
 	IConnectionService.ConnectionState NewState,
 	bool FirstLogin = false,
-	int? RemainingConnections = null) : INotification;
+	int? RemainingConnections = null,
+	IConnectionService.ConnectionData? FormerConnection = null) : INotification;

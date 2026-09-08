@@ -1,4 +1,3 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
@@ -20,8 +19,7 @@ namespace SharpMUSH.Plugins.Scene;
 ///   <item><see cref="PluginBase"/> (→ <c>ICommandSource</c>/<c>IFunctionSource</c>) surfaces the
 ///   <c>@SCENE</c> command and the <c>scene…</c> functions, discovered the same way as in-tree code
 ///   through the generator analyzer this assembly references.</item>
-///   <item><see cref="IMigrationSource"/> contributes the Arango <c>Migration_AddScenes</c> assembly and
-///   the Memgraph/Surreal scene schema statements.</item>
+///   <item><see cref="IMigrationSource"/> contributes the provider-specific scene schema.</item>
 ///   <item><see cref="IFlagSource"/> contributes the informational <c>SCENE_ROOM</c> object flag.</item>
 ///   <item><see cref="IBridgeSubscriptionSource"/> contributes the <c>game.scene.*</c> NATS→SignalR leg,
 ///   forwarding to the plugin-owned <c>SceneHub</c> (Phase 9).</item>
@@ -81,32 +79,6 @@ public sealed class ScenePlugin
 	/// </summary>
 	public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
 		endpoints.MapHub<SceneHub>("/hubs/scene");
-
-	/// <summary>The plugin's own assembly carries <c>Migration_AddScenes</c> (an <c>IArangoMigration</c>);
-	/// the host's <c>ArangoDatabase.Migrate()</c> feeds this to <c>migrator.AddMigrations(...)</c>.</summary>
-	public Assembly? ArangoMigrationAssembly => typeof(ScenePlugin).Assembly;
-
-	/// <summary>
-	/// Memgraph scene-graph schema (indexes + uniqueness constraints), moved out of
-	/// <c>MemgraphDatabase.Migration.cs</c>. The host runs each statement after its built-in batch, each
-	/// isolated so an "already exists" failure does not abort the rest.
-	/// </summary>
-	public IEnumerable<string> CypherStatements =>
-	[
-		"CREATE INDEX ON :SharpScene(sceneId)",
-		"CREATE INDEX ON :SharpScene(status)",
-		"CREATE INDEX ON :SharpScene(isPublic)",
-		"CREATE INDEX ON :SharpScene(scheduledFor)",
-		"CREATE INDEX ON :SharpScene(lastActivityAt)",
-		"CREATE CONSTRAINT ON (s:SharpScene) ASSERT s.sceneId IS UNIQUE",
-		"CREATE INDEX ON :SharpScenePose(poseId)",
-		"CREATE INDEX ON :SharpScenePose(createdAt)",
-		"CREATE CONSTRAINT ON (p:SharpScenePose) ASSERT p.poseId IS UNIQUE",
-		"CREATE INDEX ON :SharpScenePoseEdit(editId)",
-		"CREATE CONSTRAINT ON (e:SharpScenePoseEdit) ASSERT e.editId IS UNIQUE",
-		"CREATE INDEX ON :SharpScenePlot(plotId)",
-		"CREATE CONSTRAINT ON (pl:SharpScenePlot) ASSERT pl.plotId IS UNIQUE"
-	];
 
 	/// <summary>
 	/// SurrealDB scene-graph schema (tables + RELATE-edge tables + traversal indexes), moved out of

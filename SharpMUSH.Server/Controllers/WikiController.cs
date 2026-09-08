@@ -558,7 +558,6 @@ public class WikiController(
 	/// PUT /api/wiki/{slug}
 	/// Updates an existing wiki page's markdown content, identified by its slug.
 	/// Using slug (not the internal DB ID) avoids encoded-slash routing issues with
-	/// ArangoDB-style IDs (e.g. "node_wiki_pages/1532") which contain a literal '/'.
 	/// </summary>
 	[HttpPut("{slug}")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]

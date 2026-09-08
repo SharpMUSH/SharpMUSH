@@ -70,6 +70,10 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IBanEnforcer BanEnforcer { get; }
 
+	private IWorldBackupService WorldBackupService { get; }
+
+	private IBooleanExpressionParser BooleanExpressionParser { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -115,6 +119,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IGameBroadcastService gameBroadcastService,
 		ConfigurationReloadService configReloadService,
 		IBanEnforcer banEnforcer,
+		IWorldBackupService worldBackupService,
+		IBooleanExpressionParser booleanExpressionParser,
 		ILibraryProvider<FunctionDefinition> functions)
 	{
 		Mediator = mediator;
@@ -152,6 +158,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		GameBroadcastService = gameBroadcastService;
 		ConfigReloadService = configReloadService;
 		BanEnforcer = banEnforcer;
+		WorldBackupService = worldBackupService;
+		BooleanExpressionParser = booleanExpressionParser;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

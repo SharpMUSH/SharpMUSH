@@ -9,9 +9,7 @@ namespace SharpMUSH.Tests.Database;
 /// <summary>
 /// Provider-level round-trip for <see cref="ISharpDatabase.SetPlayerQuotaAsync"/>. Before the
 /// fix, <c>SetPlayerQuotaAsync</c> put the full <c>_id</c> ("node_players/&lt;key&gt;") into the
-/// Arango update payload where a bare <c>_key</c> is required, throwing
 /// <c>[1205] illegal document identifier</c> at runtime. This drives the real provider against
-/// the real ArangoDB container: create a player, set its quota, read it back, and assert the new
 /// value persisted — which reproduces the throw on the old code and verifies the write on the fix.
 /// </summary>
 public class QuotaDbTests

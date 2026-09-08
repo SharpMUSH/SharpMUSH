@@ -14,7 +14,7 @@ namespace SharpMUSH.Database;
 /// observer's "Name…" form. <c>%#</c> is the speaker (enactor).</para>
 ///
 /// <para>Run once at the tail of each provider's migration via <see cref="IAttributeStore.SetAttributeAsync"/>
-/// — a single provider-agnostic code path so all three backends seed byte-identical attribute values.
+/// — a single provider-agnostic code path so both supported backends seed byte-identical attribute values.
 /// Idempotent: re-running simply overwrites with the same values.</para>
 /// </summary>
 public static class AncestorSeed

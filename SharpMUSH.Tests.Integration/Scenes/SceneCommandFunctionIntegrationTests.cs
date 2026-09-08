@@ -85,8 +85,6 @@ public class SceneCommandFunctionIntegrationTests
 
 	/// <summary>
 	/// Service-level (runs on every provider, including SurrealDB): scene and pose ids come from 1-based
-	/// incrementing counters, not GUIDs or ArangoDB's server-wide HLC key sequence. Providers format the
-	/// id differently (Arango/Memgraph bare "N"; SurrealDB "scene:N"/"scene_pose:N") — the counter is the
 	/// trailing numeric segment in all cases.
 	/// </summary>
 	[Test]

@@ -2023,8 +2023,11 @@
   <data name="SearchCriteriaFormat" xml:space="preserve">
     <value>  Criteria: {0}</value>
   </data>
-  <data name="SearchRangeFormat" xml:space="preserve">
-    <value>  Range: {0} to {1}</value>
+  <data name="SearchUnknownOwner" xml:space="preserve">
+    <value>Unknown owner.</value>
+  </data>
+  <data name="SearchNothingFound" xml:space="preserve">
+    <value>Nothing found.</value>
   </data>
   <data name="SearchObjectEntryFormat" xml:space="preserve">
     <value>  #{0} ({1}) [{2}]</value>
@@ -2296,8 +2299,8 @@
   <data name="ShutdownParanoidInitiated" xml:space="preserve">
     <value>PARANOID SHUTDOWN initiated.</value>
   </data>
-  <data name="ShutdownParanoidArangoDB" xml:space="preserve">
-    <value>Database state is continuously persisted in ArangoDB.</value>
+  <data name="ShutdownParanoidDatabase" xml:space="preserve">
+    <value>Database state is continuously persisted.</value>
   </data>
   <data name="ShutdownInitiated" xml:space="preserve">
     <value>SHUTDOWN initiated.</value>
@@ -2330,6 +2333,29 @@
   <!-- @dump -->
   <data name="DumpDoesNothing" xml:space="preserve">
     <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
+  </data>
+
+  <!-- @backup -->
+  <data name="BackupUnavailableFormat" xml:space="preserve">
+    <value>@backup is not available here: {0}.</value>
+  </data>
+  <data name="BackupStarted" xml:space="preserve">
+    <value>Copying the world. The game keeps running; this may take a while.</value>
+  </data>
+  <data name="BackupCompleteFormat" xml:space="preserve">
+    <value>Backup {0} written ({1}). Keeping {2}.</value>
+  </data>
+  <data name="BackupFailedFormat" xml:space="preserve">
+    <value>Backup failed: {0}</value>
+  </data>
+  <data name="BackupListHeaderFormat" xml:space="preserve">
+    <value>Backups in {0}:</value>
+  </data>
+  <data name="BackupListRowFormat" xml:space="preserve">
+    <value>  {0}  {1}</value>
+  </data>
+  <data name="BackupListEmpty" xml:space="preserve">
+    <value>No backups have been taken yet.</value>
   </data>
 
   <!-- @pcreate -->

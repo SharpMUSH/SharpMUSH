@@ -5,7 +5,6 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// Wiki pages are NOT SharpObjects — they have their own schema and live
 /// in their own collection.
 /// </summary>
-/// <param name="Id">Storage key (ArangoDB _key). Empty string for unsaved pages.</param>
 /// <param name="Slug">URL-friendly identifier, unique per namespace. Format: [a-z0-9_/]+</param>
 /// <param name="Title">Human-readable display title.</param>
 /// <param name="Namespace">Top-level namespace grouping (main, help, character, system).</param>

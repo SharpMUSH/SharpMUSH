@@ -1,9 +1,5 @@
-using Core.Arango;
-using Core.Arango.Migration;
-using Core.Arango.Protocol;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Database.ArangoDB.Migrations;
 using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Tests.Database;
@@ -63,10 +59,7 @@ public class FlagSeedIntegrityTests
 	}
 
 	/// <summary>
-	/// The ArangoDB seed wrote MISTRUST twice — once correctly and once carrying the MYOPIC alias — so
-	/// which of the two documents any lookup found was down to iteration order. Name is the identity of a
-	/// flag on every provider (SurrealDB and Memgraph key their records on it), so a duplicate is a seed
-	/// bug wherever it appears.
+	/// A flag name is its persistent identity, so duplicates make lookups order-dependent.
 	/// </summary>
 	[Test]
 	public async Task NoFlagNameIsSeededTwice()
@@ -86,93 +79,7 @@ public class FlagSeedIntegrityTests
 	}
 
 	/// <summary>
-	/// The forward repair, run against a database that actually holds the broken seed.
-	///
-	/// <para>The seeds above only prove a <em>fresh</em> database comes out right;
-	/// <see cref="Migration_RepairMistrustMyopic"/> exists for the ones already deployed, and on a fresh
-	/// database it matches nothing, so running the suite would never exercise it. This builds the broken
-	/// shape by hand in a throwaway ArangoDB database — two MISTRUST documents, the second carrying the
-	/// MYOPIC alias, and an object edge pointing at that second one — runs the migration, and checks
-	/// both that the duplicate is gone and that the object did not silently lose its flag.</para>
-	///
-	/// <para>Arango only: SurrealDB re-runs its flag seed as an unconditional UPSERT on every boot and so
-	/// corrects itself, and Memgraph's repair is a <c>WHERE 'MYOPIC' IN f.aliases</c> statement inside
-	/// its own migration path. The non-Arango legs skip.</para>
-	/// </summary>
-	[Test]
-	public async Task RepairMigration_SplitsAnAlreadyBrokenDatabase()
-	{
-		if (WebAppFactoryArg.Services.GetService<IArangoContext>() is not { } context)
-		{
-			return;
-		}
-
-		var scratch = new ArangoHandle($"flagrepair{Guid.NewGuid():N}"[..24]);
-		await context.Database.CreateAsync(scratch);
-
-		try
-		{
-			await context.Collection.CreateAsync(scratch, new ArangoCollection
-			{
-				Name = SharpMUSH.Database.DatabaseConstants.ObjectFlags,
-				Type = ArangoCollectionType.Document
-			});
-			await context.Collection.CreateAsync(scratch, new ArangoCollection
-			{
-				Name = SharpMUSH.Database.DatabaseConstants.HasFlags,
-				Type = ArangoCollectionType.Edge
-			});
-
-			var wrongTypes = new[] { "PLAYER", "EXIT", "THING" };
-			await context.Document.CreateAsync(scratch, SharpMUSH.Database.DatabaseConstants.ObjectFlags,
-				new { Name = "MISTRUST", Symbol = "m", System = true, TypeRestrictions = wrongTypes });
-			var aliased = await context.Document.CreateAsync(scratch, SharpMUSH.Database.DatabaseConstants.ObjectFlags,
-				new
-				{
-					Name = "MISTRUST",
-					Aliases = (string[])["MYOPIC"],
-					Symbol = "m",
-					System = true,
-					TypeRestrictions = wrongTypes
-				});
-
-			const string ObjectId = "node_objects/12345";
-			await context.Document.CreateAsync(scratch, SharpMUSH.Database.DatabaseConstants.HasFlags,
-				new Dictionary<string, object> { ["_from"] = ObjectId, ["_to"] = aliased.Id });
-
-			await new Migration_RepairMistrustMyopic().Up(new ArangoMigrator(context), scratch);
-
-			var mistrusts = await context.Query.ExecuteAsync<FlagRow>(scratch,
-				$"FOR f IN {SharpMUSH.Database.DatabaseConstants.ObjectFlags:@} FILTER f.Name == \"MISTRUST\" RETURN f");
-
-			await Assert.That(mistrusts.Count)
-				.IsEqualTo(1)
-				.Because("the migration collapses the duplicate rows into one");
-			await Assert.That(mistrusts[0].Aliases ?? []).DoesNotContain("MYOPIC");
-			await Assert.That(mistrusts[0].TypeRestrictions.Order(StringComparer.Ordinal).ToArray())
-				.IsEquivalentTo(new[] { "EXIT", "ROOM", "THING" });
-
-			var myopics = await context.Query.ExecuteAsync<FlagRow>(scratch,
-				$"FOR f IN {SharpMUSH.Database.DatabaseConstants.ObjectFlags:@} FILTER f.Name == \"MYOPIC\" RETURN f");
-
-			await Assert.That(myopics.Count).IsEqualTo(1);
-			await Assert.That(myopics[0].TypeRestrictions).IsEquivalentTo(new[] { "PLAYER" });
-
-			var edgeTargets = await context.Query.ExecuteAsync<string>(scratch,
-				$"FOR e IN {SharpMUSH.Database.DatabaseConstants.HasFlags:@} RETURN e._to");
-
-			await Assert.That(edgeTargets)
-				.IsEquivalentTo(new[] { mistrusts[0].Id })
-				.Because("an object that was MISTRUST must still be MISTRUST after the duplicate is removed");
-		}
-		finally
-		{
-			await context.Database.DropAsync(scratch);
-		}
-	}
-
-	/// <summary>
-	/// The general form of the ArangoDB <c>prefixmatch</c> gap: an attribute entry may only name
+	/// An attribute entry may only name
 	/// flags that actually exist. <c>SetAttributeAsync</c> resolves each <c>DefaultFlags</c> name to
 	/// a flag row and silently skips the ones it cannot find, so a name with no row is not an error
 	/// anywhere - the attribute is simply created without the flag its own entry asked for, on that
@@ -201,8 +108,7 @@ public class FlagSeedIntegrityTests
 	}
 
 	/// <summary>
-	/// The specific instance the test above generalises. Both other providers seed this flag in their
-	/// always-run flag list; ArangoDB needed <c>Migration_AddPrefixMatchAttributeFlag</c>.
+	/// The specific instance the test above generalises.
 	/// </summary>
 	[Test]
 	public async Task PrefixMatchAttributeFlagIsSeeded()
@@ -213,13 +119,6 @@ public class FlagSeedIntegrityTests
 		await Assert.That(flag).IsNotNull()
 			.Because("127 standard attribute entries name prefixmatch in their DefaultFlags");
 		await Assert.That(flag!.Symbol ?? string.Empty).IsEqualTo(string.Empty)
-			.Because("PennMUSH has no character for this flag, and the other two providers seed it with none");
+			.Because("PennMUSH has no character for this flag");
 	}
-
-	private sealed record FlagRow(
-		[property: System.Text.Json.Serialization.JsonPropertyName("_id")]
-		string Id,
-		string Name,
-		string[]? Aliases,
-		string[] TypeRestrictions);
 }

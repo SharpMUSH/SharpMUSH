@@ -381,6 +381,59 @@ public class GeneralCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor, executor)).IsTrue();
 	}
 
+	// Regression coverage for "@search all type=PLAYER" being parsed as a NAME search for the
+	// literal text "player" instead of a TYPE filter — @SEARCH's CB.EqSplit|CB.RSArgs behavior only
+	// splits the raw command text on the first top-level '=', so "all type" (the player field plus
+	// the leading search class) landed together in one chunk with no class/restriction parsing at
+	// all. See ParseSearchCommandArgs in GeneralCommands.cs.
+	[Test]
+	public async ValueTask Search_TypeEqualsPlayer_FiltersByTypeNotByName()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var offType = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SearchTypeBugPLAYER");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search all type=PLAYER"));
+
+		// The criteria line must show the parsed pair, not a raw "all type=PLAYER" echo.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
+			nameof(ErrorMessages.Notifications.SearchCriteriaFormat), "  Criteria: TYPE=PLAYER", executor)).IsTrue();
+
+		// A THING whose name contains "PLAYER" must NOT match a TYPE=PLAYER search...
+		await Assert.That(SearchResultContains(offType.Number, "THING")).IsFalse();
+
+		// ...while an actual player (the fixture's God, #1) must.
+		await Assert.That(SearchResultContains(executor.Number, "PLAYER")).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask Search_CombinedTypeAndFlags_MatchesOnBothCriteria()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchCombined");
+		var match = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"{token}_Match");
+		var control = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"{token}_Control");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {match}=MONITOR"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search all type=thing,flags=MONITOR"));
+
+		await Assert.That(SearchResultContains(match.Number, "THING")).IsTrue();
+		await Assert.That(SearchResultContains(control.Number, "THING")).IsFalse();
+	}
+
+	/// <summary>
+	/// Whether a <c>SearchObjectEntryFormat</c> notification was sent for the given dbref number and
+	/// type, inspecting the mock's recorded calls directly (mirrors
+	/// <see cref="TestHelpers.ReceivedNotifyLocalizedWithKey"/>'s approach for params-array calls).
+	/// </summary>
+	private bool SearchResultContains(int dbRefNumber, string type) =>
+		NotifyService.ReceivedCalls()
+			.Any(c =>
+				c.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup" &&
+				c.GetArguments().Length >= 2 &&
+				c.GetArguments()[1] is string k && k == nameof(ErrorMessages.Notifications.SearchObjectEntryFormat) &&
+				c.GetArguments()[^1] is object[] { Length: 3 } fmtArgs &&
+				Convert.ToInt32(fmtArgs[0]) == dbRefNumber &&
+				fmtArgs[2] is string t && t.Equals(type, StringComparison.OrdinalIgnoreCase));
+
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()
 	{
@@ -548,7 +601,6 @@ public class GeneralCommandTests
 		var attr = attrs.LastOrDefault();
 		await Assert.That(attr).IsNotNull();
 
-		// This confirms that ArangoDatabase.cs:1832-1849 correctly applies flags from entries
 		await Assert.That(attr!.Flags.Any(f => f.Name.Equals("no_command", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
 

@@ -105,6 +105,7 @@ public class WildcardParityTests
 	public async Task NoWildcardTakesLongerThanAnEyeblink(string glob)
 	{
 		var adversarial = new string('a', 60) + "!";
+		_ = Matches(glob, "");
 
 		var stopwatch = Stopwatch.StartNew();
 		var matched = Matches(glob, adversarial);

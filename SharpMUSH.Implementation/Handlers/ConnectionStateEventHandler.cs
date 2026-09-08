@@ -81,7 +81,7 @@ public class ConnectionStateEventHandler(
 					or IConnectionService.ConnectionState.Connected &&
 				notification.PlayerRef.HasValue)
 		{
-			var connectionData = connectionService.Get(notification.Handle);
+			var connectionData = notification.FormerConnection ?? connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
@@ -154,7 +154,7 @@ public class ConnectionStateEventHandler(
 		// PennMUSH spec: socket`disconnect (former descriptor, former ip, cause of disconnection, recv bytes/sent bytes/command count)
 		if (notification.NewState == IConnectionService.ConnectionState.Disconnected)
 		{
-			var connectionData = connectionService.Get(notification.Handle);
+			var connectionData = notification.FormerConnection ?? connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)

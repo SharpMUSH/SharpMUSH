@@ -15,7 +15,6 @@ namespace SharpMUSH.Tests.Integration.Mcp;
 /// <c>validate</c> tool against the live parser.
 ///
 /// Marked <see cref="ExplicitAttribute"/> because, like the other integration tests here, they
-/// require the Arango/NATS/SQL Testcontainers spun up by <see cref="ServerWebAppFactory"/> and
 /// so are excluded from the default (no-Docker) test run. The MCP endpoint is enabled for the
 /// test host via <c>ServerTestWebApplicationBuilderFactory.ConfigureStartupConfiguration</c>.
 /// </summary>

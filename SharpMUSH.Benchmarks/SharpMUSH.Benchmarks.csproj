@@ -16,13 +16,11 @@
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
 		<PackageReference Include="NSubstitute" Version="5.3.0" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.14.0" />
 		<PackageReference Include="Testcontainers.Nats" Version="4.14.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
-		<ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />

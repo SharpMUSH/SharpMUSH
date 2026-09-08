@@ -17,7 +17,6 @@ public readonly record struct ChannelNameTaken;
 /// The outcome of a channel create: it worked, the name was taken, or the storage layer failed.
 /// </summary>
 /// <remarks>
-/// <c>CreateChannelAsync</c> used to return <c>ValueTask</c>, and ArangoDB's implementation caught every
 /// exception, aborted its transaction and returned normally — so a create that failed reported success to
 /// the caller. Every provider now answers with one of these three, and none of them is silence.
 /// </remarks>

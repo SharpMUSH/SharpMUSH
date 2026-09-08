@@ -43,7 +43,6 @@ public class LightningExtendedBenchmarks : ExtendedDatabaseBenchmarks
 		_lightningPath = LightningBaseBenchmark.CreateDataDirectory();
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
-			acnf: null,
 			configFile: configFile,
 			databaseProvider: DatabaseProvider.Lightning,
 			lightningPath: _lightningPath);

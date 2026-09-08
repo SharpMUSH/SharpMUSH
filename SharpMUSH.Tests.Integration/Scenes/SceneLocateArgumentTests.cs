@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 ///
 /// Driven over the WIRE via the <c>scene…()</c> functions. The <see cref="ServerWebAppFactory.FunctionParser"/>
 /// binds enactor = executor = <c>#1</c> (God), so <c>me</c> must resolve to <c>#1</c> and <c>here</c> to
-/// <c>#1</c>'s location. Runs identically on all three providers.
+/// <c>#1</c>'s location. Runs identically on both supported providers.
 ///
 /// <para><c>[NotInParallel]</c> for the same reason as <c>SceneDbrefResolutionTests</c>: every test drives
 /// the single shared God object (<c>#1</c>), and <c>scenecreate</c> focuses the owner on the new scene, so

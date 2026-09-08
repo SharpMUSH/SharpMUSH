@@ -7,7 +7,7 @@
 	     portal models/messages, widget + application descriptors, portal authorization roles/permissions,
 	     the config/schema + package API DTOs, the client-facing service interfaces, the database-conversion
 	     progress/result DTOs, and the Markdig wiki-rendering pipeline. It deliberately references NONE of
-	     the server DB/infra packages (SqlClient, MySqlConnector, Npgsql, Neo4j.Driver, Core.Arango,
+	     the server DB/infra packages (SqlClient, MySqlConnector, Npgsql,
 	     SurrealDb.Net, NATS.Net, Quartz, Serilog, TelnetNegotiationCore, ...) so the browser bundle no
 	     longer drags the full server closure (nor its transitive FSharp.Core / Windows desktop assemblies).
 

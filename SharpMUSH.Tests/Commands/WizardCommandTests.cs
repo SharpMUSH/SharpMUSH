@@ -216,7 +216,6 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
 		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, attrName, 10000);
 
@@ -250,7 +249,6 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
 		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, resultAttr, 10000);
 

@@ -16,10 +16,13 @@ public class StartupHandler(
 	IExpandedObjectDataService data,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IWikiService wikiService,
-	IMessageBus messageBus)
-	: IHostedService
+	IMessageBus messageBus,
+	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null)
+	: IHostedLifecycleService, IDisposable
 {
 	private const string ServerVersion = "1.0.0";
+	private readonly CancellationTokenSource _readinessCancellation = new();
+	private Task _ready = Task.CompletedTask;
 
 	/// <summary>
 	/// Body of the seeded Help:Markdown Guide page documenting the CommonMark subset
@@ -486,8 +489,6 @@ public class StartupHandler(
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
 
-		logger.LogInformation("Publishing MainProcessReadyMessage to ConnectionServer.");
-		await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), cancellationToken);
 	}
 
 	/// <summary>
@@ -570,8 +571,56 @@ public class StartupHandler(
 			logger.LogWarning("{Page} wiki page could not be seeded: {Msg}", page, error);
 	}
 
-	public async Task StopAsync(CancellationToken cancellationToken)
+	public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public Task StartedAsync(CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var ct = _readinessCancellation.Token;
+		_ready = Task.Run(() => PublishReadinessAsync(ct), CancellationToken.None);
+		return Task.CompletedTask;
+	}
+
+	private async Task PublishReadinessAsync(CancellationToken ct)
+	{
+		try
+		{
+			if (consumers is not null) await consumers.WaitUntilReadyAsync(ct);
+			while (!ct.IsCancellationRequested)
+			{
+				try
+				{
+					await messageBus.Publish(new MainProcessReadyMessage(DateTimeOffset.UtcNow, ServerVersion), ct);
+					return;
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+				{
+					logger.LogWarning(ex, "Failed to publish engine readiness; retrying.");
+				}
+				await Task.Delay(TimeSpan.FromSeconds(2), ct);
+			}
+		}
+		catch (OperationCanceledException) when (ct.IsCancellationRequested)
+		{
+			logger.LogDebug("Engine readiness publishing cancelled.");
+		}
+	}
+
+	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+	public async Task StoppingAsync(CancellationToken cancellationToken)
+	{
+		await _readinessCancellation.CancelAsync();
+		try
+		{
+			await _ready.WaitAsync(cancellationToken);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			logger.LogDebug("Stopped waiting for readiness publishing during shutdown.");
+		}
 		logger.LogInformation("Publishing MainProcessShutdownMessage to ConnectionServer.");
 		try
 		{
@@ -585,5 +634,11 @@ public class StartupHandler(
 		{
 			logger.LogWarning(ex, "Failed to publish MainProcessShutdownMessage during shutdown");
 		}
+	}
+
+	public void Dispose()
+	{
+		_readinessCancellation.Cancel();
+		_readinessCancellation.Dispose();
 	}
 }

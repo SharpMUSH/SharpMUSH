@@ -10,7 +10,6 @@ namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// <c>FOLLOWING</c> is seeded with the <c>wizard</c> attribute flag
-/// (<c>SurrealDatabase.Migration.cs:718</c> and its Memgraph/Arango counterparts), which is why
 /// PennMUSH writes it as GOD rather than as the player: <c>atr_add(follower, "FOLLOWING", …, GOD, 0)</c>
 /// (<c>src/move.c:1236</c>) and <c>atr_clr(follower, "FOLLOWING", GOD)</c> (<c>src/move.c:1451</c>).
 /// <para>
@@ -21,7 +20,6 @@ namespace SharpMUSH.Tests.Commands;
 /// path so that regression cannot come back unnoticed.
 /// </para>
 /// <para>
-/// These were <see cref="ExplicitAttribute"/> under issue #838, where they failed on the Memgraph leg
 /// under full-suite load. The FOLLOWING write was never the problem: the locate was, because
 /// <c>CreatePlayerCommand</c> invalidated the room's cached contents by key alone. See
 /// <c>CachingBehaviorTests.StraddlingRead_DoesNotOutliveTheWriteThatInvalidatedIt</c>.
@@ -156,7 +154,6 @@ public class FollowCommandTests
 
 	/// <remarks>
 	/// The case that failed on CI (issue #839). It failed in the locate, not the write; the
-	/// "Memgraph transient conflict" noise around it was contention, not the cause.
 	/// </remarks>
 	[Test]
 	public async ValueTask MortalUnfollow_ClearsTheWizardFlaggedAttribute()

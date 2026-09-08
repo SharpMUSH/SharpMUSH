@@ -10,6 +10,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using System.Text;
 
@@ -391,16 +392,20 @@ public static class SocketOptions
 		}
 
 		Row("Pueblo", YesNo(connection.Metadata.GetValueOrDefault("PUEBLO") == "1"));
-		Row("Telnet", YesNo(connection.ConnectionType == "telnet"));
+		// Whether the client answered telnet negotiation, not which port it arrived on — the same
+		// CONN_TELNET terminfo() reports, so the two cannot disagree about a raw socket.
+		Row("Telnet", YesNo(connection.Metadata.GetValueOrDefault("TELNET") == "1"));
 		Row("Width", connection.Metadata.GetValueOrDefault("WIDTH", "78"));
 		Row("Height", connection.Metadata.GetValueOrDefault("HEIGHT", "24"));
 		Row("Terminal Type", connection.Metadata.GetValueOrDefault("TerminalType", "unknown"));
 		Row("Stripaccents", YesNo(connection.Metadata.GetValueOrDefault(StripAccentsKey) == "1"));
 
 		// PennMUSH reports "auto (<derived>)" until the style has been pinned explicitly, so the
-		// player can tell a negotiated default apart from a choice they made.
+		// player can tell a negotiated default apart from a choice they made. The derived half is the
+		// one terminfo() reports, read from the client's own terminal types rather than assumed.
 		var colorStyle = connection.Metadata.GetValueOrDefault(ColorStyleKey);
-		Row("Color Style", colorStyle is null ? "auto (xterm256)" : colorStyle);
+		Row("Color Style", colorStyle
+			?? $"auto ({TerminalCapabilityReader.Read(connection.Metadata).ColorStyle})");
 
 		builder.Append($"{"Prompt Newlines",-15}:  {YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1")}");
 
@@ -517,10 +522,14 @@ public static class SocketOptions
 			var style = newValue.Trim().ToLowerInvariant() switch
 			{
 				"auto" => "auto",
-				"plain" or "none" => "plain",
-				"hilite" or "highlight" => "hilite",
-				"16color" => "16color",
-				"xterm256" or "256" => "xterm256",
+				"plain" or "none" => ColorStyles.Plain,
+				"hilite" or "highlight" => ColorStyles.Hilite,
+				"16color" => ColorStyles.SixteenColor,
+				"xterm256" or "256" => ColorStyles.Xterm256,
+				// Not a PennMUSH style: PennMUSH predates clients that render ESC[38;2;r;g;b, but
+				// SharpMUSH emits those for hex ansi() codes, so a player has to be able to ask for
+				// them — or refuse them — the same way they can for the 256 palette.
+				"truecolor" or "truecolour" or "rgb" or "24bit" => ColorStyles.Truecolor,
 				_ => null
 			};
 

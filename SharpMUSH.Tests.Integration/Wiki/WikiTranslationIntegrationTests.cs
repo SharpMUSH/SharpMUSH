@@ -7,12 +7,10 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 
 /// <summary>
 /// The translation overlay's CRUD and index semantics against the configured DB backend. The backend is
-/// selected by <c>SHARPMUSH_DATABASE_PROVIDER</c> (arangodb / memgraph / surrealdb) and CI runs this
-/// assembly once per provider, so this one class is all three providers' contract.
+/// assembly once per provider, so this one class is both supported providers' contract.
 ///
 /// Written deliberately before the three hand-written backend implementations: the five CRUD methods are
 /// mechanical, but the existing revision indexes differ per store — unique on SurrealDB, non-unique on
-/// ArangoDB, absent on Memgraph — and this file is what catches that.
 ///
 /// The <b>negative</b> cases at the bottom carry the weight. A suite that only writes valid data cannot
 /// distinguish a real unique constraint from a missing one, which is exactly how these three drifted
@@ -425,7 +423,6 @@ public class WikiTranslationIntegrationTests
 	public async Task UpsertTranslationAsync_ReportsAConflictWhenTheTranslationWasDeletedMidEdit()
 	{
 		// The third lost-write shape, and the one all four implementations used to phrase differently — one
-		// of them (Memgraph) folded it into the stale-revision wording, so the HTTP boundary's phrase match
 		// answered 409 there and 400 everywhere else for the same race. Pinned per provider now.
 		var page = await CreateSourcePageAsync("DeletedMidEdit");
 		await Wiki.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
@@ -448,7 +445,6 @@ public class WikiTranslationIntegrationTests
 		// WikiWriteConflict, and the loser's markdown appears in no revision.
 		//
 		// Repeated deliberately. A single attempt usually resolves through the tidy "zero rows matched"
-		// branch and never reaches the one where the store aborts the loser mid-write — on ArangoDB that
 		// second branch reported a plain error, so a genuine lost write answered 400 instead of 409, and one
 		// attempt found it perhaps one run in five. Both branches must classify the loser identically.
 		for (var attempt = 0; attempt < 10; attempt++)

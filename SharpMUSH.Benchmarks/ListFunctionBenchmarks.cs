@@ -5,7 +5,7 @@ namespace SharpMUSH.Benchmarks;
 /// Covers <c>lnum()</c>, <c>iter()</c>, <c>words()</c>, <c>member()</c>, <c>sort()</c>, and <c>map()</c>.
 /// </summary>
 [BenchmarkCategory("List Functions")]
-public class ListFunctionBenchmarks : BaseBenchmark
+public class ListFunctionBenchmarks : LightningBaseBenchmark
 {
 	private static readonly MString Lnum10 = MarkupText.Plain("lnum(10)");
 	private static readonly MString Lnum100 = MarkupText.Plain("lnum(100)");
