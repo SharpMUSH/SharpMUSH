@@ -31,7 +31,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -88,7 +88,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -165,7 +165,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -233,7 +233,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
@@ -340,7 +340,7 @@ public partial class Commands
 				// send RemoveUserFromChannelCommand, and delcom answers "Alias deleted." either way. There is
 				// no observable difference to leak. A visible lookup would instead strand a membership the
 				// player can no longer reach — leaving them on a channel they just removed their alias for.
-				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
+				var maybeChannel = await ChannelHelper.GetChannelOrError(Mediator, channelName);
 				if (!maybeChannel.IsError)
 				{
 					await Mediator.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
@@ -366,6 +366,7 @@ public partial class Commands
 			PermissionService,
 			Mediator,
 			NotifyService,
+			ConnectionService,
 			MarkupText.Empty,
 			MarkupText.Empty,
 			switches);
@@ -411,7 +412,7 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{

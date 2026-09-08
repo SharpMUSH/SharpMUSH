@@ -48,25 +48,99 @@ public static class ChannelHelper
 {
 	/// <summary>
 	/// Channel privilege names and their single-character abbreviations, matching PennMUSH's
-	/// <c>chan_privs</c> table (<c>extchat.c</c>). The characters are case-sensitive: 'O' is Object
+	/// <c>priv_table</c> (<c>src/extchat.c:118</c>). The characters are case-sensitive: 'O' is Object
 	/// and 'o' is Open.
+	///
+	/// <para>The ORDER is part of the contract, not an accident of how it was typed: PennMUSH's
+	/// <c>privs_to_letters</c> and <c>privs_to_string</c> walk the table in order, so it is what
+	/// <c>cflags()</c>, <c>clflags()</c>, <c>@channel/what</c> and <c>@channel/decompile</c> print.</para>
 	/// </summary>
+	private static readonly (string Name, char Letter)[] ChannelPrivilegeTable =
+	[
+		("Disabled", 'D'),
+		("Player", 'P'),
+		("Admin", 'A'),
+		("Wizard", 'W'),
+		("Object", 'O'),
+		("Quiet", 'Q'),
+		("Open", 'o'),
+		("Hide_Ok", 'H'),
+		("NoTitles", 'T'),
+		("NoNames", 'N'),
+		("NoCemit", 'C'),
+		("Interact", 'I')
+	];
+
 	private static readonly ReadOnlyDictionary<string, char> ChannelPrivileges = new(
-		new Dictionary<string, char>(StringComparer.OrdinalIgnoreCase)
+		ChannelPrivilegeTable.ToDictionary(x => x.Name, x => x.Letter, StringComparer.OrdinalIgnoreCase));
+
+	/// <summary>
+	/// PennMUSH <c>chanuser_priv</c> (<c>src/extchat.c:134</c>): the per-member flags, in the table's
+	/// order, which is the order both <c>privs_to_letters</c> and <c>privs_to_string</c> emit them in.
+	/// <c>Quiet</c> is the flag <c>@channel/mute</c> sets.
+	/// </summary>
+	private static readonly (string Name, char Letter)[] MemberPrivileges =
+	[
+		("Quiet", 'Q'),
+		("Hide", 'H'),
+		("Gag", 'G'),
+		("Combine", 'C')
+	];
+
+	/// <summary>
+	/// PennMUSH <c>privs_to_letters(priv_table, ChanType(c))</c> (<c>src/privtab.c:118</c>), which is what
+	/// <c>cflags()</c> and <c>@channel/decompile</c> print: one character per privilege, in table order.
+	/// </summary>
+	public static string PrivilegeLetters(IEnumerable<string> privileges)
+	{
+		var set = privileges.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return string.Concat(ChannelPrivilegeTable
+			.Where(x => set.Contains(x.Name))
+			.Select(x => x.Letter));
+	}
+
+	/// <summary>
+	/// PennMUSH <c>privs_to_string</c> (<c>src/privtab.c:96</c>): the same set spelled out and space
+	/// separated, in the table's canonical casing. <c>clflags()</c> and <c>@channel/what</c> print this.
+	/// </summary>
+	public static string PrivilegeNames(IEnumerable<string> privileges)
+	{
+		var set = privileges.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		return string.Join(" ", ChannelPrivilegeTable.Where(x => set.Contains(x.Name)).Select(x => x.Name));
+	}
+
+	/// <summary>
+	/// PennMUSH <c>list_cuflags</c> (<c>src/extchat.c:2905</c>): a member's own channel flags, as letters
+	/// or as names. <c>Hide</c> comes first in both spellings because Penn emits it before the table.
+	/// </summary>
+	public static string MemberFlags(SharpChannelStatus status, bool verbose)
+	{
+		var present = new List<(string Name, char Letter)>();
+
+		if (status.Hide ?? false)
 		{
-			{ "Disabled", 'D' },
-			{ "Player", 'P' },
-			{ "Admin", 'A' },
-			{ "Wizard", 'W' },
-			{ "Object", 'O' },
-			{ "Quiet", 'Q' },
-			{ "Open", 'o' },
-			{ "Hide_Ok", 'H' },
-			{ "NoTitles", 'T' },
-			{ "NoNames", 'N' },
-			{ "NoCemit", 'C' },
-			{ "Interact", 'I' }
-		});
+			present.Add(MemberPrivileges[1]);
+		}
+
+		if (status.Mute ?? false)
+		{
+			present.Add(MemberPrivileges[0]);
+		}
+
+		if (status.Gagged ?? false)
+		{
+			present.Add(MemberPrivileges[2]);
+		}
+
+		if (status.Combine ?? false)
+		{
+			present.Add(MemberPrivileges[3]);
+		}
+
+		return verbose
+			? string.Join(" ", present.Select(x => x.Name))
+			: string.Concat(present.Select(x => x.Letter));
+	}
 
 	private static readonly ReadOnlyDictionary<char, string?> ChannelPrivilegesReverse =
 		new(ChannelPrivileges.ToDictionary(x => x.Value, string? (x) => x.Key));
@@ -156,42 +230,18 @@ public static class ChannelHelper
 			 && !channelName.Contains(' ');
 
 	/// <summary>
-	/// Looks a channel up by name. This is PennMUSH's <c>find_channel()</c> and nothing more: it does not
-	/// decide who may see, join or speak on what it returns.
+	/// Looks a channel up by exact name. This is PennMUSH's <c>find_channel()</c> stripped of both of its
+	/// other jobs: it does not prefix-match and it does not decide who may see what it returns.
 	///
-	/// <para>It used to take an <see cref="IPermissionService"/> and never touch it, which made every one
-	/// of its twenty-odd call sites read as though a permission check had already happened. The parameter
-	/// is gone; callers that need a gate ask for one by name — <see cref="GetVisibleChannelOrError"/>,
-	/// <see cref="JoinRefusal"/>, <see cref="SpeechRefusal"/>, <see cref="CemitRefusal"/>.</para>
+	/// <para>Only the two call sites that genuinely need an unfiltered exact lookup use it — the
+	/// uniqueness probe in <c>@channel/add</c> and the membership cleanup in <c>@delcom</c>. Everything a
+	/// player names goes through <see cref="MatchChannel"/> or
+	/// <see cref="GetVisibleChannelOrError"/>, which gate on visibility and accept an abbreviation.</para>
 	/// </summary>
-	public static async ValueTask<ChannelOrError> GetChannelOrError(
-		IMUSHCodeParser parser,
-		IMediator Mediator,
-		INotifyService NotifyService,
-		MString channelName,
-		bool notify = false)
-	{
-		var channel = await Mediator.Send(new GetChannelQuery(channelName.ToPlainText()));
-
-		switch (channel, notify)
-		{
-			case (null, true):
-				{
-					var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-					await NotifyService.Notify(executor,
-						"Channel not found.", executor);
-					return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
-				}
-			case (null, false):
-				{
-					return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
-				}
-			case ({ } foundChannel, _):
-				{
-					return new ChannelOrError(foundChannel);
-				}
-		}
-	}
+	public static async ValueTask<ChannelOrError> GetChannelOrError(IMediator mediator, MString channelName)
+		=> await mediator.Send(new GetChannelQuery(NormalizeChannelName(channelName.ToPlainText()))) is { } channel
+			? new ChannelOrError(channel)
+			: new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.ChannelNotFound)));
 
 	/// <summary>
 	/// Whether <paramref name="viewer"/> may be told this channel exists at all.
@@ -205,6 +255,180 @@ public static class ChannelHelper
 		SharpChannel channel)
 		=> await permissionService.ChannelCanSeeAsync(viewer, channel)
 			 || await IsMemberOfChannel(viewer, channel);
+
+	/// <summary>
+	/// Which channels a name is allowed to resolve against. PennMUSH keeps three near-identical copies of
+	/// its matcher for this — <c>find_channel</c>, <c>find_channel_partial_on</c> and
+	/// <c>find_channel_partial_off</c> (<c>src/extchat.c:943-1160</c>) — and the distinction is not
+	/// cosmetic: <c>@channel/on pub</c> must resolve against channels the joiner is NOT on, so that a
+	/// second channel they already joined cannot make the abbreviation ambiguous, and so that the
+	/// "you are already on" answer is reachable at all.
+	/// </summary>
+	public enum ChannelMatchScope
+	{
+		/// <summary>PennMUSH <c>find_channel</c>: every channel the viewer may see.</summary>
+		Any,
+
+		/// <summary>PennMUSH <c>find_channel_partial_on</c>: only channels the viewer is a member of.</summary>
+		Member,
+
+		/// <summary>PennMUSH <c>find_channel_partial_off</c>: only visible channels the viewer is NOT on.</summary>
+		NonMember
+	}
+
+	/// <summary>PennMUSH's <c>cmatch_type</c> (<c>hdrs/extchat.h</c>).</summary>
+	public enum ChannelMatchKind
+	{
+		None,
+		Exact,
+		Partial,
+		Ambiguous
+	}
+
+	/// <summary>
+	/// The outcome of resolving a channel name. <see cref="Candidates"/> is populated only for
+	/// <see cref="ChannelMatchKind.Ambiguous"/>, where PennMUSH lists the possibilities
+	/// (<c>list_partial_matches</c>, <c>src/extchat.c:1035</c>).
+	/// </summary>
+	public readonly record struct ChannelMatch(ChannelMatchKind Kind, SharpChannel? Channel, SharpChannel[] Candidates)
+	{
+		public bool Found => Channel is not null && Kind is ChannelMatchKind.Exact or ChannelMatchKind.Partial;
+
+		public static ChannelMatch NoMatch { get; } = new(ChannelMatchKind.None, null, []);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>normalize_channel_name</c> (<c>src/extchat.c:905</c>): markup off — which
+	/// <c>ToPlainText</c> has already done — and one layer of surrounding angle brackets off, so that the
+	/// <c>&lt;Public&gt;</c> a player copies out of channel output resolves to <c>Public</c>.
+	/// </summary>
+	private static string NormalizeChannelName(string name)
+		=> name.Length > 1 && name[0] == '<' && name[^1] == '>'
+			? name[1..^1]
+			: name;
+
+	/// <summary>Whether a channel is a candidate for this scope at all.</summary>
+	private static async ValueTask<bool> InScope(IPermissionService permissionService, AnySharpObject viewer,
+		SharpChannel channel, ChannelMatchScope scope)
+		=> scope switch
+		{
+			ChannelMatchScope.Member => await IsMemberOfChannel(viewer, channel),
+			ChannelMatchScope.NonMember => !await IsMemberOfChannel(viewer, channel)
+																		 && await permissionService.ChannelCanSeeAsync(viewer, channel),
+			_ => true
+		};
+
+	/// <summary>
+	/// Whether an in-scope candidate is one the viewer may be told about. Only
+	/// <see cref="ChannelMatchScope.Any"/> still has a test left to make; the other two scopes already
+	/// established visibility (or membership, which implies it) in <see cref="InScope"/>.
+	/// </summary>
+	private static async ValueTask<bool> VisibleInScope(IPermissionService permissionService, AnySharpObject viewer,
+		SharpChannel channel, ChannelMatchScope scope)
+		=> scope != ChannelMatchScope.Any || await CanSeeChannel(permissionService, viewer, channel);
+
+	/// <summary>
+	/// PennMUSH's channel matcher (<c>src/extchat.c:943-1160</c>): an exact, case-insensitive name match
+	/// wins outright, and failing that the name is taken as an abbreviation and prefix-matched against
+	/// every channel the viewer may see. One surviving candidate is the answer; several are
+	/// <see cref="ChannelMatchKind.Ambiguous"/>. This is why <c>@channel/on pub</c> joins <c>Public</c>.
+	///
+	/// <para>An exact name match ends the search whether or not the viewer may see it, exactly as Penn's
+	/// <c>find_channel</c> does — a hidden <c>Wizards</c> channel therefore answers "I don't recognize
+	/// that channel" rather than silently resolving to a visible <c>WizardsLounge</c> behind it.</para>
+	///
+	/// <para>The exact store lookup up front is a fast path and nothing more: it can only produce the same
+	/// answer the scan would, since Penn returns on an exact match before considering any prefix. It keeps
+	/// the common case — a player typing a channel's full name — from enumerating every channel's
+	/// membership.</para>
+	/// </summary>
+	public static async ValueTask<ChannelMatch> MatchChannel(
+		IPermissionService permissionService,
+		IMediator mediator,
+		AnySharpObject viewer,
+		MString channelName,
+		ChannelMatchScope scope = ChannelMatchScope.Any)
+	{
+		var name = NormalizeChannelName(channelName.ToPlainText());
+
+		if (name.Length == 0)
+		{
+			return ChannelMatch.NoMatch;
+		}
+
+		if (await mediator.Send(new GetChannelQuery(name)) is { } stored
+				&& stored.Name.ToPlainText().Equals(name, StringComparison.OrdinalIgnoreCase)
+				&& await InScope(permissionService, viewer, stored, scope))
+		{
+			return await VisibleInScope(permissionService, viewer, stored, scope)
+				? new ChannelMatch(ChannelMatchKind.Exact, stored, [])
+				: ChannelMatch.NoMatch;
+		}
+
+		// Materialise the channel list BEFORE testing scope or visibility, for the same reason
+		// VisibleChannels does: those tests read channel.Members, and enumerating one database stream
+		// inside another faults on a thread pool thread and takes the process with it.
+		var all = await mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
+		var candidates = new List<SharpChannel>();
+
+		foreach (var channel in all)
+		{
+			if (!await InScope(permissionService, viewer, channel, scope))
+			{
+				continue;
+			}
+
+			var candidateName = channel.Name.ToPlainText();
+
+			if (candidateName.Equals(name, StringComparison.OrdinalIgnoreCase))
+			{
+				return await VisibleInScope(permissionService, viewer, channel, scope)
+					? new ChannelMatch(ChannelMatchKind.Exact, channel, [])
+					: ChannelMatch.NoMatch;
+			}
+
+			if (candidateName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+					&& await VisibleInScope(permissionService, viewer, channel, scope))
+			{
+				candidates.Add(channel);
+			}
+		}
+
+		// Penn walks an alphabetically ordered channel list, so its "first match wins" is really
+		// "alphabetically first"; neither store returns channels in any guaranteed order, so sort.
+		var ordered = candidates
+			.OrderBy(x => x.Name.ToPlainText(), StringComparer.OrdinalIgnoreCase)
+			.ToArray();
+
+		return ordered.Length switch
+		{
+			0 => ChannelMatch.NoMatch,
+			1 => new ChannelMatch(ChannelMatchKind.Partial, ordered[0], ordered),
+			_ => new ChannelMatch(ChannelMatchKind.Ambiguous, null, ordered)
+		};
+	}
+
+	/// <summary>A refusal carrying PennMUSH's <c>#-2 AMBIGUOUS CHANNEL NAME</c> (<c>extchat.h:171</c>).</summary>
+	public static ChannelOrError AmbiguousChannel()
+		=> new(new Error<CallState>(new CallState(ErrorMessages.Returns.AmbiguousChannelName)));
+
+	/// <summary>
+	/// A refusal carrying PennMUSH's <c>#-1 NO SUCH CHANNEL</c> (<c>extchat.h:167</c>), or
+	/// <paramref name="returns"/> where the caller has a more specific answer to give — Penn's
+	/// <c>channel_join_self</c> and <c>channel_leave_self</c> both refuse with a message about the
+	/// channel the player named, having already established that it exists.
+	/// </summary>
+	public static ChannelOrError NoSuchChannel(string? returns = null)
+		=> new(new Error<CallState>(new CallState(returns ?? ErrorMessages.Returns.NoSuchChannel)));
+
+	/// <summary>
+	/// PennMUSH <c>list_partial_matches</c> (<c>src/extchat.c:1035</c>): the possibilities an ambiguous
+	/// abbreviation could have meant, appended to the header one space apart. Only channels that already
+	/// passed the visibility gate reach here, so this cannot name a channel the viewer may not see.
+	/// </summary>
+	public static string PartialMatchList(IEnumerable<SharpChannel> candidates)
+		=> ErrorMessages.Notifications.ChatPartialMatchesAre
+			 + string.Concat(candidates.Select(x => $" {x.Name.ToPlainText()}"));
 
 	/// <summary>
 	/// Lookup plus PennMUSH's visibility gate, which is inside <c>find_channel</c> itself
@@ -224,21 +448,30 @@ public static class ChannelHelper
 	/// edit that wants to explain a not-found here has to keep the two cases sharing an answer.</para>
 	/// </summary>
 	public static async ValueTask<ChannelOrError> GetVisibleChannelOrError(
-		IMUSHCodeParser parser,
 		IPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject viewer,
 		MString channelName,
-		bool notify = false)
+		bool notify = false,
+		ChannelMatchScope scope = ChannelMatchScope.Any)
 	{
-		// notify: false — the caller must not learn which of the two failures it hit, so the one refusal
-		// below is the only thing either path is allowed to emit.
-		var maybeChannel = await GetChannelOrError(parser, mediator, notifyService, channelName, notify: false);
+		var match = await MatchChannel(permissionService, mediator, viewer, channelName, scope);
 
-		if (!maybeChannel.IsError && await CanSeeChannel(permissionService, viewer, maybeChannel.AsChannel))
+		if (match.Found)
 		{
-			return maybeChannel;
+			return new ChannelOrError(match.Channel!);
+		}
+
+		if (match.Kind == ChannelMatchKind.Ambiguous)
+		{
+			if (notify)
+			{
+				await notifyService.Notify(viewer, ErrorMessages.Notifications.DontKnowWhichChannel, viewer);
+				await notifyService.Notify(viewer, PartialMatchList(match.Candidates), viewer);
+			}
+
+			return AmbiguousChannel();
 		}
 
 		if (notify)
@@ -246,7 +479,7 @@ public static class ChannelHelper
 			await notifyService.Notify(viewer, ErrorMessages.Notifications.DontRecognizeThatChannel, viewer);
 		}
 
-		return new ChannelOrError(new Error<CallState>(new CallState(ErrorMessages.Returns.NoSuchChannel)));
+		return NoSuchChannel();
 	}
 
 	/// <summary>
@@ -367,6 +600,62 @@ public static class ChannelHelper
 		return await permissionService.ChannelCanCemit(who, channel)
 			? null
 			: string.Format(ErrorMessages.Notifications.ChatNotAllowedToCemit, channel.Name.ToPlainText());
+	}
+
+	/// <summary>
+	/// One member of a channel as <c>@channel/who</c> and <c>cwho()</c> see them: PennMUSH's
+	/// <c>CHANUSER</c> plus whether the object behind it is presently reachable.
+	/// </summary>
+	public readonly record struct ChannelMember(AnySharpObject Object, SharpChannelStatus Status, bool Connected)
+	{
+		public bool IsThing => Object.IsThing;
+
+		public bool Hidden => Status.Hide ?? false;
+
+		public bool Gagging => Status.Gagged ?? false;
+
+		/// <summary>
+		/// PennMUSH <c>do_channel_who</c> (<c>src/extchat.c:2963</c>) and <c>fun_cwho</c>'s "on" arm
+		/// (<c>:3068</c>): a THING is always listed, a player only while connected, and a member who has
+		/// hidden on the channel only to a viewer with <c>Priv_Who</c>.
+		/// </summary>
+		public bool ListedAsOn(bool privilegedWho) => IsThing || (Connected && (!Hidden || privilegedWho));
+
+		/// <summary>PennMUSH <c>fun_cwho</c>'s "off" arm (<c>src/extchat.c:3066</c>).</summary>
+		public bool ListedAsOff(bool privilegedWho) => IsThing || !Connected || (Hidden && !privilegedWho);
+	}
+
+	/// <summary>
+	/// Whether <paramref name="viewer"/> sees through <c>@channel/hide</c>: PennMUSH's <c>Priv_Who</c>
+	/// (<c>hdrs/mushtype.h</c>), which is privileged status or the <c>Who</c> power.
+	/// </summary>
+	public static async ValueTask<bool> PrivilegedWho(AnySharpObject viewer)
+		=> await viewer.IsPriv() || await viewer.HasPower("Who");
+
+	/// <summary>
+	/// The channel's membership with each member's connection state attached, so the callers can apply
+	/// PennMUSH's listing rules (<see cref="ChannelMember.ListedAsOn"/> /
+	/// <see cref="ChannelMember.ListedAsOff"/>).
+	///
+	/// <para>Neither rule was applied before: <c>@channel/who</c> and <c>cwho()</c> listed every member
+	/// unconditionally, so <c>@channel/hide</c> — which the help file documents as hiding you from
+	/// <c>@channel/who</c> — did nothing, and both listings named players who were not online.</para>
+	/// </summary>
+	public static async ValueTask<List<ChannelMember>> ChannelMembers(IConnectionService connectionService,
+		SharpChannel channel)
+	{
+		// Materialised before the connection lookups for the same reason as everywhere else in this file.
+		var members = await channel.Members.Value.ToArrayAsync();
+		var result = new List<ChannelMember>(members.Length);
+
+		foreach (var (member, status) in members)
+		{
+			var connected = member.IsThing
+											|| await connectionService.Get(member.Object().DBRef).AnyAsync();
+			result.Add(new ChannelMember(member, status, connected));
+		}
+
+		return result;
 	}
 
 	/// <summary>

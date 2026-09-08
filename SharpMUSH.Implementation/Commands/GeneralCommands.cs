@@ -5258,15 +5258,19 @@ public partial class Commands
 			// /list, /recall and /decompile combine with other switches (`@channel/list/on/quiet`), so they
 			// match on membership rather than on a positional list pattern that only fires when they are last.
 			_ when switches.Contains("LIST") => await ChannelCommand.ChannelList.Handle(parser, LocateService,
-				PermissionService, Mediator, NotifyService, emptyIfMissing0, emptyIfMissing1, switches),
+				PermissionService, Mediator, NotifyService, ConnectionService, emptyIfMissing0, emptyIfMissing1,
+				switches),
+			// CB.RSArgs comma-splits the right-hand side, so `@channel/recall <chan>=<lines>,<start>` arrives
+			// as two arguments — PennMUSH reads the same pair out of its lineinfo array (src/extchat.c:4008).
 			_ when switches.Contains("RECALL") && arg0 is not null => await ChannelRecall.Handle(parser, LocateService,
-				PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1, switches),
+				PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1,
+				args.GetValueOrDefault("2")?.Message ?? MarkupText.Empty, switches),
 			_ when switches.Contains("DECOMPILE") && arg0 is not null => await ChannelDecompile.Handle(parser,
 				LocateService, PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1, switches),
 			["WHAT"] => await ChannelWhat.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
 				emptyIfMissing0),
 			["WHO"] when arg0 is not null => await ChannelWho.Handle(parser, LocateService, PermissionService, Mediator,
-				NotifyService, arg0),
+				NotifyService, ConnectionService, arg0),
 			(["ON"] or ["JOIN"]) when arg0 is not null => await ChannelOn.Handle(parser, LocateService, PermissionService,
 				Mediator, NotifyService, arg0, arg1),
 			(["OFF"] or ["LEAVE"]) when arg0 is not null => await ChannelOff.Handle(parser, LocateService,

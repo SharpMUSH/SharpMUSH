@@ -18,7 +18,7 @@ public static class ChannelDescribe
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)

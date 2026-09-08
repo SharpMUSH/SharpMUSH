@@ -39,7 +39,7 @@ public static class ChannelCombine
 		}
 		else
 		{
-			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 				NotifyService, executor, channelName, true);
 			if (maybeChannel.IsError)
 			{

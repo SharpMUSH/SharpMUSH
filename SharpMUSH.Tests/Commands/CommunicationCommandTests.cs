@@ -408,10 +408,13 @@ public class CommunicationCommandTests
 		Console.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
+		// @clist is @channel/list, which prints PennMUSH's column table (src/extchat.c:2622) — the channel
+		// name in a 30-column field, not a "Name: <channel>" line.
 		await NotifyService
 			.Received() // Weak check
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Name: Public")),
+				TestHelpers.MessagePlainTextContains(msg, "Public")
+				&& TestHelpers.MessagePlainTextContains(msg, "Chan Type")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

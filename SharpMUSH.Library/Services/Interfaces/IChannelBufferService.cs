@@ -18,7 +18,11 @@ public interface IChannelBufferService
 	/// </summary>
 	/// <param name="channelId">The channel ID</param>
 	/// <param name="count">Number of messages to retrieve</param>
-	/// <returns>Messages in reverse chronological order (newest first)</returns>
+	/// <returns>
+	/// The last <paramref name="count"/> messages, oldest first. Every caller replays a conversation with
+	/// this, so chronological is the only order that reads correctly; PennMUSH's <c>iter_bufferq</c>
+	/// (<c>src/bufferq.c</c>) walks its buffer the same way.
+	/// </returns>
 	IAsyncEnumerable<SharpChannelMessage> GetMessagesAsync(string channelId, int count);
 
 	/// <summary>
