@@ -37,7 +37,7 @@ public partial class Functions
 			? "1"
 			: "0";
 
-	[SharpFunction(Name = "eq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
+	[SharpFunction(Name = "eq", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> ExactEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 == pair.Item2);
 
@@ -85,7 +85,7 @@ public partial class Functions
 	public ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> CancellingNegativeAnd(parser, _2);
 
-	[SharpFunction(Name = "neq", Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
+	[SharpFunction(Name = "neq", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Any(x => x.Value.Message!.ToPlainText() == parser.CurrentState.Arguments["0"].Message!.ToPlainText())

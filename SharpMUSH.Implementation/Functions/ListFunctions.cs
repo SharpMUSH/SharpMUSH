@@ -615,21 +615,17 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["level"])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["levels"])]
 	public ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var iterDepth = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MushText.Zero);
-		var iterNumber = int.Parse(iterDepth.ToString());
-		var maxCount = parser.CurrentState.IterationRegisters.Count;
-
-		if (iterNumber >= maxCount)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-		}
-
-		parser.CurrentState.IterationRegisters.ElementAt(maxCount - iterNumber - 1).Break = true;
-
+		var text = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "1").ToPlainText();
+		if (!long.TryParse(text, out var levels))
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+		if (levels < 0 || levels > parser.CurrentState.IterationRegisters.Count)
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
+		foreach (var iteration in parser.CurrentState.IterationRegisters.Take((int)levels))
+			iteration.Break = true;
 		return ValueTask.FromResult(CallState.Empty);
 	}
 

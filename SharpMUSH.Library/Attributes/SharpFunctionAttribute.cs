@@ -9,6 +9,8 @@ public class SharpFunctionAttribute : Attribute
 	public int MinArgs { get; set; } = 0;
 	public int MaxArgs { get; set; } = 32;
 	public required FunctionFlags Flags { get; set; } = FunctionFlags.Regular;
+	/// <summary>With HasSideFX, gate only calls with at least this many arguments. Zero gates every call.</summary>
+	public int SideEffectMinArgs { get; set; }
 	public string[] Restrict { get; set; } = [];
 	/// <summary>
 	/// Optional parameter names for better IDE support (inlay hints, signature help, etc.)

@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
+	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -30,7 +30,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "lemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
+	[SharpFunction(Name = "lemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> LocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -48,14 +48,9 @@ public partial class Functions
 
 	private const int MaxFunctionArguments = 10;
 
-	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object", "recipient", "message"])]
+	[SharpFunction(Name = "message", MinArgs = 3, MaxArgs = 14, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["object", "recipient", "message"])]
 	public async ValueTask<CallState> Message(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
 		var recipients = orderedArgs["0"];
@@ -84,7 +79,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
+	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> NoSpoofEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -109,7 +104,7 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nslemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["message"])]
+	[SharpFunction(Name = "nslemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> NoSpoofLocationEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -134,14 +129,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsoemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["message"])]
+	[SharpFunction(Name = "nsoemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -227,14 +217,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nspemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["target", "message"])]
+	[SharpFunction(Name = "nspemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]
 	public async ValueTask<CallState> NoSpoofPrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -279,14 +264,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsprompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["target", "message"])]
+	[SharpFunction(Name = "nsprompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]
 	public async ValueTask<CallState> NoSpoofPrompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -322,14 +302,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nsremit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["room", "message"])]
+	[SharpFunction(Name = "nsremit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["room", "message"])]
 	public async ValueTask<CallState> NoSpoofRoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -364,14 +339,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "nszemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["zone", "message"])]
+	[SharpFunction(Name = "nszemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["zone", "message"])]
 	public async ValueTask<CallState> NoSpoofZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -407,14 +377,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "oemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["message"])]
+	[SharpFunction(Name = "oemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> OmitEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -496,14 +461,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "pemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["target", "message"])]
+	[SharpFunction(Name = "pemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]
 	public async ValueTask<CallState> PrivateEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -551,14 +511,9 @@ public partial class Functions
 		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
 	}
 
-	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["target", "message"])]
+	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]
 	public async ValueTask<CallState> Prompt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -588,14 +543,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "remit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["room", "message"])]
+	[SharpFunction(Name = "remit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["room", "message"])]
 	public async ValueTask<CallState> RoomEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objects = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -630,14 +580,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "zemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["zone", "message"])]
+	[SharpFunction(Name = "zemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["zone", "message"])]
 	public async ValueTask<CallState> ZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var zoneName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;

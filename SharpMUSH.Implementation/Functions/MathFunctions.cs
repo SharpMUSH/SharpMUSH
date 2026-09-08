@@ -906,9 +906,9 @@ public partial class Functions
 	public ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		var arg1 = arguments["1"]?.Message?.ToPlainText();
+		var arg1 = arguments.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
 
-		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
+		return ValueTask.FromResult<CallState>(new(double.TryParse(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
 			? Math.Exp(dec).ToString()
 			: ErrorMessages.Returns.Number));
 	}
