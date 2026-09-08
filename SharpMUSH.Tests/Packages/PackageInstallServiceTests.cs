@@ -111,6 +111,136 @@ public class PackageInstallServiceTests
 	}
 
 	[Test, NotInParallel]
+	public async Task WellKnownRefs_InstallAndUpgradeWithExistingRefTree()
+	{
+		var manifest = Parse("""
+			package: well-known-refs
+			version: "1.0"
+			objects:
+			  - ref: core
+			    type: thing
+			    name: Reference Core
+			    attributes:
+			      FN_ZERO: "{{$room_zero}}"
+			""");
+		var answers = new Dictionary<string, string>();
+		var installed = await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(installed.IsT0).IsTrue();
+		var objid = installed.AsT0.CreatedObjects["core"];
+		var upgraded = Parse("""
+			package: well-known-refs
+			version: "1.1"
+			objects:
+			  - ref: core
+			    type: thing
+			    name: Reference Core
+			    attributes:
+			      FN_ZERO: "{{$room_zero}}"
+			      FN_PM: "{{$package_manager}}"
+			      FN_GOD: "{{$god}}"
+			      FN_START: "{{$player_start}}"
+			      FN_MASTER: "{{$master_room}}"
+			""");
+		var plan = await Installer.PlanAsync(upgraded, answers);
+		await Assert.That(plan.HasConflicts).IsFalse();
+		await Assert.That((await Installer.ApplyAsync(upgraded, new PackageApplyRequest(Source("commit-2"), answers, []))).IsT0).IsTrue();
+		foreach (var (name, number) in new[] { ("ROOM_ZERO", 0), ("PACKAGE_MANAGER", 7), ("GOD", 1), ("PLAYER_START", 0), ("MASTER_ROOM", 2) })
+		{
+			var expected = (await Database.GetObjectNodeAsync(new DBRef(number))).Known().Object().DBRef.ToString();
+			await Assert.That(await ReadAttributeAsync(objid, $"PM`REFS`{name}")).IsEqualTo(expected);
+		}
+		await Assert.That((await Installer.PlanAsync(upgraded, answers)).Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known().Match(p => p, _ => null!, _ => null!, _ => null!);
+		await Database.SetAttributeAsync(PackageInstallService.ParseObjid(objid)!.Value,
+			["PM", "REFS", "PACKAGE_MANAGER"], MarkupText.Empty, pm);
+		var beforeRepair = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
+		await Assert.That(beforeRepair!.Message!.ToPlainText()).IsEqualTo("");
+		var repair = await Installer.PlanAsync(upgraded, answers);
+		await Assert.That(repair.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").Action)
+			.IsEqualTo(PackageAttributeAction.AutoUpgrade);
+		await Assert.That((await Installer.ApplyAsync(upgraded, new PackageApplyRequest(Source("commit-3"), answers, []))).IsT0).IsTrue();
+		var expectedPm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known().Object().DBRef.ToString();
+		await Assert.That(await ReadAttributeAsync(objid, "PM`REFS`PACKAGE_MANAGER")).IsEqualTo(expectedPm);
+		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
+		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(expectedPm);
+		await Assert.That((await Installer.UninstallAsync(manifest.Name)).IsT0).IsTrue();
+	}
+
+	[Test, NotInParallel]
+	public async Task LegacyAttachedRefUpgrade_MigratesLocalValueAndRetainsSharedPath()
+	{
+		var manifest = Parse("""
+			package: legacy-ref-probe
+			version: "1.0"
+			objects:
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      LEGACY_SRC: "{{$god}}"
+			""");
+		var answers = new Dictionary<string, string>();
+		await Assert.That((await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []))).IsT0).IsTrue();
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known().Match(p => p, _ => null!, _ => null!, _ => null!);
+		var custom = pm.Object.DBRef.ToString();
+		const string isolated = "PM`ATTACHED_REFS`LEGACY-REF-PROBE`GOD";
+		// Seed the state left by the old installer, including a local re-point.
+		await Database.ClearAttributeAsync(new DBRef(0), isolated.Split('`'));
+		await Registry.RemoveManagedAttributeAsync(manifest.Name, host, isolated);
+		await Database.SetAttributeAsync(new DBRef(0), ["PM", "REFS", "GOD"], MarkupText.Plain(custom), pm);
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(manifest.Name, host, "PM`REFS`GOD", god, "h", "1.0"));
+		await Database.SetAttributeAsync(new DBRef(0), ["LEGACY_SRC"], MarkupText.Plain("[v(PM`REFS`GOD)]"), pm);
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(manifest.Name, host, "LEGACY_SRC", "[v(PM`REFS`GOD)]", "h", "1.0"));
+
+		var plan = await Installer.PlanAsync(manifest, answers);
+		await Assert.That(plan.HasConflicts).IsTrue();
+		await Assert.That(plan.Attributes.Single(a => a.Attribute == isolated).PreviousAttribute).IsEqualTo("PM`REFS`GOD");
+		await Assert.That((await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source("commit-2"), answers,
+			[new PackageConflictDecision("registration", isolated, PackageConflictResolution.KeepMine)]))).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, isolated)).IsEqualTo(custom);
+		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);
+		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({host}/LEGACY_SRC)]"));
+		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(custom);
+		await Assert.That((await Installer.PlanAsync(manifest, answers)).HasConflicts).IsFalse();
+		await Assert.That((await Installer.UninstallAsync(manifest.Name)).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`GOD")).IsEqualTo(custom);
+		await Database.ClearAttributeAsync(new DBRef(0), ["PM", "REFS", "GOD"]);
+	}
+
+	[Test, NotInParallel]
+	public async Task AttachedRefs_AreIsolatedAcrossPackagesAndUninstall()
+	{
+		PackageManifest Consumer(string name) => Parse($$$"""
+			package: {{{name}}}
+			version: "1.0"
+			objects:
+			  - ref: help
+			    type: thing
+			    name: Reference Help
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SRC`{{{name}}}: "{{help}}"
+			""");
+		var answers = new Dictionary<string, string>();
+		var first = Consumer("ref-consumer-a");
+		var second = Consumer("ref-consumer-b");
+		var a = await Installer.ApplyAsync(first, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(a.IsT0).IsTrue();
+		var b = await Installer.ApplyAsync(second, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(b.IsT0).IsTrue();
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
+		await Assert.That(await ReadAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo("[v(PM`ATTACHED_REFS`REF-CONSUMER-A`HELP)]");
+		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-A`HELP")).IsEqualTo(a.AsT0.CreatedObjects["help"]);
+		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
+		await Assert.That((await Installer.PlanAsync(first, answers)).Attributes.All(x => x.Action == PackageAttributeAction.NoChange)).IsTrue();
+		await Assert.That((await Installer.UninstallAsync(first.Name)).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
+		await Assert.That((await Installer.UninstallAsync(second.Name)).IsT0).IsTrue();
+	}
+
+	[Test, NotInParallel]
 	public async Task InstallUpgradeRollbackUninstall_EndToEnd()
 	{
 		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();

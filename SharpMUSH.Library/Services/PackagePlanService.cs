@@ -216,7 +216,7 @@ public class PackagePlanService : IPackagePlanService
 			{
 				// Code never carries dbrefs (decision 20.21): tokens become
 				// [v(PM`REFS`...)] recalls — a total, game-portable transform.
-				var resolved = PackageRefIndirection.TransformCode(attr.Value);
+				var resolved = PackageRefIndirection.TransformCode(attr.Value, obj.IsAttach ? inputs.Manifest.Name : null);
 
 				if (objid is null || live is null)
 				{
@@ -237,9 +237,9 @@ public class PackagePlanService : IPackagePlanService
 			// object needs: value = the resolved objid/answer (decision 20.21).
 			// They run through the same three-way table, so a user re-pointing
 			// a ref locally is preserved as KeepLocal on upgrade.
-			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj))
+			foreach (var reference in PackageRefIndirection.RefsUsedIn(obj, obj.IsAttach ? inputs.Manifest.Name : null))
 			{
-				var refAttr = PackageRefIndirection.AttributeNameFor(reference);
+				var refAttr = PackageRefIndirection.AttributeNameFor(reference, obj.IsAttach ? inputs.Manifest.Name : null);
 				var resolution = Resolve(reference);
 				var newValue = resolution ?? reference.ToString();
 				if (resolution is null)
@@ -259,9 +259,50 @@ public class PackagePlanService : IPackagePlanService
 				var baseline = baselineByKey.GetValueOrDefault((objid, refAttr.ToUpperInvariant()));
 				var liveValue = live.Attributes.TryGetValue(refAttr, out var lv) ? lv : null;
 
+				string? previousAttribute = null;
+				if (obj.IsAttach && baseline is null && liveValue is null)
+				{
+					var legacy = PackageRefIndirection.AttributeNameFor(reference);
+					var legacyBaseline = baselineByKey.GetValueOrDefault((objid, legacy));
+					// A shared legacy leaf may hold another package's resolution. Never copy
+					// that collision into the isolated namespace.
+					var shared = inputs.OtherManagedAttributes.Any(a => a.Objid == objid
+						&& a.PackageId != inputs.Manifest.Name && a.Attribute.Equals(legacy, StringComparison.OrdinalIgnoreCase));
+					if (legacyBaseline is not null && !shared)
+					{
+						previousAttribute = legacy;
+						baseline = legacyBaseline;
+						liveValue = live.Attributes.GetValueOrDefault(legacy);
+					}
+				}
+
+				// Empty managed well-known refs from older installs are invalid objids,
+				// not useful local overrides. Configure values may legitimately be empty.
+				if (baseline is not null && liveValue == "" && reference.Kind == PackageRefKind.WellKnown
+					&& !string.IsNullOrEmpty(resolution))
+				{
+					changes.Add(new PackageAttributeChange(obj.Ref, objid, refAttr, PackageAttributeAction.AutoUpgrade,
+						BaseValue: baseline.BaselineValue, LiveValue: liveValue, NewValue: resolution,
+						PreviousAttribute: previousAttribute));
+					notes.Add($"{obj.Ref}/{refAttr}: repair empty well-known ref to {resolution}.");
+					continue;
+				}
+
+				if (previousAttribute is not null && liveValue is not null && liveValue != baseline!.BaselineValue)
+				{
+					// Another package may already have retired its legacy baseline. A changed
+					// value is ambiguous: intentional re-point or historical shared-ref collision.
+					changes.Add(new PackageAttributeChange(obj.Ref, objid, refAttr, PackageAttributeAction.Conflict,
+						PackageConflictKind.ModifyModify, baseline.BaselineValue, liveValue, newValue,
+						resolution is null, previousAttribute));
+					notes.Add($"{obj.Ref}/{refAttr}: legacy ref differs from its baseline; choose whether to retain it or use this package's resolution.");
+					continue;
+				}
+
 				changes.Add(ClassifyExisting(
 					obj.Ref, objid, refAttr, baseline?.BaselineValue, liveValue, newValue,
-					requiresApply: resolution is null));
+					requiresApply: resolution is null) with
+				{ PreviousAttribute = previousAttribute });
 			}
 		}
 
@@ -283,6 +324,16 @@ public class PackagePlanService : IPackagePlanService
 			}
 
 			var targetRef = objidByRef.FirstOrDefault(kv => kv.Value == baseline.Objid).Key ?? baseline.Objid;
+
+			// Legacy attached refs may still be recalled by another package or locally
+			// edited code. Retire our ownership without deleting the shared leaf.
+			if (baseline.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase)
+				&& inputs.Manifest.Objects.Any(o => o.IsAttach && objidByRef.GetValueOrDefault(o.Ref) == baseline.Objid))
+			{
+				changes.Add(new PackageAttributeChange(targetRef, baseline.Objid, baseline.Attribute,
+					PackageAttributeAction.RemoveBaseline, BaseValue: baseline.BaselineValue, LiveValue: liveValue));
+				continue;
+			}
 
 			changes.Add(liveValue switch
 			{

@@ -133,6 +133,7 @@ public enum PackageConflictKind
 /// <param name="BaseValue">Baseline (as applied at last install/upgrade), or null.</param>
 /// <param name="LiveValue">Current live value, or null when absent.</param>
 /// <param name="NewValue">Incoming value with refs resolved as far as currently possible, or null for deletes.</param>
+/// <param name="PreviousAttribute">Legacy ref path whose local value is being migrated; the old leaf remains for other code.</param>
 /// <param name="RequiresApplyResolution">True when the new value references objects that only get dbrefs at apply time.</param>
 public sealed record PackageAttributeChange(
 	string TargetRef,
@@ -143,7 +144,8 @@ public sealed record PackageAttributeChange(
 	string? BaseValue = null,
 	string? LiveValue = null,
 	string? NewValue = null,
-	bool RequiresApplyResolution = false);
+	bool RequiresApplyResolution = false,
+	string? PreviousAttribute = null);
 
 /// <summary>The kind of object-structure element a <see cref="PackageStructureChange"/> describes.</summary>
 public enum PackageStructureKind

@@ -1157,6 +1157,25 @@ manifests may not define attributes under it, authoring exports exclude it,
 and same-package ref names must be unique across kinds (internal /
 well-known-used / configure) since they share the namespace.
 
+Attached code isolates **all** ref kinds under `PM`ATTACHED_REFS`PACKAGE`
+(e.g. `PM`ATTACHED_REFS`SCENE`HELP`), with the dependency id appended for
+cross-package refs. This separate branch cannot collide with the host's own
+refs or another attacher's configure answers. Plan, apply, and live-state
+reads use the same naming rule.
+
+Upgrading legacy attached code migrates unshared ref values through the
+normal three-way merge, preserving local deletions. Changed legacy values
+require a migration choice: they may be local re-points or historical
+collisions after another package has retired its baseline. Shared
+legacy entries are resolved afresh into each package's isolated branch;
+their current value may belong to another package. Legacy leaves remain
+unmodified for code that still recalls them, but the upgrading package drops
+its old baseline. Empty **managed well-known** refs are repaired to their
+configured objids on apply when resolvable; empty configure values and
+nonempty local re-points retain their normal merge behavior after migration.
+Package attribute writes and clears use Mediator commands so cached softcode
+reads see installs, repairs, upgrades, rollbacks, and uninstalls immediately.
+
 ### 20.22 Application Packages (Area 21 ↔ Area 20)
 
 **Decision:** A package declares a `kind:` — `softcode` (the default; the
