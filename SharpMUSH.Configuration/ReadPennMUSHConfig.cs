@@ -145,11 +145,11 @@ public static partial class ReadPennMushConfig
 				RequiredString(Get(nameof(FileOptions.ColorsFile)), "colors.json")
 			),
 			Flag = new FlagOptions(
-				PlayerFlags: RequiredString(Get(nameof(FlagOptions.PlayerFlags)), "enter_ok ansi no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-				RoomFlags: RequiredString(Get(nameof(FlagOptions.RoomFlags)), "no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-				ThingFlags: RequiredString(Get(nameof(FlagOptions.ThingFlags)), "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-				ExitFlags: RequiredString(Get(nameof(FlagOptions.ExitFlags)), "no_command").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-				ChannelFlags: RequiredString(Get(nameof(FlagOptions.ChannelFlags)), "player").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				PlayerFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.PlayerFlags)), FlagOptions.Defaults.Player)),
+				RoomFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.RoomFlags)), FlagOptions.Defaults.Room)),
+				ThingFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.ThingFlags)), FlagOptions.Defaults.Thing)),
+				ExitFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.ExitFlags)), FlagOptions.Defaults.Exit)),
+				ChannelFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.ChannelFlags)), FlagOptions.Defaults.Channel))
 			),
 			Function = new FunctionOptions(
 				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.SaferUserFunctions)), true),

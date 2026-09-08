@@ -1161,6 +1161,66 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
+	/// The configured creation defaults reach the object, on whichever provider the suite is running.
+	/// The defaults are looked up through the flag store directly, and the two providers disagreed
+	/// about resolving a name in the case the config supplies it, so this passed on Lightning and
+	/// applied nothing at all on SurrealDB.
+	/// </summary>
+	[Test]
+	public async ValueTask Create_AppliesTheConfiguredDefaultFlags()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("dflt");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create DfltThing_{token}"));
+
+		var flagged = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"think hasflag(DfltThing_{token}, NO_COMMAND)"));
+
+		await Assert.That(flagged.Message!.ToPlainText()!.Trim()).IsEqualTo("1")
+			.Because("thing_flags ships as no_command, and a default nothing applies is not a default");
+	}
+
+	/// <summary>
+	/// A clone is created through the same path as any other object, so it arrives carrying the
+	/// configured creation defaults — NO_COMMAND among them. Copying only the flags the source has
+	/// left that default in place on a source that had deliberately cleared it, and the `$`-commands
+	/// copied onto the clone in the same breath then never ran.
+	/// </summary>
+	[Test]
+	public async ValueTask Clone_DoesNotKeepACreationDefaultTheSourceCleared()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("clnc");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create ClncSrc_{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set ClncSrc_{token}=!NO_COMMAND"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clone ClncSrc_{token}=ClncCopy_{token}"));
+
+		var cloned = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"think hasflag(ClncCopy_{token}, NO_COMMAND)"));
+
+		await Assert.That(cloned.Message!.ToPlainText()!.Trim()).IsEqualTo("0")
+			.Because("the clone's flags are synchronised to the source, not unioned with the defaults");
+	}
+
+	/// <summary>A flag the source does have still reaches the clone.</summary>
+	[Test]
+	public async ValueTask Clone_KeepsANonDefaultFlagTheSourceHas()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("clnk");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create ClnkSrc_{token}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set ClnkSrc_{token}=OPAQUE"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clone ClnkSrc_{token}=ClnkCopy_{token}"));
+
+		var cloned = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"think hasflag(ClnkCopy_{token}, OPAQUE)"));
+
+		await Assert.That(cloned.Message!.ToPlainText()!.Trim()).IsEqualTo("1");
+	}
+
+	/// <summary>
 	/// @clone/preserve copies privileged flags too.
 	/// PennMUSH testsidefx.t: clone.7-8
 	/// </summary>

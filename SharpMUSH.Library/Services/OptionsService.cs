@@ -174,11 +174,11 @@ public class OptionsService(
 				SSLPrivateKeyFile: null
 			),
 			Flag = new FlagOptions(
-				ChannelFlags: ["player"],
-				ExitFlags: ["no_command"],
-				PlayerFlags: ["enter_ok", "ansi", "no_command"],
-				RoomFlags: [""],
-				ThingFlags: [""]
+				ChannelFlags: FlagOptions.Defaults.Split(FlagOptions.Defaults.Channel),
+				ExitFlags: FlagOptions.Defaults.Split(FlagOptions.Defaults.Exit),
+				PlayerFlags: FlagOptions.Defaults.Split(FlagOptions.Defaults.Player),
+				RoomFlags: FlagOptions.Defaults.Split(FlagOptions.Defaults.Room),
+				ThingFlags: FlagOptions.Defaults.Split(FlagOptions.Defaults.Thing)
 			),
 			Function = new FunctionOptions(
 				FunctionSideEffects: true,

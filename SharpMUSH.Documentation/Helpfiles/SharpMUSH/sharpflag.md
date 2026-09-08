@@ -225,11 +225,12 @@ XTERM colors can also be enabled on a per-connection basis with `@sockset`.
 
 **Flag: TRUECOLOR (players)**
 
-This flag indicates to the MUSH that the player's client can handle 24-bit RGB colors. It is aliased to TRUECOLOUR, RGB, and 24BIT.
+This flag indicates to the MUSH that the player's client can handle 24-bit RGB colors.
 
-A color flag and a capability the client negotiated for itself are both claims that it can display something, so they are added together: whichever says yes wins, and the deepest one either of them reaches is the depth used. Setting a flag can therefore only ever *raise* what you are sent, never lower it — a flag you have not set means "nobody has said", not "no colors", which is why a client that reports 24-bit color over MTTS gets it whether or not TRUECOLOR is set on the character.
+The flag is aliased to TRUECOLOUR, RGB, and 24BIT.
 
-To be sent *less* than the client and the flags between them claim — including no color at all — pin a style with `SOCKSET colorstyle` (`plain`, `hilite`, `16color`, `xterm256`, `truecolor`, or `auto` to go back to the automatic choice). A pin overrides both the flags and the negotiated capabilities.
+RGB colors can also be enabled on a per-connection basis with `@sockset`.
+
 
 **See Also:**
 - [ANSI]
@@ -478,6 +479,22 @@ When a player is set MONITOR, they receive notification whenever another player 
 **Flag: MYOPIC (players)**
 
 A MYOPIC player only sees the flags on objects that they own or control.
+
+# NO_COMMAND
+
+**Flag: NO_COMMAND (all types)**
+
+The NO_COMMAND flag disables the checking of `$`-commands on an object. The server runs faster when fewer objects are checked for `$`-commands; thus, any object which does not have `$`-commands on it should be set NO_COMMAND. The flag has no effect on exits, which are never checked for `$`-commands.
+
+Players, rooms and things are set NO_COMMAND at creation. The defaults are the `player_flags`, `room_flags` and `thing_flags` config options.
+
+There is also a NO_COMMAND attribute flag, which disables `$`-command AND `^`-listen checking for a single attribute. See [attribute flags].
+
+
+**See Also:**
+- [attribute flags]
+- [@config]
+- [@set]
 
 # NOSPOOF
 

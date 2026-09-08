@@ -416,6 +416,35 @@ Existing games which have softcoded 'who' commands.
 		await Assert.That(who!).Contains("WHO command");
 	}
 
+	/// <summary>
+	/// The flags with a help entry of their own resolve by name, which is what <c>help &lt;flag&gt;</c>
+	/// does. NO_COMMAND had no entry at all until it became a creation default, and there is no point
+	/// in a default nobody can look up.
+	/// </summary>
+	[Test]
+	[Arguments("NO_COMMAND", "disables the checking")]
+	[Arguments("no_command", "disables the checking")]
+	[Arguments("TRUECOLOR", "24-bit RGB colors")]
+	[Arguments("truecolor", "24-bit RGB colors")]
+	[Arguments("XTERM256", "256 XTERM colors")]
+	[Arguments("COLOR", "ANSI colors")]
+	public async Task FlagTopicsResolveByName(string topic, string expected)
+	{
+		var helpDir = FindHelpfilesDirectory();
+		if (helpDir == null)
+		{
+			return;
+		}
+
+		var helpfiles = new Helpfiles(new DirectoryInfo(helpDir));
+		helpfiles.Index();
+
+		var entry = helpfiles.FindEntry(topic);
+
+		await Assert.That(entry).IsNotNull();
+		await Assert.That(entry!).Contains(expected);
+	}
+
 	[Test]
 	public async Task PositionBasedIndexingReturnsCorrectContentForAliases()
 	{

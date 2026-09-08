@@ -120,6 +120,25 @@ public static class TestIsolationHelpers
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message. The command may have failed.");
 		var plainText = message.ToPlainText()
 			?? throw new InvalidOperationException($"@create {uniqueName} message could not be converted to plain text.");
-		return DBRef.Parse(plainText);
+		var created = DBRef.Parse(plainText);
+
+		// Things are created NO_COMMAND, as PennMUSH's thing_flags ships them, so nothing on them is
+		// searched for $-commands until the flag comes off. A test thing exists to be driven, so the
+		// helper does what a game has to do for any object that carries a $-command.
+		await ClearNoCommandAsync(parser, connectionService, created);
+
+		return created;
 	}
+
+	/// <summary>
+	/// Takes NO_COMMAND off an object so its <c>$</c>-commands are matched again — the
+	/// <c>@set &lt;object&gt;=!NO_COMMAND</c> that every game now has to run on anything carrying one,
+	/// since players, rooms and things are all created with the flag.
+	/// </summary>
+	public static async Task ClearNoCommandAsync(
+		IMUSHCodeParser parser,
+		IConnectionService connectionService,
+		DBRef target) =>
+		await parser.CommandParse(1, connectionService,
+			MarkupText.Plain($"@set #{target.Number}=!NO_COMMAND"));
 }

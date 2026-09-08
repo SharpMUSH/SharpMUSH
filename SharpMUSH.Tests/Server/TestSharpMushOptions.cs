@@ -56,10 +56,13 @@ internal static class TestSharpMushOptions
 			DictionaryFile: null, NamesFile: "names.cnf",
 			SSLCADirectory: null, SSLCAFile: null,
 			SSLCertificateFile: null, SSLPrivateKeyFile: null),
+			// Kept identical to the shipped defaults in OptionsService and ReadPennMUSHConfig: a test
+			// harness that creates differently-flagged objects than the server does is testing a game
+			// nobody runs.
 			Flag = new FlagOptions(
-			ChannelFlags: ["player"], ExitFlags: ["no_command"],
+			ChannelFlags: ["player"], ExitFlags: [],
 			PlayerFlags: ["enter_ok", "ansi", "no_command"],
-			RoomFlags: [""], ThingFlags: [""]),
+			RoomFlags: ["no_command"], ThingFlags: ["no_command"]),
 			Function = new FunctionOptions(
 			FunctionSideEffects: true, SaferUserFunctions: true),
 			Limit = new LimitOptions(
