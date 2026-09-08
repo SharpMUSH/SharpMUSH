@@ -123,8 +123,7 @@ public partial class Functions
 			return new CallState(data2.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
-			arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? ErrorMessages.Returns.CantSeeThat : maybeLocate.AsError.Value);
@@ -355,7 +354,7 @@ public partial class Functions
 			};
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(string.Empty);
@@ -399,7 +398,7 @@ public partial class Functions
 			return new CallState(data.HostName);
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -444,8 +443,7 @@ public partial class Functions
 			return new CallState(data2.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor,
-			arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "-1" : maybeLocate.AsError.Value);
@@ -484,7 +482,7 @@ public partial class Functions
 			return new CallState(data.InternetProtocolAddress);
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -872,7 +870,7 @@ public partial class Functions
 			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -913,7 +911,7 @@ public partial class Functions
 			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
@@ -958,7 +956,7 @@ public partial class Functions
 			return new CallState(ssl);
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState(maybeLocate.IsNone ? "0" : maybeLocate.AsError.Value);
@@ -993,34 +991,22 @@ public partial class Functions
 				return new CallState("unknown");
 			}
 
-			var isSelf = data.Ref == executor.Object().DBRef;
-
-			if (!hasSeeAll && !isSelf)
-			{
-				return new CallState("unknown");
-			}
-
-			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || isSelf));
+			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef));
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState("unknown");
 		}
 
 		var located = maybeLocate.AsPlayer;
-		var isSelfPlayer = located.Object.DBRef == executor.Object().DBRef;
-
-		if (!hasSeeAll && !isSelfPlayer)
-		{
-			return new CallState("unknown");
-		}
-
 		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+
 		return connectionData is null
 			? new CallState("unknown")
-			: new CallState(BuildTermInfo(connectionData.Metadata, hasSeeAll || isSelfPlayer));
+			: new CallState(BuildTermInfo(connectionData.Metadata,
+				hasSeeAll || located.Object.DBRef == executor.Object().DBRef));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1045,13 +1031,7 @@ public partial class Functions
 				: defaultArg;
 		}
 
-		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			playerOrDescriptor,
-			async found =>
-			{
-				var fod = await ConnectionService.Get(found.Object.DBRef).FirstOrDefaultAsync();
-				return fod?.Metadata.GetValueOrDefault("WIDTH") ?? defaultArg.ToPlainText();
-			});
+		return await DescriptorDimensionAsync(parser, executor, playerOrDescriptor, "WIDTH", defaultArg);
 	}
 
 	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
@@ -1437,13 +1417,7 @@ public partial class Functions
 
 		if (!isHandle)
 		{
-			return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-				playerOrDescriptor,
-				async found =>
-				{
-					var fod = await ConnectionService.Get(found.Object.DBRef).FirstOrDefaultAsync();
-					return fod?.Metadata.GetValueOrDefault("HEIGHT") ?? defaultArg.ToPlainText();
-				});
+			return await DescriptorDimensionAsync(parser, executor, playerOrDescriptor, "HEIGHT", defaultArg);
 		}
 
 		var data = ConnectionService.Get(port);
@@ -1484,7 +1458,7 @@ public partial class Functions
 			return new CallState(isHidden ? "1" : "0");
 		}
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
 			return new CallState("#-1");
@@ -1512,8 +1486,40 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// The named-target half of PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c): the
+	/// dimension off the target's least-idle descriptor, and on any miss the caller's default rather
+	/// than an error. PennMUSH falls through to <c>args[1]</c> (or 78) whenever <c>lookup_desc</c>
+	/// finds nothing, so a name that resolves to nobody answers with the default width, not
+	/// "#-1 NO MATCH" — and it does not say anything to the player either.
+	/// </summary>
+	private async ValueTask<CallState> DescriptorDimensionAsync(
+		IMUSHCodeParser parser, AnySharpObject executor, string target, string key, MString defaultArg)
+	{
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, target);
+
+		if (maybeLocate.IsNone || maybeLocate.IsError)
+		{
+			return new CallState(defaultArg);
+		}
+
+		var connection = await ConnectionService.Get(maybeLocate.AsPlayer.Object.DBRef).FirstOrDefaultAsync();
+		return new CallState(connection?.Metadata.GetValueOrDefault(key) ?? defaultArg.ToPlainText());
+	}
+
+	/// <summary>
 	/// Builds terminal information string from connection metadata.
 	/// </summary>
+	/// <summary>
+	/// PennMUSH <c>fun_terminfo</c> (src/bsd.c), whose privilege split is finer than "all or nothing":
+	/// the client's own name, <c>telnet</c>, <c>gmcp</c>, <c>ssl</c>, <c>websocket</c> and
+	/// <c>prompt_newlines</c> are behind <c>has_privs</c>, while <c>pueblo</c>, <c>stripaccents</c> and
+	/// the colour style are emitted for anyone. An unprivileged caller gets <c>default_ttype</c> — the
+	/// literal "unknown" here — in place of the name and the rest of the unprivileged tokens after it,
+	/// rather than the bare word on its own.
+	/// </summary>
+	/// <param name="includeDetails">
+	/// PennMUSH's <c>has_privs</c>: the caller is looking at their own descriptor, or has See_All.
+	/// </param>
 	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
 	{
 		// The RFC 1091 terminal type, which is where PennMUSH gets the client name too — set by TTYPE
@@ -1521,54 +1527,54 @@ public partial class Functions
 		// SocketOptions reads, so SOCKSET and terminfo() cannot disagree about who the client is.
 		var terminfo = new List<string>
 		{
-			metadata.GetValueOrDefault("TerminalType", "unknown")
+			includeDetails ? metadata.GetValueOrDefault("TerminalType", "unknown") : "unknown"
 		};
-
-		if (!includeDetails)
-		{
-			return string.Join(" ", terminfo);
-		}
 
 		if (metadata.GetValueOrDefault("PUEBLO", "0") == "1")
 		{
 			terminfo.Add("pueblo");
 		}
 
+		// Not a PennMUSH token — PennMUSH has no MXP — but it says the same kind of thing about the
+		// markup the connection renders as "pueblo" does, so it keeps that one's visibility.
 		if (metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") == "mxp")
 		{
 			terminfo.Add("mxp");
 		}
 
-		// Set once the client genuinely answers a telnet option, not merely because it arrived on the
-		// telnet port — PennMUSH's CONN_TELNET means the same thing, and a raw socket must not claim it.
-		if (metadata.GetValueOrDefault("TELNET", "0") == "1")
+		if (includeDetails)
 		{
-			terminfo.Add("telnet");
-		}
+			// Set once the client genuinely answers a telnet option, not merely because it arrived on
+			// the telnet port — PennMUSH's CONN_TELNET means the same, and a raw socket cannot claim it.
+			if (metadata.GetValueOrDefault("TELNET", "0") == "1")
+			{
+				terminfo.Add("telnet");
+			}
 
-		if (metadata.GetValueOrDefault("GMCP", "0") == "1")
-		{
-			terminfo.Add("gmcp");
-		}
+			if (metadata.GetValueOrDefault("GMCP", "0") == "1")
+			{
+				terminfo.Add("gmcp");
+			}
 
-		if (metadata.GetValueOrDefault("SSL", "0") == "1")
-		{
-			terminfo.Add("ssl");
-		}
+			if (metadata.GetValueOrDefault("SSL", "0") == "1")
+			{
+				terminfo.Add("ssl");
+			}
 
-		if (metadata.GetValueOrDefault("ConnectionType", "") == "websocket")
-		{
-			terminfo.Add("websocket");
-		}
+			if (metadata.GetValueOrDefault("ConnectionType", "") == "websocket")
+			{
+				terminfo.Add("websocket");
+			}
 
-		if (metadata.GetValueOrDefault("PresenceClass", PresenceClasses.Play) == PresenceClasses.Portal)
-		{
-			terminfo.Add(PresenceClasses.Portal);
-		}
+			if (metadata.GetValueOrDefault("PresenceClass", PresenceClasses.Play) == PresenceClasses.Portal)
+			{
+				terminfo.Add(PresenceClasses.Portal);
+			}
 
-		if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
-		{
-			terminfo.Add("prompt_newlines");
+			if (metadata.GetValueOrDefault("PROMPT_NEWLINES", "0") == "1")
+			{
+				terminfo.Add("prompt_newlines");
+			}
 		}
 
 		if (metadata.GetValueOrDefault("STRIPACCENTS", "0") == "1")

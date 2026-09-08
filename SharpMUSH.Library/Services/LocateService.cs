@@ -255,6 +255,12 @@ public partial class LocateService(
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
 		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch;
 
+	/// <inheritdoc />
+	public ValueTask<AnyOptionalSharpObjectOrError> LocateConnectionTarget(IMUSHCodeParser parser,
+		AnySharpObject looker, AnySharpObject executor,
+		string name) =>
+		Locate(parser, looker, executor, name, PlayerMatchFlags | LocateFlags.MatchMeForLooker);
+
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
 		AnySharpObject looker, AnySharpObject executor,
 		string name) =>

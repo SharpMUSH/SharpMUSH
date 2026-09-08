@@ -105,7 +105,7 @@ public class OutputTransformServiceTests
 	[Test]
 	[Arguments("\x1b[1;38;5;196mText\x1b[0m", "\x1b[1mText\x1b[0m")]
 	[Arguments("\x1b[38;2;255;0;0;1mText\x1b[0m", "\x1b[1mText\x1b[0m")]
-	[Arguments("\x1b[48;5;21mText\x1b[0m", "Text\x1b[0m")]
+	[Arguments("\x1b[48;5;21mText\x1b[0m", "Text")]
 	public async Task TransformAsync_PinnedHilite_DropsExtendedColourWithItsArguments(string input, string expected)
 	{
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite);
@@ -125,7 +125,8 @@ public class OutputTransformServiceTests
 
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1zRed\x1b[0m");
+		// The reset is dropped with the colour it closed: nothing is left open for it to close.
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1zRed");
 	}
 
 	/// <summary>A pin renders below the terminal's own claim, which is the whole point of pinning one.</summary>
@@ -398,15 +399,32 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
-	public async Task TransformAsync_HandlesComplexAnsi_StripsAll()
+	public async Task TransformAsync_HandlesComplexAnsi_StripsAll_WhenPinnedPlain()
+	{
+		var input = "\x1b[1m\x1b[31mBold Red\x1b[0m \x1b[4m\x1b[32mUnderline Green\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: false, ColorStylePin: ColorStyles.Plain);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		var resultText = Encoding.UTF8.GetString(result);
+		await Assert.That(resultText).IsEqualTo("Bold Red Underline Green");
+	}
+
+	/// <summary>
+	/// Unpinned, the same client keeps its attributes: a termcap that named no colour is what
+	/// TerminalCapabilities.ColorStyle already calls "hilite", so hilite is what terminfo() and
+	/// SOCKSET report to the player and hilite is what goes on the wire.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_HandlesComplexAnsi_KeepsAttributes_WhenTerminalNamedNoColour()
 	{
 		var input = "\x1b[1m\x1b[31mBold Red\x1b[0m \x1b[4m\x1b[32mUnderline Green\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
 
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("Bold Red Underline Green");
+		await Assert.That(Encoding.UTF8.GetString(result))
+			.IsEqualTo("\x1b[1mBold Red\x1b[0m \x1b[4mUnderline Green\x1b[0m");
 	}
 
 	[Test]
@@ -450,8 +468,10 @@ public class OutputTransformServiceTests
 
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		// Both ANSI and OSC 8 should be stripped
+		// The OSC 8 wrapper goes; the bold does not, because a client that named no colour is rendered
+		// at "hilite" rather than plain. Colour is what this rung drops, and there is none here.
 		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("topic text");
+		await Assert.That(resultText).IsEqualTo("\x1b[1mtopic text\x1b[0m");
+		await Assert.That(resultText).DoesNotContain("]8;;");
 	}
 }

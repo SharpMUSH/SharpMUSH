@@ -128,6 +128,25 @@ public interface ILocateService
 		string name,
 		LocateFlags flags);
 
+	/// <summary>
+	/// The player half of PennMUSH's <c>lookup_desc()</c> (src/bsd.c), which is how every connection
+	/// function resolves its argument: <c>lookup_player()</c> first, and on a miss
+	/// <c>match_result(executor, name, TYPE_PLAYER, MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE)</c>.
+	/// <para>
+	/// Two differences from <see cref="LocatePlayerAndNotifyIfInvalid"/>, both load-bearing. The
+	/// <c>MAT_ME</c> means "me" resolves to the caller, which is what a player types and what every
+	/// one of <c>terminfo()</c>, <c>ssl()</c>, <c>host()</c> and their siblings is asked with. And it
+	/// is silent: those are functions, they answer with a string, and the notifying locate was
+	/// emitting "I can't see that here." into the player's own output every time one of them was
+	/// called with a name that did not resolve.
+	/// </para>
+	/// </summary>
+	ValueTask<AnyOptionalSharpObjectOrError> LocateConnectionTarget(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnySharpObject executor,
+		string name);
+
 	ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,

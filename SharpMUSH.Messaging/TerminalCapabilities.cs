@@ -203,23 +203,21 @@ public static class TerminalCapabilityReader
 		entry.Contains("256", StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>
-	/// Termcap names claiming colour at all. <c>-m</c> and <c>-mono</c> are the conventional suffixes
-	/// for a monochrome variant, and "dumb" is the terminfo name for a terminal with no capabilities.
+	/// Termcap names claiming colour at all, which is every name except the handful that mean the
+	/// opposite: <c>-m</c> and <c>-mono</c> are the conventional suffixes for a monochrome variant,
+	/// "dumb" is the terminfo name for a terminal with no capabilities, and RFC 1091's "UNKNOWN" is a
+	/// client declining to say.
+	/// <para>
+	/// Deliberately a blocklist and not a whitelist of known-good names. A whitelist reads every MUD
+	/// client that reports its own name — MUDLET, MUSHCLIENT, POTATO, ATLANTIS, none of which contain
+	/// "xterm" or "color" — as monochrome, which is the expensive direction to be wrong in: it
+	/// silently strips every colour a perfectly capable terminal asked for, while being wrong the
+	/// other way costs a client that ignores SGR a few stray escapes.
+	/// </para>
 	/// </summary>
 	private static bool MentionsColor(string entry) =>
 		!entry.Contains("mono", StringComparison.OrdinalIgnoreCase)
 		&& !entry.EndsWith("-m", StringComparison.OrdinalIgnoreCase)
 		&& !entry.Equals("dumb", StringComparison.OrdinalIgnoreCase)
-		&& !entry.Equals(UnknownTerminalType, StringComparison.OrdinalIgnoreCase)
-		&& (entry.Contains("color", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("ansi", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("xterm", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("vt1", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("vt2", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("screen", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("tmux", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("linux", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("rxvt", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("putty", StringComparison.OrdinalIgnoreCase)
-				|| entry.Contains("cygwin", StringComparison.OrdinalIgnoreCase));
+		&& !entry.Equals(UnknownTerminalType, StringComparison.OrdinalIgnoreCase);
 }

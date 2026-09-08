@@ -106,6 +106,29 @@ public class TerminalCapabilityReaderTests
 	public async Task TermcapName_ImpliesItsColourDepth(string terminalType, string expected)
 		=> await Assert.That(TerminalCapabilityReader.Read([terminalType]).ColorStyle).IsEqualTo(expected);
 
+	/// <summary>
+	/// A MUD client's first TTYPE answer is its own name, not a termcap entry, and none of these
+	/// contain "xterm" or "color". Matching against a whitelist of known-colourful names read every
+	/// one of them as monochrome and stripped the colour they had asked for; the rule is a blocklist
+	/// of the handful of names that mean "no colour", which is what the method has always said it was.
+	/// </summary>
+	[Test]
+	[Arguments("MUDLET")]
+	[Arguments("Mudlet")]
+	[Arguments("MUSHCLIENT")]
+	[Arguments("POTATO")]
+	[Arguments("Atlantis")]
+	[Arguments("BeipMU")]
+	[Arguments("TinTin++")]
+	[Arguments("SharpMUTerm")]
+	public async Task ClientNameThatIsNotATermcap_StillClaimsColour(string clientName)
+	{
+		var capabilities = TerminalCapabilityReader.Read([clientName]);
+
+		await Assert.That(capabilities.Ansi).IsTrue();
+		await Assert.That(capabilities.ColorStyle).IsEqualTo(ColorStyles.SixteenColor);
+	}
+
 	[Test]
 	public async Task ColorStyleFor_PrefersAnExplicitPinOverWhatTheClientClaims()
 	{

@@ -138,18 +138,20 @@ public partial class OutputTransformService : IOutputTransformService
 		var xterm256 = truecolor || capabilities.SupportsXterm256 || preferences?.Xterm256Enabled == true;
 		var color = xterm256 || capabilities.SupportsAnsi || preferences?.ColorEnabled == true;
 
-		// PennMUSH's split: ANSI is "this client can highlight", COLOR is "this client can colour".
-		// A player with only ANSI set, on a terminal that claims nothing, gets the attributes and none
-		// of the hues.
-		var hilite = color || preferences?.AnsiEnabled == true;
-
-		return (truecolor, xterm256, color, hilite) switch
+		return (truecolor, xterm256, color) switch
 		{
-			(true, _, _, _) => ColorStyles.Truecolor,
-			(_, true, _, _) => ColorStyles.Xterm256,
-			(_, _, true, _) => ColorStyles.SixteenColor,
-			(_, _, _, true) => ColorStyles.Hilite,
-			_ => ColorStyles.Plain
+			(true, _, _) => ColorStyles.Truecolor,
+			(_, true, _) => ColorStyles.Xterm256,
+			(_, _, true) => ColorStyles.SixteenColor,
+			// PennMUSH's split: ANSI is "this client can highlight", COLOR is "this client can
+			// colour", so a player with only ANSI set gets the attributes and none of the hues. This
+			// is also where a client whose termcap named no colour lands — "dumb", a "-mono" variant,
+			// or RFC 1091's "UNKNOWN" — and hilite is what TerminalCapabilities.ColorStyle already
+			// reports for exactly those, so it is what terminfo() and SOCKSET tell the player they are
+			// getting. Sending plain text instead made the report a lie; a client that names itself
+			// at all can be assumed to understand bold, and one we never asked is already assumed to
+			// take full colour. Nothing at all now requires a screen reader or a plain pin.
+			_ => ColorStyles.Hilite
 		};
 	}
 
@@ -175,22 +177,25 @@ public partial class OutputTransformService : IOutputTransformService
 	/// <summary>
 	/// The "hilite" style: keep the SGR attributes — bold, underline, reverse and their cancels — and
 	/// drop every hue, including the extended <c>38;5;n</c> and <c>38;2;r;g;b</c> forms and the
-	/// arguments that belong to them. An SGR left with no parameters at all is dropped rather than
-	/// emitted as a bare <c>ESC[m</c>, which would read as a reset the sender never asked for.
-	/// Sequences that are not SGR — the MXP line modes end in <c>z</c> — are not touched.
+	/// arguments that belong to them. Sequences that are not SGR — the MXP line modes end in
+	/// <c>z</c> — are not touched.
+	/// <para>
+	/// Stateful, because a reset is only worth sending when something is open. A line the renderer
+	/// produced as colour alone leaves a reset behind that now closes nothing, and emitting it would
+	/// put a stray escape on the wire of the one kind of client least able to cope with one — the
+	/// clients that land on this rung are those that named no colour at all.
+	/// </para>
 	/// </summary>
-	private static string StripColorParameters(string text) =>
-		SgrRegex().Replace(text, match =>
+	private static string StripColorParameters(string text)
+	{
+		var attributeOpen = false;
+
+		return SgrRegex().Replace(text, match =>
 		{
 			var parameters = match.Groups[1].Value;
 
-			// ESC[m is ESC[0m; it carries no colour and has to survive as the reset it is.
-			if (parameters.Length == 0)
-			{
-				return match.Value;
-			}
-
-			var parts = parameters.Split(';');
+			// ESC[m is ESC[0m.
+			var parts = parameters.Length == 0 ? ["0"] : parameters.Split(';');
 			var kept = new List<string>(parts.Length);
 
 			for (var index = 0; index < parts.Length; index++)
@@ -217,11 +222,31 @@ public partial class OutputTransformService : IOutputTransformService
 					continue;
 				}
 
+				// A reset, or the cancel of one specific attribute: worth sending only if an attribute
+				// is actually open. Everything else in range is an attribute being turned on.
+				if (code is 0 or (>= 20 and <= 29))
+				{
+					if (!attributeOpen)
+					{
+						continue;
+					}
+
+					if (code == 0)
+					{
+						attributeOpen = false;
+					}
+				}
+				else
+				{
+					attributeOpen = true;
+				}
+
 				kept.Add(code.ToString(CultureInfo.InvariantCulture));
 			}
 
 			return kept.Count == 0 ? string.Empty : $"\x1b[{string.Join(';', kept)}m";
 		});
+	}
 
 	/// <summary>Foreground, background, their defaults, and the bright aixterm ranges.</summary>
 	private static bool IsColorParameter(int code) =>
