@@ -111,8 +111,11 @@ def report(result, removed=()):
     lines = ["## Deployment impact", "",
              "**SocketServer restart / live connection drops: " + ("YES" if drops else "NO") + "**", "",
              ("On merge to main, changed image inputs are published after successful validation. "
-             "Watchtower will replace the corresponding container when its image digest changes."), "",
-             ("SocketServer replacement disconnects its TCP and WebSocket clients. "
+             "Watchtower replaces the game-server and rendering-worker containers when their image "
+             "digests change; the socket owner is labelled out of Watchtower and replaced by an "
+             "operator."), "",
+             ("SocketServer replacement disconnects its TCP and WebSocket clients, so a publish here "
+             "means an announced maintenance window rather than an unattended update. "
              "Game-server and ConnectionServer rendering-worker updates retain client sockets in SocketServer."), ""]
     for image, paths in result.items():
         lines.extend([f"### {image}: {'removed (no publish)' if image in removed else 'publish' if paths else 'unchanged'}", ""])

@@ -48,8 +48,16 @@ services:
     # suite). The box never builds — watchtower below pulls and recreates when the tag moves.
     image: sharpmush/sharpmush-socketserver:dev
     container_name: sharpmush-connectionserver
+    # Deliberately NOT a watchtower target. This service owns every telnet and /ws kernel socket,
+    # so recreating it disconnects everyone who is logged in — which is the one thing the split
+    # exists to avoid. Engine and renderer updates are the ones watchtower carries, and those keep
+    # the sockets. Replace this one yourself, during an announced window:
+    #   docker compose -f docker-compose.cloudflare.yml pull connectionserver
+    #   docker compose -f docker-compose.cloudflare.yml up -d connectionserver
+    # Setting this to true buys unattended socket-owner updates at the cost of dropping every
+    # player without warning whenever its image tag moves.
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.enable=false
     stop_grace_period: 60s
     volumes:
       - render-socket:/run/sharpmush
@@ -166,10 +174,13 @@ services:
     cpus: 0.5
     restart: unless-stopped
 
-  # Auto-deploy: polls Docker Hub and recreates the two labeled services when their :dev tag
-  # moves (pushed by docker-dev.yml after the full test suite passes on main). Label-scoped so
-  # nats/cloudflared/backup are never touched; CLEANUP prunes superseded images so unattended
-  # updates cannot fill the disk. No inbound access needed — fits the tunnel-only posture.
+  # Auto-deploy: polls Docker Hub and recreates the engine and renderer when their :dev tag moves
+  # (pushed by docker-dev.yml after the full test suite passes on main). Both of those updates
+  # keep live client sockets, which is why they are the two carrying enable=true; the socket owner
+  # is enable=false and replaced by hand. WATCHTOWER_LABEL_ENABLE means anything not labelled true
+  # is skipped, so nats/cloudflared/backup are never touched either; CLEANUP prunes superseded
+  # images so unattended updates cannot fill the disk. No inbound access needed — fits the
+  # tunnel-only posture.
   watchtower:
     image: containrrr/watchtower:1.7.1   # pinned (not :latest) for reproducible deploys
     container_name: sharpmush-watchtower
