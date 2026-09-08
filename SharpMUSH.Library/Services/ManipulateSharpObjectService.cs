@@ -555,7 +555,7 @@ public class ManipulateSharpObjectService(
 		// Deny if: NOT(controls newParent) AND NOT(LINK_OK) AND NOT(passes Parent lock)
 		var controls = await permissionService.Controls(executor, newParent);
 		var hasLinkOk = await obj.HasFlag("LINK_OK");
-		var passesLock = permissionService.PassesLock(executor, newParent, LockType.Parent);
+		var passesLock = await permissionService.PassesLock(executor, newParent, LockType.Parent);
 
 		if (!controls && !hasLinkOk && !passesLock)
 		{

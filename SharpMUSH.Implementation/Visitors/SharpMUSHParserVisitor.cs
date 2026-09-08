@@ -1945,7 +1945,7 @@ public class SharpMUSHParserVisitor(
 				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
 				{
 					var executorObj = executor.Known();
-					if (!LockService.Evaluate(commandLockStr, executorObj, executorObj))
+					if (!await LockService.Evaluate(commandLockStr, executorObj, executorObj))
 					{
 						await NotifyService.NotifyLocalized(executorObj, nameof(ErrorMessages.Notifications.PermissionDenied));
 						return new CallState(ErrorMessages.Returns.PermissionDenied);

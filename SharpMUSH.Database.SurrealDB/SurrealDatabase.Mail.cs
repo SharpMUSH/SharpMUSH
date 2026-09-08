@@ -155,7 +155,6 @@ public partial class SurrealDatabase
 		};
 
 		// Deterministic record ID used by later record-id-based operations. One transaction so the
-		// mail row and its received_mail/mail_sender edges commit together, matching ArangoDB's
 		// Exclusive=[Mails, ReceivedMail, SenderOfMail].
 		await ExecuteAsync(
 			"BEGIN TRANSACTION;" +

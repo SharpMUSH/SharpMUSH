@@ -13,19 +13,36 @@ public class ConnectionService(
 	ITelemetryService? telemetryService = null) : IConnectionService
 {
 	/// <summary>
-	/// Metadata key marking an entry this process did not register itself, but restored from the
-	/// state store on startup. It is the one thing that distinguishes a stale handle from a live one,
-	/// and it is dropped the moment a real connection claims the handle.
+	/// Identifies restored legacy entries that lack an explicit transport incarnation.
 	/// </summary>
 	private const string ReconciledMarker = "ReconciledFromStateStore";
 
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
 	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
-	public async ValueTask Disconnect(long handle)
+	/// <summary>
+	/// Guards <see cref="Disconnect"/>'s atomic remove-and-count against a race between two of the same
+	/// player's handles disconnecting at genuinely the same time. Both the removal from
+	/// <see cref="_sessionState"/> and the subsequent count of the player's remaining connections happen
+	/// inside this lock, so whichever of two concurrent <see cref="Disconnect"/> calls for the same
+	/// player runs second always sees the first one's handle already gone, never as "still connected."
+	/// </summary>
+	private readonly Lock _disconnectLock = new();
+
+	public async ValueTask Disconnect(long handle, string? sessionId = null)
 	{
 		var get = Get(handle);
-		if (get is null) return;
+		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
+
+		int? remainingConnections;
+		lock (_disconnectLock)
+		{
+			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
+
+			remainingConnections = get.Ref is { } playerRef
+				? _sessionState.Values.Count(x => x.Ref.HasValue && x.Ref.Value.Equals(playerRef))
+				: null;
+		}
 
 		foreach (var handler in _handlers)
 		{
@@ -33,11 +50,10 @@ public class ConnectionService(
 		}
 
 		await publisher.Publish(new ConnectionStateChangeNotification(get.Handle, get.Ref, get.State,
-			IConnectionService.ConnectionState.Disconnected));
+			IConnectionService.ConnectionState.Disconnected, RemainingConnections: remainingConnections, FormerConnection: get));
 
-		_sessionState.Remove(handle, out _);
-
-		if (stateStore != null)
+		// The socket owner already deleted a fenced close. A second delete could erase its replacement.
+		if (stateStore != null && string.IsNullOrEmpty(sessionId))
 		{
 			await stateStore.RemoveConnectionAsync(handle);
 		}
@@ -59,6 +75,18 @@ public class ConnectionService(
 		_sessionState.Values
 			.ToAsyncEnumerable();
 
+	public async ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef)
+	{
+		await foreach (var conn in Get(playerRef))
+		{
+			if (conn.IsHidden)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
 		_handlers.Add(handler);
 
@@ -67,9 +95,8 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null) return;
 
-		_sessionState.AddOrUpdate(handle,
-			_ => throw new InvalidDataException("Tried to add a new handle during Login."),
-			(_, y) => y with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn });
+		if (get.Ref is not null && get.Ref != player && !await RevokeResumeAsync(get)) return;
+		if (!_sessionState.TryUpdate(handle, get with { Ref = player, State = IConnectionService.ConnectionState.LoggedIn }, get)) return;
 
 		if (stateStore != null)
 		{
@@ -93,13 +120,12 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null || get.Ref is null) return;
 
+		if (!await RevokeResumeAsync(get)) return;
 		var formerRef = get.Ref;
 
 		// State is updated before the notification is published, so a PLAYER`DISCONNECT handler asking
 		// for the player's remaining connections does not count the one that is leaving.
-		_sessionState.AddOrUpdate(handle,
-			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
-			(_, y) => y with { Ref = null, State = IConnectionService.ConnectionState.Connected });
+		if (!_sessionState.TryUpdate(handle, get with { Ref = null, State = IConnectionService.ConnectionState.Connected }, get)) return;
 
 		if (stateStore != null)
 		{
@@ -119,6 +145,27 @@ public class ConnectionService(
 
 		await publisher.Publish(new ConnectionStateChangeNotification(handle, formerRef, get.State,
 			IConnectionService.ConnectionState.Connected));
+
+		// PennMUSH's logout_sock explicitly resets d->hide = 0 (bsd.c:2248) - without this, a wizard who
+		// @hides then LOGOUTs would leave the socket hidden for whoever connects next on it, including a
+		// mortal with no permission to hide themselves. This clear runs AFTER the notification publish
+		// (rather than folded into the AddOrUpdate above) so a PLAYER`DISCONNECT handler reading
+		// Get(handle).IsHidden while handling that notification still observes the pre-logout Hidden
+		// value for its "hidden?" argument and for ConnectionAnnounceService's disconnect wording -
+		// clearing it beforehand made every LOGOUT (as opposed to QUIT) report as an ordinary,
+		// non-hidden disconnect regardless of the player's actual Hidden state.
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during Logout."),
+			(_, y) =>
+			{
+				y.Metadata.TryRemove("Hidden", out var removedHiddenValue);
+				return y;
+			});
+
+		if (stateStore != null)
+		{
+			await stateStore.UpdateMetadataAsync(handle, "Hidden", "0");
+		}
 	}
 
 	public async ValueTask BindAccount(long handle, string accountId)
@@ -126,17 +173,15 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null) return;
 
+		if ((get.Ref is not null || (get.State == IConnectionService.ConnectionState.AccountMode &&
+			get.Metadata.GetValueOrDefault("AccountId") != accountId)) && !await RevokeResumeAsync(get)) return;
 		var oldState = get.State;
-		_sessionState.AddOrUpdate(handle,
-			_ => throw new InvalidDataException("Tried to add a new handle during BindAccount."),
-			(_, y) =>
-			{
-				y.Metadata["AccountId"] = accountId;
-				return y with { State = IConnectionService.ConnectionState.AccountMode };
-			});
+		if (!_sessionState.TryUpdate(handle, get with { Ref = null, State = IConnectionService.ConnectionState.AccountMode }, get)) return;
+		get.Metadata["AccountId"] = accountId;
 
 		if (stateStore != null)
 		{
+			if (get.Ref is not null) await stateStore.SetPlayerBindingAsync(handle, null);
 			await stateStore.UpdateMetadataAsync(handle, "AccountId", accountId);
 			await stateStore.UpdateMetadataAsync(handle, "State", "AccountMode");
 		}
@@ -153,6 +198,18 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 	}
 
+	private async Task<bool> RevokeResumeAsync(IConnectionService.ConnectionData connection)
+	{
+		if (connection.Metadata.GetValueOrDefault("ResumeRevoked") == "1") return true;
+		// Legacy connections have no resumable session identity. For resumable connections,
+		// fence the first KV read as well as every CAS retry to the caller's session.
+		var sessionId = connection.Metadata.GetValueOrDefault("SessionId");
+		if (stateStore is not null && !string.IsNullOrEmpty(sessionId)
+			&& !await stateStore.TryRevokeResumeAsync(connection.Handle, sessionId)) return false;
+		connection.Metadata["ResumeRevoked"] = "1";
+		return true;
+	}
+
 	public void Update(long handle, string key, string value)
 	{
 		var get = Get(handle);
@@ -166,7 +223,7 @@ public class ConnectionService(
 				return y;
 			});
 
-		// Update Redis if available (fire and forget for performance)
+		// Persist noncritical metadata asynchronously; authentication changes are awaited above.
 		if (stateStore != null)
 		{
 			_ = Task.Run(async () =>
@@ -177,7 +234,7 @@ public class ConnectionService(
 				}
 				catch
 				{
-					// Ignore errors in background update
+					// Best-effort metadata must not fault the detached task; durable binding changes propagate failures.
 				}
 			});
 		}
@@ -202,7 +259,7 @@ public class ConnectionService(
 				return y;
 			});
 
-		// Update Redis if available (fire and forget for performance)
+		// Persist noncritical metadata asynchronously; authentication changes are awaited above.
 		if (stateStore != null && newValue != null)
 		{
 			var captured = newValue;
@@ -214,7 +271,7 @@ public class ConnectionService(
 				}
 				catch
 				{
-					// Ignore errors in background update
+					// Best-effort metadata must not fault the detached task; durable binding changes propagate failures.
 				}
 			});
 		}
@@ -237,21 +294,14 @@ public class ConnectionService(
 		var newEntry = new IConnectionService.ConnectionData(handle, null, IConnectionService.ConnectionState.Connected,
 			outputFunction, promptOutputFunction, encoding, metadata);
 
-		// A known handle has two explanations needing opposite answers. A redelivered Register for a
-		// connection this process owns must be ignored — the store is at-least-once, and overwriting
-		// would log a live player out. An entry restored by ReconcileFromStateStoreAsync must be
-		// overwritten: descriptor numbering restarts from the same base, so a new socket can be handed
-		// a number the store still describes, and inheriting it gives the connection a dead player's
-		// binding and an output function pointing at a transport that no longer exists.
-		// Read back from what the dictionary stored rather than recorded inside the factory:
-		// AddOrUpdate may run that factory more than once when its compare-and-swap loses, so a flag
-		// set in it can describe a discarded attempt. The factory is pure, so a retry costs nothing.
+		// Redelivery keeps the same incarnation, including after engine reconciliation. A new
+		// socket must never inherit a previous occupant's login; delayed old registrations lose.
 		var stored = _sessionState.AddOrUpdate(handle, newEntry, (_, existing) =>
-			existing.Metadata.ContainsKey(ReconciledMarker) ? newEntry : existing);
+			ShouldReplaceRegistration(existing, newEntry) ? newEntry : existing);
 
 		if (!ReferenceEquals(stored, newEntry)) return;
 
-		if (stateStore != null)
+		if (stateStore != null && string.IsNullOrEmpty(metadata.GetValueOrDefault("SessionId")))
 		{
 			await stateStore.SetConnectionAsync(handle, new ConnectionStateData
 			{
@@ -278,8 +328,28 @@ public class ConnectionService(
 		UpdateConnectionMetrics();
 	}
 
+	private static bool ShouldReplaceRegistration(IConnectionService.ConnectionData existing,
+		IConnectionService.ConnectionData incoming)
+	{
+		var oldSession = existing.Metadata.GetValueOrDefault("SessionId");
+		var newSession = incoming.Metadata.GetValueOrDefault("SessionId");
+		if (!string.IsNullOrEmpty(newSession))
+		{
+			if (newSession == oldSession) return false;
+			return RegistrationTime(incoming) > RegistrationTime(existing);
+		}
+		return string.IsNullOrEmpty(oldSession) && existing.Metadata.ContainsKey(ReconciledMarker);
+	}
+
+	private static long RegistrationTime(IConnectionService.ConnectionData connection)
+	{
+		if (long.TryParse(connection.Metadata.GetValueOrDefault("ConnectionIncarnationTime"), out var ticks)) return ticks;
+		return long.TryParse(connection.Metadata.GetValueOrDefault("ConnectionStartTime"), out var milliseconds)
+			? milliseconds * TimeSpan.TicksPerMillisecond : 0;
+	}
+
 	/// <summary>
-	/// Reconcile state from Redis on startup.
+	/// Reconcile state from the shared connection store on startup.
 	/// Should be called during application initialization.
 	/// </summary>
 	public async Task ReconcileFromStateStoreAsync(

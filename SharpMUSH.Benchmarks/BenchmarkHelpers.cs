@@ -13,7 +13,6 @@ using Testcontainers.Nats;
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
-/// Shared helpers used by both <see cref="BaseBenchmark"/> and <see cref="MemgraphBaseBenchmark"/>.
 /// </summary>
 internal static class BenchmarkHelpers
 {

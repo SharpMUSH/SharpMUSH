@@ -1,3 +1,8 @@
+# Development-only Kubernetes example. SocketServer and renderer share a Pod for their Unix socket.
+# Any Pod rollout, including a renderer image change, replaces SocketServer and drops client sockets.
+# Container crash/restart alone can recover through the shared emptyDir; this is not an independent
+# renderer rollout topology. Use the supplied single-host Compose stack for that guarantee.
+# Keep replicas=1: shared connection state currently supports only one socket owner.
 # NATS server config. max_payload is a server-level limit with no command-line flag, so it
 # can only come from a config file — see ../nats.conf, which this mirrors for the compose
 # stacks. Left at the 1 MB default, a single @wiki page of syntax-highlighted markup
@@ -10,11 +15,12 @@ data:
   nats.conf: |
     max_payload: 6291456
 ---
-# Persistent Volume for the infrastructure pod
+# The game's data: the LMDB world (data/lightning) plus wiki asset uploads. One writer process, so
+# ReadWriteOnce is correct and the server deployment below recreates rather than rolls.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: sharpmush-infra-pvc
+  name: sharpmush-data-pvc
 spec:
   accessModes:
     - ReadWriteOnce
@@ -22,13 +28,27 @@ spec:
     requests:
       storage: 30Gi
 ---
-# ArangoDB and NATS (JetStream)
+# Persist resume tokens, session bindings and replay across NATS Pod replacement.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sharpmush-nats-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
+---
+# NATS (JetStream)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sharpmush-infra
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sharpmush-infra
@@ -37,31 +57,13 @@ spec:
       labels:
         app: sharpmush-infra
     spec:
-      securityContext:
-        fsGroup: 101
       containers:
-        - name: arangodb
-          image: arangodb:latest
-          ports:
-            - containerPort: 8529
-          volumeMounts:
-            - name: infra-storage
-              mountPath: /var/lib/arangodb3
-              subPath: arangodb
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "1Gi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-          env:
-            - name: ARANGO_ROOT_PASSWORD
-              value: "password"
         - name: nats
           image: nats:2-alpine
-          args: ["-js", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+          args: ["-js", "-sd", "/data", "-m", "8222", "-c", "/etc/nats/nats.conf"]
           volumeMounts:
+            - name: nats-data
+              mountPath: /data
             - name: nats-config
               mountPath: /etc/nats
               readOnly: true
@@ -90,24 +92,12 @@ spec:
               cpu: "500m"
               memory: "256Mi"
       volumes:
-        - name: infra-storage
+        - name: nats-data
           persistentVolumeClaim:
-            claimName: sharpmush-infra-pvc
+            claimName: sharpmush-nats-pvc
         - name: nats-config
           configMap:
             name: nats-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: arangodb
-spec:
-  selector:
-    app: sharpmush-infra
-  ports:
-    - port: 8529
-      targetPort: 8529
-  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -132,6 +122,10 @@ metadata:
   name: sharpmush
 spec:
   replicas: 1
+  # The LMDB world admits one process; a rolling update would briefly run two against the same
+  # volume, so the old pod goes away before the new one starts.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sharpmush
@@ -144,6 +138,7 @@ spec:
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
+      terminationGracePeriodSeconds: 60
       initContainers:
         - name: cert-generator
           image: alpine/openssl:latest
@@ -178,6 +173,8 @@ spec:
           volumeMounts:
             - name: cert-volume
               mountPath: /app/certs
+            - name: data
+              mountPath: /app/data
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080;https://+:8081"
@@ -185,8 +182,15 @@ spec:
               value: "/app/certs/sharpmush-dev.pfx"
             - name: ASPNETCORE_Kestrel__Certificates__Default__Password
               value: "DevPassword123!"
-            - name: ARANGO_CONNECTION_STRING
-              value: "Server=http://arangodb:8529;User=root;Password=password;UseUnixSocket=false"
+            # Embedded LMDB world on the data PVC. See deploy/README.md for the settings.
+            - name: SHARPMUSH_DATABASE_PROVIDER
+              value: "lightning"
+            - name: SHARPMUSH_LIGHTNING_PATH
+              value: "data/lightning"
+            - name: SHARPMUSH_LIGHTNING_SYNC
+              value: "periodic"
+            - name: Wiki__AssetRoot
+              value: "/app/data/wiki-assets"
             - name: NATS_URL
               value: "nats://nats:4222"
           resources:
@@ -199,6 +203,9 @@ spec:
       volumes:
         - name: cert-volume
           emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: sharpmush-data-pvc
 ---
 # SharpMUSH Service (for Prometheus scraping and HTTP API)
 apiVersion: v1
@@ -220,13 +227,15 @@ spec:
       targetPort: 9092
   type: ClusterIP
 ---
-# ConnectionServer
+# Stable SocketServer with development-only renderer sidecar
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: connectionserver
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: connectionserver
@@ -239,10 +248,28 @@ spec:
         prometheus.io/port: "4202"
         prometheus.io/path: "/metrics"
     spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: render-socket
+          emptyDir: {}
       containers:
-        - name: connectionserver
-          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+        - name: socketserver
+          image: docker.io/sharpmush/sharpmush-socketserver:dev
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: render-socket
+              mountPath: /run/sharpmush
           ports:
             - containerPort: 4201
               name: telnet
@@ -251,6 +278,8 @@ spec:
             - containerPort: 9091
               name: metrics
           env:
+            - name: Rendering__SocketPath
+              value: /run/sharpmush/render.sock
             - name: NATS_URL
               value: "nats://nats:4222"
             - name: SHARPMUSH_HOST
@@ -262,6 +291,27 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+        - name: renderer
+          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: Rendering__SocketPath
+              value: /run/sharpmush/render.sock
+          volumeMounts:
+            - name: render-socket
+              mountPath: /run/sharpmush
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
 ---
 apiVersion: v1
 kind: Service

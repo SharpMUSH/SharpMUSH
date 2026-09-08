@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="bunit" Version="2.9.0" />
-    <PackageReference Include="AngleSharp" Version="1.7.2" />
+    <PackageReference Include="AngleSharp" Version="1.8.0" />
     <PackageReference Include="coverlet.collector" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -46,6 +46,9 @@
     <ProjectReference Include="..\SharpMUSH.Tests.Infrastructure\SharpMUSH.Tests.Infrastructure.csproj" />
     <!-- ConnectionServer protocol handlers -->
     <ProjectReference Include="..\SharpMUSH.ConnectionServer\SharpMUSH.ConnectionServer.csproj" />
+    <ProjectReference Include="..\SharpMUSH.SocketServer\SharpMUSH.SocketServer.csproj" />
+    <!-- Lightning provider -->
+    <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
   </ItemGroup>
 
   <ItemGroup>

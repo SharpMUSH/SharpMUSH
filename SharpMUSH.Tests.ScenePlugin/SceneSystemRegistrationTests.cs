@@ -1,4 +1,3 @@
-using Core.Arango;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf;
@@ -7,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Library.Plugins.Storage;
+using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.Scene.Storage;
 using Scene = SharpMUSH.Plugins.Scene.Models.Scene;
@@ -22,15 +22,28 @@ namespace SharpMUSH.Tests.ScenePlugin;
 public class SceneSystemRegistrationTests
 {
 	[Test]
-	public async Task AddSceneSystem_SelectsStorageMatchingConfiguredProvider()
+	public async Task AddSceneSystem_DefaultsToLightningStorage()
 	{
 		var services = new ServiceCollection();
-		// Only the Arango accessor is present (as the host does for the active provider). The factory must
-		// pick the "arangodb"-keyed ArangoSceneStorage and never touch the other two keys.
-		services.AddSingleton<IArangoStorageAccessor>(new FakeArangoAccessor());
+		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
+		var config = new ConfigurationBuilder().Build();
+
+		services.AddSceneSystem(config);
+
+		await using var sp = services.BuildServiceProvider();
+		var svc = sp.GetRequiredService<ISceneService>();
+
+		await Assert.That(svc).IsTypeOf<LightningSceneStorage>();
+	}
+
+	[Test]
+	public async Task AddSceneSystem_SelectsLightningStorage_WhenProviderIsLightning()
+	{
+		var services = new ServiceCollection();
+		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
 
 		var config = new ConfigurationBuilder()
-			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "arangodb" })
+			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "lightning" })
 			.Build();
 
 		services.AddSceneSystem(config);
@@ -38,7 +51,7 @@ public class SceneSystemRegistrationTests
 		await using var sp = services.BuildServiceProvider();
 		var svc = sp.GetRequiredService<ISceneService>();
 
-		await Assert.That(svc).IsTypeOf<ArangoSceneStorage>();
+		await Assert.That(svc).IsTypeOf<LightningSceneStorage>();
 	}
 
 	[Test]
@@ -70,11 +83,24 @@ public class SceneSystemRegistrationTests
 		await Assert.That(calls).IsEquivalentTo(new[] { "second", "first", "core" });
 	}
 
-	private sealed class FakeArangoAccessor : IArangoStorageAccessor
+	/// <summary>
+	/// A no-database Lightning accessor. Only <c>OpenTable</c> is exercised: the storage opens its tables
+	/// in its constructor, which is the part of the registration this test reaches.
+	/// </summary>
+	private sealed class FakeLightningAccessor : ILightningStorageAccessor
 	{
-		public IArangoContext Context => throw new NotSupportedException();
-		public ArangoHandle Handle => throw new NotSupportedException();
-		public ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default) =>
+		public T Read<T>(Func<ITx, T> read) => throw new NotSupportedException();
+
+		public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default) =>
+			throw new NotSupportedException();
+
+		public IAsyncEnumerable<(byte[] Key, byte[] Value)> RangeAsync(TableDef table, byte[] prefix,
+			int pageSize = 256, CancellationToken ct = default) => throw new NotSupportedException();
+
+		public TableDef OpenTable(string name, bool duplicates) =>
+			duplicates ? TableDef.Index(name, duplicates: true) : TableDef.Node(name);
+
+		public ValueTask CopyToAsync(string path, bool compact = true, CancellationToken ct = default) =>
 			throw new NotSupportedException();
 	}
 

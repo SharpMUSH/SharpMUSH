@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// longer name <c>ISceneService</c> now that it lives inside the Scene plugin's ALC): writes go through the
 /// wizard-only <c>scene…()</c> side-effect functions and the resolved dbref is read back through the
 /// <c>scene…()</c> read functions. Object references are <c>#1</c> (the seeded God object), so a correct
-/// resolution must come back as <c>#1</c>. Runs identically on all three providers.
+/// resolution must come back as <c>#1</c>. Runs identically on both supported providers.
 /// </summary>
 [NotInParallel]
 public class SceneDbrefResolutionTests

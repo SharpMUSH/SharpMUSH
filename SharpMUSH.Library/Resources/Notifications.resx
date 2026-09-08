@@ -1136,20 +1136,11 @@
   <data name="NotSupportedForSharpMUSH" xml:space="preserve">
     <value>Not Supported for SharpMUSH.</value>
   </data>
-  <data name="ErrorDarkFlagNotFound" xml:space="preserve">
-    <value>Error: DARK flag not found in database.</value>
+  <data name="NoLongerAppearOnWho" xml:space="preserve">
+    <value>You no longer appear on the WHO list.</value>
   </data>
-  <data name="NowHiddenFromWho" xml:space="preserve">
-    <value>You are now hidden from the WHO list.</value>
-  </data>
-  <data name="NoLongerHiddenFromWho" xml:space="preserve">
-    <value>You are no longer hidden from the WHO list.</value>
-  </data>
-  <data name="AlreadyHiddenFromWho" xml:space="preserve">
-    <value>You are already hidden from the WHO list.</value>
-  </data>
-  <data name="AlreadyVisibleOnWho" xml:space="preserve">
-    <value>You are already visible on the WHO list.</value>
+  <data name="NowAppearOnWho" xml:space="preserve">
+    <value>You now appear on the WHO list.</value>
   </data>
   <data name="NeedAnnouncePower" xml:space="preserve">
     <value>Permission denied. You need the Announce power.</value>
@@ -2032,8 +2023,11 @@
   <data name="SearchCriteriaFormat" xml:space="preserve">
     <value>  Criteria: {0}</value>
   </data>
-  <data name="SearchRangeFormat" xml:space="preserve">
-    <value>  Range: {0} to {1}</value>
+  <data name="SearchUnknownOwner" xml:space="preserve">
+    <value>Unknown owner.</value>
+  </data>
+  <data name="SearchNothingFound" xml:space="preserve">
+    <value>Nothing found.</value>
   </data>
   <data name="SearchObjectEntryFormat" xml:space="preserve">
     <value>  #{0} ({1}) [{2}]</value>
@@ -2305,8 +2299,8 @@
   <data name="ShutdownParanoidInitiated" xml:space="preserve">
     <value>PARANOID SHUTDOWN initiated.</value>
   </data>
-  <data name="ShutdownParanoidArangoDB" xml:space="preserve">
-    <value>Database state is continuously persisted in ArangoDB.</value>
+  <data name="ShutdownParanoidDatabase" xml:space="preserve">
+    <value>Database state is continuously persisted.</value>
   </data>
   <data name="ShutdownInitiated" xml:space="preserve">
     <value>SHUTDOWN initiated.</value>
@@ -2339,6 +2333,29 @@
   <!-- @dump -->
   <data name="DumpDoesNothing" xml:space="preserve">
     <value>Dump command does nothing for SharpMUSH. Consider using @backup.</value>
+  </data>
+
+  <!-- @backup -->
+  <data name="BackupUnavailableFormat" xml:space="preserve">
+    <value>@backup is not available here: {0}.</value>
+  </data>
+  <data name="BackupStarted" xml:space="preserve">
+    <value>Copying the world. The game keeps running; this may take a while.</value>
+  </data>
+  <data name="BackupCompleteFormat" xml:space="preserve">
+    <value>Backup {0} written ({1}). Keeping {2}.</value>
+  </data>
+  <data name="BackupFailedFormat" xml:space="preserve">
+    <value>Backup failed: {0}</value>
+  </data>
+  <data name="BackupListHeaderFormat" xml:space="preserve">
+    <value>Backups in {0}:</value>
+  </data>
+  <data name="BackupListRowFormat" xml:space="preserve">
+    <value>  {0}  {1}</value>
+  </data>
+  <data name="BackupListEmpty" xml:space="preserve">
+    <value>No backups have been taken yet.</value>
   </data>
 
   <!-- @pcreate -->

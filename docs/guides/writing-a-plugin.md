@@ -179,13 +179,8 @@ public sealed class MyPlugin : PluginBase,
 
     // (c) Migrations: provider-tagged. Implement only the backends you support; every member has an
     //     empty/no-op default.
-    //     Arango tracks your assembly as a migration stream of its own: your Ids only ever have to be
-    //     unique and increasing among YOUR OWN migrations. The engine's Ids — and other plugins' — are
-    //     unrelated, so a migration older than the running engine's newest still applies. Adding one
-    //     dated before an Id you have already shipped is refused at boot, so append, never back-date.
-    public Assembly? ArangoMigrationAssembly => typeof(MyPlugin).Assembly;        // IArangoMigration types here
-    public IEnumerable<string> CypherStatements => ["CREATE INDEX ON :MyThing(id)"];   // Memgraph
-    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE my_thing SCHEMALESS"]; // SurrealDB
+    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE my_thing SCHEMALESS"];
+    public IEnumerable<LightningMigrationStep> LightningSteps => [new MyLightningMigration()];
 
     // (d) NATS bridge: subscribe to your own subjects and forward to SignalR groups, mirroring the engine's
     //     built-in output/room/scene subscriptions. The host runs this alongside the built-ins, isolated in
@@ -209,8 +204,8 @@ public sealed class MyPlugin : PluginBase,
   `IServiceRegistrar`. The catalog classifies each plugin by the interfaces it implements.
 - **Flags ride the migration plumbing.** A contributed flag is seeded during `db.Migrate()` on every backend,
   so it is queryable (e.g. `GetObjectFlagQuery`) immediately after boot.
-- **Migrations are per-provider.** If your plugin only supports ArangoDB, leave `CypherStatements` /
-  `SurrealStatements` at their empty defaults; the other backends simply seed nothing from your plugin.
+- **Migrations are per-provider.** Supply SurrealDB statements and/or Lightning steps for the
+  providers the plugin supports; omitted contributions default to empty.
 - **Bridge subscriptions are long-lived.** `RunAsync` should loop until `ct` is cancelled, exactly like the
   built-in subscriptions. A faulting subscription is logged and isolated; it does not tear down the others.
 

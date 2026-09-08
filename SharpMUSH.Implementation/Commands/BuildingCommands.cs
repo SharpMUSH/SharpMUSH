@@ -694,7 +694,7 @@ public partial class Commands
 							// Check @lock/link, transfer ownership, and set HALT flag
 							if (isOwnedByOther && exitNotControlled)
 							{
-								var linkLockPasses = LockService.Evaluate(LockType.Link, exitObj, executor);
+								var linkLockPasses = await LockService.Evaluate(LockType.Link, exitObj, executor);
 								if (!linkLockPasses)
 								{
 									return await NotifyService.NotifyAndReturn(
@@ -895,7 +895,7 @@ public partial class Commands
 					{
 						bool canZone = await PermissionService.Controls(executor, zoneObj);
 
-						if (!canZone && !LockService.Evaluate(LockType.ChZone, zoneObj, executor))
+						if (!canZone && !await LockService.Evaluate(LockType.ChZone, zoneObj, executor))
 						{
 							return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
@@ -1468,7 +1468,6 @@ public partial class Commands
 					// The "_"-prefix skip is a pre-existing SharpMUSH-only filter, orthogonal to
 					// Penn's no_clone. It folds into the same skip set so that a "_"-prefixed
 					// branch's children don't get silently auto-vivified a stripped-down parent
-					// by SetAttributeAsync (ArangoDatabase.Attributes.cs:608-675) - the same
 					// missing-root hazard the no_clone propagation above exists to avoid.
 					if (attr.IsNoCopy() || attr.Name.StartsWith("_") || parentSkipped)
 					{
@@ -1486,7 +1485,6 @@ public partial class Commands
 					// avoids the skip set if it genuinely landed on the clone. Without this, a
 					// child under a branch that failed to set would still see its parent as
 					// "not skipped" and auto-vivify a stripped-down stand-in via
-					// SetAttributeAsync's own auto-vivification (ArangoDatabase.Attributes.cs:
 					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
 					// today (the clone's owner always controls the freshly-created destination),
 					// but one permission change away from live.

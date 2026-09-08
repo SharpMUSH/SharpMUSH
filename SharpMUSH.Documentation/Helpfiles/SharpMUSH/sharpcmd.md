@@ -718,6 +718,32 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 **See Also:**
 - [@idle]
 - [@haven]
+# @backup
+`@backup`<br>
+`@backup/list`
+
+Wizard-only. Takes a copy of the world, into a timestamped directory under the game's backup
+directory, and reports the name and size of what it wrote. This is a SharpMUSH command; PennMUSH
+has no equivalent, because PennMUSH holds the database in memory and `@dump` writes it out.
+
+The game keeps running throughout. The copy is a snapshot as of the moment it starts: everything
+committed before then is in it, nothing after. It is written aside and moved into place only once
+complete, so a backup tool reading the directory never sees a half-written one.
+
+`@backup/list` reports the copies currently on disk, newest first, without taking one.
+
+What a copy is depends on the database. LMDB copies its environment with its own routine, which is a
+point-in-time snapshot by construction. SurrealDB produces a complete, restorable logical export from
+the running game.
+
+Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
+and whether one is also taken automatically on an interval are deployment settings on the server
+process, not `@config` options. See `deploy/README.md`.
+
+
+**See Also:**
+- [@dump]
+- [@shutdown]
 # @boot
 `@boot[/silent] <player>`<br>
 `@boot/port[/silent] <descriptor number>`<br>
@@ -1571,8 +1597,11 @@ If the `/paranoid` switch is given, the game performs additional consistency che
 
 These switches should ONLY be used if a normal @dump is not being done correctly. They should generally only be done by wizards with access to the account on which the MUSH is running, since others will not have access to the checkpoint log file.
 
+In SharpMUSH `@dump` does nothing. There is no in-memory copy to write out: every change is committed to the database as it is made, so the game on disk is already current. To take a copy of it that is safe to read while the game runs, use `@backup`.
+
 
 **See Also:**
+- [@backup]
 - [@shutdown]
 # @ealias
 # @lalias
@@ -3693,7 +3722,10 @@ Colorstyle options are:
 - hilite: You only receive hilite text. No colors, just ansi-hilite.
 - 16color: You receive hilite text and the ANSI 16 colors.
 - xterm256: You receive xterm-style 256 colors for text and background.
+- truecolor: You receive 24-bit RGB colors for text and background. Also accepted as 'rgb' or '24bit'.
 - auto: go back to what SharpMUSH determined was your client's capabilities.
+
+SharpMUSH determines 'auto' from the terminal type your client reports (RFC 1091), including the MTTS capability bits when your client sends them. terminfo() shows the style in effect.
 
 In the event that your client receives a color that it is unable to display, SharpMUSH will attempt to find a close match that can fit your client's capabilities.
 
@@ -5006,4 +5038,3 @@ BIRD
 
 **See Also:**
 - [suggest()]
-

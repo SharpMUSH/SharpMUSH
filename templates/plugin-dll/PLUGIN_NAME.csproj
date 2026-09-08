@@ -29,13 +29,13 @@
 		     PrivateAssets=all + ExcludeAssets=runtime keep the contract assembly OUT of the plugin's
 		     output so the HOST's copy is the one that loads (the loader's sharedTypes is the real
 		     type-unification net). The version aligns with the server's PluginContractVersion. -->
-		<PackageReference Include="SharpMUSH.Library" Version="1.0.0"
+		<PackageReference Include="SharpMUSH.Library" Version="2.0.0"
 			PrivateAssets="all" ExcludeAssets="runtime" />
 
 		<!-- The source generator referenced AS AN ANALYZER: your [SharpCommand]/[SharpFunction] methods
 		     produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
 		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->
-		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="1.0.0"
+		<PackageReference Include="SharpMUSH.Implementation.Generated" Version="2.0.0"
 			PrivateAssets="all" />
 	</ItemGroup>
 

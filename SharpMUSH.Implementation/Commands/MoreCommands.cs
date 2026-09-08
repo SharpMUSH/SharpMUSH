@@ -1212,13 +1212,13 @@ public partial class Commands
 
 		var currentRoom = executorLocation;
 
-		if (!LockService.Evaluate(LockType.Drop, objectToDrop, executor))
+		if (!await LockService.Evaluate(LockType.Drop, objectToDrop, executor))
 		{
 			await NotifyService.Notify(executor, "You can't drop that.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
+		if (!await LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeemToDropThingsHere), executor);
 			return CallState.Empty;
@@ -1285,7 +1285,7 @@ public partial class Commands
 
 			if (!dropToLocation.IsT3) // Not None
 			{
-				if (LockService.Evaluate(LockType.DropTo, room, objectToDrop))
+				if (await LockService.Evaluate(LockType.DropTo, room, objectToDrop))
 				{
 					var dropToContainer = dropToLocation.Match<AnySharpContainer>(
 						player => player,
@@ -1403,13 +1403,13 @@ public partial class Commands
 				continue;
 			}
 
-			if (!LockService.Evaluate(LockType.Basic, itemObj, executor))
+			if (!await LockService.Evaluate(LockType.Basic, itemObj, executor))
 			{
 				failedCount++;
 				continue;
 			}
 
-			if (!LockService.Evaluate(LockType.Take, container.WithExitOption(), executor))
+			if (!await LockService.Evaluate(LockType.Take, container.WithExitOption(), executor))
 			{
 				failedCount++;
 				continue;
@@ -1471,13 +1471,13 @@ public partial class Commands
 					}
 				}
 
-				if (!LockService.Evaluate(LockType.Drop, itemObj, executor))
+				if (!await LockService.Evaluate(LockType.Drop, itemObj, executor))
 				{
 					failedCount++;
 					continue;
 				}
 
-				if (!LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
+				if (!await LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
 				{
 					failedCount++;
 					continue;
@@ -1572,7 +1572,7 @@ public partial class Commands
 			}
 		}
 
-		if (!LockService.Evaluate(LockType.Enter, objectToEnter, executor))
+		if (!await LockService.Evaluate(LockType.Enter, objectToEnter, executor))
 		{
 			var efailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
 			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
@@ -1827,13 +1827,13 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!LockService.Evaluate(LockType.Basic, objectToGet, executor))
+		if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
 		{
 			await NotifyService.Notify(executor, "You can't pick that up.", executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
 		{
 			await NotifyService.Notify(executor, "You can't take that from there.", executor);
 			return CallState.Empty;
@@ -1979,20 +1979,20 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!LockService.Evaluate(LockType.From, recipient, executor))
+		if (!await LockService.Evaluate(LockType.From, recipient, executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		if (!LockService.Evaluate(LockType.Give, objectToGive, executor))
+		if (!await LockService.Evaluate(LockType.Give, objectToGive, executor))
 		{
 			await NotifyService.Notify(executor, "You can't give that away.", executor);
 			return CallState.Empty;
 		}
 
 		// Check @lock/receive on recipient (object must pass this)
-		if (!LockService.Evaluate(LockType.Receive, recipient, objectToGive))
+		if (!await LockService.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
 			await NotifyService.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
 			return CallState.Empty;
@@ -2217,7 +2217,7 @@ public partial class Commands
 			async room => await ValueTask.FromResult<AnySharpContainer>(room),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
-		if (!LockService.Evaluate(LockType.Leave, container, executor))
+		if (!await LockService.Evaluate(LockType.Leave, container, executor))
 		{
 			var lfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
 			if (lfailAttr.IsAttribute && lfailAttr.AsT0.Length > 0)
@@ -2500,7 +2500,7 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
@@ -2541,7 +2541,7 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
@@ -2574,7 +2574,7 @@ public partial class Commands
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
 
 		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
 			return CallState.Empty;
@@ -2686,7 +2686,7 @@ public partial class Commands
 
 		var objectToUse = locateResult.WithoutError().WithoutNone();
 
-		if (!LockService.Evaluate(LockType.Use, objectToUse, executor))
+		if (!await LockService.Evaluate(LockType.Use, objectToUse, executor))
 		{
 			var ufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "UFAIL", IAttributeService.AttributeMode.Read, true);
 			if (ufailAttr.IsAttribute && ufailAttr.AsT0.Length > 0)

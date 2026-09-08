@@ -41,7 +41,7 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
-		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
 	[Arguments("type^Player & #TRUE", true)]
@@ -56,7 +56,7 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
-		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
 	[Arguments("type^Player", true)]
@@ -106,7 +106,7 @@ public class BooleanExpressionUnitTests
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, player)).IsTrue();
-		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
 
 	[Arguments("=#1", true)]
@@ -119,7 +119,7 @@ public class BooleanExpressionUnitTests
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, player)).IsTrue();
-		await Assert.That(bep.Compile(input)(player, player)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
 
 	[Arguments("dbreflist^testattr", true)]
@@ -161,9 +161,9 @@ public class BooleanExpressionUnitTests
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 		var input = "type^Player";
 
-		await Assert.That(bep.Compile(input)(player, player)).IsTrue();
+		await Assert.That(await bep.Compile(input)(player, player)).IsTrue();
 		bep.InvalidateCache(input);
-		await Assert.That(bep.Compile(input)(player, player)).IsTrue();
+		await Assert.That(await bep.Compile(input)(player, player)).IsTrue();
 	}
 
 	[Test]
@@ -172,13 +172,13 @@ public class BooleanExpressionUnitTests
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
-		await Assert.That(bep.Compile("#TRUE")(player, player)).IsTrue();
-		await Assert.That(bep.Compile("type^Thing")(player, player)).IsFalse();
+		await Assert.That(await bep.Compile("#TRUE")(player, player)).IsTrue();
+		await Assert.That(await bep.Compile("type^Thing")(player, player)).IsFalse();
 
 		bep.InvalidateCache();
 
-		await Assert.That(bep.Compile("#TRUE")(player, player)).IsTrue();
-		await Assert.That(bep.Compile("type^Thing")(player, player)).IsFalse();
+		await Assert.That(await bep.Compile("#TRUE")(player, player)).IsTrue();
+		await Assert.That(await bep.Compile("type^Thing")(player, player)).IsFalse();
 	}
 
 	[Test]
@@ -190,14 +190,14 @@ public class BooleanExpressionUnitTests
 		var input = "type^Player";
 		var errors = new ConcurrentQueue<Exception>();
 
-		var compileTask = Task.Run(() =>
+		var compileTask = Task.Run(async () =>
 		{
 			for (var i = 0; i < iterationCount; i++)
 			{
 				try
 				{
 					var compiled = bep.Compile(input);
-					_ = compiled(player, player);
+					_ = await compiled(player, player);
 				}
 				catch (Exception ex)
 				{
@@ -270,7 +270,7 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
-		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -291,7 +291,7 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		await Assert.That(bep.Validate(input, dbn)).IsTrue();
-		await Assert.That(bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile(input)(dbn, dbn)).IsEqualTo(expected);
 	}
 
 	/// <summary>
@@ -309,8 +309,8 @@ public class BooleanExpressionUnitTests
 		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
 
 		var normalized = bep.Normalize(input);
-		var before = bep.Compile(input)(dbn, dbn);
-		var after = bep.Compile(normalized)(dbn, dbn);
+		var before = await bep.Compile(input)(dbn, dbn);
+		var after = await bep.Compile(normalized)(dbn, dbn);
 
 		await Assert.That(after).IsEqualTo(before);
 	}

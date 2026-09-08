@@ -6,17 +6,12 @@ namespace SharpMUSH.Library.Definitions;
 public enum DatabaseProvider
 {
 	/// <summary>
-	/// ArangoDB - the default graph database provider.
+	/// SurrealDB - a multi-model database embedded in-process; RocksDB on disk in production, in-memory in tests.
 	/// </summary>
-	ArangoDB,
+	SurrealDB,
 
 	/// <summary>
-	/// Memgraph - a Cypher-compatible graph database using the Bolt protocol.
+	/// LMDB embedded in-process through Lightning.NET; one directory per world.
 	/// </summary>
-	Memgraph,
-
-	/// <summary>
-	/// SurrealDB - a multi-model database using embedded in-memory mode.
-	/// </summary>
-	SurrealDB
+	Lightning
 }

@@ -1,4 +1,3 @@
-using Core.Arango;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +19,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService notifier,
-	string? databaseName = null,
 	string sqlPlatform = "mysql") :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
@@ -123,12 +121,6 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor));
-
-				if (!string.IsNullOrEmpty(databaseName))
-				{
-					sc.RemoveAll<ArangoHandle>();
-					sc.AddSingleton(new ArangoHandle(databaseName));
-				}
 			}
 		);
 	}

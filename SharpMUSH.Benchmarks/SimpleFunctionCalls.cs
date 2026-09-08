@@ -3,7 +3,7 @@ using System.Text;
 namespace SharpMUSH.Benchmarks;
 
 [BenchmarkCategory("Non-DB Function Evaluation")]
-public class SimpleFunctionCalls : BaseBenchmark
+public class SimpleFunctionCalls : LightningBaseBenchmark
 {
 
 	[Benchmark]

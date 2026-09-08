@@ -399,12 +399,9 @@ SharpMUSH.Contracts/
                                               (permissive read path) / NeutralLocale /
                                               SameLanguage
 
-SharpMUSH.Database.ArangoDB/
-  Migrations/Migration_AddWikiTranslations.cs — SourceLocale / WikiRevision.Locale
-                                              backfill and the unique revision
-                                              constraint (equivalents live in the
-                                              SurrealDB and Memgraph migration
-                                              statement lists)
+SharpMUSH.Database.Lightning/ and SharpMUSH.Database.SurrealDB/
+  Migration definitions                         — SourceLocale / WikiRevision.Locale
+                                                  backfill and revision constraints
 
 SharpMUSH.Client/
   Resources/PortalLocales.cs                — The portal's locale list, shared by the

@@ -1,7 +1,6 @@
-# Quick local build - copy pre-built binaries
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:10.0
+# Quick local renderer image: copy pre-built binaries; shares /run/sharpmush with SocketServer.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY SharpMUSH.ConnectionServer/bin/Release/net10.0/ ./
-EXPOSE 4201 4202 4203
-ENV ASPNETCORE_URLS=http://+:4202
+ENV Rendering__SocketPath=/run/sharpmush/render.sock
 ENTRYPOINT ["dotnet", "SharpMUSH.ConnectionServer.dll"]

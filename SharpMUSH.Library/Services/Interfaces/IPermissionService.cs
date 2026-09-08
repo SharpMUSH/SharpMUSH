@@ -11,9 +11,9 @@ public interface IPermissionService
 		See, Hear, Match, Presence, Page
 	}
 
-	bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
+	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
 
-	bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
+	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);
 
 	ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute);
 

@@ -8,8 +8,6 @@
 
 **Tech Stack:** .NET 10, Blazor WASM, MudBlazor 9.x, TUnit (not xUnit), bUnit for components, source-generated Mediator.
 
-**Spec:** `docs/superpowers/specs/2026-07-16-session-state-nav-panel-design.md`
-
 ## Global Constraints
 
 - **C# files:** tabs, indent size 2. **Razor files:** spaces, indent size 4.

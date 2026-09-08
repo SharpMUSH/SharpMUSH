@@ -2,7 +2,7 @@
 
 > **Status — implemented; screenshots pending a deployment.** The feature this guide
 > describes is built and tested (`docs/todo/area-21-applications.md`). The REST surface was
-> verified live against a bootstrapped server + ArangoDB: registering a valid app returns
+> verified live against a bootstrapped server: registering a valid app returns
 > 200 and round-trips; a bogus schema URL is rejected ("Schema endpoint validation failed");
 > an unknown kind is rejected. The **[SCREENSHOT]** markers below are still placeholders —
 > capturing them needs a served WASM deployment and a browser, which the build environment

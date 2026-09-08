@@ -9,10 +9,10 @@ namespace SharpMUSH.Library.Services;
 
 public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options) : IPermissionService
 {
-	public bool PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
+	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 
-	public bool PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
+	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType)
 		=> lockService.Evaluate(lockType, target, who);
 
 	public async ValueTask<bool> CanSet(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
@@ -326,7 +326,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
 		{
 			var targetZone = await target.Object().Zone.WithCancellation(CancellationToken.None);
-			if (!targetZone.IsNone && lockService.Evaluate(LockType.Zone, targetZone.Known, who))
+			if (!targetZone.IsNone && await lockService.Evaluate(LockType.Zone, targetZone.Known, who))
 			{
 				return true;
 			}
@@ -340,7 +340,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			var ownerObject = new AnySharpObject(targetOwner);
 			if (await ownerObject.HasFlag("SHARED"))
 			{
-				if (lockService.Evaluate(LockType.Zone, ownerObject, who))
+				if (await lockService.Evaluate(LockType.Zone, ownerObject, who))
 				{
 					return true;
 				}
@@ -353,30 +353,30 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		// and that `who` passes, grants control.
 		var controlLock = LockService.GetIfSet(LockType.Control, target);
 
-		return controlLock is not null && lockService.Evaluate(controlLock, target, who);
+		return controlLock is not null && await lockService.Evaluate(controlLock, target, who);
 	}
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
 			 || await Controls(examiner, examinee)
 			 || await examiner.IsSee_All()
-			 || (await examinee.IsVisual() && lockService.Evaluate(LockType.Examine, examinee, examiner));
+			 || (await examinee.IsVisual() && await lockService.Evaluate(LockType.Examine, examinee, examiner));
 
 	/// <inheritdoc />
 	public async ValueTask<bool> CanReadLock(AnySharpObject viewer, AnySharpObject target, LockService.LockFlags lockFlags)
 		=> await viewer.IsSee_All()
 			 || await Controls(viewer, target)
 			 || ((await target.IsVisual() || lockFlags.HasFlag(LockService.LockFlags.Visual))
-				 && lockService.Evaluate(LockType.Examine, target, viewer));
+				 && await lockService.Evaluate(LockType.Examine, target, viewer));
 
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
-		if (type.HasFlag(IPermissionService.InteractType.Hear) && !lockService.Evaluate(LockType.Interact, to, from))
+		if (type.HasFlag(IPermissionService.InteractType.Hear) && !await lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
-		return await ValueTask.FromResult(true);
+		return true;
 	}
 
 	public async ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interactee,
@@ -412,11 +412,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	/// <param name="thing">Against what thing?</param>
 	/// <returns>Whether or not they pass te basic lock.</returns>
 	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing)
-		=> ValueTask.FromResult(thing switch
+		=> thing switch
 		{
-			{ IsNone: true } => false,
+			{ IsNone: true } => ValueTask.FromResult(false),
 			_ => PassesLock(who, thing.Known, LockType.Basic)
-		});
+		};
 
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
@@ -454,10 +454,10 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		=> await ChannelStandardCan(target, channel.Privs);
 
 	public async ValueTask<bool> ChannelCanJoin(AnySharpObject target, SharpChannel channel)
-		=> await ChannelCanAccess(target, channel) && lockService.Evaluate(channel.JoinLock, channel, target);
+		=> await ChannelCanAccess(target, channel) && await lockService.Evaluate(channel.JoinLock, channel, target);
 
 	public async ValueTask<bool> ChannelCanSpeak(AnySharpObject target, SharpChannel channel)
-		=> await ChannelCanAccess(target, channel) && lockService.Evaluate(channel.SpeakLock, channel, target);
+		=> await ChannelCanAccess(target, channel) && await lockService.Evaluate(channel.SpeakLock, channel, target);
 
 	public async ValueTask<bool> ChannelCanCemit(AnySharpObject target, SharpChannel channel)
 		=> !channel.HasPriv("NoCemit") && await ChannelCanSpeak(target, channel);
@@ -484,7 +484,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			!await target.HasPower("guest")
 			&& !string.IsNullOrWhiteSpace(channel.ModLock)
 			&& await ChannelCanAccess(target, channel)
-			&& lockService.Evaluate(channel.ModLock, channel, target)
+			&& await lockService.Evaluate(channel.ModLock, channel, target)
 		);
 
 	public async ValueTask<bool> ChannelCanSeeAsync(AnySharpObject target, SharpChannel channel)
@@ -492,7 +492,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || await target.IsSee_All()
 			 || (
 				 await ChannelCanAccess(target, channel)
-				 && lockService.Evaluate(channel.SeeLock, channel, target)
+				 && await lockService.Evaluate(channel.SeeLock, channel, target)
 			 )
 			 || (
 				 await channel.Members.Value.AnyAsync(x => x.Member.Id() == target.Id())
@@ -509,7 +509,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || (
 				 channel.HasPriv("Hide_Ok")
 				 && await ChannelCanAccess(target, channel)
-				 && lockService.Evaluate(channel.HideLock, channel, target)
+				 && await lockService.Evaluate(channel.HideLock, channel, target)
 			 );
 
 	public async ValueTask<bool> ChannelCanNukeAsync(AnySharpObject target, SharpChannel channel)

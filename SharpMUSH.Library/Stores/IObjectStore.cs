@@ -271,9 +271,7 @@ public interface IObjectStore
 	/// <remarks>
 	/// <b>Every</b> populated field of <paramref name="filter"/> must be honoured, and they compose as
 	/// AND. A provider may not quietly drop a predicate it has not implemented: the call would succeed
-	/// and hand back a set the caller never asked for. All three providers had done exactly that —
-	/// SurrealDB and Memgraph ignored <c>Owner</c>/<c>Zone</c>/<c>Parent</c>/<c>HasFlag</c>/
-	/// <c>HasPower</c> outright (returning the whole database), while ArangoDB's <c>Owner</c> compared
+	/// and hand back a set the caller never asked for. both supported providers had done exactly that —
 	/// a dbref against a generated typed-vertex key and its <c>HasFlag</c>/<c>HasPower</c> read array
 	/// fields that objects do not have (returning nothing). Prefer throwing over silently widening.
 	/// <para>

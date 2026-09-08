@@ -1,0 +1,8 @@
+# Quick local socket-owner image: copy pre-built binaries; shares /run/sharpmush with renderer.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY SharpMUSH.SocketServer/bin/Release/net10.0/ ./
+EXPOSE 4201 4202 4203
+ENV ASPNETCORE_URLS=http://+:4202
+ENV Rendering__SocketPath=/run/sharpmush/render.sock
+ENTRYPOINT ["dotnet", "SharpMUSH.SocketServer.dll"]

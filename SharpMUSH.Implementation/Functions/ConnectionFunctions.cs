@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using SharpMUSH.Library.Markup;
 
@@ -105,7 +106,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (int.TryParse(arg0, out var port))
+		if (long.TryParse(arg0, out var port))
 		{
 			var data2 = ConnectionService.Get(port);
 			if (data2 is null || data2.Ref is null)
@@ -426,7 +427,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (int.TryParse(arg0, out var port))
+		if (long.TryParse(arg0, out var port))
 		{
 			var data2 = ConnectionService.Get(port);
 			if (data2 is null || data2.Ref is null)
@@ -757,7 +758,11 @@ public partial class Functions
 		ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal)
+				&& x.PresenceClass != PresenceClasses.Portal
+				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+				// this whole WHO family exactly as DARK always did - see WHO's own row filtering in
+				// SocketCommands.cs for the same isHiddenRow = isDark || connection.IsHidden pattern.
+				&& !x.IsHidden)
 			.Select(x => x.Ref!.Value)
 			.DistinctBy(x => x.Number)
 			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
@@ -773,6 +778,12 @@ public partial class Functions
 		ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+			// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+			// this whole WHO family exactly as DARK always did, unless the looker is privileged -
+			// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503), powered
+			// being Priv_Who (IsSee_All here). See WHO's own row filtering in SocketCommands.cs for the
+			// same isHiddenRow = isDark || connection.IsHidden pattern.
+			.Where(async (x, _) => !x.IsHidden || await looker.IsSee_All())
 			.Select(x => x.Ref!.Value)
 			.DistinctBy(x => x.Number)
 			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
@@ -1205,7 +1216,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1261,7 +1272,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1316,7 +1327,7 @@ public partial class Functions
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
 		{
-			if (!LockService.Evaluate(LockType.Zone, zone, executor))
+			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
@@ -1469,7 +1480,7 @@ public partial class Functions
 			}
 
 			var player = await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value));
-			var isHidden = await player.Known.HasFlag("DARK");
+			var isHidden = data.IsHidden || await player.Known.HasFlag("DARK");
 			return new CallState(isHidden ? "1" : "0");
 		}
 
@@ -1480,7 +1491,8 @@ public partial class Functions
 		}
 
 		var located = maybeLocate.AsPlayer;
-		var isHiddenPlayer = await new AnySharpObject(located).HasFlag("DARK");
+		var isHiddenPlayer = await ConnectionService.IsPlayerHiddenAsync(located.Object.DBRef)
+			|| await new AnySharpObject(located).HasFlag("DARK");
 		return new CallState(isHiddenPlayer ? "1" : "0");
 	}
 
@@ -1504,9 +1516,12 @@ public partial class Functions
 	/// </summary>
 	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
 	{
+		// The RFC 1091 terminal type, which is where PennMUSH gets the client name too — set by TTYPE
+		// negotiation, by MSDP's TERMINAL_TYPE, or by hand with "@sockset terminaltype". The same key
+		// SocketOptions reads, so SOCKSET and terminfo() cannot disagree about who the client is.
 		var terminfo = new List<string>
 		{
-			metadata.GetValueOrDefault("CLIENT", "unknown")
+			metadata.GetValueOrDefault("TerminalType", "unknown")
 		};
 
 		if (!includeDetails)
@@ -1524,6 +1539,8 @@ public partial class Functions
 			terminfo.Add("mxp");
 		}
 
+		// Set once the client genuinely answers a telnet option, not merely because it arrived on the
+		// telnet port — PennMUSH's CONN_TELNET means the same thing, and a raw socket must not claim it.
 		if (metadata.GetValueOrDefault("TELNET", "0") == "1")
 		{
 			terminfo.Add("telnet");
@@ -1559,11 +1576,10 @@ public partial class Functions
 			terminfo.Add("stripaccents");
 		}
 
-		var colorStyle = metadata.GetValueOrDefault("COLORSTYLE", "");
-		if (!string.IsNullOrEmpty(colorStyle))
-		{
-			terminfo.Add(colorStyle);
-		}
+		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
+		// client that pinned nothing still reports what it is being rendered at. An explicit
+		// "SOCKSET colorstyle" wins; otherwise it is read back out of the client's own MTTS claims.
+		terminfo.Add(TerminalCapabilityReader.ColorStyleFor(metadata));
 
 		return string.Join(" ", terminfo);
 	}

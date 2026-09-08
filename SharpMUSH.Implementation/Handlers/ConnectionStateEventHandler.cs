@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
@@ -27,6 +28,7 @@ public class ConnectionStateEventHandler(
 	IMUSHCodeParser parser,
 	INotifyService notifyService,
 	IMediator mediator,
+	IConnectionAnnounceService connectionAnnounceService,
 	IOptionsWrapper<SharpMUSHOptions> configuration)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
@@ -79,13 +81,29 @@ public class ConnectionStateEventHandler(
 					or IConnectionService.ConnectionState.Connected &&
 				notification.PlayerRef.HasValue)
 		{
-			var connectionData = connectionService.Get(notification.Handle);
+			var connectionData = notification.FormerConnection ?? connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
 
-				var remainingConnections = await connectionService.Get(notification.PlayerRef.Value).CountAsync();
+				// ConnectionService.Disconnect publishes this notification before it removes the
+				// disconnecting handle from its session-state dictionary (Unbind does the opposite,
+				// and says so in a comment there), so a naive count of the player's connections here
+				// would still include the one that is on its way out. Exclude it by handle instead of
+				// relying on removal order — correct however the two ever end up sequenced.
+				//
+				// That handle-exclusion alone isn't enough when the SAME player disconnects on two
+				// handles at genuinely the same time: each handler would exclude only its own handle
+				// and see the other's as still present, so both would compute "1 remaining" instead of
+				// one seeing 1 and the other (whichever actually runs second) seeing 0. Disconnect
+				// closes that gap itself, atomically with marking the handle as leaving, and hands the
+				// correct count through the notification — prefer it when present (the QUIT path).
+				// Unbind's LOGOUT path carries no such count (it doesn't need one — see the notification
+				// field's doc comment), so it falls back to the same recomputation as before.
+				var remainingConnections = notification.RemainingConnections
+					?? await connectionService.Get(notification.PlayerRef.Value)
+						.CountAsync(c => c.Handle != notification.Handle);
 
 				var connectedSecs = connectionData.Connected?.TotalSeconds.ToString("F0") ?? "0";
 				var idleSecs = connectionData.Idle?.TotalSeconds.ToString("F0") ?? "0";
@@ -99,7 +117,7 @@ public class ConnectionStateEventHandler(
 					notification.PlayerRef.Value, // Enactor is the disconnecting player
 					$"#{notification.PlayerRef.Value.Number}",
 					remainingConnections.ToString(),
-					"0", // hidden? (0 = not hidden, 1 = hidden)
+					connectionData.IsHidden ? "1" : "0", // hidden? (0 = not hidden, 1 = hidden)
 					notification.NewState == IConnectionService.ConnectionState.Connected
 						? "logout"
 						: "quit", // cause of disconnection
@@ -109,11 +127,18 @@ public class ConnectionStateEventHandler(
 					idleSecs,
 					$"{bytesRecv}/{bytesSent}/{commandCount}");
 
-				// Refresh the room's remaining occupants after the player disconnects.
-				// Resolve the player's location while the player object is still in the DB.
+				// Resolve the player object once, while it's still in the DB, and share it between
+				// the connection-announce call and the room-contents refresh below.
 				var playerNode = await mediator.Send(new GetObjectNodeQuery(notification.PlayerRef.Value));
 				if (!playerNode.IsNone && playerNode.IsPlayer)
 				{
+					await connectionAnnounceService.AnnounceDisconnectAsync(
+						parser,
+						new AnySharpObject(playerNode.AsPlayer),
+						remainingConnections,
+						connectionData.IsHidden);
+
+					// Refresh the room's remaining occupants after the player disconnects.
 					var roomContainer = await playerNode.AsPlayer.Location.WithCancellation(CancellationToken.None);
 					var roomDbref = roomContainer.Object().DBRef.ToString();
 					await eventService.TriggerEventAsync(
@@ -129,7 +154,7 @@ public class ConnectionStateEventHandler(
 		// PennMUSH spec: socket`disconnect (former descriptor, former ip, cause of disconnection, recv bytes/sent bytes/command count)
 		if (notification.NewState == IConnectionService.ConnectionState.Disconnected)
 		{
-			var connectionData = connectionService.Get(notification.Handle);
+			var connectionData = notification.FormerConnection ?? connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)

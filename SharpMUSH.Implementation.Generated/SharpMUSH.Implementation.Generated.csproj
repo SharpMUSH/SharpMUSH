@@ -18,14 +18,14 @@
 	     into its assembly (which PluginBase reflects at load time). The generator DLL is shipped under
 	     analyzers/dotnet/cs and carries no compile/runtime output (IncludeBuildOutput=false above);
 	     DevelopmentDependency=true marks it PrivateAssets=all for consumers by default.
-	     Version is aligned to PluginContractVersion.Current (1.0.0) — keep it in step with the
+	     Version is aligned to PluginContractVersion.Current (2.0.0) — keep it in step with the
 	     SharpMUSH.Library contract package. -->
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Implementation.Generated</PackageId>
-		<Version>1.0.0</Version>
+		<Version>2.0.0</Version>
 		<Authors>SharpMUSH Contributors</Authors>
-		<Description>SharpMUSH command/function source generator, packaged as a Roslyn analyzer. External SharpMUSH plugins reference this so their [SharpCommand]/[SharpFunction] methods produce the generated CommandLibrary/FunctionLibrary that PluginBase reflects. Aligned to PluginContractVersion 1.0.0.</Description>
+		<Description>SharpMUSH command/function source generator, packaged as a Roslyn analyzer. External SharpMUSH plugins reference this so their [SharpCommand]/[SharpFunction] methods produce the generated CommandLibrary/FunctionLibrary that PluginBase reflects. Aligned to PluginContractVersion 2.0.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
@@ -44,8 +44,8 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

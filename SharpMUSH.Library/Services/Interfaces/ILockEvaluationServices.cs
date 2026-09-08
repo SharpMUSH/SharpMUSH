@@ -22,5 +22,5 @@ public interface ILockEvaluationServices
 	/// </summary>
 	ValueTask<OneOf<string, LockEvaluationFailure>> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName);
 
-	bool EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker);
+	ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker);
 }

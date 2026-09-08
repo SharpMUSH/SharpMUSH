@@ -83,8 +83,7 @@ public class WikiStartupSeedingTests
 		await Assert.That(bySlug.IsT0).IsTrue();
 
 		var id = bySlug.AsT0.Id;
-		await Assert.That(id).IsNotEmpty()
-			.Because("ArangoDB assigns a non-empty _id on CreateAsync");
+		await Assert.That(id).IsNotEmpty();
 
 		var byId = await Wiki.GetByIdAsync(id);
 

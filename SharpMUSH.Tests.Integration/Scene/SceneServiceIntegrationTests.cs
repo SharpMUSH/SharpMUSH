@@ -7,8 +7,7 @@ namespace SharpMUSH.Tests.Integration.Scenes;
 /// over the WIRE — the wizard-only <c>scene…()</c> side-effect functions (writes) and the <c>scene…()</c>
 /// read functions (reads). The Scene plugin now owns <c>ISceneService</c> inside its own (collectible)
 /// AssemblyLoadContext, so the host cannot name it any more; the engine's softcode surface is the
-/// host-visible seam. These exercises run identically on all three providers (arangodb / memgraph /
-/// surrealdb, selected by <c>SHARPMUSH_DATABASE_PROVIDER</c>). Object references use <c>#1</c> (the seeded
+/// surrealdb / lightning, selected by <c>SHARPMUSH_DATABASE_PROVIDER</c>). Object references use <c>#1</c> (the seeded
 /// God object) so the resolve → edge → name-snapshot mechanism is exercised against a real vertex.
 ///
 /// <para>Each scene is made <c>public</c> immediately after creation so the read functions' visibility
@@ -71,7 +70,6 @@ public class SceneServiceIntegrationTests
 	/// A scene id is a bare key on every provider. It is not an internal detail: players type it
 	/// (<c>+scene 1</c>, <c>+scene/join 1</c>), it is a path segment in <c>/scenes/{id}/live</c>, and
 	/// it is stored in player attributes. SurrealDB used to hand back its own record id verbatim, so
-	/// production (surrealdb) showed <c>scene:1</c> while this suite's default provider (arangodb)
 	/// showed <c>1</c> — the tests and the running game disagreed about the shape of the thing a
 	/// player is asked to type, and a colon rode into every scene URL.
 	/// </summary>
@@ -108,7 +106,6 @@ public class SceneServiceIntegrationTests
 	///
 	/// <para>SurrealDB stores both ON the membership edge — focus as <c>isCurrent</c>, the
 	/// <c>+scene/as</c> persona as <c>showAs</c> — and its <c>SetMember</c> deleted and recreated that
-	/// edge, hard-setting both back to empty. ArangoDB updated in place and kept them, so the two
 	/// providers disagreed about what re-roling somebody costs, and production is the one that lost
 	/// data. Losing focus is not cosmetic: nearly every owner verb acts on <c>scenefocus(%#)</c> and
 	/// does nothing without one, and the capture hooks need it to record a pose at all.</para>
@@ -251,14 +248,79 @@ public class SceneServiceIntegrationTests
 	public async Task SetFocus_OnNonMember_AutoJoinsAndFocuses()
 	{
 		// Focusing a player who is NOT yet a member must auto-create a (role-less) member edge and stick,
-		// identically on all three providers. SurrealDB previously only UPDATEd an existing edge, so the
-		// focus silently no-opped for a non-member; ArangoDB/Memgraph created the edge. This pins the
-		// Arango behavior across the board (no explicit sceneaddmember first).
+		// identically on both supported providers. SurrealDB previously only UPDATEd an existing edge, so the
 		var id = await NewSceneAsync("NonMember focus");
 
 		await Eval($"scenesetfocus({God},{id})");
 
 		await Assert.That(await Eval($"scenefocus({God})")).IsEqualTo(id);
 		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,status,…)</c> moves the scene's <c>scene.idx</c> "status" row, which is what
+	/// <c>scenelist(active)</c>/<c>scenelist(finished)</c> read instead of scanning every scene. A stale
+	/// row would either hide a newly-active scene from the listing or leave a finished one behind in it.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_Status_UpdatesTheActiveListIndex()
+	{
+		var id = await NewSceneAsync("StatusIndex");
+
+		await Eval($"sceneset({id},status,active)");
+		await Assert.That(await Eval("scenelist(active)")).Contains(id);
+
+		await Eval($"sceneset({id},status,finished)");
+		await Assert.That(await Eval("scenelist(active)")).DoesNotContain(id);
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,room,…)</c> repoints the scene's <c>scene.idx</c> "room" row, which is what
+	/// <c>scenewhere()</c> (softcode: <c>scenewhere</c>) reads. A stale row would leave the scene
+	/// findable from the room it just left, or unfindable from the room it just entered.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_Room_UpdatesTheActiveSceneInRoomIndex()
+	{
+		// #3 (Ancestor Room), not #0: other classes in this session drive `+scene/create` as players
+		// standing in Room Zero, so #0 accumulates other people's active scenes and the "no scene here
+		// any more" assertion below would read one of those instead. Nothing else puts a scene in #3.
+		const string oldRoom = "#3";
+		var newRoom = God;
+		var id = await Eval($"scenecreate({oldRoom},{God},RoomIndex {Guid.NewGuid():N})");
+		await Eval($"sceneset({id},public,1)");
+		await Eval($"sceneset({id},status,active)");
+
+		await Assert.That(await Eval($"scenewhere({oldRoom})")).IsEqualTo(id);
+
+		await Eval($"sceneset({id},room,{newRoom})");
+
+		await Assert.That(await Eval($"scenewhere({newRoom})")).IsEqualTo(id);
+		await Assert.That(await Eval($"scenewhere({oldRoom})")).StartsWith("#-1");
+	}
+
+	/// <summary>
+	/// <c>sceneset(&lt;id&gt;,scheduledfor,…)</c> adds or removes the scene's <c>scene.idx</c> "sched"
+	/// row on the null boundary, which is what <c>scenelist(scheduled,&lt;from&gt;,&lt;to&gt;)</c> windows.
+	/// A stale row would leave a cleared scene in every future window, or hide a freshly-scheduled one.
+	/// </summary>
+	[Test]
+	public async Task SetSceneMeta_ScheduledFor_UpdatesTheScheduledWindowIndex()
+	{
+		var id = await NewSceneAsync("ScheduledIndex");
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var insideFrom = now - 60_000;
+		var insideTo = now + 60_000;
+		var outsideFrom = now + 120_000;
+		var outsideTo = now + 180_000;
+
+		await Eval($"sceneset({id},scheduledfor,{now})");
+
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).Contains(id);
+		await Assert.That(await Eval($"scenelist(scheduled,{outsideFrom},{outsideTo})")).DoesNotContain(id);
+
+		await Eval($"sceneset({id},scheduledfor,)");
+
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).DoesNotContain(id);
 	}
 }

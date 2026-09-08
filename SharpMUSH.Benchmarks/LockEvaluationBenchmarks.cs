@@ -4,20 +4,20 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Benchmarks for the MUSH lock / boolean-expression subsystem.
-/// Separates <em>compile</em> (lex → parse → LINQ expression tree → delegate)
+/// Separates <em>compile</em> (lex → parse → composed delegate)
 /// from <em>evaluate</em> (call pre-compiled delegate) costs.
 /// </summary>
 [BenchmarkCategory("Lock/Boolean Expression")]
-public class LockEvaluationBenchmarks : BaseBenchmark
+public class LockEvaluationBenchmarks : LightningBaseBenchmark
 {
 	private IBooleanExpressionParser? _lockParser;
 	private AnySharpObject? _godPlayer;
 
-	private Func<AnySharpObject, AnySharpObject, bool>? _simpleLock;
-	private Func<AnySharpObject, AnySharpObject, bool>? _andLock;
-	private Func<AnySharpObject, AnySharpObject, bool>? _orLock;
-	private Func<AnySharpObject, AnySharpObject, bool>? _nestedLock;
-	private Func<AnySharpObject, AnySharpObject, bool>? _complexLock;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _simpleLock;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _andLock;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _orLock;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _nestedLock;
+	private Func<AnySharpObject, AnySharpObject, ValueTask<bool>>? _complexLock;
 
 	public override async ValueTask Setup()
 	{
@@ -34,42 +34,42 @@ public class LockEvaluationBenchmarks : BaseBenchmark
 	}
 
 	[Benchmark(Description = "Compile: #1 (trivial object match)")]
-	public Func<AnySharpObject, AnySharpObject, bool> CompileSimple() =>
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileSimple() =>
 		_lockParser!.Compile("#1");
 
 	[Benchmark(Description = "Compile: #1&#1&#1 (3-way AND)")]
-	public Func<AnySharpObject, AnySharpObject, bool> CompileAndLock() =>
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileAndLock() =>
 		_lockParser!.Compile("#1&#1&#1");
 
 	[Benchmark(Description = "Compile: #1|#2 (OR)")]
-	public Func<AnySharpObject, AnySharpObject, bool> CompileOrLock() =>
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileOrLock() =>
 		_lockParser!.Compile("#1|#2");
 
 	[Benchmark(Description = "Compile: (A|B)&!B (nested NOT)")]
-	public Func<AnySharpObject, AnySharpObject, bool> CompileNestedLock() =>
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileNestedLock() =>
 		_lockParser!.Compile("(#1|#2)&!(#2)");
 
 	[Benchmark(Description = "Compile: 8-term complex lock")]
-	public Func<AnySharpObject, AnySharpObject, bool> CompileComplexLock() =>
+	public Func<AnySharpObject, AnySharpObject, ValueTask<bool>> CompileComplexLock() =>
 		_lockParser!.Compile("(#1|#2)&!(#3|#4)&(#1|#1)&!(#2|#2)");
 
 	[Benchmark(Description = "Evaluate: simple #1 lock")]
-	public bool EvaluateSimple() =>
+	public ValueTask<bool> EvaluateSimple() =>
 		_simpleLock!(_godPlayer!, _godPlayer!);
 
 	[Benchmark(Description = "Evaluate: AND lock (#1&#1&#1)")]
-	public bool EvaluateAndLock() =>
+	public ValueTask<bool> EvaluateAndLock() =>
 		_andLock!(_godPlayer!, _godPlayer!);
 
 	[Benchmark(Description = "Evaluate: OR lock (#1|#2)")]
-	public bool EvaluateOrLock() =>
+	public ValueTask<bool> EvaluateOrLock() =>
 		_orLock!(_godPlayer!, _godPlayer!);
 
 	[Benchmark(Description = "Evaluate: nested lock (A|B)&!B")]
-	public bool EvaluateNestedLock() =>
+	public ValueTask<bool> EvaluateNestedLock() =>
 		_nestedLock!(_godPlayer!, _godPlayer!);
 
 	[Benchmark(Description = "Evaluate: complex 8-term lock")]
-	public bool EvaluateComplexLock() =>
+	public ValueTask<bool> EvaluateComplexLock() =>
 		_complexLock!(_godPlayer!, _godPlayer!);
 }
