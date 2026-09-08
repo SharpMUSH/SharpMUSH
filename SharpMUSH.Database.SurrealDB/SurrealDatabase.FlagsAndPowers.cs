@@ -22,15 +22,40 @@ public partial class SurrealDatabase
 {
 	#region Flags and Powers
 
+	/// <summary>
+	/// A flag by name or by any of its aliases, matched case-insensitively — the same contract the
+	/// Lightning provider has always had, where the key is upper-cased on the way in and a miss falls
+	/// back to scanning aliases.
+	/// <para>
+	/// This asked for an exact <c>name = $name</c>, which meant only a caller that already spelled the
+	/// flag exactly as the seed stored it found anything: <c>@set obj=no_command</c> works because the
+	/// command upper-cases first, but every caller passing a configured or user-typed name got null,
+	/// and no alias resolved here at all. It is the sort of divergence that stays invisible until two
+	/// providers are asked the same question.
+	/// </para>
+	/// </summary>
 	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var parameters = new Dictionary<string, object?> { ["name"] = name };
+		var parameters = new Dictionary<string, object?> { ["name"] = name.ToUpperInvariant() };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object_flag WHERE name = $name",
+			"SELECT * FROM object_flag WHERE string::uppercase(name) = $name",
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<FlagRecord>>(0)!;
-		return results.Count > 0 ? MapRecordToFlag(results[0]) : null;
+		if (results.Count > 0)
+		{
+			return MapRecordToFlag(results[0]);
+		}
+
+		// Aliases are scanned rather than queried, as Lightning scans them: the flag table is a few
+		// dozen rows, and matching inside an array case-insensitively is not worth a query that has to
+		// be right across SurrealDB versions.
+		var all = await ExecuteAsync("SELECT * FROM object_flag", cancellationToken);
+		return all.GetValue<List<FlagRecord>>(0)!
+			.Where(record => record.aliases is not null)
+			.Select(MapRecordToFlag)
+			.FirstOrDefault(flag => flag.Aliases?.Any(
+				alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)) == true);
 	}
 
 	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)

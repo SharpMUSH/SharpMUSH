@@ -1539,12 +1539,26 @@ public partial class Commands
 					}
 				}
 
-				await foreach (var flag in obj.Object().Flags.Value)
+				// Synchronised to the source, not unioned with it. The clone is created through the same
+				// path as any other object and therefore arrives carrying the configured creation
+				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
+				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
+				// The attribute-flag sync above works the same way, for the same reason.
+				var sourceObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(obj.Object().Flags.Value);
+				var copyable = sourceObjectFlags
+					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
+					.Select(flag => flag.Name)
+					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+				var clonedObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(clonedObj.Object().Flags.Value);
+				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
 				{
-					if (preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
-					{
-						await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flag.Name, false);
-					}
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
+				}
+
+				foreach (var flagName in copyable)
+				{
+					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
 				}
 
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), executor, cloneDbRef.Number);

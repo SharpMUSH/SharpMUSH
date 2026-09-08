@@ -974,4 +974,30 @@ public class FlagAndPowerCommandTests
 				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// The <b>store's</b> own contract, not the query handler's. GetObjectFlagQueryHandler falls back
+	/// to a case-insensitive scan over every flag, so a caller reaching the flag through Mediator never
+	/// saw that the two providers disagreed underneath: Lightning upper-cased the key and scanned
+	/// aliases on a miss, while SurrealDB compared the name exactly and looked at no aliases at all.
+	/// Callers that hold the store directly — the creation defaults do — got null from one provider and
+	/// a flag from the other.
+	/// </summary>
+	[Test]
+	[Arguments("no_command", "NO_COMMAND")]
+	[Arguments("NO_COMMAND", "NO_COMMAND")]
+	[Arguments("No_Command", "NO_COMMAND")]
+	[Arguments("rgb", "TRUECOLOR")]
+	[Arguments("24BIT", "TRUECOLOR")]
+	[Arguments("color256", "XTERM256")]
+	public async Task FlagStore_ResolvesNameAndAliasInAnyCase(string asked, string expected)
+	{
+		var store = WebAppFactoryArg.Services.GetRequiredService<IFlagAndPowerStore>();
+
+		var flag = await store.GetObjectFlagAsync(asked);
+
+		await Assert.That(flag).IsNotNull()
+			.Because($"the store must resolve '{asked}' on every provider, not only where the name happens to match");
+		await Assert.That(flag!.Name).IsEqualTo(expected);
+	}
 }
