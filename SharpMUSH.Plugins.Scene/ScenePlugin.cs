@@ -93,10 +93,12 @@ public sealed class ScenePlugin
 		"DEFINE TABLE IF NOT EXISTS scene_pose SCHEMALESS",
 		"DEFINE TABLE IF NOT EXISTS scene_pose_edit SCHEMALESS",
 		"DEFINE TABLE IF NOT EXISTS scene_plot SCHEMALESS",
-		// 1-based scene/pose id counters seeded at 0 (runtime UPDATE increments atomically). Phase 9 moved
-		// this seed out of the core SurrealDB migration into the plugin alongside the scene schema.
-		"UPSERT counter:scene_id SET seq = seq ?? 0",
-		"UPSERT counter:pose_id SET seq = seq ?? 0",
+		// Older versions reset these counters on every boot. Repair them from stored numeric IDs,
+		// without lowering a counter whose higher IDs have since been deleted.
+		"UPSERT counter:scene_id SET seq = math::max(array::concat([seq ?? 0, 0], " +
+		"(SELECT VALUE <int> meta::id(id) FROM scene WHERE string::matches(<string> meta::id(id), '^[0-9]+$'))))",
+		"UPSERT counter:pose_id SET seq = math::max(array::concat([seq ?? 0, 0], " +
+		"(SELECT VALUE <int> meta::id(id) FROM scene_pose WHERE string::matches(<string> meta::id(id), '^[0-9]+$'))))",
 		"DEFINE INDEX IF NOT EXISTS scene_status ON scene FIELDS status",
 		"DEFINE INDEX IF NOT EXISTS scene_scheduledfor ON scene FIELDS scheduledFor",
 		"DEFINE INDEX IF NOT EXISTS scene_public ON scene FIELDS isPublic",
@@ -146,13 +148,14 @@ public sealed class ScenePlugin
 		"""
 		BEGIN TRANSACTION;
 		IF !record::exists(migration:scene_member_ids_v1) {
+			LET $multiple_focus = SELECT in, count() AS total FROM scene_member WHERE isCurrent = true GROUP BY in;
 			LET $groups = SELECT in, out FROM scene_member GROUP BY in, out;
 			FOR $pair IN $groups {
 				LET $members = SELECT * FROM scene_member
 					WHERE in = $pair.in AND out = $pair.out ORDER BY grantedAt, id;
 				LET $keep = $members[0];
 				FOR $member IN $members {
-					IF array::len($members) > 1 {
+					IF array::len($members) > 1 OR $multiple_focus[WHERE in = $pair.in][0].total > 1 {
 						CREATE scene_member_duplicate_backup CONTENT { original: $member };
 					};
 					DELETE $member.id;
@@ -165,6 +168,14 @@ public sealed class ScenePlugin
 					isCurrent: array::len($members[WHERE isCurrent = true]) > 0,
 					memberName: $members[WHERE memberName != NONE AND memberName != ''][0].memberName ?? '',
 					grantedAt: $keep.grantedAt
+				};
+			};
+			LET $players = SELECT in FROM scene_member WHERE isCurrent = true GROUP BY in;
+			FOR $player IN $players {
+				LET $focused = SELECT id, grantedAt FROM scene_member
+					WHERE in = $player.in AND isCurrent = true ORDER BY grantedAt, id;
+				FOR $edge IN $focused {
+					IF $edge.id != $focused[0].id { UPDATE $edge.id SET isCurrent = false; };
 				};
 			};
 			CREATE migration:scene_member_ids_v1 SET appliedAt = time::now();

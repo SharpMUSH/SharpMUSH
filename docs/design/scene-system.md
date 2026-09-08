@@ -109,14 +109,17 @@ concurrent insert stress test exposed duplicates with that approach on this engi
 
 On first startup after upgrading, `migration:scene_member_ids_v1` converts legacy
 random edge IDs in a transaction before the plugin accepts writes. Duplicate groups
-keep the earliest grant time, the earliest nonempty role/persona/name (ties by edge
-ID), and any active focus. Every original row from a duplicate group is retained
+keep the earliest grant time and earliest nonempty role/persona/name (ties by edge
+ID). Active focus is retained, then reduced to one scene per player by earliest
+grant time and edge ID when legacy races left multiple focused scenes. Every original row from a duplicate or conflicting-focus group is retained
 under `scene_member_duplicate_backup.original`, including its original ID and
-conflicting values. Singleton memberships are converted without a backup copy.
+conflicting values. Singleton memberships without conflicting focus are converted without a backup copy.
 The migration marker commits with the conversion; subsequent startups skip it.
 The scene plugin opts into `RequireSuccessfulSurrealMigrations`, so its migration
 errors abort startup; legacy plugins retain log-and-continue behavior. Take a normal database backup before upgrading;
 the conversion runs at startup and its cost scales with the existing membership table.
+Scene/pose counters are also raised to at least the highest stored numeric ID on
+startup, repairing counters reset by older versions without lowering higher values.
 
 ```mermaid
 graph LR

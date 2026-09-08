@@ -227,4 +227,40 @@ public class SurrealSceneMembershipTests
 		await Assert.That((await client.RawQuery("CREATE my_thing:test")).HasErrors).IsFalse();
 	}
 
+	[Test]
+	public async Task Migration_RepairsCountersBelowExistingIds()
+	{
+		await using var world = await CreateWorld();
+		await world.Query("CREATE scene:⟨42⟩; CREATE scene_pose:⟨73⟩; CREATE scene:custom; CREATE scene_pose:custom; UPDATE counter:scene_id, counter:pose_id SET seq = 0");
+		await world.Migrate();
+		var scene = await world.Storage.CreateSceneAsync("#1", "#1");
+		await Assert.That(scene.Id).IsEqualTo("43");
+		await world.Query("IF (SELECT VALUE seq FROM counter:pose_id)[0] != 73 { THROW 'Stale pose counter'; }");
+		await world.Query("UPDATE counter:scene_id, counter:pose_id SET seq = 100");
+		await world.Migrate();
+		await world.Query("IF (SELECT VALUE seq FROM counter:scene_id)[0] != 100 OR (SELECT VALUE seq FROM counter:pose_id)[0] != 100 { THROW 'Counter lowered'; }");
+	}
+
+	[Test]
+	public async Task Migration_ConsolidatesFocusAcrossScenesAndArchivesOriginals()
+	{
+		await using var world = await CreateWorld();
+		await world.Storage.CreateSceneAsync("#1", "#1");
+		await world.Query("""
+			DELETE migration:scene_member_ids_v1;
+			RELATE object:1->scene_member:older->scene:⟨1⟩ SET
+				role = 'owner', showAs = 'One', isCurrent = true, grantedAt = 10, memberName = 'Player';
+			RELATE object:1->scene_member:newer->scene:⟨2⟩ SET
+				role = 'guest', showAs = 'Two', isCurrent = true, grantedAt = 20, memberName = 'Player';
+			""");
+		await world.Migrate();
+		await world.Migrate();
+		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
+		var other = (await world.Storage.GetMemberAsync("2", "#1")).AsT0;
+		await Assert.That(other.IsCurrent).IsFalse();
+		await Assert.That(other.ShowAs).IsEqualTo("Two");
+		await Assert.That(other.Role).IsEqualTo("guest");
+		await world.Query("IF array::len((SELECT * FROM scene_member_duplicate_backup WHERE original.isCurrent = true)) != 2 { THROW 'Missing original focus data'; }");
+	}
+
 }
