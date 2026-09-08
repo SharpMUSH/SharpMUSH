@@ -15,9 +15,9 @@ The millisecond representation leaked into the softcode surface. `csecs()` and
 decay timer and `timestring()` built on it produces nonsense. `isdaylight()` reads a
 Penn-seconds argument through `FromUnixTimeMilliseconds`, so it answers for January
 1970 whatever you ask it. `uptime()` returns seconds for its default and milliseconds
-for every sub-key. And the PennMUSH importer reads Penn's `created` field, in seconds,
-straight into the millisecond field, so every imported object is dated to January 1970
-and carries a permanently wrong objid.
+for every sub-key. And `idle()` returns `TimeSpan.TotalSeconds`, a fractional number,
+where PennMUSH returns a whole one — disagreeing with its own `idlesecs()` alias, which
+truncates.
 
 Milliseconds are worth keeping. The problem is that they were exposed by changing what
 existing names mean, rather than by adding a way to ask for them.
@@ -130,9 +130,15 @@ use `objid()`. Softcode ported from a Penn game that holds hardcoded `#N:<second
 strings will not resolve those after import, even though the objects themselves import
 correctly.
 
-`PennMUSHDatabaseParser` multiplies Penn's `created` and `modified` fields by 1000 on
-import. This is a data-corruption fix, not only a compatibility one: today those
-seconds are stored raw into the millisecond field.
+`PennMUSHDatabaseParser` reads Penn's `created` and `modified` fields correctly, but
+`PennMUSHDatabaseConverter` never carries them across — an imported object is created
+with a fresh timestamp, so **every objid changes on import** and any softcode holding
+one stops resolving. Preserving them requires an explicit creation time on
+`IObjectStore`'s four create methods and on both database providers, which is a
+cross-cutting change with its own review surface; it is tracked separately rather than
+folded in here. What this change does is document the unit on `PennMUSHObject` —
+seconds, as PennMUSH writes it — so the eventual carry-over scales by 1000 rather than
+storing seconds into a millisecond field.
 
 ## Shared mechanism
 
@@ -141,8 +147,12 @@ than in ten `switch` statements:
 
 - `TimePrecision.TryParse(string?, out TimePrecision)` — the token table, including
   the omitted-argument case.
-- `FormatInstant(long unixMilliseconds, TimePrecision)` — an epoch value out.
-- `FormatDuration(long milliseconds, TimePrecision)` — a duration value out.
+- `Format(long milliseconds, TimePrecision)` — a stored millisecond value out, as an
+  epoch value or a duration.
+- `FormatSecondsField(long milliseconds, TimePrecision)` — the seconds field of a
+  rendered duration.
+- `ToWholeSeconds(long milliseconds)` — floor, matching
+  `DateTimeOffset.ToUnixTimeSeconds` for pre-epoch instants.
 - `TryParseSeconds(string, out long milliseconds)` — the input side. Invariant-culture
   decimal seconds in, milliseconds out. Every consumer's existing
   `long.TryParse(secsStr, ...)` is replaced by a call to this, which is what makes the
@@ -169,6 +179,8 @@ Each is inside a file this work already touches.
   `warnings` when unset, where SharpMUSH returns the current time.
 - `starttime()` and `restarttime()` return `DateTimeOffset.ToString()`; PennMUSH
   returns `time()` format, `ddd MMM dd HH:mm:ss yyyy`.
+- `idle()` returns `TimeSpan.TotalSeconds`, so it renders a fractional second where
+  PennMUSH renders a whole one, and disagrees with its own `idlesecs()` alias.
 - Culture-sensitive `double.TryParse` and `long.TryParse` throughout
   `TimeFunctions.cs`.
 
@@ -185,9 +197,7 @@ text.
 equals that object's stored milliseconds divided by 1000; every rejected token yields
 `#-1 INVALID PRECISION`; `f` output feeds back through the consumers and round-trips.
 
-**Regression.** One test per bug above. The importer fix gets a test asserting that an
-imported Penn object's `csecs()` equals the `created` value in the source database,
-which is the property the bug destroys.
+**Regression.** One test per bug above.
 
 **Culture.** A test pinned to a comma-decimal culture asserting `stringsecs(1.5s)` is
 not 15.
