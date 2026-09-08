@@ -80,42 +80,47 @@ public sealed class ScenePlugin
 	public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
 		endpoints.MapHub<SceneHub>("/hubs/scene");
 
+	// Deterministic membership writes must never run beside unconverted legacy edges.
+	public bool RequireSuccessfulSurrealMigrations => true;
+
 	/// <summary>
 	/// SurrealDB scene-graph schema (tables + RELATE-edge tables + traversal indexes), moved out of
 	/// <c>SurrealDatabase.Migration.cs</c>. The host runs each statement after its built-in batch.
 	/// </summary>
 	public IEnumerable<string> SurrealStatements =>
 	[
-		"DEFINE TABLE scene SCHEMALESS",
-		"DEFINE TABLE scene_pose SCHEMALESS",
-		"DEFINE TABLE scene_pose_edit SCHEMALESS",
-		"DEFINE TABLE scene_plot SCHEMALESS",
-		// 1-based scene/pose id counters seeded at 0 (runtime UPDATE increments atomically). Phase 9 moved
-		// this seed out of the core SurrealDB migration into the plugin alongside the scene schema.
-		"UPSERT counter:scene_id SET seq = 0",
-		"UPSERT counter:pose_id SET seq = 0",
+		"DEFINE TABLE IF NOT EXISTS scene SCHEMALESS",
+		"DEFINE TABLE IF NOT EXISTS scene_pose SCHEMALESS",
+		"DEFINE TABLE IF NOT EXISTS scene_pose_edit SCHEMALESS",
+		"DEFINE TABLE IF NOT EXISTS scene_plot SCHEMALESS",
+		// Older versions reset these counters on every boot. Repair them from stored numeric IDs,
+		// without lowering a counter whose higher IDs have since been deleted.
+		"UPSERT counter:scene_id SET seq = math::max(array::concat([seq ?? 0, 0], " +
+		"(SELECT VALUE <int> meta::id(id) FROM scene WHERE string::matches(<string> meta::id(id), '^[0-9]+$'))))",
+		"UPSERT counter:pose_id SET seq = math::max(array::concat([seq ?? 0, 0], " +
+		"(SELECT VALUE <int> meta::id(id) FROM scene_pose WHERE string::matches(<string> meta::id(id), '^[0-9]+$'))))",
 		"DEFINE INDEX IF NOT EXISTS scene_status ON scene FIELDS status",
 		"DEFINE INDEX IF NOT EXISTS scene_scheduledfor ON scene FIELDS scheduledFor",
 		"DEFINE INDEX IF NOT EXISTS scene_public ON scene FIELDS isPublic",
 		"DEFINE INDEX IF NOT EXISTS scene_lastactivity ON scene FIELDS lastActivityAt",
-		"DEFINE TABLE scene_first_pose TYPE RELATION",
-		"DEFINE TABLE scene_last_pose TYPE RELATION",
-		"DEFINE TABLE scene_pose_next TYPE RELATION",
-		"DEFINE TABLE scene_pose_in_scene TYPE RELATION",
-		"DEFINE TABLE scene_first_edit TYPE RELATION",
-		"DEFINE TABLE scene_current_edit TYPE RELATION",
-		"DEFINE TABLE scene_next_edit TYPE RELATION",
-		"DEFINE TABLE scene_plot_includes TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_first_pose TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_last_pose TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_pose_next TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_pose_in_scene TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_first_edit TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_current_edit TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_next_edit TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_plot_includes TYPE RELATION",
 		// Object edges into the game-object graph (incarnation-safe; *Name snapshot kept on the vertex).
-		"DEFINE TABLE scene_in_room TYPE RELATION",
-		"DEFINE TABLE scene_owner TYPE RELATION",
-		"DEFINE TABLE scene_starter TYPE RELATION",
-		"DEFINE TABLE scene_pose_author TYPE RELATION",
-		"DEFINE TABLE scene_pose_origin TYPE RELATION",
-		"DEFINE TABLE scene_edit_editor TYPE RELATION",
-		"DEFINE TABLE scene_plot_owner TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_in_room TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_owner TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_starter TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_pose_author TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_pose_origin TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_edit_editor TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_plot_owner TYPE RELATION",
 		// The member edge (player -> scene) carries {role, showAs, isCurrent, grantedAt, memberName}.
-		"DEFINE TABLE scene_member TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_member TYPE RELATION",
 		"DEFINE INDEX IF NOT EXISTS scene_first_pose_in ON scene_first_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_last_pose_in ON scene_last_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_pose_next_in ON scene_pose_next FIELDS in",
@@ -136,7 +141,47 @@ public sealed class ScenePlugin
 		"DEFINE INDEX IF NOT EXISTS scene_edit_editor_in ON scene_edit_editor FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_plot_owner_in ON scene_plot_owner FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_member_in ON scene_member FIELDS in",
-		"DEFINE INDEX IF NOT EXISTS scene_member_out ON scene_member FIELDS out"
+		"DEFINE INDEX IF NOT EXISTS scene_member_out ON scene_member FIELDS out",
+		// Convert legacy random ids before any membership writes. Preserve conflicting duplicate
+		// rows in an ordinary backup table, and retain the earliest nonempty role/persona/name and
+		// any active focus. The marker and graph changes commit together, once per database.
+		"""
+		BEGIN TRANSACTION;
+		IF !record::exists(migration:scene_member_ids_v1) {
+			LET $multiple_focus = SELECT in, count() AS total FROM scene_member WHERE isCurrent = true GROUP BY in;
+			LET $groups = SELECT in, out FROM scene_member GROUP BY in, out;
+			FOR $pair IN $groups {
+				LET $members = SELECT * FROM scene_member
+					WHERE in = $pair.in AND out = $pair.out ORDER BY grantedAt, id;
+				LET $keep = $members[0];
+				FOR $member IN $members {
+					IF array::len($members) > 1 OR $multiple_focus[WHERE in = $pair.in][0].total > 1 {
+						CREATE scene_member_duplicate_backup CONTENT { original: $member };
+					};
+					DELETE $member.id;
+				};
+				INSERT RELATION INTO scene_member {
+					id: type::thing('scene_member', [$pair.in, $pair.out]),
+					in: $pair.in, out: $pair.out,
+					role: $members[WHERE role != NONE AND role != ''][0].role ?? '',
+					showAs: $members[WHERE showAs != NONE AND showAs != ''][0].showAs ?? '',
+					isCurrent: array::len($members[WHERE isCurrent = true]) > 0,
+					memberName: $members[WHERE memberName != NONE AND memberName != ''][0].memberName ?? '',
+					grantedAt: $keep.grantedAt
+				};
+			};
+			LET $players = SELECT in FROM scene_member WHERE isCurrent = true GROUP BY in;
+			FOR $player IN $players {
+				LET $focused = SELECT id, grantedAt FROM scene_member
+					WHERE in = $player.in AND isCurrent = true ORDER BY grantedAt, id;
+				FOR $edge IN $focused {
+					IF $edge.id != $focused[0].id { UPDATE $edge.id SET isCurrent = false; };
+				};
+			};
+			CREATE migration:scene_member_ids_v1 SET appliedAt = time::now();
+		};
+		COMMIT TRANSACTION;
+		"""
 	];
 
 	/// <summary>

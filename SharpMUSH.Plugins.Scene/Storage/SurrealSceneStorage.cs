@@ -5,6 +5,7 @@ using SceneModel = SharpMUSH.Plugins.Scene.Models.Scene;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;
+using SurrealDb.Net.Models.Response;
 using System.Text.Json;
 using OkNone = OneOf.Types.None;
 
@@ -668,35 +669,20 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
 
-		// At most one member edge per (player, scene). This used to DELETE then RELATE, which is why it
-		// is now an UPDATE-or-RELATE: this edge does not only carry the role. `isCurrent` IS the
-		// player's focus and `showAs` is their +scene/as persona, so recreating the edge silently reset
-		// disagreed about what re-roling somebody costs, and production is the one that lost the data.
-		// Losing focus is not cosmetic: nearly every owner verb acts on scenefocus(%#) and does nothing
-		// without one, and the capture hooks need it to record a pose at all.
-		var parameters = new Dictionary<string, object?>
-		{
-			["pk"] = playerKey.Value,
-			["sid"] = sceneKey.Split(':')[1],
-			["role"] = role ?? "",
-			["now"] = now,
-			["name"] = memberName
-		};
-
-		var updated = await _accessor.ExecuteAsync(
-			"UPDATE scene_member SET role = $role, memberName = $name " +
-			"WHERE in = object:$pk AND out = scene:⟨$sid⟩ RETURN AFTER",
-			parameters);
-
-		// Nothing to update means this player is not in the cast yet; create the edge, and only then
-		// are the empty focus and persona correct — they are what a new member starts with.
-		if (updated.GetValue<List<SceneMemberEdgeRecord>>(0) is null or { Count: 0 })
-		{
-			await _accessor.ExecuteAsync(
-				"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
-				"role = $role, showAs = '', isCurrent = false, grantedAt = $now, memberName = $name",
-				parameters);
-		}
+		// A deterministic edge id makes the insert-or-update atomic. Only a new member receives
+		// default focus/persona values; changing a role preserves the existing participation state.
+		await ExecuteMembershipWriteAsync(
+			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, isCurrent, grantedAt, memberName) " +
+			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, $role, '', false, $now, $name) " +
+			"ON DUPLICATE KEY UPDATE role = $role, memberName = $name",
+			new Dictionary<string, object?>
+			{
+				["pk"] = playerKey.Value,
+				["sid"] = sceneKey.Split(':')[1],
+				["role"] = role ?? "",
+				["now"] = now,
+				["name"] = memberName
+			});
 
 		return await GetMemberAsync(sceneId, playerDbref);
 	}
@@ -770,47 +756,55 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (playerKey is null)
 			return new NotFound();
 
-		// Clear isCurrent on all of the player's member edges first.
-		await _accessor.ExecuteAsync(
-			"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value });
-
 		if (string.IsNullOrWhiteSpace(sceneId))
+		{
+			await ExecuteMembershipWriteAsync(
+				"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk",
+				new Dictionary<string, object?> { ["pk"] = playerKey.Value });
 			return new OkNone();
+		}
 
 		var sceneExisting = await GetSceneAsync(sceneId);
 		if (sceneExisting.IsT1)
 			return new NotFound();
 
-		var sceneKey = SceneKey(sceneId);
-		var sid = sceneKey.Split(':')[1];
-
-		// player who is not yet a member auto-creates a role-less member edge so the focus sticks (a bare
-		// UPDATE would no-op for a non-member, leaving the player with no current scene).
-		var member = await GetMemberAsync(sceneId, playerDbref);
-		if (member.IsT1)
-		{
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-			var memberName = await ResolveObjectNameAsync(playerDbref) ?? "";
-			await _accessor.ExecuteAsync(
-				"RELATE object:$pk->scene_member->scene:⟨$sid⟩ SET " +
-				"role = '', showAs = '', isCurrent = true, grantedAt = $now, memberName = $name",
-				new Dictionary<string, object?>
-				{
-					["pk"] = playerKey.Value,
-					["sid"] = sid,
-					["now"] = now,
-					["name"] = memberName
-				});
-		}
-		else
-		{
-			await _accessor.ExecuteAsync(
-				"UPDATE scene_member SET isCurrent = true WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-				new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sid });
-		}
+		// Clear the old focus and create/update the target in the same transaction. A simultaneous
+		// role grant cannot create another edge or lose its role, persona, or original grant time.
+		await ExecuteMembershipWriteAsync(
+			"BEGIN TRANSACTION; " +
+			"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk; " +
+			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, isCurrent, grantedAt, memberName) " +
+			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, '', '', true, $now, $name) " +
+			"ON DUPLICATE KEY UPDATE isCurrent = true, memberName = $name; " +
+			"COMMIT TRANSACTION;",
+			new Dictionary<string, object?>
+			{
+				["pk"] = playerKey.Value,
+				["sid"] = SceneKey(sceneId).Split(':')[1],
+				["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				["name"] = await ResolveObjectNameAsync(playerDbref) ?? ""
+			});
 
 		return new OkNone();
+	}
+
+	private async Task ExecuteMembershipWriteAsync(string query, IReadOnlyDictionary<string, object?> parameters)
+	{
+		for (var attempt = 0; ; attempt++)
+		{
+			var response = await _accessor.ExecuteAsync(query, parameters);
+			if (!response.HasErrors)
+				return;
+
+			var errors = string.Join("; ", response.Errors.Select(error =>
+				error is SurrealDbErrorResult concrete ? concrete.Details ?? concrete.Status : error.GetType().Name));
+			var conflict = errors.Contains("read or write conflict", StringComparison.OrdinalIgnoreCase)
+				|| errors.Contains("transaction can be retried", StringComparison.OrdinalIgnoreCase);
+			if (!conflict || attempt >= 8)
+				throw new InvalidOperationException($"Scene membership write failed: {errors}");
+
+			await Task.Delay(TimeSpan.FromMilliseconds((1 << attempt) + Random.Shared.Next(1, 10)));
+		}
 	}
 
 	public async Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)

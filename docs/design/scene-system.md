@@ -98,6 +98,29 @@ per-scene **persona** is `showAs` on that edge. There are therefore **no
 `SCENE`*` attributes** on rooms or players — focus/persona are edge properties,
 and a room's active scene is derived via `scenewhere()`.
 
+SurrealDB stores each membership at `scene_member:[object:<key>, scene:<id>]`.
+Both role grants and focus auto-membership use `INSERT RELATION ... ON DUPLICATE
+KEY UPDATE`; existing members keep their persona and original grant time. Focus
+changes clear the old focus and write the target in one transaction. Transaction
+conflicts are retried with a bounded backoff; other write errors propagate.
+This behavior is covered against the pinned embedded SurrealDB 2.3.6 engine
+(`SurrealDb.Embedded` 0.9.0). A unique edge index is deliberately avoided: the
+concurrent insert stress test exposed duplicates with that approach on this engine.
+
+On first startup after upgrading, `migration:scene_member_ids_v1` converts legacy
+random edge IDs in a transaction before the plugin accepts writes. Duplicate groups
+keep the earliest grant time and earliest nonempty role/persona/name (ties by edge
+ID). Active focus is retained, then reduced to one scene per player by earliest
+grant time and edge ID when legacy races left multiple focused scenes. Every original row from a duplicate or conflicting-focus group is retained
+under `scene_member_duplicate_backup.original`, including its original ID and
+conflicting values. Singleton memberships without conflicting focus are converted without a backup copy.
+The migration marker commits with the conversion; subsequent startups skip it.
+The scene plugin opts into `RequireSuccessfulSurrealMigrations`, so its migration
+errors abort startup; legacy plugins retain log-and-continue behavior. Take a normal database backup before upgrading;
+the conversion runs at startup and its cost scales with the existing membership table.
+Scene/pose counters are also raised to at least the highest stored numeric ID on
+startup, repairing counters reset by older versions without lowering higher values.
+
 ```mermaid
 graph LR
   PLAYER([node_players])

@@ -529,7 +529,7 @@ public partial class SurrealDatabase
 
 	/// <summary>
 	/// Run each plugin's SurrealQL migration statements (Phase 2a <see cref="IMigrationSource.SurrealStatements"/>)
-	/// after the built-in seed batch. Each statement is isolated so one failure does not abort the rest.
+	/// after the built-in seed batch. Required migrations abort startup; legacy sources keep log-and-continue behavior.
 	/// </summary>
 	private async Task RunPluginSurrealMigrations(CancellationToken ct)
 	{
@@ -539,9 +539,13 @@ public partial class SurrealDatabase
 			{
 				try
 				{
-					await ExecuteAsync(statement, ct);
+					var response = await ExecuteAsync(statement, ct);
+					if (response.HasErrors && source.RequireSuccessfulSurrealMigrations)
+						throw new InvalidOperationException(
+							$"Plugin SurrealQL migration failed ({source.GetType().FullName}): " +
+							string.Join("; ", response.Errors.Select(FormatError)));
 				}
-				catch (Exception ex)
+				catch (Exception ex) when (!source.RequireSuccessfulSurrealMigrations && ex is not OperationCanceledException)
 				{
 					logger.LogError(ex, "Plugin SurrealQL migration statement failed (SurrealDB); continuing.");
 				}
