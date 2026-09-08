@@ -3,7 +3,7 @@
 # Layout (see deploy/README.md):
 #   nats              — message bus (JetStream), the ONLY required backing service
 #   connectionserver  — telnet :4201 + websocket gateway
-#   sharpmush-server  — ASP.NET Core: REST + SignalR + Blazor portal, SurrealDB embedded (RocksDB on disk)
+#   sharpmush-server  — ASP.NET Core: REST + SignalR + Blazor portal, LMDB embedded (one directory on disk)
 #   backup            — restic sidecar: nightly encrypted snapshot of the game data to your bucket
 #   caddy             — OPTIONAL reverse proxy giving the web portal automatic HTTPS (Let's Encrypt)
 #
@@ -34,12 +34,20 @@ services:
   connectionserver:
     build:
       context: ../
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
-    image: sharpmush/sharpmush-connectionserver:latest
+      dockerfile: SharpMUSH.SocketServer/Dockerfile
+    image: sharpmush/sharpmush-socketserver:latest
     container_name: sharpmush-connectionserver
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    stop_grace_period: 60s
+    volumes:
+      - render-socket:/run/sharpmush
     environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
       - NATS_URL=nats://nats:4222
     depends_on:
+      renderer:
+        condition: service_healthy
       nats:
         condition: service_healthy
     ports:
@@ -50,17 +58,52 @@ services:
     cpus: 1.0
     restart: unless-stopped
 
+  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  renderer:
+    build:
+      context: ../
+      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+    image: sharpmush/sharpmush-connectionserver:latest
+    stop_grace_period: 60s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
+    volumes:
+      - render-socket:/run/sharpmush
+    network_mode: none
+    restart: unless-stopped
+
   sharpmush-server:
     build:
       context: ../
       dockerfile: Dockerfile
     image: sharpmush/sharpmush-server:latest
     container_name: sharpmush-server
+    stop_grace_period: 60s
     environment:
-      # --- Object database: SurrealDB embedded, file-backed RocksDB (no separate DB server) ---
-      - SHARPMUSH_DATABASE_PROVIDER=surrealdb
-      # Relative path resolves under the /app WORKDIR -> /app/data/surreal, which is the mounted volume.
-      - SHARPMUSH_SURREALDB_ENDPOINT=rocksdb://data/surreal
+      # --- Object database: LMDB embedded through Lightning.NET (no separate DB server) ---
+      - SHARPMUSH_DATABASE_PROVIDER=lightning
+      # Relative path resolves under the /app WORKDIR -> /app/data/lightning, on the mounted volume.
+      - SHARPMUSH_LIGHTNING_PATH=data/lightning
+      # Durability. `periodic` syncs to disk once a second instead of on every commit — the guarantee
+      # the RocksDB engine gave before — so a power loss costs at most the last second of writes and
+      # the file stays consistent. `full` syncs every commit. Read by the server from #889 on; an
+      # older image ignores it and runs `full`.
+      - SHARPMUSH_LIGHTNING_SYNC=periodic
+      # File-size ceiling for the LMDB map in bytes — NOT memory; the file is sparse. Default 64 GiB.
+      # Raise it before a world grows past it: the server refuses writes with MDB_MAP_FULL rather
+      # than corrupting anything.
+      # - SHARPMUSH_LIGHTNING_MAPSIZE=68719476736
+      # Hot backup: a consistent copy of the world, taken with LMDB's own copy routine while the game
+      # keeps running, into /app/data/backup. This is what the restic sidecar snapshots — it must never
+      # read the live world. Six-hourly, so the 03:30 run always finds a copy at most six hours old;
+      # @backup takes one on demand. Each copy is a whole world, so KEEP is what the disk can afford.
+      - SHARPMUSH_BACKUP_INTERVAL=6h
+      - SHARPMUSH_BACKUP_KEEP=2
+      # Set rather than left to default (<world>.backups) so the copies sit at a path the
+      # restic service names, well away from the live world it must not read.
+      - SHARPMUSH_BACKUP_PATH=data/backup
       # Wiki asset uploads (filesystem) land in the same persisted volume.
       - Wiki__AssetRoot=/app/data/wiki-assets
       # --- Messaging ---
@@ -111,8 +154,14 @@ services:
       - BACKUP_CRON=0 30 3 * * *
       - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:-}
       - RESTIC_PASSWORD=${RESTIC_PASSWORD:-}
-      - RESTIC_BACKUP_SOURCES=/data
-      - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush
+      # The hot copies the server writes, NOT the live world at /data/lightning. restic reads a file
+      # front to back while commits keep landing under it, and LMDB does not promise such a copy
+      # opens; /data/backup holds copies taken with LMDB's own copy routine, each one a complete
+      # environment. SHARPMUSH_BACKUP_INTERVAL on sharpmush-server keeps them fresh.
+      - RESTIC_BACKUP_SOURCES=/data/backup /data/wiki-assets
+      # A copy still being written is named .incoming-*; it is moved into place only when complete, so
+      # excluding it keeps a half-written world out of the snapshot even mid-copy.
+      - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush --exclude /data/backup/.incoming-*
       # Retention: keep a week of dailies + a month of weeklies, prune the rest.
       - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
       # Credentials for the storage backend. These are for Backblaze B2; swap for
@@ -155,7 +204,8 @@ services:
     restart: unless-stopped
 
 volumes:
-  app-data:      # SurrealDB RocksDB + wiki assets — the game. This is what gets backed up.
+  render-socket: # Private Unix socket shared only by socket owner and rendering worker
+  app-data:      # LMDB world (data/lightning), its hot copies (data/backup) and wiki assets — the game.
   nats-data:     # JetStream state (transient I/O, not the source of truth) — not backed up.
   caddy-data:    # Let's Encrypt certificates
   caddy-config:

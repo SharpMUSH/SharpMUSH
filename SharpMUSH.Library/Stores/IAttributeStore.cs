@@ -31,8 +31,6 @@ public interface IAttributeStore
 	/// skipped if its immediate parent was already skipped, which only works if the parent was
 	/// actually visited first.
 	/// <para>
-	/// Every provider satisfies this today, but not the same way: ArangoDB's implementation
-	/// sorts explicitly (<c>SORT v.LongName ASC</c>), Memgraph's Cypher traversal orders by
 	/// path depth, and SurrealDB's does neither - it satisfies the invariant only because its
 	/// traversal happens to be a manual preorder DFS (<c>SurrealDatabase.cs</c>,
 	/// <c>GetAllAttributesForIdAsync</c>: yield an attribute, then recurse into its children,

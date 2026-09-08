@@ -7,7 +7,7 @@
 ## Implementation Tasks
 
 ### Indexing
-- [ ] Set up ArangoSearch view (or SurrealDB FTS indexes) on wiki, characters, scenes, help
+- [ ] Set up the provider-neutral search projection for wiki, characters, scenes, and help
 - [ ] Configure text analyzer (stemming, lowercase, accent-fold)
 - [ ] Wiki: extract plain text on save → store in text_plain field
 - [ ] Profiles: extract searchable text (public fields only) on save
@@ -17,7 +17,7 @@
 
 ### Search Service
 - [ ] `ISearchService` interface (query, type filter, role, character_id)
-- [ ] AQL query builder with permission filtering (role + character bind params)
+- [ ] Provider query implementation with permission filtering (role + character parameters)
 - [ ] Result model: type, title, snippet (highlighted), url, relevance score
 - [ ] Grouping: results grouped by type with per-type count
 - [ ] Pagination within groups (default 10 per type on full page)

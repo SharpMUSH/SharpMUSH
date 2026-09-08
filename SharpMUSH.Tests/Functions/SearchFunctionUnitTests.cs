@@ -136,6 +136,57 @@ public class SearchFunctionUnitTests
 		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
+	// --- Visibility gate: PennMUSH's raw_search restricts a non-wizard searcher, searching anyone
+	// else's objects (including "all"), to objects they could @examine (src/wiz.c ~line 2498). Neither
+	// lsearch() nor @search enforced this before — a mortal could search another player's objects and
+	// see everything regardless of examine permission.
+
+	[Test]
+	public async Task Lsearch_MortalSearchingOtherPlayersObjects_OnlySeesExaminableOnes()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchVis");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+
+		var owner = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, $"{token}_Owner");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, $"{token}_Mortal");
+
+		var visibleThing = await CreateThingAsync($"{token}_Visible");
+		await CommandAsync($"@chown {visibleThing}={owner}");
+		await CommandAsync($"@set {visibleThing}=VISUAL");
+
+		var hiddenThing = await CreateThingAsync($"{token}_Hidden");
+		await CommandAsync($"@chown {hiddenThing}={owner}");
+
+		var mortalParser = WebAppFactoryArg.FunctionParserFor(mortal);
+		var result = (await mortalParser.FunctionParse(MarkupText.Plain($"lsearch(#{owner.Number},type,thing)")))?.Message!;
+		var dbrefs = ReturnedDbRefs(result.ToPlainText());
+
+		await Assert.That(dbrefs).Contains(visibleThing.Number);
+		await Assert.That(dbrefs).DoesNotContain(hiddenThing.Number);
+	}
+
+	[Test]
+	public async Task Lsearch_WizardSearchingOtherPlayersObjects_SeesEverything()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchVisWiz");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+		var owner = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, $"{token}_Owner");
+
+		var visibleThing = await CreateThingAsync($"{token}_Visible");
+		await CommandAsync($"@chown {visibleThing}={owner}");
+		await CommandAsync($"@set {visibleThing}=VISUAL");
+
+		var hiddenThing = await CreateThingAsync($"{token}_Hidden");
+		await CommandAsync($"@chown {hiddenThing}={owner}");
+
+		// Parser.FunctionParse runs as the fixture executor (God, a wizard) — no visibility gate applies.
+		var result = await SearchAsync($"lsearch(#{owner.Number},type,thing)");
+		var dbrefs = ReturnedDbRefs(result);
+
+		await Assert.That(dbrefs).Contains(visibleThing.Number);
+		await Assert.That(dbrefs).Contains(hiddenThing.Number);
+	}
+
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
 		var result = await WebAppFactoryArg.CommandParser.CommandParse(
@@ -191,7 +242,6 @@ public class SearchFunctionUnitTests
 	public async Task Scan_ReturnsVisibleObjects()
 	{
 		// Use a short unique identifier to avoid cross-test interference.
-		// We do NOT use @create here because that increments Memgraph's global counter node,
 		// which all parallel @create calls compete for and causes transient transaction conflicts.
 		// Instead, set a $-command attribute directly on room #0 (the master room).
 		// scan() with the default "all" switch always checks room #0 via the globals scope,

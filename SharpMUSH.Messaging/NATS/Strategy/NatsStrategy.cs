@@ -2,7 +2,6 @@ namespace SharpMUSH.Messaging.NATS.Strategy;
 
 /// <summary>
 /// Base strategy for obtaining a NATS server URL at startup.
-/// Mirrors <c>ArangoStartupStrategy</c> — concrete implementations choose whether
 /// to connect to an already-running server or to spin up a Testcontainer.
 /// </summary>
 public abstract class NatsStrategy : IAsyncDisposable

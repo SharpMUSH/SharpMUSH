@@ -8,6 +8,23 @@ SharpMUSH is a modern .NET 10 MUSH server (text-based multiplayer role-playing) 
 
 ## Build & Test Commands
 
+`global.json` pins the SDK to the **10.0.4xx** feature band with `allowPrerelease: false`, so a
+10.0.3xx SDK or a .NET 11 preview will not satisfy it — `dotnet` fails with "A compatible .NET SDK
+was not found" before any project is read. Install 10.0.400 or newer within that band:
+
+```bash
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.400
+```
+
+The pin is not cosmetic: the two source-generator projects reference `Microsoft.CodeAnalysis.CSharp`
+5.9.0, which is the Roslyn that ships inside 10.0.400. An older SDK carries an older compiler and
+rejects the generators with CS9057.
+
+`global.json` is the only place the SDK version is written down. Every workflow resolves it with
+`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping the band is a one-line change
+here; the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:10.0` tag and fail loudly
+against `global.json` if that tag ever lags the pin.
+
 ```bash
 # Build everything
 dotnet build
@@ -40,17 +57,33 @@ The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` f
 
 ## Running the Server
 
-The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. Infrastructure (ArangoDB + NATS) is available via Docker:
+The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. The compose stack runs both on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
 
 ```bash
 docker compose up -d
 ```
 
+Both supported providers are embedded and need no Docker for the database itself — `lightning`
+opens an LMDB directory in-process. NATS is still wanted for the connection server.
+
 Key environment variables:
-- `SHARPMUSH_DATABASE_PROVIDER` — `arangodb` (default), `memgraph`, or `surrealdb`
-- `ARANGO_CONNECTION_STRING` — ArangoDB connection string
-- `MEMGRAPH_URI` — Bolt URI for Memgraph (default: `bolt://localhost:7687`)
+- `SHARPMUSH_DATABASE_PROVIDER` — `lightning` (default) or `surrealdb`
+- `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
+- `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
+- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`; required under `surrealdb` on a `mem://` endpoint, since it has no world directory to derive it from)
+- `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
+- `SHARPMUSH_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
+- `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)
+- `SHARPMUSH_LIGHTNING_SYNC` — how hard each LMDB commit pushes on the disk: `full` (default; every commit fsynced, nothing lost on power failure), `nometasync` (one fsync per commit instead of two; power failure can lose the last transaction), or `periodic` (no sync on commit; a timer forces one every `SHARPMUSH_LIGHTNING_FLUSH_MS`, default 1000, and power failure can lose at most that window). The file stays consistent in every mode.
 - `NATS_URL` — NATS server URL (falls back to embedded Testcontainer in dev)
+
+Promoting a staged import under `lightning` renames the previous world to `<path>.previous`; it is not cleaned up automatically, so delete it once the promotion is verified.
+
+Under `lightning`, `@backup` (wizard-only) copies the live world into a timestamped directory using LMDB's own copy routine, so an external snapshot tool has a consistent one to read without the server stopping. `@backup/list` shows what is on disk. Nothing else copies a live `data.mdb` — see `deploy/README.md`.
+
+`IWorldBackupService` is the provider-agnostic seam. `WorldBackupWriter` (in `SharpMUSH.Library`) owns everything identical across providers — writing the copy into `.incoming-<id>`, moving it into place only when complete, the `latest` symlink, retention — and each provider supplies only the part that fills a directory: `lightning` an `mdb_env_copy`, and `surrealdb` a `world.surql` export.
+
+Only the Lightning copy is point-in-time by construction; the other two are logical dumps taken from a running game. Don't describe them as equivalent.
 
 First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
 
@@ -78,9 +111,8 @@ Browser (Blazor WASM)
 | `SharpMUSH.ConnectionServer` | Raw telnet/WebSocket gateway; bridges to Server via NATS |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
-| `SharpMUSH.Database.ArangoDB` | ArangoDB provider (primary/default) |
-| `SharpMUSH.Database.Memgraph` | Memgraph provider (Neo4j Bolt protocol) |
-| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded in-memory provider |
+| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
+| `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |
 | `SharpMUSH.Tests` | TUnit tests (unit + integration with real DB via Testcontainers) |
@@ -200,9 +232,10 @@ Two things to know before changing this:
   `dotnet_diagnostic.IDE0055.severity = error` reports nothing for indentation on this SDK —
   verified against a file with 93 space-indented lines, which built clean. It looks like a
   gate and enforces nothing. That is why the check shells out to `dotnet format` instead.
-- **Use `--folder`, not the solution.** `dotnet format` cannot load `SharpMUSH.sln` on the
-  .NET 11 SDK; the MSBuild build host crashes. Whitespace rules are syntactic, so folder mode
-  loses nothing.
+- **Use `--folder`, not the solution.** Whitespace rules are syntactic, so folder mode loses
+  nothing, and it does not load MSBuild projects at all: ~2s for the whole repo against ~14s
+  for `SharpMUSH.sln`. Solution mode is also unsafe as a gate — it exits 0 even when MSBuild
+  fails to load a project, silently dropping that project's files from the check.
 
 `csharp_new_line_before_members_in_object_initializers = false` (`.editorconfig:13`) is **not**
 honoured by folder-mode formatting — it is a semantic option. Compact anonymous-object
@@ -222,7 +255,7 @@ fails the gate.
 
 ## Infrastructure Notes
 
-- **Logging**: Serilog; ArangoDB sink enabled in production for persistent logs
+- **Logging**: Serilog, configured through `appsettings.json`
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
 - **Rate limiting**: Fixed-window limiter on `"public-api"` (30 req/window); sliding-window on `"auth"` (10 req/window)

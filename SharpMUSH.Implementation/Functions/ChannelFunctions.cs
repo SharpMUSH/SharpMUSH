@@ -233,7 +233,6 @@ public partial class Functions
 		var privWho = await executor.IsPriv() || await executor.HasPower("Who");
 
 		// Materialised before the loop: the per-channel checks below open their own streams, and
-		// Core.Arango faults when one stream is enumerated inside another.
 		var channelArray = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 
 		var filteredChannels = new List<string>();

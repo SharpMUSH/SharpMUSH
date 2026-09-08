@@ -5,6 +5,22 @@ namespace SharpMUSH.Tests.Client.Services;
 public class TerminalFrameRendererTests
 {
 	[Test]
+	public async Task MarkupSendLinkRendersCommandForTerminalClickHandler()
+	{
+		var link = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("[newbie]");
+		var envelope = System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "markup",
+			data = MarkupString.MarkupTextSerializer.Serialize(link)
+		});
+		var frame = TerminalFrameRenderer.Parse(envelope);
+
+		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
+		await Assert.That(frame.Html).Contains("xch_cmd=\"help newbie\"");
+		await Assert.That(frame.Plain).IsEqualTo("newbie");
+	}
+
+	[Test]
 	public async Task OobEnvelopeSurfacesPackageAndData()
 	{
 		var frame = TerminalFrameRenderer.Parse("{\"type\":\"oob\",\"package\":\"room.contents\",\"data\":{\"who\":[\"#5\"]}}");

@@ -26,8 +26,6 @@
 	</ItemGroup>
 	
   <ItemGroup>
-		<PackageReference Include="Core.Arango" Version="3.12.3" />
-		<PackageReference Include="Core.Arango.Serilog" Version="3.12.3" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageReference Include="Scriban" Version="7.2.5" />
     <PackageReference Include="Mediator.SourceGenerator" Version="3.0.2">
@@ -48,28 +46,26 @@
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-		<PackageReference Include="TelnetNegotiationCore" Version="2.8.1" />
+		<PackageReference Include="TelnetNegotiationCore" Version="$(TelnetNegotiationCoreVersion)" />
 		<!-- FSharp.Core is a runtime transitive (via TelnetNegotiationCore) the engine never JITs, so it is
 		     normally trimmed from output. The McMaster plugin loader eagerly walks the shared SharpMUSH.Library
 		     reference closure and resolves each referenced assembly against the host's default load context,
 		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
 		<PackageReference Include="FSharp.Core" Version="10.1.400" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
-		<PackageReference Include="Testcontainers.ArangoDb" Version="4.14.0" />
 
 	</ItemGroup>
 	
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.ArangoDB\SharpMUSH.Database.ArangoDB.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database\SharpMUSH.Database.csproj" />
     <ProjectReference Include="..\SharpMUSH.Implementation\SharpMUSH.Implementation.csproj" />
     <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
-    <ProjectReference Include="..\SharpMUSH.Database.Memgraph\SharpMUSH.Database.Memgraph.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
     <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->

@@ -261,14 +261,58 @@ public static class Align
 			MarkupText.Plain("left      |  center  |     right")
 		);
 
-		// Paragraph justification (same as right for this implementation)
+		// Paragraph justification against the two things it is not. Every line is stretched to the
+		// column except the one that ends the paragraph, which keeps its natural spacing — so it
+		// differs from full justification on the last line, and from right justification on all of
+		// them. A single-line case cannot tell these apart, because one line is its own last.
+		yield return () => new(
+			"=20",
+			[MarkupText.Plain("alpha beta gamma delta epsilon zeta")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("alpha   beta   gamma\ndelta epsilon zeta  ")
+		);
+
+		yield return () => new(
+			"_20",
+			[MarkupText.Plain("alpha beta gamma delta epsilon zeta")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("alpha   beta   gamma\ndelta  epsilon  zeta")
+		);
+
+		yield return () => new(
+			">20",
+			[MarkupText.Plain("alpha beta gamma delta epsilon zeta")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("    alpha beta gamma\n  delta epsilon zeta")
+		);
+
+		// Paragraph justification across a hard break: each paragraph's own last line is the one
+		// left unstretched, not merely the last line of the column.
+		yield return () => new(
+			"=20",
+			[MarkupText.Plain("alpha beta gamma delta\nsecond para here now")],
+			MarkupText.Space,
+			MarkupText.Space,
+			MarkupText.Plain("\n"),
+			MarkupText.Plain("alpha   beta   gamma\ndelta               \nsecond para here now")
+		);
+
+		// Paragraph justification. A line that ends its paragraph keeps its natural spacing rather
+		// than being stretched, so a single line is left-aligned. The previous implementation
+		// treated '=' as plain right-justification, which is not what PennMUSH means by it.
 		yield return () => new(
 			"=15",
 			[MarkupText.Plain("text")],
 			MarkupText.Space,
 			MarkupText.Space,
 			MarkupText.Plain("\n"),
-			MarkupText.Plain("           text")
+			MarkupText.Plain("text           ")
 		);
 	}
 }

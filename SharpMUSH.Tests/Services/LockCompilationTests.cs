@@ -25,7 +25,7 @@ public class LockCompilationTests
 
 	/// <summary>Compiles to a delegate that answers with whether the text was the one given here.</summary>
 	private void CompilesTo(string text, bool answer)
-		=> _parser.Compile(text).Returns(_ => (AnySharpObject _, AnySharpObject _) => answer);
+		=> _parser.Compile(text).Returns(_ => (AnySharpObject _, AnySharpObject _) => ValueTask.FromResult(answer));
 
 	private AnySharpObject LockedWith(int number, string lockString)
 	{
@@ -44,12 +44,12 @@ public class LockCompilationTests
 		CompilesTo("=#2", false);
 
 		var gated = LockedWith(7, "=#1");
-		await Assert.That(service.Evaluate(LockType.Basic, gated, unlocker)).IsTrue();
+		await Assert.That(await service.Evaluate(LockType.Basic, gated, unlocker)).IsTrue();
 
 		gated.Object().Locks = ImmutableDictionary<string, SharpLockData>.Empty
 			.Add(LockType.Basic.ToString(), new SharpLockData { LockString = "=#2" });
 
-		await Assert.That(service.Evaluate(LockType.Basic, gated, unlocker)).IsFalse()
+		await Assert.That(await service.Evaluate(LockType.Basic, gated, unlocker)).IsFalse()
 			.Because("the delegate belongs to the lock text, so a new lock string cannot reach an old one");
 	}
 }

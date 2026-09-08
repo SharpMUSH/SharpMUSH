@@ -282,7 +282,8 @@ public partial record ParserState(
 	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
 	ParserStateFlags Flags = ParserStateFlags.None,
 	Dictionary<string, CallState>? CallerArguments = null,
-	BreakPropagation? BreakPropagation = null)
+	BreakPropagation? BreakPropagation = null,
+	string? ConnectionSessionId = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

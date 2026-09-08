@@ -6,6 +6,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Server.Handlers;
 
@@ -17,7 +19,8 @@ public class ConnectionStateChangeHandler(
 	IConnectionService connectionService,
 	INotifyService notifyService,
 	IAttributeStore attributes,
-	IObjectStore objects)
+	IObjectStore objects,
+	IMessageBus messageBus)
 	: INotificationHandler<ConnectionStateChangeNotification>
 {
 	public async ValueTask Handle(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
@@ -29,7 +32,7 @@ public class ConnectionStateChangeHandler(
 			connectionId, notification.Handle, notification.PlayerRef, notification.OldState, notification.NewState);
 
 		var connection = connectionService.Get(notification.Handle);
-		if (connection is null)
+		if (connection is null && notification.NewState != IConnectionService.ConnectionState.Disconnected)
 		{
 			logger.LogWarning("[{ConnectionId}] Connection {Handle} not found in service",
 				connectionId, notification.Handle);
@@ -41,6 +44,14 @@ public class ConnectionStateChangeHandler(
 			switch (notification.NewState)
 			{
 				case IConnectionService.ConnectionState.Connected:
+					if (notification.OldState == IConnectionService.ConnectionState.LoggedIn)
+					{
+						// The socket survives LOGOUT, but the character's flags do not. Clear them before
+						// rendering the connect screen so negotiated terminal capabilities take over again.
+						await messageBus.Publish(
+							new ClearPlayerOutputPreferencesMessage(notification.Handle), cancellationToken);
+					}
+
 					logger.LogInformation("[{ConnectionId}] Sending 'Connected!' message to handle {Handle}",
 						connectionId, notification.Handle);
 

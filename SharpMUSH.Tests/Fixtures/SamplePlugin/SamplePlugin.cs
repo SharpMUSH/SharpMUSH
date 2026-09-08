@@ -25,7 +25,6 @@ public sealed class SamplePluginService
 ///
 /// Phase 2a: it also exercises the four contribution seams — <see cref="IServiceRegistrar"/> (a DI
 /// service), <see cref="IFlagSource"/> (one flag), and <see cref="IBridgeSubscriptionSource"/> (a bridge
-/// subscription that records that it ran). (No <see cref="IMigrationSource"/>: an Arango migration
 /// assembly is heavy to fixture; the flag seam proves the same migration plumbing end-to-end.)
 /// </summary>
 [SharpPlugin]

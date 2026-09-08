@@ -214,7 +214,7 @@ Collection: sys_managed_attributes
 - Travels with backups (restore = package registry matches game state)
 - Queryable (dependency resolution, drift detection)
 - Not visible to softcode (system collections, not game objects)
-- Consistent across all three backends
+- Consistent across both supported backends
 
 ## Three-Way Merge (Upgrade)
 

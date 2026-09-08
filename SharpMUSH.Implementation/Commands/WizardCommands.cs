@@ -1,3 +1,4 @@
+using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
@@ -818,57 +819,60 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// PennMUSH <c>@hide</c> (<c>hide_player</c>, <c>bsd.c:7161-7251</c>): a permission-gated,
+	/// per-CONNECTION toggle — unrelated to the <c>DARK</c> object flag. With no target (the only
+	/// form SharpMUSH implements; Penn's numeric-descriptor and named-player-target forms are out of
+	/// scope), it acts on every one of the executor's own currently-open connections. A bare
+	/// <c>@hide</c> with no switch reproduces Penn's <c>status == 2</c> aggregate toggle
+	/// (<c>bsd.c:7224-7232</c>): hide all connections if any of them is currently visible, otherwise
+	/// unhide all of them (i.e. only flip to "all unhidden" once every connection was already
+	/// hidden). The notify text mirrors Penn's self-target branch (<c>bsd.c:7239,7246</c>) — not its
+	/// numeric-descriptor branch's "Connection hidden."/"Connection unhidden." (<c>bsd.c:7205,7207</c>),
+	/// which SharpMUSH doesn't implement here.
+	/// </summary>
 	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["on-off"])]
 	public async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
-		var darkFlag = await Mediator.Send(new GetObjectFlagQuery("DARK"));
-		if (darkFlag == null)
+		if (!await executor.CanHide())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDarkFlagNotFound), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		var isDark = await executor.HasFlag("DARK");
+		var playerRef = executor.Object().DBRef;
+		var connections = await ConnectionService.Get(playerRef).ToListAsync();
 
-		bool shouldBeDark;
+		bool shouldBeHidden;
 		if (switches.Contains("YES") || switches.Contains("ON"))
 		{
-			shouldBeDark = true;
+			shouldBeHidden = true;
 		}
 		else if (switches.Contains("NO") || switches.Contains("OFF"))
 		{
-			shouldBeDark = false;
+			shouldBeHidden = false;
 		}
 		else
 		{
-			// No switch = toggle
-			shouldBeDark = !isDark;
+			// No switch = aggregate toggle: hide all connections unless every one of them is
+			// already hidden, in which case unhide all of them (bsd.c:7224-7232).
+			var allHidden = connections.Count != 0 && connections.All(c => c.IsHidden);
+			shouldBeHidden = !allHidden;
 		}
 
-		if (shouldBeDark && !isDark)
+		foreach (var connection in connections)
 		{
-			await Mediator.Send(new SetObjectFlagCommand(executor, darkFlag));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NowHiddenFromWho), executor);
+			ConnectionService.Update(connection.Handle, "Hidden", shouldBeHidden ? "1" : "0");
 		}
-		else if (!shouldBeDark && isDark)
-		{
-			await Mediator.Send(new UnsetObjectFlagCommand(executor, darkFlag));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), executor);
-		}
-		else
-		{
-			if (isDark)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), executor);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), executor);
-			}
-		}
+
+		await NotifyService.NotifyLocalized(executor,
+			shouldBeHidden
+				? nameof(ErrorMessages.Notifications.NoLongerAppearOnWho)
+				: nameof(ErrorMessages.Notifications.NowAppearOnWho),
+			executor);
 
 		return CallState.Empty;
 	}
@@ -1983,7 +1987,7 @@ public partial class Commands
 		{
 			await GameBroadcastService.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidInitiated), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidArangoDB), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidDatabase), executor);
 			Logger.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
 		}
 		else
@@ -2157,6 +2161,74 @@ public partial class Commands
 		return new None();
 	}
 
+	/// <summary>
+	/// Takes a hot copy of the world into the backup directory, so a snapshot tool has a consistent
+	/// one to read while the game runs. This is what <c>@dump</c> would be if SharpMUSH kept the world
+	/// in memory: it does not, so <c>@dump</c> has nothing to write out and this copies instead.
+	///
+	/// <para><c>/LIST</c> reports the copies already on disk, newest first. A provider that cannot copy
+	/// its own world says why, in its own terms — a database server this game only talks to is not the
+	/// same situation as one whose support is not written yet.</para>
+	/// </summary>
+	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
+		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	public async ValueTask<Option<CallState>> Backup(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (!WorldBackupService.IsSupported)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
+				executor, WorldBackupService.UnavailableReason);
+			return new None();
+		}
+
+		if (parser.CurrentState.Switches.Contains("LIST"))
+		{
+			var existing = WorldBackupService.List();
+			if (existing.Count == 0)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
+				return new None();
+			}
+
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
+				executor, WorldBackupService.Root);
+			foreach (var backup in existing)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
+					executor, backup.Name, DescribeBytes(backup.SizeBytes));
+			}
+
+			return new None();
+		}
+
+		// Said before the copy starts, because a large world takes long enough that silence reads as a
+		// wedged command.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
+
+		var result = await WorldBackupService.CreateAsync();
+		if (result.TryPickT0(out var written, out var error))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
+				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
+			return new CallState(written.Name);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
+			error.Value);
+		return new None();
+	}
+
+	/// <summary>Byte count at a size a wizard reading it in a terminal can take in at a glance.</summary>
+	private static string DescribeBytes(long bytes) => bytes switch
+	{
+		>= 1024L * 1024 * 1024 => $"{bytes / (double)(1024L * 1024 * 1024):F1} GB",
+		>= 1024 * 1024 => $"{bytes / (double)(1024 * 1024):F1} MB",
+		>= 1024 => $"{bytes / 1024.0:F1} KB",
+		_ => $"{bytes} B"
+	};
+
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
 	/// </remarks>
@@ -2290,7 +2362,7 @@ public partial class Commands
 			await foreach (var player in players)
 			{
 				var objectCount = await Mediator.Send(new GetOwnedObjectCountQuery(player));
-				var playerName = player.Object.Name.PadRight(27);
+				var playerName = player.Object.Name.PadToColumns(27);
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaPlayerRowFormat), executor, playerName, objectCount, player.Quota);
 			}
 

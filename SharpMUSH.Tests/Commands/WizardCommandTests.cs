@@ -216,7 +216,6 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
 		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, attrName, 10000);
 
@@ -250,7 +249,6 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		// slow database backends (e.g. Memgraph being ~50% slower than ArangoDB in CI).
 		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
 		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, resultAttr, 10000);
 
@@ -390,16 +388,18 @@ public class WizardCommandTests
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideToggle");
+		// @hide is permission-gated (CanHide: wizard/royalty or the Hide power) - grant WIZARD.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -408,13 +408,14 @@ public class WizardCommandTests
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideYes");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/yes"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -423,13 +424,14 @@ public class WizardCommandTests
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOn");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -438,13 +440,14 @@ public class WizardCommandTests
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideNo");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/no"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
 	[Test]
@@ -453,43 +456,51 @@ public class WizardCommandTests
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideOff");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
 	}
 
+	// PennMUSH's hide_player has no "already hidden/visible" branch for the no-target case: it
+	// unconditionally re-applies the requested state to every connection and re-sends the same
+	// notify (bsd.c:7234-7250). Repeating /on (or /off) just repeats the same message.
 	[Test, NotInParallel]
-	public async ValueTask Hide_AlreadyHidden_ShowsAppropriateMessage()
+	public async ValueTask Hide_OnSwitch_Repeated_StillNotifiesHidden()
 	{
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideAlready");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyHiddenFromWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLongerAppearOnWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsTrue();
 	}
 
 	[Test, NotInParallel]
-	public async ValueTask Hide_AlreadyVisible_ShowsAppropriateMessage()
+	public async ValueTask Hide_OffSwitch_Repeated_StillNotifiesVisible()
 	{
 		// Use isolated player to avoid modifying shared God (#1).
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideVisible");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/off"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AlreadyVisibleOnWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NowAppearOnWho), testPlayer.DbRef)).IsTrue();
+		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsFalse();
 	}
 
 	[Test]

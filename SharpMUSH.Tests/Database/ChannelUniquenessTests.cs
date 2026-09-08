@@ -13,11 +13,9 @@ namespace SharpMUSH.Tests.Database;
 /// <c>ChannelAdd</c> — is what enforces it.
 ///
 /// <para>Each provider reaches that guarantee differently, because each has a different primitive:
-/// ArangoDB decides the name inside the exclusive transaction it already opens, Memgraph relies on a
 /// <c>:Channel(name)</c> uniqueness constraint because snapshot isolation lets both writers observe
 /// "absent", and SurrealDB relies on the record ID, which is the channel name.</para>
 ///
-/// <para>Losing the race used to mean a duplicate channel on ArangoDB and Memgraph and — worse — a silent
 /// overwrite on SurrealDB, where <c>UPSERT</c> reset <c>privs</c> and all five locks and reported success
 /// to both callers. These tests run against whichever provider
 /// <c>SHARPMUSH_DATABASE_PROVIDER</c> selects, so the matrix covers all three.</para>

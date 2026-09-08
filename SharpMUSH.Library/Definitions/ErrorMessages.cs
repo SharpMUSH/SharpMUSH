@@ -541,6 +541,10 @@ public static class ErrorMessages
 		public const string GameHasReconnected = "has reconnected.";
 		public const string GameHasDisconnected = "has disconnected.";
 		public const string GameHasPartiallyDisconnected = "has partially disconnected.";
+		public const string GameHasHiddenConnected = "has HIDDEN-connected.";
+		public const string GameHasHiddenReconnected = "has HIDDEN-reconnected.";
+		public const string GameHasHiddenDisconnected = "has HIDDEN-disconnected.";
+		public const string GameHasPartiallyHiddenDisconnected = "has partially HIDDEN-disconnected.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
 		public const string GameRebootFinished = "GAME: Reboot finished.";
@@ -550,6 +554,8 @@ public static class ErrorMessages
 		public const string GameDbConsistencyDone = "GAME: Database consistency check complete.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GameSuspectActivity = "GAME: Suspect {0}";
 
 		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
 
@@ -574,7 +580,7 @@ public static class ErrorMessages
 		public const string SocksetStripAccentsOn = "Accents will be stripped.";
 		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
 		public const string SocksetUnknownColorStyle =
-			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.";
+			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256', 'truecolor'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -987,11 +993,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
-		public const string ErrorDarkFlagNotFound = "Error: DARK flag not found in database.";
-		public const string NowHiddenFromWho = "You are now hidden from the WHO list.";
-		public const string NoLongerHiddenFromWho = "You are no longer hidden from the WHO list.";
-		public const string AlreadyHiddenFromWho = "You are already hidden from the WHO list.";
-		public const string AlreadyVisibleOnWho = "You are already visible on the WHO list.";
+		// PennMUSH bsd.c:7239,7246 (hide_player's self-target branch, the only one @hide implements).
+		public const string NoLongerAppearOnWho = "You no longer appear on the WHO list.";
+		public const string NowAppearOnWho = "You now appear on the WHO list.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MotdClearedFormat = "{0} MOTD cleared.";
@@ -1454,8 +1458,8 @@ public static class ErrorMessages
 		public const string SearchPlayerFilterFormat = "  Player filter: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchCriteriaFormat = "  Criteria: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchRangeFormat = "  Range: {0} to {1}";
+		public const string SearchUnknownOwner = "Unknown owner.";
+		public const string SearchNothingFound = "Nothing found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchObjectEntryFormat = "  #{0} ({1}) [{2}]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1592,7 +1596,7 @@ public static class ErrorMessages
 		public const string ShutdownRebootStandalone = "- For standalone: Restart the web application";
 		public const string ShutdownRebootRedis = "- Player connections will be preserved via Redis state store";
 		public const string ShutdownParanoidInitiated = "PARANOID SHUTDOWN initiated.";
-		public const string ShutdownParanoidArangoDB = "Database state is continuously persisted in ArangoDB.";
+		public const string ShutdownParanoidDatabase = "Database state is continuously persisted.";
 		public const string ShutdownInitiated = "SHUTDOWN initiated.";
 		public const string ShutdownNoteWebApp = "Note: SharpMUSH runs as a web application. Traditional shutdown is not applicable.";
 		public const string ShutdownNoteOrchestration = "In cloud/container deployments, use your orchestration tools to manage server lifecycle.";
@@ -1613,6 +1617,21 @@ public static class ErrorMessages
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";
 
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
+
+		/// <summary>Reported by <c>@backup</c> on a provider that cannot copy its own world; the reason
+		/// comes from the provider, because they differ.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupUnavailableFormat = "@backup is not available here: {0}.";
+		public const string BackupStarted = "Copying the world. The game keeps running; this may take a while.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupFailedFormat = "Backup failed: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupListHeaderFormat = "Backups in {0}:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string BackupListRowFormat = "  {0}  {1}";
+		public const string BackupListEmpty = "No backups have been taken yet.";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";

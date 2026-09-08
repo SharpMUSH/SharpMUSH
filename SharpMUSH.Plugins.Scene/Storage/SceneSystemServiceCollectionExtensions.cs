@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -12,9 +13,8 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 public static class SceneSystemServiceCollectionExtensions
 {
 	/// <summary>Provider keys for the keyed <see cref="ISceneStorage"/> registrations.</summary>
-	public const string ArangoKey = "arangodb";
-	public const string MemgraphKey = "memgraph";
 	public const string SurrealKey = "surrealdb";
+	public const string LightningKey = "lightning";
 
 	private const string ProviderConfigKey = "SHARPMUSH_DATABASE_PROVIDER";
 
@@ -28,14 +28,12 @@ public static class SceneSystemServiceCollectionExtensions
 	{
 		// Keyed storage cores — registered via FACTORY lambdas (not implementation types) so the host's
 		// ValidateOnBuild does not eagerly require every provider's accessor to be constructable. Only the
-		// active provider's accessor is registered by core; the other two keys are never resolved, so their
+		// active provider's accessor is registered by core; the other key is never resolved, so its
 		// missing accessors never error.
-		services.AddKeyedSingleton<ISceneStorage>(ArangoKey,
-			(sp, _) => new ArangoSceneStorage(sp.GetRequiredService<IArangoStorageAccessor>()));
-		services.AddKeyedSingleton<ISceneStorage>(MemgraphKey,
-			(sp, _) => new MemgraphSceneStorage(sp.GetRequiredService<IMemgraphStorageAccessor>()));
 		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
 			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
+		services.AddKeyedSingleton<ISceneStorage>(LightningKey,
+			(sp, _) => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
@@ -63,7 +61,7 @@ public static class SceneSystemServiceCollectionExtensions
 
 	/// <summary>
 	/// Maps the configured provider name to a storage key. Reads <c>SHARPMUSH_DATABASE_PROVIDER</c> from
-	/// configuration first, then the process environment, defaulting to ArangoDB (same precedence the host
+	/// configuration first, then the process environment, defaulting to Lightning (same precedence the host
 	/// uses to pick <c>ISharpDatabase</c>).
 	/// </summary>
 	private static string ResolveProviderKey(IConfiguration? configuration)
@@ -71,11 +69,11 @@ public static class SceneSystemServiceCollectionExtensions
 		var provider = configuration?[ProviderConfigKey]
 									 ?? Environment.GetEnvironmentVariable(ProviderConfigKey);
 
-		return provider switch
+		return DatabaseProviderResolver.Resolve(provider) switch
 		{
-			var p when string.Equals(p, "memgraph", StringComparison.OrdinalIgnoreCase) => MemgraphKey,
-			var p when string.Equals(p, "surrealdb", StringComparison.OrdinalIgnoreCase) => SurrealKey,
-			_ => ArangoKey
+			DatabaseProvider.SurrealDB => SurrealKey,
+			DatabaseProvider.Lightning => LightningKey,
+			_ => throw new ArgumentOutOfRangeException(nameof(provider))
 		};
 	}
 }

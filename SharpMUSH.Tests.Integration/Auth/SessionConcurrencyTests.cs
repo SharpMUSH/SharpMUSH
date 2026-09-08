@@ -11,7 +11,6 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// Regression cover for the session-store write storm: <see cref="DatabaseAccountSessionStore.ValidateAsync"/>
 /// slides the rolling window on every authenticated request, so a single portal page load — several
 /// concurrent API calls carrying the same bearer — used to have every one of them upsert the same session
-/// document at once. ArangoDB answered with 409 ("write-write conflict" / "timeout waiting to lock key"),
 /// nothing caught it, and the request became a 500.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

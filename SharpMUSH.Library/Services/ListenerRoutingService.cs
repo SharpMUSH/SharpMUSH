@@ -126,7 +126,7 @@ public class ListenerRoutingService(
 		if (string.IsNullOrWhiteSpace(listenPattern))
 			return;
 
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
+		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
 		if (!passesListenLock)
 			return;
 
@@ -192,10 +192,10 @@ public class ListenerRoutingService(
 		if (!hasMonitor)
 			return;
 
-		var passesUseLock = lockService.Evaluate(LockType.Use, listener, speaker);
-		var passesListenLock = lockService.Evaluate(LockType.Listen, listener, speaker);
-
-		if (!passesUseLock || !passesListenLock)
+		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
+		// chain of awaited reads, not a field test, so the second one is worth not asking for.
+		if (!await lockService.Evaluate(LockType.Use, listener, speaker)
+				|| !await lockService.Evaluate(LockType.Listen, listener, speaker))
 			return;
 
 		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker);
@@ -265,19 +265,21 @@ public class ListenerRoutingService(
 			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
 			: $"{puppet.Object().Name}> ";
 
-		// This relay writes bytes straight onto the telnet stream rather than going through
-		// NotifyService (which hands the ConnectionServer a serialized MString and lets it pick the
-		// wire format), so the markup has to be rendered here — ANSI, the telnet wire format.
-		var relayedText = message.Match(
-			markupString => prefix + markupString.Render(MarkupFormat.Ansi),
-			str => prefix + str
-		);
-
-		var bytes = System.Text.Encoding.UTF8.GetBytes(relayedText);
+		// The relay stays an MString all the way to the ConnectionServer, which owns the wire format
+		// — the same contract NotifyService publishes under. This used to render ANSI here and push
+		// the bytes out as a TelnetOutputMessage, which skipped MarkupOutputRenderer entirely: on a
+		// Pueblo or MXP connection the relayed text arrived neither entity-encoded nor line-mode
+		// prefixed, so a '<' or '&' in what the puppet heard reached the client's parser raw. An
+		// unprefixed line sits in MXP's default open mode, where <b>, <color> and <font> are honoured
+		// — which made a puppet a route for one player's text to format another player's screen.
+		var relayed = MarkupText.Concat(
+			MarkupText.Plain(prefix),
+			message.Match(markupString => markupString, MarkupText.Plain));
 
 		await foreach (var conn in connectionService.Get(owner.Object.DBRef))
 		{
-			await publishEndpoint.Publish(new TelnetOutputMessage(conn.Handle, bytes));
+			await publishEndpoint.HandlePublish(
+				new MarkupOutputMessage(conn.Handle, MarkupTextSerializer.Serialize(relayed)));
 		}
 	}
 

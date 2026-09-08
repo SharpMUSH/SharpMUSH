@@ -49,6 +49,9 @@ public interface IConnectionService
 
 		public int CommandCount
 			=> int.TryParse(Metadata.GetValueOrDefault("CommandCount", "0"), out var cnt) ? cnt : 0;
+
+		/// <summary>True if this connection is Hidden (PennMUSH DESC.hide).</summary>
+		public bool IsHidden => Metadata.TryGetValue("Hidden", out var value) && value == "1";
 	}
 
 	ValueTask Register(long handle, string ipaddr, string host, string connectionType, Func<byte[], ValueTask> outputFunction, Func<byte[], ValueTask> promptOutputFunction, Func<Encoding> encoding,
@@ -86,7 +89,7 @@ public interface IConnectionService
 	/// </summary>
 	void IncrementMetadata(long handle, string key);
 
-	ValueTask Disconnect(long handle);
+	ValueTask Disconnect(long handle, string? sessionId = null);
 
 	/// <summary>
 	/// Gets the connection state of a handle.
@@ -100,6 +103,9 @@ public interface IConnectionService
 	/// <param name="reference">A database reference</param>
 	/// <returns>All matching handles connected to the DBRef</returns>
 	IAsyncEnumerable<ConnectionData> Get(DBRef reference);
+
+	/// <summary>True if any of this player's active connections is Hidden (PennMUSH DESC.hide).</summary>
+	ValueTask<bool> IsPlayerHiddenAsync(DBRef playerRef);
 
 	/// <summary>
 	/// Gets all handle information.

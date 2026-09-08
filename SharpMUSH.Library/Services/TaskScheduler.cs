@@ -155,7 +155,12 @@ public class TaskScheduler(
 			pid,
 			$"handle:{handle}-{pid}",
 			DirectInputGroup,
-			async () => await parser.FromState(state).CommandParse(handle, connectionService, command),
+			async () =>
+			{
+				if (!string.IsNullOrEmpty(state.ConnectionSessionId) &&
+					connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
+				return await parser.FromState(state).CommandParse(handle, connectionService, command);
+			},
 			new CancellationTokenSource()
 		);
 		_pendingEntries[pid] = entry;

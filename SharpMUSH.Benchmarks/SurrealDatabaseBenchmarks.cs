@@ -2,7 +2,6 @@ namespace SharpMUSH.Benchmarks;
 
 /// <summary>
 /// Database read benchmarks backed by <b>SurrealDB</b>.
-/// Mirrors <see cref="ArangoDBReadBenchmarks"/>/<see cref="MemgraphReadBenchmarks"/> - compare
 /// results to quantify backend differences.
 /// </summary>
 [BenchmarkCategory("Database Read", "SurrealDB")]
@@ -45,7 +44,6 @@ public class SurrealDBReadBenchmarks : SurrealBaseBenchmark
 
 /// <summary>
 /// Database write benchmarks backed by <b>SurrealDB</b>.
-/// Mirrors <see cref="ArangoDBWriteBenchmarks"/>/<see cref="MemgraphWriteBenchmarks"/> - compare
 /// results to quantify backend differences. Each iteration uses a unique name to avoid key
 /// collisions.
 /// </summary>

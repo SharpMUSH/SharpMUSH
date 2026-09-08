@@ -44,9 +44,8 @@ The script will:
    - ConnectionServer
 
 2. ✅ Deploy to Kubernetes:
-   - ArangoDB (database)
-   - RedPanda (message broker)
-   - SharpMUSH Server
+   - NATS (message bus)
+   - SharpMUSH Server, with its LMDB world on a persistent volume
    - ConnectionServer
 
 3. ✅ Create services and persistent volumes
@@ -66,11 +65,8 @@ kubectl logs -f deployment/sharpmush
 # ConnectionServer logs
 kubectl logs -f deployment/connectionserver
 
-# ArangoDB logs
-kubectl logs -f deployment/arangodb
-
-# RedPanda logs
-kubectl logs -f deployment/redpanda
+# NATS logs
+kubectl logs -f deployment/sharpmush-infra -c nats
 ```
 
 **Check Status:**
@@ -159,8 +155,8 @@ After successful deployment:
 # Interactive shell in a pod
 kubectl exec -it deployment/sharpmush -- /bin/bash
 
-# Port forward a service
-kubectl port-forward service/arangodb 8529:8529
+# Port forward a service (NATS monitoring)
+kubectl port-forward service/nats 8222:8222
 
 # Get pod resource usage
 kubectl top pods
@@ -171,7 +167,7 @@ kubectl get pods -w
 # Delete specific resources
 kubectl delete deployment sharpmush
 kubectl delete service connectionserver
-kubectl delete pvc arangodb-pvc
+kubectl delete pvc sharpmush-data-pvc   # deletes the world
 
 # Delete everything from the manifest
 kubectl delete -f kubernetes/dev-k8s.yaml

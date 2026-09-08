@@ -1,5 +1,3 @@
-using Core.Arango;
-using Core.Arango.Serialization.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -30,12 +28,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
-
-	[ClassDataSource<ArangoDbTestServer>(Shared = SharedType.PerTestSession)]
-	public required ArangoDbTestServer ArangoDbTestServer { get; init; }
-
-	[ClassDataSource<MemgraphTestServer>(Shared = SharedType.PerTestSession)]
-	public required MemgraphTestServer MemgraphTestServer { get; init; }
 
 	[ClassDataSource<SurrealDbTestServer>(Shared = SharedType.PerTestSession)]
 	public required SurrealDbTestServer SurrealDbTestServer { get; init; }
@@ -74,6 +66,8 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
+	/// <summary>Set when this run created its own Lightning data directory (no SHARPMUSH_LIGHTNING_PATH was already set), so DisposeAsync can delete it. Null when a caller supplied their own path — that one outlives the factory.</summary>
+	private string? _ownLightningPath;
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -88,16 +82,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	protected string? _customSqlConnectionString;
 	private readonly string _sqlPlatform;
-	private readonly string? _customDatabaseName;
-
-	public ServerWebAppFactory() : this(null, null, "mysql")
+	public ServerWebAppFactory() : this(null, "mysql")
 	{
 	}
 
-	public ServerWebAppFactory(string? sqlConnectionString, string? databaseName, string sqlPlatform = "mysql")
+	public ServerWebAppFactory(string? sqlConnectionString, string sqlPlatform = "mysql")
 	{
 		_customSqlConnectionString = sqlConnectionString;
-		_customDatabaseName = databaseName;
 		_sqlPlatform = sqlPlatform;
 	}
 
@@ -206,15 +197,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		Log.Logger = log;
 
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var useMemgraph = string.Equals(dbProviderStr, "memgraph", StringComparison.OrdinalIgnoreCase);
 		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
 
-		if (useMemgraph)
-		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "memgraph");
-			Environment.SetEnvironmentVariable("MEMGRAPH_URI", MemgraphTestServer.BoltUri);
-		}
-		else if (useSurrealDb)
+		if (useSurrealDb)
 		{
 			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
 			// Tests run the embedded in-memory engine for isolation/speed; production defaults to a
@@ -228,6 +213,18 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 					SurrealDbTestServer.IsEnabled ? SurrealDbTestServer.Endpoint : "mem://");
 			}
 		}
+		else
+		{
+			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
+			// No container, no shared server: LMDB is a plain directory. Give each run its own unless a
+			// caller already pinned one (e.g. to inspect the data after the test), and clean up only the
+			// directory this run created itself.
+			if (Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
+			{
+				_ownLightningPath = Path.Combine(Path.GetTempPath(), "sharpmush-lightning-tests-" + Guid.NewGuid().ToString("N"));
+				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", _ownLightningPath);
+			}
+		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
@@ -239,7 +236,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
 			TestHelpers.CreateNotifyServiceSubstitute(Notifications),
-			_customDatabaseName,
 			_sqlPlatform);
 
 		var provider = _server.Services;
@@ -262,6 +258,25 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	public new async ValueTask DisposeAsync()
 	{
 		_meterListener?.Dispose();
+
+		// Both the world and the hot-backup root the server derives from its path (<world>.backups).
+		string[] ownedPaths = _ownLightningPath is null
+			? []
+			: [_ownLightningPath, _ownLightningPath + ".backups"];
+		foreach (var owned in ownedPaths)
+		{
+			if (!Directory.Exists(owned)) continue;
+			try
+			{
+				Directory.Delete(owned, recursive: true);
+			}
+			catch (IOException)
+			{
+				// Best-effort: a lingering LMDB lock file (mdb.lck) can outlive the writer thread's join
+				// by a few milliseconds under load. Leaving the temp directory behind costs disk, not
+				// correctness, and the next run gets its own directory regardless.
+			}
+		}
 
 		if (_server?.Services != null)
 		{

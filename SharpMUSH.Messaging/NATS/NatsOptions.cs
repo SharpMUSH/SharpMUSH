@@ -48,6 +48,9 @@ public class NatsOptions
 	/// </summary>
 	public int MaxMsgSize { get; set; } = 6 * 1024 * 1024;
 
+	/// <summary>Maximum time allowed for a message publish, including broker disconnection.</summary>
+	public TimeSpan PublishTimeout { get; set; } = TimeSpan.FromSeconds(2);
+
 	internal string GetConsumeStreamName() => ConsumeStreamName ?? StreamName;
 	internal string GetConsumeSubjectPrefix() => ConsumeSubjectPrefix ?? SubjectPrefix;
 }

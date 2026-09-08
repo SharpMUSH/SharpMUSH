@@ -10,7 +10,6 @@ namespace SharpMUSH.Tests.Database;
 
 /// <summary>
 /// Pins every <see cref="ObjectSearchFilter"/> predicate against ground truth, on whichever provider
-/// the suite is running (CI runs arangodb / memgraph / surrealdb legs over this same file).
 ///
 /// <para>Each test creates a <em>matching</em> object and a deliberately <em>non-matching</em> control
 /// that is identical in every other respect, then asserts the match is present <b>and</b> the control
@@ -21,8 +20,6 @@ namespace SharpMUSH.Tests.Database;
 ///   <item>Predicate that can never be true → nothing comes back and the match is missing.</item>
 /// </list>
 ///
-/// <para>Both had shipped. SurrealDB and Memgraph never read <c>Owner</c>, <c>Zone</c>, <c>Parent</c>,
-/// <c>HasFlag</c> or <c>HasPower</c> at all; ArangoDB read the last two but tested
 /// <c>v.Flags[*].Name</c> against <c>node_objects</c> documents, which carry no such field (flags are
 /// edges), so the predicate was false for every row. Neither raised anything — the call succeeded and
 /// returned a confidently wrong set.</para>

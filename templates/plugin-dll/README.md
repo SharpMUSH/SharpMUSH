@@ -26,7 +26,7 @@ PLUGIN_ID/
 
 ## Build prerequisites — the parallel NuGets
 
-This template references two SharpMUSH contract packages (versioned **1.0.0**,
+This template references two SharpMUSH contract packages (versioned **2.0.0**,
 aligned to the server's `PluginContractVersion`):
 
 - **`SharpMUSH.Library`** — the contract surface (`IPlugin`, `PluginBase`, the

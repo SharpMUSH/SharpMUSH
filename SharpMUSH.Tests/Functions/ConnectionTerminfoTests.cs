@@ -22,7 +22,8 @@ public class ConnectionTerminfoTests
 
 	private static long _handleSeq = 950_000;
 
-	private async Task<long> ConnectAsAsync(DBRef player, string connectionType, string presenceClass = PresenceClasses.Play)
+	private async Task<long> ConnectAsAsync(DBRef player, string connectionType,
+		string presenceClass = PresenceClasses.Play, string? terminalType = null, bool telnetNegotiated = false)
 	{
 		var connectionService = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		var handle = Interlocked.Increment(ref _handleSeq);
@@ -35,6 +36,17 @@ public class ConnectionTerminfoTests
 			["ConnectionType"] = connectionType,
 			["PresenceClass"] = presenceClass
 		});
+
+		if (terminalType is not null)
+		{
+			metadata["TerminalType"] = terminalType;
+		}
+
+		if (telnetNegotiated)
+		{
+			metadata["TELNET"] = "1";
+		}
+
 		await connectionService.Register(handle, "127.0.0.1", "localhost", connectionType,
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
 		await connectionService.Bind(handle, player);
@@ -96,6 +108,56 @@ public class ConnectionTerminfoTests
 		try
 		{
 			await Assert.That(await TerminfoAsync(playerRef)).DoesNotContain("websocket");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// The client name is the terminal type the connection negotiated (RFC 1091) or was given by
+	/// <c>@sockset terminaltype</c> — the same "TerminalType" key SOCKSET reports, so the two cannot
+	/// disagree about who the client is.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsNegotiatedTerminalType_AsTheClient()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "TTypeTermClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "SharpMUTerm", telnetNegotiated: true);
+		try
+		{
+			var info = await TerminfoAsync(playerRef);
+			await Assert.That(info).StartsWith("SharpMUTerm");
+			await Assert.That(info).Contains("telnet")
+				.Because("a client that answered TTYPE has demonstrably negotiated telnet");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>A client that never answers TTYPE stays "unknown", as PennMUSH documents.</summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsUnknown_WhenNoTerminalTypeWasNegotiated()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "NoTTypeTermClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet");
+		try
+		{
+			var info = await TerminfoAsync(playerRef);
+			await Assert.That(info).StartsWith("unknown");
+			await Assert.That(info).DoesNotContain("telnet")
+				.Because("a raw socket on the telnet port has negotiated nothing, so it cannot claim telnet");
 		}
 		finally
 		{
