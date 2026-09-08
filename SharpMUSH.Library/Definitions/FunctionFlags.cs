@@ -1,4 +1,4 @@
-﻿namespace SharpMUSH.Library.Definitions;
+namespace SharpMUSH.Library.Definitions;
 
 [Flags]
 public enum FunctionFlags
@@ -28,5 +28,7 @@ public enum FunctionFlags
 	PositiveIntegersOnly = 1 << 21,
 	DecimalsOnly = 1 << 22,
 	EvenArgsOnly = 1 << 23,
-	UnEvenArgsOnly = 1 << 24
+	UnEvenArgsOnly = 1 << 24,
+	/// <summary>Arguments accepted by double.TryParse; empty arguments mean zero.</summary>
+	NumbersOnly = 1 << 25
 }
