@@ -18,7 +18,10 @@ public sealed record LightningMigrationStep(string Id, Func<ILightningStorageAcc
 /// </summary>
 public interface IMigrationSource
 {
-	/// <summary>SurrealQL statements to run against SurrealDB after the built-in migration batch.</summary>
+	/// <summary>
+	/// SurrealQL statements to run against SurrealDB after the built-in migration batch, on every startup.
+	/// Statements must be idempotent or track their own migration marker. A failure aborts startup.
+	/// </summary>
 	IEnumerable<string> SurrealStatements => [];
 
 	/// <summary>Lightning migration steps to run after the built-in migration batch, each applied once and tracked by <see cref="LightningMigrationStep.Id"/>.</summary>

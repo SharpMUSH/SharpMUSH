@@ -151,6 +151,23 @@ jobs:
           max_attempts: 3
           command: dotnet run --project SharpMUSH.Tests.BUnit --no-build --verbosity normal -- --output Detailed
 
+  test-scene-plugin:
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Scene plugin tests (embedded SurrealDB)
+        run: dotnet run --project SharpMUSH.Tests.ScenePlugin -p:SkipFormatVerification=true -- --output Detailed
+
   test-integration:
     needs: [build]
     runs-on: ubuntu-latest

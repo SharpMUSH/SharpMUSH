@@ -18,15 +18,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="TUnit" Version="1.19.16" />
   </ItemGroup>
 
   <!-- Focused unit test for the Scene plugin's AddSceneSystem registration seam (Phase 8). References the
        plugin and Library WITHOUT touching SharpMUSH.Implementation, so the plugin's generated VersionInfo
-       does not collide with the engine's. The storage classes never reach a database here. -->
+       does not collide with the engine's. Storage regressions use the pinned embedded SurrealDB provider. -->
   <ItemGroup>
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" />
     <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
   </ItemGroup>
 
 </Project>

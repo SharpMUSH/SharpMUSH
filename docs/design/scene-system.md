@@ -98,6 +98,25 @@ per-scene **persona** is `showAs` on that edge. There are therefore **no
 `SCENE`*` attributes** on rooms or players — focus/persona are edge properties,
 and a room's active scene is derived via `scenewhere()`.
 
+SurrealDB stores each membership at `scene_member:[object:<key>, scene:<id>]`.
+Both role grants and focus auto-membership use `INSERT RELATION ... ON DUPLICATE
+KEY UPDATE`; existing members keep their persona and original grant time. Focus
+changes clear the old focus and write the target in one transaction. Transaction
+conflicts are retried with a bounded backoff; other write errors propagate.
+This behavior is covered against the pinned embedded SurrealDB 2.3.6 engine
+(`SurrealDb.Embedded` 0.9.0). A unique edge index is deliberately avoided: the
+concurrent insert stress test exposed duplicates with that approach on this engine.
+
+On first startup after upgrading, `migration:scene_member_ids_v1` converts legacy
+random edge IDs in a transaction before the plugin accepts writes. Duplicate groups
+keep the earliest grant time, the earliest nonempty role/persona/name (ties by edge
+ID), and any active focus. Every original row from a duplicate group is retained
+under `scene_member_duplicate_backup.original`, including its original ID and
+conflicting values. Singleton memberships are converted without a backup copy.
+The migration marker commits with the conversion; subsequent startups skip it.
+Plugin migration errors abort startup. Take a normal database backup before upgrading;
+the conversion runs at startup and its cost scales with the existing membership table.
+
 ```mermaid
 graph LR
   PLAYER([node_players])
