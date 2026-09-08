@@ -4,6 +4,7 @@ using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -58,6 +59,10 @@ public partial class Commands
 				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
 				var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 				var isDark = await known.HasFlag("DARK");
+				// A row is treated as hidden-from-mortals either because the object itself is DARK,
+				// or because this specific connection is Hidden (PennMUSH DESC.hide / @HIDE) — the
+				// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
+				var isHiddenRow = isDark || player.IsHidden;
 
 				string line;
 				if (isWizard)
@@ -65,8 +70,8 @@ public partial class Commands
 					var location = known.IsContent
 						? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
 						: "#-1";
-					// Host truncated + " (Dark)" for dark players, else truncated to 27 (PennMUSH).
-					var host = isDark
+					// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH).
+					var host = isHiddenRow
 						? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
 						: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
 					// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
@@ -78,16 +83,19 @@ public partial class Commands
 					// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
 					// listing exists to show.
 					var doingText = await GetDoingText(executor ?? known, known);
-					line = $"{namePadded} {onFor,10}   {idle,4}{(isDark ? 'D' : ' ')} {doingText}";
+					line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
 				}
 
-				return (Line: line, Known: known);
+				return (Line: line, Known: known, HiddenRow: isHiddenRow);
 			})
-			// CanSee needs a viewer; an anonymous connect-screen viewer has none and is neither
-			// privileged nor SEE_ALL, so it reduces to the DARK check CanSee would have made.
+			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
+			// which only knows about the DARK flag. HiddenRow folds in the per-connection Hidden
+			// state too (see above), so the row is visible when either CanSee's own privilege
+			// exemption applies, or the row isn't hidden by either mechanism. An anonymous
+			// connect-screen viewer has no executor and is never privileged.
 			.Where(async (player, _) => executor is null
-				? !await player.Known.IsDark()
-				: await PermissionService.CanSee(executor, player.Known))
+				? !player.HiddenRow
+				: !player.HiddenRow || await executor.IsPriv() || await executor.IsSee_All())
 			.ToListAsync();
 
 		var count = filteredPlayers.Count;
@@ -114,6 +122,20 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH's alternate login words (<c>bsd.c:4431-4497</c>): <c>cd</c> connects and forces the
+	/// player's <c>DARK</c> flag on (and hides the connection if the player has permission), <c>cv</c>
+	/// connects and forces <c>DARK</c> off, <c>ch</c> connects and hides the connection if permitted
+	/// without touching <c>DARK</c>. Plain <c>connect</c> is <see cref="Normal"/> and touches neither.
+	/// </summary>
+	private enum ConnectMode
+	{
+		Normal,
+		Dark,
+		Visible,
+		Hidden
+	}
+
 	/// <example>
 	/// connect "person with long name" password
 	/// connect person password
@@ -123,7 +145,28 @@ public partial class Commands
 	/// </example>
 	[SharpCommand(Name = "CONNECT", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
 		MaxArgs = 2, ParameterNames = ["player", "password"])]
-	public async ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> Connect(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> ConnectCoreAsync(parser, ConnectMode.Normal);
+
+	/// <summary>PennMUSH <c>cd</c>: connect and force the player's <c>DARK</c> flag on (<c>bsd.c:4431-4497</c>).</summary>
+	[SharpCommand(Name = "CD", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
+		MaxArgs = 2, ParameterNames = ["player", "password"])]
+	public ValueTask<Option<CallState>> ConnectDark(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> ConnectCoreAsync(parser, ConnectMode.Dark);
+
+	/// <summary>PennMUSH <c>cv</c>: connect and force the player's <c>DARK</c> flag off (<c>bsd.c:4431-4497</c>).</summary>
+	[SharpCommand(Name = "CV", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
+		MaxArgs = 2, ParameterNames = ["player", "password"])]
+	public ValueTask<Option<CallState>> ConnectVisible(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> ConnectCoreAsync(parser, ConnectMode.Visible);
+
+	/// <summary>PennMUSH <c>ch</c>: connect and hide the connection if permitted, <c>DARK</c> untouched (<c>bsd.c:4431-4497</c>).</summary>
+	[SharpCommand(Name = "CH", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 1,
+		MaxArgs = 2, ParameterNames = ["player", "password"])]
+	public ValueTask<Option<CallState>> ConnectHidden(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> ConnectCoreAsync(parser, ConnectMode.Hidden);
+
+	private async ValueTask<Option<CallState>> ConnectCoreAsync(IMUSHCodeParser parser, ConnectMode mode)
 	{
 		if (ConnectionService.Get(parser.CurrentState.Handle!.Value)?.Ref is not null)
 		{
@@ -245,6 +288,41 @@ public partial class Commands
 
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(parser.CurrentState.Handle!.Value, playerDbRef);
+
+		if (mode != ConnectMode.Normal)
+		{
+			var connectedPlayer = new AnySharpObject(foundDB);
+
+			if (mode is ConnectMode.Dark or ConnectMode.Hidden && await connectedPlayer.CanHide())
+			{
+				ConnectionService.Update(parser.CurrentState.Handle!.Value, "Hidden", "1");
+			}
+
+			if (mode is ConnectMode.Dark or ConnectMode.Visible)
+			{
+				var darkFlag = await Mediator.Send(new GetObjectFlagQuery("DARK"));
+				if (darkFlag is not null)
+				{
+					if (mode == ConnectMode.Dark)
+					{
+						// PennMUSH's set_flag special-cases DARK: only a Wizard or a player with the
+						// Can_Dark power may set it on a living player (flags.c ~1793-1798) - cd must
+						// respect the same gate rather than force DARK on unconditionally. cv (clearing
+						// DARK) has no such special case in PennMUSH - clearing your own flag only needs
+						// ordinary self-set permission, which every player already has - so it stays
+						// ungated here.
+						if (await connectedPlayer.CanDark())
+						{
+							await Mediator.Send(new SetObjectFlagCommand(connectedPlayer, darkFlag));
+						}
+					}
+					else
+					{
+						await Mediator.Send(new UnsetObjectFlagCommand(connectedPlayer, darkFlag));
+					}
+				}
+			}
+		}
 
 		await CompletePlayerLoginAsync(parser, parser.CurrentState.Handle!.Value, foundDB, playerDbRef);
 		Logger?.LogDebug("Successful login and binding for {@person}", foundDB.Object);
@@ -535,6 +613,9 @@ public partial class Commands
 			$"#{player.Object.Key}",
 			connectionCount.ToString(),
 			handle.ToString());
+
+		await ConnectionAnnounceService.AnnounceConnectAsync(
+			parser, new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
 
 		// Refresh everyone in the room the player just appeared in.
 		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);

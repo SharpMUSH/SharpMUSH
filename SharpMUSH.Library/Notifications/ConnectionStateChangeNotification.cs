@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Notifications;
@@ -12,10 +13,26 @@ namespace SharpMUSH.Library.Notifications;
 /// character's entry into play immediately after it was created, so it can be greeted as new
 /// rather than welcomed "back" to a game it has never seen.
 /// </param>
+/// <param name="RemainingConnections">
+/// For a QUIT-driven <see cref="ConnectionService.Disconnect"/> only: the player's remaining
+/// connection count, computed atomically with the disconnecting handle's removal so two concurrent
+/// disconnects of the same player's two handles can't both observe the other as "still connected"
+/// and both conclude one connection remains. Null for every other transition (including the LOGOUT
+/// path through <see cref="ConnectionService.Unbind"/>, which does not need it - <c>Unbind</c> already
+/// nulls its handle's <c>Ref</c> before publishing, so a concurrent <c>Get(playerRef)</c> naturally
+/// excludes it without this field).
+/// </param>
+/// <param name="FormerConnection">
+/// A snapshot of the connection's data taken before <see cref="ConnectionService.Disconnect"/> removes
+/// it from session state - the disconnecting handle is gone from that state by the time this
+/// notification is handled, so <c>Get(handle)</c> would otherwise return nothing. Null for every other
+/// transition, whose handler can still resolve the handle live.
+/// </param>
 public record ConnectionStateChangeNotification(
 	long Handle,
 	DBRef? PlayerRef,
 	IConnectionService.ConnectionState OldState,
 	IConnectionService.ConnectionState NewState,
 	bool FirstLogin = false,
+	int? RemainingConnections = null,
 	IConnectionService.ConnectionData? FormerConnection = null) : INotification;

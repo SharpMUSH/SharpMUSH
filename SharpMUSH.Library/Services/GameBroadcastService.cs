@@ -27,7 +27,11 @@ public class GameBroadcastService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask BroadcastToFlagAsync(string flagName, string message)
+	public ValueTask BroadcastToFlagAsync(string flagName, string message)
+		=> BroadcastToFlagAsync(null, flagName, message);
+
+	/// <inheritdoc />
+	public async ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, string message)
 	{
 		await foreach (var conn in connectionService.GetAll())
 		{
@@ -45,7 +49,25 @@ public class GameBroadcastService(
 				}
 
 				var player = playerResult.Known;
-				if (await player.HasFlag(flagName))
+
+				if (anyOfFlags is not null)
+				{
+					var hasAny = false;
+					foreach (var flag in anyOfFlags)
+					{
+						if (await player.HasFlag(flag))
+						{
+							hasAny = true;
+							break;
+						}
+					}
+					if (!hasAny)
+					{
+						continue;
+					}
+				}
+
+				if (await player.HasFlag(requiredFlag))
 				{
 					await notifyService.Notify(conn.Handle, message);
 				}
