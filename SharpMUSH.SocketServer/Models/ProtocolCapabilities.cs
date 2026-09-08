@@ -23,6 +23,7 @@ public enum OutputFormat
 /// <param name="Charset">The character set used by the client (e.g., "UTF-8", "ASCII", "LATIN-1")</param>
 /// <param name="MaxLineLength">Maximum line length supported by the client (-1 = unlimited)</param>
 /// <param name="Format">The output format negotiated for this connection</param>
+/// <param name="ScreenReader">Whether MTTS identified the client as a screen reader</param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -30,5 +31,6 @@ public record ProtocolCapabilities(
 	bool SupportsUtf8 = true,
 	string Charset = "UTF-8",
 	int MaxLineLength = -1,
-	OutputFormat Format = OutputFormat.Ansi
+	OutputFormat Format = OutputFormat.Ansi,
+	bool ScreenReader = false
 );

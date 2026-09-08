@@ -68,6 +68,7 @@ public static class FlagSeed
 		("PARANOID", "", null, ["odark"], ["odark"], ["ROOM","PLAYER","EXIT","THING"]),
 		("TRACK_MONEY", "", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("XTERM256", "", ["XTERM","COLOR256"], [], [], ["PLAYER"]),
+		("TRUECOLOR", "", ["TRUECOLOUR","RGB","24BIT"], [], [], ["PLAYER"]),
 		("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("OPEN_OK", "", null, [], [], ["ROOM"]),
 		("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),

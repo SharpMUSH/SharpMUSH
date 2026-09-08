@@ -54,7 +54,7 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
-	public async Task TransformAsync_StripsAnsi_WhenClientDoesNotSupportAnsi()
+	public async Task TransformAsync_PlayerFlagsOverrideInferredAnsiCapability()
 	{
 		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
@@ -63,7 +63,25 @@ public class OutputTransformServiceTests
 		var result = await _service.TransformAsync(input, capabilities, preferences);
 
 		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("Red text");
+		await Assert.That(resultText).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	[Test]
+	public async Task TransformAsync_ScreenReaderOverridesPlayerColorFlags()
+	{
+		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: false,
+			ScreenReader: true);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true,
+			ColorEnabled: true,
+			Xterm256Enabled: true,
+			TruecolorEnabled: true);
+
+		var result = await _service.TransformAsync(input, capabilities, preferences);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("Red text");
 	}
 
 	[Test]
@@ -96,7 +114,7 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
-	public async Task TransformAsync_PreservesXterm256_WhenSupported()
+	public async Task TransformAsync_PreservesXterm256_WhenPlayerFlagEnabled()
 	{
 		var input = "\x1b[38;5;196mBright red\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: true);
@@ -108,20 +126,59 @@ public class OutputTransformServiceTests
 		await Assert.That(resultText).Contains("38;5;196");
 	}
 
+	[Test]
+	public async Task TransformAsync_PlayerFlagOverridesInferredXterm256Capability()
+	{
+		var input = "\x1b[38;5;196mBright red\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: false, SupportsXterm256: false);
+		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true);
+
+		var result = Encoding.UTF8.GetString(await _service.TransformAsync(input, capabilities, preferences));
+
+		await Assert.That(result).IsEqualTo("\x1b[38;5;196mBright red\x1b[0m");
+	}
+
 	/// <summary>
 	/// The renderer emits 24-bit RGB freely — every hex <c>ansi()</c> code and every syntax-highlighted
 	/// help block does — and until the transform knew the sequence existed, those reached a 16-colour
 	/// client verbatim: <c>Xterm256ColorRegex</c> matches only <c>38;5;n</c>.
 	/// </summary>
 	[Test]
-	public async Task TransformAsync_PreservesTruecolor_WhenSupported()
+	public async Task TransformAsync_PreservesTruecolor_WhenPlayerFlagEnabled()
 	{
 		var input = "\x1b[38;2;255;0;0mRed text\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(
 			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true);
-		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true, TruecolorEnabled: true);
 
 		var result = Encoding.UTF8.GetString(await _service.TransformAsync(input, capabilities, preferences));
+
+		await Assert.That(result).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
+	}
+
+	[Test]
+	public async Task TransformAsync_PlayerFlagOverridesInferredTruecolorCapability()
+	{
+		var input = "\x1b[38;2;255;0;0mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: false, SupportsXterm256: false, SupportsTruecolor: false);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: false, TruecolorEnabled: true);
+
+		var result = Encoding.UTF8.GetString(await _service.TransformAsync(input, capabilities, preferences));
+
+		await Assert.That(result).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
+	}
+
+	[Test]
+	public async Task TransformAsync_UsesInferredTruecolorCapabilityBeforeLogin()
+	{
+		var input = "\x1b[38;2;255;0;0mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true);
+
+		var result = Encoding.UTF8.GetString(await _service.TransformAsync(input, capabilities, null));
 
 		await Assert.That(result).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
 	}

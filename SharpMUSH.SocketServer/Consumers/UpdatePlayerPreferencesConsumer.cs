@@ -11,7 +11,8 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 public class UpdatePlayerPreferencesConsumer(
 	IConnectionServerService connectionService,
 	ILogger<UpdatePlayerPreferencesConsumer> logger)
-: IMessageConsumer<UpdatePlayerPreferencesMessage>
+	: IMessageConsumer<UpdatePlayerPreferencesMessage>,
+		IMessageConsumer<ClearPlayerOutputPreferencesMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -30,6 +31,7 @@ public class UpdatePlayerPreferencesConsumer(
 				AnsiEnabled: message.AnsiEnabled,
 				ColorEnabled: message.ColorEnabled,
 				Xterm256Enabled: message.Xterm256Enabled,
+				TruecolorEnabled: message.TruecolorEnabled,
 				Locale: existingPreferences?.Locale ?? "en"
 			);
 
@@ -38,11 +40,12 @@ public class UpdatePlayerPreferencesConsumer(
 			if (success)
 			{
 				logger.LogInformation(
-					"Updated preferences for connection {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}",
+					"Updated preferences for connection {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",
 					message.Handle,
 					message.AnsiEnabled,
 					message.ColorEnabled,
-					message.Xterm256Enabled);
+					message.Xterm256Enabled,
+					message.TruecolorEnabled);
 			}
 			else
 			{
@@ -52,6 +55,20 @@ public class UpdatePlayerPreferencesConsumer(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error updating preferences for connection {Handle}", message.Handle);
+		}
+
+		return Task.CompletedTask;
+	}
+
+	public Task HandleAsync(ClearPlayerOutputPreferencesMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connectionService.ClearPreferences(message.Handle))
+		{
+			logger.LogInformation("Cleared player output preferences for connection {Handle}", message.Handle);
+		}
+		else
+		{
+			logger.LogWarning("Could not clear preferences for unknown connection handle: {Handle}", message.Handle);
 		}
 
 		return Task.CompletedTask;
