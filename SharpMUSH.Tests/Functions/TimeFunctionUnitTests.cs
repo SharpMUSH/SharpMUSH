@@ -1,3 +1,4 @@
+using System.Globalization;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -87,12 +88,24 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// PennMUSH's ctime() is a time string in time() format, in both the local and the utc branch.
+	/// This asserted only IsNotNull, so it stayed green while the utc branch returned a raw number.
+	/// </summary>
 	[Test]
-	[Arguments("ctime(#0)", "")]
-	public async Task Ctime(string str, string expected)
+	[Arguments("ctime(#0)")]
+	[Arguments("ctime(#0,1)")]
+	[Arguments("mtime(#0)")]
+	[Arguments("mtime(#0,1)")]
+	public async Task Ctime(string str)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message!.ToPlainText();
+
+		// "ddd MMM dd HH:mm:ss yyyy" — five space-separated fields, and never a bare number.
+		await Assert.That(long.TryParse(result, out _)).IsFalse();
+		await Assert.That(result.Split(' ').Length).IsEqualTo(5);
+		await Assert.That(DateTime.TryParseExact(result, "ddd MMM dd HH:mm:ss yyyy",
+			CultureInfo.InvariantCulture, DateTimeStyles.None, out _)).IsTrue();
 	}
 
 	// ETIMEFMT tests - Penn etimefmt.1-etimefmt.18
