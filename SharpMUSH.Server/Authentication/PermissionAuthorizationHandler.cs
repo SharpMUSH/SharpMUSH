@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Server.Hubs;
@@ -15,7 +16,11 @@ public sealed class PermissionAuthorizationHandler(IAdministrativeCapabilityServ
 		var accountId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (context.User.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(accountId)) return;
 		DBRef? active = null;
-		var claim = context.User.FindFirstValue(GameHub.CharacterDbrefClaim);
+		// Portal HTTP authority is account-wide even while a character is selected.
+		// Only a game hub invocation uses the active-character authority boundary.
+		var claim = context.Resource is HubInvocationContext
+			? context.User.FindFirstValue(GameHub.CharacterDbrefClaim) : null;
+		if (context.Resource is HubInvocationContext && claim is null) return;
 		if (claim is not null && !DBRef.TryParse(claim, out active)) return;
 		if (await capabilities.AuthorizeAsync(new(accountId, active, active), requirement.Scope))
 			context.Succeed(requirement);

@@ -52,10 +52,7 @@ public class RolesController(
 	{
 		var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
 		if (id is null) return Forbid();
-		DBRef? active = null;
-		var claim = User.FindFirstValue(SharpMUSH.Server.Hubs.GameHub.CharacterDbrefClaim);
-		if (claim is not null && !DBRef.TryParse(claim, out active)) return Forbid();
-		return Ok(await capabilities.ExplainAsync(new(id, active, active)));
+		return Ok(await capabilities.ExplainAsync(new(id)));
 	}
 
 	[HttpGet]

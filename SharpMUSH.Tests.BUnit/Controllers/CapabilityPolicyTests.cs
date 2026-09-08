@@ -31,6 +31,20 @@ public class CapabilityPolicyTests
 	}
 
 	[Test]
+	public async Task PortalPolicyRetainsAccountAuthorityWithSelectedCharacter()
+	{
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(new CapabilityActor("a"), PortalPermission.RolesAdmin, Arg.Any<CancellationToken>()).Returns(true);
+		var user = new ClaimsPrincipal(new ClaimsIdentity([
+			new Claim(ClaimTypes.NameIdentifier, "a"),
+			new Claim(SharpMUSH.Server.Hubs.GameHub.CharacterDbrefClaim, "#7:1")], "test"));
+		var context = new AuthorizationHandlerContext([new PermissionRequirement(PortalPermission.RolesAdmin)], user, new DefaultHttpContext());
+		await new PermissionAuthorizationHandler(capabilities).HandleAsync(context);
+		await Assert.That(context.HasSucceeded).IsTrue();
+		await capabilities.Received(1).AuthorizeAsync(new CapabilityActor("a"), PortalPermission.RolesAdmin, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task ManagerCannotAssignRoleToSelf()
 	{
 		var registry = Substitute.For<IRoleRegistryService>();
