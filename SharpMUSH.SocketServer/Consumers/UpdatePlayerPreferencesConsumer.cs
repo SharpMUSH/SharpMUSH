@@ -12,7 +12,8 @@ public class UpdatePlayerPreferencesConsumer(
 	IConnectionServerService connectionService,
 	ILogger<UpdatePlayerPreferencesConsumer> logger)
 	: IMessageConsumer<UpdatePlayerPreferencesMessage>,
-		IMessageConsumer<ClearPlayerOutputPreferencesMessage>
+		IMessageConsumer<ClearPlayerOutputPreferencesMessage>,
+		IMessageConsumer<UpdateColorStyleMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -55,6 +56,21 @@ public class UpdatePlayerPreferencesConsumer(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error updating preferences for connection {Handle}", message.Handle);
+		}
+
+		return Task.CompletedTask;
+	}
+
+	public Task HandleAsync(UpdateColorStyleMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connectionService.UpdateColorStyle(message.Handle, message.Style))
+		{
+			logger.LogInformation("Colour style for connection {Handle} is now {Style}",
+				message.Handle, message.Style ?? "auto");
+		}
+		else
+		{
+			logger.LogWarning("Could not set colour style for unknown connection handle: {Handle}", message.Handle);
 		}
 
 		return Task.CompletedTask;

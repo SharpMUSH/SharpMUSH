@@ -3,10 +3,12 @@ using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -242,6 +244,37 @@ public static partial class ArgHelpers
 		if (foundData is null) return new CallState("#-1 That player is not connected.");
 
 		return await playerFunc(found, foundData);
+	}
+
+	/// <summary>
+	/// The colour flags set on whoever is behind a descriptor, or null at the connect screen where
+	/// there is nobody behind it yet. They belong in every answer about a connection's colour depth:
+	/// a flag can raise the depth above what the terminal negotiated, so a report built from terminal
+	/// metadata alone describes a connection that is not the one being rendered — a "dumb" terminal on
+	/// a player with XTERM256 receives 256-colour output while terminfo() calls it "hilite".
+	/// </summary>
+	public static async ValueTask<PlayerColorFlags?> ColorFlagsOfAsync(IMediator mediator, DBRef? who)
+	{
+		if (who is not { } reference)
+		{
+			return null;
+		}
+
+		var found = await mediator.Send(new GetObjectNodeQuery(reference));
+		if (found.IsNone)
+		{
+			return null;
+		}
+
+		var flags = await found.Known.Object().Flags.Value.Select(flag => flag.Name).ToArrayAsync();
+
+		return new PlayerColorFlags(
+			Ansi: Has("ANSI"),
+			Color: Has("COLOR"),
+			Xterm256: Has("XTERM256"),
+			Truecolor: Has("TRUECOLOR"));
+
+		bool Has(string name) => flags.Any(flag => string.Equals(flag, name, StringComparison.OrdinalIgnoreCase));
 	}
 
 	/// <summary>

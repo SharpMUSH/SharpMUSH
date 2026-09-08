@@ -75,3 +75,12 @@ public record UpdatePlayerPreferencesMessage(
 /// Terminal negotiation remains attached to the connection and becomes authoritative again.
 /// </summary>
 public record ClearPlayerOutputPreferencesMessage(long Handle) : IHandleMessage;
+
+/// <summary>
+/// Carries a <c>SOCKSET colorstyle</c> pin to the socket owner, which is where output is actually
+/// rendered. Player flags and terminal negotiation can only ever <i>add</i> depth, so this is the
+/// one setting that renders below what they claim — including refusing colour outright.
+/// <paramref name="Style"/> is one of the <see cref="SharpMUSH.Library.Utilities.ColorStyles"/>
+/// values, or null for "auto", which hands the decision back to the flags and the terminal.
+/// </summary>
+public record UpdateColorStyleMessage(long Handle, string? Style) : IHandleMessage;

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Utilities;
 using System.Text;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -27,30 +28,155 @@ public class OutputTransformServiceTests
 		await Assert.That(resultText).IsEqualTo("\x1b[31mRed text\x1b[0m");
 	}
 
+	/// <summary>
+	/// The bug this ladder exists to prevent. Logging in publishes the character's colour flags, and a
+	/// character with neither ANSI nor COLOR published <c>false</c> for both — which the transform read
+	/// as "this player refuses colour" and stripped every escape the renderer had just produced. The
+	/// default <c>player_flags</c> grants <c>ansi</c> and never <c>color</c>, so no character could pass
+	/// that gate without being told to set the flags by hand. An unset flag is not a refusal.
+	/// </summary>
 	[Test]
-	public async Task TransformAsync_StripsAnsi_WhenAnsiDisabledInPreferences()
+	public async Task TransformAsync_KeepsColour_WhenFlagsAreUnsetButTerminalClaimsAnsi()
 	{
 		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: true);
-		var preferences = new PlayerOutputPreferences(AnsiEnabled: false);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: false, ColorEnabled: false, Xterm256Enabled: false, TruecolorEnabled: false);
 
 		var result = await _service.TransformAsync(input, capabilities, preferences);
 
-		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("Red text");
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[31mRed text\x1b[0m");
 	}
 
+	/// <summary>
+	/// The same fact one rung up: <c>preferences?.TruecolorEnabled ?? capabilities.SupportsTruecolor</c>
+	/// reads like a per-flag fallback to MTTS but can never be one, because a non-null preferences
+	/// record's <c>false</c> satisfies the <c>??</c>. Every rung silently stopped consulting the
+	/// terminal the moment a character logged in.
+	/// </summary>
 	[Test]
-	public async Task TransformAsync_StripsAnsi_WhenColorDisabledInPreferences()
+	public async Task TransformAsync_KeepsTruecolor_WhenFlagIsUnsetButTerminalClaimsIt()
+	{
+		var input = "\x1b[38;2;255;0;0mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true);
+		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: true);
+
+		var result = await _service.TransformAsync(input, capabilities, preferences);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[38;2;255;0;0mRed text\x1b[0m");
+	}
+
+	/// <summary>
+	/// Refusing colour is <c>SOCKSET colorstyle</c>'s job, not a flag's: only a pin renders below what
+	/// the client and the flags between them claim.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_StripsAnsi_WhenColorStylePinnedToPlain()
+	{
+		var input = "\x1b[1m\x1b[31mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, ColorStylePin: ColorStyles.Plain);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true, TruecolorEnabled: true);
+
+		var result = await _service.TransformAsync(input, capabilities, preferences);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("Red text");
+	}
+
+	/// <summary>PennMUSH's middle rung: the attributes survive and the hues do not.</summary>
+	[Test]
+	public async Task TransformAsync_PinnedHilite_KeepsAttributesAndDropsColour()
+	{
+		var input = "\x1b[1;31mBold red\x1b[0m \x1b[4mUnderline\x1b[24m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result))
+			.IsEqualTo("\x1b[1mBold red\x1b[0m \x1b[4mUnderline\x1b[24m");
+	}
+
+	/// <summary>
+	/// An extended colour carries its own arguments; dropping the <c>38</c> and leaving them behind
+	/// would emit the selector as blink and the palette index as a foreground colour.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[1;38;5;196mText\x1b[0m", "\x1b[1mText\x1b[0m")]
+	[Arguments("\x1b[38;2;255;0;0;1mText\x1b[0m", "\x1b[1mText\x1b[0m")]
+	[Arguments("\x1b[48;5;21mText\x1b[0m", "Text")]
+	public async Task TransformAsync_PinnedHilite_DropsExtendedColourWithItsArguments(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	/// <summary>An MXP line mode shares CSI syntax with SGR but is not one, and must survive intact.</summary>
+	[Test]
+	public async Task TransformAsync_PinnedHilite_LeavesMxpLineModesAlone()
+	{
+		var input = "\x1b[1z\x1b[31mRed\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, Format: OutputFormat.Mxp, ColorStylePin: ColorStyles.Hilite);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		// The reset is dropped with the colour it closed: nothing is left open for it to close.
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1zRed");
+	}
+
+	/// <summary>A pin renders below the terminal's own claim, which is the whole point of pinning one.</summary>
+	[Test]
+	public async Task TransformAsync_PinnedSixteenColor_DowngradesATruecolorTerminal()
+	{
+		var input = "\x1b[38;2;255;0;0mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: true,
+			ColorStylePin: ColorStyles.SixteenColor);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true, ColorEnabled: true, Xterm256Enabled: true, TruecolorEnabled: true);
+
+		var result = Encoding.UTF8.GetString(await _service.TransformAsync(input, capabilities, preferences));
+
+		await Assert.That(result).DoesNotContain("38;2;");
+		await Assert.That(result).DoesNotContain("38;5;");
+		await Assert.That(result).Contains("Red text");
+	}
+
+	/// <summary>
+	/// A pin is the player speaking for themselves, so it also overrides the screen-reader default —
+	/// somebody running a screen reader alongside a colour-capable terminal can ask for the colour.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_PinOverridesScreenReaderDefault()
 	{
 		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();
-		var capabilities = new ProtocolCapabilities(SupportsAnsi: true);
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: false, ScreenReader: true, ColorStylePin: ColorStyles.SixteenColor);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[31mRed text\x1b[0m");
+	}
+
+	/// <summary>
+	/// sharpflag.md's split, honoured: ANSI is "this client can highlight", COLOR is "this client can
+	/// colour". A player with only the first, on a terminal claiming nothing, gets the attributes.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_AnsiFlagAlone_RendersHilite()
+	{
+		var input = "\x1b[1;31mBold red\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
 		var preferences = new PlayerOutputPreferences(AnsiEnabled: true, ColorEnabled: false);
 
 		var result = await _service.TransformAsync(input, capabilities, preferences);
 
-		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("Red text");
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1mBold red\x1b[0m");
 	}
 
 	[Test]
@@ -245,6 +371,86 @@ public class OutputTransformServiceTests
 		await Assert.That(result).IsEqualTo("\x1b[38;5;244mGrey\x1b[0m");
 	}
 
+	/// <summary>
+	/// The renderer emits one SGR per run carrying everything that changes there — bold underlined
+	/// white is <c>ESC[1;4;38;2;255;255;255m</c>, not three sequences (see AnsiStream's remarks). The
+	/// downgrades matched only a sequence whose parameters began at <c>38</c>, so every colour that
+	/// shared its SGR with an attribute — which is most of them — went to the client untouched, and a
+	/// 16-colour client received raw 24-bit escapes.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[1;4;38;2;255;255;255mText\x1b[0m", "\x1b[1;4;38;5;231mText\x1b[0m")]
+	[Arguments("\x1b[1;38;2;255;0;0mText\x1b[0m", "\x1b[1;38;5;196mText\x1b[0m")]
+	[Arguments("\x1b[38;2;0;0;255;1mText\x1b[0m", "\x1b[38;5;21;1mText\x1b[0m")]
+	public async Task TransformAsync_DowngradesAColourSharingItsSgrWithAnAttribute(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: false);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	/// <summary>The same, one rung further down, where the palette entry also has to go.</summary>
+	[Test]
+	public async Task TransformAsync_DowngradesACombinedSequenceAllTheWayToSixteen()
+	{
+		var input = "\x1b[1;4;38;2;255;0;0mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: false, SupportsTruecolor: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;4;31mText\x1b[0m");
+	}
+
+	/// <summary>
+	/// The bright half of the basic sixteen is the aixterm range, not "3" followed by the index:
+	/// concatenating gave 38 and 39 for bright black and bright red — the extended-colour introducer
+	/// and the default foreground — and two-digit nonsense like "315" above that.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[38;5;9mText\x1b[0m", "\x1b[91mText\x1b[0m")]
+	[Arguments("\x1b[38;5;255mText\x1b[0m", "\x1b[97mText\x1b[0m")]
+	[Arguments("\x1b[48;5;9mText\x1b[0m", "\x1b[101mText\x1b[0m")]
+	[Arguments("\x1b[38;5;196mText\x1b[0m", "\x1b[31mText\x1b[0m")]
+	public async Task TransformAsync_MapsTheBrightSixteenOntoTheAixtermRange(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	/// <summary>A sequence that is not a colour at all comes through byte for byte.</summary>
+	[Test]
+	public async Task TransformAsync_LeavesAttributeOnlySequencesAlone()
+	{
+		var input = "\x1b[1;4;7mText\x1b[22;24;27m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;4;7mText\x1b[22;24;27m");
+	}
+
+	/// <summary>
+	/// A truncated extended colour is left exactly as it arrived rather than guessed at: dropping it
+	/// would leave the rest of the line coloured by whatever came before.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_LeavesAMalformedExtendedColourAlone()
+	{
+		var input = "\x1b[38;2;255mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).Contains("Text");
+	}
+
 	[Test]
 	public async Task TransformAsync_ConvertsToAscii_WhenAsciiCharset()
 	{
@@ -273,15 +479,32 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
-	public async Task TransformAsync_HandlesComplexAnsi_StripsAll()
+	public async Task TransformAsync_HandlesComplexAnsi_StripsAll_WhenPinnedPlain()
+	{
+		var input = "\x1b[1m\x1b[31mBold Red\x1b[0m \x1b[4m\x1b[32mUnderline Green\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: false, ColorStylePin: ColorStyles.Plain);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		var resultText = Encoding.UTF8.GetString(result);
+		await Assert.That(resultText).IsEqualTo("Bold Red Underline Green");
+	}
+
+	/// <summary>
+	/// Unpinned, the same client keeps its attributes: a termcap that named no colour is what
+	/// TerminalCapabilities.ColorStyle already calls "hilite", so hilite is what terminfo() and
+	/// SOCKSET report to the player and hilite is what goes on the wire.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_HandlesComplexAnsi_KeepsAttributes_WhenTerminalNamedNoColour()
 	{
 		var input = "\x1b[1m\x1b[31mBold Red\x1b[0m \x1b[4m\x1b[32mUnderline Green\x1b[0m"u8.ToArray();
 		var capabilities = new ProtocolCapabilities(SupportsAnsi: false);
 
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("Bold Red Underline Green");
+		await Assert.That(Encoding.UTF8.GetString(result))
+			.IsEqualTo("\x1b[1mBold Red\x1b[0m \x1b[4mUnderline Green\x1b[0m");
 	}
 
 	[Test]
@@ -325,8 +548,10 @@ public class OutputTransformServiceTests
 
 		var result = await _service.TransformAsync(input, capabilities, null);
 
-		// Both ANSI and OSC 8 should be stripped
+		// The OSC 8 wrapper goes; the bold does not, because a client that named no colour is rendered
+		// at "hilite" rather than plain. Colour is what this rung drops, and there is none here.
 		var resultText = Encoding.UTF8.GetString(result);
-		await Assert.That(resultText).IsEqualTo("topic text");
+		await Assert.That(resultText).IsEqualTo("\x1b[1mtopic text\x1b[0m");
+		await Assert.That(resultText).DoesNotContain("]8;;");
 	}
 }

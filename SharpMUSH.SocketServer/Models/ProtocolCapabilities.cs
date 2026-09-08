@@ -24,6 +24,13 @@ public enum OutputFormat
 /// <param name="MaxLineLength">Maximum line length supported by the client (-1 = unlimited)</param>
 /// <param name="Format">The output format negotiated for this connection</param>
 /// <param name="ScreenReader">Whether MTTS identified the client as a screen reader</param>
+/// <param name="ColorStylePin">
+/// A colour style the player pinned with <c>SOCKSET colorstyle</c> — one of the
+/// <see cref="SharpMUSH.Library.Utilities.ColorStyles"/> values. Null means nothing is pinned and the
+/// depth is worked out from the negotiated capabilities and the player's flags. This is the only way
+/// to render <i>below</i> what the client and the flags between them claim, so it is what turns
+/// colour off for a player who does not want it.
+/// </param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -32,5 +39,6 @@ public record ProtocolCapabilities(
 	string Charset = "UTF-8",
 	int MaxLineLength = -1,
 	OutputFormat Format = OutputFormat.Ansi,
-	bool ScreenReader = false
+	bool ScreenReader = false,
+	string? ColorStylePin = null
 );

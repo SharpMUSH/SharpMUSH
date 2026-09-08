@@ -178,6 +178,7 @@ public class Program
 				x.AddConsumer<GMCPOutputConsumer, GMCPOutputMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePlayerPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, ClearPlayerOutputPreferencesMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateColorStyleMessage>();
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();

@@ -600,7 +600,8 @@ public partial class Commands
 
 		if (pairs.Length == 0)
 		{
-			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n"), executor);
+			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n",
+				await ArgHelpers.ColorFlagsOfAsync(Mediator, target.Ref)), executor);
 			return CallState.Empty;
 		}
 
@@ -609,6 +610,10 @@ public partial class Commands
 			var result = SocketOptions.Set(target, pairs[i], pairs[i + 1]);
 			await NotifyService.NotifyLocalized(executor, result.Key, result.Arguments);
 		}
+
+		// Once, after the whole run: several pairs may be set in one command, and only the descriptor's
+		// final state is worth telling the socket owner about.
+		await PublishColorStyleAsync(target);
 
 		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
 		// same way it answers an empty option name.

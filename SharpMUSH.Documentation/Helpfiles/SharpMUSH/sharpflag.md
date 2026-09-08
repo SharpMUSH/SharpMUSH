@@ -227,13 +227,16 @@ XTERM colors can also be enabled on a per-connection basis with `@sockset`.
 
 This flag indicates to the MUSH that the player's client can handle 24-bit RGB colors. It is aliased to TRUECOLOUR, RGB, and 24BIT.
 
-Player ANSI and color-depth flags take precedence over automatically detected terminal capabilities after login. ANSI and COLOR must also be set for colored output; XTERM256 independently controls 256-color output and fallback.
+A color flag and a capability the client negotiated for itself are both claims that it can display something, so they are added together: whichever says yes wins, and the deepest one either of them reaches is the depth used. Setting a flag can therefore only ever *raise* what you are sent, never lower it — a flag you have not set means "nobody has said", not "no colors", which is why a client that reports 24-bit color over MTTS gets it whether or not TRUECOLOR is set on the character.
+
+To be sent *less* than the client and the flags between them claim — including no color at all — pin a style with `SOCKSET colorstyle` (`plain`, `hilite`, `16color`, `xterm256`, `truecolor`, or `auto` to go back to the automatic choice). A pin overrides both the flags and the negotiated capabilities.
 
 **See Also:**
 - [ANSI]
 - [COLOR]
 - [XTERM256]
 - [ansi()]
+- [@sockset]
 
 # CONNECTED
 

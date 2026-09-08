@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -55,6 +56,99 @@ public class ConnectionTerminfoTests
 
 	private async Task<string> TerminfoAsync(DBRef player) =>
 		(await Parser.FunctionParse(MarkupText.Plain($"terminfo(#{player.Number})")))!.Message!.ToPlainText();
+
+	/// <summary>
+	/// PennMUSH's <c>lookup_desc()</c> (src/bsd.c) falls back to
+	/// <c>match_result(executor, name, TYPE_PLAYER, MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE)</c>,
+	/// so "me" is a valid argument to every connection function — and it is the one a player types.
+	/// The player-name match SharpMUSH used carries no MAT_ME, so <c>terminfo(me)</c> answered
+	/// "unknown" and, because it was the notifying variant of the match, said "I can't see that here."
+	/// to the caller as well. Functions do not talk.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ResolvesMe_ToTheCallersOwnConnection()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "MeTermClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "SharpMUTerm", telnetNegotiated: true);
+		try
+		{
+			var asSelf = WebAppFactoryArg.FunctionParserFor(playerRef);
+			var byMe = (await asSelf.FunctionParse(MarkupText.Plain("terminfo(me)")))!.Message!.ToPlainText();
+
+			await Assert.That(byMe).StartsWith("SharpMUTerm");
+			await Assert.That(byMe).IsEqualTo(await TerminfoAsync(playerRef))
+				.Because("\"me\" and the dbref name the same descriptor");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>fun_terminfo</c> emits the colour style for every caller — it sits after the has_privs block
+	/// alongside pueblo and stripaccents — so a client that pinned nothing still learns what depth it
+	/// is being rendered at. SharpMUSH returned early with the bare word "unknown" for an unprivileged
+	/// caller, which made the documented "one of the color styles will also be included" untrue and
+	/// left the includeDetails parameter unreachable.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_AlwaysReportsAColourStyle()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "StyleTermClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet");
+		try
+		{
+			var info = await TerminfoAsync(playerRef);
+			await Assert.That(info.Split(' ')).Contains(ColorStyles.SixteenColor)
+				.Because("a client that was never asked is assumed to take the basic sixteen");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// A colour flag can raise the depth above what the terminal negotiated — that is what setting
+	/// XTERM256 on a character is for — so the reported style has to account for it. Reading the style
+	/// out of terminal metadata alone told a "dumb"-terminal player with XTERM256 that they were on
+	/// "hilite" while the wire carried 256-colour output, which is a capability claim softcode acts on.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsTheStyleAPlayerFlagRaisesItTo()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "FlagStyleClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "dumb", telnetNegotiated: true);
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "dumb");
+		try
+		{
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).Contains(ColorStyles.Hilite)
+				.Because("a termcap that names no colour is hilite on its own");
+
+			await Parser.CommandParse(1, connectionService,
+				MarkupText.Plain($"@set #{playerRef.Number}=XTERM256"));
+
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).Contains(ColorStyles.Xterm256)
+				.Because("the flag raises the depth, so it has to raise the report with it");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
 
 	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
 	public async Task Terminfo_ReportsWebsocket_ForWebSocketConnection()

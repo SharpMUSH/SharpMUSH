@@ -236,26 +236,53 @@ public class ConnectionServerService(
 		return false;
 	}
 
-	public bool UpdateCapabilities(long handle, ProtocolCapabilities capabilities)
+	/// <summary>
+	/// Pins — or, with a null <paramref name="style"/>, unpins — the connection's colour style.
+	/// </summary>
+	public bool UpdateColorStyle(long handle, string? style) =>
+		UpdateCapabilities(handle, current => current with { ColorStylePin = style });
+
+	/// <summary>
+	/// Applies <paramref name="change"/> to the connection's capabilities under a compare-and-swap.
+	/// <para>
+	/// A transform rather than a value, because the capabilities record has several independent
+	/// writers — terminal-type negotiation, the Pueblo and MXP format switches, and a
+	/// <c>SOCKSET colorstyle</c> pin arriving from the engine — and every one of them used to read the
+	/// record, build a whole replacement from it, and write that replacement back. Anything another
+	/// writer had set in between was overwritten by a snapshot taken before it existed: a pin
+	/// acknowledged to the player, then silently reverted to automatic rendering because the client
+	/// happened to finish negotiating in the same instant. Recomputing inside the loop makes each
+	/// writer's change apply to whatever is there now, so they compose instead of racing.
+	/// </para>
+	/// </summary>
+	/// <returns>True when the capabilities actually changed; false for an unknown handle or a no-op.</returns>
+	public bool UpdateCapabilities(long handle, Func<ProtocolCapabilities, ProtocolCapabilities> change)
 	{
-		if (_sessionState.TryGetValue(handle, out var connection))
+		if (!_sessionState.TryGetValue(handle, out var connection))
 		{
-			var updated = connection with { Capabilities = capabilities };
-			for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+			return false;
+		}
+
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			var capabilities = change(connection.Capabilities);
+
+			if (capabilities == connection.Capabilities)
 			{
-				if (_sessionState.TryUpdate(handle, updated, connection))
-				{
-					return true;
-				}
+				return false;
+			}
 
-				if (!_sessionState.TryGetValue(handle, out connection))
-				{
-					return false;
-				}
+			if (_sessionState.TryUpdate(handle, connection with { Capabilities = capabilities }, connection))
+			{
+				return true;
+			}
 
-				updated = connection with { Capabilities = capabilities };
+			if (!_sessionState.TryGetValue(handle, out connection))
+			{
+				return false;
 			}
 		}
+
 		return false;
 	}
 
@@ -307,5 +334,9 @@ public interface IConnectionServerService
 
 	bool ClearPreferences(long handle);
 
-	bool UpdateCapabilities(long handle, SharpMUSH.ConnectionServer.Models.ProtocolCapabilities capabilities);
+	bool UpdateColorStyle(long handle, string? style);
+
+	bool UpdateCapabilities(long handle,
+		Func<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities,
+			SharpMUSH.ConnectionServer.Models.ProtocolCapabilities> change);
 }
