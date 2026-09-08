@@ -48,19 +48,24 @@ public class CapabilityPolicyTests
 	}
 
 	[Test]
-	public async Task ManagerCannotAssignRoleToSelf()
+	[Arguments("node_accounts/a")]
+	[Arguments("a")]
+	public async Task ManagerCannotAssignRoleToSelf(string alias)
 	{
 		var registry = Substitute.For<IRoleRegistryService>();
 		var accounts = Substitute.For<IAccountService>();
+		accounts.GetByIdAsync(alias, Arg.Any<CancellationToken>()).Returns(new SharpAccount { Id = "node_accounts/a", Username = "a", PasswordHash = "" });
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.RolesAdmin });
-		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
-		registry.GetRolesForAccountAsync("a", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		accounts.GetCharactersAsync("node_accounts/a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
+		registry.GetRolesForAccountAsync("node_accounts/a", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
 		registry.GetRoleAsync("operator").Returns(new SharpRole { Slug = "operator", Name = "Operator", Permissions = [] });
 		var controller = new RolesController(registry, accounts, NullLogger<RolesController>.Instance, capabilities)
-		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "a")], "test")) } } };
-		await Assert.That(await controller.AssignRole("a", "operator")).IsTypeOf<ForbidResult>();
+		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "node_accounts/a")], "test")) } } };
+		await Assert.That(await controller.AssignRole(alias, "operator")).IsTypeOf<ForbidResult>();
 		await registry.DidNotReceive().AssignRoleToAccountAsync(Arg.Any<string>(), Arg.Any<string>());
+		await Assert.That(await controller.RemoveRole(alias, "operator")).IsTypeOf<ForbidResult>();
+		await registry.DidNotReceive().RemoveRoleFromAccountAsync(Arg.Any<string>(), Arg.Any<string>());
 	}
 	[Test]
 	public async Task DerivedRolePriorityPermitsLowerDelegationWithoutExplicitAssignments()

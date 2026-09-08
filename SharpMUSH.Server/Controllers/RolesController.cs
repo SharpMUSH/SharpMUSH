@@ -122,7 +122,7 @@ public class RolesController(
 			if (!RoleRecoveryPolicy.PreservesRecovery(role, await roles.GetRolesAsync()))
 				return BadRequest(new { error = "The God recovery grant must remain above every roles.admin denial." });
 			await roles.UpsertRoleAsync(role);
-			logger.LogInformation("Upserted role '{Slug}' (system: {IsSystem}).", role.Slug, role.IsSystem);
+			logger.LogInformation("Upserted role '{Slug}' (system: {IsSystem}).", System.Text.Json.JsonSerializer.Serialize(role.Slug), role.IsSystem);
 			return Ok(ToDto(role));
 
 		}
@@ -145,7 +145,7 @@ public class RolesController(
 
 			if (existingResult.IsT0 && !await CanChangeAsync(existingResult.AsT0)) return Forbid();
 			await roles.RemoveRoleAsync(slug);
-			logger.LogInformation("Removed role '{Slug}'.", slug);
+			logger.LogInformation("Removed role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok(new { deleted = true });
 
 		}
@@ -186,10 +186,12 @@ public class RolesController(
 				return BadRequest(new { error = $"Unknown role: {slug}" });
 			}
 
+			var account = await accounts.GetByIdAsync(accountId);
+			if (account?.Id is null) return NotFound();
+			accountId = account.Id;
 			if (!await CanChangeAsync(existingResult.AsT0, accountId)) return Forbid();
-			if (await accounts.GetByIdAsync(accountId) is null) return NotFound();
 			await roles.AssignRoleToAccountAsync(accountId, slug);
-			logger.LogInformation("Assigned role '{Slug}' to account '{AccountId}'.", slug, accountId);
+			logger.LogInformation("Assigned account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok();
 
 		}
@@ -204,10 +206,14 @@ public class RolesController(
 		await MutationGate.WaitAsync(HttpContext.RequestAborted);
 		try
 		{
+			var account = await accounts.GetByIdAsync(accountId);
+			if (account?.Id is null) return NotFound();
+			accountId = account.Id;
 			var existing = await roles.GetRoleAsync(slug);
-			if (existing.IsT0 && !await CanChangeAsync(existing.AsT0, accountId)) return Forbid();
+			if (!existing.IsT0) return NotFound();
+			if (!await CanChangeAsync(existing.AsT0, accountId)) return Forbid();
 			await roles.RemoveRoleFromAccountAsync(accountId, slug);
-			logger.LogInformation("Removed role '{Slug}' from account '{AccountId}'.", slug, accountId);
+			logger.LogInformation("Removed account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok();
 
 		}

@@ -4544,4 +4544,6 @@
     <value>Teme iz ahelpa. Samo za Čarobnjake i Boga, na portalu kao i u igri.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Odlučuje izričito pravilo najvišeg prioriteta; pri jednakosti zabrana ima prednost. Nasljeđivanje vrijedi samo bez izričitog pravila. Bez dopuštenja pristup je odbijen. Delegirani administratori mogu upravljati samo dopuštenjima koja imaju s nižim prioritetom, bez promjene vlastitih uloga ili ograničenja.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Trenutačni pristup: {0}; prioritet {1}; uloge {2}; odluka {3}.</value></data>
 </root>
