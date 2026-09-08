@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -17,8 +19,10 @@ namespace SharpMUSH.Library.Services;
 /// outlives the text that produced it — and it did not even save the inner lookup, because the value
 /// argument of GetOrSet is evaluated before the call.
 /// </remarks>
-public class LockService(IBooleanExpressionParser bep) : ILockService
+public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSHOptions> options) : ILockService
 {
+	private readonly AsyncLocal<uint> _evaluationDepth = new();
+
 	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new(StringComparer.OrdinalIgnoreCase)
 	{
 		{ "visual", ("v", LockFlags.Visual) },
@@ -136,43 +140,43 @@ public class LockService(IBooleanExpressionParser bep) : ILockService
 			? lockData.LockString
 			: null;
 
-	public ValueTask<bool> Evaluate(
+	public async ValueTask<bool> Evaluate(
 		string lockString,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
 	{
-		// Optimize #TRUE - no need to compile or cache
-		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
-			return ValueTask.FromResult(true);
+		var depth = _evaluationDepth.Value;
+		// The outermost evaluation is depth zero; max_depth indirect hops are allowed.
+		// Check before the #TRUE fast path, just as PennMUSH does.
+		if (depth > options.CurrentValue.Limit.MaxDepth) return false;
+		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE") return true;
 
-		return bep.Compile(lockString)(gated, unlocker);
+		_evaluationDepth.Value = depth + 1;
+		try
+		{
+			return await bep.Compile(lockString)(gated, unlocker);
+		}
+		finally
+		{
+			_evaluationDepth.Value = depth;
+		}
 	}
 
 	public async ValueTask<bool> Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
-		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE") return true;
-
-		var compile = bep.Compile(lockString);
-		// For channel locks, we need to evaluate the lock against the unlocker
-		// Channels don't have the same object structure, so we pass a synthetic object representation
+		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
+			return await Evaluate(lockString, unlocker, unlocker);
+		// Channels have no object representation, so evaluate against the channel owner.
 		var channelOwner = await gatedChannel.Owner.WithCancellation(CancellationToken.None);
 		var syntheticGated = new AnySharpObject(channelOwner);
-		return await compile(syntheticGated, unlocker);
+		return await Evaluate(lockString, syntheticGated, unlocker);
 	}
 
 	public ValueTask<bool> Evaluate(
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-	{
-		var lockString = Get(standardType, gated);
-
-		// Optimize #TRUE - no need to compile or cache
-		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
-			return ValueTask.FromResult(true);
-
-		return bep.Compile(lockString)(gated, unlocker);
-	}
+		=> Evaluate(Get(standardType, gated), gated, unlocker);
 
 	public async IAsyncEnumerable<bool> Evaluate(
 		LockType standardType,

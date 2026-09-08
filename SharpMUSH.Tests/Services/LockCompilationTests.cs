@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -35,10 +38,17 @@ public class LockCompilationTests
 		return obj;
 	}
 
+	private static IOptionsMonitor<SharpMUSHOptions> Options()
+	{
+		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst"));
+		return options;
+	}
+
 	[Test]
 	public async Task ChangingTheLockStringChangesTheAnswer()
 	{
-		var service = new LockService(_parser);
+		var service = new LockService(_parser, Options());
 		var unlocker = _factory.CreateThing(1, "Unlocker");
 		CompilesTo("=#1", true);
 		CompilesTo("=#2", false);
