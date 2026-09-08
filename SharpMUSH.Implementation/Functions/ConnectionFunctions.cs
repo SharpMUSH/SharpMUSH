@@ -91,14 +91,46 @@ public partial class Functions
 		return new CallState(isCount ? uniqueAddresses.Count.ToString() : string.Join(osep, results));
 	}
 
+	/// <summary>
+	/// PennMUSH <c>fun_cmds</c> (src/bsd.c): the command count off the target's descriptor, and "-1"
+	/// for every failure — no descriptor, or one the caller may not read. It carries no restriction of
+	/// its own, because a player asking about their own connection is allowed and the See_All check
+	/// inside covers everyone else; declaring it admin-only refused that reading outright.
+	/// <para>
+	/// The count lives under "CommandCount", which is the key
+	/// <see cref="SharpMUSHParserVisitor"/> increments and <c>WHO</c> reports. Reading a "CMDS" key
+	/// nothing writes — through an indexer, so a miss threw rather than returned — meant this
+	/// function could not answer at all.
+	/// </para>
+	/// </summary>
 	[SharpFunction(Name = "cmds", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		Restrict = ["admin", "power:see_all"], ParameterNames = ["object"])]
+		ParameterNames = ["object"])]
 	public async ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator, ConnectionService, LocateService,
-			parser.CurrentState.Arguments["0"],
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"]),
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata["CMDS"])
-		);
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		IConnectionService.ConnectionData? connection;
+
+		if (long.TryParse(arg0, out var port))
+		{
+			connection = ConnectionService.Get(port);
+		}
+		else
+		{
+			var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
+			connection = maybeLocate.IsNone || maybeLocate.IsError
+				? null
+				: await LeastIdleConnectionAsync(maybeLocate.AsPlayer.Object.DBRef);
+		}
+
+		if (connection is null || !await CanAccessConnectionData(executor, connection.Ref))
+		{
+			return new CallState("-1");
+		}
+
+		return new CallState(connection.CommandCount.ToString(CultureInfo.InvariantCulture));
+	}
 
 	[SharpFunction(Name = "conn", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -123,10 +155,12 @@ public partial class Functions
 			return new CallState(data2.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 		}
 
+		// fun_conn answers every failure with "-1" — a name that matches nothing, a match that is not
+		// connected, and a descriptor the caller may not see are one outcome, not three.
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? ErrorMessages.Returns.CantSeeThat : maybeLocate.AsError.Value);
+			return new CallState("-1");
 		}
 
 		var located = maybeLocate.AsPlayer;
@@ -136,7 +170,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var data = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var data = await LeastIdleConnectionAsync(located.Object.DBRef);
 		return new CallState(data?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -390,9 +424,11 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
+			// fun_hostname folds "no descriptor" and "not yours to see" into one "#-1": whether the
+			// descriptor exists is itself the thing a caller without See_All must not learn.
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return new CallState("#-1");
 			}
 
 			return new CallState(data.HostName);
@@ -408,10 +444,10 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return new CallState("#-1");
 		}
 
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 		if (connectionData is null)
 		{
 			return new CallState("#-1");
@@ -456,7 +492,7 @@ public partial class Functions
 			return new CallState("-1");
 		}
 
-		var connectionData = await ConnectionService.Get(locate.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(locate.Object.DBRef);
 		return new CallState(connectionData?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
@@ -474,9 +510,10 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
+			// Same "#-1" for both failures as fun_hostname, and for the same reason.
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return new CallState("#-1");
 			}
 
 			return new CallState(data.InternetProtocolAddress);
@@ -492,10 +529,10 @@ public partial class Functions
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return new CallState("#-1");
 		}
 
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
 		return connectionData is null
 			? new CallState("#-1")
@@ -859,12 +896,14 @@ public partial class Functions
 			var data = ConnectionService.Get(port);
 			if (data is null)
 			{
-				return new CallState("#-1");
+				return new CallState("-1");
 			}
 
+			// fun_recv counts as an integer and fails as one: "-1" for a descriptor that is not there and
+			// for one the caller may not read, with no "#-1" anywhere in it.
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return new CallState("-1");
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
@@ -873,19 +912,19 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+			return new CallState("-1");
 		}
 
 		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return new CallState("-1");
 		}
 
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 		return connectionData is null
-			? new CallState("#-1")
+			? new CallState("-1")
 			: new CallState(connectionData.Metadata.GetValueOrDefault("RECV", "0"));
 	}
 
@@ -900,12 +939,14 @@ public partial class Functions
 			var data = ConnectionService.Get(port);
 			if (data is null)
 			{
-				return new CallState("#-1");
+				return new CallState("-1");
 			}
 
+			// fun_sent counts as an integer and fails as one: "-1" for a descriptor that is not there and
+			// for one the caller may not read, with no "#-1" anywhere in it.
 			if (!await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return new CallState("-1");
 			}
 
 			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
@@ -914,19 +955,19 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+			return new CallState("-1");
 		}
 
 		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return new CallState("-1");
 		}
 
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 		return connectionData is null
-			? new CallState("#-1")
+			? new CallState("-1")
 			: new CallState(connectionData.Metadata.GetValueOrDefault("SENT", "0"));
 	}
 
@@ -941,7 +982,10 @@ public partial class Functions
 			var data = ConnectionService.Get(port);
 			if (data is null)
 			{
-				return new CallState("0");
+				// fun_ssl separates the two failures where fun_hostname folds them: no descriptor is
+				// "#-1 NOT CONNECTED", and a descriptor you may not read is a permission error. The
+				// boolean 0 means "connected, and not over TLS", which is a different fact.
+				return new CallState(ErrorMessages.Returns.NotConnected);
 			}
 
 			if (data.Ref != executor.Object().DBRef)
@@ -959,20 +1003,25 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? "0" : maybeLocate.AsError.Value);
+			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
 		var located = maybeLocate.AsPlayer;
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
+		if (connectionData is null)
+		{
+			return new CallState(ErrorMessages.Returns.NotConnected);
+		}
+
+		// lookup_desc first, permission second: a name that matches a player who is not online is "not
+		// connected" whoever asks, and only a descriptor that exists can be refused.
 		if (located.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
-		return connectionData is null
-			? new CallState("0")
-			: new CallState(connectionData.Metadata.GetValueOrDefault("SSL", "0"));
+		return new CallState(connectionData.Metadata.GetValueOrDefault("SSL", "0"));
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
@@ -983,56 +1032,43 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var hasSeeAll = await executor.IsSee_All();
 
+		// fun_terminfo checks the argument before it looks anything up, and says so rather than
+		// answering "unknown" — which would claim the descriptor exists and has no terminal type.
+		if (string.IsNullOrEmpty(arg0))
+		{
+			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
+		}
+
 		if (long.TryParse(arg0, out var port))
 		{
 			var data = ConnectionService.Get(port);
-			if (data is null)
-			{
-				return new CallState("unknown");
-			}
 
-			return new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef));
+			return data is null
+				? new CallState(ErrorMessages.Returns.NotConnected)
+				: new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef));
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState("unknown");
+			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
 		var located = maybeLocate.AsPlayer;
-		var connectionData = await ConnectionService.Get(located.Object.DBRef).FirstOrDefaultAsync();
+		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
+		// "unknown" is default_ttype — what a connected client with no terminal type is called. A
+		// target that is not connected at all is a different answer.
 		return connectionData is null
-			? new CallState("unknown")
+			? new CallState(ErrorMessages.Returns.NotConnected)
 			: new CallState(BuildTermInfo(connectionData.Metadata,
 				hasSeeAll || located.Object.DBRef == executor.Object().DBRef));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Width(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var playerOrDescriptor = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var defaultArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78");
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var isHandle = long.TryParse(playerOrDescriptor, out var port);
-
-		if (isHandle)
-		{
-			var data = ConnectionService.Get(port);
-			if (data is null)
-			{
-				return new CallState("#-1");
-			}
-
-			return data.Metadata.TryGetValue("WIDTH", out var height)
-				? height
-				: defaultArg;
-		}
-
-		return await DescriptorDimensionAsync(parser, executor, playerOrDescriptor, "WIDTH", defaultArg);
-	}
+		=> await DescriptorDimensionAsync(parser, "WIDTH",
+			ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78"));
 
 	[SharpFunction(Name = "xmwho", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "count"])]
 	public async ValueTask<CallState> NumberRangeMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1355,20 +1391,23 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
+		// fun_ports resolves its target exactly as lookup_desc's player half does — lookup_player, then
+		// MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE — so "me" works here too, and a name that
+		// matches nothing is answered with an empty list rather than an error string or a message.
+		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
-			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+			return CallState.Empty;
 		}
 
 		var target = maybeLocate.AsPlayer;
 
-		if (target.Object.DBRef != executor.Object().DBRef)
+		// The one thing fun_ports does say out loud, and it still returns nothing rather than "#-1":
+		// reading someone else's descriptors needs Priv_Who.
+		if (target.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
 		{
-			if (!await executor.IsSee_All())
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return CallState.Empty;
 		}
 
 		var handles = ConnectionService
@@ -1408,28 +1447,9 @@ public partial class Functions
 
 	[SharpFunction(Name = "height", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Height(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var playerOrDescriptor = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var defaultArg = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "78");
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var isHandle = long.TryParse(playerOrDescriptor, out var port);
-
-		if (!isHandle)
-		{
-			return await DescriptorDimensionAsync(parser, executor, playerOrDescriptor, "HEIGHT", defaultArg);
-		}
-
-		var data = ConnectionService.Get(port);
-		if (data is null)
-		{
-			return new CallState("#-1");
-		}
-
-		return data.Metadata.TryGetValue("HEIGHT", out var height)
-			? height
-			: defaultArg;
-	}
+		// 24, not 78: fun_height's fallback is a screen's worth of rows, and only fun_width's is 78.
+		=> await DescriptorDimensionAsync(parser, "HEIGHT",
+			ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, "24"));
 
 	[SharpFunction(Name = "hidden", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Hidden(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1440,8 +1460,12 @@ public partial class Functions
 		var canSeeHidden = await executor.IsWizard() || await executor.IsRoyalty() ||
 											 await executor.IsSee_All();
 
+		// The exception in this family: fun_hidden answers "#-1" and says why, for all three of its
+		// failures. Being told a descriptor could not be found costs nothing, because only a caller who
+		// already has See_All gets this far.
 		if (!canSeeHidden)
 		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState("#-1");
 		}
 
@@ -1450,6 +1474,8 @@ public partial class Functions
 			var data = ConnectionService.Get(port);
 			if (data is null || data.Ref is null)
 			{
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CouldNotFindDescriptor), executor);
 				return new CallState("#-1");
 			}
 
@@ -1461,6 +1487,8 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate.IsNone || maybeLocate.IsError)
 		{
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.CouldNotFindPlayer), executor);
 			return new CallState("#-1");
 		}
 
@@ -1468,6 +1496,28 @@ public partial class Functions
 		var isHiddenPlayer = await ConnectionService.IsPlayerHiddenAsync(located.Object.DBRef)
 			|| await new AnySharpObject(located).HasFlag("DARK");
 		return new CallState(isHiddenPlayer ? "1" : "0");
+	}
+
+	/// <summary>
+	/// The descriptor PennMUSH's <c>lookup_desc()</c> (src/bsd.c) settles on for a player: it walks the
+	/// whole connected list and keeps the one with the greatest <c>last_time</c> — the least idle. A
+	/// player with two clients open therefore answers <c>idle()</c>, <c>terminfo()</c>, <c>width()</c>
+	/// and the rest about the one they are actually using, which taking whichever connection came out
+	/// of the dictionary first did only by luck.
+	/// </summary>
+	private async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(DBRef who)
+	{
+		IConnectionService.ConnectionData? best = null;
+
+		await foreach (var connection in ConnectionService.Get(who))
+		{
+			if (best is null || (connection.Idle ?? TimeSpan.MaxValue) < (best.Idle ?? TimeSpan.MaxValue))
+			{
+				best = connection;
+			}
+		}
+
+		return best;
 	}
 
 	/// <summary>
@@ -1486,24 +1536,50 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// The named-target half of PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c): the
-	/// dimension off the target's least-idle descriptor, and on any miss the caller's default rather
-	/// than an error. PennMUSH falls through to <c>args[1]</c> (or 78) whenever <c>lookup_desc</c>
-	/// finds nothing, so a name that resolves to nobody answers with the default width, not
-	/// "#-1 NO MATCH" — and it does not say anything to the player either.
+	/// PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c), which are one function apart from
+	/// the key they read and the fallback they end on:
+	/// <code>
+	/// if (!*args[0])                                    "#-1 FUNCTION REQUIRES ONE ARGUMENT"
+	/// else if (lookup_desc(...) &amp;&amp; match->width > 0)     the dimension
+	/// else if (args[1])                                 the caller's default
+	/// else                                              78 / 24
+	/// </code>
+	/// Every failure after the argument check lands on the default: a name that matches nobody, a
+	/// match who is not connected, and a descriptor whose dimension was never negotiated are one
+	/// outcome. Answering "#-1 NO MATCH" instead — which is what routing this through the notifying
+	/// locate produced — turns a formatting helper into an error string in the middle of a line, and
+	/// said "I can't see that here." to the caller on the way.
 	/// </summary>
 	private async ValueTask<CallState> DescriptorDimensionAsync(
-		IMUSHCodeParser parser, AnySharpObject executor, string target, string key, MString defaultArg)
+		IMUSHCodeParser parser, string key, MString defaultArg)
 	{
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, target);
+		var target = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (string.IsNullOrEmpty(target))
 		{
-			return new CallState(defaultArg);
+			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
 		}
 
-		var connection = await ConnectionService.Get(maybeLocate.AsPlayer.Object.DBRef).FirstOrDefaultAsync();
-		return new CallState(connection?.Metadata.GetValueOrDefault(key) ?? defaultArg.ToPlainText());
+		var connection = long.TryParse(target, out var port)
+			? ConnectionService.Get(port)
+			: await LocatedConnectionAsync(parser, target);
+
+		// PennMUSH's "&& match->width > 0": a dimension of zero is one nobody has reported, so it takes
+		// the default rather than being sent as a width of nothing.
+		return connection?.Metadata.GetValueOrDefault(key) is { Length: > 0 } dimension && dimension != "0"
+			? new CallState(dimension)
+			: new CallState(defaultArg);
+
+		async ValueTask<IConnectionService.ConnectionData?> LocatedConnectionAsync(
+			IMUSHCodeParser inner, string name)
+		{
+			var executor = await inner.CurrentState.KnownExecutorObject(Mediator);
+			var maybeLocate = await LocateService.LocateConnectionTarget(inner, executor, executor, name);
+
+			return maybeLocate.IsNone || maybeLocate.IsError
+				? null
+				: await LeastIdleConnectionAsync(maybeLocate.AsPlayer.Object.DBRef);
+		}
 	}
 
 	/// <summary>

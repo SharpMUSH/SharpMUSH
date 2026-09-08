@@ -36,6 +36,20 @@ public static class ErrorMessages
 		public const string InvalidObjectType = "#-1 INVALID OBJECT TYPE";
 
 		public const string PermissionDenied = "#-1 PERMISSION DENIED";
+
+		/// <summary>
+		/// PennMUSH <c>fun_ssl</c> / <c>fun_terminfo</c> (src/bsd.c) when <c>lookup_desc</c> finds no
+		/// descriptor. The rest of the connection family answers a miss with a bare <c>#-1</c> or
+		/// <c>-1</c> instead; the wording is per-function and not a house style.
+		/// </summary>
+		public const string NotConnected = "#-1 NOT CONNECTED";
+
+		/// <summary>
+		/// PennMUSH <c>fun_terminfo</c> / <c>fun_width</c> / <c>fun_height</c> on an empty first
+		/// argument. Those three check for it explicitly; the rest of the family lets an empty name
+		/// fall through <c>lookup_desc</c> and fail as an ordinary miss.
+		/// </summary>
+		public const string FunctionRequiresOneArgument = "#-1 FUNCTION REQUIRES ONE ARGUMENT";
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 		public const string AttrEvalPermissions = "#-1 NO PERMISSION TO EVALUATE ATTRIBUTE";
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
@@ -369,6 +383,8 @@ public static class ErrorMessages
 		public const string NoSuchObject = "I can't find that.";
 		public const string CouldNotFind = "Could not find that.";
 		public const string CouldNotFindPlayer = "Could not find that player.";
+		/// <summary>PennMUSH <c>fun_hidden</c> (src/bsd.c), in this codebase's wording.</summary>
+		public const string CouldNotFindDescriptor = "Could not find that descriptor.";
 		public const string CantFindThatPlayer = "I can't find that player";
 		// match.c:481 — with the exclamation mark. The neighbouring two are already exact.
 		public const string AmbiguousMatch = "I don't know which one you mean!";
