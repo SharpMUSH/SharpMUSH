@@ -1650,9 +1650,13 @@ public partial class Functions
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
+		// Connections with no known idle time are filtered out rather than mapped to -1: mixed in,
+		// the sentinel wins the Min() and an executor with one unavailable connection reports -1
+		// however long its other connections have actually been idle.
 		var data = ConnectionService.Get(executor.Object().DBRef);
 		var idleMilliseconds = await data
-			.Select(x => x.Idle is null ? -1L : (long)x.Idle.Value.TotalMilliseconds)
+			.Where(x => x.Idle is not null)
+			.Select(x => (long)x.Idle!.Value.TotalMilliseconds)
 			.DefaultIfEmpty(-1L)
 			.MinAsync();
 

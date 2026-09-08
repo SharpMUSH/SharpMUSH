@@ -48,9 +48,6 @@ public static class TimePrecisions
 		switch (token.Trim().ToLowerInvariant())
 		{
 			case "s":
-			case "sec":
-			case "secs":
-			case "second":
 			case "seconds":
 				precision = TimePrecision.Seconds;
 				return true;
@@ -59,9 +56,6 @@ public static class TimePrecisions
 				precision = TimePrecision.Fractional;
 				return true;
 			case "ms":
-			case "milli":
-			case "millis":
-			case "millisecond":
 			case "milliseconds":
 				precision = TimePrecision.Milliseconds;
 				return true;
@@ -125,7 +119,8 @@ public static class TimePrecisions
 	}
 
 	/// <summary>
-	/// Reads a seconds value as a whole-second part and a millisecond remainder.
+	/// Reads a seconds value as a whole-second part and a millisecond remainder. <b>Both parts carry
+	/// the sign</b>, so a caller rejecting negative durations must test both.
 	/// </summary>
 	/// <remarks>
 	/// The duration renderers use this rather than <see cref="TryParseSeconds"/> because a single
@@ -144,30 +139,65 @@ public static class TimePrecisions
 			return false;
 		}
 
-		// Truncation towards zero, not floor: the two parts are read back as one signed magnitude
-		// ("-1.500"), so -1.5 has to split as -1 and 500, never -2 and 500.
-		var whole = decimal.Truncate(parsed);
-		var fraction = decimal.Round(Math.Abs(parsed - whole) * 1000m, MidpointRounding.AwayFromZero);
+		// Split the magnitude and reapply the sign, rather than reading the sign back off the
+		// truncated whole part. decimal.Truncate returns 0 for everything in (-1, 0), so a value like
+		// -0.5 would otherwise arrive as a positive 500ms with nothing left to say it was negative —
+		// and timestring(-0.5) would render "0s" instead of refusing a negative duration.
+		var negative = parsed < 0;
+		var magnitude = Math.Abs(parsed);
+		var whole = decimal.Truncate(magnitude);
+		var fraction = decimal.Round((magnitude - whole) * 1000m, MidpointRounding.AwayFromZero);
 
 		// Rounding .9995 up lands on a full second, which belongs in the whole part.
 		if (fraction >= 1000m)
 		{
-			whole += whole < 0 ? -1 : 1;
+			whole += 1;
 			fraction -= 1000m;
 		}
 
 		try
 		{
-			seconds = (long)whole;
+			seconds = negative ? -(long)whole : (long)whole;
 		}
 		catch (OverflowException)
 		{
 			return false;
 		}
 
-		milliseconds = (int)fraction;
+		milliseconds = negative ? -(int)fraction : (int)fraction;
 		return true;
 	}
+
+	/// <summary>
+	/// Reads a seconds value naming an instant, rejecting anything outside the range
+	/// <see cref="DateTimeOffset"/> can represent.
+	/// </summary>
+	/// <remarks>
+	/// The range check is the point. Callers used to hand the parsed value straight to
+	/// <see cref="DateTimeOffset.FromUnixTimeMilliseconds"/>, which throws for a value a caller can
+	/// trivially supply — a millisecond stamp passed where seconds are expected is 1000x too large
+	/// and lands well outside it. The exception escaped into the function dispatcher and came back as
+	/// an empty result rather than an error, which is the one answer softcode cannot tell from a real
+	/// one.
+	/// </remarks>
+	public static bool TryParseInstant(string? value, out DateTimeOffset instant)
+	{
+		instant = default;
+
+		if (!TryParseSeconds(value, out var milliseconds)
+				|| milliseconds < MinInstantMilliseconds
+				|| milliseconds > MaxInstantMilliseconds)
+		{
+			return false;
+		}
+
+		instant = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+		return true;
+	}
+
+	private static readonly long MinInstantMilliseconds = DateTimeOffset.MinValue.ToUnixTimeMilliseconds();
+
+	private static readonly long MaxInstantMilliseconds = DateTimeOffset.MaxValue.ToUnixTimeMilliseconds();
 
 	/// <summary>
 	/// The seconds field of a rendered duration, at <paramref name="precision"/>: whole as

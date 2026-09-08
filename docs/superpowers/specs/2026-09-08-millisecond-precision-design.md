@@ -33,9 +33,10 @@ One rule, three clauses:
    reached by omitting the precision argument. Softcode pasted in from a Penn game
    behaves identically.
 3. **Precision describes output only. Every number a function reads is seconds,
-   possibly fractional.** `timefmt($Y, 1778518155494)` reads its argument as seconds
-   and yields year 58333, exactly as written. Nothing inspects a value's magnitude to
-   guess its unit.
+   possibly fractional.** `timefmt($Y, 1778518155494)` reads its argument as seconds —
+   a millisecond stamp is a thousand times too large, so it lands outside the
+   representable range and returns `#-1 TIME INTEGER OUT OF RANGE`. Nothing inspects a
+   value's magnitude to guess its unit.
 
 Clause 3 is what makes clause 2 safe. Because no input path changes meaning, a call
 that is textually identical in Penn and in SharpMUSH computes the same thing, and the
@@ -196,6 +197,14 @@ text.
 **Precision.** `secs(ms)` equals `secs()` times 1000 to within a tick; `csecs(#N)`
 equals that object's stored milliseconds divided by 1000; every rejected token yields
 `#-1 INVALID PRECISION`; `f` output feeds back through the consumers and round-trips.
+
+**Hostile input.** Softcode can call these functions with anything, so nothing may
+escape as an exception: a duration term large enough to overflow `decimal`
+(`stringsecs(99999999999999999999999999y)`), a seconds value outside the range
+`DateTimeOffset` can represent (`timefmt($Y,1778518155494)`), an `etimefmt` field width
+too large for `Int32` (`$99999999999s`), and a sub-second negative duration
+(`timestring(-0.5)`), whose sign lives in the millisecond remainder because the
+whole-second part of anything in `(-1, 0)` is zero.
 
 **Regression.** One test per bug above.
 

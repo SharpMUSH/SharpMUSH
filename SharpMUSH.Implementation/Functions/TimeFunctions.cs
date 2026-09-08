@@ -84,13 +84,12 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.UtcNow));
 		}
 
-		if (!TimePrecisions.TryParseSeconds(secs, out var milliseconds))
+		if (!TimePrecisions.TryParseInstant(secs, out var instant))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(
-			tz.IsDaylightSavingTime(DateTimeOffset.FromUnixTimeMilliseconds(milliseconds)));
+		return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(instant));
 	}
 
 	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -286,32 +285,36 @@ public partial class Functions
 			return false;
 		}
 
-		decimal total = 0;
-		foreach (Match match in matches)
-		{
-			if (!decimal.TryParse(match.Groups["number"].Value,
-						NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
-						CultureInfo.InvariantCulture, out var value))
-			{
-				error = ErrorMessages.Returns.Integer;
-				return false;
-			}
-
-			total += match.Groups["unit"].Value.ToLowerInvariant() switch
-			{
-				['y', ..] => value * 365 * 24 * 3600 * 1000,
-				['w', ..] => value * 7 * 24 * 3600 * 1000,
-				['d', ..] => value * 24 * 3600 * 1000,
-				['h', ..] => value * 3600 * 1000,
-				['m', ..] => value * 60 * 1000,
-				['s', ..] => value * 1000,
-				"" => value * 1000, // Empty unit defaults to seconds
-				_ => 0 // Unknown unit returns 0 instead of throwing
-			};
-		}
-
+		// The whole accumulation sits inside the guard, not just the final cast: each term is a
+		// user-supplied decimal scaled by up to 31,536,000,000, so "99999999999999999999999999y"
+		// overflows at the multiplication and the running sum can overflow too. Either would escape
+		// as an exception from a function softcode is allowed to call.
 		try
 		{
+			decimal total = 0;
+			foreach (Match match in matches)
+			{
+				if (!decimal.TryParse(match.Groups["number"].Value,
+							NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+							CultureInfo.InvariantCulture, out var value))
+				{
+					error = ErrorMessages.Returns.Integer;
+					return false;
+				}
+
+				total += match.Groups["unit"].Value.ToLowerInvariant() switch
+				{
+					['y', ..] => value * 365 * 24 * 3600 * 1000,
+					['w', ..] => value * 7 * 24 * 3600 * 1000,
+					['d', ..] => value * 24 * 3600 * 1000,
+					['h', ..] => value * 3600 * 1000,
+					['m', ..] => value * 60 * 1000,
+					['s', ..] => value * 1000,
+					"" => value * 1000, // Empty unit defaults to seconds
+					_ => 0 // Unknown unit returns 0 instead of throwing
+				};
+			}
+
 			milliseconds = (long)decimal.Round(total, MidpointRounding.AwayFromZero);
 			return true;
 		}
@@ -463,11 +466,10 @@ public partial class Functions
 		if (args.TryGetValue("1", out var secsArg))
 		{
 			var secsStr = secsArg.Message!.ToPlainText();
-			if (!TimePrecisions.TryParseSeconds(secsStr, out var milliseconds))
+			if (!TimePrecisions.TryParseInstant(secsStr, out dt))
 			{
-				return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
+				return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 			}
-			dt = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
 		}
 		else
 		{
@@ -564,8 +566,9 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		// PennMUSH: negative seconds return error
-		if (totalSecs < 0)
+		// Both parts carry the sign, so a sub-second negative — where the whole part is 0 — is only
+		// visible in the remainder. Testing totalSecs alone let timestring(-0.5) render "0s".
+		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
@@ -724,8 +727,9 @@ public partial class Functions
 		}
 
 		// PennMUSH's fun_etime rejects a negative (src/funtime.c: "secs < 0" -> e_range), as
-		// timestring() and etimefmt() already do here. This rendered "-1s" instead.
-		if (totalSecs < 0)
+		// timestring() and etimefmt() already do here. This rendered "-1s" instead. Both parts carry
+		// the sign, so a sub-second negative shows up only in the remainder.
+		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
@@ -794,8 +798,9 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		// PennMUSH: negative seconds return error
-		if (totalSecs < 0)
+		// PennMUSH: negative seconds return error. Both parts carry the sign, so a sub-second
+		// negative shows up only in the remainder.
+		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
@@ -819,9 +824,12 @@ public partial class Functions
 			var flags = match.Groups["flags"].Value.ToLowerInvariant();
 			var codeChar = match.Groups["code"].Value;
 
-			var width = string.IsNullOrEmpty(widthStr)
-				? 0
-				: int.Parse(widthStr, CultureInfo.InvariantCulture);
+			// TryParse, not Parse: the pattern's width group is \d* with no length bound, so
+			// "$99999999999s" overflows Int32 and the exception escapes this Regex.Replace callback.
+			// A width nobody could render falls back to no padding.
+			var width = int.TryParse(widthStr, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedWidth)
+				? parsedWidth
+				: 0;
 			var addSuffix = flags.Contains('x');
 			var skipZero = flags.Contains('z');
 			var useTotal = flags.Contains('t');
@@ -875,12 +883,10 @@ public partial class Functions
 			? tzArg.Message!.ToPlainText()
 			: null;
 
-		if (!TimePrecisions.TryParseSeconds(secsStr, out var milliseconds))
+		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
-
-		var dateTime = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
 
 		if (timezone != null)
 		{
@@ -934,12 +940,11 @@ public partial class Functions
 	{
 		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (!TimePrecisions.TryParseSeconds(secsStr, out var milliseconds))
+		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
 
-		var dateTime = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
 		return ValueTask.FromResult<CallState>(
 			dateTime.UtcDateTime.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 	}

@@ -37,13 +37,80 @@ public class TimePrecisionFunctionTests
 		await Assert.That(precision).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// Only the six documented spellings. "secs" and "millis" read like precision tokens but are
+	/// not ones, and accepting an undocumented alias makes the guide wrong rather than generous.
+	/// </summary>
 	[Test]
 	[Arguments("us")]
 	[Arguments("ns")]
 	[Arguments("m")]
 	[Arguments("nonsense")]
+	[Arguments("secs")]
+	[Arguments("sec")]
+	[Arguments("millis")]
+	[Arguments("milli")]
 	public async Task UnknownPrecisionTokensAreRejectedRatherThanDefaulted(string token)
 		=> await Assert.That(TimePrecisions.TryParse(token, out _)).IsFalse();
+
+	// ---- hostile input --------------------------------------------------------------------------
+
+	/// <summary>
+	/// The sign of a duration in (-1, 0) lives entirely in the millisecond remainder, because the
+	/// whole-second part truncates to zero. Reading the sign off the whole part let a negative
+	/// duration through the guard and render as a positive one.
+	/// </summary>
+	[Test]
+	[Arguments("-0.5", 0L, -500)]
+	[Arguments("-0.9996", -1L, 0)]
+	[Arguments("-1.5", -1L, -500)]
+	[Arguments("0.9996", 1L, 0)]
+	public async Task ASubSecondNegativeKeepsItsSign(string input, long expectedSeconds, int expectedMs)
+	{
+		await Assert.That(TimePrecisions.TryParseSecondsParts(input, out var seconds, out var ms)).IsTrue();
+		await Assert.That(seconds).IsEqualTo(expectedSeconds);
+		await Assert.That(ms).IsEqualTo(expectedMs);
+	}
+
+	[Test]
+	[Arguments("timestring(-0.5)")]
+	[Arguments("timestring(-0.9996)")]
+	[Arguments("etime(-0.5)")]
+	[Arguments("etimefmt($s,-0.5)")]
+	public async Task ASubSecondNegativeDurationIsRefused(string code)
+		=> await Assert.That(await Eval(code)).IsEqualTo("#-1 SECONDS MUST NOT BE NEGATIVE");
+
+	/// <summary>
+	/// Each term is a user-supplied decimal scaled by up to 31,536,000,000, so the multiplication
+	/// itself overflows — not just the final cast. An OverflowException here escapes a function
+	/// softcode is allowed to call.
+	/// </summary>
+	[Test]
+	[Arguments("stringsecs(99999999999999999999999999y)")]
+	[Arguments("stringsecs(79228162514264337593543950335y)")]
+	public async Task AnOverflowingDurationIsAnErrorNotAnException(string code)
+		=> await Assert.That(await Eval(code)).IsEqualTo("#-1 INVALID TIMESTRING");
+
+	/// <summary>
+	/// A millisecond stamp handed to a seconds argument is 1000x too large and lands outside the
+	/// range DateTimeOffset can represent. That threw, and the dispatcher turned the exception into
+	/// an empty result — the one answer softcode cannot tell from a real one.
+	/// </summary>
+	[Test]
+	[Arguments("timefmt($Y,1778518155494)", "#-1 TIME INTEGER OUT OF RANGE")]
+	[Arguments("isdaylight(1778518155494,UTC)", "#-1 TIME INTEGER OUT OF RANGE")]
+	[Arguments("convsecs(1778518155494)", "#-1 INVALID SECONDS")]
+	[Arguments("convutcsecs(1778518155494)", "#-1 INVALID SECONDS")]
+	public async Task AnUnrepresentableInstantIsAnErrorNotAnEmptyResult(string code, string expected)
+		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// etimefmt's width group is \d* with no length bound, so a width too large for Int32 threw out
+	/// of the Regex.Replace callback. It falls back to no padding.
+	/// </summary>
+	[Test]
+	public async Task AnEtimefmtWidthTooLargeForInt32DoesNotThrow()
+		=> await Assert.That(await Eval("etimefmt($99999999999s,61)")).IsEqualTo("1");
 
 	[Test]
 	[Arguments(1500L, TimePrecision.Seconds, "1")]
@@ -231,12 +298,13 @@ public class TimePrecisionFunctionTests
 		=> await Assert.That(await Eval("etime(-1)")).IsEqualTo("#-1 SECONDS MUST NOT BE NEGATIVE");
 
 	/// <summary>
-	/// The two parts are read back as one signed magnitude, so -1.5 splits as -1 and 500, not the
-	/// -2 and 500 that flooring would give.
+	/// The two parts are read back as one signed magnitude, so -1.5 splits as -1 and -500, not the
+	/// -2 and 500 that flooring would give. Both parts carry the sign — see
+	/// <see cref="ASubSecondNegativeKeepsItsSign"/> for why the remainder has to.
 	/// </summary>
 	[Test]
 	[Arguments("1.5", 1L, 500)]
-	[Arguments("-1.5", -1L, 500)]
+	[Arguments("-1.5", -1L, -500)]
 	[Arguments("-2", -2L, 0)]
 	[Arguments("0.999", 0L, 999)]
 	public async Task SecondsPartsTruncateTowardsZero(string input, long expectedSeconds, int expectedMs)

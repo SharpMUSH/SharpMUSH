@@ -26,6 +26,8 @@ means something different.
 | `f` | `fractional` | Seconds with a decimal part, trailing zeros trimmed |
 | `ms` | `milliseconds` | Whole milliseconds |
 
+Those six spellings and nothing else — `secs` and `millis` are not accepted.
+
 Anything else is `#-1 INVALID PRECISION`. It does not quietly fall back to seconds — a
 typo that silently returned a plausible number is the whole problem this design exists
 to avoid.
@@ -49,8 +51,12 @@ function read milliseconds, and nothing guesses from a value's size.
 
 ```
 timefmt($Y,1778518155)      →  2026
-timefmt($Y,1778518155494)   →  year 58333   ← read as seconds, exactly as written
+timefmt($Y,1778518155494)   →  #-1 TIME INTEGER OUT OF RANGE   ← read as seconds
 ```
+
+A millisecond stamp handed to a function expecting seconds is a thousand times too
+large. Small enough to be representable it gives you the wrong year; large enough and
+you get an error. Either way it is read as seconds, never guessed at.
 
 If you stored a millisecond value and want to format it, divide first:
 
