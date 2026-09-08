@@ -102,5 +102,11 @@ public class LoggingConfigurationTests
 		await Assert.That(overrides).IsNotNull();
 		await Assert.That(overrides).ContainsKey("ZiggyCreatures.Caching.Fusion");
 		await Assert.That(overrides["ZiggyCreatures.Caching.Fusion"]).IsEqualTo(LogEventLevel.Error);
+
+		// Serilog matches an override by SourceContext prefix, so the NATS client library and
+		// SharpMUSH's own NATS plumbing ("SharpMUSH.Messaging.NATS.*", which does not begin with
+		// "NATS") need separate entries - the appsettings files carry both for the same reason.
+		await Assert.That(overrides["NATS"]).IsEqualTo(LogEventLevel.Error);
+		await Assert.That(overrides["SharpMUSH.Messaging"]).IsEqualTo(LogEventLevel.Error);
 	}
 }
