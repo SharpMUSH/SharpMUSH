@@ -687,11 +687,152 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Looking at a room with no @describe shows the default description, still run
-	/// through @descformat.
+	/// A non-owner sees inherited @describe and @descformat output even though the format attribute
+	/// is not readable by the viewer.
 	/// </summary>
 	[Test]
-	public async ValueTask Look_Room_NoDescription_ShowsDefaultThroughDescFormat()
+	public async ValueTask Look_Room_UsesInheritedDescriptionAndPrivateFormatForNonOwner()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lip");
+		var parentResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig LookParent_{token}"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!.Trim());
+		var childResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig LookChild_{token}"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!.Trim());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@desc {parentDbRef}=inherited_[add(20,22)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DESCFORMAT {parentDbRef}=parent_{token}:%0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/DESCRIBE=!visual"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/DESCFORMAT=!visual"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
+
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookInherit{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={childDbRef}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"parent_{token}:inherited_42")),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// The inside-description path applies the same parent and permission rules as @describe.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_InsideThing_UsesInheritedPrivateIdescribeAndFormatForNonOwner()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("liip");
+		var parentResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create InsideParent_{token}"));
+		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!.Trim());
+		var childResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create InsideChild_{token}"));
+		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!.Trim());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&IDESCRIBE {parentDbRef}=inside_[add(20,22)]"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&IDESCFORMAT {parentDbRef}=inner_{token}:%0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/IDESCRIBE=!visual"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {parentDbRef}/IDESCFORMAT=!visual"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
+
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookInside{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={childDbRef}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"inner_{token}:inside_42")),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// A forced look evaluates descriptions and actions with the forced player, not the forcer, as enactor.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_ForcedPlayer_IsEnactorForDescriptionFormatAndAction()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lfi");
+		var roomResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig ForceRoom_{token}"));
+		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"ForceLook{token}");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@desc {roomDbRef}=desc:%#"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DESCFORMAT {roomDbRef}=format_{token}:%#:%0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {roomDbRef}/DESCFORMAT=visual"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@adesc {roomDbRef}=@pemit %#=action_{token}:%#:%!"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force {player.DbRef}=look"));
+
+		var playerRef = $"#{player.DbRef.Number}";
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef,
+			$"action_{token}:{playerRef}:#{roomDbRef.Number}");
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg,
+				$"format_{token}:{playerRef}:desc:{playerRef}")),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// A present but empty @describe is real description output and supplies an empty %0 to @descformat.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_EmptyDescription_PassesEmptyValueToDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("led");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookEmpty{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig EmptyRoom_{token}"));
+		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@desc here="));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=empty_{token}:%0:end"));
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}::end")),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// The action queued by look executes the value retrieved during look even if the attribute changes
+	/// before the nested queue entry runs.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_AdescribeQueueUsesRetrievedValueSnapshot()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("las");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookSnapshot{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig SnapshotRoom_{token}"));
+		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@adesc here=@pemit %#=snapshot_old_{token}"));
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@dolist 1={{look; @adesc here=@pemit %#=snapshot_new_{token}}}"));
+
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"snapshot_old_{token}");
+		await NotifyService.Received().Notify(
+			TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
+			TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Looking at a room with no @describe shows the default directly; @descformat has no %0 to format.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_NoDescription_ShowsDefaultWithoutDescFormat()
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("lnd");
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -701,14 +842,14 @@ public class BuildingCommandTests
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomND_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&DESCFORMAT here=[ucstr(%0)]"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=unexpected_{token}:%0"));
 
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await NotifyService
-			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "YOU SEE NOTHING SPECIAL.")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(messages).Contains("You see nothing special.");
+		await Assert.That(messages.Any(message => message.Contains($"unexpected_{token}"))).IsFalse();
 	}
 
 	/// <summary>
