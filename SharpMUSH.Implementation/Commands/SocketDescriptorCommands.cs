@@ -342,7 +342,8 @@ public partial class Commands
 
 		if (argument.Length == 0)
 		{
-			await NotifyService.Notify(handle, SocketOptions.Show(connection, "\n"));
+			await NotifyService.Notify(handle, SocketOptions.Show(connection, "\n",
+				await ArgHelpers.ColorFlagsOfAsync(Mediator, connection.Ref)));
 			return new None();
 		}
 
@@ -394,7 +395,13 @@ public static class SocketOptions
 	/// The settings report. PennMUSH lays this out as a 15-column label followed by two spaces and the
 	/// value, and omits the prefix/suffix rows entirely when they are unset.
 	/// </summary>
-	public static string Show(IConnectionService.ConnectionData connection, string newLine)
+	/// <param name="colorFlags">
+	/// The colour flags of whoever is behind the descriptor, or null at the connect screen. They can
+	/// raise the depth above what the terminal negotiated, so the "auto (...)" reading is wrong
+	/// without them.
+	/// </param>
+	public static string Show(IConnectionService.ConnectionData connection, string newLine,
+		PlayerColorFlags? colorFlags = null)
 	{
 		var builder = new StringBuilder();
 		builder.Append(newLine);
@@ -425,7 +432,7 @@ public static class SocketOptions
 		// one terminfo() reports, read from the client's own terminal types rather than assumed.
 		var colorStyle = connection.Metadata.GetValueOrDefault(ColorStyleKey);
 		Row("Color Style", colorStyle
-			?? $"auto ({TerminalCapabilityReader.Read(connection.Metadata).ColorStyle})");
+			?? $"auto ({TerminalCapabilityReader.ColorStyleFor(connection.Metadata, colorFlags)})");
 
 		builder.Append($"{"Prompt Newlines",-15}:  {YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1")}");
 

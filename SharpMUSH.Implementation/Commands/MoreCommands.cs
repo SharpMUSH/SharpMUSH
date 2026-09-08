@@ -600,7 +600,8 @@ public partial class Commands
 
 		if (pairs.Length == 0)
 		{
-			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n"), executor);
+			await NotifyService.Notify(executor, SocketOptions.Show(target, "\n",
+				await ArgHelpers.ColorFlagsOfAsync(Mediator, target.Ref)), executor);
 			return CallState.Empty;
 		}
 

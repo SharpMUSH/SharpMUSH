@@ -117,6 +117,39 @@ public class ConnectionTerminfoTests
 		}
 	}
 
+	/// <summary>
+	/// A colour flag can raise the depth above what the terminal negotiated — that is what setting
+	/// XTERM256 on a character is for — so the reported style has to account for it. Reading the style
+	/// out of terminal metadata alone told a "dumb"-terminal player with XTERM256 that they were on
+	/// "hilite" while the wire carried 256-colour output, which is a capability claim softcode acts on.
+	/// </summary>
+	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
+	public async Task Terminfo_ReportsTheStyleAPlayerFlagRaisesItTo()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, "FlagStyleClient");
+		var handle = await ConnectAsAsync(playerRef, "telnet", terminalType: "dumb", telnetNegotiated: true);
+		connectionService.Update(handle, TerminalCapabilityReader.TerminalTypesKey, "dumb");
+		try
+		{
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).Contains(ColorStyles.Hilite)
+				.Because("a termcap that names no colour is hilite on its own");
+
+			await Parser.CommandParse(1, connectionService,
+				MarkupText.Plain($"@set #{playerRef.Number}=XTERM256"));
+
+			await Assert.That((await TerminfoAsync(playerRef)).Split(' ')).Contains(ColorStyles.Xterm256)
+				.Because("the flag raises the depth, so it has to raise the report with it");
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+		}
+	}
+
 	[Test, NotInParallel(nameof(ConnectionTerminfoTests))]
 	public async Task Terminfo_ReportsWebsocket_ForWebSocketConnection()
 	{

@@ -63,6 +63,14 @@ public readonly record struct TerminalCapabilities(
 }
 
 /// <summary>
+/// The four per-character colour flags — ANSI, COLOR, XTERM256, TRUECOLOR — as a connection sees
+/// them. Each is a claim that the client can display something, never a refusal: a flag that is not
+/// set is indistinguishable from one nobody has thought about, so it can only ever raise the depth.
+/// Refusing colour is <c>SOCKSET colorstyle</c>'s job.
+/// </summary>
+public readonly record struct PlayerColorFlags(bool Ansi, bool Color, bool Xterm256, bool Truecolor);
+
+/// <summary>
 /// Reads a client's capabilities out of the terminal types it reported.
 /// <para>
 /// Two sources, because clients disagree about which they use. MTTS
@@ -122,15 +130,57 @@ public static class TerminalCapabilityReader
 
 	/// <summary>
 	/// The colour style a connection is rendered at: the style <c>SOCKSET colorstyle</c> pinned, or —
-	/// when nothing is pinned — the one the client's own terminal types imply. <c>terminfo()</c>
-	/// reports this, and <c>SOCKSET</c> shows the unpinned case as "auto (&lt;style&gt;)".
+	/// when nothing is pinned — the deepest rung the client's terminal types and the player's colour
+	/// flags between them reach. <c>terminfo()</c> reports this, and <c>SOCKSET</c> shows the unpinned
+	/// case as "auto (&lt;style&gt;)".
+	/// <para>
+	/// The flags are not optional to the answer. They can raise the depth above what the terminal
+	/// negotiated — that is what setting XTERM256 on a character is for — so leaving them out of the
+	/// report meant a <c>dumb</c> terminal on a player with XTERM256 received 256-colour output while
+	/// <c>terminfo()</c> called it "hilite", handing softcode a capability claim the connection does
+	/// not match. Pass <paramref name="flags"/> as null only where they genuinely are not known.
+	/// </para>
 	/// </summary>
-	public static string ColorStyleFor(IReadOnlyDictionary<string, string> metadata)
+	public static string ColorStyleFor(IReadOnlyDictionary<string, string> metadata, PlayerColorFlags? flags = null)
 	{
 		ArgumentNullException.ThrowIfNull(metadata);
 
-		var pinned = metadata.GetValueOrDefault(ColorStyleKey, "");
-		return string.IsNullOrEmpty(pinned) ? Read(metadata).ColorStyle : pinned;
+		return ResolveColorStyle(metadata.GetValueOrDefault(ColorStyleKey, ""), Read(metadata), flags);
+	}
+
+	/// <summary>
+	/// The one calculation behind both what goes on the wire and what <c>terminfo()</c> and
+	/// <c>SOCKSET</c> report, so the two cannot drift: an explicit pin wins outright, a screen reader
+	/// is plain, and otherwise the deepest rung either the terminal or the player's flags reaches.
+	/// <para>
+	/// It lives here, beside the reader, because the two callers are in different processes — the
+	/// socket owner renders, the engine reports — and the whole point of the last round of fixes was
+	/// that a connection must be sent what it is told it is being sent.
+	/// </para>
+	/// </summary>
+	public static string ResolveColorStyle(string? pinnedStyle, TerminalCapabilities terminal, PlayerColorFlags? flags)
+	{
+		if (!string.IsNullOrEmpty(pinnedStyle))
+		{
+			return pinnedStyle;
+		}
+
+		if (terminal.ScreenReader)
+		{
+			return ColorStyles.Plain;
+		}
+
+		var truecolor = terminal.Truecolor || flags?.Truecolor == true;
+		var xterm256 = truecolor || terminal.Xterm256 || flags?.Xterm256 == true;
+		var color = xterm256 || terminal.Ansi || flags?.Color == true;
+
+		return (truecolor, xterm256, color) switch
+		{
+			(true, _, _) => ColorStyles.Truecolor,
+			(_, true, _) => ColorStyles.Xterm256,
+			(_, _, true) => ColorStyles.SixteenColor,
+			_ => ColorStyles.Hilite
+		};
 	}
 
 	/// <summary>

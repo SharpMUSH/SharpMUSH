@@ -381,25 +381,24 @@ public class TelnetServer : ConnectionHandler
 		}
 
 		var reported = TerminalCapabilityReader.Read(terminalTypes);
-		var updated = connection.Capabilities with
+
+		// Only the fields this report speaks to: the record also carries the negotiated output format
+		// and any SOCKSET colorstyle pin, which have their own writers and must survive this one.
+		var updated = _connectionService.UpdateCapabilities(handle, current => current with
 		{
 			SupportsAnsi = reported.Ansi && !reported.ScreenReader,
 			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
 			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
 			SupportsUtf8 = reported.Utf8,
 			ScreenReader = reported.ScreenReader
-		};
+		});
 
-		if (updated == connection.Capabilities)
-		{
-			return;
-		}
-
-		if (_connectionService.UpdateCapabilities(handle, updated))
+		if (updated)
 		{
 			_logger.LogDebug(
 				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}",
-				handle, updated.SupportsAnsi, updated.SupportsXterm256, updated.SupportsTruecolor, updated.SupportsUtf8);
+				handle, reported.Ansi && !reported.ScreenReader, reported.Xterm256 && !reported.ScreenReader,
+				reported.Truecolor && !reported.ScreenReader, reported.Utf8);
 		}
 	}
 
@@ -407,10 +406,12 @@ public class TelnetServer : ConnectionHandler
 	{
 		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
 		{
-			var conn = _connectionService.Get(handle);
-			if (conn != null)
+			if (_connectionService.Get(handle) is not null)
 			{
-				return _connectionService.UpdateCapabilities(handle, conn.Capabilities with { Format = format });
+				// True only when the format actually changed; a client that negotiates the same format
+				// twice is not a failure, so a no-op counts as success here.
+				_connectionService.UpdateCapabilities(handle, current => current with { Format = format });
+				return true;
 			}
 
 			if (cancellationToken.IsCancellationRequested)

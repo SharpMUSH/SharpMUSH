@@ -1045,7 +1045,8 @@ public partial class Functions
 
 			return data is null
 				? new CallState(ErrorMessages.Returns.NotConnected)
-				: new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef));
+				: new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef,
+					await ArgHelpers.ColorFlagsOfAsync(Mediator, data.Ref)));
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
@@ -1062,7 +1063,8 @@ public partial class Functions
 		return connectionData is null
 			? new CallState(ErrorMessages.Returns.NotConnected)
 			: new CallState(BuildTermInfo(connectionData.Metadata,
-				hasSeeAll || located.Object.DBRef == executor.Object().DBRef));
+				hasSeeAll || located.Object.DBRef == executor.Object().DBRef,
+				await ArgHelpers.ColorFlagsOfAsync(Mediator, connectionData.Ref)));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1596,7 +1598,8 @@ public partial class Functions
 	/// <param name="includeDetails">
 	/// PennMUSH's <c>has_privs</c>: the caller is looking at their own descriptor, or has See_All.
 	/// </param>
-	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails)
+	private string BuildTermInfo(IReadOnlyDictionary<string, string> metadata, bool includeDetails,
+		PlayerColorFlags? flags)
 	{
 		// The RFC 1091 terminal type, which is where PennMUSH gets the client name too — set by TTYPE
 		// negotiation, by MSDP's TERMINAL_TYPE, or by hand with "@sockset terminaltype". The same key
@@ -1661,7 +1664,7 @@ public partial class Functions
 		// "One of the color styles shown in [colorstyle] will also be included" — always one, so a
 		// client that pinned nothing still reports what it is being rendered at. An explicit
 		// "SOCKSET colorstyle" wins; otherwise it is read back out of the client's own MTTS claims.
-		terminfo.Add(TerminalCapabilityReader.ColorStyleFor(metadata));
+		terminfo.Add(TerminalCapabilityReader.ColorStyleFor(metadata, flags));
 
 		return string.Join(" ", terminfo);
 	}

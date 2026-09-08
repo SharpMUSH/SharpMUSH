@@ -22,14 +22,6 @@ public partial class OutputTransformService : IOutputTransformService
 	[GeneratedRegex(@"\x1b\]8;;[^\x07]*\x07(.*?)\x1b\]8;;\x07", RegexOptions.Singleline)]
 	private static partial Regex Osc8HyperlinkRegex();
 
-	// Regex for 256-color ANSI codes (38;5;N for foreground, 48;5;N for background)
-	[GeneratedRegex(@"\x1b\[([34])8;5;(\d+)m")]
-	private static partial Regex Xterm256ColorRegex();
-
-	/// <summary>24-bit RGB SGR: <c>ESC[38;2;r;g;b m</c> for foreground, <c>48</c> for background.</summary>
-	[GeneratedRegex(@"\x1b\[([34])8;2;(\d+);(\d+);(\d+)m")]
-	private static partial Regex TruecolorRegex();
-
 	/// <summary>Any SGR sequence, with its parameter list captured for per-parameter filtering.</summary>
 	[GeneratedRegex(@"\x1b\[([0-9;]*)m")]
 	private static partial Regex SgrRegex();
@@ -92,68 +84,36 @@ public partial class OutputTransformService : IOutputTransformService
 			return StripColorParameters(text);
 		}
 
-		// Colour depth is a ladder, and the rungs have to be walked in order. The renderer emits
-		// 24-bit RGB freely — every hex ansi() code and every syntax-highlighted help block does —
-		// so a client that stops at 256 needs those mapped into the palette before the palette is
-		// mapped into the basic sixteen. Skipping a rung leaves sequences the client cannot read.
-		if (style != ColorStyles.Truecolor)
-		{
-			text = DowngradeTruecolorToXterm256(text);
-		}
-
-		if (style != ColorStyles.Truecolor && style != ColorStyles.Xterm256)
-		{
-			text = DowngradeXterm256To16Color(text);
-		}
-
-		return text;
+		return DowngradeColors(text, style);
 	}
 
 	/// <summary>
-	/// The depth this connection is rendered at, as one of the <see cref="ColorStyles"/> values.
+	/// The depth this connection is rendered at. The calculation itself lives in
+	/// <see cref="TerminalCapabilityReader.ResolveColorStyle"/>, shared with the engine so that what
+	/// goes on the wire and what <c>terminfo()</c> and <c>SOCKSET</c> report cannot drift apart.
 	/// <para>
 	/// A player flag and a negotiated terminal capability are both claims that the client can display
 	/// something, so they are unioned: whichever says yes wins, and the deepest rung either of them
 	/// reaches is the one used. Neither can veto the other, because a flag that is <i>not</i> set is
 	/// indistinguishable from one nobody has thought about — reading absence as "no colour" is what
-	/// left every character without both ANSI and COLOR seeing plain text on telnet, MTTS notwithstanding.
-	/// Refusing colour is therefore <c>SOCKSET colorstyle</c>'s job, and a pin from it overrides
-	/// everything here, including the screen-reader default.
+	/// left every character without both ANSI and COLOR seeing plain text on telnet, MTTS
+	/// notwithstanding. Refusing colour is <c>SOCKSET colorstyle</c>'s job, and a pin from it overrides
+	/// everything, including the screen-reader default.
 	/// </para>
 	/// </summary>
-	private static string ResolveColorStyle(ProtocolCapabilities capabilities, PlayerOutputPreferences? preferences)
-	{
-		if (!string.IsNullOrEmpty(capabilities.ColorStylePin))
-		{
-			return capabilities.ColorStylePin;
-		}
-
-		// Colour means nothing to a screen reader, and it reads the escape bytes aloud.
-		if (capabilities.ScreenReader)
-		{
-			return ColorStyles.Plain;
-		}
-
-		var truecolor = capabilities.SupportsTruecolor || preferences?.TruecolorEnabled == true;
-		var xterm256 = truecolor || capabilities.SupportsXterm256 || preferences?.Xterm256Enabled == true;
-		var color = xterm256 || capabilities.SupportsAnsi || preferences?.ColorEnabled == true;
-
-		return (truecolor, xterm256, color) switch
-		{
-			(true, _, _) => ColorStyles.Truecolor,
-			(_, true, _) => ColorStyles.Xterm256,
-			(_, _, true) => ColorStyles.SixteenColor,
-			// PennMUSH's split: ANSI is "this client can highlight", COLOR is "this client can
-			// colour", so a player with only ANSI set gets the attributes and none of the hues. This
-			// is also where a client whose termcap named no colour lands — "dumb", a "-mono" variant,
-			// or RFC 1091's "UNKNOWN" — and hilite is what TerminalCapabilities.ColorStyle already
-			// reports for exactly those, so it is what terminfo() and SOCKSET tell the player they are
-			// getting. Sending plain text instead made the report a lie; a client that names itself
-			// at all can be assumed to understand bold, and one we never asked is already assumed to
-			// take full colour. Nothing at all now requires a screen reader or a plain pin.
-			_ => ColorStyles.Hilite
-		};
-	}
+	private static string ResolveColorStyle(ProtocolCapabilities capabilities, PlayerOutputPreferences? preferences) =>
+		TerminalCapabilityReader.ResolveColorStyle(
+			capabilities.ColorStylePin,
+			new TerminalCapabilities(
+				Ansi: capabilities.SupportsAnsi,
+				Xterm256: capabilities.SupportsXterm256,
+				Truecolor: capabilities.SupportsTruecolor,
+				Utf8: capabilities.SupportsUtf8,
+				ScreenReader: capabilities.ScreenReader),
+			preferences is null
+				? null
+				: new PlayerColorFlags(preferences.AnsiEnabled, preferences.ColorEnabled,
+					preferences.Xterm256Enabled, preferences.TruecolorEnabled));
 
 	private string ApplyCharsetTransformations(string text, ProtocolCapabilities capabilities)
 	{
@@ -252,41 +212,96 @@ public partial class OutputTransformService : IOutputTransformService
 	private static bool IsColorParameter(int code) =>
 		code is (>= 30 and <= 39) or (>= 40 and <= 49) or (>= 90 and <= 97) or (>= 100 and <= 107);
 
-	private string DowngradeXterm256To16Color(string text)
-	{
-		return Xterm256ColorRegex().Replace(text, match =>
-		{
-			var fgOrBg = match.Groups[1].Value; // "3" for foreground, "4" for background
-			var colorCode = int.Parse(match.Groups[2].Value);
-
-			var basicColor = Map256ColorTo16Color(colorCode);
-
-			return $"\x1b[{fgOrBg}{basicColor}m";
-		});
-	}
-
 	/// <summary>
-	/// Rewrites <c>ESC[38;2;r;g;b m</c> as its nearest xterm-256 palette entry, so a client that never
-	/// claimed 24-bit colour sees an approximation rather than a sequence it cannot parse.
+	/// Maps every colour in the text down to what <paramref name="style"/> can display: 24-bit RGB
+	/// becomes the nearest palette entry, and a palette entry becomes one of the basic sixteen. The
+	/// rungs are walked in order, because a client that stops at the palette cannot read an RGB
+	/// sequence and a client that stops at sixteen cannot read a palette one.
+	/// <para>
+	/// Parameter by parameter rather than sequence by sequence, because the renderer emits one SGR per
+	/// run carrying everything that changes there — bold underlined white arrives as
+	/// <c>ESC[1;4;38;2;255;255;255m</c>, not as three sequences. Matching only a sequence that begins
+	/// at <c>38</c> therefore missed every colour that shared its SGR with an attribute, which is most
+	/// of them: a player pinned to 16color, or a client that negotiated no more than that, still
+	/// received the raw 24-bit escape.
+	/// </para>
 	/// </summary>
-	private string DowngradeTruecolorToXterm256(string text)
+	private static string DowngradeColors(string text, string style)
 	{
-		return TruecolorRegex().Replace(text, match =>
+		if (style == ColorStyles.Truecolor)
 		{
-			var fgOrBg = match.Groups[1].Value; // "3" for foreground, "4" for background
+			return text;
+		}
 
-			// A malformed component is left alone rather than guessed at: dropping the sequence would
-			// leave the rest of the line coloured by whatever came before it.
-			if (!byte.TryParse(match.Groups[2].Value, out var r)
-					|| !byte.TryParse(match.Groups[3].Value, out var g)
-					|| !byte.TryParse(match.Groups[4].Value, out var b))
+		var toBasic = style != ColorStyles.Xterm256;
+
+		return SgrRegex().Replace(text, match =>
+		{
+			var parameters = match.Groups[1].Value;
+
+			if (parameters.Length == 0)
 			{
 				return match.Value;
 			}
 
-			return $"\x1b[{fgOrBg}8;5;{MapRgbTo256Color(r, g, b)}m";
+			var parts = parameters.Split(';');
+			var rewritten = new List<string>(parts.Length);
+
+			for (var index = 0; index < parts.Length; index++)
+			{
+				if (!int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
+						|| code is not (38 or 48))
+				{
+					rewritten.Add(parts[index]);
+					continue;
+				}
+
+				var layer = code == 38 ? 3 : 4;
+				var selector = Parameter(parts, index + 1);
+				var palette = selector switch
+				{
+					2 when Parameter(parts, index + 2) is >= 0 and <= 255 and var r
+								 && Parameter(parts, index + 3) is >= 0 and <= 255 and var g
+								 && Parameter(parts, index + 4) is >= 0 and <= 255 and var b
+						=> MapRgbTo256Color((byte)r, (byte)g, (byte)b),
+					5 => Parameter(parts, index + 1 + 1),
+					_ => -1
+				};
+
+				// A malformed sequence is left exactly as it was rather than guessed at: dropping it
+				// would leave the rest of the line coloured by whatever came before.
+				if (palette is < 0 or > 255)
+				{
+					rewritten.Add(parts[index]);
+					continue;
+				}
+
+				index += selector switch { 2 => 4, 5 => 2, _ => 0 };
+				rewritten.AddRange(toBasic
+					? [BasicColorParameter(layer, Map256ColorTo16Color(palette))]
+					: new[] { code.ToString(CultureInfo.InvariantCulture), "5", palette.ToString(CultureInfo.InvariantCulture) });
+			}
+
+			return rewritten.Count == 0 ? string.Empty : $"\x1b[{string.Join(';', rewritten)}m";
 		});
+
+		static int Parameter(string[] parts, int index) =>
+			index < parts.Length
+			&& int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+				? value
+				: -1;
 	}
+
+	/// <summary>
+	/// The SGR parameter for one of the basic sixteen. The bright half is not "3" followed by the
+	/// index — that spells 38 and 39, which are the extended-colour introducer and the default
+	/// foreground — but the aixterm ranges 90-97 and 100-107.
+	/// </summary>
+	private static string BasicColorParameter(int layer, int color) =>
+		(color < 8
+			? (layer == 3 ? 30 : 40) + color
+			: (layer == 3 ? 90 : 100) + color - 8)
+		.ToString(CultureInfo.InvariantCulture);
 
 	/// <summary>
 	/// The standard xterm-256 quantisation: the 6×6×6 colour cube for anything with a hue, and the

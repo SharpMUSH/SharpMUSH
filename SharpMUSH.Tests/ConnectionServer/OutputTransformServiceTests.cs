@@ -371,6 +371,86 @@ public class OutputTransformServiceTests
 		await Assert.That(result).IsEqualTo("\x1b[38;5;244mGrey\x1b[0m");
 	}
 
+	/// <summary>
+	/// The renderer emits one SGR per run carrying everything that changes there — bold underlined
+	/// white is <c>ESC[1;4;38;2;255;255;255m</c>, not three sequences (see AnsiStream's remarks). The
+	/// downgrades matched only a sequence whose parameters began at <c>38</c>, so every colour that
+	/// shared its SGR with an attribute — which is most of them — went to the client untouched, and a
+	/// 16-colour client received raw 24-bit escapes.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[1;4;38;2;255;255;255mText\x1b[0m", "\x1b[1;4;38;5;231mText\x1b[0m")]
+	[Arguments("\x1b[1;38;2;255;0;0mText\x1b[0m", "\x1b[1;38;5;196mText\x1b[0m")]
+	[Arguments("\x1b[38;2;0;0;255;1mText\x1b[0m", "\x1b[38;5;21;1mText\x1b[0m")]
+	public async Task TransformAsync_DowngradesAColourSharingItsSgrWithAnAttribute(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: true, SupportsTruecolor: false);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	/// <summary>The same, one rung further down, where the palette entry also has to go.</summary>
+	[Test]
+	public async Task TransformAsync_DowngradesACombinedSequenceAllTheWayToSixteen()
+	{
+		var input = "\x1b[1;4;38;2;255;0;0mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: true, SupportsXterm256: false, SupportsTruecolor: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;4;31mText\x1b[0m");
+	}
+
+	/// <summary>
+	/// The bright half of the basic sixteen is the aixterm range, not "3" followed by the index:
+	/// concatenating gave 38 and 39 for bright black and bright red — the extended-colour introducer
+	/// and the default foreground — and two-digit nonsense like "315" above that.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[38;5;9mText\x1b[0m", "\x1b[91mText\x1b[0m")]
+	[Arguments("\x1b[38;5;255mText\x1b[0m", "\x1b[97mText\x1b[0m")]
+	[Arguments("\x1b[48;5;9mText\x1b[0m", "\x1b[101mText\x1b[0m")]
+	[Arguments("\x1b[38;5;196mText\x1b[0m", "\x1b[31mText\x1b[0m")]
+	public async Task TransformAsync_MapsTheBrightSixteenOntoTheAixtermRange(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	/// <summary>A sequence that is not a colour at all comes through byte for byte.</summary>
+	[Test]
+	public async Task TransformAsync_LeavesAttributeOnlySequencesAlone()
+	{
+		var input = "\x1b[1;4;7mText\x1b[22;24;27m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;4;7mText\x1b[22;24;27m");
+	}
+
+	/// <summary>
+	/// A truncated extended colour is left exactly as it arrived rather than guessed at: dropping it
+	/// would leave the rest of the line coloured by whatever came before.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_LeavesAMalformedExtendedColourAlone()
+	{
+		var input = "\x1b[38;2;255mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).Contains("Text");
+	}
+
 	[Test]
 	public async Task TransformAsync_ConvertsToAscii_WhenAsciiCharset()
 	{
