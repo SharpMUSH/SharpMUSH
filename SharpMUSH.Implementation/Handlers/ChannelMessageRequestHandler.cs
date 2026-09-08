@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -179,12 +180,25 @@ public class ChannelMessageRequestHandler(
 			["Category"] = "logs"
 		}))
 		{
+			var sourceNumber = notification.Source.IsNone
+				? (int?)null
+				: notification.Source.Known().Object().DBRef.Number;
+
 			foreach (var (member, status) in channelMembers)
 			{
 				var isGagged = status.Gagged ?? false;
 				var wantsToHear = notification.Source.IsNone ||
 													await permissionService.CanInteract(notification.Source.Known(), member,
 														IPermissionService.InteractType.Hear);
+
+				// CB_SEEALL (src/extchat.c:3958): a privileged-only line reaches See_All members and the
+				// source, nobody else. Used for the connect/disconnect announcement of a hidden player.
+				if (notification.SeeAllOnly
+						&& member.Object().DBRef.Number != sourceNumber
+						&& !await member.IsSee_All())
+				{
+					continue;
+				}
 
 				if (!isGagged && wantsToHear)
 				{
@@ -229,7 +243,8 @@ public class ChannelMessageRequestHandler(
 						Timestamp = DateTimeOffset.UtcNow,
 						Sender = sourceDbRef,
 						Message = message,
-						MessageType = notification.MessageType.ToString()
+						MessageType = notification.MessageType.ToString(),
+						SeeAllOnly = notification.SeeAllOnly
 					};
 					await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
 				}

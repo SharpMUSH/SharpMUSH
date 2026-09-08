@@ -37,9 +37,11 @@ public static class ChannelRecall
 			}
 		}
 
-		var messages = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, linesInt))
-			.Select(x => x.Message)
+		var recalled = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, linesInt))
 			.ToListAsync();
+		var messages = (await ChannelHelper.FilterRecallableAsync(recalled, executor))
+			.Select(x => x.Message)
+			.ToList();
 
 		var message = MarkupText.Join(MarkupText.NewLine, messages);
 

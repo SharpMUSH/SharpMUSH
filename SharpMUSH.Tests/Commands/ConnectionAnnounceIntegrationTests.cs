@@ -269,6 +269,11 @@ public class ConnectionAnnounceIntegrationTests
 	/// half of the announcement (<c>ConnectionAnnounceService</c> only sends the visible-room message
 	/// when the player is not Dark). The channel-announce path is unconditional on Dark, so it — not
 	/// the room — is this test's witness for the wording; the DARK flag itself is asserted directly.
+	///
+	/// <para>The witness has to be See_All: <c>cd</c> also hides the connection, and a hidden
+	/// connect line goes out CB_SEEALL (see
+	/// <see cref="ConnectHidden_ChannelLineReachesSeeAllMembersOnly"/>), so an ordinary member would
+	/// no longer receive it.</para>
 	/// </summary>
 	[Test]
 	public async ValueTask ConnectDark_ViaCd_SetsDarkFlagAndBroadcastsHiddenConnectedOnChannel()
@@ -277,6 +282,7 @@ public class ConnectionAnnounceIntegrationTests
 
 		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWitness6");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {witness.DbRef}=WIZARD"));
 		await JoinChannelAsync(channel, witness.DbRef);
 
 		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
@@ -621,5 +627,95 @@ public class ConnectionAnnounceIntegrationTests
 			.Because("the SECOND disconnect must actually update LASTLOGOUT - before the fix, writing " +
 				"through IAttributeService.SetAttributeAsync as the player's own authority silently " +
 				"failed once the attribute existed, freezing it at its first-ever value forever");
+	}
+
+	// --- Test 14: a hidden connect's channel line is CB_SEEALL (issue #904, gap 2) -------------------
+
+	/// <summary>
+	/// PennMUSH's <c>chat_player_announce</c> (src/extchat.c:3190) sends the connect/disconnect line
+	/// with <c>CB_SEEALL</c> when the connecting descriptor is hidden, so <c>channel_send</c> (:3958)
+	/// delivers it only to members who are See_All, plus the connecting player. Until this was ported,
+	/// a hidden player's channel memberships leaked exactly the arrival that the room broadcast, the
+	/// HEAR_CONNECT broadcast and the WHO family all withheld — every ordinary member of every
+	/// non-Quiet channel they belonged to was told "&lt;Name&gt; has HIDDEN-connected."
+	/// </summary>
+	[Test]
+	public async ValueTask ConnectHidden_ChannelLineReachesSeeAllMembersOnly()
+	{
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan14", "Open");
+
+		var mortalWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMortalWitness14");
+		await JoinChannelAsync(channel, mortalWitness.DbRef);
+
+		var wizardWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWizWitness14");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizardWitness.DbRef}=WIZARD"));
+		await JoinChannelAsync(channel, wizardWitness.DbRef);
+
+		// ch only hides the connection when the connecting player has Hide permission.
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnounceChConn14");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {playerRef}=WIZARD"));
+		await JoinChannelAsync(channel, playerRef);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var expected = $"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasHiddenConnected}";
+		var mortalBefore = WebAppFactoryArg.Notifications.CountFor(mortalWitness.DbRef);
+		var wizardBefore = WebAppFactoryArg.Notifications.CountFor(wizardWitness.DbRef);
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"ch {playerName} TestPassword123"));
+
+		await Assert.That(MessagesTo(wizardWitness.DbRef, wizardBefore)).Contains(expected)
+			.Because("a See_All channel member still receives the hidden-connect line");
+		await Assert.That(MessagesTo(mortalWitness.DbRef, mortalBefore)).DoesNotContain(expected)
+			.Because("CB_SEEALL keeps the hidden-connect line off an ordinary member's channel");
+
+		// The line is buffered tagged, so recall must apply the same gate (src/extchat.c:3559,4083) -
+		// otherwise @channel/recall replays what the live broadcast withheld.
+		var mortalRecallBefore = WebAppFactoryArg.Notifications.CountFor(mortalWitness.DbRef);
+		await Parser.CommandParse(mortalWitness.Handle, ConnectionService,
+			MarkupText.Plain($"@channel/recall {chanName}=50"));
+		var mortalRecall = string.Join("\n", MessagesTo(mortalWitness.DbRef, mortalRecallBefore));
+
+		var wizardRecallBefore = WebAppFactoryArg.Notifications.CountFor(wizardWitness.DbRef);
+		await Parser.CommandParse(wizardWitness.Handle, ConnectionService,
+			MarkupText.Plain($"@channel/recall {chanName}=50"));
+		var wizardRecall = string.Join("\n", MessagesTo(wizardWitness.DbRef, wizardRecallBefore));
+
+		await Assert.That(wizardRecall).Contains(expected)
+			.Because("recall for a See_All member still shows the hidden-connect line");
+		await Assert.That(mortalRecall).DoesNotContain(expected)
+			.Because("recall must not hand an ordinary member the line the live broadcast withheld");
+	}
+
+	// --- Test 15: an ordinary connect is unaffected by the CB_SEEALL gate --------------------------
+
+	/// <summary>
+	/// The control for <see cref="ConnectHidden_ChannelLineReachesSeeAllMembersOnly"/>: gating on
+	/// hidden-ness must not quietly turn every channel connect announcement into a wizard-only one.
+	/// </summary>
+	[Test]
+	public async ValueTask Connect_NotHidden_ChannelLineStillReachesOrdinaryMembers()
+	{
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan15", "Open");
+
+		var mortalWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMortalWitness15");
+		await JoinChannelAsync(channel, mortalWitness.DbRef);
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnounceConn15");
+		await JoinChannelAsync(channel, playerRef);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var before = WebAppFactoryArg.Notifications.CountFor(mortalWitness.DbRef);
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+
+		await Assert.That(MessagesTo(mortalWitness.DbRef, before)).Contains(
+			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
 }
