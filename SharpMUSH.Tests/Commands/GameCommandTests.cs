@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -19,6 +20,7 @@ public class GameCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
 	[Test]
 	[Category("NotImplemented")]
@@ -49,51 +51,45 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask TeachCommandEchoesToRoomAndExecutesOnce()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var executor = await CreatePlayerAsync("TeachExecutor");
 		var observer = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "TeachObserver");
-		var marker = $"TeachSelf_{Guid.NewGuid():N}";
-		var taughtCommand = $"think {marker}";
+		try
+		{
+			var marker = $"TeachSelf_{Guid.NewGuid():N}";
+			var taughtCommand = $"think {marker}";
+			var echo = $"{executor.Name} types --> {taughtCommand}";
+			var executorStart = Notifications.CountFor(executor.DbRef);
+			var observerStart = Notifications.CountFor(observer);
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
+			await CommandAsAsync(executor, $"teach {taughtCommand}");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(observer), TestHelpers.MatchingMessage($"God types --> {taughtCommand}"),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(marker),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			var executorMessages = Notifications.For(executor.DbRef).Skip(executorStart);
+			var observerMessages = Notifications.For(observer).Skip(observerStart);
+			await Assert.That(executorMessages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(observerMessages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(executorMessages.Count(message => message == marker)).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
 	}
 
 	[Test]
 	public async ValueTask TeachCommandEchoesReportedSetFormToExecutor()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "TeachSetPlayer");
+		var player = await CreatePlayerAsync("TeachSetPlayer");
 		try
 		{
-			var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
-			var playerName = playerObject.Object().Name;
 			const string taughtCommand = "@set me=color";
+			var echo = $"{player.Name} types --> {taughtCommand}";
+			var start = Notifications.CountFor(player.DbRef);
 
-			NotifyService.ClearReceivedCalls();
-			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
-			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"teach {taughtCommand}"));
+			await CommandAsAsync(player, $"teach {taughtCommand}");
 
-			await NotifyService
-				.Received(1)
-				.Notify(TestHelpers.MatchingObject(player.DbRef),
-					TestHelpers.MatchingMessage($"{playerName} types --> {taughtCommand}"),
-					TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Emit);
+			var messages = Notifications.For(player.DbRef).Skip(start);
+			await Assert.That(messages.Count(message => message == echo)).IsEqualTo(1);
 		}
 		finally
 		{
@@ -104,29 +100,44 @@ public class GameCommandTests
 	[Test]
 	public async ValueTask TeachListEchoesToExecutorAndExecutesEveryCommandOnce()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		var firstMarker = $"TeachListFirst_{Guid.NewGuid():N}";
-		var secondMarker = $"TeachListSecond_{Guid.NewGuid():N}";
-		var taughtActionList = $"think {firstMarker};think {secondMarker}";
+		var executor = await CreatePlayerAsync("TeachListExecutor");
+		try
+		{
+			var firstMarker = $"TeachListFirst_{Guid.NewGuid():N}";
+			var secondMarker = $"TeachListSecond_{Guid.NewGuid():N}";
+			var taughtActionList = $"think {firstMarker};think {secondMarker}";
+			var echo = $"{executor.Name} types --> {taughtActionList}";
+			var start = Notifications.CountFor(executor.DbRef);
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"teach/list {taughtActionList}"));
+			await CommandAsAsync(executor, $"teach/list {taughtActionList}");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage($"God types --> {taughtActionList}"),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(firstMarker),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(secondMarker),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			var messages = Notifications.For(executor.DbRef).Skip(start);
+			await Assert.That(messages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(messages.Count(message => message == firstMarker)).IsEqualTo(1);
+			await Assert.That(messages.Count(message => message == secondMarker)).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
 	}
+
+	private async Task<TeachPlayer> CreatePlayerAsync(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+
+		return new TeachPlayer(player.DbRef, player.Handle, playerObject.Object().Name);
+	}
+
+	private async Task CommandAsAsync(TeachPlayer player, string command)
+	{
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+	}
+
+	private sealed record TeachPlayer(DBRef DbRef, long Handle, string Name);
 
 	[Test]
 	[Category("NotImplemented")]
