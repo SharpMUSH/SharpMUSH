@@ -47,6 +47,10 @@ public class FlagsAndPowersTests
 	}
 
 	[Test]
+	public async Task GetObjectFlagAsync_EmptyNameReturnsNull()
+		=> await Assert.That(await _db.GetObjectFlagAsync(string.Empty)).IsNull();
+
+	[Test]
 	public async Task GetObjectFlagAsync_UnknownNameReturnsNull()
 		=> await Assert.That(await _db.GetObjectFlagAsync("NO_SUCH_FLAG_AT_ALL")).IsNull();
 

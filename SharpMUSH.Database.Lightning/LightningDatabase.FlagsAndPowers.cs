@@ -275,6 +275,9 @@ public partial class LightningDatabase
 	/// the whole table (~60 rows) for a case-insensitive alias match, mirroring SurrealDatabase's alias handling.</summary>
 	private static FlagRecord? FindFlagRecord(ITx tx, string name)
 	{
+		// LMDB rejects empty keys; an empty flag name cannot match a definition.
+		if (string.IsNullOrEmpty(name)) return null;
+
 		if (tx.TryGet(Tables.Flag, Keys.Upper(name), out var bytes))
 		{
 			return Codec.Deserialize<FlagRecord>(bytes);
