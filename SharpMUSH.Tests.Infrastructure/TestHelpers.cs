@@ -171,6 +171,30 @@ public static class TestHelpers
 			throw new TimeoutException($"No notification containing '{containsText}' arrived for {who} within {limit}.");
 		}
 
+		/// <summary>
+		/// Waits until <paramref name="who"/> receives a sender-aware delivery containing
+		/// <paramref name="containsText"/> from <paramref name="sender"/>.
+		/// </summary>
+		public async Task WaitForDeliveryAsync(
+			DBRef who,
+			string containsText,
+			DBRef sender,
+			TimeSpan? timeout = null)
+		{
+			var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			var limit = timeout ?? TimeSpan.FromSeconds(5);
+			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
+			{
+				if (DeliveriesFor(who).Any(delivery =>
+					delivery.Sender == sender
+					&& delivery.Message.Contains(containsText, StringComparison.Ordinal))) return;
+				await Task.Delay(50);
+			}
+
+			throw new TimeoutException(
+				$"No notification containing '{containsText}' arrived for {who} from {sender} within {limit}.");
+		}
+
 		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>
 		public List<OneOf<MString, string>> RawFor(DBRef who)
 			=> _rawByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];

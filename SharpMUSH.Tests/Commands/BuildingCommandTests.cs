@@ -702,7 +702,8 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=teleport_barrier_{token}"));
-		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"teleport_barrier_{token}");
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(
+			player.DbRef, $"teleport_barrier_{token}", player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@adesc {roomDbRef}=@pemit %#=halted_adesc_{token}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@set {roomDbRef}=HALT"));
@@ -711,7 +712,8 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
-		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"look_barrier_{token}");
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(
+			player.DbRef, $"look_barrier_{token}", player.DbRef);
 		var deliveries = WebAppFactoryArg.Notifications.DeliveriesFor(player.DbRef).Skip(before).ToList();
 
 		await Assert.That(deliveries.Any(delivery => delivery.Message.Contains($"look_barrier_{token}"))).IsTrue();
