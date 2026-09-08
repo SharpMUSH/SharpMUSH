@@ -1,4 +1,6 @@
 using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Library.Utilities;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -27,6 +29,10 @@ public partial class OutputTransformService : IOutputTransformService
 	/// <summary>24-bit RGB SGR: <c>ESC[38;2;r;g;b m</c> for foreground, <c>48</c> for background.</summary>
 	[GeneratedRegex(@"\x1b\[([34])8;2;(\d+);(\d+);(\d+)m")]
 	private static partial Regex TruecolorRegex();
+
+	/// <summary>Any SGR sequence, with its parameter list captured for per-parameter filtering.</summary>
+	[GeneratedRegex(@"\x1b\[([0-9;]*)m")]
+	private static partial Regex SgrRegex();
 
 	public OutputTransformService(ILogger<OutputTransformService> logger)
 	{
@@ -74,35 +80,77 @@ public partial class OutputTransformService : IOutputTransformService
 		// Always strip OSC 8 hyperlinks - telnet clients don't support them
 		text = StripOsc8Hyperlinks(text);
 
-		// Authenticated player flags are explicit preferences and therefore take precedence over
-		// inferred terminal capabilities. Before login, terminal negotiation remains the only signal.
-		var ansiAllowed = !capabilities.ScreenReader && (preferences is null
-			? capabilities.SupportsAnsi
-			: preferences.AnsiEnabled && preferences.ColorEnabled);
+		var style = ResolveColorStyle(capabilities, preferences);
 
-		if (!ansiAllowed)
+		if (style == ColorStyles.Plain)
 		{
 			return StripAnsiCodes(text, capabilities.Format == OutputFormat.Mxp);
+		}
+
+		if (style == ColorStyles.Hilite)
+		{
+			return StripColorParameters(text);
 		}
 
 		// Colour depth is a ladder, and the rungs have to be walked in order. The renderer emits
 		// 24-bit RGB freely — every hex ansi() code and every syntax-highlighted help block does —
 		// so a client that stops at 256 needs those mapped into the palette before the palette is
 		// mapped into the basic sixteen. Skipping a rung leaves sequences the client cannot read.
-		var truecolorAllowed = preferences?.TruecolorEnabled ?? capabilities.SupportsTruecolor;
-		var xterm256Allowed = preferences?.Xterm256Enabled ?? capabilities.SupportsXterm256;
-
-		if (!truecolorAllowed)
+		if (style != ColorStyles.Truecolor)
 		{
 			text = DowngradeTruecolorToXterm256(text);
 		}
 
-		if (!xterm256Allowed)
+		if (style != ColorStyles.Truecolor && style != ColorStyles.Xterm256)
 		{
 			text = DowngradeXterm256To16Color(text);
 		}
 
 		return text;
+	}
+
+	/// <summary>
+	/// The depth this connection is rendered at, as one of the <see cref="ColorStyles"/> values.
+	/// <para>
+	/// A player flag and a negotiated terminal capability are both claims that the client can display
+	/// something, so they are unioned: whichever says yes wins, and the deepest rung either of them
+	/// reaches is the one used. Neither can veto the other, because a flag that is <i>not</i> set is
+	/// indistinguishable from one nobody has thought about — reading absence as "no colour" is what
+	/// left every character without both ANSI and COLOR seeing plain text on telnet, MTTS notwithstanding.
+	/// Refusing colour is therefore <c>SOCKSET colorstyle</c>'s job, and a pin from it overrides
+	/// everything here, including the screen-reader default.
+	/// </para>
+	/// </summary>
+	private static string ResolveColorStyle(ProtocolCapabilities capabilities, PlayerOutputPreferences? preferences)
+	{
+		if (!string.IsNullOrEmpty(capabilities.ColorStylePin))
+		{
+			return capabilities.ColorStylePin;
+		}
+
+		// Colour means nothing to a screen reader, and it reads the escape bytes aloud.
+		if (capabilities.ScreenReader)
+		{
+			return ColorStyles.Plain;
+		}
+
+		var truecolor = capabilities.SupportsTruecolor || preferences?.TruecolorEnabled == true;
+		var xterm256 = truecolor || capabilities.SupportsXterm256 || preferences?.Xterm256Enabled == true;
+		var color = xterm256 || capabilities.SupportsAnsi || preferences?.ColorEnabled == true;
+
+		// PennMUSH's split: ANSI is "this client can highlight", COLOR is "this client can colour".
+		// A player with only ANSI set, on a terminal that claims nothing, gets the attributes and none
+		// of the hues.
+		var hilite = color || preferences?.AnsiEnabled == true;
+
+		return (truecolor, xterm256, color, hilite) switch
+		{
+			(true, _, _, _) => ColorStyles.Truecolor,
+			(_, true, _, _) => ColorStyles.Xterm256,
+			(_, _, true, _) => ColorStyles.SixteenColor,
+			(_, _, _, true) => ColorStyles.Hilite,
+			_ => ColorStyles.Plain
+		};
 	}
 
 	private string ApplyCharsetTransformations(string text, ProtocolCapabilities capabilities)
@@ -123,6 +171,61 @@ public partial class OutputTransformService : IOutputTransformService
 	{
 		return Osc8HyperlinkRegex().Replace(text, "$1");
 	}
+
+	/// <summary>
+	/// The "hilite" style: keep the SGR attributes — bold, underline, reverse and their cancels — and
+	/// drop every hue, including the extended <c>38;5;n</c> and <c>38;2;r;g;b</c> forms and the
+	/// arguments that belong to them. An SGR left with no parameters at all is dropped rather than
+	/// emitted as a bare <c>ESC[m</c>, which would read as a reset the sender never asked for.
+	/// Sequences that are not SGR — the MXP line modes end in <c>z</c> — are not touched.
+	/// </summary>
+	private static string StripColorParameters(string text) =>
+		SgrRegex().Replace(text, match =>
+		{
+			var parameters = match.Groups[1].Value;
+
+			// ESC[m is ESC[0m; it carries no colour and has to survive as the reset it is.
+			if (parameters.Length == 0)
+			{
+				return match.Value;
+			}
+
+			var parts = parameters.Split(';');
+			var kept = new List<string>(parts.Length);
+
+			for (var index = 0; index < parts.Length; index++)
+			{
+				if (!int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var code))
+				{
+					continue;
+				}
+
+				if (code is 38 or 48)
+				{
+					// The selector says how many arguments follow: 5 is one palette index, 2 is an RGB
+					// triple. Skipping them as a unit keeps a stray "5" from being emitted as blink.
+					var selector = index + 1 < parts.Length
+						&& int.TryParse(parts[index + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var kind)
+						? kind
+						: -1;
+					index += selector switch { 5 => 2, 2 => 4, _ => 1 };
+					continue;
+				}
+
+				if (IsColorParameter(code))
+				{
+					continue;
+				}
+
+				kept.Add(code.ToString(CultureInfo.InvariantCulture));
+			}
+
+			return kept.Count == 0 ? string.Empty : $"\x1b[{string.Join(';', kept)}m";
+		});
+
+	/// <summary>Foreground, background, their defaults, and the bright aixterm ranges.</summary>
+	private static bool IsColorParameter(int code) =>
+		code is (>= 30 and <= 39) or (>= 40 and <= 49) or (>= 90 and <= 97) or (>= 100 and <= 107);
 
 	private string DowngradeXterm256To16Color(string text)
 	{

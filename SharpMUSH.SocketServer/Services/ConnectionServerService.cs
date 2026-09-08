@@ -236,6 +236,36 @@ public class ConnectionServerService(
 		return false;
 	}
 
+	/// <summary>
+	/// Pins — or, with a null <paramref name="style"/>, unpins — the connection's colour style. Unlike
+	/// <see cref="UpdateCapabilities"/> this recomputes the replacement from whatever the last read
+	/// saw, so a terminal-type report landing in the same instant is not overwritten by a stale copy.
+	/// </summary>
+	public bool UpdateColorStyle(long handle, string? style)
+	{
+		if (!_sessionState.TryGetValue(handle, out var connection))
+		{
+			return false;
+		}
+
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			var updated = connection with { Capabilities = connection.Capabilities with { ColorStylePin = style } };
+
+			if (_sessionState.TryUpdate(handle, updated, connection))
+			{
+				return true;
+			}
+
+			if (!_sessionState.TryGetValue(handle, out connection))
+			{
+				return false;
+			}
+		}
+
+		return false;
+	}
+
 	public bool UpdateCapabilities(long handle, ProtocolCapabilities capabilities)
 	{
 		if (_sessionState.TryGetValue(handle, out var connection))
@@ -306,6 +336,8 @@ public interface IConnectionServerService
 	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
 
 	bool ClearPreferences(long handle);
+
+	bool UpdateColorStyle(long handle, string? style);
 
 	bool UpdateCapabilities(long handle, SharpMUSH.ConnectionServer.Models.ProtocolCapabilities capabilities);
 }

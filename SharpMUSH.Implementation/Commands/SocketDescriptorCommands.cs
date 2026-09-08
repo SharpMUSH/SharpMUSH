@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
+using SharpMUSH.Messaging.Messages;
 using System.Globalization;
 using System.Text;
 
@@ -354,8 +355,27 @@ public partial class Commands
 
 		var result = SocketOptions.Set(connection, argument[..separator], argument[(separator + 1)..]);
 		await NotifyService.NotifyLocalized(handle, result.Key, result.Arguments);
+		await PublishColorStyleAsync(connection);
 
 		return new None();
+	}
+
+	/// <summary>
+	/// A colour-style pin changes nothing until the socket owner knows about it — that process, not
+	/// this one, renders output. The value is read back off the descriptor rather than out of the
+	/// <see cref="SocketOptions.SocksetResult"/>, which carries the message and not the setting, so
+	/// this stays correct for any option name that ends up writing the key.
+	/// </summary>
+	private async ValueTask PublishColorStyleAsync(IConnectionService.ConnectionData connection)
+	{
+		if (MessageBus is null)
+		{
+			return;
+		}
+
+		// Absent means "auto": the flags and the negotiated terminal decide again.
+		await MessageBus.Publish(new UpdateColorStyleMessage(connection.Handle,
+			connection.Metadata.GetValueOrDefault(SocketOptions.ColorStyleKey)));
 	}
 }
 

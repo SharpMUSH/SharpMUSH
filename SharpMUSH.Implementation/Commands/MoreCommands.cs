@@ -610,6 +610,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, result.Key, result.Arguments);
 		}
 
+		// Once, after the whole run: several pairs may be set in one command, and only the descriptor's
+		// final state is worth telling the socket owner about.
+		await PublishColorStyleAsync(target);
+
 		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
 		// same way it answers an empty option name.
 		if (pairs.Length % 2 != 0)

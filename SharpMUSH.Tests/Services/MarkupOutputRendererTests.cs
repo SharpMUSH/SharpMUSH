@@ -10,6 +10,7 @@ using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -85,18 +86,25 @@ public partial class MarkupOutputRendererTests
 		}
 	}
 
+	/// <summary>
+	/// MXP line modes share CSI syntax with SGR, so a connection rendering no colour still needs them:
+	/// without <c>ESC[1z</c> the client treats the SEND tag as text. Both ways of arriving at "no
+	/// colour" are covered — a client that negotiated none, and a player who pinned
+	/// <c>SOCKSET colorstyle plain</c>, which since the colour ladder became additive is the only thing
+	/// that turns colour off outright.
+	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async Task Mxp_ModeSurvivesDisablingAnsi(bool supportsAnsi)
+	[Arguments(true, ColorStyles.Plain)]
+	[Arguments(false, null)]
+	public async Task Mxp_ModeSurvivesDisablingAnsi(bool supportsAnsi, string? pin)
 	{
-		var capabilities = new ProtocolCapabilities(SupportsAnsi: supportsAnsi, Format: OutputFormat.Mxp);
-		var preferences = supportsAnsi ? new PlayerOutputPreferences(AnsiEnabled: false) : null;
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: supportsAnsi, Format: OutputFormat.Mxp, ColorStylePin: pin);
 		var transform = new OutputTransformService(
 			Microsoft.Extensions.Logging.Abstractions.NullLogger<OutputTransformService>.Instance);
 		var text = Encoding.UTF8.GetString(transform.Transform(
 			Encoding.UTF8.GetBytes("\x1b[1z<SEND HREF=\"help newbie\">\x1b[31mnewbie\x1b[0m</SEND>"),
-			capabilities, preferences));
+			capabilities, new PlayerOutputPreferences(AnsiEnabled: false, ColorEnabled: false)));
 
 		await Assert.That(text).IsEqualTo("\x1b[1z<SEND HREF=\"help newbie\">newbie</SEND>");
 	}
