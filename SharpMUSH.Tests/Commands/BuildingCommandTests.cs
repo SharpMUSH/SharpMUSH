@@ -999,6 +999,36 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
+	/// An inside description is not passed through the outside description format when
+	/// no inside description format is present.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_InsideThing_WithIdescAndNoIdescFormat_DoesNotUseDescFormat()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("liinf");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookIdescNoFormat{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		var objResult = await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@create ThingIINF_{token}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&IDESCRIBE {objDbRef}=inside_raw_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&DESCFORMAT {objDbRef}=wrong_outside_format_{token}:%0"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"drop {objDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={objDbRef}"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages).Contains($"inside_raw_{token}");
+		await Assert.That(messages.Any(message => message.Contains($"wrong_outside_format_{token}"))).IsFalse();
+	}
+
+	/// <summary>
 	/// Tests error case: @desc with invalid target shows error notification.
 	/// </summary>
 	[Test]

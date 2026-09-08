@@ -724,7 +724,7 @@ public partial class Commands
 		var formatAttribute = await AttributeService.GetAttributeAsync(
 			god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
 
-		if (tryIdesc && formatAttribute.IsNone)
+		if (tryIdesc && !usedIdesc && formatAttribute.IsNone)
 		{
 			formatAttrName = "DESCFORMAT";
 			formatAttribute = await AttributeService.GetAttributeAsync(
