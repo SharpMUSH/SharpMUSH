@@ -22,12 +22,27 @@ public partial class SurrealDatabase
 {
 	#region Object CRUD
 
+	/// <summary>
+	/// Resolves the optional creation/modification stamps an importer may supply: absent means now,
+	/// and an absent modification time matches the creation time, which is what every freshly created
+	/// object has anyway.
+	/// </summary>
+	private static (long Created, long Modified) Timestamps(long? creationTime, long? modifiedTime)
+	{
+		var created = creationTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		return (created, modifiedTime ?? created);
+	}
+
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-	string? salt = null, CancellationToken cancellationToken = default)
+	string? salt = null, long? creationTime = null, long? modifiedTime = null,
+	CancellationToken cancellationToken = default)
 	{
 		var nextKey = await GetNextObjectKeyAsync(cancellationToken);
-		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
+		// Hashed against the objid this object is about to have — an imported player carries its
+		// original creation time, so hashing against the wall clock would key the hash to an objid
+		// the object never has.
 		var hashedPassword = salt != null
 		? password
 		: passwordService.HashPassword($"#{nextKey}:{now}", password);
@@ -37,6 +52,7 @@ public partial class SurrealDatabase
 			["key"] = nextKey,
 			["name"] = name,
 			["now"] = now,
+			["modified"] = modified,
 			["hash"] = hashedPassword,
 			["salt"] = salt ?? "",
 			["quota"] = quota,
@@ -49,7 +65,7 @@ public partial class SurrealDatabase
 		// concurrent reader resolving .Owner/.Location/.Home (all throw on a missing edge) crashes.
 		await ExecuteAsync("""
 			BEGIN TRANSACTION;
-			CREATE object:$key SET key = $key, name = $name, type = 'PLAYER', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0;
+			CREATE object:$key SET key = $key, name = $name, type = 'PLAYER', creationTime = $now, modifiedTime = $modified, locks = '{}', warnings = 0;
 			CREATE player:$key SET key = $key, passwordHash = $hash, passwordSalt = $salt, aliases = [], quota = $quota;
 			RELATE player:$key->is_object->object:$key;
 			RELATE object:$key->has_owner->player:$key;
@@ -61,10 +77,11 @@ public partial class SurrealDatabase
 		return new DBRef(nextKey, now);
 	}
 
-	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
+	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, long? creationTime = null,
+	long? modifiedTime = null, CancellationToken cancellationToken = default)
 	{
 		var nextKey = await GetNextObjectKeyAsync(cancellationToken);
-		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 		var creatorKey = creator.Object.Key;
 
 		var parameters = new Dictionary<string, object?>
@@ -72,6 +89,7 @@ public partial class SurrealDatabase
 			["key"] = nextKey,
 			["name"] = name,
 			["now"] = now,
+			["modified"] = modified,
 			["ownerKey"] = creatorKey
 		};
 
@@ -79,7 +97,7 @@ public partial class SurrealDatabase
 		// resolving .Owner throws on a missing has_owner edge).
 		await ExecuteAsync("""
 			BEGIN TRANSACTION;
-			CREATE object:$key SET key = $key, name = $name, type = 'ROOM', creationTime = $now, modifiedTime = $now, locks = '{}', warnings = 0;
+			CREATE object:$key SET key = $key, name = $name, type = 'ROOM', creationTime = $now, modifiedTime = $modified, locks = '{}', warnings = 0;
 			CREATE room:$key SET key = $key, aliases = [];
 			RELATE room:$key->is_object->object:$key;
 			RELATE object:$key->has_owner->player:$ownerKey;
@@ -90,10 +108,11 @@ public partial class SurrealDatabase
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
-	AnySharpContainer home, CancellationToken cancellationToken = default)
+	AnySharpContainer home, long? creationTime = null, long? modifiedTime = null,
+	CancellationToken cancellationToken = default)
 	{
 		var nextKey = await GetNextObjectKeyAsync(cancellationToken);
-		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 		var creatorKey = creator.Object.Key;
 		var locKey = ExtractKey(location.Id);
 		var homeKey = ExtractKey(home.Id);
@@ -106,6 +125,7 @@ public partial class SurrealDatabase
 			["key"] = nextKey,
 			["name"] = name,
 			["now"] = now,
+			["modified"] = modified,
 			["ownerKey"] = creatorKey,
 			["locKey"] = locKey,
 			["homeKey"] = homeKey,
@@ -116,7 +136,7 @@ public partial class SurrealDatabase
 		// last statement, so without this the object is visible and owner-less across the whole create.
 		await ExecuteAsync(
 			$"BEGIN TRANSACTION;" +
-			$"CREATE object:$key SET key = $key, name = $name, type = 'THING', creationTime = $now, modifiedTime = $now, locks = $emptyLocks, warnings = 0;" +
+			$"CREATE object:$key SET key = $key, name = $name, type = 'THING', creationTime = $now, modifiedTime = $modified, locks = $emptyLocks, warnings = 0;" +
 			$"CREATE thing:$key SET key = $key, aliases = [];" +
 			$"RELATE thing:$key->is_object->object:$key;" +
 			$"RELATE thing:$key->at_location->{locTable}:$locKey;" +
@@ -129,10 +149,11 @@ public partial class SurrealDatabase
 	}
 
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
-	SharpPlayer creator, CancellationToken cancellationToken = default)
+	SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+	CancellationToken cancellationToken = default)
 	{
 		var nextKey = await GetNextObjectKeyAsync(cancellationToken);
-		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 		var creatorKey = creator.Object.Key;
 		var locKey = ExtractKey(location.Id);
 
@@ -143,6 +164,7 @@ public partial class SurrealDatabase
 			["key"] = nextKey,
 			["name"] = name,
 			["now"] = now,
+			["modified"] = modified,
 			["aliases"] = aliases,
 			["ownerKey"] = creatorKey,
 			["locKey"] = locKey,
@@ -152,7 +174,7 @@ public partial class SurrealDatabase
 		// One transaction so the object and all its edges commit together (has_owner is last).
 		await ExecuteAsync(
 			$"BEGIN TRANSACTION;" +
-			$"CREATE object:$key SET key = $key, name = $name, type = 'EXIT', creationTime = $now, modifiedTime = $now, locks = $emptyLocks, warnings = 0;" +
+			$"CREATE object:$key SET key = $key, name = $name, type = 'EXIT', creationTime = $now, modifiedTime = $modified, locks = $emptyLocks, warnings = 0;" +
 			$"CREATE exit:$key SET key = $key, aliases = $aliases;" +
 			$"RELATE exit:$key->is_object->object:$key;" +
 			$"RELATE exit:$key->at_location->{locTable}:$locKey;" +

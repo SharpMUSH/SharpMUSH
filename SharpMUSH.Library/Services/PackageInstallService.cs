@@ -697,13 +697,13 @@ public class PackageInstallService(
 		switch (spec.Type)
 		{
 			case PackageObjectType.Room:
-				createdDbref = await database.CreateRoomAsync(PrimaryName(spec.Name), pmWizard, cancellationToken);
+				createdDbref = await database.CreateRoomAsync(PrimaryName(spec.Name), pmWizard, cancellationToken: cancellationToken);
 				break;
 			case PackageObjectType.Thing:
 				{
 					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
 					createdDbref = await database.CreateThingAsync(
-						PrimaryName(spec.Name), location, pmWizard, location, cancellationToken);
+						PrimaryName(spec.Name), location, pmWizard, location, cancellationToken: cancellationToken);
 					break;
 				}
 			case PackageObjectType.Exit:
@@ -716,7 +716,7 @@ public class PackageInstallService(
 
 					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 					createdDbref = await database.CreateExitAsync(
-						parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken);
+						parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken: cancellationToken);
 					break;
 				}
 			default:
