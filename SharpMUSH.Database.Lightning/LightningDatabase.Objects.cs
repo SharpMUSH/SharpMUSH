@@ -510,6 +510,20 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
+	public async ValueTask SetObjectTimestampsAsync(DBRef target, long creationTime, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
+	{
+		var dbref = (long)target.Number;
+		var modified = modifiedTime ?? creationTime;
+
+		await Store.WriteAsync(tx =>
+		{
+			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
+			tx.Put(Tables.Obj, Keys.Dbref(dbref),
+				Codec.Serialize(found.Record with { CreationTime = creationTime, ModifiedTime = modified }));
+		}, cancellationToken);
+	}
+
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)obj.Object().Key;

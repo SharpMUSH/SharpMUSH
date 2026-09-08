@@ -692,6 +692,19 @@ public partial class SurrealDatabase
 		await ExecuteAsync("UPDATE object:$key SET name = $name", parameters, cancellationToken);
 	}
 
+	public async ValueTask SetObjectTimestampsAsync(DBRef target, long creationTime, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
+	{
+		var parameters = new Dictionary<string, object?>
+		{
+			["key"] = target.Number,
+			["created"] = creationTime,
+			["modified"] = modifiedTime ?? creationTime
+		};
+		await ExecuteAsync("UPDATE object:$key SET creationTime = $created, modifiedTime = $modified",
+			parameters, cancellationToken);
+	}
+
 	public async ValueTask SetContentHome(AnySharpContent obj, AnySharpContainer home, CancellationToken cancellationToken = default)
 	{
 		var objKey = ExtractKey(obj.Id);

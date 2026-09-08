@@ -215,6 +215,24 @@ public interface IObjectStore
 	ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Rewrites an existing object's creation and modification times, in Unix milliseconds.
+	/// </summary>
+	/// <remarks>
+	/// This changes the object's <b>identity</b>: the objid is <c>#N:&lt;creationTime&gt;</c>, so
+	/// anything holding the old one stops resolving. It exists for the importer, which has to restamp
+	/// the three objects it reuses from the migration seed (<c>#0</c>, <c>#1</c>, <c>#2</c>) rather
+	/// than creating them — without it those keep the seed's timestamps and their PennMUSH objids
+	/// still do not resolve, which is the whole defect the create-time parameter exists to fix.
+	/// <para>Not for general use: nothing in normal play should change when an object was created.</para>
+	/// </remarks>
+	/// <param name="target">Object to restamp</param>
+	/// <param name="creationTime">Creation time in Unix milliseconds</param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/></param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetObjectTimestampsAsync(DBRef target, long creationTime, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Sets the Home of a content object. The 'home' of a Room is its Drop-To.
 	/// </summary>
 	/// <param name="obj">Object</param>
