@@ -23,8 +23,6 @@ public static class FunctionDispatcher
 			if (permissionError is not null) return new CallState(permissionError);
 		}
 		var count = argumentCount ?? parser.CurrentState.Arguments.Count;
-		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
-			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 
 		if (count < attribute.MinArgs)
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name, attribute.MinArgs, count));
@@ -34,6 +32,8 @@ public static class FunctionDispatcher
 			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, name));
 		if (flags.HasFlag(FunctionFlags.UnEvenArgsOnly) && count % 2 == 0)
 			return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name));
+		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
+			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values);
 		if (error is not null) return new CallState(error);
 

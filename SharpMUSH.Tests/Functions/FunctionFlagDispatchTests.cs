@@ -274,4 +274,27 @@ public class FunctionFlagDispatchTests
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
 	}
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ApplyValidatesArityBeforeSideEffects(bool parity)
+	{
+		var flags = FunctionFlags.HasSideFX | (parity ? FunctionFlags.EvenArgsOnly : FunctionFlags.Regular);
+		var parser = Parser(flags, false);
+		var definition = parser.FunctionLibrary["flagprobe"].LibraryInformation;
+		definition.Attribute.MinArgs = parity ? 0 : 2;
+		definition.Attribute.MaxArgs = 3;
+		var parsed = await parser.FunctionParse(MarkupText.Plain("flagprobe(hello)"));
+		var expected = parity
+			? string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FLAGPROBE")
+			: string.Format(ErrorMessages.Returns.TooFewArguments, "FLAGPROBE", 2, 1);
+		await Assert.That(parsed!.Message!.ToPlainText()).IsEqualTo(expected);
+		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Known;
+		var applied = await FunctionDispatcher.InvokeAsync(parser, definition, executor,
+			false, Substitute.For<INotifyService>(), new RecordingLogger());
+		await Assert.That(applied.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
 }
