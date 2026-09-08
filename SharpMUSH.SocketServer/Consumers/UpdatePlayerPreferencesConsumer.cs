@@ -11,7 +11,8 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 public class UpdatePlayerPreferencesConsumer(
 	IConnectionServerService connectionService,
 	ILogger<UpdatePlayerPreferencesConsumer> logger)
-: IMessageConsumer<UpdatePlayerPreferencesMessage>
+	: IMessageConsumer<UpdatePlayerPreferencesMessage>,
+		IMessageConsumer<ClearPlayerOutputPreferencesMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -54,6 +55,20 @@ public class UpdatePlayerPreferencesConsumer(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error updating preferences for connection {Handle}", message.Handle);
+		}
+
+		return Task.CompletedTask;
+	}
+
+	public Task HandleAsync(ClearPlayerOutputPreferencesMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connectionService.ClearPreferences(message.Handle))
+		{
+			logger.LogInformation("Cleared player output preferences for connection {Handle}", message.Handle);
+		}
+		else
+		{
+			logger.LogWarning("Could not clear preferences for unknown connection handle: {Handle}", message.Handle);
 		}
 
 		return Task.CompletedTask;

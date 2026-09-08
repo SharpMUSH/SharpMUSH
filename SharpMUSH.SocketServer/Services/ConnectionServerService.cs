@@ -213,6 +213,29 @@ public class ConnectionServerService(
 		return false;
 	}
 
+	public bool ClearPreferences(long handle)
+	{
+		if (!_sessionState.TryGetValue(handle, out var connection))
+		{
+			return false;
+		}
+
+		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
+		{
+			if (_sessionState.TryUpdate(handle, connection with { Preferences = null }, connection))
+			{
+				return true;
+			}
+
+			if (!_sessionState.TryGetValue(handle, out connection))
+			{
+				return false;
+			}
+		}
+
+		return false;
+	}
+
 	public bool UpdateCapabilities(long handle, ProtocolCapabilities capabilities)
 	{
 		if (_sessionState.TryGetValue(handle, out var connection))
@@ -281,6 +304,8 @@ public interface IConnectionServerService
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
 
 	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
+
+	bool ClearPreferences(long handle);
 
 	bool UpdateCapabilities(long handle, SharpMUSH.ConnectionServer.Models.ProtocolCapabilities capabilities);
 }

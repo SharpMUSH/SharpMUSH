@@ -76,9 +76,9 @@ public partial class OutputTransformService : IOutputTransformService
 
 		// Authenticated player flags are explicit preferences and therefore take precedence over
 		// inferred terminal capabilities. Before login, terminal negotiation remains the only signal.
-		var ansiAllowed = preferences is null
+		var ansiAllowed = !capabilities.ScreenReader && (preferences is null
 			? capabilities.SupportsAnsi
-			: preferences.AnsiEnabled && preferences.ColorEnabled;
+			: preferences.AnsiEnabled && preferences.ColorEnabled);
 
 		if (!ansiAllowed)
 		{

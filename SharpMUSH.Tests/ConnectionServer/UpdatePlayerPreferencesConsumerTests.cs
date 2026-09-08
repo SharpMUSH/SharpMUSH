@@ -52,4 +52,32 @@ public class UpdatePlayerPreferencesConsumerTests
 		await Assert.That(preferences.Xterm256Enabled).IsTrue();
 		await Assert.That(preferences.TruecolorEnabled).IsTrue();
 	}
+
+	[Test]
+	public async Task ClearMessage_RemovesPlayerPreferencesFromActiveConnection()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var connectionService = new ConnectionServerService(
+			NullLogger<ConnectionServerService>.Instance, bus);
+		await connectionService.RegisterAsync(
+			42,
+			"127.0.0.1",
+			"localhost",
+			"telnet",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8,
+			() => { });
+		connectionService.UpdatePreferences(42, new PlayerOutputPreferences(
+			AnsiEnabled: true,
+			ColorEnabled: true,
+			Xterm256Enabled: true,
+			TruecolorEnabled: true));
+		var consumer = new UpdatePlayerPreferencesConsumer(
+			connectionService, NullLogger<UpdatePlayerPreferencesConsumer>.Instance);
+
+		await consumer.HandleAsync(new ClearPlayerOutputPreferencesMessage(42));
+
+		await Assert.That(connectionService.Get(42)!.Preferences).IsNull();
+	}
 }

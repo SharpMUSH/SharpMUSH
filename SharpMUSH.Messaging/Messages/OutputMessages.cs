@@ -69,3 +69,9 @@ public record UpdatePlayerPreferencesMessage(
 	bool Xterm256Enabled,
 	bool TruecolorEnabled = false
 ) : IHandleMessage;
+
+/// <summary>
+/// Clears character-specific output preferences when a socket returns to an unauthenticated state.
+/// Terminal negotiation remains attached to the connection and becomes authoritative again.
+/// </summary>
+public record ClearPlayerOutputPreferencesMessage(long Handle) : IHandleMessage;

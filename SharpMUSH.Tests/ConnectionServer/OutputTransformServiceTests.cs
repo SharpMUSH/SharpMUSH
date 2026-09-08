@@ -67,6 +67,24 @@ public class OutputTransformServiceTests
 	}
 
 	[Test]
+	public async Task TransformAsync_ScreenReaderOverridesPlayerColorFlags()
+	{
+		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(
+			SupportsAnsi: false,
+			ScreenReader: true);
+		var preferences = new PlayerOutputPreferences(
+			AnsiEnabled: true,
+			ColorEnabled: true,
+			Xterm256Enabled: true,
+			TruecolorEnabled: true);
+
+		var result = await _service.TransformAsync(input, capabilities, preferences);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("Red text");
+	}
+
+	[Test]
 	public async Task TransformAsync_StripsAnsi_WhenNoPreferences()
 	{
 		var input = "\x1b[31mRed text\x1b[0m"u8.ToArray();

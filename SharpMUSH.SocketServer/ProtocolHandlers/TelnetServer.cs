@@ -386,7 +386,8 @@ public class TelnetServer : ConnectionHandler
 			SupportsAnsi = reported.Ansi && !reported.ScreenReader,
 			SupportsXterm256 = reported.Xterm256 && !reported.ScreenReader,
 			SupportsTruecolor = reported.Truecolor && !reported.ScreenReader,
-			SupportsUtf8 = reported.Utf8
+			SupportsUtf8 = reported.Utf8,
+			ScreenReader = reported.ScreenReader
 		};
 
 		if (updated == connection.Capabilities)
