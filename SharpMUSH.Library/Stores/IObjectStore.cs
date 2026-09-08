@@ -223,7 +223,15 @@ public interface IObjectStore
 	/// the three objects it reuses from the migration seed (<c>#0</c>, <c>#1</c>, <c>#2</c>) rather
 	/// than creating them — without it those keep the seed's timestamps and their PennMUSH objids
 	/// still do not resolve, which is the whole defect the create-time parameter exists to fix.
-	/// <para>Not for general use: nothing in normal play should change when an object was created.</para>
+	/// <para>Not for general use, and not safe on a live object. This is a raw store write below the
+	/// Mediator layer, so it does <b>not</b> invalidate the number-keyed object cache that
+	/// <c>GetObjectNodeByNumberQuery</c> fills. A cached copy would keep the old creation time while
+	/// the store has the new one, and the objid check in <c>GetObjectNodeQuery</c> compares against
+	/// that stale value — so every reference to the object stops resolving. The importer gets away
+	/// with it because a conversion runs at startup, before the cache is populated, which is equally
+	/// true of the other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent,
+	/// SetObjectZone). Any caller that is not the importer needs a Mediator command carrying
+	/// <c>ICacheInvalidating</c> instead.</para>
 	/// </remarks>
 	/// <param name="target">Object to restamp</param>
 	/// <param name="creationTime">Creation time in Unix milliseconds</param>
