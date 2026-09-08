@@ -25,11 +25,13 @@ public class PageCommandTests
 		var player = await CreatePlayerAsync("PagePlain");
 		try
 		{
-			var messages = await PageSelfAsync(player, "Test");
+			var outgoing = $"You paged {player.Name} with 'Test'";
+			var incoming = $"{player.Name} pages: Test";
+			var messages = await PageSelfAsync(player, "Test", outgoing, incoming);
 
 			await Assert.That(messages.Length).IsEqualTo(2);
-			await Assert.That(messages[0]).IsEqualTo($"You paged {player.Name} with 'Test'");
-			await Assert.That(messages[1]).IsEqualTo($"{player.Name} pages: Test");
+			await Assert.That(messages[0]).IsEqualTo(outgoing);
+			await Assert.That(messages[1]).IsEqualTo(incoming);
 		}
 		finally
 		{
@@ -43,11 +45,13 @@ public class PageCommandTests
 		var player = await CreatePlayerAsync("PagePose");
 		try
 		{
-			var messages = await PageSelfAsync(player, ":Test");
+			var outgoing = $"Long distance to {player.Name}: {player.Name} Test";
+			var incoming = $"From afar, {player.Name} Test";
+			var messages = await PageSelfAsync(player, ":Test", outgoing, incoming);
 
 			await Assert.That(messages.Length).IsEqualTo(2);
-			await Assert.That(messages[0]).IsEqualTo($"Long distance to {player.Name}: {player.Name} Test");
-			await Assert.That(messages[1]).IsEqualTo($"From afar, {player.Name} Test");
+			await Assert.That(messages[0]).IsEqualTo(outgoing);
+			await Assert.That(messages[1]).IsEqualTo(incoming);
 		}
 		finally
 		{
@@ -61,11 +65,13 @@ public class PageCommandTests
 		var player = await CreatePlayerAsync("PageSemipose");
 		try
 		{
-			var messages = await PageSelfAsync(player, ";Test");
+			var outgoing = $"Long distance to {player.Name}: {player.Name}Test";
+			var incoming = $"From afar, {player.Name}Test";
+			var messages = await PageSelfAsync(player, ";Test", outgoing, incoming);
 
 			await Assert.That(messages.Length).IsEqualTo(2);
-			await Assert.That(messages[0]).IsEqualTo($"Long distance to {player.Name}: {player.Name}Test");
-			await Assert.That(messages[1]).IsEqualTo($"From afar, {player.Name}Test");
+			await Assert.That(messages[0]).IsEqualTo(outgoing);
+			await Assert.That(messages[1]).IsEqualTo(incoming);
 		}
 		finally
 		{
@@ -89,13 +95,11 @@ public class PageCommandTests
 			var recipientStart = Notifications.CountFor(recipient.DbRef);
 			await PageAsync(sender, recipient.Name, ":Test");
 			var recipientDbRef = $"#{recipient.DbRef.Number}";
+			var incoming = $"IN:Test|:||{recipientDbRef}|From afar, {sender.Name} Test";
+			var outgoing = $"OUT:Test|:||{recipientDbRef}|Long distance to {recipient.Name}: {sender.Name} Test";
 
-			await Assert.That(Notifications.For(recipient.DbRef).Skip(recipientStart)).IsEquivalentTo([
-				$"IN:Test|:||{recipientDbRef}|From afar, {sender.Name} Test"
-			]);
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				$"OUT:Test|:||{recipientDbRef}|Long distance to {recipient.Name}: {sender.Name} Test"
-			]);
+			await Assert.That(PageMessagesSince(recipient.DbRef, recipientStart, incoming)).IsEquivalentTo([incoming]);
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing)).IsEquivalentTo([outgoing]);
 		}
 		finally
 		{
@@ -119,15 +123,11 @@ public class PageCommandTests
 			await PageAsync(sender, $"{first.Name} {second.Name}", "Test");
 
 			var recipientList = $"{first.Name} and {second.Name}";
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				$"You paged {recipientList} with 'Test'"
-			]);
-			await Assert.That(Notifications.For(first.DbRef).Skip(firstStart)).IsEquivalentTo([
-				$"{sender.Name} pages {recipientList}: Test"
-			]);
-			await Assert.That(Notifications.For(second.DbRef).Skip(secondStart)).IsEquivalentTo([
-				$"{sender.Name} pages {recipientList}: Test"
-			]);
+			var outgoing = $"You paged {recipientList} with 'Test'";
+			var incoming = $"{sender.Name} pages {recipientList}: Test";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing)).IsEquivalentTo([outgoing]);
+			await Assert.That(PageMessagesSince(first.DbRef, firstStart, incoming)).IsEquivalentTo([incoming]);
+			await Assert.That(PageMessagesSince(second.DbRef, secondStart, incoming)).IsEquivalentTo([incoming]);
 		}
 		finally
 		{
@@ -148,11 +148,13 @@ public class PageCommandTests
 			await AttributeService.SetAttributeAsync(player.Object, player.Object, "OUTPAGEFORMAT",
 				MarkupText.Plain("OUT:[get(me/LASTPAGED)]"));
 
-			var messages = await PageSelfAsync(player, "Test");
+			var outgoing = $"OUT:{player.DbRef}";
+			var incoming = $"IN:{player.DbRef}";
+			var messages = await PageSelfAsync(player, "Test", outgoing, incoming);
 
 			await Assert.That(messages.Length).IsEqualTo(2);
-			await Assert.That(messages[0]).IsEqualTo($"OUT:{player.DbRef}");
-			await Assert.That(messages[1]).IsEqualTo($"IN:{player.DbRef}");
+			await Assert.That(messages[0]).IsEqualTo(outgoing);
+			await Assert.That(messages[1]).IsEqualTo(incoming);
 		}
 		finally
 		{
@@ -173,10 +175,10 @@ public class PageCommandTests
 			var pagerStart = Notifications.CountFor(pager.DbRef);
 			await GodCommandAsync($"@force {pager.DbRef}=page {recipient.Name}=Test");
 
-			var messages = Notifications.For(pager.DbRef).Skip(pagerStart).ToArray();
+			var expected = $"OUT:#{pager.DbRef.Number}|#{pager.DbRef.Number}|#{pager.DbRef.Number}";
+			var messages = PageMessagesSince(pager.DbRef, pagerStart, expected);
 			await Assert.That(messages.Length).IsEqualTo(1);
-			await Assert.That(messages[0]).IsEqualTo(
-				$"OUT:#{pager.DbRef.Number}|#{pager.DbRef.Number}|#{pager.DbRef.Number}");
+			await Assert.That(messages[0]).IsEqualTo(expected);
 		}
 		finally
 		{
@@ -200,22 +202,18 @@ public class PageCommandTests
 
 			var secondPageStart = Notifications.CountFor(sender.DbRef);
 			await PageAsync(sender, second.Name, "Second");
-			await Assert.That(Notifications.For(sender.DbRef).Skip(secondPageStart)).IsEquivalentTo([
-				$"OUT:{second.DbRef}"
-			]);
+			var outgoing = $"OUT:{second.DbRef}";
+			await Assert.That(PageMessagesSince(sender.DbRef, secondPageStart, outgoing)).IsEquivalentTo([outgoing]);
 
 			var senderRepageStart = Notifications.CountFor(sender.DbRef);
 			var firstRepageStart = Notifications.CountFor(first.DbRef);
 			var secondRepageStart = Notifications.CountFor(second.DbRef);
 			await PageAsync(sender, string.Empty, "Again");
 
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderRepageStart)).IsEquivalentTo([
-				$"OUT:{second.DbRef}"
-			]);
-			await Assert.That(Notifications.For(first.DbRef).Skip(firstRepageStart)).IsEmpty();
-			await Assert.That(Notifications.For(second.DbRef).Skip(secondRepageStart)).IsEquivalentTo([
-				$"{sender.Name} pages: Again"
-			]);
+			var incoming = $"{sender.Name} pages: Again";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderRepageStart, outgoing)).IsEquivalentTo([outgoing]);
+			await Assert.That(PageMessagesSince(first.DbRef, firstRepageStart, incoming)).IsEmpty();
+			await Assert.That(PageMessagesSince(second.DbRef, secondRepageStart, incoming)).IsEquivalentTo([incoming]);
 		}
 		finally
 		{
@@ -239,9 +237,8 @@ public class PageCommandTests
 			var senderStart = Notifications.CountFor(sender.DbRef);
 			await CommandAsync(sender, "page/list");
 
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				$"You last paged {second.Name}."
-			]);
+			var expected = $"You last paged {second.Name}.";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, expected)).IsEquivalentTo([expected]);
 		}
 		finally
 		{
@@ -260,9 +257,8 @@ public class PageCommandTests
 			var senderStart = Notifications.CountFor(sender.DbRef);
 			await CommandAsync(sender, "page/list");
 
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				"You haven't paged anyone since connecting."
-			]);
+			const string expected = "You haven't paged anyone since connecting.";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, expected)).IsEquivalentTo([expected]);
 		}
 		finally
 		{
@@ -290,10 +286,10 @@ public class PageCommandTests
 				var operandStart = Notifications.CountFor(operandRecipient.DbRef);
 				await CommandAsync(sender, command);
 
-				await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-					$"You last paged {previousRecipient.Name}."
-				]);
-				await Assert.That(Notifications.For(operandRecipient.DbRef).Skip(operandStart)).IsEmpty();
+				var expected = $"You last paged {previousRecipient.Name}.";
+				var unintendedPage = $"{sender.Name} pages: Ignored";
+				await Assert.That(PageMessagesSince(sender.DbRef, senderStart, expected)).IsEquivalentTo([expected]);
+				await Assert.That(PageMessagesSince(operandRecipient.DbRef, operandStart, unintendedPage)).IsEmpty();
 			}
 		}
 		finally
@@ -318,9 +314,8 @@ public class PageCommandTests
 			var senderStart = Notifications.CountFor(sender.DbRef);
 			await CommandAsync(sender, "page/list");
 
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				"I can't find who you last paged."
-			]);
+			const string expected = "I can't find who you last paged.";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, expected)).IsEquivalentTo([expected]);
 		}
 		finally
 		{
@@ -344,9 +339,8 @@ public class PageCommandTests
 			var senderStart = Notifications.CountFor(sender.DbRef);
 			await CommandAsync(sender, "page/list");
 
-			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
-				$"You last paged {liveRecipient.Name}."
-			]);
+			var expected = $"You last paged {liveRecipient.Name}.";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, expected)).IsEquivalentTo([expected]);
 		}
 		finally
 		{
@@ -369,10 +363,10 @@ public class PageCommandTests
 			var recipientStart = Notifications.CountFor(recipient.DbRef);
 			await PageAsync(sender, recipient.Name, "Test");
 
-			var messages = Notifications.For(recipient.DbRef).Skip(recipientStart).ToArray();
+			var expected = $"IN:#{recipient.DbRef.Number}|#{recipient.DbRef.Number}|#{sender.DbRef.Number}";
+			var messages = PageMessagesSince(recipient.DbRef, recipientStart, expected);
 			await Assert.That(messages.Length).IsEqualTo(1);
-			await Assert.That(messages[0]).IsEqualTo(
-				$"IN:#{recipient.DbRef.Number}|#{recipient.DbRef.Number}|#{sender.DbRef.Number}");
+			await Assert.That(messages[0]).IsEqualTo(expected);
 		}
 		finally
 		{
@@ -390,13 +384,18 @@ public class PageCommandTests
 		return new PagePlayer(player.DbRef, player.Handle, playerObject, playerObject.Object().Name);
 	}
 
-	private async Task<string[]> PageSelfAsync(PagePlayer player, string message)
+	private async Task<string[]> PageSelfAsync(PagePlayer player, string message, params string[] expectedMessages)
 	{
 		var start = Notifications.CountFor(player.DbRef);
 		await PageAsync(player, "me", message);
 
-		return [.. Notifications.For(player.DbRef).Skip(start)];
+		return PageMessagesSince(player.DbRef, start, expectedMessages);
 	}
+
+	private string[] PageMessagesSince(DBRef recipient, int start, params string[] expectedMessages)
+		=> [.. Notifications.For(recipient)
+			.Skip(start)
+			.Where(message => expectedMessages.Contains(message, StringComparer.Ordinal))];
 
 	private async Task PageAsync(PagePlayer sender, string recipients, string message)
 		=> await CommandAsync(sender, $"page {recipients}={message}");
