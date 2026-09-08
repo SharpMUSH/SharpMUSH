@@ -250,56 +250,45 @@ public class PennMUSHImportTimestampTests
 	}
 
 	/// <summary>
-	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
-	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
-	/// migration seed's startup time, so their PennMUSH objids still do not resolve — God's
-	/// especially, which imported softcode references constantly.
+	/// The restamp mechanism the importer uses for the three objects it reuses from the migration
+	/// seed (#0, #1, #2) rather than creating.
 	/// </summary>
 	/// <remarks>
-	/// This is the one place a test may touch the shared #1, and it renames it: reusing the seeded
-	/// God is the entire code path being tested, and it only runs when a source object sits at #1.
-	/// The original name is restored afterwards.
+	/// Exercised on a throwaway object, deliberately not on the seed objects themselves. Restamping
+	/// changes an objid, every other test in this shared session resolves God, and they run
+	/// concurrently — so a test that restamped #1 would break unrelated suites during its window
+	/// however carefully it restored afterwards. The wiring into the three reuse branches is plain
+	/// enough to read; what needs proving is that the store write lands.
 	/// </remarks>
 	[Test]
-	public async Task ReusedSeedObjectsAreRestampedWithTheirPennCreationTime()
+	public async Task RestampingRewritesBothTimesAndTheObjid()
 	{
-		const long pennCreatedSeconds = 1_010_101_010L;
-		const long pennModifiedSeconds = 1_010_101_020L;
+		var (limbo, god) = await LimboAndGod();
+		var dbref = await Database.CreateThingAsync("RestampTarget", limbo, god, limbo);
 
-		var originalGod = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
-		var originalName = originalGod.Object().Name;
-		var originalCreated = originalGod.Object().CreationTime;
-		var originalModified = originalGod.Object().ModifiedTime;
+		const long created = 1_010_101_010_000L;
+		const long modified = 1_010_101_020_000L;
+		await Database.SetObjectTimestampsAsync(dbref, created, modified);
 
-		try
-		{
-			var result = await Converter.ConvertDatabaseAsync(new PennMUSHDatabase
-			{
-				Version = "Reused Seed Fixture",
-				Objects =
-				[
-					new PennMUSHObject
-					{
-						DBRef = 1,
-						Name = originalName,
-						Type = PennMUSHObjectType.Player,
-						CreationTime = pennCreatedSeconds,
-						ModificationTime = pennModifiedSeconds
-					}
-				]
-			});
+		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Known;
+		await Assert.That(restamped.Object().CreationTime).IsEqualTo(created);
+		await Assert.That(restamped.Object().ModifiedTime).IsEqualTo(modified);
+		await Assert.That(restamped.Object().DBRef.ToString()).IsEqualTo($"#{dbref.Number}:{created}");
+	}
 
-			await Assert.That(result.IsSuccessful).IsTrue();
+	/// <summary>An omitted modification time matches the creation time, as it does on create.</summary>
+	[Test]
+	public async Task RestampingWithoutAModificationTimeMatchesTheCreationTime()
+	{
+		var (limbo, god) = await LimboAndGod();
+		var dbref = await Database.CreateThingAsync("RestampTargetDefaultModified", limbo, god, limbo);
 
-			var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
-			await Assert.That(god.Object().CreationTime).IsEqualTo(pennCreatedSeconds * 1000);
-			await Assert.That(god.Object().ModifiedTime).IsEqualTo(pennModifiedSeconds * 1000);
-			await Assert.That(god.Object().DBRef.ToString()).IsEqualTo($"#1:{pennCreatedSeconds * 1000}");
-		}
-		finally
-		{
-			await Database.SetObjectTimestampsAsync(new DBRef(1), originalCreated, originalModified);
-		}
+		const long created = 1_020_202_020_000L;
+		await Database.SetObjectTimestampsAsync(dbref, created);
+
+		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Known;
+		await Assert.That(restamped.Object().CreationTime).IsEqualTo(created);
+		await Assert.That(restamped.Object().ModifiedTime).IsEqualTo(created);
 	}
 
 	private async Task<SharpObject> FindByNameAsync(string name)
