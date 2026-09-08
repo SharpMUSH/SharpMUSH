@@ -207,11 +207,31 @@ public class PackagePlanService : IPackagePlanService
 			b => (b.Objid, Attribute: b.Attribute.ToUpperInvariant()));
 		var manifestKeys = new HashSet<(string Objid, string Attribute)>();
 		var legacyRefKeys = new HashSet<(string Objid, string Attribute)>();
+		var ownedObjids = inputs.InstalledObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+		var legacyRefsByObject = inputs.Baselines
+			.Where(b => b.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase))
+			.ToLookup(b => b.Objid);
+
 
 		foreach (var obj in inputs.Manifest.Objects)
 		{
 			var objid = objidByRef.GetValueOrDefault(obj.Ref);
 			var live = objid is not null ? inputs.Live.Objects.GetValueOrDefault(objid) : null;
+
+			if (obj.IsAttach && objid is not null)
+			{
+				foreach (var legacy in legacyRefsByObject[objid])
+				{
+					// On a package-owned target, only an old attached-code baseline can
+					// establish that a legacy ref belonged to the attachment too.
+					if (!ownedObjids.Contains(objid) || obj.Attributes.Keys.Any(name =>
+						baselineByKey.GetValueOrDefault((objid, name.ToUpperInvariant()))?.BaselineValue
+							.Contains($"[v({legacy.Attribute})]", StringComparison.OrdinalIgnoreCase) == true))
+					{
+						legacyRefKeys.Add((objid, legacy.Attribute.ToUpperInvariant()));
+					}
+				}
+			}
 
 			foreach (var (attrName, attr) in obj.Attributes)
 			{
@@ -256,11 +276,6 @@ public class PackagePlanService : IPackagePlanService
 					continue;
 				}
 
-				if (obj.IsAttach)
-				{
-					legacyRefKeys.Add((objid, PackageRefIndirection.AttributeNameFor(reference)));
-				}
-
 				manifestKeys.Add((objid, refAttr.ToUpperInvariant()));
 				var baseline = baselineByKey.GetValueOrDefault((objid, refAttr.ToUpperInvariant()));
 				var liveValue = live.Attributes.TryGetValue(refAttr, out var lv) ? lv : null;
@@ -274,7 +289,7 @@ public class PackagePlanService : IPackagePlanService
 					// that collision into the isolated namespace.
 					var shared = inputs.OtherManagedAttributes.Any(a => a.Objid == objid
 						&& a.PackageId != inputs.Manifest.Name && a.Attribute.Equals(legacy, StringComparison.OrdinalIgnoreCase));
-					if (legacyBaseline is not null && !shared)
+					if (legacyBaseline is not null && !shared && legacyRefKeys.Contains((objid, legacy)))
 					{
 						previousAttribute = legacy;
 						baseline = legacyBaseline;
@@ -331,9 +346,19 @@ public class PackagePlanService : IPackagePlanService
 
 			var targetRef = objidByRef.FirstOrDefault(kv => kv.Value == baseline.Objid).Key ?? baseline.Objid;
 
+			var isLegacyRef = baseline.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase);
+			// A removed attachment has no incoming spec to establish provenance. Its
+			// locally edited code can still be retained through ModifyDelete/KeepMine.
+			var recalledByLocalCode = isLegacyRef && liveValue == baseline.BaselineValue && live is not null
+				&& inputs.Baselines.Any(code => code.Objid == baseline.Objid
+					&& live.Attributes.TryGetValue(code.Attribute, out var codeValue)
+					&& codeValue != code.BaselineValue
+					&& codeValue.Contains($"[v({baseline.Attribute})]", StringComparison.OrdinalIgnoreCase));
+
 			// Legacy attached refs may still be recalled by another package or locally
 			// edited code. Retire our ownership without deleting the shared leaf.
-			if (legacyRefKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant()))
+			if ((isLegacyRef && (!ownedObjids.Contains(baseline.Objid)
+					|| legacyRefKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant())) || recalledByLocalCode))
 				|| (PackageRefIndirection.IsRefAttribute(baseline.Attribute)
 					&& inputs.OtherManagedAttributes.Any(a => a.PackageId != inputs.Manifest.Name && a.Objid == baseline.Objid
 						&& a.Attribute.Equals(baseline.Attribute, StringComparison.OrdinalIgnoreCase))))

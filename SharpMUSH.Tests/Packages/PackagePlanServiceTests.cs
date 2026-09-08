@@ -192,6 +192,44 @@ public class PackagePlanServiceTests
 		await Assert.That(removed.Conflict).IsEqualTo(PackageConflictKind.ModifyDelete);
 	}
 
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task RemovedLegacyRef_RemainsAvailableToLocallyEditedAttachedCode(bool ownsTarget, bool removeAttachment)
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: own
+			    type: thing
+			    name: Own
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      SRC: "replacement no longer uses a ref"
+			""");
+		if (removeAttachment)
+		{
+			manifest = manifest with { Objects = manifest.Objects.Where(o => !o.IsAttach).ToList() };
+		}
+		var changes = _service.ComputeChangeset(Inputs(manifest, installed: Installed("probe"),
+			installedObjects: ownsTarget ? [new PackageObjectRecord("probe", "own", "#0:0", "thing")] : [],
+			baselines:
+			[
+				new ManagedAttributeRecord("probe", "#0:0", "SRC", "[v(PM`REFS`GOD)]", "h", "1.0"),
+				new ManagedAttributeRecord("probe", "#0:0", "PM`REFS`GOD", "#1:0", "h", "1.0")
+			],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#0:0"] = LiveObject("#0:0", "Own", ("SRC", "local [v(PM`REFS`GOD)]"), ("PM`REFS`GOD", "#1:0"))
+			})));
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "SRC").Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`REFS`GOD").Action).IsEqualTo(PackageAttributeAction.RemoveBaseline);
+	}
+
 	#region Fresh install
 
 	[Test]
