@@ -2586,9 +2586,16 @@ public partial class Commands
 
 			var outPageFormatArgs = PageFormatArguments(
 				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
-			var outgoing = await AttributeHelpers.EvaluateFormatAttribute(
-				AttributeService, parser, executor, executor, "OUTPAGEFORMAT",
-				outPageFormatArgs, outgoingDefault, checkParents: true);
+			var outgoing = await parser.With(
+				state => state with
+				{
+					Executor = executor.Object().DBRef,
+					Caller = executor.Object().DBRef,
+					Enactor = executor.Object().DBRef
+				},
+				pageParser => AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
+					outPageFormatArgs, outgoingDefault, checkParents: true));
 			await NotifyService.Notify(executor, outgoing, executor);
 
 			foreach (var recipient in successfulRecipients)

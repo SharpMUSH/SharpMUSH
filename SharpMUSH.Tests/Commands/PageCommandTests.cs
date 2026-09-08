@@ -161,6 +161,31 @@ public class PageCommandTests
 	}
 
 	[Test]
+	public async ValueTask ForcedPage_OutPageFormatRunsEntirelyAsPager()
+	{
+		var pager = await CreatePlayerAsync("ForcedPagePager");
+		var recipient = await CreatePlayerAsync("ForcedPageRecipient");
+		try
+		{
+			await AttributeService.SetAttributeAsync(pager.Object, pager.Object, "OUTPAGEFORMAT",
+				MarkupText.Plain("OUT:%!|%@|%#"));
+
+			var pagerStart = Notifications.CountFor(pager.DbRef);
+			await GodCommandAsync($"@force {pager.DbRef}=page {recipient.Name}=Test");
+
+			var messages = Notifications.For(pager.DbRef).Skip(pagerStart).ToArray();
+			await Assert.That(messages.Length).IsEqualTo(1);
+			await Assert.That(messages[0]).IsEqualTo(
+				$"OUT:#{pager.DbRef.Number}|#{pager.DbRef.Number}|#{pager.DbRef.Number}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(pager.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	[Test]
 	public async ValueTask LastPaged_UpdatesAfterEachSuccessfulPageAndDrivesRepage()
 	{
 		var sender = await CreatePlayerAsync("PageLastPagedSender");
@@ -280,6 +305,58 @@ public class PageCommandTests
 	}
 
 	[Test]
+	public async ValueTask PageList_AllStaleObjidsUsesPennMissingRecipientsMessage()
+	{
+		var sender = await CreatePlayerAsync("PageListAllStaleSender");
+		var recipient = await CreatePlayerAsync("PageListAllStaleRecipient");
+		try
+		{
+			var staleRecipient = new DBRef(
+				recipient.DbRef.Number, recipient.DbRef.CreationMilliseconds!.Value + 1);
+			await GodCommandAsync($"&LASTPAGED {sender.DbRef}={staleRecipient}");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await CommandAsync(sender, "page/list");
+
+			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
+				"I can't find who you last paged."
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	[Test]
+	public async ValueTask PageList_MixedLiveAndStaleObjidsOnlyReportsLiveRecipients()
+	{
+		var sender = await CreatePlayerAsync("PageListMixedSender");
+		var liveRecipient = await CreatePlayerAsync("PageListMixedLiveRecipient");
+		var staleRecipient = await CreatePlayerAsync("PageListMixedStaleRecipient");
+		try
+		{
+			var staleObjid = new DBRef(
+				staleRecipient.DbRef.Number, staleRecipient.DbRef.CreationMilliseconds!.Value + 1);
+			await GodCommandAsync($"&LASTPAGED {sender.DbRef}={liveRecipient.DbRef} {staleObjid}");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await CommandAsync(sender, "page/list");
+
+			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
+				$"You last paged {liveRecipient.Name}."
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(liveRecipient.Handle);
+			await ConnectionService.Disconnect(staleRecipient.Handle);
+		}
+	}
+
+	[Test]
 	public async ValueTask IncomingPageFormat_RunsAsRecipientWithPagerAsEnactor()
 	{
 		var sender = await CreatePlayerAsync("PageIdentitySender");
@@ -329,6 +406,10 @@ public class PageCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
 		await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain(command));
 	}
+
+	private async Task GodCommandAsync(string command)
+		=> await WebAppFactoryArg.CommandParser.CommandParse(
+			1, ConnectionService, MarkupText.Plain(command));
 
 	private sealed record PagePlayer(DBRef DbRef, long Handle, AnySharpObject Object, string Name);
 }
