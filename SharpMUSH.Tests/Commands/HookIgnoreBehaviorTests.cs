@@ -1,3 +1,5 @@
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -67,14 +69,22 @@ public class HookIgnoreBehaviorTests
 	}
 
 	[Test]
-	public async ValueTask Ignore_ReturnsFalse_CommandSkipped()
+	[Arguments("0", false)]
+	[Arguments("-0", false)]
+	[Arguments("0.0", false)]
+	[Arguments("#-2", false)]
+	[Arguments("text", true)]
+	public async ValueTask Ignore_ReturnsFalse_CommandSkipped(string gateValue, bool tinyBooleans)
 	{
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookIgnFalse");
 		try
 		{
-			await ArmAsync(obj, "0");
-
-			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
+			await ArmAsync(obj, gateValue);
+			var original = (MUSHCodeParser)Parser;
+			var baseline = original.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+			var options = new TestOptions(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = tinyBooleans } });
+			var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
+			await parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
 
 			await Assert.That(await ReadAttributeAsync(obj, "RAN")).IsEqualTo("")
 				.Because("a FALSE /ignore SKIPS @emit entirely — execution never reaches the override or built-in");
@@ -85,4 +95,11 @@ public class HookIgnoreBehaviorTests
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
 		}
 	}
+	private sealed record TestOptions(SharpMUSHOptions CurrentValue) : IOptionsWrapper<SharpMUSHOptions>;
+	private sealed class OptionsProvider(IServiceProvider inner, IOptionsWrapper<SharpMUSHOptions> options) : IServiceProvider
+	{
+		public object? GetService(Type serviceType) => serviceType == typeof(IOptionsWrapper<SharpMUSHOptions>)
+			? options : inner.GetService(serviceType);
+	}
+
 }
