@@ -220,16 +220,14 @@ public class PackagePlanService : IPackagePlanService
 
 			if (obj.IsAttach && objid is not null)
 			{
-				foreach (var legacy in legacyRefsByObject[objid])
-				{
-					// On a package-owned target, only an old attached-code baseline can
-					// establish that a legacy ref belonged to the attachment too.
-					if (!ownedObjids.Contains(objid) || obj.Attributes.Keys.Any(name =>
+				// On a package-owned target, only an old attached-code baseline can
+				// establish that a legacy ref belonged to the attachment too.
+				foreach (var legacy in legacyRefsByObject[objid].Where(legacy => !ownedObjids.Contains(objid)
+					|| obj.Attributes.Keys.Any(name =>
 						baselineByKey.GetValueOrDefault((objid, name.ToUpperInvariant()))?.BaselineValue
-							.Contains($"[v({legacy.Attribute})]", StringComparison.OrdinalIgnoreCase) == true))
-					{
-						legacyRefKeys.Add((objid, legacy.Attribute.ToUpperInvariant()));
-					}
+							.Contains($"[v({legacy.Attribute})]", StringComparison.OrdinalIgnoreCase) == true)))
+				{
+					legacyRefKeys.Add((objid, legacy.Attribute.ToUpperInvariant()));
 				}
 			}
 

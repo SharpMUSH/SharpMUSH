@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -243,6 +244,58 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`SHARED")).IsEqualTo(value);
 		await Assert.That((await Installer.UninstallAsync(second.Name)).IsT0).IsTrue();
 		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`SHARED")).IsEqualTo("");
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LegacyRollback_ProtectsOtherPackagesBeforeAnyWrites(bool conflictingValue)
+	{
+		const string package = "legacy-rollback-a";
+		const string other = "legacy-rollback-b";
+		const string restoredRef = "PM`REFS`ROLLBACK_RESTORE";
+		const string removedRef = "PM`REFS`ROLLBACK_REMOVE";
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known().Match(p => p, _ => null!, _ => null!, _ => null!);
+		var liveRef = conflictingValue ? pm.Object.DBRef.ToString() : god;
+		foreach (var id in new[] { package, other })
+		{
+			await Registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(id, "1.1.0",
+				Source().Repo, Source().Path, "current", "main", DateTimeOffset.UtcNow, 2));
+			await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(id, host, removedRef, god, "h", "1.1.0"));
+		}
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(other, host, restoredRef, liveRef, "h", "1.1.0"));
+		await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, host, "ROLLBACK_CODE", "current", "h", "1.1.0"));
+		await Database.SetAttributeAsync(new DBRef(0), ["ROLLBACK_CODE"], MarkupText.Plain("current"), pm);
+		await Database.SetAttributeAsync(new DBRef(0), restoredRef.Split('`'), MarkupText.Plain(liveRef), pm);
+		await Database.SetAttributeAsync(new DBRef(0), removedRef.Split('`'), MarkupText.Plain(god), pm);
+		var snapshot = new PackageRevisionSnapshot("1.0.0", [],
+		[
+			new PackageRevisionSnapshotAttribute(host, "ROLLBACK_CODE", "old"),
+			new PackageRevisionSnapshotAttribute(host, restoredRef, god)
+		]);
+		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(package, 1, PackageRevisionKind.Install,
+			"1.0.0", "old", JsonSerializer.Serialize(snapshot, new JsonSerializerOptions(JsonSerializerDefaults.Web)), "{}", "[]", DateTimeOffset.UtcNow));
+
+		var rolledBack = await Installer.RollbackAsync(package, 1);
+		if (conflictingValue)
+		{
+			await Assert.That(rolledBack.IsT1).IsTrue();
+			await Assert.That(rolledBack.AsT1.Value).Contains("shared");
+			await Assert.That(await ReadAttributeAsync(host, "ROLLBACK_CODE")).IsEqualTo("current");
+			await Assert.That(await ReadAttributeAsync(host, restoredRef)).IsEqualTo(liveRef);
+			await Assert.That((await Registry.GetInstalledPackageAsync(package)).AsT0.CurrentRevision).IsEqualTo(2);
+			await Registry.RemoveManagedAttributeAsync(other, host, restoredRef);
+			rolledBack = await Installer.RollbackAsync(package, 1);
+		}
+		await Assert.That(rolledBack.IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, "ROLLBACK_CODE")).IsEqualTo("old");
+		await Assert.That(await ReadAttributeAsync(host, restoredRef)).IsEqualTo(god);
+		await Assert.That(await ReadAttributeAsync(host, removedRef)).IsEqualTo(god);
+		await Assert.That((await Registry.GetManagedAttributesAsync(package)).Any(a => a.Attribute == removedRef)).IsFalse();
+		await Assert.That((await Installer.UninstallAsync(package)).IsT0).IsTrue();
+		await Assert.That((await Installer.UninstallAsync(other)).IsT0).IsTrue();
 	}
 
 	[Test, NotInParallel]

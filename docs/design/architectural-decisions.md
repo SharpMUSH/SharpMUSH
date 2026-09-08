@@ -1173,6 +1173,9 @@ unmodified for code that still recalls them, but the upgrading package drops
 its old baseline. Empty **managed well-known** refs are repaired to their
 configured objids on apply when resolvable; empty configure values and
 nonempty local re-points retain their normal merge behavior after migration.
+Rollback checks shared ref values before writing a snapshot and rejects a
+restore that would overwrite another package's different live value. Shared
+refs absent from the snapshot lose only the rolling-back package's ownership.
 Package attribute writes and clears use Mediator commands so cached softcode
 reads see installs, repairs, upgrades, rollbacks, and uninstalls immediately.
 

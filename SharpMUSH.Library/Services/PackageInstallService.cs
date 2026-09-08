@@ -1202,6 +1202,35 @@ public class PackageInstallService(
 			return new Error<string>($"Revision {revision} has no usable snapshot.");
 		}
 
+		var managedAttributes = await registry.GetManagedAttributesAsync(packageId);
+		var sharedRefs = new HashSet<(string Objid, string Attribute)>();
+		foreach (var objid in snapshot.Attributes.Select(a => a.Objid)
+			.Concat(managedAttributes.Select(a => a.Objid)).Distinct(StringComparer.Ordinal))
+		{
+			foreach (var shared in (await registry.GetManagedAttributesForObjectAsync(objid))
+				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute)))
+			{
+				sharedRefs.Add((objid, shared.Attribute.ToUpperInvariant()));
+			}
+		}
+
+		// Validate shared legacy restores before writing even the first snapshot attribute.
+		// A rollback must not redirect another package's code to our historical resolution.
+		foreach (var attribute in snapshot.Attributes.Where(a => sharedRefs.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
+		{
+			var dbref = ParseObjid(attribute.Objid);
+			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone())
+			{
+				continue;
+			}
+			var live = await attributeStore.GetAttributeAsync(dbref.Value, attribute.Attribute.Split('`'), cancellationToken)
+				.LastOrDefaultAsync(cancellationToken);
+			if (live?.Value.ToPlainText() != attribute.Value)
+			{
+				return new Error<string>($"Cannot roll back '{packageId}': {attribute.Objid}/{attribute.Attribute} is shared with another package and differs from revision {revision}.");
+			}
+		}
+
 		var notes = new List<string>();
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
 		var restoredKeys = new HashSet<(string, string)>();
@@ -1224,17 +1253,20 @@ public class PackageInstallService(
 		}
 
 		// Attributes managed now but absent from the snapshot: remove to match the old state.
-		foreach (var managed in (await registry.GetManagedAttributesAsync(packageId))
+		foreach (var managed in managedAttributes
 			.Where(m => !restoredKeys.Contains((m.Objid, m.Attribute.ToUpperInvariant()))))
 		{
+			var shared = sharedRefs.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
 			var dbref = ParseObjid(managed.Objid);
-			if (dbref is not null)
+			if (dbref is not null && !shared)
 			{
 				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
 			}
 
 			await registry.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
-			notes.Add($"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
+			notes.Add(shared
+				? $"Released ownership of shared ref {managed.Objid}/{managed.Attribute}; its value was retained."
+				: $"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
 		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);
