@@ -64,6 +64,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IProgress<ConversionProgress>? progress,
 		CancellationToken cancellationToken = default)
 	{
+		// This service is a singleton, and the mapping is per-conversion state. Left over from a
+		// previous run it makes every dbref look already-converted, so a second import in the same
+		// process — a retry after a failure, or importing two databases — silently creates nothing.
+		_dbrefMapping.Clear();
+
 		var stopwatch = Stopwatch.StartNew();
 		var result = new ConversionResult();
 		var errors = new List<string>();
@@ -157,6 +162,22 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return result;
 	}
 
+	/// <summary>
+	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
+	/// </summary>
+	/// <remarks>
+	/// The ×1000 is the whole point: PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c>
+	/// writes <c>o-&gt;creation_time</c> as an int), while SharpMUSH keeps milliseconds and puts them
+	/// in the objid. Carrying the stamps across unscaled would date every imported object to January
+	/// 1970; not carrying them at all — which is what happened before — gives every object a brand
+	/// new objid, so any softcode in the imported database that holds one stops resolving.
+	/// <para>A PennMUSH object with no recorded creation time (a 0 field) is left to default to now,
+	/// since 1970 is not a more truthful answer than the import date.</para>
+	/// </remarks>
+	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
+		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
+			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
+
 	private async Task<(int players, int rooms, int things, int exits)> CreateObjectsAsync(
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
@@ -207,6 +228,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
 				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
+				var (godCreated, godModified) = PennTimestamps(godPennObject);
 				tempGodDbRef = await _database.CreatePlayerAsync(
 					godPennObject.Name,
 					godHash,
@@ -214,6 +236,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					new DBRef(0), // Home is also Limbo
 					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
 					godSalt,
+					godCreated,
+					godModified,
 					cancellationToken);
 
 				_dbrefMapping[1] = tempGodDbRef;
@@ -230,7 +254,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					new DBRef(0),
 					10000,
 					null,
-					cancellationToken);
+					cancellationToken: cancellationToken);
 				_dbrefMapping[1] = tempGodDbRef;
 				playersConverted++;
 				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
@@ -269,9 +293,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
+				var (room0Created, room0Modified) = PennTimestamps(room0Penn);
 				tempRoom0DbRef = await _database.CreateRoomAsync(
 					room0Penn.Name,
 					godPlayer,
+					room0Created,
+					room0Modified,
 					cancellationToken);
 				_dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
@@ -282,7 +309,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				tempRoom0DbRef = await _database.CreateRoomAsync(
 					"Limbo",
 					godPlayer,
-					cancellationToken);
+					cancellationToken: cancellationToken);
 				_dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
 				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
@@ -346,6 +373,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			try
 			{
 				DBRef newDbRef;
+				var (created, modified) = PennTimestamps(pennObj);
 
 				switch (pennObj.Type)
 				{
@@ -361,6 +389,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								tempRoom0DbRef, // Home is Limbo for now
 								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
 								playerSalt,
+								created,
+								modified,
 								cancellationToken);
 							playersConverted++;
 							break;
@@ -372,6 +402,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							newDbRef = await _database.CreateRoomAsync(
 								pennObj.Name,
 								godPlayer,
+								created,
+								modified,
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -394,6 +426,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
 								room0, // Home is Limbo for now
+								created,
+								modified,
 								cancellationToken);
 							thingsConverted++;
 							break;
@@ -417,6 +451,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								aliases.aliases,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
+								created,
+								modified,
 								cancellationToken);
 							exitsConverted++;
 							break;
