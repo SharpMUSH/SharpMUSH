@@ -337,4 +337,25 @@ public class SemaphoreCommandTests
 		await Assert.That(attrValue).DoesNotContain("-1")
 			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
 	}
+	[Test]
+	public async Task FirstWaiterAndTimeoutKeepSemaphoreCountConsistent()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemBudgetCount");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wait {semObj}/{name}=think timeout"));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
+		var initial = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(initial.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("1");
+		var tasks = await Scheduler.GetSemaphoreTasks(new SharpMUSH.Library.Models.DbRefAttribute(semObj, [name])).ToArrayAsync();
+		await Scheduler.RescheduleSemaphoreTask(tasks.Single().Pid, TimeSpan.Zero);
+		var count = "1";
+		for (var attempt = 0; attempt < 50 && count != "0"; attempt++)
+		{
+			await Task.Delay(100);
+			var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+			count = current.AsAttribute.Last().Value.ToPlainText();
+		}
+		await Assert.That(count).IsEqualTo("0");
+	}
+
 }

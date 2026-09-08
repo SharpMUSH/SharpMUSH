@@ -500,7 +500,7 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?<Object>#\d+(?::\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>

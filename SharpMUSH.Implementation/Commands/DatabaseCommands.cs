@@ -245,7 +245,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
 
 							firstRow = false;
 						}
@@ -270,7 +270,7 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
 
 						rowNumber++;
 					}

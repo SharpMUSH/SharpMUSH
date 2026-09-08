@@ -2700,13 +2700,12 @@ public partial class Commands
 		if (attrValue is null)
 		{
 
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-
 			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-
-			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
+			var admission = await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 				dbRefAttr, 0));
+			if (admission.Accepted)
+				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain("1"),
+					one.AsPlayer));
 
 			return;
 		}
@@ -2717,13 +2716,12 @@ public partial class Commands
 			return;
 		}
 
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-			one.AsPlayer));
-
 		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
-
-		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
+		var queued = await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
 			dbRefAttr2, last));
+		if (queued.Accepted)
+			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
+				one.AsPlayer));
 
 	}
 
@@ -2738,10 +2736,11 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
+			var admission = await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
+			if (admission.Accepted)
+				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain("1"),
+					one.AsPlayer));
 			return;
 		}
 
@@ -2750,11 +2749,11 @@ public partial class Commands
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
 		}
-
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
+		var queued = await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+		if (queued.Accepted)
+			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
+				one.AsPlayer));
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
@@ -4745,6 +4744,10 @@ public partial class Commands
 			}
 
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
+			var usage = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueUsage();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
+			foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
 			foreach (var (group, tasks) in allTasks)

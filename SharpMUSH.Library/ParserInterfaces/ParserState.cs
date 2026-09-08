@@ -283,7 +283,8 @@ public partial record ParserState(
 	ParserStateFlags Flags = ParserStateFlags.None,
 	Dictionary<string, CallState>? CallerArguments = null,
 	BreakPropagation? BreakPropagation = null,
-	string? ConnectionSessionId = null)
+	string? ConnectionSessionId = null,
+	ExecutionBudget? ExecutionBudget = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

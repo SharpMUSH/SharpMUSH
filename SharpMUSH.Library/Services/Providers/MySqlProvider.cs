@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
@@ -23,7 +24,7 @@ public class MySqlProvider : ISqlProvider
 	public string ParameterPlaceholderFormat => "?";
 
 	public async ValueTask<DbConnection> CreateConnectionAsync()
-		=> await _dataSource.OpenConnectionAsync();
+		=> await _dataSource.OpenConnectionAsync(ExecutionBudget.CurrentToken);
 
 	public string Escape(string value)
 		=> MySqlHelper.EscapeString(value);
