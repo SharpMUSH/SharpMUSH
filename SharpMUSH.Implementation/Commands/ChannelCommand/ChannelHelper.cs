@@ -368,4 +368,31 @@ public static class ChannelHelper
 			? null
 			: string.Format(ErrorMessages.Notifications.ChatNotAllowedToCemit, channel.Name.ToPlainText());
 	}
+
+	/// <summary>
+	/// Drops the recall lines that were only ever delivered to privileged members - PennMUSH's
+	/// <c>CBTYPE_SEEALL</c> filter, applied identically by <c>do_chan_recall</c> (src/extchat.c:4083)
+	/// and <c>fun_crecall</c> (:3559): a See_All viewer sees everything, and everyone else still sees
+	/// their own lines. Without it, <c>@channel/recall</c> replays the hidden-connect announcement
+	/// that the live broadcast deliberately withheld.
+	/// </summary>
+	public static async ValueTask<List<SharpChannelMessage>> FilterRecallableAsync(
+		IEnumerable<SharpChannelMessage> messages, AnySharpObject viewer)
+	{
+		var materialized = messages.ToList();
+		if (!materialized.Any(x => x.SeeAllOnly))
+		{
+			return materialized;
+		}
+
+		if (await viewer.IsSee_All())
+		{
+			return materialized;
+		}
+
+		var viewerNumber = viewer.Object().DBRef.Number;
+		return materialized
+			.Where(x => !x.SeeAllOnly || x.Sender.Number == viewerNumber)
+			.ToList();
+	}
 }

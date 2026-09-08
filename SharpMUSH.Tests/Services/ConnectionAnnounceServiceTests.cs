@@ -124,19 +124,24 @@ public class ConnectionAnnounceServiceTests
 	}
 
 	/// <summary>
-	/// Builds a minimal <see cref="SharpChannel"/> with the given <paramref name="privs"/>. Owner/Members
-	/// are never touched by <c>AnnounceOnChannelsAsync</c> (which only reads <c>Privs</c> and passes the
-	/// channel through to <c>ChannelMessageNotification</c>), so they get trivial stub values matching the
-	/// idiom used for <c>AsyncLazy</c>/<c>Lazy</c> fields elsewhere in this file.
+	/// Builds a minimal <see cref="SharpChannel"/> with the given <paramref name="privs"/> and member
+	/// list. <c>Owner</c> is never touched by <c>AnnounceOnChannelsAsync</c>, so it gets a trivial stub
+	/// matching the idiom used for <c>AsyncLazy</c>/<c>Lazy</c> fields elsewhere in this file;
+	/// <c>Members</c> is read for the announcing player's own per-channel Hide status (PennMUSH's
+	/// <c>Chanuser_Hide</c>), and defaults to empty.
 	/// </summary>
-	private static SharpChannel FakeChannel(string name, string[] privs) =>
+	private static SharpChannel FakeChannel(
+		string name, string[] privs, params SharpChannel.MemberAndStatus[] members) =>
 		new()
 		{
 			Name = MarkupText.Plain(name),
 			Owner = new(async _ => { await Task.CompletedTask; return null!; }),
-			Members = new(() => AsyncEnumerable.Empty<SharpChannel.MemberAndStatus>()),
+			Members = new(() => members.ToAsyncEnumerable()),
 			Privs = privs
 		};
+
+	private static SharpChannel.MemberAndStatus HiddenMember(AnySharpObject member) =>
+		new(member, new SharpChannelStatus(Combine: null, Gagged: null, Hide: true, Mute: null, Title: null));
 
 	/// <summary>
 	/// Configures the given <see cref="IAttributeService"/> substitute to report "no such attribute"
@@ -683,7 +688,72 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
 
 		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
-			n.Channel == channel && n.Message.ToPlainText() == "Bob has connected."), Arg.Any<CancellationToken>());
+			n.Channel == channel && n.Message.ToPlainText() == "Bob has connected." && !n.SeeAllOnly),
+			Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// Issue #904, gap 2: PennMUSH's chat_player_announce sends the line with <c>CB_SEEALL</c> when the
+	/// connecting descriptor is hidden (src/extchat.c:3190), so only See_All members receive it. Without
+	/// the flag, every ordinary member of every non-Quiet channel the player belongs to was told a
+	/// hidden player had just arrived.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_HiddenConnection_PublishesSeeAllOnly()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var mediator = Substitute.For<IMediator>();
+
+		var channel = FakeChannel("Public", privs: []);
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+
+		var player = FakeConnectedPlayer("Bob");
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: true);
+
+		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
+			n.Channel == channel && n.Message.ToPlainText() == "Bob has HIDDEN-connected." && n.SeeAllOnly),
+			Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The other half of PennMUSH's <c>if (Chanuser_Hide(up) || (desc_player-&gt;hide == 1))</c>
+	/// (src/extchat.c:3190): a member hidden on that particular channel gets the same privileged-only
+	/// delivery even when the connection itself is not hidden.
+	/// </summary>
+	[Test]
+	public async Task AnnounceConnectAsync_MemberHiddenOnChannel_PublishesSeeAllOnly()
+	{
+		var communicationService = Substitute.For<ICommunicationService>();
+		var gameBroadcastService = Substitute.For<IGameBroadcastService>();
+		var attributeService = Substitute.For<IAttributeService>();
+		StubNoAconnectAttribute(attributeService);
+		var configuration = FakeOptionsWrapper();
+		var mediator = Substitute.For<IMediator>();
+
+		var player = FakeConnectedPlayer("Bob");
+		var channel = FakeChannel("Public", privs: [], HiddenMember(player));
+		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => new[] { channel }.ToAsyncEnumerable());
+
+		var service = new ConnectionAnnounceService(
+			communicationService, gameBroadcastService, attributeService, configuration, mediator, FakeLogger());
+
+		var parser = Substitute.For<IMUSHCodeParser>();
+
+		await service.AnnounceConnectAsync(parser, player, connectionCount: 1, isHiddenConnection: false);
+
+		await mediator.Received(1).Publish(Arg.Is<ChannelMessageNotification>(n =>
+			n.Channel == channel && n.SeeAllOnly), Arg.Any<CancellationToken>());
 	}
 
 	/// <summary>

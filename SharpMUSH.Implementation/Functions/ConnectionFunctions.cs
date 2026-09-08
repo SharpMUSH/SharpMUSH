@@ -607,29 +607,37 @@ public partial class Functions
 
 	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flag"])]
 	public async ValueTask<CallState> ListWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await ListWhoCore(parser, objectIds: false);
+
+	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
+	public async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await ListWhoCore(parser, objectIds: true);
+
+	/// <summary>
+	/// lwho() and lwhoid(), which differ only in whether each entry is a bare <c>#N</c> or a full
+	/// objid - PennMUSH runs both through one fun_lwho, keyed on <c>strchr(called_as, 'D')</c>
+	/// (bsd.c:6528).
+	/// </summary>
+	private async ValueTask<CallState> ListWhoCore(IMUSHCodeParser parser, bool objectIds)
 	{
 		var args = parser.CurrentState.Arguments;
-		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
-		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
-		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
-		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
-		var arg1 = args.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
-			: ["online"];
+		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls, so it
+		// arrives here as an empty string rather than as an absent key; ResolveWhoLookerAsync treats
+		// blank as "no viewer named", which is the same thing.
+		var arg0Raw = args.TryGetValue("0", out var arg0) ? arg0.Message!.ToPlainText() : null;
+		// Same for the status argument: PennMUSH's `if (nargs > 1 && args[1] && *args[1])` (bsd.c:6548)
+		// treats an explicitly empty <status> as absent, so lwho(<viewer>,) means the "online" default
+		// rather than "#-1 INVALID SECOND ARGUMENT".
+		var arg1Raw = args.TryGetValue("1", out var arg1Value) ? arg1Value.Message!.ToPlainText() : null;
+		var arg1 = string.IsNullOrEmpty(arg1Raw)
+			? ["online"]
+			: arg1Raw.ToLower().Split(" ");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var looker = executor;
-
-		if (arg0 != null)
+		var (looker, powered, lookerError) = await ResolveWhoLookerAsync(parser, executor, arg0Raw);
+		if (lookerError is not null)
 		{
-			var maybeLocate =
-				await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-			if (maybeLocate.IsError)
-			{
-				return maybeLocate.AsError;
-			}
-
-			looker = maybeLocate.AsSharpObject;
+			return lookerError;
 		}
 
 		if (arg1.Length > 1)
@@ -643,35 +651,42 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
-		var hasSeeAll = await looker.IsSee_All();
-		if ((status == "offline" || status == "all") && !hasSeeAll)
+		// PennMUSH bsd.c:6561: only a powered caller may ask about anything but the online list.
+		if (status != "online" && !powered)
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var connectedRefs = ConnectionService
+		if (status == "online")
+		{
+			// The online list is exactly what the rest of the caller-scoped family already computes,
+			// @hide gate included - lwho() and lwhoid() were the two members of it that still filtered
+			// on the DARK flag alone, so a @hide'd (but undarkened) player stayed listed.
+			var online = VisibleWhoPlayers(looker, powered)
+				.Select(x => objectIds ? x.Object().DBRef.ToString() : $"#{x.Object().DBRef.Number}");
+
+			return new CallState(string.Join(" ", await online.ToArrayAsync()));
+		}
+
+		// "offline"/"all" reach the player table rather than the connection list, and are powered-only
+		// (checked above), so no per-connection Hidden gate applies to them.
+		//
+		// Keyed on DBRef.Number, not on the whole DBRef: the bound reference is a bare #N on some login
+		// paths and a full #N:creation objid on others, and those two compare unequal - so a player
+		// bound the objid way counted as not connected, and "offline" listed them (see the same note on
+		// MortalWhoPlayers).
+		var connectedDbRefs = new HashSet<int>(await ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null)
-			.Select(x => x.Ref!.Value);
-		var connectedDbRefs = new HashSet<DBRef>(await connectedRefs.ToListAsync());
+			.Select(x => x.Ref!.Value.Number)
+			.ToListAsync());
 
 		var result = new List<string>();
 
-		var allPlayers = Mediator.CreateStream(new GetAllPlayersQuery())!;
-		await foreach (var player in allPlayers)
+		await foreach (var player in Mediator.CreateStream(new GetAllPlayersQuery())!)
 		{
 			var dbref = player.Object.DBRef;
-			var isConnected = connectedDbRefs.Contains(dbref);
-
-			var shouldInclude = status switch
-			{
-				"online" => isConnected,
-				"offline" => !isConnected,
-				"all" => true,
-				_ => false
-			};
-
-			if (!shouldInclude)
+			if (status == "offline" && connectedDbRefs.Contains(dbref.Number))
 			{
 				continue;
 			}
@@ -679,92 +694,49 @@ public partial class Functions
 			AnySharpObject playerObj = player;
 			if (await PermissionService.CanSee(looker, playerObj))
 			{
-				result.Add($"#{dbref.Number}");
+				result.Add(objectIds ? dbref.ToString() : $"#{dbref.Number}");
 			}
 		}
 
 		return new CallState(string.Join(" ", result));
 	}
 
-	[SharpFunction(Name = "lwhoid", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flags"])]
-	public async ValueTask<CallState> ListWhoObjectIds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// PennMUSH's shared victim/privilege resolution for the caller-scoped WHO family (fun_lwho
+	/// bsd.c:6532-6546, fun_nwho :6494-6506, fun_xwho :6438-6450): the optional first argument names
+	/// the <em>viewer</em> whose visibility the answer is computed for, an unprivileged caller may
+	/// only name itself, and the answer is then capped at the lower of the caller's and the viewer's
+	/// Priv_Who.
+	/// </summary>
+	/// <remarks>
+	/// The "may only name itself" half is what stops <c>lwho(&lt;wizard&gt;)</c> / <c>nwho(&lt;wizard&gt;)</c>
+	/// from handing a mortal the privileged WHO list - @hide'd connections included - simply by naming
+	/// someone privileged as the viewer.
+	/// </remarks>
+	private async ValueTask<(AnySharpObject Looker, bool Powered, CallState? Error)> ResolveWhoLookerAsync(
+		IMUSHCodeParser parser, AnySharpObject executor, string? arg0Text)
 	{
-		var args = parser.CurrentState.Arguments;
-		// Arguments["0"] is always present (DefaultIfEmpty(CallState.Empty)) even for 0-arg calls.
-		// Use IsNullOrEmpty to distinguish a truly absent optional arg from an explicitly empty one.
-		var arg0Raw = args.ContainsKey("0") ? parser.CurrentState.Arguments["0"].Message!.ToPlainText() : null;
-		var arg0 = string.IsNullOrEmpty(arg0Raw) ? null : arg0Raw;
-		var arg1 = args.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText().ToLower().Split(" ")
-			: ["online"];
+		var powered = await executor.IsSee_All();
 
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var looker = executor;
-
-		if (arg0 != null)
+		if (string.IsNullOrWhiteSpace(arg0Text))
 		{
-			var maybeLocate =
-				await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-			if (maybeLocate.IsError)
-			{
-				return maybeLocate.AsError;
-			}
-
-			looker = maybeLocate.AsSharpObject;
+			return (executor, powered, null);
 		}
 
-		if (arg1.Length > 1)
+		var maybeLocate =
+			await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0Text);
+		if (maybeLocate.IsError)
 		{
-			return ErrorMessages.Returns.InvalidSecondArgument;
+			return (executor, powered, maybeLocate.AsError);
 		}
 
-		var status = arg1.First();
-		if (!((string[])["online", "offline", "all"]).Contains(status))
+		var looker = maybeLocate.AsSharpObject;
+		if (!powered && looker.Object().DBRef.Number != executor.Object().DBRef.Number)
 		{
-			return ErrorMessages.Returns.InvalidSecondArgument;
+			return (executor, false, new CallState(ErrorMessages.Returns.PermissionDenied));
 		}
 
-		var hasSeeAll = await looker.IsSee_All();
-		if ((status == "offline" || status == "all") && !hasSeeAll)
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var connectedRefsId = ConnectionService
-			.GetAll()
-			.Where(x => x.Ref is not null)
-			.Select(x => x.Ref!.Value);
-		var connectedDbRefsId = new HashSet<DBRef>(await connectedRefsId.ToListAsync());
-
-		var resultId = new List<string>();
-
-		var allPlayersId = Mediator.CreateStream(new GetAllPlayersQuery())!;
-		await foreach (var player in allPlayersId)
-		{
-			var dbref = player.Object.DBRef;
-			var isConnected = connectedDbRefsId.Contains(dbref);
-
-			var shouldInclude = status switch
-			{
-				"online" => isConnected,
-				"offline" => !isConnected,
-				"all" => true,
-				_ => false
-			};
-
-			if (!shouldInclude)
-			{
-				continue;
-			}
-
-			AnySharpObject playerObj = player;
-			if (await PermissionService.CanSee(looker, playerObj))
-			{
-				resultId.Add(dbref.ToString());
-			}
-		}
-
-		return new CallState(string.Join(" ", resultId));
+		return (looker, powered && await looker.IsSee_All(), null);
 	}
 
 	/// <summary>
@@ -809,16 +781,17 @@ public partial class Functions
 	/// nwho()/xwho() family, and distinct for the same reason — help nwho documents it as
 	/// <c>words(lwho(&lt;viewer&gt;))</c>, and lwho() lists each player once.
 	/// </summary>
-	private IAsyncEnumerable<AnySharpObject> VisibleWhoPlayers(AnySharpObject looker) =>
+	private IAsyncEnumerable<AnySharpObject> VisibleWhoPlayers(AnySharpObject looker, bool powered) =>
 		ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
 			// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
-			// this whole WHO family exactly as DARK always did, unless the looker is privileged -
-			// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503), powered
-			// being Priv_Who (IsSee_All here). See WHO's own row filtering in SocketCommands.cs for the
-			// same isHiddenRow = isDark || connection.IsHidden pattern.
-			.Where(async (x, _) => !x.IsHidden || await looker.IsSee_All())
+			// this whole WHO family exactly as DARK always did, unless the caller is privileged -
+			// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503). `powered`
+			// is the *pair's* Priv_Who, not the looker's alone (see ResolveWhoLookerAsync). See WHO's
+			// own row filtering in SocketCommands.cs for the same
+			// isHiddenRow = isDark || connection.IsHidden pattern.
+			.Where(x => !x.IsHidden || powered)
 			.Select(x => x.Ref!.Value)
 			.DistinctBy(x => x.Number)
 			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
@@ -853,26 +826,15 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var looker = executor;
 
-		if (args.TryGetValue("0", out var arg0))
+		var (looker, powered, lookerError) = await ResolveWhoLookerAsync(
+			parser, executor, args.TryGetValue("0", out var arg0) ? arg0.Message!.ToPlainText() : null);
+		if (lookerError is not null)
 		{
-			var arg0Text = arg0.Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(arg0Text))
-			{
-				var maybeLocate =
-					await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0Text);
-
-				if (maybeLocate.IsError)
-				{
-					return maybeLocate.AsError;
-				}
-
-				looker = maybeLocate.AsSharpObject;
-			}
+			return lookerError;
 		}
 
-		var count = await VisibleWhoPlayers(looker).CountAsync();
+		var count = await VisibleWhoPlayers(looker, powered).CountAsync();
 
 		return new CallState(count.ToString(CultureInfo.InvariantCulture));
 	}
@@ -1123,23 +1085,20 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var looker = executor;
+		var powered = await executor.IsSee_All();
 
 		int start, count;
 
 		if (args.Count == 3)
 		{
-			var arg0 = args["0"].Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(arg0))
+			var (resolved, resolvedPowered, lookerError) =
+				await ResolveWhoLookerAsync(parser, executor, args["0"].Message!.ToPlainText());
+			if (lookerError is not null)
 			{
-				var maybeLocate =
-					await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-				if (maybeLocate.IsError)
-				{
-					return maybeLocate.AsError;
-				}
-
-				looker = maybeLocate.AsSharpObject;
+				return lookerError;
 			}
+
+			(looker, powered) = (resolved, resolvedPowered);
 
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
@@ -1161,7 +1120,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allDbrefs = VisibleWhoPlayers(looker).Select(x => $"#{x.Object().DBRef.Number}");
+		var allDbrefs = VisibleWhoPlayers(looker, powered).Select(x => $"#{x.Object().DBRef.Number}");
 
 		var result = allDbrefs.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1173,23 +1132,20 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var looker = executor;
+		var powered = await executor.IsSee_All();
 
 		int start, count;
 
 		if (args.Count == 3)
 		{
-			var arg0 = args["0"].Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(arg0))
+			var (resolved, resolvedPowered, lookerError) =
+				await ResolveWhoLookerAsync(parser, executor, args["0"].Message!.ToPlainText());
+			if (lookerError is not null)
 			{
-				var maybeLocate =
-					await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-				if (maybeLocate.IsError)
-				{
-					return maybeLocate.AsError;
-				}
-
-				looker = maybeLocate.AsSharpObject;
+				return lookerError;
 			}
+
+			(looker, powered) = (resolved, resolvedPowered);
 
 			if (!int.TryParse(args["1"].Message!.ToPlainText(), out start) ||
 					!int.TryParse(args["2"].Message!.ToPlainText(), out count))
@@ -1211,7 +1167,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var allObjIds = VisibleWhoPlayers(looker).Select(x => x.Object().DBRef);
+		var allObjIds = VisibleWhoPlayers(looker, powered).Select(x => x.Object().DBRef);
 
 		var result = allObjIds.Skip(start - 1).Take(count);
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
@@ -1219,61 +1175,27 @@ public partial class Functions
 
 	[SharpFunction(Name = "zmwho", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone"])]
 	public async ValueTask<CallState> ZoneMortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		=> await ZoneWhoCore(parser, mortal: true);
 
-		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
-		if (maybeZone.IsNone || maybeZone.IsError)
-		{
-			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
-		}
-
-		var zone = maybeZone.AsAnyObject;
-
-		var hasSeeAll = await executor.IsSee_All();
-		if (!hasSeeAll)
-		{
-			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-		}
-
-		var playersInZone = new List<string>();
-		var allPlayers = Mediator.CreateStream(new GetAllPlayersQuery())!;
-
-		await foreach (var player in allPlayers)
-		{
-			if (!hasSeeAll)
-			{
-				AnySharpObject playerObj = player;
-				var isDark = await playerObj.HasFlag("DARK");
-				if (isDark)
-				{
-					continue;
-				}
-			}
-
-			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
-
-			var locationObj = playerLocation.WithExitOption();
-			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
-
-			if (!locationZone.IsNone)
-			{
-				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
-				{
-					playersInZone.Add(player.Object.DBRef.ToString());
-				}
-			}
-		}
-
-		return new CallState(string.Join(" ", playersInZone));
-	}
-
-	[SharpFunction(Name = "zwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone"])]
+	[SharpFunction(Name = "zwho", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone", "viewer"])]
 	public async ValueTask<CallState> ZoneWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await ZoneWhoCore(parser, mortal: false);
+
+	/// <summary>
+	/// zwho() and zmwho(), which PennMUSH runs through one fun_zwho (bsd.c:6810) keyed on
+	/// <c>called_as</c>: the connected players in locations @chzone'd to the named zone, gated by the
+	/// viewer's visibility. zmwho() is the mortal-audience twin and is never powered, so it always
+	/// drops @hide'd connections; zwho() drops them too unless the pair is privileged.
+	/// </summary>
+	/// <remarks>
+	/// Both used to walk the whole player table and answer for players who were not connected at all -
+	/// zmwho() gated only on the DARK flag and zwho() on nothing whatsoever, so an @hide'd player was
+	/// listed by both. Routing them through <see cref="VisibleWhoPlayers"/> makes the connection list
+	/// the source of truth, exactly as it already was for the mwho()/nwho()/xwho() families, and gives
+	/// zwho() the <c>&lt;viewer&gt;</c> second argument that <c>help zwho</c> has always documented -
+	/// it was being read as an output separator instead.
+	/// </remarks>
+	private async ValueTask<CallState> ZoneWhoCore(IMUSHCodeParser parser, bool mortal)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1287,40 +1209,49 @@ public partial class Functions
 
 		var zone = maybeZone.AsAnyObject;
 
-		var hasSeeAll = await executor.IsSee_All();
-		if (!hasSeeAll)
+		var executorHasSeeAll = await executor.IsSee_All();
+		// PennMUSH bsd.c:6815 - `powered = (strcmp(called_as, "ZMWHO") && Priv_Who(executor))`.
+		var powered = !mortal && executorHasSeeAll;
+		var viewer = executor;
+
+		if (args.TryGetValue("1", out var arg1) && !string.IsNullOrWhiteSpace(arg1.Message!.ToPlainText()))
 		{
-			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
+			// Only a powered caller may compute the answer for someone else (bsd.c:6822-6830), and the
+			// answer is then capped at that viewer's own privilege (:6847).
+			if (!powered)
 			{
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
-		}
 
-		var playersInZone = new List<string>();
-		var allPlayers = Mediator.CreateStream(new GetAllPlayersQuery())!;
-
-		await foreach (var player in allPlayers)
-		{
-			var playerLocation = await player.Location.WithCancellation(CancellationToken.None);
-
-			var locationObj = playerLocation.WithExitOption();
-			var locationZone = await locationObj.Object().Zone.WithCancellation(CancellationToken.None);
-
-			if (!locationZone.IsNone)
+			var maybeViewer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(
+				parser, executor, executor, arg1.Message!.ToPlainText());
+			if (maybeViewer.IsError)
 			{
-				if (locationZone.Known.Object().DBRef.Number == zone.Object().DBRef.Number)
-				{
-					playersInZone.Add(player.Object.DBRef.ToString());
-				}
+				return maybeViewer.AsError;
 			}
+
+			viewer = maybeViewer.AsSharpObject;
+			powered = await viewer.IsSee_All();
 		}
 
-		if (args.TryGetValue("1", out var arg1Value))
+		// The zone lock is waived for a privileged caller and otherwise evaluated as the viewer, not as
+		// the caller (bsd.c:6832-6839).
+		if (!executorHasSeeAll && !await LockService.Evaluate(LockType.Zone, zone, viewer))
 		{
-			var format = arg1Value.Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(format))
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var zoneNumber = zone.Object().DBRef.Number;
+		var playersInZone = new List<string>();
+
+		await foreach (var player in VisibleWhoPlayers(viewer, powered))
+		{
+			var location = await player.Where();
+			var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+
+			if (!locationZone.IsNone && locationZone.Known.Object().DBRef.Number == zoneNumber)
 			{
-				return new CallState(string.Join(format, playersInZone));
+				playersInZone.Add($"#{player.Object().DBRef.Number}");
 			}
 		}
 

@@ -60,7 +60,7 @@ public class ConnectionAnnounceService(
 				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
 			}
 
-			await BroadcastAnnouncementAsync(player, fullMessage, isDark);
+			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
 
 			await QueueHookAsync(parser, player, player, "ACONNECT", connectionCount.ToString());
 
@@ -117,7 +117,7 @@ public class ConnectionAnnounceService(
 				await gameBroadcastService.BroadcastToFlagAsync(null, "HEAR_CONNECT", gameLine);
 			}
 
-			await BroadcastAnnouncementAsync(player, fullMessage, isDark);
+			await BroadcastAnnouncementAsync(player, fullMessage, isDark, isHiddenConnection);
 
 			await QueueHookAsync(parser, player, player, "ADISCONNECT", remainingConnections.ToString());
 
@@ -172,7 +172,8 @@ public class ConnectionAnnounceService(
 	/// <see cref="AnnounceConnectAsync"/> and <see cref="AnnounceDisconnectAsync"/>, whose broadcast
 	/// sections are otherwise identical.
 	/// </summary>
-	private async ValueTask BroadcastAnnouncementAsync(AnySharpObject player, string fullMessage, bool isDark)
+	private async ValueTask BroadcastAnnouncementAsync(
+		AnySharpObject player, string fullMessage, bool isDark, bool isHiddenConnection)
 	{
 		if (!configuration.CurrentValue.Cosmetic.AnnounceConnects)
 		{
@@ -192,7 +193,7 @@ public class ConnectionAnnounceService(
 					excludeObjects: [player]);
 			}
 
-			await AnnounceOnChannelsAsync(player, fullMessage);
+			await AnnounceOnChannelsAsync(player, fullMessage, isHiddenConnection);
 		}
 		catch (Exception ex)
 		{
@@ -244,18 +245,32 @@ public class ConnectionAnnounceService(
 	}
 
 	/// <summary>
-	/// Ports the channel-broadcast portion of chat_player_announce (src/extchat.c:3164-3202): the
+	/// Ports the channel-broadcast portion of chat_player_announce (src/extchat.c:3187-3205): the
 	/// connect/disconnect line is published to every channel the player belongs to, skipping channels
-	/// with the "Quiet" privilege. Per-viewer CHATFORMAT/combine formatting and the CB_SEEALL
-	/// hidden-viewer gate are out of scope for this port (see the plan's Global Constraints).
+	/// with the "Quiet" privilege. A line from a hidden connection - or from a member who is hidden on
+	/// that particular channel - goes out CB_SEEALL, so only See_All members (and the player
+	/// themselves) receive it; that is PennMUSH's
+	/// <c>if (Chanuser_Hide(up) || (desc_player-&gt;hide == 1))</c> at :3190. Per-viewer
+	/// CHATFORMAT/combine formatting remains out of scope for this port.
 	/// </summary>
-	private async ValueTask AnnounceOnChannelsAsync(AnySharpObject player, string fullMessage)
+	private async ValueTask AnnounceOnChannelsAsync(
+		AnySharpObject player, string fullMessage, bool isHiddenConnection)
 	{
+		var playerNumber = player.Object().DBRef.Number;
+
 		await foreach (var channel in mediator.CreateStream(new GetOnChannelQuery(player)))
 		{
 			if (channel.HasPriv("Quiet"))
 			{
 				continue;
+			}
+
+			var hiddenOnChannel = isHiddenConnection;
+			if (!hiddenOnChannel)
+			{
+				var membership = await channel.Members.Value
+					.FirstOrDefaultAsync(x => x.Member.Object().DBRef.Number == playerNumber);
+				hiddenOnChannel = membership?.Status.Hide ?? false;
 			}
 
 			await mediator.Publish(new ChannelMessageNotification(
@@ -266,7 +281,8 @@ public class ConnectionAnnounceService(
 				MarkupText.Empty,
 				MarkupText.Plain(player.Object().Name),
 				MarkupText.Empty,
-				[]));
+				[],
+				SeeAllOnly: hiddenOnChannel));
 		}
 	}
 

@@ -436,9 +436,11 @@ public partial class Functions
 			lines = parsedLines;
 		}
 
-		var messages = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
-			.Select(x => x.Message)
+		var recalled = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, lines))
 			.ToListAsync();
+		var messages = (await ChannelHelper.FilterRecallableAsync(recalled, executor))
+			.Select(x => x.Message)
+			.ToList();
 
 		return new CallState(MarkupText.Concat(messages));
 	}
