@@ -759,21 +759,21 @@ public class BuildingCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"ForceLook{token}");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@desc {roomDbRef}=desc:%#"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DESCFORMAT {roomDbRef}=format_{token}:%#:%0"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@desc {roomDbRef}=desc:%#:%@"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DESCFORMAT {roomDbRef}=format_{token}:%#:%@:%0"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {roomDbRef}/DESCFORMAT=visual"));
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@adesc {roomDbRef}=@pemit %#=action_{token}:%#:%!"));
+			MarkupText.Plain($"@adesc {roomDbRef}=@pemit %#=action_{token}:%#:%@:%!"));
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force {player.DbRef}=look"));
 
 		var playerRef = $"#{player.DbRef.Number}";
 		await TestHelpers.WaitForNotification(NotifyService, player.DbRef,
-			$"action_{token}:{playerRef}:#{roomDbRef.Number}");
+			$"action_{token}:{playerRef}:{playerRef}:#{roomDbRef.Number}");
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
 			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg,
-				$"format_{token}:{playerRef}:desc:{playerRef}")),
+				$"format_{token}:{playerRef}:{playerRef}:desc:{playerRef}:{playerRef}")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -791,14 +791,37 @@ public class BuildingCommandTests
 		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@desc here="));
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=empty_{token}:%0:end"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=empty_{token}:%+:%0:end"));
 
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}::end")),
+			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}:1::end")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// A present but empty @descformat suppresses an otherwise non-empty description.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_EmptyDescFormatSuppressesDescription()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lefs");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookEmptyFormat{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var roomResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig EmptyFormatRoom_{token}"));
+		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc here=visible_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&DESCFORMAT here="));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages.Any(message => message.Contains($"visible_{token}"))).IsFalse();
 	}
 
 	/// <summary>
@@ -829,10 +852,10 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// Looking at a room with no @describe shows the default directly; @descformat has no %0 to format.
+	/// Looking at a room with no @describe still evaluates @descformat, without supplying %0.
 	/// </summary>
 	[Test]
-	public async ValueTask Look_Room_NoDescription_ShowsDefaultWithoutDescFormat()
+	public async ValueTask Look_Room_NoDescription_UsesDescFormatWithoutArgument()
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("lnd");
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -842,14 +865,36 @@ public class BuildingCommandTests
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomND_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&DESCFORMAT here=unexpected_{token}:%0"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&DESCFORMAT here=formatted_{token}:%+:%0:end"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages).Contains($"formatted_{token}:0::end");
+		await Assert.That(messages).DoesNotContain("You see nothing special.");
+	}
+
+	/// <summary>
+	/// With neither @describe nor @descformat, look retains the default description.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_Room_NoDescriptionOrFormat_ShowsDefault()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lndf");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookRoomDefault{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDefault_{token}"));
+		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains("You see nothing special.");
-		await Assert.That(messages.Any(message => message.Contains($"unexpected_{token}"))).IsFalse();
 	}
 
 	/// <summary>
@@ -882,6 +927,44 @@ public class BuildingCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"THINGDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Inside a thing, a present @idescformat formats the fallback @describe even without @idescribe,
+	/// and that branch triggers neither outside nor inside description actions.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_InsideThing_NoIdesc_UsesIdescFormatWithoutDescriptionActions()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("liifa");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookIdescFallback{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var objResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create ThingIF_{token}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=outer_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&DESCFORMAT {objDbRef}=wrong_format_{token}:%0"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&IDESCFORMAT {objDbRef}=inside_format_{token}:%+:%0"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@adesc {objDbRef}=@pemit %#=wrong_adesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&AIDESCRIBE {objDbRef}=@pemit %#=wrong_aidesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"drop {objDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={objDbRef}"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages).Contains($"inside_format_{token}:1:outer_{token}");
+		await Assert.That(messages.Any(message => message.Contains($"wrong_format_{token}"))).IsFalse();
+		await Assert.That(messages.Any(message => message.Contains($"wrong_adesc_{token}"))).IsFalse();
+		await Assert.That(messages.Any(message => message.Contains($"wrong_aidesc_{token}"))).IsFalse();
 	}
 
 	/// <summary>

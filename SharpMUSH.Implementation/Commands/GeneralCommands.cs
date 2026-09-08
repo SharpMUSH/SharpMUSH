@@ -658,9 +658,8 @@ public partial class Commands
 		var lookerEnactor = executor.Object().DBRef;
 
 		// @idescribe is only used for players and things; rooms and exits always use @describe
-		// (help @idescribe). And when no @idescribe is set, the viewer sees the @describe run
-		// through @descformat even when looking from inside (help @idescformat) — so which
-		// format attribute applies follows which description attribute was actually used.
+		// (help @idescribe). Inside formats are discovered independently of @idescribe, however:
+		// a present @idescformat formats the fallback @describe too.
 		var tryIdesc = viewingFromInside && !lookOutside
 			&& (realViewing.IsPlayer || realViewing.IsThing);
 		var usedIdesc = false;
@@ -721,26 +720,31 @@ public partial class Commands
 				nameFormatArgs, defaultFormattedName, checkParents: false);
 		}
 
-		var formattedDesc = baseDesc;
-		if (descriptionAttributeName is not null)
-		{
-			var formatAttrName = usedIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-			var formatAttribute = await AttributeService.GetAttributeAsync(
-				god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
+		var formatAttrName = tryIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+		var formatAttribute = await AttributeService.GetAttributeAsync(
+			god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
 
-			if (formatAttribute.IsAttribute && formatAttribute.AsAttribute.Last().Value.Length > 0)
+		if (tryIdesc && formatAttribute.IsNone)
+		{
+			formatAttrName = "DESCFORMAT";
+			formatAttribute = await AttributeService.GetAttributeAsync(
+				god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
+		}
+
+		var formattedDesc = baseDesc;
+		if (formatAttribute.IsAttribute)
+		{
+			var descFormatArgs = new Dictionary<string, CallState>();
+			if (descriptionAttributeName is not null)
 			{
-				var descFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(baseDesc)
-				};
-				var evaluatedFormat = await parser.With(
-					state => state with { Enactor = lookerEnactor },
-					lookParser => AttributeService.EvaluateAttributeFunctionAsync(
-						lookParser, executor, realViewing, formatAttrName,
-						descFormatArgs, evalParent: true, ignorePermissions: true));
-				formattedDesc = evaluatedFormat.Length > 0 ? evaluatedFormat : baseDesc;
+				descFormatArgs["0"] = new CallState(baseDesc);
 			}
+
+			formattedDesc = await parser.With(
+				state => state with { Enactor = lookerEnactor },
+				lookParser => AttributeService.EvaluateAttributeFunctionAsync(
+					lookParser, executor, realViewing, formatAttrName,
+					descFormatArgs, evalParent: true, ignorePermissions: true));
 		}
 
 		await NotifyService.Notify(executor, formattedName, executor);
@@ -749,27 +753,32 @@ public partial class Commands
 			await NotifyService.Notify(executor, formattedDesc, executor);
 		}
 
-		var actionAttributeName = usedIdesc ? "AIDESCRIBE" : "ADESCRIBE";
-		var actionAttribute = await AttributeService.GetAttributeAsync(
-			realViewing, realViewing, actionAttributeName, IAttributeService.AttributeMode.Execute);
-		if (actionAttribute.IsAttribute)
+		var actionAttributeName = tryIdesc
+			? usedIdesc ? "AIDESCRIBE" : null
+			: "ADESCRIBE";
+		if (actionAttributeName is not null)
 		{
-			var action = actionAttribute.AsAttribute.Last();
-			var actionState = parser.CurrentState with
+			var actionAttribute = await AttributeService.GetAttributeAsync(
+				realViewing, realViewing, actionAttributeName, IAttributeService.AttributeMode.Execute);
+			if (actionAttribute.IsAttribute)
 			{
-				Executor = viewingObject.DBRef,
-				Enactor = lookerEnactor,
-				Caller = parser.CurrentState.Executor,
-				Arguments = new Dictionary<string, CallState>(),
-				EnvironmentRegisters = new Dictionary<string, CallState>(),
-				CurrentEvaluation = new DBAttribute(viewingObject.DBRef, action.LongName!),
-				Function = null
-			};
-			await Mediator.Send(new QueueCommandListRequest(
-				action.Value,
-				actionState,
-				new DbRefAttribute(viewingObject.DBRef, action.LongName!.Split('`')),
-				-1));
+				var action = actionAttribute.AsAttribute.Last();
+				var actionState = parser.CurrentState with
+				{
+					Executor = viewingObject.DBRef,
+					Enactor = lookerEnactor,
+					Caller = parser.CurrentState.Executor,
+					Arguments = new Dictionary<string, CallState>(),
+					EnvironmentRegisters = new Dictionary<string, CallState>(),
+					CurrentEvaluation = new DBAttribute(viewingObject.DBRef, action.LongName!),
+					Function = null
+				};
+				await Mediator.Send(new QueueCommandListRequest(
+					action.Value,
+					actionState,
+					new DbRefAttribute(viewingObject.DBRef, action.LongName!.Split('`')),
+					-1));
+			}
 		}
 
 		var showInventory = realViewing.IsContainer
