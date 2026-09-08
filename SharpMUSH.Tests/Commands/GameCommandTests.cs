@@ -1,11 +1,16 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+[NotInParallel]
 public class GameCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -14,6 +19,8 @@ public class GameCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
 	[Test]
 	[Category("NotImplemented")]
@@ -42,17 +49,116 @@ public class GameCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask TeachCommand()
+	public async ValueTask TeachCommandEchoesToRoomAndExecutesOnce()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("teach #1=skill"));
+		var executor = await CreatePlayerAsync("TeachExecutor");
+		var observer = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "TeachObserver");
+		try
+		{
+			var marker = $"TeachSelf_{Guid.NewGuid():N}";
+			var taughtCommand = $"think {marker}";
+			var echo = $"{executor.Name} types --> {taughtCommand}";
+			var executorStart = Notifications.CountFor(executor.DbRef);
+			var observerStart = Notifications.CountFor(observer);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Teach what?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			await CommandAsAsync(executor, $"teach {taughtCommand}");
+
+			var executorMessages = Notifications.For(executor.DbRef).Skip(executorStart);
+			var observerMessages = Notifications.For(observer).Skip(observerStart);
+			await Assert.That(executorMessages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(observerMessages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(executorMessages.Count(message => message == marker)).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
 	}
+
+	[Test]
+	[Arguments("teach", "Teach what?")]
+	[Arguments("teach/list", "Teach what action list?")]
+	public async ValueTask TeachWithoutArgumentReportsExpectedError(string command, string expectedMessage)
+	{
+		var executor = await CreatePlayerAsync("TeachMissingArgumentExecutor");
+		try
+		{
+			var start = Notifications.CountFor(executor.DbRef);
+
+			await CommandAsAsync(executor, command);
+
+			var messages = Notifications.For(executor.DbRef).Skip(start).ToArray();
+			await Assert.That(messages).IsEquivalentTo([expectedMessage]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
+	}
+
+	[Test]
+	public async ValueTask TeachCommandEchoesReportedSetFormToExecutor()
+	{
+		var player = await CreatePlayerAsync("TeachSetPlayer");
+		try
+		{
+			const string taughtCommand = "@set me=color";
+			var echo = $"{player.Name} types --> {taughtCommand}";
+			var start = Notifications.CountFor(player.DbRef);
+
+			await CommandAsAsync(player, $"teach {taughtCommand}");
+
+			var messages = Notifications.For(player.DbRef).Skip(start);
+			await Assert.That(messages.Count(message => message == echo)).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	[Test]
+	public async ValueTask TeachListEchoesToExecutorAndExecutesEveryCommandOnce()
+	{
+		var executor = await CreatePlayerAsync("TeachListExecutor");
+		try
+		{
+			var firstMarker = $"TeachListFirst_{Guid.NewGuid():N}";
+			var secondMarker = $"TeachListSecond_{Guid.NewGuid():N}";
+			var taughtActionList = $"think {firstMarker};think {secondMarker}";
+			var echo = $"{executor.Name} types --> {taughtActionList}";
+			var start = Notifications.CountFor(executor.DbRef);
+
+			await CommandAsAsync(executor, $"teach/list {taughtActionList}");
+
+			var messages = Notifications.For(executor.DbRef).Skip(start);
+			await Assert.That(messages.Count(message => message == echo)).IsEqualTo(1);
+			await Assert.That(messages.Count(message => message == firstMarker)).IsEqualTo(1);
+			await Assert.That(messages.Count(message => message == secondMarker)).IsEqualTo(1);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(executor.Handle);
+		}
+	}
+
+	private async Task<TeachPlayer> CreatePlayerAsync(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+
+		return new TeachPlayer(player.DbRef, player.Handle, playerObject.Object().Name);
+	}
+
+	private async Task CommandAsAsync(TeachPlayer player, string command)
+	{
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+	}
+
+	private sealed record TeachPlayer(DBRef DbRef, long Handle, string Name);
 
 	[Test]
 	[Category("NotImplemented")]

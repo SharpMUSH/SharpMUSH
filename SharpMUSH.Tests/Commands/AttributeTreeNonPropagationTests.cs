@@ -129,7 +129,7 @@ public class AttributeTreeNonPropagationTests
 		// rather than the session-shared NSubstitute call list: enumerating ReceivedCalls() while
 		// other tests are still recording violates NSubstitute's threading contract, and clearing
 		// it would delete a parallelizable test's calls out from under it.
-		var messages = await MessagesWhile(new DBRef(1), () =>
+		var messages = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef, () =>
 			Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/VB{uid}**")).AsTask());
 
 		// Positive control: the veiled branch's own value must be suppressed. Proves the flag

@@ -86,7 +86,7 @@ public static class TestHelpers
 		Arg.Is<AnySharpObject>(o => o.Object().DBRef == dbRef);
 
 	/// <summary>
-	/// Every notification the substitute was asked to deliver, bucketed by recipient dbref number.
+	/// Every notification the substitute was asked to deliver, bucketed by full recipient DBRef.
 	///
 	/// <para>This exists because <c>ReceivedCalls()</c> must not be enumerated while the substitute is
 	/// still recording: NSubstitute's threading contract requires verification and production activity to
@@ -98,15 +98,23 @@ public static class TestHelpers
 	/// <see cref="ConcurrentQueue{T}"/> keyed by recipient. Enumeration never touches NSubstitute state,
 	/// and <see cref="ConcurrentQueue{T}.ToArray"/> is a point-in-time snapshot that cannot throw while
 	/// another thread enqueues. Recipient bucketing gives isolation on top of that: a test that reads its
-	/// own uniquely-created player's bucket cannot see another test's notifications at all.</para>
+	/// own uniquely-created player's bucket cannot see another test's notifications at all, even when
+	/// parallel tests recycle the same object number with a different creation stamp.</para>
 	/// </summary>
 	public sealed class NotificationRecorder
 	{
-		private readonly ConcurrentDictionary<int, ConcurrentQueue<string>> _byRecipient = new();
-		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
-		private readonly ConcurrentDictionary<int, ConcurrentQueue<OneOf<MString, string>>> _rawByRecipient = new();
+		public sealed record Delivery(
+			DBRef Recipient,
+			string Message,
+			DBRef? Sender,
+			INotifyService.NotificationType Type);
 
-		internal void Record(int recipient, string message)
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<string>> _byRecipient = new();
+		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<OneOf<MString, string>>> _rawByRecipient = new();
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<Delivery>> _deliveriesByRecipient = new();
+
+		internal void Record(DBRef recipient, string message)
 			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
 
 		/// <summary>
@@ -117,8 +125,17 @@ public static class TestHelpers
 		/// printing <c>[31m</c> as literal text — and <see cref="For(DBRef)"/> cannot answer that,
 		/// because by then both look the same.</para>
 		/// </summary>
-		internal void RecordRaw(int recipient, OneOf<MString, string> message)
+		internal void RecordRaw(DBRef recipient, OneOf<MString, string> message)
 			=> _rawByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<OneOf<MString, string>>()).Enqueue(message);
+
+		internal void RecordDelivery(
+			DBRef recipient,
+			string message,
+			AnySharpObject? sender,
+			INotifyService.NotificationType type)
+			=> _deliveriesByRecipient
+				.GetOrAdd(recipient, _ => new ConcurrentQueue<Delivery>())
+				.Enqueue(new Delivery(recipient, message, sender?.Object().DBRef, type));
 
 		/// <summary>
 		/// Records output aimed at a connection rather than at an object. Socket commands (INFO,
@@ -131,19 +148,68 @@ public static class TestHelpers
 
 		/// <summary>Everything <paramref name="who"/> has been notified of so far, in order.</summary>
 		public List<string> For(DBRef who)
-			=> _byRecipient.TryGetValue(who.Number, out var queue) ? [.. queue] : [];
+			=> _byRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
 
 		/// <summary>How many notifications <paramref name="who"/> has had, for windowing.</summary>
 		public int CountFor(DBRef who)
-			=> _byRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
+			=> _byRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
+
+		/// <summary>
+		/// Waits until <paramref name="who"/> receives a message containing
+		/// <paramref name="containsText"/>, or fails after <paramref name="timeout"/>.
+		/// </summary>
+		public async Task WaitForAsync(DBRef who, string containsText, TimeSpan? timeout = null)
+		{
+			var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			var limit = timeout ?? TimeSpan.FromSeconds(5);
+			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
+			{
+				if (For(who).Any(message => message.Contains(containsText, StringComparison.Ordinal))) return;
+				await Task.Delay(50);
+			}
+
+			throw new TimeoutException($"No notification containing '{containsText}' arrived for {who} within {limit}.");
+		}
+
+		/// <summary>
+		/// Waits until <paramref name="who"/> receives a sender-aware delivery containing
+		/// <paramref name="containsText"/> from <paramref name="sender"/>.
+		/// </summary>
+		public async Task WaitForDeliveryAsync(
+			DBRef who,
+			string containsText,
+			DBRef sender,
+			TimeSpan? timeout = null)
+		{
+			var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			var limit = timeout ?? TimeSpan.FromSeconds(5);
+			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
+			{
+				if (DeliveriesFor(who).Any(delivery =>
+					delivery.Sender == sender
+					&& delivery.Message.Contains(containsText, StringComparison.Ordinal))) return;
+				await Task.Delay(50);
+			}
+
+			throw new TimeoutException(
+				$"No notification containing '{containsText}' arrived for {who} from {sender} within {limit}.");
+		}
 
 		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>
 		public List<OneOf<MString, string>> RawFor(DBRef who)
-			=> _rawByRecipient.TryGetValue(who.Number, out var queue) ? [.. queue] : [];
+			=> _rawByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
 
 		/// <summary>How many such messages <paramref name="who"/> has had, for windowing.</summary>
 		public int RawCountFor(DBRef who)
-			=> _rawByRecipient.TryGetValue(who.Number, out var queue) ? queue.Count : 0;
+			=> _rawByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
+
+		/// <summary>Every notification delivered to <paramref name="who"/>, including its sender.</summary>
+		public List<Delivery> DeliveriesFor(DBRef who)
+			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many sender-aware deliveries <paramref name="who"/> has had, for windowing.</summary>
+		public int DeliveryCountFor(DBRef who)
+			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
 
 		/// <summary>Everything sent to connection <paramref name="handle"/> so far, in order.</summary>
 		public List<string> ForHandle(long handle)
@@ -173,19 +239,30 @@ public static class TestHelpers
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 
-		void Deliver(int recipient, string message)
+		void Deliver(
+			DBRef recipient,
+			string message,
+			AnySharpObject? sender = null,
+			INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		{
-			capture.TryCapture(recipient, message);
+			capture.TryCapture(recipient.Number, message);
 			recorder?.Record(recipient, message);
+			recorder?.RecordDelivery(recipient, message, sender, type);
 		}
 
 		// Only the Notify overloads carry the union; NotifyLocalized formats a string before it ever
 		// reaches here, so there is no unflattened form of those to keep.
-		void DeliverRaw(int recipient, OneOf<MString, string> message)
+		void DeliverRaw(
+			DBRef recipient,
+			OneOf<MString, string> message,
+			AnySharpObject? sender,
+			INotifyService.NotificationType type)
 		{
-			capture.TryCapture(recipient, PlainText(message));
-			recorder?.Record(recipient, PlainText(message));
+			var text = PlainText(message);
+			capture.TryCapture(recipient.Number, text);
+			recorder?.Record(recipient, text);
 			recorder?.RecordRaw(recipient, message);
+			recorder?.RecordDelivery(recipient, text, sender, type);
 		}
 
 		void DeliverToHandle(long handle, string message) => recorder?.RecordHandle(handle, message);
@@ -194,8 +271,10 @@ public static class TestHelpers
 			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
-				call.ArgAt<DBRef>(0).Number,
-				call.ArgAt<OneOf<MString, string>>(1)));
+				call.ArgAt<DBRef>(0),
+				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<AnySharpObject?>(2),
+				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// The real service's AnySharpObject overload delegates to the DBRef overload; a substitute
 		// does not, so hook both.
@@ -203,34 +282,38 @@ public static class TestHelpers
 			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
-				call.ArgAt<OneOf<MString, string>>(1)));
+				call.ArgAt<AnySharpObject>(0).Object().DBRef,
+				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<AnySharpObject?>(2),
+				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
 		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale.
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
-				call.ArgAt<DBRef>(0).Number,
+				call.ArgAt<DBRef>(0),
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
+				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(2))));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
-				call.ArgAt<DBRef>(0).Number,
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+				call.ArgAt<DBRef>(0),
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
+				call.ArgAt<AnySharpObject?>(2)));
 
 		notifier
 			.When(x => x.NotifyLocalized(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<object[]>()))
 			.Do(call => Deliver(
-				call.ArgAt<AnySharpObject>(0).Object().DBRef.Number,
-				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+				call.ArgAt<AnySharpObject>(0).Object().DBRef,
+				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
+				call.ArgAt<AnySharpObject?>(2)));
 
 		// Handle-addressed output: the descriptor overloads. These have no DBRef to capture against —
 		// a connect-screen socket has no object behind it — so they are recorded by handle instead.
@@ -270,37 +353,6 @@ public static class TestHelpers
 
 	private static string PlainText(OneOf<MString, string> msg) =>
 		msg.Match(ms => ms.ToPlainText(), s => s);
-
-	/// <summary>
-	/// Polls the NSubstitute <paramref name="notifyService"/> mock until a Notify call matching
-	/// the given <paramref name="executor"/> DBRef and <paramref name="containsText"/> is recorded,
-	/// or until <paramref name="timeoutMs"/> elapses.  This replaces fragile <c>Task.Delay</c>
-	/// waits for asynchronously-queued attribute executions (e.g. @mapsql think callbacks).
-	/// </summary>
-	public static async Task WaitForNotification(
-		INotifyService notifyService,
-		DBRef executor,
-		string containsText,
-		int timeoutMs = 5000)
-	{
-		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-		while (DateTime.UtcNow < deadline)
-		{
-			var calls = notifyService.ReceivedCalls();
-			foreach (var call in calls)
-			{
-				var args = call.GetArguments();
-				if (args.Length < 2) continue;
-				if (args[0] is not AnySharpObject obj) continue;
-				if (obj.Object().DBRef != executor) continue;
-				if (args[1] is not OneOf<MString, string> msg) continue;
-				var text = msg.Match(ms => ms.ToString(), s => s);
-				if (text.Contains(containsText)) return;
-			}
-			await Task.Delay(50);
-		}
-		// Timeout reached — let the caller's assertion produce the diagnostic message
-	}
 
 	/// <summary>
 	/// Polls the attribute service until the specified attribute exists on the target object,

@@ -2345,6 +2345,49 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
+		var isList = parser.CurrentState.Switches.Contains("LIST");
+		if (isList)
+		{
+			var lastPagedAttr = await AttributeService.GetAttributeAsync(
+				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
+			var lastPagedText = lastPagedAttr.Match(
+				attr => attr.Last().Value.ToPlainText(),
+				_ => string.Empty,
+				_ => string.Empty);
+
+			if (string.IsNullOrWhiteSpace(lastPagedText))
+			{
+				await NotifyService.Notify(executor, "You haven't paged anyone since connecting.", executor);
+				return CallState.Empty;
+			}
+
+			var lastPagedNames = new List<string>();
+			foreach (var recipientRef in lastPagedText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			{
+				if (!DBRef.TryParse(recipientRef, out var dbref))
+				{
+					continue;
+				}
+
+				var recipient = await Mediator.Send(new GetObjectNodeQuery(dbref!.Value));
+				if (!recipient.IsNone)
+				{
+					lastPagedNames.Add(recipient.Known.Object().Name);
+				}
+			}
+
+			if (lastPagedNames.Count == 0)
+			{
+				await NotifyService.Notify(executor, "I can't find who you last paged.", executor);
+			}
+			else
+			{
+				var recipientList = MessageHelpers.FormatWithOxfordComma(lastPagedNames.ToArray());
+				await NotifyService.Notify(executor, $"You last paged {recipientList}.", executor);
+			}
+
+			return CallState.Empty;
+		}
 
 		var recipientsArg = isNoEval
 			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
@@ -2356,10 +2399,12 @@ public partial class Commands
 
 		string recipientsText;
 
-		// If no recipients provided, use last paged
-		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) && !string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
+		// If no recipients are provided, use the last successful page targets.
+		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
+			!string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
 		{
-			var lastPagedAttr = await AttributeService.GetAttributeAsync(executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Set, false);
+			var lastPagedAttr = await AttributeService.GetAttributeAsync(
+				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
 			recipientsText = lastPagedAttr.Match(
 				attr => attr.Last().Value.ToPlainText(),
 				_ => string.Empty,
@@ -2382,6 +2427,16 @@ public partial class Commands
 			await NotifyService.Notify(executor, "What do you want to page?", executor);
 			return CallState.Empty;
 		}
+
+		var pageType = messageArg.ToPlainText()[0] switch
+		{
+			':' => PageMessageType.Pose,
+			';' => PageMessageType.SemiPose,
+			_ => PageMessageType.Speech
+		};
+		var message = pageType == PageMessageType.Speech
+			? messageArg
+			: messageArg.Substring(1, messageArg.Length - 1);
 
 		var recipientNames = recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulRecipients = new List<AnySharpObject>();
@@ -2469,19 +2524,101 @@ public partial class Commands
 				}
 			}
 
-			var pageMessage = $"From afar, {executor.Object().Name} pages: {messageArg}";
-			await NotifyService.Notify(recipient, pageMessage, executor, INotifyService.NotificationType.Say);
-
 			successfulRecipients.Add(recipient);
 		}
 
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = string.Join(", ", successfulRecipients.Select(r => r.Object().DBRef));
-			await NotifyService.Notify(executor, $"You paged {recipientList} with '{messageArg}'.", executor);
+			var recipientList = MessageHelpers.FormatWithOxfordComma(
+				successfulRecipients.Select(r => r.Object().Name).ToArray());
+			var recipientRefs = string.Join(" ",
+				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));
+			var pageAlias = executor.IsPlayer
+				? executor.AsPlayer.Aliases?.FirstOrDefault() ?? string.Empty
+				: string.Empty;
+			var senderName = Configuration.CurrentValue.Cosmetic.PageAliases && !string.IsNullOrEmpty(pageAlias)
+				? $"{executor.Object().Name} ({pageAlias})"
+				: executor.Object().Name;
+			var recipientSuffix = successfulRecipients.Count > 1 ? $" (to {recipientList})" : string.Empty;
 
+			var incomingDefault = pageType switch
+			{
+				PageMessageType.Speech => MarkupText.Concat([
+					MarkupText.Plain(successfulRecipients.Count > 1
+						? $"{senderName} pages {recipientList}: "
+						: $"{senderName} pages: "),
+					message
+				]),
+				PageMessageType.Pose => MarkupText.Concat([
+					MarkupText.Plain($"From afar{recipientSuffix}, {senderName} "),
+					message
+				]),
+				_ => MarkupText.Concat([
+					MarkupText.Plain($"From afar{recipientSuffix}, {senderName}"),
+					message
+				])
+			};
+			var outgoingDefault = pageType switch
+			{
+				PageMessageType.Speech => MarkupText.Concat([
+					MarkupText.Plain($"You paged {recipientList} with '"),
+					message,
+					MarkupText.Plain("'")
+				]),
+				PageMessageType.Pose => MarkupText.Concat([
+					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name} "),
+					message
+				]),
+				_ => MarkupText.Concat([
+					MarkupText.Plain($"Long distance to {recipientList}: {executor.Object().Name}"),
+					message
+				])
+			};
+			var pageTypeToken = pageType switch
+			{
+				PageMessageType.Pose => ":",
+				PageMessageType.SemiPose => ";",
+				_ => "\""
+			};
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
-			await AttributeService.SetAttributeAsync(executor, executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
+			var lastPagedResult = await AttributeService.SetAttributeAsync(
+				await HelperFunctions.GetGod(Mediator), executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
+			if (lastPagedResult.IsT1)
+			{
+				await NotifyService.Notify(executor, lastPagedResult.AsT1.Value, executor);
+				return CallState.Empty;
+			}
+
+			var outPageFormatArgs = PageFormatArguments(
+				message, pageTypeToken, pageAlias, recipientRefs, outgoingDefault);
+			var outgoing = await parser.With(
+				state => state with
+				{
+					Executor = executor.Object().DBRef,
+					Caller = executor.Object().DBRef,
+					Enactor = executor.Object().DBRef
+				},
+				pageParser => AttributeHelpers.EvaluateFormatAttribute(
+					AttributeService, pageParser, executor, executor, "OUTPAGEFORMAT",
+					outPageFormatArgs, outgoingDefault, checkParents: true));
+			await NotifyService.Notify(executor, outgoing, executor);
+
+			foreach (var recipient in successfulRecipients)
+			{
+				var pageFormatArgs = PageFormatArguments(
+					message, pageTypeToken, pageAlias, recipientRefs, incomingDefault);
+				var incoming = await parser.With(
+					state => state with
+					{
+						Executor = recipient.Object().DBRef,
+						Caller = recipient.Object().DBRef,
+						Enactor = executor.Object().DBRef
+					},
+					pageParser => AttributeHelpers.EvaluateFormatAttribute(
+						AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
+						pageFormatArgs, incomingDefault, checkParents: true));
+				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
+			}
 		}
 		else if (recipientNames.Length > 0)
 		{
@@ -2489,6 +2626,23 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	private static Dictionary<string, CallState> PageFormatArguments(
+		MString message, string pageType, string alias, string recipientRefs, MString defaultMessage) => new()
+		{
+			["0"] = new CallState(message),
+			["1"] = new CallState(pageType),
+			["2"] = new CallState(alias),
+			["3"] = new CallState(recipientRefs),
+			["4"] = new CallState(defaultMessage)
+		};
+
+	private enum PageMessageType
+	{
+		Speech,
+		Pose,
+		SemiPose
 	}
 
 	[SharpCommand(Name = "POSE", Switches = ["NOEVAL", "NOSPACE"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
@@ -2615,7 +2769,7 @@ public partial class Commands
 			var executorLocation = await executor.Where();
 			await CommunicationService.SendToRoomAsync(executor, executorLocation,
 				_ => MarkupText.Plain($"{executor.Object().Name} types --> {actionList}"),
-				INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+				INotifyService.NotificationType.Emit);
 
 			await parser.CommandListParse(MarkupText.Plain(actionList));
 
@@ -2633,7 +2787,7 @@ public partial class Commands
 		var location = await executor.Where();
 		await CommunicationService.SendToRoomAsync(executor, location,
 			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
-			INotifyService.NotificationType.Emit, excludeObjects: [executor]);
+			INotifyService.NotificationType.Emit);
 
 		await parser.CommandParse(MarkupText.Plain(command));
 

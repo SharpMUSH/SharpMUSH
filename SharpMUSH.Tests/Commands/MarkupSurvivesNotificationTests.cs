@@ -1,7 +1,7 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using SharpMUSH.Library.Models;
-using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -28,11 +28,9 @@ public class MarkupSurvivesNotificationTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private const char Escape = '';
-
-	private static readonly DBRef God = new(1);
 
 	/// <summary>
 	/// Read through the factory's recorder rather than off the substitute.
@@ -46,12 +44,23 @@ public class MarkupSurvivesNotificationTests
 	/// </summary>
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
-	/// <summary>Runs a command as God and returns only what it caused God to be told.</summary>
+	/// <summary>Runs a command as an isolated player and returns only what it caused them to be told.</summary>
 	private async Task<IReadOnlyList<OneOf<MString, string>>> NotifiedByAsync(string command)
 	{
-		var before = Notifications.RawCountFor(God);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		return [.. Notifications.RawFor(God).Skip(before)];
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MarkupNotification");
+
+		try
+		{
+			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+			var before = Notifications.RawCountFor(player.DbRef);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+			return [.. Notifications.RawFor(player.DbRef).Skip(before)];
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
 	}
 
 	private static bool CarriesEscapes(OneOf<MString, string> message) =>
