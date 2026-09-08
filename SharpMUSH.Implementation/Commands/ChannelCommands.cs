@@ -108,16 +108,17 @@ public partial class Commands
 		// required membership unconditionally, and a member gagging the channel could still speak on it.
 		if (!channel.Privs.Contains("Open", StringComparer.OrdinalIgnoreCase))
 		{
-			if (maybeMemberStatus is null)
+			var refusalToSpeak = maybeMemberStatus switch
 			{
-				await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak, executor);
-				return new CallState(ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak);
-			}
+				null => ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak,
+				{ Status.Gagged: true } => ErrorMessages.Notifications.ChatMustStopGaggingToSpeak,
+				_ => null
+			};
 
-			if (maybeMemberStatus.Status.Gagged ?? false)
+			if (refusalToSpeak is not null)
 			{
-				await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatMustStopGaggingToSpeak, executor);
-				return new CallState(ErrorMessages.Notifications.ChatMustStopGaggingToSpeak);
+				await NotifyService.Notify(executor, refusalToSpeak, executor);
+				return new CallState(refusalToSpeak);
 			}
 		}
 

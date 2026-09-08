@@ -425,9 +425,11 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// extchat.c:3525 — membership OR the ability to reach the channel, matching @channel/recall.
+		// extchat.c:3525 — membership OR the ability to reach the channel. The guest half comes from
+		// @channel/recall (extchat.c:4050) rather than fun_crecall, deliberately: crecall() is
+		// @channel/recall with a different spelling, and a gate softcode can walk around is not a gate.
 		if (await ChannelHelper.ChannelMemberStatus(executor, channel) is null
-				&& !await PermissionService.ChannelCanJoin(executor, channel))
+				&& (await executor.IsGuest() || !await PermissionService.ChannelCanJoin(executor, channel)))
 		{
 			return new CallState(ErrorMessages.Returns.NotAMember);
 		}
