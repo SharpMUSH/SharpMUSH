@@ -59,4 +59,23 @@ public class CapabilityPolicyTests
 		await Assert.That(await controller.AssignRole("a", "operator")).IsTypeOf<ForbidResult>();
 		await registry.DidNotReceive().AssignRoleToAccountAsync(Arg.Any<string>(), Arg.Any<string>());
 	}
+	[Test]
+	public async Task DerivedRolePriorityPermitsLowerDelegationWithoutExplicitAssignments()
+	{
+		var registry = Substitute.For<IRoleRegistryService>();
+		var accounts = Substitute.For<IAccountService>();
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.RolesAdmin });
+		capabilities.ExplainAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(new Dictionary<string, PermissionExplanation>
+		{ [PortalPermission.RolesAdmin] = new(true, 30, ["wizard"], "explicit") });
+		accounts.GetCharactersAsync("a", Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
+		accounts.GetByIdAsync("b", Arg.Any<CancellationToken>()).Returns(new SharpAccount { Id = "b", Username = "b", PasswordHash = "" });
+		registry.GetRolesForAccountAsync("a", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<SharpRole>>([]));
+		registry.GetRoleAsync("operator").Returns(new SharpRole { Slug = "operator", Name = "Operator", Priority = 5, Permissions = [] });
+		var controller = new RolesController(registry, accounts, NullLogger<RolesController>.Instance, capabilities)
+		{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "a")], "test")) } } };
+		await Assert.That(await controller.AssignRole("b", "operator")).IsTypeOf<OkResult>();
+		await registry.Received(1).AssignRoleToAccountAsync("b", "operator");
+	}
+
 }

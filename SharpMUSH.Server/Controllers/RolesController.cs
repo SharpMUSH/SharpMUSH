@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -157,6 +158,7 @@ public class RolesController(
 
 	[HttpPost("account/{accountId}/{slug}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
 	public async Task<IActionResult> AssignRole(string accountId, string slug)
 	{
 		var existingResult = await roles.GetRoleAsync(slug);
@@ -175,6 +177,7 @@ public class RolesController(
 
 	[HttpDelete("account/{accountId}/{slug}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
 	public async Task<IActionResult> RemoveRole(string accountId, string slug)
 	{
 		var existing = await roles.GetRoleAsync(slug);
@@ -196,8 +199,9 @@ public class RolesController(
 		// A delegated manager cannot change their own authority, system roles or restrictions.
 		if (role.IsSystem || targetAccount == id || assigned.Any(r => r.Slug == role.Slug) ||
 			role.Permissions.Values.Any(v => v == PermissionState.Deny)) return false;
-		var ceiling = assigned.Where(r => r.Permissions.TryGetValue(PortalPermission.RolesAdmin, out var state)
-			&& state == PermissionState.Allow).Select(r => r.Priority).DefaultIfEmpty(int.MinValue).Max();
+		var decisions = await capabilities.ExplainAsync(new(id));
+		var ceiling = decisions.TryGetValue(PortalPermission.RolesAdmin, out var decision)
+			? decision.Priority ?? int.MinValue : int.MinValue;
 		return role.Priority < ceiling && new PermissionResolver().Resolve([role]).All(grants.Contains);
 	}
 
