@@ -522,13 +522,9 @@ public partial class Functions
 		return new CallState(string.Join(" ", lockNames));
 	}
 
-	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse, ParameterNames = ["string"])]
+	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse | FunctionFlags.Localize, ParameterNames = ["string"])]
 	public async ValueTask<CallState> Localize(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await parser
-				 .With(
-					 x => x with { Registers = new([[]]) },
-					 newParser => newParser.FunctionParse(parser.CurrentState.Arguments["0"].Message!))
-			 ?? CallState.Empty;
+		=> await parser.FunctionParse(parser.CurrentState.Arguments["0"].Message!) ?? CallState.Empty;
 
 	[SharpFunction(Name = "locate", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "name", "type"])]
 	public async ValueTask<CallState> Locate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1030,22 +1026,13 @@ public partial class Functions
 
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
-					var attrResult = await AttributeService.GetAttributeAsync(
-						executor, callbackObject, string.Join("`", callbackAttribute),
-						IAttributeService.AttributeMode.Read, true);
-
-					if (!attrResult.IsNone && !attrResult.IsError)
-					{
-						var attribute = attrResult.AsAttribute.Last();
-						var attrValue = attribute.Value;
-
-						// Replace %0 with the original name and %1 with the error code
-						var substitutedCommand = attrValue.ToString()
-							.Replace("%0", originalName)
-							.Replace("%1", $"#{errorCode}");
-
-						await parser.CommandParse(MarkupText.Plain(substitutedCommand));
-					}
+					await AttributeService.EvaluateAttributeFunctionAsync(
+						parser, executor, callbackObject, string.Join("`", callbackAttribute),
+						new Dictionary<string, CallState>
+						{
+							["0"] = new(MarkupText.Plain(originalName)),
+							["1"] = new(MarkupText.Plain($"#{errorCode}"))
+						});
 				}
 			}
 		}
@@ -1138,7 +1125,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>("20250102000000");
 	}
 
-	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1157,10 +1144,6 @@ public partial class Functions
 					?.DBRef.ToString() ?? "");
 		}
 
-		if (Configuration.CurrentValue.Function.FunctionSideEffects == false)
-		{
-			return ErrorMessages.Returns.NoSideFx;
-		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
@@ -1303,7 +1286,7 @@ public partial class Functions
 					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
 	}
 
-	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Zone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1325,10 +1308,6 @@ public partial class Functions
 
 				if (hasArg1)
 				{
-					if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-					{
-						return ErrorMessages.Returns.NoSideFx;
-					}
 
 					var arg1Str = arg1Value!.Message!.ToPlainText();
 

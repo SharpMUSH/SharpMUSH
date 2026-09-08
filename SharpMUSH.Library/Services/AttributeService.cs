@@ -551,33 +551,15 @@ public class AttributeService(
 
 			if (parser.FunctionLibrary.TryGetValue(attribute.ToPlainText().ToLower(), out var applyFunction))
 			{
-				var functionFlags = applyFunction.LibraryInformation.Attribute.Flags;
+				var builtinRestriction = serviceProvider.GetService<IUserDefinedFunctionService>()
+					?.GetBuiltinRestriction(attribute.ToPlainText());
+				if (builtinRestriction is not null && !await realExecutor.SatisfiesFunctionRestriction(builtinRestriction))
+					return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 
-				if (functionFlags.HasFlag(FunctionFlags.GodOnly) && !await realExecutor.IsRoyalty())
+				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
-					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
-				}
-				if (functionFlags.HasFlag(FunctionFlags.AdminOnly) && !await realExecutor.IsRoyalty())
-				{
-					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
-				}
-				if (functionFlags.HasFlag(FunctionFlags.WizardOnly) && !await realExecutor.IsWizard())
-				{
-					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
-				}
-				if (functionFlags.HasFlag(FunctionFlags.NoGuest) && await realExecutor.IsGuest())
-				{
-					return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
-				}
-
-				if (applyFunction.LibraryInformation.Attribute.Restrict.Length > 0)
-				{
-					var hasRestriction = await applyFunction.LibraryInformation.Attribute.Restrict.ToAsyncEnumerable()
-						.AnyAsync(async (restriction, _) => await realExecutor.HasPower(restriction));
-					if (!hasRestriction)
-					{
-						return MarkupText.Plain(ErrorMessages.Returns.AttrEvalPermissions);
-					}
+					slimArgs = slimArgs.ToDictionary(pair => pair.Key,
+						pair => pair.Value with { Message = MarkupText.Plain(pair.Value.Message?.ToPlainText() ?? "") });
 				}
 
 				var result = await parser.With(
@@ -590,7 +572,9 @@ public class AttributeService(
 						TotalInvocations = s.TotalInvocations,
 						LimitExceeded = s.LimitExceeded
 					},
-					async np => await applyFunction.LibraryInformation.Function.Invoke(np)
+					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
+						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
+						serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AttributeService>>())
 				);
 
 				return result.Message!;

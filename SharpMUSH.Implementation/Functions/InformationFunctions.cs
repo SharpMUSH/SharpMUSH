@@ -334,7 +334,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Powers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		parser.CurrentState.Arguments.TryGetValue("0", out var obj);
@@ -359,10 +359,6 @@ public partial class Functions
 
 			default:
 				{
-					if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-					{
-						return ErrorMessages.Returns.NoSideFx;
-					}
 
 					// PennMUSH src/fundb.c fun_powers hands the side-effect form straight to do_power, so it
 					// gets the same wizard-only check and the same "!" revoke handling as @power.
@@ -587,7 +583,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(string.IsNullOrEmpty(locale) ? "en" : locale));
 	}
 
-	[SharpFunction(Name = "name", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "new name"])]
+	[SharpFunction(Name = "name", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object", "new name"])]
 	public async ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -601,16 +597,9 @@ public partial class Functions
 				found => found.Object().Name);
 		}
 
-		if (Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-				executor, executor, obj, LocateFlags.All,
-				async found =>
-					await ManipulateSharpObjectService.SetName(executor, found, newName.Message!, true));
-		}
-
-		await NotifyService.Notify(executor, ErrorMessages.Returns.NoSideFx);
-		return false;
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			executor, executor, obj, LocateFlags.All,
+			async found => await ManipulateSharpObjectService.SetName(executor, found, newName.Message!, true));
 	}
 
 	[SharpFunction(Name = "moniker", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

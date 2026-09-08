@@ -315,14 +315,9 @@ public partial class Functions
 	/// extmail.c:1466 — <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c>: the same send
 	/// <c>@mail</c> performs, with silent=1 and nosig=0.
 	/// </summary>
-	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["player", "message"])]
+	[SharpFunction(Name = "mailsend", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["player", "message"])]
 	public async ValueTask<CallState> mailsend(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var args = parser.CurrentState.Arguments;
 
 		await SendMail.Handle(parser, PermissionService, LocateService, ObjectDataService, Mediator,

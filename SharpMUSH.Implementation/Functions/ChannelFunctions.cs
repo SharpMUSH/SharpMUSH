@@ -38,14 +38,9 @@ public partial class Functions
 		return (maybePlayer.AsSharpObject, maybeChannel.AsChannel, null);
 	}
 
-	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
+	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message"])]
 	public async ValueTask<CallState> ChannelBufferAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -77,14 +72,9 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
+	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message"])]
 	public async ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;
@@ -540,14 +530,9 @@ public partial class Functions
 		return new CallState(string.Join(outputSep, memberList));
 	}
 
-	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["channel", "message"])]
+	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message"])]
 	public async ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (!Configuration.CurrentValue.Function.FunctionSideEffects)
-		{
-			return new CallState(ErrorMessages.Returns.NoSideFx);
-		}
-
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var message = parser.CurrentState.Arguments["1"].Message!;

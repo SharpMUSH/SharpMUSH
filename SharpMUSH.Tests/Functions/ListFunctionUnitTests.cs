@@ -65,9 +65,9 @@ public class ListFunctionUnitTests
 
 	[Test, NotInParallel]
 	[Arguments("iter(1|2|3,add(%i0,1)[ibreak()],|,-)", "2")]
-	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2")]
-	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak()]),|,-)", "2 3 4")]
-	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak(0)]),|,-)", "2 3 4")]
+	[Arguments("iter(1|2|3,add(%i0,1)[ibreak(0)],|,-)", "2-3-4")]
+	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak()]),|,-)", "2-3-4")]
+	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak(0)]),|,-)", "2 3 4-3 4 5-4 5 6")]
 	[Arguments("iter(1|2|3,iter(1 2 3,[add(%i0,%i1)][ibreak(1)]),|,-)", "2-3-4")]
 	[Arguments("iter(1|2|3,iter(1 2 3,[add(1,1)][add(%i0,%i1)][ibreak(1)]),|,-)", "22-23-24")]
 	[Arguments("iter(1|2|3,iter(1 2 3,[ibreak(1)][add(%i0,%i1)]),|,-)", "2-3-4")]

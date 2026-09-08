@@ -32,7 +32,7 @@ public partial class Functions
 		ValueTask.FromResult(AggregateIntegerDivision(
 			Operands(parser.CurrentState.ArgumentsOrdered), (acc, sub) => acc / sub, DivisionOverflows));
 
-	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["dividend", "divisor"])]
+	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["dividend", "divisor"])]
 	public ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.ArgumentsOrdered.Skip(1).Any(x
 				=> decimal.TryParse(ArgHelpers.EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText()), out var num) && num == 0)
@@ -849,7 +849,7 @@ public partial class Functions
 		return AngleTypeMath(angleType, Math.Atan2(y, x), angle => angle);
 	}
 
-	[SharpFunction(Name = "ceil", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+	[SharpFunction(Name = "ceil", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ceil(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Ceiling);
 
@@ -902,13 +902,13 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		var arg1 = arguments["1"]?.Message?.ToPlainText();
+		var arg1 = arguments.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
 
-		return ValueTask.FromResult<CallState>(new(double.TryParse(arg1 ?? "1", out var dec)
+		return ValueTask.FromResult<CallState>(new(double.TryParse(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
 			? Math.Exp(dec).ToString()
 			: ErrorMessages.Returns.Number));
 	}
@@ -932,7 +932,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(arg0 % arg1);
 	}
 
-	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Floor(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Floor);
 
@@ -977,7 +977,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ln", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -1060,7 +1060,7 @@ public partial class Functions
 		return AngleTypeMath(angleType, angle, Math.Sin);
 	}
 
-	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var text = ArgHelpers.EmptyStringToZero((parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText());

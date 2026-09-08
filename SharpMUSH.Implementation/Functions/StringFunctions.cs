@@ -1308,7 +1308,7 @@ public partial class Functions
 	/// SharpMUSH extension — no PennMUSH equivalent. See help formq / help sharphttp.
 	/// </summary>
 	[SharpFunction(Name = "formq", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.HasSideFX,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["string", "prefix"])]
 	public ValueTask<CallState> FormQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

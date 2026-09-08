@@ -623,43 +623,32 @@ public class SharpMUSHParserVisitor(
 		{
 			if (!parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
 			{
-				var discoveredFunction = DiscoverBuiltInFunction(name);
-
-				if (!discoveredFunction.TryPickT0(out var functionValue, out _))
+				// Built-ins take precedence; only on a built-in miss do we consult the
+				// in-memory global user-defined-function registry (@function). Resolved
+				// entries are evaluated ufun-style against <object>/<attribute> with the
+				// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
+				// (so /enable, /disable, /delete take effect immediately and never leak).
+				var userFunction = ResolveUserDefinedFunction(name);
+				if (userFunction is null)
 				{
-					// Built-ins take precedence; only on a built-in miss do we consult the
-					// in-memory global user-defined-function registry (@function). Resolved
-					// entries are evaluated ufun-style against <object>/<attribute> with the
-					// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
-					// (so /enable, /disable, /delete take effect immediately and never leak).
-					var userFunction = ResolveUserDefinedFunction(name);
-					if (userFunction is null)
+					if (!IsUnknownFunctionAnError(context))
 					{
-						if (!IsUnknownFunctionAnError(context))
-						{
-							// Not a function and not required to be one: the text is prose, not a call.
-							return await LiteralFunctionCall(context, visitor);
-						}
-
-						success = false;
-						var notFound = string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant());
-						var suggestion = SuggestFunctionName(name);
-						if (suggestion is not null)
-						{
-							notFound += $" DID YOU MEAN '{suggestion.ToUpperInvariant()}'";
-						}
-
-						return new CallState(notFound, context.Depth());
+						// Not a function and not required to be one: the text is prose, not a call.
+						return await LiteralFunctionCall(context, visitor);
 					}
 
-					libraryMatch = (userFunction.Value, false);
+					success = false;
+					var notFound = string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant());
+					var suggestion = SuggestFunctionName(name);
+					if (suggestion is not null)
+					{
+						notFound += $" DID YOU MEAN '{suggestion.ToUpperInvariant()}'";
+					}
+
+					return new CallState(notFound, context.Depth());
 				}
-				else
-				{
-					// Avoid double lookup: store result and add to library
-					libraryMatch = (functionValue, true);
-					parser.FunctionLibrary.Add(name, libraryMatch);
-				}
+
+				libraryMatch = (userFunction.Value, false);
 			}
 
 			var (attribute, function) = libraryMatch.LibraryInformation;
@@ -703,34 +692,11 @@ public class SharpMUSHParserVisitor(
 
 			var executor = executorOption.Known();
 
-			if (attribute.Flags.HasFlag(FunctionFlags.WizardOnly) && !await executor.IsWizard())
+			var permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+			if (permissionError is not null)
 			{
 				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
-			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.AdminOnly) && !await executor.IsWizard())
-			{
-				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
-			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.GodOnly) && !executor.IsGod())
-			{
-				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
-			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.NoGuest) && await executor.IsGuest())
-			{
-				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
-			}
-
-			if (attribute.Flags.HasFlag(FunctionFlags.NoGagged) && await executor.HasFlag("GAGGED"))
-			{
-				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
+				return new CallState(permissionError, contextDepth);
 			}
 
 			// @function/restrict restrictions. For user-defined functions the restriction string
@@ -837,18 +803,9 @@ public class SharpMUSHParserVisitor(
 					refinedArguments.Add(new CallState(MarkupText.Empty, context.Depth()));
 				}
 			}
-			else if (attribute.Flags.HasFlag(FunctionFlags.NoParse) && attribute.MaxArgs == 1)
-			{
-				return new CallState(
-					src.Substring(context.Start.StartIndex, context.Stop.StopIndex - context.Start.StartIndex + 1),
-					contextDepth,
-					null,
-					async () => (await visitor.VisitChildren(context) ?? CallState.Empty with { Depth = context.Depth() })
-						.Message!);
-			}
 			else
 			{
-				// For NoParse functions with multiple arguments, store unevaluated text with deferred evaluation
+				// Store NoParse arguments as unevaluated text with deferred evaluation.
 				refinedArguments = args.Select(x =>
 					{
 						if (x is null) return CallState.Empty;
@@ -900,7 +857,10 @@ public class SharpMUSHParserVisitor(
 				LimitExceeded: limitExceeded
 			));
 
-			var result = await function(newParser);
+			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
+				new FunctionDefinition(attribute, function), executor,
+				Configuration.CurrentValue.Function.FunctionSideEffects, NotifyService, logger,
+				argumentCount: args.Length, permissionsChecked: true, deferredArguments: true);
 
 			// Output ceiling: stop a single function that generates an enormous string from
 			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
@@ -953,17 +913,6 @@ public class SharpMUSHParserVisitor(
 			var limitHit = limitExceeded is { IsExceeded: true };
 			GetTelemetryService(parser)?.RecordFunctionInvocation(name, elapsedMs, success && !limitHit);
 		}
-	}
-
-	private Option<(SharpFunctionAttribute, Func<IMUSHCodeParser, ValueTask<CallState>>)>
-		DiscoverBuiltInFunction(string name)
-	{
-		if (!parser.FunctionLibrary.TryGetValue(name, out var result) || !result.IsSystem)
-			return new None();
-
-		return (result.LibraryInformation.Attribute,
-			p => (ValueTask<CallState>)result.LibraryInformation.Function.Method.Invoke(null,
-				[p, result.LibraryInformation.Attribute])!);
 	}
 
 	/// <summary>

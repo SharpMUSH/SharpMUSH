@@ -4451,12 +4451,10 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, attr.MaxArgs);
 
-		var flags = new List<string>();
-		if ((attr.Flags & FunctionFlags.Regular) != 0) flags.Add("Regular");
-		if ((attr.Flags & FunctionFlags.StripAnsi) != 0) flags.Add("StripAnsi");
-		if ((attr.Flags & FunctionFlags.NoParse) != 0) flags.Add("NoParse");
-		if ((attr.Flags & FunctionFlags.Localize) != 0) flags.Add("Localize");
-		if ((attr.Flags & FunctionFlags.Literal) != 0) flags.Add("Literal");
+		var flags = Enum.GetValues<FunctionFlags>()
+			.Where(flag => flag != FunctionFlags.Regular && flag != FunctionFlags.Arg_Mask && attr.Flags.HasFlag(flag))
+			.Select(flag => flag.ToString()).ToList();
+		if (flags.Count == 0) flags.Add(nameof(FunctionFlags.Regular));
 
 		if (flags.Count > 0)
 		{
