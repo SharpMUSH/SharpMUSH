@@ -110,8 +110,11 @@ public class HiddenWhoVisibilityTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LwhoEmptyStatus");
 
+		// Membership, not list identity: this class shares its server session with the whole run, so two
+		// lwho() calls a moment apart legitimately disagree as other tests' connections come and go.
 		var withEmptyStatus = await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef},)");
-		await Assert.That(withEmptyStatus).IsEqualTo(await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef})"));
+		await Assert.That(withEmptyStatus).IsNotEqualTo("#-1 INVALID SECOND ARGUMENT")
+			.Because("an empty <status> means the online default, not an error");
 		await Assert.That(Lists(withEmptyStatus, mortal.DbRef)).IsTrue()
 			.Because("the default online list contains the caller's own connection");
 
