@@ -899,7 +899,8 @@ public class BuildingCommandTests
 
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomND_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		// Keep the teleport's queued auto-look out of the explicit look's notification window.
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/quiet me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&DESCFORMAT here=formatted_{token}:%+:%0:end"));
 
@@ -925,7 +926,8 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDefault_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		// Keep the teleport's queued auto-look out of the explicit look's notification window.
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/quiet me={roomDbRef}"));
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
