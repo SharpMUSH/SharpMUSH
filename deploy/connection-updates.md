@@ -41,7 +41,14 @@ Before merging/publishing this migration, pause Watchtower for the existing publ
 
 The Cloudflare stack continues automatic updates for all three images. Watchtower uses `WATCHTOWER_TIMEOUT=60s`; Compose uses `stop_grace_period: 60s` for engine, socket owner and worker. Rendering requests retry across worker replacement while the stable process retains sockets and pending output. A prolonged rendering outage delays output; it does not reconstruct sockets after loss of the owner process. The worker has no public TCP listener and shares its Unix socket volume only with SocketServer.
 
-For deployments requiring approval before socket loss, set `com.centurylinklabs.watchtower.enable=false` on the `connectionserver` Compose service (the SocketServer image) and replace it during an announced maintenance window. Engine and renderer automatic updates can remain enabled. Watchtower's [stop timeout](https://containrrr.dev/watchtower/arguments/#stop-timeout) controls forced termination; optional [lifecycle hooks](https://containrrr.dev/watchtower/lifecycle-hooks/) can add countdowns, but container startup alone does not establish game readiness. These repository changes do not deploy production automatically until merged, images published, and the Compose migration applied.
+The supplied Compose files therefore label the `connectionserver` service (the SocketServer image) `com.centurylinklabs.watchtower.enable=false`, and the engine and renderer `true`. Watchtower carries the two updates that keep sockets; the socket owner is replaced deliberately, during an announced window:
+
+```bash
+docker compose -f docker-compose.cloudflare.yml pull connectionserver
+docker compose -f docker-compose.cloudflare.yml up -d connectionserver
+```
+
+Leaving that label at `true` is what makes a routine image publish disconnect every logged-in player without warning — the notices for the engine restart arrive, and then the socket dies when Watchtower reaches the owner in the same cycle. Set it to `true` only where unattended socket-owner updates are worth that. Watchtower's [stop timeout](https://containrrr.dev/watchtower/arguments/#stop-timeout) controls forced termination; optional [lifecycle hooks](https://containrrr.dev/watchtower/lifecycle-hooks/) can add countdowns, but container startup alone does not establish game readiness. These repository changes do not deploy production automatically until merged, images published, and the Compose migration applied.
 
 ## Measured rendering boundary cost
 

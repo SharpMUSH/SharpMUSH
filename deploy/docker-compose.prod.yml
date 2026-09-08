@@ -37,8 +37,16 @@ services:
       dockerfile: SharpMUSH.SocketServer/Dockerfile
     image: sharpmush/sharpmush-socketserver:latest
     container_name: sharpmush-connectionserver
+    # Deliberately NOT a watchtower target. This service owns every telnet and /ws kernel socket,
+    # so recreating it disconnects everyone who is logged in — which is the one thing the split
+    # exists to avoid. Engine and renderer updates are the ones watchtower carries, and those keep
+    # the sockets. Replace this one yourself, during an announced window:
+    #   docker compose -f docker-compose.prod.yml pull connectionserver
+    #   docker compose -f docker-compose.prod.yml up -d connectionserver
+    # Setting this to true buys unattended socket-owner updates at the cost of dropping every
+    # player without warning whenever its image tag moves.
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.enable=false
     stop_grace_period: 60s
     volumes:
       - render-socket:/run/sharpmush
@@ -80,6 +88,10 @@ services:
       dockerfile: Dockerfile
     image: sharpmush/sharpmush-server:latest
     container_name: sharpmush-server
+    # Safe to update unattended: the engine going down and coming back sends players a restart
+    # notice and leaves the socket owner — and so their connections — untouched.
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     stop_grace_period: 60s
     environment:
       # --- Object database: LMDB embedded through Lightning.NET (no separate DB server) ---

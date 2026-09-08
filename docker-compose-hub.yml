@@ -21,8 +21,11 @@ services:
   connectionserver:
     restart: unless-stopped
     image: sharpmush/sharpmush-socketserver:dev
+    # Deliberately NOT a watchtower target: this service owns every telnet and /ws kernel socket,
+    # so recreating it disconnects everyone who is logged in. Engine and renderer updates are the
+    # ones that can be unattended — those keep the sockets. See deploy/connection-updates.md.
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.enable=false
     stop_grace_period: 60s
     volumes:
       - render-socket:/run/sharpmush
@@ -57,6 +60,10 @@ services:
     restart: unless-stopped
     stop_grace_period: 60s
     image: sharpmush/sharpmush-server:dev
+    # Safe to update unattended: the engine going down and coming back sends players a restart
+    # notice and leaves the socket owner — and so their connections — untouched.
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       # Embedded LMDB world on the app-data volume; no database container needed. See deploy/README.md
       # for the durability setting and the map-size ceiling.

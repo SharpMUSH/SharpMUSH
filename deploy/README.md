@@ -378,8 +378,18 @@ complete.
 publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
 `sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
 for the renderer, and `sharpmush/sharpmush-socketserver:dev` for the socket owner. The
-`watchtower` service polls every 5 minutes and recreates each of these three labeled services
-when its image tag changes, pruning superseded images. Socket owner replacement drops live sockets.
+`watchtower` service polls every 5 minutes and recreates the **engine and renderer** when their
+image tags change, pruning superseded images. Both of those updates keep live telnet and
+WebSocket connections open — players get a restart notice and carry on.
+
+The **socket owner is not auto-updated**: it holds every client's kernel socket, so recreating it
+disconnects everyone. Pull it deliberately, when you are willing to drop players:
+
+```bash
+docker compose -f docker-compose.cloudflare.yml pull connectionserver
+docker compose -f docker-compose.cloudflare.yml up -d connectionserver
+```
+
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
 image — the Blazor WASM portal is baked into the server image at build time.
 
