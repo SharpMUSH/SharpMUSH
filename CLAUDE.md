@@ -8,6 +8,18 @@ SharpMUSH is a modern .NET 10 MUSH server (text-based multiplayer role-playing) 
 
 ## Build & Test Commands
 
+`global.json` pins the SDK to the **10.0.4xx** feature band with `allowPrerelease: false`, so a
+10.0.3xx SDK or a .NET 11 preview will not satisfy it — `dotnet` fails with "A compatible .NET SDK
+was not found" before any project is read. Install 10.0.400 or newer within that band:
+
+```bash
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.400
+```
+
+The pin is not cosmetic: the two source-generator projects reference `Microsoft.CodeAnalysis.CSharp`
+5.9.0, which is the Roslyn that ships inside 10.0.400. An older SDK carries an older compiler and
+rejects the generators with CS9057.
+
 ```bash
 # Build everything
 dotnet build
