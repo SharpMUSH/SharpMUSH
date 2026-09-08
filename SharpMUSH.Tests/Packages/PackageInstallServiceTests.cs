@@ -102,6 +102,12 @@ public class PackageInstallServiceTests
 		return leaf?.Value.ToPlainText() ?? "";
 	}
 
+	private async Task<string> EvaluateAttributeAsync(string objid, string attribute)
+	{
+		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/{attribute})]"));
+		return result!.Message!.ToPlainText();
+	}
+
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
 	{
 		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
@@ -235,7 +241,11 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-A`HELP")).IsEqualTo(a.AsT0.CreatedObjects["help"]);
 		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
 		await Assert.That((await Installer.PlanAsync(first, answers)).Attributes.All(x => x.Action == PackageAttributeAction.NoChange)).IsTrue();
+		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo(a.AsT0.CreatedObjects["help"]);
+		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-B")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
 		await Assert.That((await Installer.UninstallAsync(first.Name)).IsT0).IsTrue();
+		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo("");
+		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-B")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
 		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(b.AsT0.CreatedObjects["help"]);
 		await Assert.That((await Installer.UninstallAsync(second.Name)).IsT0).IsTrue();
 	}
@@ -272,6 +282,7 @@ public class PackageInstallServiceTests
 		await Assert.That(cmd).DoesNotContain("{{");
 		await Assert.That(cmd).DoesNotContain(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
+		await Assert.That(await EvaluateAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
 
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`BOARD")).IsEqualTo(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`STORAGE")).IsEqualTo(roomZero);
@@ -313,6 +324,7 @@ public class PackageInstallServiceTests
 		await Assert.That(upgrade.AsT0.Revision).IsEqualTo(2);
 		await Assert.That(upgrade.AsT0.CreatedObjects.Count).IsEqualTo(0);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-two-format");
+		await Assert.That(await EvaluateAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-two-format");
 		await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).AsT0.Version).IsEqualTo("1.1.0");
 
 		var rollback = await Installer.RollbackAsync("e2e-pkg", 1);
@@ -320,6 +332,7 @@ public class PackageInstallServiceTests
 		await Assert.That(rollback.AsT0.Revision).IsEqualTo(3);
 		await Assert.That(rollback.AsT0.RestoredFromRevision).IsEqualTo(1);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
+		await Assert.That(await EvaluateAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
 		var afterRollback = await Registry.GetInstalledPackageAsync("e2e-pkg");
 		await Assert.That(afterRollback.AsT0.Version).IsEqualTo("1.0.0");
 		await Assert.That(afterRollback.AsT0.CurrentRevision).IsEqualTo(3);
