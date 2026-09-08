@@ -2341,46 +2341,23 @@ public partial class Commands
 		var isNoEval = parser.CurrentState.Switches.Contains("NOEVAL");
 		var isOverride = parser.CurrentState.Switches.Contains("OVERRIDE");
 		var isList = parser.CurrentState.Switches.Contains("LIST");
-
-		var recipientsArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
-
-		var messageArg = isNoEval
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
-
-		string recipientsText;
-
-		// If no recipients are provided, use the last successful page targets.
-		if ((string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
-				 !string.IsNullOrWhiteSpace(messageArg.ToPlainText())) ||
-			(isList && string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
-			 string.IsNullOrWhiteSpace(messageArg.ToPlainText())))
+		if (isList)
 		{
 			var lastPagedAttr = await AttributeService.GetAttributeAsync(
 				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
-			recipientsText = lastPagedAttr.Match(
+			var lastPagedText = lastPagedAttr.Match(
 				attr => attr.Last().Value.ToPlainText(),
 				_ => string.Empty,
-				_ => string.Empty
-			);
+				_ => string.Empty);
 
-			if (string.IsNullOrWhiteSpace(recipientsText))
+			if (string.IsNullOrWhiteSpace(lastPagedText))
 			{
-				await NotifyService.Notify(executor, "Who do you want to page?", executor);
+				await NotifyService.Notify(executor, "You haven't paged anyone since connecting.", executor);
 				return CallState.Empty;
 			}
-		}
-		else
-		{
-			recipientsText = recipientsArg.ToPlainText();
-		}
 
-		if (isList && string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
-		{
 			var lastPagedNames = new List<string>();
-			foreach (var recipientRef in recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			foreach (var recipientRef in lastPagedText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 			{
 				if (!DBRef.TryParse(recipientRef, out var dbref))
 				{
@@ -2405,6 +2382,39 @@ public partial class Commands
 			}
 
 			return CallState.Empty;
+		}
+
+		var recipientsArg = isNoEval
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
+
+		var messageArg = isNoEval
+			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
+
+		string recipientsText;
+
+		// If no recipients are provided, use the last successful page targets.
+		if (string.IsNullOrWhiteSpace(recipientsArg.ToPlainText()) &&
+			!string.IsNullOrWhiteSpace(messageArg.ToPlainText()))
+		{
+			var lastPagedAttr = await AttributeService.GetAttributeAsync(
+				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
+			recipientsText = lastPagedAttr.Match(
+				attr => attr.Last().Value.ToPlainText(),
+				_ => string.Empty,
+				_ => string.Empty
+			);
+
+			if (string.IsNullOrWhiteSpace(recipientsText))
+			{
+				await NotifyService.Notify(executor, "Who do you want to page?", executor);
+				return CallState.Empty;
+			}
+		}
+		else
+		{
+			recipientsText = recipientsArg.ToPlainText();
 		}
 
 		if (string.IsNullOrWhiteSpace(messageArg.ToPlainText()))

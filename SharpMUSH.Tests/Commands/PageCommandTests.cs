@@ -227,6 +227,59 @@ public class PageCommandTests
 	}
 
 	[Test]
+	public async ValueTask PageList_WithoutHistoryUsesPennMessage()
+	{
+		var sender = await CreatePlayerAsync("PageListNoHistorySender");
+		try
+		{
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await CommandAsync(sender, "page/list");
+
+			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
+				"You haven't paged anyone since connecting."
+			]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	[Test]
+	public async ValueTask PageList_IgnoresOperandsAndOnlyReportsStoredHistory()
+	{
+		var sender = await CreatePlayerAsync("PageListOperandSender");
+		var previousRecipient = await CreatePlayerAsync("PageListPreviousRecipient");
+		var operandRecipient = await CreatePlayerAsync("PageListOperandRecipient");
+		try
+		{
+			await PageAsync(sender, previousRecipient.Name, "First");
+
+			foreach (var command in new[]
+			{
+				$"page/list {operandRecipient.Name}",
+				$"page/list {operandRecipient.Name}=Ignored"
+			})
+			{
+				var senderStart = Notifications.CountFor(sender.DbRef);
+				var operandStart = Notifications.CountFor(operandRecipient.DbRef);
+				await CommandAsync(sender, command);
+
+				await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart)).IsEquivalentTo([
+					$"You last paged {previousRecipient.Name}."
+				]);
+				await Assert.That(Notifications.For(operandRecipient.DbRef).Skip(operandStart)).IsEmpty();
+			}
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(previousRecipient.Handle);
+			await ConnectionService.Disconnect(operandRecipient.Handle);
+		}
+	}
+
+	[Test]
 	public async ValueTask IncomingPageFormat_RunsAsRecipientWithPagerAsEnactor()
 	{
 		var sender = await CreatePlayerAsync("PageIdentitySender");
