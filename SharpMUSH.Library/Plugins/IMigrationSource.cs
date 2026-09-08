@@ -20,9 +20,17 @@ public interface IMigrationSource
 {
 	/// <summary>
 	/// SurrealQL statements to run against SurrealDB after the built-in migration batch, on every startup.
-	/// Statements must be idempotent or track their own migration marker. A failure aborts startup.
+	/// Prefer idempotent statements or a migration marker. Legacy sources log failures and continue;
+	/// sources opting into <see cref="RequireSuccessfulSurrealMigrations"/> abort startup on failure.
 	/// </summary>
 	IEnumerable<string> SurrealStatements => [];
+
+	/// <summary>
+	/// Require all SurrealQL statements to succeed before startup continues. Defaults to false to
+	/// preserve compatibility with existing plugins whose repeated DEFINE statements may fail.
+	/// Opt in when runtime writes depend on a successful schema/data migration.
+	/// </summary>
+	bool RequireSuccessfulSurrealMigrations => false;
 
 	/// <summary>Lightning migration steps to run after the built-in migration batch, each applied once and tracked by <see cref="LightningMigrationStep.Id"/>.</summary>
 	IEnumerable<LightningMigrationStep> LightningSteps => [];

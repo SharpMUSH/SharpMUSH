@@ -180,6 +180,7 @@ public class SurrealSceneMembershipTests
 
 	private sealed class FailedMigration : IMigrationSource
 	{
+		public bool RequireSuccessfulSurrealMigrations => true;
 		public IEnumerable<string> SurrealStatements => ["THROW 'Required scene migration failed'", "CREATE migration:should_not_run"];
 	}
 
@@ -199,6 +200,31 @@ public class SurrealSceneMembershipTests
 		await Assert.That(async () => await database.Migrate()).Throws<InvalidOperationException>();
 		var laterStatement = await client.RawQuery("SELECT * FROM migration:should_not_run");
 		await Assert.That(laterStatement.GetValue<List<object>>(0)!.Count).IsEqualTo(0);
+	}
+
+	private sealed class LegacyMigration : IMigrationSource
+	{
+		public IEnumerable<string> SurrealStatements => ["DEFINE TABLE my_thing SCHEMALESS"];
+	}
+
+	[Test]
+	public async Task LegacyPluginMigration_PreservesRestartCompatibility()
+	{
+		var services = new ServiceCollection();
+		services.AddSurreal($"Endpoint=mem://;Namespace=scene_members;Database=d{Guid.NewGuid():N}").AddInMemoryProvider();
+		await using var provider = services.BuildServiceProvider();
+		var client = provider.GetRequiredService<ISurrealDbClient>();
+		await client.Connect();
+		var password = Substitute.For<IPasswordService>();
+		password.GenerateRandomPassword().Returns("password");
+		password.HashPassword(Arg.Any<string>(), Arg.Any<string>()).Returns("hash");
+		var database = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client,
+			password, Substitute.For<IObjectRelationLoader>(), [new LegacyMigration()]);
+		await database.Migrate();
+		var restarted = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client,
+			password, Substitute.For<IObjectRelationLoader>(), [new LegacyMigration()]);
+		await restarted.Migrate();
+		await Assert.That((await client.RawQuery("CREATE my_thing:test")).HasErrors).IsFalse();
 	}
 
 }

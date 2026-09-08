@@ -178,8 +178,11 @@ public sealed class MyPlugin : PluginBase,
     ];
 
     // (c) Migrations: provider-tagged. Implement only the backends you support; every member has an
-    //     empty/no-op default.
-    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE my_thing SCHEMALESS"];
+    //     empty/no-op default. Surreal statements run on every startup; make them idempotent or
+    //     guard data migrations with a committed marker. Opt into strict failures when runtime
+    //     writes depend on this migration. Older plugins retain log-and-continue behavior.
+    public bool RequireSuccessfulSurrealMigrations => true;
+    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE IF NOT EXISTS my_thing SCHEMALESS"];
     public IEnumerable<LightningMigrationStep> LightningSteps => [new MyLightningMigration()];
 
     // (d) NATS bridge: subscribe to your own subjects and forward to SignalR groups, mirroring the engine's

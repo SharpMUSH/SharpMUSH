@@ -114,7 +114,8 @@ ID), and any active focus. Every original row from a duplicate group is retained
 under `scene_member_duplicate_backup.original`, including its original ID and
 conflicting values. Singleton memberships are converted without a backup copy.
 The migration marker commits with the conversion; subsequent startups skip it.
-Plugin migration errors abort startup. Take a normal database backup before upgrading;
+The scene plugin opts into `RequireSuccessfulSurrealMigrations`, so its migration
+errors abort startup; legacy plugins retain log-and-continue behavior. Take a normal database backup before upgrading;
 the conversion runs at startup and its cost scales with the existing membership table.
 
 ```mermaid

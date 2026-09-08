@@ -80,6 +80,9 @@ public sealed class ScenePlugin
 	public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
 		endpoints.MapHub<SceneHub>("/hubs/scene");
 
+	// Deterministic membership writes must never run beside unconverted legacy edges.
+	public bool RequireSuccessfulSurrealMigrations => true;
+
 	/// <summary>
 	/// SurrealDB scene-graph schema (tables + RELATE-edge tables + traversal indexes), moved out of
 	/// <c>SurrealDatabase.Migration.cs</c>. The host runs each statement after its built-in batch.
