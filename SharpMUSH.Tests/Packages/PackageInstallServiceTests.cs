@@ -215,6 +215,37 @@ public class PackageInstallServiceTests
 	}
 
 	[Test, NotInParallel]
+	public async Task UninstallLegacyAttacher_PreservesRefsStillManagedByAnotherPackage()
+	{
+		PackageManifest Consumer(string name) => Parse($$$"""
+			package: {{{name}}}
+			version: "1.0"
+			objects:
+			  - ref: registration
+			    target: "{{$room_zero}}"
+			    attributes:
+			      {{{name}}}: "source"
+			""");
+		var first = Consumer("legacy-uninstall-a");
+		var second = Consumer("legacy-uninstall-b");
+		var answers = new Dictionary<string, string>();
+		await Assert.That((await Installer.ApplyAsync(first, new PackageApplyRequest(Source(), answers, []))).IsT0).IsTrue();
+		await Assert.That((await Installer.ApplyAsync(second, new PackageApplyRequest(Source(), answers, []))).IsT0).IsTrue();
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known().Match(p => p, _ => null!, _ => null!, _ => null!);
+		var value = pm.Object.DBRef.ToString();
+		await Database.SetAttributeAsync(new DBRef(0), ["PM", "REFS", "SHARED"], MarkupText.Plain(value), pm);
+		foreach (var package in new[] { first.Name, second.Name })
+		{
+			await Registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, host, "PM`REFS`SHARED", value, "h", "1.0"));
+		}
+		await Assert.That((await Installer.UninstallAsync(first.Name)).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`SHARED")).IsEqualTo(value);
+		await Assert.That((await Installer.UninstallAsync(second.Name)).IsT0).IsTrue();
+		await Assert.That(await ReadAttributeAsync(host, "PM`REFS`SHARED")).IsEqualTo("");
+	}
+
+	[Test, NotInParallel]
 	public async Task AttachedRefs_AreIsolatedAcrossPackagesAndUninstall()
 	{
 		PackageManifest Consumer(string name) => Parse($$$"""

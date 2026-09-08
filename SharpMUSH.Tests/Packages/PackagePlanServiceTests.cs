@@ -160,6 +160,38 @@ public class PackagePlanServiceTests
 		await Assert.That(changes.Attributes.Single(a => a.Attribute == "PM`ATTACHED_REFS`PROBE`PROVIDER`REMOTE").NewValue).IsEqualTo("#99:0");
 	}
 
+	[Test]
+	public async Task OwnedRefRemoval_IsNotMistakenForLegacyAttachmentOnSameObject()
+	{
+		var manifest = Parse("""
+			package: probe
+			version: "1.1"
+			configure:
+			  target:
+			    label: Target
+			objects:
+			  - ref: own
+			    type: thing
+			    name: Own
+			    attributes:
+			      FN_OWN: "no longer uses a ref"
+			  - ref: registration
+			    target: "{{?target}}"
+			    attributes:
+			      SRC: "attached code without refs"
+			""");
+		var changes = _service.ComputeChangeset(Inputs(manifest, installed: Installed("probe"),
+			installedObjects: [new PackageObjectRecord("probe", "own", "#10:1", "thing")],
+			baselines: [new ManagedAttributeRecord("probe", "#10:1", "PM`REFS`ROOM_ZERO", "#0:0", "h", "1.0")],
+			live: new LivePackageState(new Dictionary<string, LiveObjectState>
+			{
+				["#10:1"] = LiveObject("#10:1", "Own", ("PM`REFS`ROOM_ZERO", "#99:0"))
+			}), configure: new Dictionary<string, string> { ["target"] = "#10:1" }));
+		var removed = changes.Attributes.Single(a => a.Attribute == "PM`REFS`ROOM_ZERO");
+		await Assert.That(removed.Action).IsEqualTo(PackageAttributeAction.Conflict);
+		await Assert.That(removed.Conflict).IsEqualTo(PackageConflictKind.ModifyDelete);
+	}
+
 	#region Fresh install
 
 	[Test]

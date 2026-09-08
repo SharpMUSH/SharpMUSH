@@ -206,6 +206,7 @@ public class PackagePlanService : IPackagePlanService
 		var baselineByKey = inputs.Baselines.ToDictionary(
 			b => (b.Objid, Attribute: b.Attribute.ToUpperInvariant()));
 		var manifestKeys = new HashSet<(string Objid, string Attribute)>();
+		var legacyRefKeys = new HashSet<(string Objid, string Attribute)>();
 
 		foreach (var obj in inputs.Manifest.Objects)
 		{
@@ -253,6 +254,11 @@ public class PackagePlanService : IPackagePlanService
 						obj.Ref, null, refAttr, PackageAttributeAction.Create,
 						NewValue: newValue, RequiresApplyResolution: resolution is null));
 					continue;
+				}
+
+				if (obj.IsAttach)
+				{
+					legacyRefKeys.Add((objid, PackageRefIndirection.AttributeNameFor(reference)));
 				}
 
 				manifestKeys.Add((objid, refAttr.ToUpperInvariant()));
@@ -327,8 +333,10 @@ public class PackagePlanService : IPackagePlanService
 
 			// Legacy attached refs may still be recalled by another package or locally
 			// edited code. Retire our ownership without deleting the shared leaf.
-			if (baseline.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase)
-				&& inputs.Manifest.Objects.Any(o => o.IsAttach && objidByRef.GetValueOrDefault(o.Ref) == baseline.Objid))
+			if (legacyRefKeys.Contains((baseline.Objid, baseline.Attribute.ToUpperInvariant()))
+				|| (PackageRefIndirection.IsRefAttribute(baseline.Attribute)
+					&& inputs.OtherManagedAttributes.Any(a => a.PackageId != inputs.Manifest.Name && a.Objid == baseline.Objid
+						&& a.Attribute.Equals(baseline.Attribute, StringComparison.OrdinalIgnoreCase))))
 			{
 				changes.Add(new PackageAttributeChange(targetRef, baseline.Objid, baseline.Attribute,
 					PackageAttributeAction.RemoveBaseline, BaseValue: baseline.BaselineValue, LiveValue: liveValue));

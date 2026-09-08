@@ -1142,11 +1142,19 @@ public class PackageInstallService(
 		}
 
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
-		foreach (var managed in (await registry.GetManagedAttributesAsync(packageId))
-			.Where(m => !ownObjids.Contains(m.Objid)))
+		foreach (var group in (await registry.GetManagedAttributesAsync(packageId))
+			.Where(m => !ownObjids.Contains(m.Objid)).GroupBy(m => m.Objid))
 		{
-			var dbref = ParseObjid(managed.Objid);
-			if (dbref is not null)
+			var otherRefs = (await registry.GetManagedAttributesForObjectAsync(group.Key))
+				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute))
+				.Select(a => a.Attribute).ToHashSet(StringComparer.OrdinalIgnoreCase);
+			var dbref = ParseObjid(group.Key);
+			if (dbref is null)
+			{
+				continue;
+			}
+
+			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute)))
 			{
 				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
 			}
