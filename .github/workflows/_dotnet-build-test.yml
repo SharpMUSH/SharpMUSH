@@ -17,11 +17,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.x
+          global-json-file: global.json
 
-      # Folder mode, not solution mode: `dotnet format` cannot load the solution on the
-      # .NET 11 SDK (the MSBuild build host crashes), and whitespace rules are purely
-      # syntactic anyway. Takes ~2s for the whole repo.
+      # Folder mode, not solution mode. Whitespace rules are purely syntactic, so folder
+      # mode loses nothing, covers every file and takes ~2s for the whole repo. Solution
+      # mode takes ~14s and still exits 0 when MSBuild fails to load a project, which
+      # would silently drop that project's files out of the gate.
       #
       # To fix locally, run the same command without --verify-no-changes. The formatter
       # needs two passes to converge, so run it until it reports no changes.
@@ -43,7 +44,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.x
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/*.csproj'
 
@@ -73,7 +74,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.x
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/*.csproj'
 
@@ -133,7 +134,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.x
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/*.csproj'
 
@@ -163,7 +164,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: 10.x
+          global-json-file: global.json
           cache: true
           cache-dependency-path: '**/*.csproj'
 

@@ -28,11 +28,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup .NET (Latest Stable)
+      - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          # Use 'x' to always get the latest stable version
-          dotnet-version: 10.x
+          global-json-file: global.json
 
       - name: Restore dependencies
         run: dotnet restore
