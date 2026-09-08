@@ -445,6 +445,9 @@ public class UtilityCommandTests
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#").Because($"@create should return a dbref; got: '{createdDbref}'");
 
+		// Things are created NO_COMMAND, so nothing on them is scanned until the flag comes off.
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(createdDbref));
+
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&{attrName} {createdDbref}=${commandWord} *:think scan test triggered"));
 
@@ -478,6 +481,9 @@ public class UtilityCommandTests
 		var createdDbref = createResult.Message?.ToPlainText() ?? string.Empty;
 		await Assert.That(createdDbref).StartsWith("#")
 			.Because($"@create should return a dbref; got: '{createdDbref}'");
+
+		// Things are created NO_COMMAND, so nothing on them is scanned until the flag comes off.
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(createdDbref));
 
 		// \\: survives attribute-set evaluation as \:, the form PennMUSH stores.
 		await Parser.CommandParse(1, ConnectionService,

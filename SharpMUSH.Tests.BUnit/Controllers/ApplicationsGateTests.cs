@@ -149,9 +149,9 @@ public class ApplicationsGateTests
 			SSLCADirectory: null, SSLCAFile: null,
 			SSLCertificateFile: null, SSLPrivateKeyFile: null),
 		Flag = new FlagOptions(
-			ChannelFlags: ["player"], ExitFlags: ["no_command"],
+			ChannelFlags: ["player"], ExitFlags: [],
 			PlayerFlags: ["enter_ok", "ansi", "no_command"],
-			RoomFlags: [""], ThingFlags: [""]),
+			RoomFlags: ["no_command"], ThingFlags: ["no_command"]),
 		Function = new FunctionOptions(
 			FunctionSideEffects: true, SaferUserFunctions: true),
 		Limit = new LimitOptions(

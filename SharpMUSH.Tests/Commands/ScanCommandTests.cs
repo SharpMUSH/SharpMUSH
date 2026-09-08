@@ -41,6 +41,11 @@ public class ScanCommandTests
 		var room = digResult.Message!.ToPlainText().Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={room}"));
 
+		// Players and rooms are created NO_COMMAND, so neither is scanned until the flag comes off.
+		// @scan reports what would match, and nothing on a NO_COMMAND object ever does.
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, player.DbRef);
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(room));
+
 		return (player, room, TestIsolationHelpers.GenerateUniqueName(prefix.ToLowerInvariant()));
 	}
 
@@ -106,6 +111,7 @@ public class ScanCommandTests
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanGlobalObj")}"));
 		var global = createResult.Message!.ToPlainText().Trim();
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(global));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {global}=#{MasterRoom}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
@@ -133,6 +139,7 @@ public class ScanCommandTests
 		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanZoneObj")}"));
 		var zone = createResult.Message!.ToPlainText().Trim();
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(zone));
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&CMD_ZONE {zone}=${word} *:think zone"));

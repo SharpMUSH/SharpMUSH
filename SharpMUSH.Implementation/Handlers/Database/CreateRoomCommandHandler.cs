@@ -2,14 +2,23 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreateRoomCommandHandler(IObjectStore database)
+public class CreateRoomCommandHandler(
+	IObjectStore database,
+	IFlagAndPowerStore flags,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: ICommandHandler<CreateRoomCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken);
+		var created = await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken);
+
+		await DefaultObjectFlags.ApplyAsync(flags, database, created,
+			configuration.CurrentValue.Flag.RoomFlags, cancellationToken);
+
+		return created;
 	}
 }

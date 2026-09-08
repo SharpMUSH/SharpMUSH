@@ -2,15 +2,24 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class CreatePlayerCommandHandler(IObjectStore database)
+public class CreatePlayerCommandHandler(
+	IObjectStore database,
+	IFlagAndPowerStore flags,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: ICommandHandler<CreatePlayerCommand, DBRef>
 {
 	public async ValueTask<DBRef> Handle(CreatePlayerCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreatePlayerAsync(
+		var created = await database.CreatePlayerAsync(
 			request.Name, request.Password, request.Location, request.Home, request.Quota, request.Salt, cancellationToken);
+
+		await DefaultObjectFlags.ApplyAsync(flags, database, created,
+			configuration.CurrentValue.Flag.PlayerFlags, cancellationToken);
+
+		return created;
 	}
 }
