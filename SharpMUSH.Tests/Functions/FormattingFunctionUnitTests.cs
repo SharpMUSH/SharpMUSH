@@ -45,11 +45,42 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("wrap(test,5)", "")]
+	[Arguments("wrap(test,5)", "test")]
+	// Word wrap, not a chop at the width: the break lands on a space.
+	[Arguments("wrap(This is a test of the wrap function,10)", "This is a\ntest of\nthe wrap\nfunction")]
+	// A narrower first line, for softcode that puts a prefix in front of it.
+	[Arguments("wrap(This is a test of the wrap function,10,5)", "This\nis a test\nof the\nwrap\nfunction")]
+	[Arguments("wrap(one two three,10,10,|)", "one two|three")]
+	// A word longer than the column has to break somewhere.
+	[Arguments("wrap(aa abcdefghijkl bb,6)", "aa\nabcdef\nghijkl\nbb")]
+	// Widths are display cells, so a two-cell character takes two of them.
+	[Arguments("wrap(日本語です,4)", "日本\n語で\nす")]
 	public async Task Wrap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	// 66 UTF-16 code units, 11 display columns. strlen answers the question softcode is actually
+	// asking, which is how much room the string takes up.
+	[Arguments("strlen(T͆́͂ͯe͕͓ͨx̼̀ͣt̜̭̪͒̉͗ͦ͂ ͕̈E͈̬̮̥͒ͣd͚͖̭͚ͩ̃͌i̺͑ͬ͊ͯt̞͔̂̏͒ͨo̥͓ͤͤ͗r̮͖̼͙͐)", "11")]
+	[Arguments("strlen(日本語)", "6")]
+	[Arguments("strlen(abc)", "3")]
+	public async Task StringLengthMeasuresColumns(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	// align(1,<a two-cell character>) used to never return: the column was narrower than one
+	// grapheme cluster, so the wrap made no progress.
+	[Arguments("align(1,日本語)", true)]
+	public async Task AlignTerminatesOnAColumnNarrowerThanItsText(string str, bool _)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result).IsNotNull();
 	}
 
 	[Test]
@@ -94,10 +125,17 @@ public class FormattingFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("table(a b c,10,2)", "")]
+	[Arguments("table(a b c,5,20)", "a     b     c    ")]
+	// The alignment prefix picks the side the text lands on, not the side the filler does.
+	[Arguments("table(a b c,>5,20)", "    a     b     c")]
+	[Arguments("table(a b c,-5,20)", "  a     b     c  ")]
+	// Fields flow onto a new line once the line length is used up.
+	[Arguments("table(a b c d,5,10)", "a     b    \nc     d    ")]
+	// A field wider than its column is cut to it.
+	[Arguments("table(abcdefg,3,20)", "abc")]
 	public async Task Table(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 }

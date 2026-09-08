@@ -2358,7 +2358,7 @@ public partial class Commands
 			await foreach (var player in players)
 			{
 				var objectCount = await Mediator.Send(new GetOwnedObjectCountQuery(player));
-				var playerName = player.Object.Name.PadRight(27);
+				var playerName = player.Object.Name.PadToColumns(27);
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaPlayerRowFormat), executor, playerName, objectCount, player.Quota);
 			}
 
