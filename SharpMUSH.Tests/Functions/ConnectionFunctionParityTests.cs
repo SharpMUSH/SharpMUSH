@@ -112,12 +112,11 @@ public class ConnectionFunctionParityTests
 		var mediator = services.GetRequiredService<IMediator>();
 		var connectionService = services.GetRequiredService<IConnectionService>();
 
-		// A name per case, because every run creates its own target and a shared name would let one run
-		// resolve an earlier run's disconnected player. The target is then addressed by dbref rather
-		// than by name: pmatch() and the player-name match behind it do not resolve a player by name in
-		// this harness at all (num() finds the same player that pmatch() misses), which is its own bug
-		// and would silence this one — every function here answers a failed match and a refused read
-		// identically, and only ssl() tells them apart.
+		// Addressed by dbref, because CreateTestPlayerAsync names its player <prefix>_<millis>_<random>
+		// and hands back only the DBRef. A lookup on the bare prefix would resolve by partial match —
+		// or, once several runs have created one, resolve an earlier run's disconnected player, which
+		// reads as "not connected" rather than "refused". Only ssl() tells those two apart, so it is
+		// the one case that would fail, and it would be blaming the wrong thing.
 		var targetRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			services, mediator, $"ParityTarget{function}");
 		var onlookerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
