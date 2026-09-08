@@ -756,7 +756,7 @@ public partial class Commands
 		var actionAttributeName = tryIdesc
 			? usedIdesc ? "AIDESCRIBE" : null
 			: "ADESCRIBE";
-		if (actionAttributeName is not null)
+		if (actionAttributeName is not null && !await realViewing.HasFlag("HALT"))
 		{
 			var actionAttribute = await AttributeService.GetAttributeAsync(
 				realViewing, realViewing, actionAttributeName, IAttributeService.AttributeMode.Execute);

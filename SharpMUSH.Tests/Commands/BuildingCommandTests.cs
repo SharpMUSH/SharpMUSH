@@ -687,6 +687,35 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
+	/// A halted room cannot run its @adescribe action when viewed.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_HaltedRoom_DoesNotTriggerAdescribe()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lhra");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookHaltedRoom{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var roomResult = await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@dig HaltedRoom_{token}"));
+		var roomDbRef = DBRef.Parse(roomResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@adesc here=@pemit %#=halted_adesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@set here=HALT"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages).Contains($"look_barrier_{token}");
+		await Assert.That(messages.Any(message => message.Contains($"halted_adesc_{token}"))).IsFalse();
+	}
+
+	/// <summary>
 	/// A non-owner sees inherited @describe and @descformat output even though the format attribute
 	/// is not readable by the viewer.
 	/// </summary>
@@ -996,6 +1025,38 @@ public class BuildingCommandTests
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"INSIDEDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// A halted container cannot run its @aidescribe action when viewed from inside.
+	/// </summary>
+	[Test]
+	public async ValueTask Look_HaltedContainer_DoesNotTriggerAidescribe()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("lhca");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"LookHaltedContainer{token}");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var objResult = await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@create HaltedContainer_{token}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&IDESCRIBE {objDbRef}=inside_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&AIDESCRIBE {objDbRef}=@pemit %#=halted_aidesc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@set {objDbRef}=HALT"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"drop {objDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={objDbRef}"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@wait 0=@pemit me=look_barrier_{token}"));
+		await TestHelpers.WaitForNotification(NotifyService, player.DbRef, $"look_barrier_{token}");
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(messages).Contains($"look_barrier_{token}");
+		await Assert.That(messages.Any(message => message.Contains($"halted_aidesc_{token}"))).IsFalse();
 	}
 
 	/// <summary>
