@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -489,5 +490,147 @@ public class ChannelMatchRecallTests
 			.Message!.ToPlainText()).IsEmpty();
 		await Assert.That((await parser.FunctionParse(MarkupText.Plain($"clock({name}/nonsense)")))!
 			.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchLockType);
+	}
+
+	// --- do_chan_title ----------------------------------------------------------------------------
+
+	/// <summary>
+	/// <c>@channel/title &lt;channel&gt;</c> with no <c>=</c> asks what your title is
+	/// (<c>src/extchat.c:3145</c>); it used to clear it. An <c>=</c> with nothing after it still clears.
+	/// </summary>
+	[Test]
+	public async Task ChannelTitle_WithoutAnEqualsAsksRatherThanClears()
+	{
+		var name = UniqueChannel("TitleQuery");
+		var channel = await CreateChannel(name, "Player", "Open");
+		var mortal = await CreateMortal("ChanTitleAsker");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+
+		await Run(mortal, $"@channel/title {name}=the Bold");
+
+		var asked = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/title {name}"));
+		await Assert.That(asked).Contains(
+			string.Format(ErrorMessages.Notifications.ChatYourTitleOnIs, name, "the Bold"));
+
+		// The title survived being asked about.
+		var status = await ChannelHelper.ChannelMemberStatus(
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(status!.Status.Title?.ToPlainText()).IsEqualTo("the Bold");
+
+		await Run(mortal, $"@channel/title {name}=");
+		var cleared = await ChannelHelper.ChannelMemberStatus(
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(cleared!.Status.Title?.ToPlainText() ?? string.Empty).IsEmpty();
+	}
+
+	// --- ok_channel_name --------------------------------------------------------------------------
+
+	/// <summary>
+	/// PennMUSH's <c>ok_channel_name</c> (<c>src/extchat.c:1855</c>) has no minimum length. A
+	/// <c>length &gt; 3</c> floor here made <c>OOC</c> — three characters, and the name half the MUSHes in
+	/// existence give their out-of-character channel — impossible to create.
+	/// </summary>
+	[Test]
+	public async Task ChannelAdd_AcceptsAThreeCharacterName()
+	{
+		var name = $"O{TestIsolationHelpers.GenerateUniqueName("x").Replace("_", string.Empty)[^2..]}";
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {name}=player"));
+
+		await Assert.That(await Mediator.Send(new GetChannelQuery(name))).IsNotNull();
+	}
+
+	// --- do_chan_decompile ------------------------------------------------------------------------
+
+	/// <summary>
+	/// A decompile has to be able to rebuild what it describes (<c>src/extchat.c:2833-2876</c>). This
+	/// emitted <c>@channel/add &lt;name&gt;</c> with no privilege list at all, plus the description and
+	/// mogrifier, and nothing else — replaying it produced a channel with no privileges, no owner, no
+	/// locks and no members.
+	/// </summary>
+	[Test]
+	public async Task Decompile_EmitsEverythingNeededToRebuildTheChannel()
+	{
+		var name = UniqueChannel("Decomp");
+		var channel = await CreateChannel(name, "Player", "Open");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/speak {name}=#1"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/describe {name}=a decompiled channel"));
+
+		var result = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@channel/decompile {name}"));
+		var decompiled = result.Message!.ToPlainText();
+
+		await Assert.That(decompiled).Contains($"@channel/add {name} = Player Open");
+		await Assert.That(decompiled).Contains($"@channel/chown {name} = ");
+		await Assert.That(decompiled).Contains($"@clock/speak {name} = ");
+		await Assert.That(decompiled).Contains($"@channel/desc {name} = a decompiled channel");
+		await Assert.That(decompiled).Contains($"@channel/on {name} = *");
+	}
+
+	// --- do_chan_wipe -----------------------------------------------------------------------------
+
+	/// <summary>
+	/// <c>@channel/wipe</c> removes every member (<c>channel_wipe</c>, <c>src/extchat.c:2216</c>), which
+	/// is what the help file says it does. It used to assign 0 to the buffer size on a detached model
+	/// object and report success, leaving every member exactly where they were.
+	/// </summary>
+	[Test]
+	public async Task Wipe_RemovesEveryMember()
+	{
+		var name = UniqueChannel("Wipe");
+		var channel = await CreateChannel(name, "Player", "Open");
+		var member = await CreateMortal("ChanWipeMember");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Known));
+
+		await Assert.That(await IsMember(name, member.DbRef)).IsTrue();
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/wipe {name}"));
+
+		await Assert.That(await IsMember(name, member.DbRef)).IsFalse();
+	}
+
+	// --- do_chat ----------------------------------------------------------------------------------
+
+	/// <summary>
+	/// The <c>open</c> privilege is documented as "You may speak on the channel even when you are not
+	/// listening to it" and is PennMUSH's <c>Channel_Open</c> check (<c>src/extchat.c:1553</c>). Speech
+	/// required membership unconditionally, so the privilege did nothing.
+	/// </summary>
+	[Test]
+	public async Task Chat_OnAnOpenChannelDoesNotRequireMembership()
+	{
+		var name = UniqueChannel("OpenSpeak");
+		var channel = await CreateChannel(name, "Player", "Open");
+		var listener = await CreateMortal("ChanOpenListener");
+		var outsider = await CreateMortal("ChanOpenOutsider");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+
+		var heard = await MessagesWhile(listener.DbRef,
+			() => Run(outsider, $"@chat {name}=spoken from outside"));
+
+		await Assert.That(string.Join("\n", heard)).Contains("spoken from outside");
+	}
+
+	/// <summary>
+	/// The control: without <c>open</c>, a non-member is refused with PennMUSH's wording
+	/// (<c>src/extchat.c:1557</c>).
+	/// </summary>
+	[Test]
+	public async Task Chat_OnAClosedChannelStillRequiresMembership()
+	{
+		var name = UniqueChannel("ClosedSpeak");
+		await CreateChannel(name, "Player");
+		var outsider = await CreateMortal("ChanClosedOutsider");
+
+		var messages = await MessagesWhile(outsider.DbRef, () => Run(outsider, $"@chat {name}=let me in"));
+
+		await Assert.That(messages).Contains(ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak);
 	}
 }

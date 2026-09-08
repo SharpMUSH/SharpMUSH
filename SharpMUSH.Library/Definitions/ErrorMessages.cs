@@ -735,6 +735,81 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChatRecallBufferSummary = "Recall buffer: {0} full lines, with {1} lines stored.";
 
+		// --- @channel/gag, /mute, /hide and /combine: PennMUSH do_chan_user_flags (src/extchat.c:1900-2050)
+		/// <summary>PennMUSH src/extchat.c:1908.</summary>
+		public const string ChatOnlyPlayersCanUseThat = "Only players can use that option.";
+		/// <summary>PennMUSH src/extchat.c:1915.</summary>
+		public const string ChatNotOnAnyChannels = "You are not on any channels.";
+		/// <summary>PennMUSH src/extchat.c:1922.</summary>
+		public const string ChatAllChannelsMuted = "All channels have been muted.";
+		public const string ChatAllChannelsUnmuted = "All channels have been unmuted.";
+		/// <summary>PennMUSH src/extchat.c:1926.</summary>
+		public const string ChatHideOnAllChannels = "You hide on all the channels you can.";
+		public const string ChatUnhideOnAllChannels = "You unhide on all channels.";
+		/// <summary>PennMUSH src/extchat.c:1930.</summary>
+		public const string ChatAllChannelsGagged = "All channels have been gagged.";
+		public const string ChatAllChannelsUngagged = "All channels have been ungagged.";
+		/// <summary>PennMUSH src/extchat.c:1934.</summary>
+		public const string ChatAllChannelsCombined = "All channels have been combined.";
+		public const string ChatAllChannelsUncombined = "All channels have been uncombined.";
+		/// <summary>PennMUSH src/extchat.c:1963.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNoLongerHearConnections = "You will no longer hear connection messages on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:1969.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNowHearConnections = "You will now hear connection messages on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:2008.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNoLongerOnWhoList = "You no longer appear on channel <{0}>'s who list.";
+		/// <summary>PennMUSH src/extchat.c:2014.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNowOnWhoList = "You now appear on channel <{0}>'s who list.";
+		/// <summary>PennMUSH src/extchat.c:2023.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNoLongerHearMessages = "You will no longer hear messages on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:2029.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNowHearMessages = "You will now hear messages on channel <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:2038.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatConnectionsNowCombined = "Connect messages on channel <{0}> will now be combined with others.";
+		/// <summary>PennMUSH src/extchat.c:2045.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatConnectionsNoLongerCombined = "Connect messages on channel <{0}> will no longer be combined with others.";
+
+		// --- @channel/title: PennMUSH do_chan_title (src/extchat.c:3125-3185)
+		/// <summary>PennMUSH src/extchat.c:3147.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatNoTitleSetOn = "You have no title set on <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:3149.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatYourTitleOnIs = "Your title on <{0}> is '{1}'.";
+		/// <summary>PennMUSH src/extchat.c:3160 — "(NoTitles) " is prepended on a NoTitles channel.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatTitleCleared = "Title cleared for {0}channel <{1}>.";
+		/// <summary>PennMUSH src/extchat.c:3181.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatTitleSet = "Title set for {0}channel <{1}>.";
+		/// <summary>PennMUSH src/extchat.c:3166.</summary>
+		public const string ChatTitleTooLong = "Title too long.";
+		/// <summary>PennMUSH src/extchat.c:3173.</summary>
+		public const string ChatInvalidCharacterInTitle = "Invalid character in title.";
+		/// <summary>PennMUSH src/extchat.c:2828.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatCannotDecompile = "CHAT: You don't have permission to decompile <{0}>.";
+		/// <summary>PennMUSH src/extchat.c:2247 — the refusal on @channel/wipe, verbatim.</summary>
+		public const string ChatWipeThatSillyGrin = "CHAT: Wipe that silly grin off your face instead.";
+		/// <summary>PennMUSH src/extchat.c:2251.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatChannelWiped = "CHAT: Channel <{0}> wiped.";
+		/// <summary>PennMUSH src/extchat.c:2226 — told to each member that was removed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ChatRemovedAllUsers = "CHAT: {0} has removed all users from <{1}>.";
+		/// <summary>PennMUSH src/extchat.c:1557.</summary>
+		public const string ChatMustBeOnChannelToSpeak = "You must be on that channel to speak on it.";
+		/// <summary>PennMUSH src/extchat.c:1560.</summary>
+		public const string ChatMustStopGaggingToSpeak = "You must stop gagging that channel to speak on it.";
+
 		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectLocked = "{0}(#{1}) - {2} locked.";

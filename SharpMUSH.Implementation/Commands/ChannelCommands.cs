@@ -5,6 +5,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -47,16 +48,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
-		}
-
-		var (_, status) = maybeMemberStatus;
+		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else. Requiring membership
+		// made @cemit unusable for exactly the objects it exists for: a wizard or a channel-owning object
+		// emitting onto a channel it does not listen to.
+		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
+								 ?? new SharpChannelStatus(null, null, null, null, null);
 
 		await Mediator.Publish(new ChannelMessageNotification(
 			channel,
@@ -107,14 +103,25 @@ public partial class Commands
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
-		if (maybeMemberStatus is null)
+		// extchat.c:1553-1562 — "If the channel isn't open, you must hear it in order to speak". The Open
+		// privilege is documented (sharpchat.md, @channel privs) as exactly this and did nothing: speech
+		// required membership unconditionally, and a member gagging the channel could still speak on it.
+		if (!channel.Privs.Contains("Open", StringComparer.OrdinalIgnoreCase))
 		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
+			if (maybeMemberStatus is null)
+			{
+				await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak, executor);
+				return new CallState(ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak);
+			}
+
+			if (maybeMemberStatus.Status.Gagged ?? false)
+			{
+				await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatMustStopGaggingToSpeak, executor);
+				return new CallState(ErrorMessages.Notifications.ChatMustStopGaggingToSpeak);
+			}
 		}
 
-		var (_, status) = maybeMemberStatus;
+		var status = maybeMemberStatus?.Status ?? new SharpChannelStatus(null, null, null, null, null);
 
 		// sharpchat.md:33 — "If <message> begins with a ':' or ';' it will be posed (or semiposed)
 		// instead of spoken." Anything else is speech, which is what produces the documented
@@ -181,16 +188,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
-		}
-
-		var (_, status) = maybeMemberStatus;
+		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else. Requiring membership
+		// made @cemit unusable for exactly the objects it exists for: a wizard or a channel-owning object
+		// emitting onto a channel it does not listen to.
+		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
+								 ?? new SharpChannelStatus(null, null, null, null, null);
 
 		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
 
@@ -421,7 +423,8 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, title);
+		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+			Configuration, channelName, title);
 
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{

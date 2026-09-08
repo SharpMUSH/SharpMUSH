@@ -203,6 +203,10 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - `@channel/mute [<channel>][=<yes|no>]`
 - `@channel/hide [<channel>][=<yes|no>]`
 - `@channel/combine [<channel>][=<yes|no>]`
+- `@channel/ungag [<channel>]`
+- `@channel/unmute [<channel>]`
+- `@channel/unhide [<channel>]`
+- `@channel/uncombine [<channel>]`
 
 `@channel/gag` allows you to stay on a channel but stop receiving messages on it. Channels are automatically ungagged when you disconnect. You cannot speak on channels you're gagging unless they have the "open" priv.
 
@@ -212,7 +216,9 @@ On channels with the 'hide_ok' priv, `@channel/hide` lets you hide from the @cha
 
 Connect and disconnect messages across all channels you have marked with `@channel/combine` will be combined into a single message with a |-separated list of all channel names. Only players can use this.
 
-For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect all channels you're on. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
+For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect every channel you are on. Naming a channel resolves against the channels you are on, so an abbreviation cannot be made ambiguous by a channel you never joined; the argument-less form reports what it did in one line and names no channel. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
+
+These are all your OWN settings on a channel. There is no command for muting or gagging somebody else; to stop a member speaking, lock the channel with `@clock/speak` (see [@clock]).
 
 **See Also:**
 - [@channel/who]
@@ -233,7 +239,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 `@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*, oldest first, between a `CHAT: Recall from channel <name>` header and a `CHAT: End recall` footer, with each line stamped with the time it was said. If *\<count\>* is not given, it shows the last 10; `=0` shows the whole buffer. A second right-hand argument (`@channel/recall <channel>=<count>,<start>`) starts the replay at the *\<start\>*th line of the buffer. The /quiet switch drops the timestamps, keeping the header and footer. You need not be a member to recall from a channel — being able to join it is enough.
 
-`@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. If *\<title\>* is not given, your title is cleared.
+`@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. `@channel/title <channel>=` with nothing after the `=` clears it, and `@channel/title <channel>` with no `=` at all tells you what it currently is. A title may not be longer than the `chan_title_len` configuration setting, and may not contain a newline, a tab or a bell.
 
 `@channel/buffer` sets the recall buffer size for *\<channel\>* to *\<size\>*. Only channel admins can do this. A size of 0 disables the recall buffer.
 
@@ -251,6 +257,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 # @channel/describe
 # @channel/privs
 # @channel/wipe
+# @channel/decompile
 
 - `@channel/add <channel>=<privlist>`
 - `@channel/delete <channel>`
@@ -261,6 +268,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 - `@channel/describe <channel>=<description>`
 - `@channel/privs <channel>=<privlist>`
 - `@channel/wipe <channel>`
+- `@channel/decompile[/brief] <channel>`
 - `@clock/join|/speak|/see|/hide|/mod <channel>[=<lock>]`
 
 `@channel/add` creates a new channel with the privileges in *<privlist>* — the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
@@ -278,6 +286,8 @@ For all four of these commands, you can specify a single channel to affect, or o
 `@channel/privs` changes a channel's privileges. Only channel admins can do this. See [@channel privs] for details.
 
 `@channel/wipe` removes all players from a channel. Only channel admins can do this.
+
+`@channel/decompile` prints the commands that would recreate the channel: its privileges, owner, mogrifier, locks, description, buffer size and membership. You must be able to decompile the channel. The /brief switch stops before the membership; members hiding on the channel are listed only to someone who could see them on [@channel/who].
 
 Channel locks are managed by the separate `@clock` command, not by a `@channel` switch. See [@clock] for details.
 

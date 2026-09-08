@@ -224,10 +224,25 @@ public static class ChannelHelper
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, MString channelName)
 		=> IsValidChannelName(Configuration, channelName.ToPlainText());
 
+	/// <summary>
+	/// PennMUSH <c>ok_channel_name</c> (<c>src/extchat.c:1855-1895</c>) minus its uniqueness check, which
+	/// the storage layer owns: non-empty, no leading or trailing whitespace, printable characters only,
+	/// no <c>|</c> (it separates the names in a combined connect announcement), and within the configured
+	/// length.
+	///
+	/// <para>There used to be a <c>length &gt; 3</c> floor, which PennMUSH does not have and which made
+	/// <c>OOC</c>, <c>RP</c> and every other short channel name every MUSH uses impossible to create.</para>
+	///
+	/// <para>The one deliberate divergence is the space: Penn permits them inside a channel name, and this
+	/// does not, because the <c>+&lt;channel&gt; &lt;message&gt;</c> token form splits on the first space
+	/// and could never address such a channel.</para>
+	/// </summary>
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
-		=> Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
-			 && channelName.Length > 3
-			 && !channelName.Contains(' ');
+		=> channelName.Length != 0
+			 && Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
+			 && !channelName.Contains(' ')
+			 && !channelName.Contains('|')
+			 && channelName.All(x => !char.IsControl(x));
 
 	/// <summary>
 	/// Looks a channel up by exact name. This is PennMUSH's <c>find_channel()</c> stripped of both of its
