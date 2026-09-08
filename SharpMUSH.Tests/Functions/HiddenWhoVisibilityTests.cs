@@ -97,6 +97,29 @@ public class HiddenWhoVisibilityTests
 		await Assert.That(Lists(await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef})"), hidden.DbRef)).IsFalse();
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>if (nargs > 1 &amp;&amp; args[1] &amp;&amp; *args[1])</c> (bsd.c:6548) treats an explicitly
+	/// empty <c>&lt;status&gt;</c> as absent and falls back to "online" — the same reading the viewer
+	/// argument on the line above already got. An empty one was answering
+	/// "#-1 INVALID SECOND ARGUMENT" instead, so <c>lwho(%#,%0)</c> with an unset %0 failed rather
+	/// than returning the default list.
+	/// </summary>
+	[Test]
+	public async Task AnEmptyStatusArgumentMeansOnline()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LwhoEmptyStatus");
+
+		var withEmptyStatus = await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef},)");
+		await Assert.That(withEmptyStatus).IsEqualTo(await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef})"));
+		await Assert.That(Lists(withEmptyStatus, mortal.DbRef)).IsTrue()
+			.Because("the default online list contains the caller's own connection");
+
+		// A non-empty but unrecognised status is still an error.
+		await Assert.That(await EvalAs(mortal.DbRef, $"lwho({mortal.DbRef},sideways)"))
+			.IsEqualTo("#-1 INVALID SECOND ARGUMENT");
+	}
+
 	[Test]
 	public async Task ZwhoRespectsHiddenAndZmwhoAlwaysDoes()
 	{

@@ -625,9 +625,13 @@ public partial class Functions
 		// arrives here as an empty string rather than as an absent key; ResolveWhoLookerAsync treats
 		// blank as "no viewer named", which is the same thing.
 		var arg0Raw = args.ContainsKey("0") ? args["0"].Message!.ToPlainText() : null;
-		var arg1 = args.ContainsKey("1")
-			? args["1"].Message!.ToPlainText().ToLower().Split(" ")
-			: ["online"];
+		// Same for the status argument: PennMUSH's `if (nargs > 1 && args[1] && *args[1])` (bsd.c:6548)
+		// treats an explicitly empty <status> as absent, so lwho(<viewer>,) means the "online" default
+		// rather than "#-1 INVALID SECOND ARGUMENT".
+		var arg1Raw = args.ContainsKey("1") ? args["1"].Message!.ToPlainText() : null;
+		var arg1 = string.IsNullOrEmpty(arg1Raw)
+			? ["online"]
+			: arg1Raw.ToLower().Split(" ");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var (looker, powered, lookerError) = await ResolveWhoLookerAsync(parser, executor, arg0Raw);

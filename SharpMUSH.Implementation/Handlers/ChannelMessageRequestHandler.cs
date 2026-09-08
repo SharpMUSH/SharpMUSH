@@ -186,19 +186,20 @@ public class ChannelMessageRequestHandler(
 
 			foreach (var (member, status) in channelMembers)
 			{
-				var isGagged = status.Gagged ?? false;
-				var wantsToHear = notification.Source.IsNone ||
-													await permissionService.CanInteract(notification.Source.Known(), member,
-														IPermissionService.InteractType.Hear);
-
 				// CB_SEEALL (src/extchat.c:3958): a privileged-only line reaches See_All members and the
 				// source, nobody else. Used for the connect/disconnect announcement of a hidden player.
+				// Checked before the interaction lock so a skipped member costs no permission query.
 				if (notification.SeeAllOnly
 						&& member.Object().DBRef.Number != sourceNumber
 						&& !await member.IsSee_All())
 				{
 					continue;
 				}
+
+				var isGagged = status.Gagged ?? false;
+				var wantsToHear = notification.Source.IsNone ||
+													await permissionService.CanInteract(notification.Source.Known(), member,
+														IPermissionService.InteractType.Hear);
 
 				if (!isGagged && wantsToHear)
 				{
