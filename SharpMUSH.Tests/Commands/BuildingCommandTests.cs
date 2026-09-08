@@ -903,11 +903,13 @@ public class BuildingCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&DESCFORMAT here=formatted_{token}:%+:%0:end"));
 
+		var expectedMessage = $"formatted_{token}:0::end";
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, expectedMessage);
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(messages).Contains($"formatted_{token}:0::end");
+		await Assert.That(messages).Contains(expectedMessage);
 		await Assert.That(messages).DoesNotContain("You see nothing special.");
 	}
 
