@@ -529,6 +529,7 @@ public class Startup(
 		// Package, application, layout and role registries are the active database provider too
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
+		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,8 @@ namespace SharpMUSH.Server.Controllers;
 public class RolesController(
 	IRoleRegistryService roles,
 	IAccountService accounts,
-	ILogger<RolesController> logger) : ControllerBase
+	ILogger<RolesController> logger,
+	IAdministrativeCapabilityService capabilities) : ControllerBase
 {
 	public record RoleDto(
 		string Slug,
@@ -44,6 +46,17 @@ public class RolesController(
 		string? Email,
 		string Status,
 		string[] RoleSlugs);
+
+	[HttpGet("effective")]
+	public async Task<IActionResult> Effective()
+	{
+		var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (id is null) return Forbid();
+		DBRef? active = null;
+		var claim = User.FindFirstValue(SharpMUSH.Server.Hubs.GameHub.CharacterDbrefClaim);
+		if (claim is not null && !DBRef.TryParse(claim, out active)) return Forbid();
+		return Ok(await capabilities.ExplainAsync(new(id, active, active)));
+	}
 
 	[HttpGet]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
@@ -68,8 +81,12 @@ public class RolesController(
 			return BadRequest(new { error = "Slug must be lowercase and contain only letters, digits, '-', or '_'." });
 		}
 
-		foreach (var scope in dto.Permissions.Keys)
+		if (dto.Permissions is null) return BadRequest(new { error = "Permissions are required." });
+
+		foreach (var (scope, value) in dto.Permissions)
 		{
+			if (!Enum.TryParse<PermissionState>(value, true, out var state) || !Enum.IsDefined(state))
+				return BadRequest(new { error = $"Invalid permission state: {value}" });
 			if (!PortalPermission.IsKnown(scope))
 			{
 				return BadRequest(new { error = $"Unknown permission scope: {scope}" });
@@ -97,6 +114,10 @@ public class RolesController(
 			UpdatedAt = nowMs
 		};
 
+		if (!await CanChangeAsync(existing ?? role) || !await CanChangeAsync(role)) return Forbid();
+		// Preserve the recovery role, including its authority and identity.
+		if (slug == "god" && (!role.Permissions.TryGetValue(PortalPermission.RolesAdmin, out var recovery) || recovery != PermissionState.Allow))
+			return BadRequest(new { error = "The God recovery role must retain roles.admin." });
 		await roles.UpsertRoleAsync(role);
 		logger.LogInformation("Upserted role '{Slug}' (system: {IsSystem}).", role.Slug, role.IsSystem);
 		return Ok(ToDto(role));
@@ -113,6 +134,7 @@ public class RolesController(
 			return BadRequest(new { error = "System roles cannot be deleted." });
 		}
 
+		if (existingResult.IsT0 && !await CanChangeAsync(existingResult.AsT0)) return Forbid();
 		await roles.RemoveRoleAsync(slug);
 		logger.LogInformation("Removed role '{Slug}'.", slug);
 		return Ok(new { deleted = true });
@@ -148,6 +170,8 @@ public class RolesController(
 			return BadRequest(new { error = $"Unknown role: {slug}" });
 		}
 
+		if (!await CanChangeAsync(existingResult.AsT0, accountId)) return Forbid();
+		if (await accounts.GetByIdAsync(accountId) is null) return NotFound();
 		await roles.AssignRoleToAccountAsync(accountId, slug);
 		logger.LogInformation("Assigned role '{Slug}' to account '{AccountId}'.", slug, accountId);
 		return Ok();
@@ -157,9 +181,28 @@ public class RolesController(
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
 	public async Task<IActionResult> RemoveRole(string accountId, string slug)
 	{
+		var existing = await roles.GetRoleAsync(slug);
+		if (existing.IsT0 && !await CanChangeAsync(existing.AsT0, accountId)) return Forbid();
 		await roles.RemoveRoleFromAccountAsync(accountId, slug);
 		logger.LogInformation("Removed role '{Slug}' from account '{AccountId}'.", slug, accountId);
 		return Ok();
+	}
+
+	private async Task<bool> CanChangeAsync(SharpRole role, string? targetAccount = null)
+	{
+		var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (id is null) return false;
+		var grants = await capabilities.GetGrantedScopesAsync(new(id));
+		if (!grants.Contains(PortalPermission.RolesAdmin)) return false;
+		var characters = await accounts.GetCharactersAsync(id);
+		if (characters.Any(c => c.Object.Key == 1)) return true;
+		var assigned = await roles.GetRolesForAccountAsync(id);
+		// A delegated manager cannot change their own authority, system roles or restrictions.
+		if (role.IsSystem || targetAccount == id || assigned.Any(r => r.Slug == role.Slug) ||
+			role.Permissions.Values.Any(v => v == PermissionState.Deny)) return false;
+		var ceiling = assigned.Where(r => r.Permissions.TryGetValue(PortalPermission.RolesAdmin, out var state)
+			&& state == PermissionState.Allow).Select(r => r.Priority).DefaultIfEmpty(int.MinValue).Max();
+		return role.Priority < ceiling && new PermissionResolver().Resolve([role]).All(grants.Contains);
 	}
 
 	private static bool IsValidSlug(string slug)
@@ -185,7 +228,7 @@ public class RolesController(
 
 			if (state != PermissionState.Inherit)
 			{
-				result[scope] = state;
+				result[PortalPermission.AllScopes.Single(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase))] = state;
 			}
 		}
 
