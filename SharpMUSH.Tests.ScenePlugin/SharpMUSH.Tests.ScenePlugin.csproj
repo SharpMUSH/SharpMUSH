@@ -19,8 +19,6 @@
 
   <ItemGroup>
     <PackageReference Include="TUnit" Version="1.19.16" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.9" />
   </ItemGroup>
 
   <!-- Focused unit test for the Scene plugin's AddSceneSystem registration seam (Phase 8). References the
