@@ -174,6 +174,37 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <para>A PennMUSH object with no recorded creation time (a 0 field) is left to default to now,
 	/// since 1970 is not a more truthful answer than the import date.</para>
 	/// </remarks>
+	/// <summary>
+	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
+	/// </summary>
+	/// <remarks>
+	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
+	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
+	/// seed's startup time, so their PennMUSH objids — God's especially, which softcode references
+	/// constantly — still fail to resolve, which is exactly the defect this is all meant to fix.
+	/// </remarks>
+	private async Task<DBRef> RestampReusedObjectAsync(int dbrefNumber, PennMUSHObject? pennObject,
+		CancellationToken cancellationToken)
+	{
+		if (pennObject is null)
+		{
+			return new DBRef(dbrefNumber);
+		}
+
+		var (created, modified) = PennTimestamps(pennObject);
+		if (created is null)
+		{
+			return new DBRef(dbrefNumber);
+		}
+
+		await _database.SetObjectTimestampsAsync(new DBRef(dbrefNumber), created.Value, modified,
+			cancellationToken);
+		_logger.LogDebug("Restamped reused object #{DBRef} with its PennMUSH creation time {Created}",
+			dbrefNumber, created.Value);
+
+		return new DBRef(dbrefNumber, created.Value);
+	}
+
 	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
 		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
 			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
@@ -217,6 +248,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
 					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
 				}
+
+				// Restamped after the password is set, not before: an imported PennMUSH hash validates
+				// against salt + plaintext and never against the objid, so the order is free — but
+				// SetPlayerPasswordAsync takes the object read before the restamp, and reusing a stale
+				// one to write is the kind of thing that only bites once.
+				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
+				_dbrefMapping[1] = tempGodDbRef;
 
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
@@ -284,6 +322,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				await _database.SetObjectName(existingRoom0.AsT1, MarkupText.Plain(room0Penn.Name), cancellationToken);
+				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
+				_dbrefMapping[0] = tempRoom0DbRef;
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -321,10 +361,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (existingRoom2.IsT0)
 		{
-			// Master Room #2 already exists (from database migration), reuse it
-			_dbrefMapping[2] = new DBRef(2);
-
 			var room2Penn = pennDatabase.GetObject(2);
+
+			// Master Room #2 already exists (from database migration), reuse it
+			_dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
+
 			if (room2Penn != null)
 			{
 				switch (room2Penn.Type)

@@ -249,6 +249,59 @@ public class PennMUSHImportTimestampTests
 		await Assert.That((await FindByNameAsync("RepeatImportThingB")).Name).IsEqualTo("RepeatImportThingB");
 	}
 
+	/// <summary>
+	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
+	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
+	/// migration seed's startup time, so their PennMUSH objids still do not resolve — God's
+	/// especially, which imported softcode references constantly.
+	/// </summary>
+	/// <remarks>
+	/// This is the one place a test may touch the shared #1, and it renames it: reusing the seeded
+	/// God is the entire code path being tested, and it only runs when a source object sits at #1.
+	/// The original name is restored afterwards.
+	/// </remarks>
+	[Test]
+	public async Task ReusedSeedObjectsAreRestampedWithTheirPennCreationTime()
+	{
+		const long pennCreatedSeconds = 1_010_101_010L;
+		const long pennModifiedSeconds = 1_010_101_020L;
+
+		var originalGod = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var originalName = originalGod.Object().Name;
+		var originalCreated = originalGod.Object().CreationTime;
+		var originalModified = originalGod.Object().ModifiedTime;
+
+		try
+		{
+			var result = await Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+			{
+				Version = "Reused Seed Fixture",
+				Objects =
+				[
+					new PennMUSHObject
+					{
+						DBRef = 1,
+						Name = originalName,
+						Type = PennMUSHObjectType.Player,
+						CreationTime = pennCreatedSeconds,
+						ModificationTime = pennModifiedSeconds
+					}
+				]
+			});
+
+			await Assert.That(result.IsSuccessful).IsTrue();
+
+			var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+			await Assert.That(god.Object().CreationTime).IsEqualTo(pennCreatedSeconds * 1000);
+			await Assert.That(god.Object().ModifiedTime).IsEqualTo(pennModifiedSeconds * 1000);
+			await Assert.That(god.Object().DBRef.ToString()).IsEqualTo($"#1:{pennCreatedSeconds * 1000}");
+		}
+		finally
+		{
+			await Database.SetObjectTimestampsAsync(new DBRef(1), originalCreated, originalModified);
+		}
+	}
+
 	private async Task<SharpObject> FindByNameAsync(string name)
 	{
 		await foreach (var obj in Database.GetAllObjectsAsync())
