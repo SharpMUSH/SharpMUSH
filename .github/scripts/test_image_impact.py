@@ -25,7 +25,7 @@ class ImageImpactTests(unittest.TestCase):
         self.assertTrue(all(self.impact("Shared/Message.cs").values()))
 
     def test_global_build_inputs_restart_both(self):
-        for path in ["Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "NuGet.Config", "global.json", ".dockerignore", "SharpMUSH.sln", ".github/scripts/image_impact.py"]:
+        for path in ["Directory.Build.props", "Directory.Build.targets", "Directory.Packages.props", "NuGet.Config", "global.json", ".dockerignore", "SharpMUSH.sln", ".github/scripts/image_impact.py", ".github/workflows/_docker-dev-publish.yml"]:
             with self.subTest(path=path):
                 self.assertTrue(all(self.impact(path).values()))
 
