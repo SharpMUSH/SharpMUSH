@@ -905,7 +905,6 @@ public partial class Commands
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
-		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objPowers = obj.Powers.Value;
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 
@@ -916,7 +915,7 @@ public partial class Commands
 			? MarkupText.Concat([
 				name.Hilight(),
 				MarkupText.Space,
-				MarkupText.Plain($"(#{obj.DBRef.Number}{string.Join(string.Empty, objFlags.Select(x => x.Symbol))})")
+				MarkupText.Plain($"(#{obj.DBRef.Number}{MessageHelpers.FlagSymbols(objFlags)})")
 			])
 			: MarkupText.Concat(name.Hilight(), MarkupText.Plain($" (#{obj.DBRef.Number})"));
 
@@ -933,7 +932,7 @@ public partial class Commands
 
 		var ownerRow = showFlags
 			? MarkupText.Plain($"Owner: {ownerName.Hilight()}" +
-											 $"(#{ownerObj.DBRef.Number}{string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol))})")
+											 $"(#{ownerObj.DBRef.Number}{await MessageHelpers.FlagSymbolsAsync(ownerObj)})")
 			: MarkupText.Plain($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number})");
 		outputSections.Add(ownerRow);
 

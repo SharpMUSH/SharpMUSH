@@ -1057,7 +1057,6 @@ public partial class Commands
 				error => MarkupText.Empty);
 
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
-		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
 		var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
@@ -1066,7 +1065,7 @@ public partial class Commands
 
 		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 
-		var objFlagStr = showFlags ? string.Join(string.Empty, objFlags.Select(x => x.Symbol)) : string.Empty;
+		var objFlagStr = showFlags ? MessageHelpers.FlagSymbols(objFlags) : string.Empty;
 		var nameRow = Format($"{name.Hilight()}(#{obj.DBRef.Number}{objFlagStr})");
 		outputSections.Add(nameRow);
 
@@ -1090,7 +1089,7 @@ public partial class Commands
 			zoneSection = Format($"  Zone: {zoneLine}");
 		}
 
-		var ownerFlagStr = showFlags ? string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol)) : string.Empty;
+		var ownerFlagStr = showFlags ? await MessageHelpers.FlagSymbolsAsync(ownerObj) : string.Empty;
 		var ownerRow = Format($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number}{ownerFlagStr}){zoneSection}");
 		outputSections.Add(ownerRow);
 

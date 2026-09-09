@@ -133,17 +133,13 @@ public class TextFileService : ITextFileService
 			}
 
 			var files = Directory.GetFiles(categoryPath, "*.*")
-				.Select(Path.GetFileName)
-				.Where(f => f != null)
-				.Cast<string>();
+				.Select(f => Path.GetFileName(f)!);
 			return Task.FromResult(files);
 		}
 		else
 		{
 			var files = Directory.GetFiles(baseDir, "*.*", SearchOption.AllDirectories)
-				.Select(Path.GetFileName)
-				.Where(f => f != null)
-				.Cast<string>()
+				.Select(f => Path.GetFileName(f)!)
 				.Distinct();
 			return Task.FromResult(files);
 		}
@@ -361,33 +357,39 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	public static string StripConsecutiveHeaders(string content)
 	{
-		var lines = content.Split('\n');
-		var firstHeaderIndex = -1;
-		var lastConsecutiveHeaderIndex = -1;
+		var text = content.AsSpan();
+		var headers = 0;
+		var firstHeaderLength = 0;
+		var afterHeaders = 0;
 
-		for (var i = 0; i < lines.Length; i++)
+		// Walk the leading run of header lines without splitting the whole entry into lines.
+		var position = 0;
+		while (position <= text.Length)
 		{
-			if (lines[i].StartsWith("# "))
+			var rest = text[position..];
+			var newline = rest.IndexOf('\n');
+			var line = newline < 0 ? rest : rest[..newline];
+			if (!line.StartsWith("# "))
 			{
-				if (firstHeaderIndex < 0)
-				{
-					firstHeaderIndex = i;
-				}
-				lastConsecutiveHeaderIndex = i;
+				break;
 			}
-			else
+
+			if (headers++ == 0)
+			{
+				firstHeaderLength = line.Length;
+			}
+
+			afterHeaders = newline < 0 ? text.Length : position + newline + 1;
+			position = afterHeaders;
+			if (newline < 0)
 			{
 				break;
 			}
 		}
 
-		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
-		{
-			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
-			return lines[firstHeaderIndex] + "\n" + remaining;
-		}
-
-		return content;
+		return headers > 1
+			? string.Concat(text[..firstHeaderLength], "\n", text[afterHeaders..])
+			: content;
 	}
 
 	/// <summary>

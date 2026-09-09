@@ -1,6 +1,5 @@
 using Mediator;
 using OneOf;
-using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -67,7 +66,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var decimals = new List<decimal>();
+		decimal? result = null;
 
 		foreach (var arg in args)
 		{
@@ -76,12 +75,11 @@ public static partial class ArgHelpers
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
-			decimals.Add(value);
+
+			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		var result = decimals.Aggregate(aggregateFunction);
-
-		return ValueTask.FromResult<CallState>(FormatDecimal(result));
+		return ValueTask.FromResult<CallState>(FormatDecimal(result ?? 0));
 	}
 
 	/// <summary>
@@ -102,7 +100,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var integers = new List<ulong>();
+		ulong? result = null;
 
 		foreach (var arg in args)
 		{
@@ -111,11 +109,11 @@ public static partial class ArgHelpers
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
 			}
-			integers.Add(value);
+
+			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		var result = integers.Aggregate(aggregateFunction);
-		return ValueTask.FromResult<CallState>(unchecked((long)result).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(unchecked((long)(result ?? 0)).ToString(CultureInfo.InvariantCulture));
 	}
 
 	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
@@ -188,18 +186,24 @@ public static partial class ArgHelpers
 			return ValueTask.FromResult(new CallState(Message: ErrorMessages.Returns.TooFewArguments));
 		}
 
-		var doubles = args.Select(x =>
-		(
-			IsDouble: numbers.TryDecimal((x.Value.Message ?? MarkupText.Empty).ToPlainText(), out var b),
-			Double: b
-		)).ToList();
-
-		if (doubles.Any(x => !x.IsDouble))
+		// Every argument is checked before any comparison decides the answer: a non-number anywhere in
+		// the list is the error, even after a pair that already failed the comparison.
+		var result = true;
+		decimal? previous = null;
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-		}
+			if (!numbers.TryDecimal((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
+			}
 
-		var result = doubles.Select(x => x.Double).Pairwise().All(func);
+			if (previous is { } left)
+			{
+				result &= func((left, value));
+			}
+
+			previous = value;
+		}
 
 		return new ValueTask<CallState>(result != negate ? "1" : "0");
 	}
@@ -278,15 +282,18 @@ public static partial class ArgHelpers
 			return null;
 		}
 
-		var flags = await found.Known.Object().Flags.Value.Select(flag => flag.Name).ToArrayAsync();
+		bool ansi = false, color = false, xterm256 = false, truecolor = false;
+		await foreach (var flag in found.Known.Object().Flags.Value)
+		{
+			ansi |= Is(flag, "ANSI");
+			color |= Is(flag, "COLOR");
+			xterm256 |= Is(flag, "XTERM256");
+			truecolor |= Is(flag, "TRUECOLOR");
+		}
 
-		return new PlayerColorFlags(
-			Ansi: Has("ANSI"),
-			Color: Has("COLOR"),
-			Xterm256: Has("XTERM256"),
-			Truecolor: Has("TRUECOLOR"));
+		return new PlayerColorFlags(Ansi: ansi, Color: color, Xterm256: xterm256, Truecolor: truecolor);
 
-		bool Has(string name) => flags.Any(flag => string.Equals(flag, name, StringComparison.OrdinalIgnoreCase));
+		static bool Is(SharpObjectFlag flag, string name) => string.Equals(flag.Name, name, StringComparison.OrdinalIgnoreCase);
 	}
 
 	/// <summary>

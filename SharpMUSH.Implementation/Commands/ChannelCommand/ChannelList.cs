@@ -43,12 +43,10 @@ public static class ChannelList
 		// sharpchat.md:181 — "If a <prefix> is given, only channels whose names begin with <prefix> are shown."
 		var prefix = arg0.ToPlainText().Trim();
 
-		// Materialised before the per-channel membership reads, as everywhere else that walks the list.
-		var all = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 		var rows = new List<MString>();
 		var names = new List<string>();
 
-		foreach (var channel in all)
+		await foreach (var channel in Mediator.CreateStream(new GetChannelListQuery()))
 		{
 			var channelName = channel.Name.ToPlainText();
 

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using static MarkupString.MStringInterpolation;
 namespace SharpMUSH.Implementation.Common;
@@ -42,12 +43,22 @@ public static class MessageHelpers
 	{
 		return message switch
 		{
-			[':', .. var rest] => new string(rest.ToArray()),
-			[';', .. var rest] => new string(rest.ToArray()),
-			['|', .. var rest] => new string(rest.ToArray()),
+			[':' or ';' or '|', .. var rest] => rest,
 			_ => message
 		};
 	}
+
+	/// <summary>
+	/// The flag symbols an object displays after its dbref, e.g. the <c>Tn</c> of <c>(#5Tn)</c>,
+	/// folded straight from the flag stream.
+	/// </summary>
+	public static async ValueTask<string> FlagSymbolsAsync(Library.Models.SharpObject obj)
+		=> (await obj.Flags.Value.AggregateAsync(new StringBuilder(), (symbols, flag) => symbols.Append(flag.Symbol)))
+			.ToString();
+
+	/// <inheritdoc cref="FlagSymbolsAsync"/>
+	public static string FlagSymbols(IEnumerable<SharpObjectFlag> flags)
+		=> flags.Aggregate(new StringBuilder(), (symbols, flag) => symbols.Append(flag.Symbol)).ToString();
 
 	/// <summary>
 	/// Formats an object name with its dbref and flag symbols as a markup-preserving MString.
@@ -58,8 +69,7 @@ public static class MessageHelpers
 	/// <returns>A task yielding the formatted MString with the name hilighted</returns>
 	public static async ValueTask<MString> FormatObjectWithDbrefMString(Library.Models.SharpObject obj)
 	{
-		var flags = await obj.Flags.Value.ToArrayAsync();
-		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		var flagSymbols = await FlagSymbolsAsync(obj);
 		return Format($"{obj.Name.Hilight()}(#{obj.DBRef.Number}{flagSymbols})");
 	}
 
@@ -100,11 +110,7 @@ public static class MessageHelpers
 	/// <param name="obj">The sharp object to format</param>
 	/// <returns>A task yielding the formatted string</returns>
 	public static async ValueTask<string> FormatObjectWithDbref(Library.Models.SharpObject obj)
-	{
-		var flags = await obj.Flags.Value.ToArrayAsync();
-		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
-		return $"{obj.Name}(#{obj.DBRef.Number}{flagSymbols})";
-	}
+		=> $"{obj.Name}(#{obj.DBRef.Number}{await FlagSymbolsAsync(obj)})";
 
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
@@ -144,7 +150,7 @@ public static class MessageHelpers
 			}
 
 			objToEvaluate = maybeLocateTarget.AsSharpObject;
-			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
+			attrToEvaluate = attrObjSplit[1];
 
 			var attr = await attributeService.GetAttributeAsync(
 				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);

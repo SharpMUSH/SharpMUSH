@@ -19,7 +19,7 @@ public class GetAttributeWithInheritanceQueryHandler(IAttributeStore database)
 	{
 		return database.GetAttributeWithInheritanceAsync(
 			request.DBRef,
-			request.Attribute.Select(x => x.ToUpper()).ToArray(),
+			Array.ConvertAll(request.Attribute, x => x.ToUpper()),
 			request.CheckParent,
 			cancellationToken);
 	}
@@ -39,7 +39,7 @@ public class GetLazyAttributeWithInheritanceQueryHandler(IAttributeStore databas
 	{
 		return database.GetLazyAttributeWithInheritanceAsync(
 			request.DBRef,
-			request.Attribute.Select(x => x.ToUpper()).ToArray(),
+			Array.ConvertAll(request.Attribute, x => x.ToUpper()),
 			request.CheckParent,
 			cancellationToken);
 	}
