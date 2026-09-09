@@ -33,6 +33,25 @@ public class LocalFunctionTests
 	}
 
 	[Test]
+	[Arguments("@function/local")]
+	[Arguments("@function/local unavailable")]
+	[Arguments("@function/local/restore *")]
+	[Arguments("@function/local/delete unavailable")]
+	[Arguments("@function/local/enable unavailable")]
+	[Arguments("@function/local/disable unavailable")]
+	[Arguments("@function/local/preserve unavailable")]
+	[Arguments("@function/local/restore unavailable")]
+	[Arguments("@function/local/alias unavailable=target")]
+	public async Task LegacyScopedManagementReturnsNormalUnavailable(string command)
+	{
+		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
+		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
+		var result = await parser.CommandParse(1, Connections, MarkupText.Plain(command));
+		await Assert.That(result.Message?.ToPlainText()).Contains("NOT FOUND");
+		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task LegacyScopedLookupReturnsTheNormalNotFoundError(bool supportsScopedGet)
@@ -50,8 +69,23 @@ public class LocalFunctionTests
 		await Cmd($"&{name} me=local");
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
 		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
-		try { await parser.CommandParse(1, Connections, MarkupText.Plain($"@function/local {name}=me,{name}")); }
-		catch (NotSupportedException) { }
+		var result = await parser.CommandParse(1, Connections, MarkupText.Plain($"@function/local {name}=me,{name}"));
+		await Assert.That(result.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task LegacyStartupCannotRestoreALocalDefinitionIntoTheGlobalRegistry()
+	{
+		var name = "legacyStartup" + Guid.NewGuid().ToString("N");
+		var startupObject = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "LegacyLocalStartup");
+		await Cmd($"&CODE {startupObject}=local");
+		await Cmd($"&STARTUP {startupObject}=@function/local {name}=me,CODE");
+		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
+		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
+		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		await StartupAttributeRunner.RunObjectAttributeAsync(parser, Factory.Services.GetRequiredService<IAttributeService>(),
+			(await Mediator.Send(new GetObjectNodeQuery(startupObject))).Known, "STARTUP", god);
 		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
 	}
 
