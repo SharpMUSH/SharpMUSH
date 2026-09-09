@@ -85,3 +85,19 @@ Observed with the handler softcode above and baked into the SharpMUSH tests:
 | HTTP entry point | the mush port | `/http/` prefix on the portal server (mush-port parity is a later phase) |
 | `http_per_second` quota | enforced | not yet enforced (later phase) |
 | `@sitelock` IP/method/path checks | enforced | not yet enforced (later phase) |
+
+## Pinned softcode compatibility capture
+
+`fixtures/compatibility-penn-95ad3511.json` records a disposable PennMUSH world
+built from commit `95ad3511d0410b9e132f140fabc4ca7afec433da` on Linux x86_64.
+Each case includes the actual configuration and observed output. Boolean and
+conditional results are covered by `BooleanCompatibilityTests`,
+`BooleanFunctionUnitTests`, and `ConditionalFunctionUnitTests`. Numeric rows
+tracked in [issue #940](https://github.com/SharpMUSH/SharpMUSH/issues/940) and marked as follow-up are reference evidence, not passing-parity claims.
+
+Start a disposable world on a loopback-only port with the built `info_slave`
+and `ssl_slave` helpers linked into its game directory. A fresh minimal database
+names player #1 `One`. Set the four configuration values in each fixture before
+issuing `think [<expression>]`; expressions already containing evaluation brackets
+can be supplied directly. Capture output before moving to the next case. Never
+run these configuration mutations against a real game.

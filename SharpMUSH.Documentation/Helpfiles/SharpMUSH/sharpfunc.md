@@ -271,7 +271,8 @@ You say, "is"
 | [strinsert()]    | [stripaccents()] | [stripansi()]    | [strlen()]       |
 | [strmatch()]     | [strreplace()]   | [switch()]       | [tr()]           |
 | [trim()]         | [ucstr()]        | [urldecode()]    | [urlencode()]    |
-| [wrap()]         |                  |                  |                  |
+| [wrap()]         | [displaywidth()] | [graphemecount()] | [graphemes()]     |
+| [printf()]       |                  |                  |                  |
 
 **See Also:**
 - [STRINGS]
@@ -6037,10 +6038,76 @@ My name
 - [ansi()]
 - [tag()]
 - [render()]
+
+# PRINTF()
+`printf(<format>[, <value>...])`
+
+  Builds compact reports from a format and its values. Directives have the form `%[flags][width][.precision]type`, where type is `s` (text), `d` (signed 64-bit integer), or `f` (decimal). Each directive consumes one value. `%%` emits a literal percent and consumes none. Missing or extra values return `#-1 PRINTF ARGUMENT COUNT MISMATCH`; unsupported, incomplete, or repeated flags return `#-1 INVALID PRINTF FORMAT`.
+
+  Normal MUSH percent substitutions happen first. Use `lit()` around the format to pass its percent signs unchanged, or double each percent sign at the MUSH layer. Thus `printf(lit(%s),name)` and `printf(%%s,name)` both return `name`; `printf(%%%%)` returns one percent sign.
+
+  Width is a minimum number of display columns, with spaces on the left by default. `-` moves padding to the right. Numeric fields also accept `+` for a positive sign and `0` for zeros after the sign; `-` takes precedence over `0`. String precision is a maximum number of display columns and keeps whole grapheme clusters. Integer precision is a minimum digit count. Decimal precision is fractional digits, defaults to six, and rounds ties to even.
+
+  Numeric values use a strict invariant grammar: an optional sign, ASCII digits, and (for decimals) a decimal point. Spaces, separators, exponent notation, and Tiny math coercions are not accepted. Values outside signed 64-bit integer or .NET decimal range return the usual number error. Literal and string-value markup survives. Generated numeric text inherits the first input character's markup; markup on a directive's percent sign wraps its field. Padding is plain unless covered by that directive markup. Controls and newlines in strings are retained and use the library's display-width policy.
+
+  The format may contain at most 65,536 UTF-16 code units, 1,024 directives including percent escapes, and 128 value fields. Width and string/integer precision are at most 65,536; decimal precision is at most 28. Exceeding these bounds returns `#-1 PRINTF FIELD LIMIT EXCEEDED` before large padding is allocated. Directives cannot cut through a grapheme cluster. The shared 5,242,880 UTF-16-unit result ceiling also applies; exceeding it stops evaluation with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
+
+  Examples:
+```sharp
+printf(lit(%-8s %4d),Ore,12)
+printf(lit(%+08.2f),12.345)
+printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
+```
+
+**See Also:**
+- [displaywidth()]
+- [align()]
+- [table()]
+- [wrap()]
+
+# DISPLAYWIDTH()
+`displaywidth(<string>)`
+
+  Returns the terminal columns occupied by the text, ignoring its markup. A wide CJK character occupies two columns. Combining marks add no columns; joined emoji are measured as whole clusters by MarkupString. Empty text returns 0. This uses the same existing measurement as [strlen()].
+
+  A display column differs from a Unicode scalar (one code point), a grapheme cluster (a base plus its combining marks, or a joined emoji sequence), and a UTF-16 code unit (the indexing unit used by the .NET string API). Use [graphemecount()] and [graphemes()] for cluster operations. These functions do not normalize or repair text.
+
+  Examples: `displaywidth(界)` returns `2`; `graphemecount(界)` returns `1`.
+
+**See Also:**
+- [strlen()]
+- [graphemecount()]
+- [graphemes()]
+
+# GRAPHEMECOUNT()
+`graphemecount(<string>)`
+
+  Returns the number of extended grapheme clusters in the text, ignoring markup. Combining accents, emoji modifiers, joined emoji, and paired flag indicators remain with their cluster. Empty text returns 0. Segmentation follows the released MarkupString library and the runtime Unicode rules, so the original composed or decomposed spelling is retained.
+
+  Examples: `graphemecount(é)` returns `1`; `graphemecount(👩‍👩‍👧‍👦)` returns `1`.
+
+**See Also:**
+- [displaywidth()]
+- [graphemes()]
+
+# GRAPHEMES()
+`graphemes(<string>[, <output-separator>])`
+
+  Inserts the output separator between whole grapheme clusters, retaining ANSI, HTML, and custom markup. The default separator is one space. Any separator text is accepted, including multiple characters and markup; an explicitly empty separator returns the original text with its markup. Empty input returns empty output. No separator is inserted before the first or after the last cluster, and existing spaces in the input remain clusters. There is no escaping or quoting of clusters containing the separator; choose a separator suitable for your data.
+
+  Examples: `graphemes(é界,|)` returns `é|界`; `graphemes(é界,)` returns `é界`.
+
+  All three Unicode functions take normally evaluated arguments and use the usual function invocation and recursion limits. The evaluator permits at most 5,242,880 UTF-16 code units per function result. GRAPHEMES checks the expanded length before constructing its output and returns `#-1 OUTPUT EXCEEDED MAXIMUM SIZE` if it would exceed that ceiling. Cluster length itself has no separate fixed limit. Text is not normalized; malformed UTF-16 is retained under the library's segmentation policy.
+
+**See Also:**
+- [displaywidth()]
+- [graphemecount()]
+- [flip()]
+
 # STRLEN()
 `strlen(<string>)`
 
-  Returns the length of the string (the number of characters in it).
+  Returns terminal display columns, ignoring markup. Wide CJK characters count as two columns and combining marks add no columns. This existing behavior is unchanged; [displaywidth()] names the unit explicitly. Use [graphemecount()] to count whole grapheme clusters.
 
   Example:
 ```sharp

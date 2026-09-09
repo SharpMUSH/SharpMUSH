@@ -4544,4 +4544,6 @@
     <value>Ahelp-emnene. Kun for Trollmenn og Gud, i portalen som i spillet.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Den uttrykkelige regelen med høyest prioritet avgjør; avslag vinner ved likhet. Arv brukes bare uten en uttrykkelig regel. Uten tillatelse avvises tilgang. Delegerte administratorer kan bare administrere tillatelser de har med lavere prioritet, uten å endre egne roller eller begrensninger.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Gjeldende tilgang: {0}; prioritet {1}; roller {2}; avgjørelse {3}.</value></data>
 </root>

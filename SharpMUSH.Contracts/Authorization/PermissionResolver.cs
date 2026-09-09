@@ -26,21 +26,41 @@ public sealed class PermissionResolver : IPermissionResolver
 
 		foreach (var scope in PortalPermission.AllScopes)
 		{
-			// The highest-priority roles that express an opinion on this scope decide.
-			var top = roles
-				.Where(r => r.Permissions.TryGetValue(scope, out var state) && state != PermissionState.Inherit)
-				.GroupBy(r => r.Priority)
-				.OrderByDescending(g => g.Key)
-				.FirstOrDefault();
-
-			if (top is null)
-				continue; // nobody opts in → default deny
-
-			// Deny wins ties: only granted when every opinion at the top priority is Allow.
-			if (top.All(r => r.Permissions[scope] == PermissionState.Allow))
+			if (Explain(roles, scope).Allowed)
 				granted.Add(scope);
 		}
 
 		return granted;
 	}
+	/// <summary>
+	/// Explicit child opinions resolve first by priority, with Deny winning ties. Only an
+	/// unopinionated child inherits a granted umbrella. Thus even a higher umbrella cannot
+	/// bypass a resolved child denial; an explicit higher child Allow can replace that denial.
+	/// </summary>
+	public PermissionExplanation Explain(IEnumerable<SharpRole> roles, string scope)
+	{
+		if (!PortalPermission.IsKnown(scope))
+			return new(false, null, [], "unknown-scope");
+		var materialized = roles.ToArray();
+		var top = materialized.Where(r => r.Permissions.Any(p =>
+			string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit))
+			.GroupBy(r => r.Priority).OrderByDescending(g => g.Key).FirstOrDefault();
+		if (top is not null)
+			return new(top.All(r => r.Permissions.Where(p =>
+				string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit)
+				.All(p => p.Value == PermissionState.Allow)),
+				top.Key, top.Select(r => r.Slug).Order().ToArray(), "explicit");
+		var parents = PortalPermission.AllScopes.Where(parent => PortalPermission.ImpliedScopes(parent)
+			.Contains(scope, StringComparer.OrdinalIgnoreCase));
+		foreach (var parent in parents)
+		{
+			var decision = Explain(materialized, parent);
+			if (decision.Allowed)
+				return decision with { Reason = $"implied:{parent}" };
+		}
+		return new(false, null, [], "default-deny");
+	}
+
 }
+
+public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason);

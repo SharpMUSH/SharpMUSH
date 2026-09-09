@@ -108,6 +108,7 @@
                         </div>
                     </div>
 
+                    <p>@Loc["RolResolutionExplanation"]</p>
                     @foreach (var group in PortalPermission.All.GroupBy(d => d.GroupKey))
                     {
                         <div class="ra-section">
@@ -122,6 +123,10 @@
                                             <div class="ra-perm-name">@Loc[d.LabelKey]</div>
                                             <div class="ra-perm-desc">@Loc[d.DescriptionKey]</div>
                                             <code class="ra-perm-scope">@d.Scope</code>
+                                            @if (_effective.TryGetValue(d.Scope, out var decision))
+                                            {
+                                                <div>@Loc["RolEffectiveExplanation", Loc[decision.Allowed ? "RolAllow" : "RolDeny"], decision.Priority?.ToString() ?? "—", string.Join(", ", decision.Roles), decision.Reason]</div>
+                                            }
                                         </div>
                                         <div class="ra-tristate">
                                             <button type="button"
@@ -277,12 +282,15 @@
             ? []
             : SortedRoles.Where(r => !_account.RoleSlugs.Contains(r.Slug)).ToList();
 
+    private IReadOnlyDictionary<string, PermissionExplanation> _effective = new Dictionary<string, PermissionExplanation>();
+
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
     private async Task LoadAsync()
     {
         _loading = true;
         _roles = (await Roles.ListAsync()).ToList();
+        _effective = await Roles.EffectiveAsync();
         _loading = false;
 
         if (_selected is not null)

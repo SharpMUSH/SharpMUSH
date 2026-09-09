@@ -169,7 +169,7 @@ public static partial class ArgHelpers
 
 	public static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(
 		ImmutableSortedDictionary<string, CallState> args,
-		Func<(decimal, decimal), bool> func)
+		Func<(decimal, decimal), bool> func, bool negate = false)
 	{
 		if (args.Count < 2)
 		{
@@ -189,7 +189,7 @@ public static partial class ArgHelpers
 
 		var result = doubles.Select(x => x.Double).Pairwise().All(func);
 
-		return new ValueTask<CallState>(result ? "1" : "0");
+		return new ValueTask<CallState>(result != negate ? "1" : "0");
 	}
 
 	public static async ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)

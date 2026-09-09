@@ -3226,7 +3226,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
-		var truthy = Predicates.Truthy(parsedIfElse!);
+		var truthy = parsedIfElse!.Truthy(parser);
 
 		if (truthy)
 		{
@@ -3643,13 +3643,13 @@ public partial class Commands
 				// No condition provided — treat as falsy (@break 0 = don't break).
 				break;
 			case 1:
-				if (args["0"].Message.Truthy())
+				if (args["0"].Message.Truthy(parser))
 				{
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
 				return args["0"];
-			case 2 when args["0"].Message.Truthy():
+			case 2 when args["0"].Message.Truthy(parser):
 				var command = await args["1"].ParsedMessage();
 
 				if (useQueue)
@@ -7233,7 +7233,7 @@ public partial class Commands
 				state => state with { Arguments = currentArgs },
 				innerParser => innerParser.FunctionParse(conditionText));
 
-			if (!(condResult?.Message.Truthy() ?? false))
+			if (!(condResult?.Message.Truthy(parser) ?? false))
 				break;
 
 			// Evaluate each retry arg in the current context to produce the new %0, %1, …
@@ -7279,13 +7279,13 @@ public partial class Commands
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				break;
 			case 1:
-				if (args["0"].Message.Falsy())
+				if (args["0"].Message.Falsy(parser))
 				{
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
 				return args["0"];
-			case 2 when args["0"].Message.Falsy():
+			case 2 when args["0"].Message.Falsy(parser):
 				var command = await args["1"].ParsedMessage();
 
 				if (useQueue)
@@ -7610,7 +7610,7 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
-		var falsey = Predicates.Falsy(parsedIfElse!);
+		var falsey = parsedIfElse!.Falsy(parser);
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{

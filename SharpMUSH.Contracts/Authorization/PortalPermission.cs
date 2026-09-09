@@ -16,6 +16,17 @@ public static class PortalPermission
 	/// <summary>JWT/claims type carrying one granted permission scope per value.</summary>
 	public const string ClaimType = "perm";
 
+	public const string SnapshotCapture = "snapshots.capture";
+	public const string SnapshotRestore = "snapshots.restore";
+	public const string JobsManageOwn = "jobs.manage.own";
+	public const string JobsManage = "jobs.manage";
+	public const string QueueInspectOwn = "queue.inspect.own";
+	public const string QueueInspect = "queue.inspect";
+	public const string QueueControlOwn = "queue.control.own";
+	public const string QueueControl = "queue.control";
+	public const string DiagnosticsProfile = "diagnostics.profile";
+	public const string RealityAdmin = "reality.admin";
+
 	public const string WikiRead = "wiki.read";
 	public const string WikiCreate = "wiki.create";
 	public const string WikiEdit = "wiki.edit";
@@ -54,6 +65,16 @@ public static class PortalPermission
 	/// <summary>Every scope, in editor display order, grouped like the nav.</summary>
 	public static readonly IReadOnlyList<Definition> All =
 	[
+		new(SnapshotCapture, "EnumPermSnapshotCapture", GroupManage, "EnumPermSnapshotCaptureDesc"),
+		new(SnapshotRestore, "EnumPermSnapshotRestore", GroupManage, "EnumPermSnapshotRestoreDesc"),
+		new(JobsManageOwn, "EnumPermJobsManageOwn", GroupManage, "EnumPermJobsManageOwnDesc"),
+		new(JobsManage, "EnumPermJobsManage", GroupManage, "EnumPermJobsManageDesc"),
+		new(QueueInspectOwn, "EnumPermQueueInspectOwn", GroupManage, "EnumPermQueueInspectOwnDesc"),
+		new(QueueInspect, "EnumPermQueueInspect", GroupManage, "EnumPermQueueInspectDesc"),
+		new(QueueControlOwn, "EnumPermQueueControlOwn", GroupManage, "EnumPermQueueControlOwnDesc"),
+		new(QueueControl, "EnumPermQueueControl", GroupManage, "EnumPermQueueControlDesc"),
+		new(DiagnosticsProfile, "EnumPermDiagnosticsProfile", GroupManage, "EnumPermDiagnosticsProfileDesc"),
+		new(RealityAdmin, "EnumPermRealityAdmin", GroupManage, "EnumPermRealityAdminDesc"),
 		new(WikiRead, "EnumPermWikiRead", GroupContent, "EnumPermWikiReadDesc"),
 		new(WikiCreate, "EnumPermWikiCreate", GroupContent, "EnumPermWikiCreateDesc"),
 		new(WikiEdit, "EnumPermWikiEdit", GroupContent, "EnumPermWikiEditDesc"),
@@ -80,10 +101,17 @@ public static class PortalPermission
 	private static readonly IReadOnlyDictionary<string, string[]> Implications =
 		new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
 		{
+			[JobsManage] = [JobsManageOwn],
+			[QueueInspect] = [QueueInspectOwn],
+			[QueueControl] = [QueueControlOwn],
 			[WikiAdmin] = [WikiRead, WikiCreate, WikiEdit, WikiDelete],
 			[MediaAdmin] = [MediaUpload],
 			[PlayersModerate] = [PlayersView],
 		};
+
+	/// <summary>Scopes directly implied by an umbrella grant.</summary>
+	public static IReadOnlyList<string> ImpliedScopes(string scope) =>
+		Implications.TryGetValue(scope, out var children) ? children : [];
 
 	/// <summary>Flat list of every scope string, in editor display order.</summary>
 	public static readonly IReadOnlyList<string> AllScopes = All.Select(d => d.Scope).ToList();
@@ -97,8 +125,8 @@ public static class PortalPermission
 
 	/// <summary>
 	/// Expands a granted scope set to include every scope implied by a coarser one (e.g.
-	/// <c>wiki.admin</c> ⇒ <c>wiki.read/create/edit/delete</c>). Used at token-issue time so the
-	/// finer gates authorize for holders of the umbrella scope.
+	/// <c>wiki.admin</c> ⇒ <c>wiki.read/create/edit/delete</c>). Only for catalog-only expansion without role restrictions. Authorization must use
+	/// PermissionResolver so an explicit child Deny cannot be restored by expansion.
 	/// </summary>
 	public static IReadOnlySet<string> Expand(IEnumerable<string> scopes)
 	{
