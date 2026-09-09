@@ -58,6 +58,48 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AdmissionPrivilegeStreamsReceiveTheConsumerExecutionToken(bool powers)
+	{
+		var target = new TestObjectFactory().CreateThing(10, "target");
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async IAsyncEnumerable<T> Block<T>([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			yield break;
+		}
+		if (powers) target.AsThing.Object.Powers = new(() => Block<SharpPower>());
+		else target.AsThing.Object.Flags = new(() => Block<SharpObjectFlag>());
+		var mediator = TargetMediator();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(target.AsThing));
+		await using var queue = Create(global: 10, mediator: mediator, milliseconds: 200);
+		var following = Signal();
+		var ran = false;
+		await queue.AdmitWork(async () =>
+		{
+			await queue.AdmitWork(() => { ran = true; return ValueTask.FromResult<CallState?>(null); }, "nested", "test", new DBRef(10, 1));
+			return null;
+		}, "outer", "test");
+		await queue.AdmitWork(() => { following.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		try
+		{
+			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await Assert.That(observed.CanBeCanceled).IsTrue();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await Assert.That(ran).IsFalse();
+		}
+		finally
+		{
+			cleanup.Cancel();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+	}
+
+	[Test]
 	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
 	{
 		var connections = Substitute.For<IConnectionService>();
