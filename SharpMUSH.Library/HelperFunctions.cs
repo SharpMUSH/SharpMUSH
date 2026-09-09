@@ -220,11 +220,9 @@ public static partial class HelperFunctions
 		=> obj.Object().HasPower(power, cancellationToken);
 
 	/// <summary>
-	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
-	/// property and handed it to every consumer, so one consumer's disposal could land on another's
-	/// live enumeration. <c>FreshAsyncEnumerable</c> gives each enumeration its own machine, and the
-	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
-	/// fail-open for anything phrased as a restriction. See issue #798.
+	/// Power-read failures propagate instead of being reported as "no power", which
+	/// could fail open when the caller is checking a restriction. Database streams use
+	/// <c>FreshAsyncEnumerable</c> to isolate each reader's enumeration state. See issue #798.
 	/// </summary>
 	public static ValueTask<bool> HasPower(this SharpObject obj, string power)
 		=> obj.HasPower(power, ExecutionBudget.CurrentToken);
