@@ -57,6 +57,7 @@ public partial class TaskScheduler(
 		Func<ValueTask<CallState?>> Action,
 		CancellationTokenSource Cts,
 		string Owner,
+		DBRef? Executor,
 		Func<ValueTask>? BeforeExecution = null
 	);
 
@@ -117,6 +118,7 @@ public partial class TaskScheduler(
 		{
 			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value));
 			if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
+			executor = target.Known().Object().DBRef;
 			owner = (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString();
 		}
 		QueueAdmissionResult result;
@@ -128,7 +130,7 @@ public partial class TaskScheduler(
 			else
 			{
 				var pid = NextPid();
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner);
+				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor);
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -427,16 +429,10 @@ public partial class TaskScheduler(
 
 	public async ValueTask Halt(DBRef dbRef)
 	{
-		var delayed = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{dbRef}"));
-		await _scheduler.UnscheduleJobs(delayed);
-		foreach (var key in delayed) CancelOrRelease(long.Parse(key.Name.Split('-').Last()));
-
-		var dbRefPrefix = $"dbref:{dbRef}-";
-		QueueEntry[] entries;
-		lock (_admissionLock) entries = _pendingEntries.Values
-			.Where(entry => entry.TriggerName.StartsWith(dbRefPrefix) && entry.Group == EnqueueGroup).ToArray();
-		foreach (var entry in entries) CancelEntry(entry);
+		long[] pids;
+		lock (_admissionLock) pids = _pendingEntries.Values
+			.Where(entry => entry.Executor?.Matches(dbRef) == true).Select(entry => entry.Pid).ToArray();
+		foreach (var pid in pids) await HaltByPid(pid);
 	}
 
 	public async ValueTask<bool> HaltByPid(long pid)
@@ -459,8 +455,13 @@ public partial class TaskScheduler(
 			if (_ready.Contains(pid)) return true;
 			removed = RemoveEntry(pid);
 		}
-		removed?.Cts.Dispose();
-		if (removed?.Group.StartsWith(SemaphoreGroup + ":") == true) await AdjustSemaphoreCount(removed.Group);
+		if (removed is null) return true;
+		removed.Cts.Dispose();
+		if (removed.Group.StartsWith(SemaphoreGroup + ":"))
+		{
+			try { await AdjustSemaphoreCount(removed.Group); }
+			catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed while halting PID {Pid}", pid); }
+		}
 		return true;
 	}
 
