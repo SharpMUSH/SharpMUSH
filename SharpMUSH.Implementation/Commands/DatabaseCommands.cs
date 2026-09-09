@@ -178,7 +178,7 @@ public partial class Commands
 					// Hold one counted completion slot before streaming any row callbacks. Publication
 					// happens at the FIFO tail only after those callbacks have been admitted.
 					using var completion = notifySwitch
-						? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), parser.CurrentState))
+						? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), parser.CurrentState), ExecutionBudget.CurrentToken)
 						: null;
 					if (completion is not null && !completion.Admission.Accepted)
 					{
@@ -260,7 +260,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
+								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
 							if (!headerAdmission.Accepted) break;
 							firstRow = false;
@@ -286,7 +286,7 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
+							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
 						if (!rowAdmission.Accepted) break;
 						admittedRows++;

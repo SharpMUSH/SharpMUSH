@@ -294,6 +294,61 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Arguments("reservation")]
+	[Arguments("header")]
+	[Arguments("row")]
+	public async Task MapSqlAdmissionPipelineReceivesExecutionCancellation(string boundary)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlPipelineCancellation");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPPIPELINE me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = boundary == "header" ? ["NOTIFY", "COLNAMES"] : ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPPIPELINE"), ["1"] = new CallState("SELECT 1 AS col1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		using var cancel = new CancellationTokenSource();
+		using var cleanup = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
+		using var scope = budget.Enter();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		async Task<T> Block<T>(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			throw new InvalidOperationException("Unreachable blocked pipeline continuation");
+		}
+		var admission = Substitute.For<IMediator>();
+		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+			boundary == "reservation" ? new ValueTask<QueueCommandReservation>(Block<QueueCommandReservation>(call.Arg<CancellationToken>()))
+				: Mediator.Send(call.Arg<ReserveCommandListRequest>(), call.Arg<CancellationToken>()));
+		admission.Send(Arg.Any<QueueAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+			new ValueTask<QueueAdmissionResult>(Block<QueueAdmissionResult>(call.Arg<CancellationToken>())));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		var operation = commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" }).AsTask();
+		try
+		{
+			await Assert.That(await entered.Task.WaitAsync(TimeSpan.FromSeconds(3))).IsEqualTo(budget.Token);
+			cancel.Cancel();
+			OperationCanceledException? cancellation = null;
+			try { await operation.WaitAsync(TimeSpan.FromSeconds(3)); }
+			catch (OperationCanceledException ex) { cancellation = ex; }
+			await Assert.That(cancellation).IsNotNull();
+			await Assert.That(cancellation!.CancellationToken).IsEqualTo(budget.Token);
+		}
+		finally
+		{
+			cleanup.Cancel();
+			try { await operation; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()
