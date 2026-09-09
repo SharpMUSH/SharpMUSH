@@ -376,7 +376,9 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
-	public async Task HaltingExecutorReleasesItsPendingSemaphoreReservation()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HaltingExecutorOrSemaphoreTargetReleasesPendingReservation(bool haltTarget)
 	{
 		var executor = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltExecutor");
 		var semaphore = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltTarget");
@@ -386,10 +388,11 @@ public class SemaphoreCommandTests
 		var before = Scheduler.GetQueueUsage().Total;
 		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
 		await Assert.That(admitted.Accepted).IsTrue();
-		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(executor))).AsThing.Object.DBRef;
-		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(executor.Number, incarnation.CreationMilliseconds + 1));
+		var haltedObject = haltTarget ? semaphore : executor;
+		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(haltedObject))).AsThing.Object.DBRef;
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number, incarnation.CreationMilliseconds + 1));
 		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before + 1);
-		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(executor.Number));
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number));
 		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before);
 		await Assert.That((await Scheduler.GetSemaphoreTasks(attribute).ToArrayAsync()).Length).IsEqualTo(0);
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(semaphore))).Known;

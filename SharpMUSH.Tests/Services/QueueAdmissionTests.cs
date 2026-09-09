@@ -27,8 +27,33 @@ public class QueueAdmissionTests
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
-		 factory, Substitute.For<IAttributeService>(), mediator ?? Substitute.For<IMediator>(),
+		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
 		 NullLogger<Scheduler>.Instance, options);
+	}
+	private static IMediator TargetMediator()
+	{
+		var mediator = Substitute.For<IMediator>();
+		ConfigureTargets(mediator);
+		return mediator;
+	}
+	private static void ConfigureTargets(IMediator mediator)
+	{
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var dbRef = call.Arg<GetObjectNodeQuery>().DBRef;
+			var player = new SharpPlayer
+			{
+				Object = new SharpObject
+				{
+					Key = dbRef.Number, CreationTime = 1, Name = "Semaphore", Type = "PLAYER", Locks = null!, Owner = null!,
+					Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = null!, Parent = null!, Zone = null!, Children = null!
+				},
+				Location = null!, Home = null!, PasswordHash = "", Quota = 0
+			};
+			player.Object.Owner = new(_ => Task.FromResult(player));
+			return ValueTask.FromResult<AnyOptionalSharpObject>(player);
+		});
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -59,7 +84,7 @@ public class QueueAdmissionTests
 	[Test]
 	public async Task SemaphoreAccountingFailureDoesNotDiscardAdmittedAction()
 	{
-		var mediator = Substitute.For<IMediator>();
+		var mediator = TargetMediator();
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => throw new InvalidOperationException("Transient bookkeeping failure"));
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -224,15 +249,18 @@ public class QueueAdmissionTests
 	[Test]
 	public async Task NestedStateCopiesShareDeadlineAndCancellation()
 	{
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(50));
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(TimeSpan.FromHours(1), cancellation.Token);
 		var parent = ParserState.Empty with { ExecutionBudget = budget };
 		var nested = parent with { Function = "nested" };
 		using var scope = budget.Enter();
 		await Assert.That(ReferenceEquals(parent.ExecutionBudget, nested.ExecutionBudget)).IsTrue();
+		cancellation.Cancel();
 		try { await Task.Delay(TimeSpan.FromSeconds(5), ExecutionBudget.CurrentToken); }
 		catch (OperationCanceledException) { }
 		await Assert.That(nested.ExecutionBudget!.IsExceeded).IsTrue();
-		await Assert.That(budget.Remaining).IsEqualTo(TimeSpan.Zero);
+		await Assert.That(ExecutionBudget.CurrentToken.IsCancellationRequested).IsTrue();
+		await Assert.That(budget.IsExpired).IsFalse();
 	}
 	[Test]
 	[Arguments(0)]

@@ -127,7 +127,7 @@ public interface ITaskScheduler
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 
 	/// <summary>
-	/// Removes all non-Semaphore jobs related to a DBRef from executing immediately.
+	/// Halts an executor's jobs and waits targeting this semaphore object.
 	/// </summary>
 	/// <param name="dbRef">DbRef</param>
 	ValueTask Halt(DBRef dbRef);
