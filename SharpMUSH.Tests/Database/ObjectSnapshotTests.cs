@@ -162,6 +162,7 @@ public class ObjectSnapshotTests
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "lock before");
 		await Get<IMediator>().Send(new UnsetLockCommand(obj, "Basic"));
+		await Get<IMediator>().Send(new SetLockCommand(obj, "Unrelated", "#TRUE", player));
 		var failing = Substitute.For<IManipulateSharpObjectService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
 			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
@@ -172,10 +173,12 @@ public class ObjectSnapshotTests
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
 		await Assert.That(result.Completed).IsFalse();
 		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsTrue();
+		await Get<IMediator>().Send(new SetLockCommand(obj, "Unrelated", "#FALSE", player));
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await real.PreviewAsync(actor, target, result.RecoverySnapshotId, new([])));
 		var recovery = await real.PreviewAsync(actor, target, result.RecoverySnapshotId, selection);
 		await Assert.That((await real.RestoreAsync(actor, target, result.RecoverySnapshotId, selection, recovery.Token)).Completed).IsTrue();
 		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
+		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks["Unrelated"].LockString).IsEqualTo("#FALSE");
 	}
 
 	[Test, NotInParallel]
@@ -211,12 +214,114 @@ public class ObjectSnapshotTests
 	}
 
 	[Test, NotInParallel]
-	public async Task GameCommandCapturesThroughTheSharedService()
+	public async Task GameCommandCapturesAndResolvesThroughTheSharedService()
 	{
 		var (actor, target, _) = await Setup();
 		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@snapshot/capture {target}=game capture"));
 		var history = await Get<IObjectSnapshotService>().ListAsync(actor, target);
 		await Assert.That(history.Snapshots.Length).IsEqualTo(1);
 		await Assert.That(history.Snapshots[0].Description).IsEqualTo("game capture");
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		await Get<IExpandedDataStore>().SetExpandedObjectData(node.Id!, ObjectSnapshotService.StorageKey, new SnapshotStorageRecord(history with { PendingRecoveryId = history.Snapshots[0].Id }));
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@snapshot/resolve {target}={history.Snapshots[0].Id}"));
+		var resolved = await Get<IObjectSnapshotService>().ListAsync(actor, target);
+		await Assert.That(resolved.PendingRecoveryId).IsNull();
+		await Assert.That(resolved.LastResolution!.AccountId).IsEqualTo(actor.AccountId);
+	}
+
+	[Test, NotInParallel]
+	public async Task RevocationAfterValueWriteStopsAttributeFlagMutation()
+	{
+		var (actor, target, player) = await Setup();
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["GUARDED"], MarkupText.Plain("saved"), player));
+		var realAttributes = Get<IAttributeService>();
+		await realAttributes.SetAttributeFlagsAsync(player, node, "GUARDED", ["VISUAL"]);
+		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "before");
+		await realAttributes.SetAttributeFlagsAsync(player, node, "GUARDED", ["!VISUAL"]);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["GUARDED"], MarkupText.Plain("current"), player));
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+		var attributes = Substitute.For<IAttributeService>();
+		async ValueTask<OneOf<Success, Error<string>>> RevokeAfterWrite(NSubstitute.Core.CallInfo call)
+		{
+			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
+			capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+			return result;
+		}
+		attributes.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>()).Returns(RevokeAfterWrite);
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			capabilities, Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection(["GUARDED"]);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
+		await Assert.That(result.Completed).IsFalse();
+		var changed = await Get<IAttributeStore>().GetAttributeAsync(target, ["GUARDED"]).LastAsync();
+		await Assert.That(changed.Value.ToPlainText()).IsEqualTo("saved");
+		await Assert.That(changed.Flags.Any(f => f.Name.Equals("visual", StringComparison.OrdinalIgnoreCase))).IsFalse();
+		await Assert.That((await Get<IObjectSnapshotService>().ListAsync(actor, target)).PendingRecoveryId).IsEqualTo(result.RecoverySnapshotId);
+		var recoveryImage = (await Get<IObjectSnapshotService>().ListAsync(actor, target)).Snapshots.Single(s => s.Id == result.RecoverySnapshotId);
+		await Assert.That(recoveryImage.DefaultAttributes()).IsEquivalentTo(new[] { "GUARDED" });
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("unrelated later edit"), player));
+		var recoverySelection = new SnapshotSelection(recoveryImage.DefaultAttributes());
+		var recoveryPreview = await Get<IObjectSnapshotService>().PreviewAsync(actor, target, recoveryImage.Id, recoverySelection);
+		await Assert.That((await Get<IObjectSnapshotService>().RestoreAsync(actor, target, recoveryImage.Id, recoverySelection, recoveryPreview.Token)).Completed).IsTrue();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("unrelated later edit");
+	}
+
+	[Test, NotInParallel]
+	public async Task LockProtectionAddedDuringRestoreStopsTheLockMutation()
+	{
+		var (actor, target, player) = await Setup();
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#TRUE", player));
+		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "before");
+		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player));
+		var realAttributes = Get<IAttributeService>();
+		var attributes = Substitute.For<IAttributeService>();
+		async ValueTask<OneOf<Success, Error<string>>> ProtectAfterWrite(NSubstitute.Core.CallInfo call)
+		{
+			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
+			await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player) { Flags = Library.Services.LockService.LockFlags.Locked });
+			return result;
+		}
+		attributes.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>()).Returns(ProtectAfterWrite);
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection(["DESC"], Locks: true);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		await Assert.That((await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token)).Completed).IsFalse();
+		var current = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks["Basic"];
+		await Assert.That(current.LockString).IsEqualTo("#FALSE");
+		await Assert.That(current.Flags).IsEqualTo(Library.Services.LockService.LockFlags.Locked);
+	}
+
+	[Test, NotInParallel]
+	public async Task AuthorizedControllerCanResolveAnOrphanedRecoveryMarker()
+	{
+		var (originalActor, target, _) = await Setup();
+		var original = await Get<IObjectSnapshotService>().CaptureAsync(originalActor, target, "old account recovery");
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		await Get<IExpandedDataStore>().SetExpandedObjectData(node.Id!, ObjectSnapshotService.StorageKey, new SnapshotStorageRecord(new([original], original.Id)));
+		var actor = originalActor with { AccountId = "new-controller" };
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(0);
+		var own = await service.CaptureAsync(actor, target, "new account");
+		var selection = new SnapshotSelection(["DESC"]);
+		var preview = await service.PreviewAsync(actor, target, own.Id, selection);
+		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.RestoreAsync(actor, target, own.Id, selection, preview.Token));
+		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.ResolveRecoveryAsync(actor, target, "stale-marker"));
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.ResolveRecoveryAsync(actor, target, original.Id));
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+		await service.ResolveRecoveryAsync(actor, target, original.Id);
+		var stored = (await Get<IExpandedDataStore>().GetExpandedObjectData<SnapshotStorageRecord>(node.Id!, ObjectSnapshotService.StorageKey))!.History;
+		await Assert.That(stored.PendingRecoveryId).IsNull();
+		await Assert.That(stored.Snapshots.Any(s => s.Id == original.Id)).IsTrue();
+		await Assert.That(stored.LastResolution!.AccountId).IsEqualTo(actor.AccountId);
+		await Assert.That((await service.RestoreAsync(actor, target, own.Id, selection, preview.Token)).Completed).IsTrue();
 	}
 }

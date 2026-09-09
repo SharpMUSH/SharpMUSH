@@ -15,7 +15,7 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@SNAPSHOT", Switches = ["CAPTURE", "LIST", "PREVIEW", "RESTORE", "LOCKS", "FLAGS", "NAME"],
+	[SharpCommand(Name = "@SNAPSHOT", Switches = ["CAPTURE", "LIST", "PREVIEW", "RESTORE", "RESOLVE", "LOCKS", "FLAGS", "NAME"],
 		Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged, MinArgs = 1, MaxArgs = 2,
 		ParameterNames = ["object", "description or snapshot-id,preview-token"])]
 	public async ValueTask<Option<CallState>> Snapshot(IMUSHCodeParser parser, SharpCommandAttribute command)
@@ -34,9 +34,14 @@ public partial class Commands
 				{
 					var switches = parser.CurrentState.Switches;
 					var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var argument) ? argument.Message?.ToPlainText() ?? "" : "";
-					var operations = switches.Where(s => s is "CAPTURE" or "LIST" or "PREVIEW" or "RESTORE").ToArray();
-					if (operations.Length != 1) throw new SnapshotOperationException("invalid", "Choose one of /capture, /list, /preview or /restore.");
+					var operations = switches.Where(s => s is "CAPTURE" or "LIST" or "PREVIEW" or "RESTORE" or "RESOLVE").ToArray();
+					if (operations.Length != 1) throw new SnapshotOperationException("invalid", "Choose one of /capture, /list, /preview, /restore or /resolve.");
 					if (operations[0] == "CAPTURE") output = "Captured snapshot " + (await snapshots.CaptureAsync(actor, obj.Object().DBRef, rhs)).Id;
+					else if (operations[0] == "RESOLVE")
+					{
+						await snapshots.ResolveRecoveryAsync(actor, obj.Object().DBRef, rhs);
+						output = "Recovery marker acknowledged; current object kept.";
+					}
 					else
 					{
 						var history = await snapshots.ListAsync(actor, obj.Object().DBRef);
@@ -46,7 +51,7 @@ public partial class Commands
 						{
 							var parts = rhs.Split(',', 2);
 							var saved = history.Snapshots.SingleOrDefault(s => s.Id == parts[0]) ?? throw new SnapshotOperationException("missing", "Snapshot not found.");
-							var selection = new SnapshotSelection(saved.Attributes.Select(a => a.Name).Concat(saved.AbsentAttributes).ToArray(), switches.Contains("LOCKS"), switches.Contains("FLAGS"), switches.Contains("NAME"));
+							var selection = new SnapshotSelection(saved.DefaultAttributes(), switches.Contains("LOCKS"), switches.Contains("FLAGS"), switches.Contains("NAME"));
 							if (operations[0] == "PREVIEW")
 							{
 								var preview = await snapshots.PreviewAsync(actor, obj.Object().DBRef, saved.Id, selection);

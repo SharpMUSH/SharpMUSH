@@ -91,7 +91,8 @@ public sealed partial class ObjectSnapshotService(
 				AbsentAttributes = selection.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1))))
 					.Except(before.Attributes.Select(a => a.Name)).ToArray(),
 				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Except(before.Locks.Keys).ToArray() : [],
-				RecoverySelection = selection
+				RecoverySelection = selection,
+				Locks = before.Locks.Where(p => selection.Locks && (snapshot.Locks.ContainsKey(p.Key) || snapshot.AbsentLocks.Contains(p.Key))).ToDictionary(p => p.Key, p => p.Value)
 			};
 			before = before with { Digest = Hash(JsonSerializer.Serialize(before with { Digest = "" }, Json)) };
 			history = Append(history, before) with { PendingRecoveryId = before.Id, LastRestoreError = null };
@@ -112,6 +113,27 @@ public sealed partial class ObjectSnapshotService(
 				catch { /* The previously committed pending marker remains authoritative. */ }
 				return new(false, before.Id, "Restore stopped; preview and restore the retained recovery snapshot. " + reason);
 			}
+		}
+		finally { _writes.Release(); }
+	}
+
+	public async Task ResolveRecoveryAsync(CapabilityActor actor, DBRef target, string recoverySnapshotId, CancellationToken ct = default)
+	{
+		await _writes.WaitAsync(ct);
+		try
+		{
+			var (_, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
+			var history = await Read(obj, ct);
+			if (history.PendingRecoveryId is null || history.PendingRecoveryId != recoverySnapshotId)
+				throw Error("stale-preview", "The pending recovery changed. Reload before acknowledging it.");
+			// Explicitly accept the current object; retain its before-image without exposing it
+			// to a new account. This permits recovery after an account or ownership transition.
+			await Save(obj, history with
+			{
+				PendingRecoveryId = null,
+				LastRestoreError = null,
+				LastResolution = new(recoverySnapshotId, actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+			}, ct);
 		}
 		finally { _writes.Release(); }
 	}
@@ -198,8 +220,7 @@ public sealed partial class ObjectSnapshotService(
 				if (await mediator.Send(new GetObjectFlagQuery(flag), ct) is null) throw Error("missing", "An object flag no longer exists: " + flag);
 		if (selection.Locks)
 			foreach (var name in snapshot.AbsentLocks)
-				if ((obj.Object().Locks.GetValueOrDefault(name, new()).Flags & (LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner)) != 0)
-					throw Error("denied", "A recovery lock is protected: " + name);
+				ValidateLockWrite(obj, name);
 		if (selection.Locks)
 			foreach (var (name, value) in snapshot.Locks)
 			{
@@ -212,10 +233,15 @@ public sealed partial class ObjectSnapshotService(
 				}
 				if (!locks.Validate(value.Expression, obj)) throw Error("invalid", "Invalid lock expression: " + name);
 				// Do not use snapshots to remove a lock's privileged write protection.
-				var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
-				if ((((LockService.LockFlags)value.Flags | obj.Object().Locks.GetValueOrDefault(name, new()).Flags) & protectedFlags) != 0)
-					throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
+				ValidateLockWrite(obj, name, (LockService.LockFlags)value.Flags);
 			}
+	}
+
+	private static void ValidateLockWrite(AnySharpObject obj, string name, LockService.LockFlags savedFlags = 0)
+	{
+		var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
+		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(name, new()).Flags) & protectedFlags) != 0)
+			throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
 	}
 
 	private async Task<bool> CanRead(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot saved, CancellationToken ct)
@@ -251,54 +277,63 @@ public sealed partial class ObjectSnapshotService(
 
 	private async Task Apply(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, CancellationToken ct)
 	{
+		// Selection builds operations; every operation passes the same unconditional fresh gate.
+		// Value and flag writes are separate so revocation between them is also observed.
+		var mutations = new List<Func<Task>>();
 		foreach (var name in selection.Attributes.OrderByDescending(name => name.Count(c => c == '`')))
 		{
-			await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
 			if (snapshot.AbsentAttributes.Contains(name))
 			{
-				var cleared = await attributeService.ClearAttributeAsync(executor, obj, name, IAttributeService.AttributePatternMode.Exact);
-				if (cleared.IsT1) throw Error("write-failed", cleared.AsT1.Value);
+				mutations.Add(async () =>
+				{
+					var cleared = await attributeService.ClearAttributeAsync(executor, obj, name, IAttributeService.AttributePatternMode.Exact);
+					if (cleared.IsT1) throw Error("write-failed", cleared.AsT1.Value);
+				});
 				continue;
 			}
 			var saved = snapshot.Attributes.Single(a => a.Name == name);
-			var result = await attributeService.SetAttributeAsync(executor, obj, name, MarkupTextSerializer.Deserialize(saved.Markup));
-			if (result.IsT1) throw Error("write-failed", result.AsT1.Value);
-			var current = await attributes.GetAttributeAsync(obj.Object().DBRef, name.Split('`'), ct).LastAsync(ct);
-			var flags = current.Flags.Select(f => f.Name).ToHashSet(StringComparer.Ordinal);
-			var changes = flags.Except(saved.Flags).Select(f => "!" + f).Concat(saved.Flags.Except(flags)).ToArray();
-			if (changes.Length > 0)
+			mutations.Add(async () =>
 			{
+				var result = await attributeService.SetAttributeAsync(executor, obj, name, MarkupTextSerializer.Deserialize(saved.Markup));
+				if (result.IsT1) throw Error("write-failed", result.AsT1.Value);
+			});
+			mutations.Add(async () =>
+			{
+				var current = await attributes.GetAttributeAsync(obj.Object().DBRef, name.Split('`'), ct).LastAsync(ct);
+				var flags = current.Flags.Select(f => f.Name).ToHashSet(StringComparer.Ordinal);
+				var changes = flags.Except(saved.Flags).Select(f => "!" + f).Concat(saved.Flags.Except(flags)).ToArray();
+				if (changes.Length == 0) return;
 				var changed = await attributeService.SetAttributeFlagsAsync(executor, obj, name, changes);
 				if (changed.IsT1) throw Error("write-failed", changed.AsT1.Value);
-			}
+			});
 		}
 		if (selection.Locks)
+		{
 			foreach (var name in snapshot.AbsentLocks)
-			{
-				await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
-				await mediator.Send(new UnsetLockCommand(obj.Object(), name), ct);
-			}
-		if (selection.Locks)
+				mutations.Add(async () => { ValidateLockWrite(obj, name); await mediator.Send(new UnsetLockCommand(obj.Object(), name), ct); });
 			foreach (var (name, saved) in snapshot.Locks)
-			{
-				await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
-				await mediator.Send(new SetLockCommand(obj.Object(), name, saved.Expression, executor) { Flags = (LockService.LockFlags)saved.Flags }, ct);
-			}
+				mutations.Add(async () => { ValidateLockWrite(obj, name, (LockService.LockFlags)saved.Flags); await mediator.Send(new SetLockCommand(obj.Object(), name, saved.Expression, executor) { Flags = (LockService.LockFlags)saved.Flags }, ct); });
+		}
 		if (selection.Flags)
 		{
 			var current = (await obj.Object().Flags.Value.ToListAsync(ct)).Where(f => f.Name != obj.Object().Type).Select(f => f.Name).ToHashSet(StringComparer.Ordinal);
 			foreach (var change in current.Except(snapshot.Flags).Select(f => "!" + f).Concat(snapshot.Flags.Except(current)))
-			{
-				await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
-				if ((await manipulation.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
-					throw Error("write-failed", "Flag change was rejected: " + change);
-			}
+				mutations.Add(async () =>
+				{
+					if ((await manipulation.SetOrUnsetFlag(executor, obj, change, false)).Message?.ToPlainText() != "1")
+						throw Error("write-failed", "Flag change was rejected: " + change);
+				});
 		}
 		if (selection.Name)
+			mutations.Add(async () =>
+			{
+				var result = await manipulation.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
+				if (result.Message?.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
+			});
+		foreach (var mutation in mutations)
 		{
-			await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
-			var result = await manipulation.SetName(executor, obj, MarkupText.Plain(snapshot.Name), false);
-			if (result.Message?.ToPlainText().StartsWith("#-", StringComparison.Ordinal) == true) throw Error("write-failed", "Name change rejected.");
+			(executor, obj) = await Authorize(actor, obj.Object().DBRef, PortalPermission.SnapshotRestore, ct);
+			await mutation();
 		}
 	}
 

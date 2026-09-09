@@ -14,6 +14,7 @@ public sealed class ObjectSnapshotsController(IObjectSnapshotService snapshots) 
 {
 	public sealed record CaptureRequest(string ObjectId, string Description, int Retain = 10);
 	public sealed record PreviewRequest(string ObjectId, string SnapshotId, SnapshotSelection Selection);
+	public sealed record ResolveRequest(string ObjectId, string RecoverySnapshotId);
 	public sealed record RestoreRequest(string ObjectId, string SnapshotId, SnapshotSelection Selection, string PreviewToken);
 
 	[HttpGet]
@@ -28,6 +29,10 @@ public sealed class ObjectSnapshotsController(IObjectSnapshotService snapshots) 
 	[HttpPost("restore")]
 	public Task<IActionResult> Restore(RestoreRequest request, CancellationToken ct)
 		=> Run(async () => await snapshots.RestoreAsync(Actor(), Target(request.ObjectId), request.SnapshotId, request.Selection, request.PreviewToken, ct));
+
+	[HttpPost("resolve")]
+	public Task<IActionResult> Resolve(ResolveRequest request, CancellationToken ct)
+		=> Run(async () => { await snapshots.ResolveRecoveryAsync(Actor(), Target(request.ObjectId), request.RecoverySnapshotId, ct); return true; });
 
 	private CapabilityActor Actor()
 	{

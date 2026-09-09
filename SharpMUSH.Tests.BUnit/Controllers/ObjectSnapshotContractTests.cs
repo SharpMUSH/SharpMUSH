@@ -35,6 +35,15 @@ public class ObjectSnapshotContractTests
 		await service.DidNotReceive().CaptureAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
 	}
 
+	[Test]
+	public async Task ResolveForwardsAuthenticatedActorAndExactPendingIdentity()
+	{
+		var service = Substitute.For<IObjectSnapshotService>();
+		var result = await Controller(service, true).Resolve(new("#10:123", "pending"), default);
+		await Assert.That(result).IsTypeOf<OkObjectResult>();
+		await service.Received(1).ResolveRecoveryAsync(new("account", new DBRef(7, 1), new DBRef(7, 1)), new(10, 123), "pending", default);
+	}
+
 	private static ObjectSnapshotsController Controller(IObjectSnapshotService service, bool active)
 	{
 		var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "account") };

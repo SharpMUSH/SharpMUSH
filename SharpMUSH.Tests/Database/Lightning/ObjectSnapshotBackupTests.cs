@@ -14,9 +14,9 @@ public class ObjectSnapshotBackupTests
 	[Test]
 	public async Task SnapshotHistoryAndPendingRecoverySurviveWorldCopy()
 	{
-		var root = Path.Combine(Path.GetTempPath(), "snapshot-backup-" + Guid.NewGuid().ToString("N"));
-		var sourcePath = Path.Combine(root, "source");
-		var copyPath = Path.Combine(root, "copy");
+		var root = Path.Join(Path.GetTempPath(), "snapshot-backup-" + Guid.NewGuid().ToString("N"));
+		var sourcePath = Path.Join(root, "source");
+		var copyPath = Path.Join(root, "copy");
 		try
 		{
 			await using var source = new LightningDatabase(NullLogger<LightningDatabase>.Instance,

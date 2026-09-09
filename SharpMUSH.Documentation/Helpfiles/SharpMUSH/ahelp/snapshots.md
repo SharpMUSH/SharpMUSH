@@ -11,6 +11,7 @@ read their attributes and locks. Ownership changes and role revocation apply imm
     @snapshot/list object
     @snapshot/preview object=snapshot-id
     @snapshot/restore object=snapshot-id,preview-token
+    @snapshot/resolve object=pending-recovery-id
 
 Add /locks, /flags or /name to preview and restore to include those fields. Use identical
 switches for preview and restore. The basic operation restores the captured attributes
@@ -37,10 +38,17 @@ transaction. Before the first change, a durable before-image and pending recover
 are stored. If a mutation, cancellation or process failure interrupts restoration, the
 marker identifies the recovery image. Preview and restore that image before another
 restore. Recovery includes every field selected by the interrupted operation and explicitly
-removes attributes or locks that operation created. The portal selects the required switches
+removes attributes or locks that operation created. Default recovery selections include only
+the interrupted operation’s attributes and locks, preserving unrelated later edits. The portal selects the required switches
 when choosing a recovery image; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
 commands first. Storage failure while clearing the marker is also reported as requiring
-recovery. Writes through this service are serialized within the single engine; other
+recovery. If the original account can no longer recover (for example after ownership or
+account changes), a current controller with snapshots.restore can explicitly acknowledge
+the current object using /resolve and the exact pending recovery ID, or the portal’s
+Acknowledge current state action. This clears the marker without undoing partial changes,
+retains the image, and records the resolving account, character and time.
+
+Writes through this service are serialized within the single engine; other
 commands can still change an object, so avoid concurrent editing during restore.
 
 A malformed image, unsupported schema, changed object type, recycled object number,

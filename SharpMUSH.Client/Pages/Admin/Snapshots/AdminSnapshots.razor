@@ -18,6 +18,10 @@
     @if (_history?.PendingRecoveryId is { } recovery)
     {
         <MudAlert Severity="Severity.Warning">@Loc["SnapshotsRecovery", recovery]</MudAlert>
+        <AuthorizeView Policy="snapshots.restore"><Authorized>
+            <MudText>@Loc["SnapshotsResolveHelp"]</MudText>
+            <MudButton Color="Color.Warning" OnClick="ResolveRecovery" Disabled="_busy">@Loc["SnapshotsResolve"]</MudButton>
+        </Authorized></AuthorizeView>
     }
     <AuthorizeView Policy="snapshots.capture"><Authorized>
     <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
@@ -76,7 +80,7 @@
     {
         _selected = id;
         var saved = _history!.Snapshots.Single(s => s.Id == id);
-        _attributes = string.Join('\n', saved.Attributes.Select(a => a.Name).Concat(saved.AbsentAttributes));
+        _attributes = string.Join('\n', saved.DefaultAttributes());
         if (saved.RecoverySelection is { } recovery) { _locks = recovery.Locks; _flags = recovery.Flags; _name = recovery.Name; }
         ClearPreview();
     }
@@ -106,8 +110,15 @@
             _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target));
         }
     });
+    private async Task ResolveRecovery() => await Run(async () =>
+    {
+        var resolved = await Read<bool>(await Api.PostAsJsonAsync("api/object-snapshots/resolve", new { ObjectId = _target, RecoverySnapshotId = _history!.PendingRecoveryId }));
+        if (resolved) { _notice = Loc["SnapshotsResolved"]; ClearPreview(); _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target)); }
+    });
+
     private async Task<T?> Read<T>(HttpResponseMessage response)
     {
+        using var responseLifetime = response;
         if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<T>();
         var body = await response.Content.ReadAsStringAsync();
         try { using var document = JsonDocument.Parse(body); _error = document.RootElement.TryGetProperty("error", out var error) ? error.GetString() : Loc["SnapshotsFailed"]; }
