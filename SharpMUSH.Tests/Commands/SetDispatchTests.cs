@@ -192,4 +192,84 @@ public class SetDispatchTests
 		await Assert.That(await HasFlag(forcer.DbRef, "DARK")).IsFalse()
 			.Because("the enactor is not do_set's player and must not be the one flagged");
 	}
+
+	/// <summary>
+	/// <c>AreQuiet(player, thing)</c> (<c>hdrs/dbdefs.h:198</c>) suppresses every confirmation
+	/// <c>do_set</c> emits: <c>set_flag</c> tests it at <c>src/flags.c:1855,1914</c> and
+	/// <c>do_set_atr</c> at <c>src/attrib.c:2446</c>. Making the function report, as Penn does, has to
+	/// bring the gate with it or a QUIET player is suddenly talked at.
+	/// </summary>
+	[Test]
+	public async ValueTask QuietExecutor_HearsNoSetConfirmation()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetQuietExec");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=QUIET"));
+
+		var said = await MessagesWhile(player.DbRef, async () =>
+			await Parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain($"think set(me, DESC{Guid.NewGuid():N}:hello)")));
+
+		await Assert.That(said.Any(m => m.Contains(" - Set.", StringComparison.Ordinal))).IsFalse()
+			.Because("a QUIET player is not told about their own writes");
+	}
+
+	/// <summary>
+	/// The one exception in <c>set_flag</c>: <c>is_flag(f, "QUIET") || !AreQuiet(...)</c> — touching
+	/// the QUIET flag itself always reports, so you can see what you just silenced.
+	/// </summary>
+	[Test]
+	public async ValueTask TogglingQuietItself_StillReports()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetQuietToggle");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player.DbRef}=QUIET"));
+
+		var said = await MessagesWhile(player.DbRef, async () =>
+			await Parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain("think set(me, !QUIET)")));
+
+		await Assert.That(said.Any(m => m.Contains("QUIET", StringComparison.OrdinalIgnoreCase))).IsTrue()
+			.Because("set_flag reports a QUIET toggle even when AreQuiet would otherwise silence it");
+	}
+
+	/// <summary>
+	/// <c>fun_set</c> (<c>src/fundb.c</c>) calls <c>do_set</c> and writes nothing to <c>buff</c>
+	/// whatever it returns — "This function returns nothing" (<c>help set()</c>). <c>do_set</c> has
+	/// already notified the failure, so returning the <c>#-1</c> as well reports it twice: once as a
+	/// message and once as the enclosing <c>think</c>'s output.
+	/// </summary>
+	[Test]
+	public async ValueTask SetFunction_ReturnsNothingWhenTheFlagDoesNotExist()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetNoSuchFlag");
+
+		var said = await MessagesWhile(player.DbRef, async () =>
+			await Parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain("think set(me, NOT_A_REAL_FLAG)")));
+
+		await Assert.That(said.Any(m => m.StartsWith("#-1", StringComparison.Ordinal))).IsFalse()
+			.Because("set() returns nothing, so think has nothing to print");
+		await Assert.That(said.Any(m => m.Contains("recognize", StringComparison.OrdinalIgnoreCase))).IsTrue()
+			.Because("the failure is still reported, as do_set reports it — just not twice");
+	}
+
+	/// <summary>
+	/// The command keeps its error return: Penn's <c>cmd_set</c> has no return value to discard, and
+	/// <c>AttributeTreePatternVisibilityTests</c> asserts on <c>@set</c>'s result to distinguish a
+	/// blocked write from a blocked read.
+	/// </summary>
+	[Test]
+	public async ValueTask SetCommand_StillReturnsItsFailure()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SetCmdFailure");
+
+		var attempt = await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@set me=NOT_A_REAL_FLAG"));
+
+		await Assert.That(attempt.Message?.ToPlainText() ?? string.Empty).StartsWith("#-1")
+			.Because("only the function discards the failure; the command's result is load-bearing");
+	}
 }

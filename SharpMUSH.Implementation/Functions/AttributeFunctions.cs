@@ -1302,10 +1302,19 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+		var result = await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
 			NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message!,
 			parser.CurrentState.Arguments["1"].Message!);
+
+		// fun_set (src/fundb.c) hands do_set the call and writes NOTHING to buff afterwards, whatever
+		// do_set made of it — "This function returns nothing" (help set()). do_set has already told the
+		// executor about any failure, so returning the #-1 here would report it a second time, as the
+		// enclosing think/@pemit's own output. The command keeps the return; Penn's cmd_set has none
+		// to keep, and SharpMUSH's @SET result is asserted on by AttributeTreePatternVisibilityTests.
+		return result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true
+			? CallState.Empty
+			: result;
 	}
 
 	[SharpFunction(Name = "subj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

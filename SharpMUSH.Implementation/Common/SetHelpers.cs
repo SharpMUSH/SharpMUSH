@@ -60,6 +60,11 @@ public static class SetHelpers
 
 		var target = locate.AsSharpObject;
 
+		// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
+		// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
+		// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
+		var areQuiet = await target.Object().AreQuietAsync(executor);
+
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
 			return await SetAttributeFlags(target, maybeAttribute);
@@ -101,8 +106,17 @@ public static class SetHelpers
 
 			if (result.IsT0)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					found.Object().Name, attribute.ToPlainText());
+				// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
+				// written attribute's own AF_Quiet suppresses the line as well.
+				var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
+					IAttributeService.AttributeMode.Read, false);
+				var attributeIsQuiet = written.IsAttribute && written.AsAttribute.Last().IsQuiet();
+
+				if (!areQuiet && !attributeIsQuiet)
+				{
+					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
+						found.Object().Name, attribute.ToPlainText());
+				}
 			}
 			else
 			{
@@ -121,7 +135,12 @@ public static class SetHelpers
 
 			foreach (var flag in MushText.SplitList(MarkupText.Space, flagOrAttributeValue))
 			{
-				var result = await manipulateSharpObjectService.SetOrUnsetFlag(executor, found, flag.ToPlainText(), true);
+				// set_flag reports when `is_flag(f, "QUIET") || !AreQuiet(player, thing)` — touching the
+				// QUIET flag itself always reports, so you can see what you just made quiet.
+				var flagName = flag.ToPlainText();
+				var togglesQuiet = flagName.TrimStart('!').Equals("QUIET", StringComparison.OrdinalIgnoreCase);
+				var result = await manipulateSharpObjectService.SetOrUnsetFlag(executor, found, flagName,
+					togglesQuiet || !areQuiet);
 
 				if (failure is null && result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)
 				{
