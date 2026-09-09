@@ -378,7 +378,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	{
 		if (reality is not null)
 		{
-			var hear = type == IPermissionService.InteractType.Hear;
+			var hear = (type & (IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)) != 0;
 			if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? from : to).Object().DBRef)) return false;
 		}
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
@@ -428,12 +428,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			_ => PassesLock(who, thing.Known, LockType.Basic)
 		};
 
-	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	public async ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
-		var _ = who;
-		var _2 = exit;
-		var _3 = destination;
-		return ValueTask.FromResult(true);
+		if (reality is not null && (!await reality.CanPerceiveAsync(who.Object().DBRef, exit.Object.DBRef)
+			|| !await reality.CanPerceiveAsync(who.Object().DBRef, destination.Object().DBRef))) return false;
+		return await lockService.Evaluate(LockType.Basic, exit, who);
 	}
 
 	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>

@@ -18,7 +18,10 @@ namespace SharpMUSH.Tests.Services;
 public class RealityRoutingTests
 {
 	[Test]
-	public async Task RoomAndPrivilegedShortcutsCannotBypassDirectionalPolicy()
+	[Arguments(IPermissionService.InteractType.Hear)]
+	[Arguments(IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)]
+	[Arguments(IPermissionService.InteractType.Page)]
+	public async Task RoomAndPrivilegedShortcutsCannotBypassDirectionalPolicy(IPermissionService.InteractType interaction)
 	{
 		var factory = new TestObjectFactory();
 		var sender = factory.CreatePlayer(1, "God");
@@ -28,7 +31,7 @@ public class RealityRoutingTests
 		await Assert.That(await permissions.CanSee(sender, receiver)).IsFalse();
 		await Assert.That(await permissions.CanSee(sender, receiver.Object())).IsFalse();
 		await Assert.That(await permissions.CanFind(sender, receiver)).IsFalse();
-		await Assert.That(await permissions.CanInteract(sender, receiver, IPermissionService.InteractType.Hear)).IsFalse();
+		await Assert.That(await permissions.CanInteract(sender, receiver, interaction)).IsFalse();
 		await reality.Received(1).CanPerceiveAsync(receiver.Object().DBRef, sender.Object().DBRef);
 	}
 

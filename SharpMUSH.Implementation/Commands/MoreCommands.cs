@@ -1304,9 +1304,18 @@ public partial class Commands
 						return CallState.Empty;
 					}
 
+					if (!await CanMoveInReality(parser, contentToDrop.Object().DBRef, dropToContainer.Object().DBRef))
+					{
+						await NotifyService.Notify(executor, "Dropped.", executor);
+						return CallState.Empty;
+					}
+
 					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 
-					await NotifyService.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
+					var dropMessage = await CanMoveInReality(parser, executor.Object().DBRef, dropToContainer.Object().DBRef)
+						? $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}."
+						: "Dropped.";
+					await NotifyService.Notify(executor, dropMessage, executor);
 					return CallState.Empty;
 				}
 			}
@@ -1377,7 +1386,10 @@ public partial class Commands
 		}
 
 		var container = objectToEmpty.AsContainer;
-		var contents = await container.Content(Mediator).ToListAsync();
+		var contents = new List<AnySharpContent>();
+		await foreach (var item in container.Content(Mediator))
+			if (await PermissionService.CanInteract(executor, item.WithRoomOption(), IPermissionService.InteractType.Match))
+				contents.Add(item);
 
 		if (contents.Count == 0)
 		{
@@ -1428,6 +1440,12 @@ public partial class Commands
 					continue;
 				}
 
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
+				{
+					failedCount++;
+					continue;
+				}
+
 				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
@@ -1464,6 +1482,12 @@ public partial class Commands
 					continue;
 				}
 
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, executor.Object().DBRef))
+				{
+					failedCount++;
+					continue;
+				}
+
 				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
@@ -1489,6 +1513,12 @@ public partial class Commands
 				}
 
 				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
+				{
+					failedCount++;
+					continue;
+				}
+
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
 				{
 					failedCount++;
 					continue;
@@ -2011,6 +2041,12 @@ public partial class Commands
 		}
 
 		var contentToGive = objectToGive.AsContent;
+		if (!await CanMoveInReality(parser, contentToGive.Object().DBRef, recipientContainer.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You can't give that there.", executor);
+			return CallState.Empty;
+		}
+
 		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer));
 
 		var giveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
@@ -2144,6 +2180,12 @@ public partial class Commands
 		if (await MoveService.WouldCreateLoop(executor.AsContent, homeLocation))
 		{
 			await NotifyService.Notify(executor, "You can't go home - it would create a containment loop.", executor);
+			return CallState.Empty;
+		}
+
+		if (!await CanMoveInReality(parser, executor.Object().DBRef, homeLocation.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You can't go home.", executor);
 			return CallState.Empty;
 		}
 

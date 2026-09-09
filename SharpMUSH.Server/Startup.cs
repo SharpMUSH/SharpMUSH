@@ -432,6 +432,7 @@ public class Startup(
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<SharpMUSH.Library.Reality.RealityPolicy>();
+		services.AddSingleton<SharpMUSH.Library.Reality.RealityAdministration>();
 		services.AddSingleton<SharpMUSH.Library.Reality.IRealityPolicy>(sp => sp.GetRequiredService<SharpMUSH.Library.Reality.RealityPolicy>());
 		services.AddSingleton<IPermissionService, PermissionService>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
