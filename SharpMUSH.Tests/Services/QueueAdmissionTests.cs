@@ -19,16 +19,16 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, IConnectionService? connections = null, INotifyService? notifications = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds } });
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
-		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
 		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
-		 NullLogger<Scheduler>.Instance, options);
+		 NullLogger<Scheduler>.Instance, options, notifications);
 	}
 	private static IMediator TargetMediator()
 	{
@@ -56,6 +56,36 @@ public class QueueAdmissionTests
 		});
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task BackgroundAdmissionCanSuppressRejectionPublication(bool notify)
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(new[]
+		{
+			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
+		}.ToAsyncEnumerable());
+		var notifications = Substitute.For<INotifyService>();
+		var entered = Signal(); var release = Signal();
+		notifications.NotifyLocalized(Arg.Any<long>(), "QueueRejected", Arg.Any<object[]>()).Returns(_ =>
+		{
+			entered.TrySetResult();
+			return new ValueTask(release.Task);
+		});
+		await using var queue = Create(global: 0, connections: connections, notifications: notifications);
+		var admission = queue.EnqueueWork(() => ValueTask.FromResult<CallState?>(null), "background", "recurring", new DBRef(10), notifyOnRejection: notify).AsTask();
+		try
+		{
+			if (notify) { await entered.Task.WaitAsync(TimeSpan.FromSeconds(2)); release.TrySetResult(); }
+			var result = await admission.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(result.Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
+			await Assert.That(entered.Task.IsCompleted).IsEqualTo(notify);
+		}
+		finally { release.TrySetResult(); await admission; }
+	}
 
 	[Test]
 	public async Task CreditOnlyReconciliationUsesFreshBudgetAfterCommandCancellation()

@@ -125,7 +125,7 @@ public partial class TaskScheduler(
 	}
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
-	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, bool managesSemaphoreCount = false)
+	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true)
 	{
 		string owner = $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
@@ -154,7 +154,7 @@ public partial class TaskScheduler(
 			}
 		}
 		if (result.Accepted && ready) EnsureConsumerStarted();
-		if (!result.Accepted && notifyService is not null)
+		if (!result.Accepted && notifyOnRejection && notifyService is not null)
 		{
 			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
 			else if (DBRef.TryParse(owner, out var player))
@@ -318,6 +318,9 @@ public partial class TaskScheduler(
 
 	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	 => Admit(action, triggerName, group, null);
+
+	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
+	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 	{
