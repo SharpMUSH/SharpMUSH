@@ -18,6 +18,30 @@ namespace SharpMUSH.Tests.Services;
 public class RealityRoutingTests
 {
 	[Test]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task EffectiveHearingSourceDoesNotReplaceTheInteractionLockActor(bool visible, bool lockAllowed)
+	{
+		var factory = new TestObjectFactory();
+		var executor = factory.CreatePlayer(40, "executor");
+		var source = factory.CreatePlayer(41, "source");
+		var receiver = factory.CreatePlayer(42, "receiver");
+		executor.AsPlayer.Id = "executor";
+		source.AsPlayer.Id = "source";
+		receiver.AsPlayer.Id = "receiver";
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(receiver.Object().DBRef, source.Object().DBRef).Returns(visible);
+		var locks = Substitute.For<ILockService>();
+		locks.Evaluate(LockType.Interact, receiver, executor).Returns(lockAllowed);
+		locks.Evaluate(LockType.Interact, receiver, source).Returns(!lockAllowed);
+		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
+		await Assert.That(await permissions.CanInteract(executor, receiver, IPermissionService.InteractType.Hear, source))
+			.IsEqualTo(visible && lockAllowed);
+		await locks.DidNotReceive().Evaluate(LockType.Interact, receiver, source);
+	}
+
+	[Test]
 	[Arguments(IPermissionService.InteractType.Hear)]
 	[Arguments(IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)]
 	[Arguments(IPermissionService.InteractType.Page)]

@@ -79,7 +79,9 @@ public class CommunicationService(
 					return false;
 				}
 
-				return await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear);
+				return actualSender.Object().DBRef == executor.Object().DBRef
+					? await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear)
+					: await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear, actualSender);
 			});
 
 		await foreach (var obj in interactableContents)

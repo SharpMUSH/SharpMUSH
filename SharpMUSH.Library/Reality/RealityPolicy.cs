@@ -17,22 +17,22 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 	{
 		var config = await ConfigurationAsync(ct);
 		if (!config.Enabled) return true;
-		var receiving = await ReadObjectAsync(receiver, ct);
-		var transmitting = await ReadObjectAsync(target, ct);
+		var receiving = await ReadObjectCoreAsync(receiver, false, ct);
+		var transmitting = await ReadObjectCoreAsync(target, false, ct);
 		return Perceives(config, receiving, transmitting);
 	}
 
 	public async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveAsync(DBRef receiver, CancellationToken ct = default)
 	{
 		var config = await ConfigurationAsync(ct);
-		var receiving = config.Enabled ? await ReadObjectAsync(receiver, ct) : null;
+		var receiving = config.Enabled ? await ReadObjectCoreAsync(receiver, false, ct) : null;
 		return async (target, token) =>
 		{
 			token.ThrowIfCancellationRequested();
 			if (!config.Enabled) return true;
 			if (receiving is null) return false;
 			if (target.Equals(receiving.Object)) return true;
-			return Perceives(config, receiving, await ReadObjectAsync(target, token));
+			return Perceives(config, receiving, await ReadObjectCoreAsync(target, false, token));
 		};
 	}
 
@@ -44,8 +44,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 	{
 		var config = await ConfigurationAsync(ct);
 		if (!config.Enabled) return null;
-		var receiving = await ReadObjectAsync(receiver, ct);
-		var transmitting = await ReadObjectAsync(target, ct);
+		var receiving = await ReadObjectCoreAsync(receiver, false, ct);
+		var transmitting = await ReadObjectCoreAsync(target, false, ct);
 		if (receiving is null || transmitting is null) return null;
 		return SharedLayers(config, receiving, transmitting)
 			.Select(layer => transmitting.Descriptions.GetValueOrDefault(layer)).FirstOrDefault(attribute => attribute is not null);
@@ -79,7 +79,10 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		finally { configurationGate.Release(); }
 	}
 
-	public async ValueTask<ObjectReality?> ReadObjectAsync(DBRef reference, CancellationToken ct = default)
+	public ValueTask<ObjectReality?> ReadObjectAsync(DBRef reference, CancellationToken ct = default)
+		=> ReadObjectCoreAsync(reference, true, ct);
+
+	private async ValueTask<ObjectReality?> ReadObjectCoreAsync(DBRef reference, bool rejectMalformed, CancellationToken ct)
 	{
 		var found = await objects.GetObjectNodeAsync(reference, ct);
 		if (found is null || found.IsNone) return null;
@@ -88,7 +91,11 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		var value = await store.GetExpandedObjectData<ObjectReality>(obj.Id, ObjectKey, ct);
 		if (value is null || !value.Object.Equals(obj.DBRef)) return ObjectReality.Default(obj.DBRef);
 		if (value.Version != 1 || value.Receive is null || value.Transmit is null || value.Descriptions is null)
-			throw new InvalidDataException("Invalid object reality data.");
+		{
+			if (rejectMalformed) throw new InvalidDataException("Invalid object reality data.");
+			// A malformed participant must not reveal itself or interrupt unrelated gameplay.
+			return null;
+		}
 		return value with
 		{
 			Receive = [.. value.Receive],

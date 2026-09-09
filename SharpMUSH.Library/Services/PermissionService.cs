@@ -374,10 +374,14 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			 || ((await target.IsVisual() || lockFlags.HasFlag(LockService.LockFlags.Visual))
 				 && await lockService.Evaluate(LockType.Examine, target, viewer));
 
-	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+	public ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+		=> CanInteract(from, to, type, from);
+
+	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to,
+		IPermissionService.InteractType type, AnySharpObject hearingSource)
 	{
 		var hear = (type & (IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)) != 0;
-		if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? from : to).Object().DBRef)) return false;
+		if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? hearingSource : to).Object().DBRef)) return false;
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !await lockService.Evaluate(LockType.Interact, to, from))

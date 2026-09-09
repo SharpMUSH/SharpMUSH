@@ -24,6 +24,33 @@ public class RealityGameTests
 	[Test, NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]
+	public async Task SpoofedRoomEmitUsesTheEffectiveSendersReality(bool sourceVisible)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var executor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var home = await executor.Location.WithCancellation(default);
+		var sender = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality source", home, executor, home)))).AsThing;
+		var recipient = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality receiver", home, executor, home)))).AsThing;
+		try
+		{
+			await policy.SaveObjectAsync(recipient.Object.Id!, ObjectReality.Default(recipient.Object.DBRef) with { Receive = ["ghost"] }, default);
+			await policy.SaveObjectAsync(sender.Object.Id!, ObjectReality.Default(sender.Object.DBRef) with { Transmit = [sourceVisible ? "ghost" : "normal"] }, default);
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			var output = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(recipient.Object.Key, output))
+				await Factory.CommandParser.FromState(ParserState.RootFor(executor.Object.DBRef) with { Enactor = sender.Object.DBRef })
+					.CommandListParse(MarkupText.Plain("@emit/spoof reality-spoof-message"));
+			await Assert.That(output.Body.ToString().Contains("reality-spoof-message")).IsEqualTo(sourceVisible);
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
 	public async Task MovementAnnouncementsDoNotRevealAnUnperceivedMover(bool arriving)
 	{
 		var objects = Get<IObjectStore>();
@@ -377,10 +404,14 @@ public class RealityGameTests
 		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var location = await player.Location.WithCancellation(default);
 		var target = (await objects.GetObjectNodeAsync(await Get<IMediator>().Send(new CreateThingCommand("corrupt reality", player, player, location)))).AsThing;
-		await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Version = 2 }, default);
-		var output = await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef))
-			.CommandListParse(MarkupText.Plain($"@reality/inspect {target.Object.DBRef}"));
-		await Assert.That(output!.Message!.ToPlainText()).IsEqualTo("#-1 Invalid object reality data.");
+		try
+		{
+			await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Version = 2 }, default);
+			var output = await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef))
+				.CommandListParse(MarkupText.Plain($"@reality/inspect {target.Object.DBRef}"));
+			await Assert.That(output!.Message!.ToPlainText()).IsEqualTo("#-1 Invalid object reality data.");
+		}
+		finally { await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef), default); }
 	}
 
 }
