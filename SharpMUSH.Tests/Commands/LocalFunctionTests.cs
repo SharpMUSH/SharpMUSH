@@ -211,4 +211,26 @@ public class LocalFunctionTests
 		finally { await manager.UnloadAsync(name); }
 	}
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LiveBuiltinCloneBlocksAnExistingLocalAndItsAlias(bool cloneAlias)
+	{
+		var name = "cloneclaim" + Guid.NewGuid().ToString("N");
+		var alias = name + "alias";
+		var clone = cloneAlias ? alias : name;
+		await Cmd($"&{name} me=local");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd($"@function/local/alias {alias}={name}");
+		await Assert.That(await Eval($"localfun({alias})")).IsEqualTo("local");
+		await Cmd($"@function/clone {clone}=add");
+		try
+		{
+			await Assert.That(await Eval($"{clone}(2,3)")).IsEqualTo("5");
+			await Assert.That(await Eval($"localfun({clone})")).Contains("NOT FOUND");
+			if (!cloneAlias) await Assert.That(await Eval($"localfun({alias})")).Contains("NOT FOUND");
+		}
+		finally { await Cmd($"@function/delete {clone}"); await Cmd($"@function/local/delete {name}"); }
+	}
+
 }
