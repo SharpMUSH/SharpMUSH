@@ -19,10 +19,18 @@ public partial class Functions
 		var owner = (await caller.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
-		var raw = registry.Get(name, owner);
-		if (Get().IsSystemNameReserved(name) || (raw?.AliasOf is { } alias && Get().IsSystemNameReserved(alias)))
+		UserDefinedFunction? entry;
+		try
+		{
+			var raw = registry.Get(name, owner);
+			if (Get().IsSystemNameReserved(name) || (raw?.AliasOf is { } alias && Get().IsSystemNameReserved(alias)))
+				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
+			entry = registry.Resolve(name, owner);
+		}
+		catch (NotSupportedException)
+		{
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
-		var entry = registry.Resolve(name, owner);
+		}
 		if (entry is null) return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 		var target = await Mediator.Send(new GetObjectNodeQuery(entry.Object), ExecutionBudget.CurrentToken);
 		if (target.IsNone || (await target.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != owner)
