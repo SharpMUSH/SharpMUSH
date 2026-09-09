@@ -24,6 +24,35 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task ContendedDeferredTransitionHonorsExecutionDeadline()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var scheduling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource<DateTimeOffset>(TaskCreationOptions.RunContinuationsAsynchronously);
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			scheduling.TrySetResult();
+			return release.Task;
+		});
+		await using var queue = Create(scheduler: scheduler);
+		var pending = queue.WriteCommandList(MarkupText.Plain("think later"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1)).AsTask();
+		await scheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			using var budget = ExecutionBudget.FromMilliseconds(30);
+			using var scope = budget.Enter();
+			await Assert.That(async () => await queue.PausePending(999, "blocked").AsTask().WaitAsync(TimeSpan.FromSeconds(1)))
+				.Throws<OperationCanceledException>();
+		}
+		finally
+		{
+			release.TrySetResult(DateTimeOffset.UtcNow);
+			await pending;
+		}
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task CountedDrainOnlyRemovesPausedWorkStillWaitingForNotification(bool notified)

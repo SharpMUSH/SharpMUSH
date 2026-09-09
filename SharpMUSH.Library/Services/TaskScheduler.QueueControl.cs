@@ -27,7 +27,7 @@ public partial class TaskScheduler
 	}
 	private async ValueTask<DeferredLease> LockDeferred()
 	{
-		await _deferredChanges.WaitAsync();
+		await _deferredChanges.WaitAsync(ExecutionBudget.CurrentToken);
 		return new(_deferredChanges);
 	}
 
