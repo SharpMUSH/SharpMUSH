@@ -5,10 +5,18 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPermissionService
 {
+	/// <summary>
+	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). Real bit values, because
+	/// <see cref="PermissionService.CanInteract"/> tests them with <c>HasFlag</c>.
+	/// </summary>
 	[Flags]
 	enum InteractType
 	{
-		See, Hear, Match, Presence, Page
+		See = 0x1,
+		Hear = 0x2,
+		Match = 0x4,
+		Presence = 0x8,
+		Page = 0x10
 	}
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);

@@ -63,7 +63,8 @@ public class CommunicationService(
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
-		IEnumerable<AnySharpObject>? excludeObjects = null)
+		IEnumerable<AnySharpObject>? excludeObjects = null,
+		IPermissionService.InteractType interact = InteractType.Hear)
 	{
 		var contents = room.Content(mediator);
 		var actualSender = sender ?? executor;
@@ -79,7 +80,7 @@ public class CommunicationService(
 					return false;
 				}
 
-				return await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear);
+				return await permissionService.CanInteract(executor, objWithRoom, interact);
 			});
 
 		await foreach (var obj in interactableContents)

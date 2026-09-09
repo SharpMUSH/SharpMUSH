@@ -83,4 +83,43 @@ public class DidItServiceTests
 		await Assert.That(await PermissionService.IsHearer(await Node(parent))).IsTrue();
 		await Assert.That(await PermissionService.IsHearer(await Node(child))).IsFalse();
 	}
+
+	[Test]
+	public async ValueTask HearingHonoursTheInteractLock()
+	{
+		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractSpeaker");
+		var deaf = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractDeaf");
+
+		// An interact lock nobody passes.
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@lock/interact {deaf.DbRef}=#0"));
+
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(speaker.DbRef), await Node(deaf.DbRef), IPermissionService.InteractType.Hear))
+			.IsFalse();
+	}
+
+	[Test]
+	public async ValueTask PresenceAndSightDoNotConsultTheInteractLock()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractMover");
+		var locked = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractLocked");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@lock/interact {locked.DbRef}=#0"));
+
+		// PennMUSH can_interact gates the Interact lock on INTERACT_HEAR alone, so an arrival
+		// message (Presence) and an OXLEAVE (See) still reach a locked object.
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(mover.DbRef), await Node(locked.DbRef), IPermissionService.InteractType.Presence))
+			.IsTrue();
+
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(mover.DbRef), await Node(locked.DbRef), IPermissionService.InteractType.See))
+			.IsTrue();
+	}
 }
