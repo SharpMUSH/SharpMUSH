@@ -73,6 +73,35 @@ public class CommandExceptionSurfacingTests
 	}
 
 	[Test]
+	public async Task CancelledArgumentEvaluationDoesNotPublishAnExceptionReport()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CancelArgument");
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+		var library = WebAppFactoryArg.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>();
+		var name = "cancel_arg_" + Guid.NewGuid().ToString("N");
+		var invoked = false;
+		library.Add(name, (new FunctionDefinition(new SharpFunctionAttribute { Name = name, Flags = FunctionFlags.Regular }, _ =>
+		{
+			invoked = true;
+			cancellation.Cancel();
+			budget.Token.ThrowIfCancellationRequested();
+			return ValueTask.FromResult(CallState.Empty);
+		}), true));
+		try
+		{
+			var root = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+			var parser = root.FromState(root.CurrentState with { ExecutionBudget = budget });
+			await Assert.That(async () => await parser.CommandParse(MarkupText.Plain($"think [{name}()]")))
+				.Throws<OperationCanceledException>();
+			await Assert.That(invoked).IsTrue();
+			await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.StartsWith("#-1 EXCEPTION:"))).IsFalse();
+		}
+		finally { library.Remove(name); }
+	}
+
+	[Test]
 	public async Task ACommandThatThrowsIsSurfacedInsteadOfSwallowed()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
