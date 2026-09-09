@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -19,23 +17,30 @@ public interface IMoveService
 	ValueTask<bool> WouldCreateLoop(AnySharpContent objectToMove, AnySharpContainer destination);
 
 	/// <summary>
-	/// Executes a complete move operation including permission checks, cost calculation,
-	/// hook triggering, and notifications.
+	/// The outermost room containing <paramref name="obj"/>, walking out through containers.
+	/// PennMUSH <c>absolute_room</c> (<c>src/utils.c:794</c>). Null when the chain exceeds
+	/// <c>Limit.MaxDepth</c> or ends somewhere that is not a room — Penn's "too many containers"
+	/// and void cases.
 	/// </summary>
-	/// <param name="parser">Parser context for executing hooks</param>
-	/// <param name="objectToMove">The object being moved</param>
-	/// <param name="destination">The destination container</param>
-	/// <param name="enactor">The object initiating the move (may be null for system moves)</param>
-	/// <param name="cause">The cause of the move (e.g., "teleport", "get", "drop")</param>
-	/// <param name="silent">If true, suppress notifications and some hooks</param>
-	/// <returns>Success if move completed, Error with message if failed</returns>
-	ValueTask<OneOf<Success, Error<string>>> ExecuteMoveAsync(
+	ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj);
+
+	/// <summary>
+	/// Sends an object somewhere and fires every triad the move produces, in PennMUSH's order.
+	/// PennMUSH <c>moveit</c> (<c>src/move.c:66</c>).
+	/// </summary>
+	/// <param name="parser">Parser context the triads evaluate and queue under.</param>
+	/// <param name="what">The object being moved.</param>
+	/// <param name="where">The destination container.</param>
+	/// <param name="noMoveMsgs">Suppresses the <c>MOVE</c>/<c>OMOVE</c>/<c>AMOVE</c> triad only.</param>
+	/// <param name="enactor">The object that caused the move.</param>
+	/// <param name="cause">What caused the move, for events.</param>
+	ValueTask MoveIt(
 		IMUSHCodeParser parser,
-		AnySharpContent objectToMove,
-		AnySharpContainer destination,
-		DBRef? enactor = null,
-		string cause = "move",
-		bool silent = false);
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause);
 
 	/// <summary>
 	/// Checks if a move is permitted based on locks and permissions.

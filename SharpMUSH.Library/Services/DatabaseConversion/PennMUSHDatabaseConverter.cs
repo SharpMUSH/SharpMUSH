@@ -1,4 +1,6 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -16,7 +18,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
 	private readonly IAttributeService _attributeService;
-	private readonly IMoveService _moveService;
+	private readonly IMediator _mediator;
 
 	// Mapping from PennMUSH DBRef to SharpMUSH DBRef
 	private readonly Dictionary<int, DBRef> _dbrefMapping = [];
@@ -33,13 +35,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		ISharpDatabase database,
 		PennMUSHDatabaseParser parser,
 		IAttributeService attributeService,
-		IMoveService moveService,
+		IMediator mediator,
 		ILogger<PennMUSHDatabaseConverter> logger)
 	{
 		_database = database;
 		_parser = parser;
 		_attributeService = attributeService;
-		_moveService = moveService;
+		_mediator = mediator;
 		_logger = logger;
 	}
 
@@ -595,21 +597,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 									thing => thing,
 									_ => throw new InvalidOperationException("None cannot be content"));
 
-								// Note: Passing null for parser as this is a system operation during conversion
-								var moveResult = await _moveService.ExecuteMoveAsync(
-									null!, // No parser context during conversion
+								// A conversion is building a world out of a dump, not moving anyone: there is no
+								// actor, no parser and nobody present to notify, so this places the object
+								// directly rather than going through the movement pipeline and its triads.
+								var currentContainer = await content.Location();
+
+								await _mediator.Send(new MoveObjectCommand(
 									content,
 									container,
-									null, // System move
-									"conversion",
-									silent: true);
-
-								if (moveResult.IsT1)
-								{
-									var errorMsg = $"Failed to move object #{pennObj.DBRef} to location #{pennObj.Location}: {moveResult.AsT1.Value}";
-									warnings.Add(errorMsg);
-									_logger.LogDebug("Move error during conversion: {Error}", errorMsg);
-								}
+									Enactor: null,
+									IsSilent: true,
+									Cause: "conversion",
+									OldContainer: currentContainer.Object().DBRef), cancellationToken);
 							}
 						}
 					}

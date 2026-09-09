@@ -1,5 +1,10 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
@@ -13,115 +18,55 @@ public class MoveServiceTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	[Test]
-	public async ValueTask MoveServiceIsRegistered()
+	private async Task<AnySharpObject> Node(DBRef dbref)
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+
+	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
+
+	private async Task<DBRef> Dig(string prefix)
 	{
-		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
-		await Assert.That(service).IsNotNull();
+		var result = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		DBRef.TryParse(result.Message!.ToPlainText().Trim(), out var dbref);
+		return dbref!.Value;
 	}
 
 	[Test]
-	public async ValueTask CalculateMoveCostReturnsZero()
+	public async ValueTask AbsoluteRoomOfSomethingInARoomIsThatRoom()
 	{
-		// For now, move costs are always zero
-		// This test ensures the method is implemented and callable
-		var service = WebAppFactoryArg.Services.GetRequiredService<IMoveService>();
-		await Assert.That(service).IsNotNull();
+		var room = await Dig("AbsRoom");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "AbsThing");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={room}"));
+
+		var absolute = await MoveService.AbsoluteRoom(await Node(thing));
+
+		await Assert.That(absolute).IsNotNull();
+		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask NoLoopWithSimpleMove()
+	public async ValueTask AbsoluteRoomWalksOutThroughContainers()
 	{
-		// This test would require proper database setup with objects created
-		await ValueTask.CompletedTask;
+		var room = await Dig("NestedRoom");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "Box");
+		var coin = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "Coin");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {coin}={box}"));
+
+		var absolute = await MoveService.AbsoluteRoom(await Node(coin));
+
+		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
 	}
 
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask DetectsDirectLoop()
+	public async ValueTask AbsoluteRoomOfARoomIsItself()
 	{
-		// This test would require proper database setup with objects created
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask DetectsIndirectLoop()
-	{
-		// This test would require proper database setup with objects created
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask NoLoopIntoRoom()
-	{
-		// This test would require proper database setup with objects created
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncWithValidMove()
-	{
-		// Test that ExecuteMoveAsync can be called and performs move
-		// Would need proper database setup with test objects
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncFailsOnLoop()
-	{
-		// Test that ExecuteMoveAsync rejects moves that would create loops
-		// Would need proper database setup with test objects
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncFailsOnPermission()
-	{
-		// Test that ExecuteMoveAsync rejects moves without proper permissions
-		// Would need proper database setup with test objects
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncTriggersEnterHooks()
-	{
-		// Test that ExecuteMoveAsync triggers ENTER/OENTER/OXENTER hooks
-		// Would need proper database setup with test objects and attributes
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncTriggersLeaveHooks()
-	{
-		// Test that ExecuteMoveAsync triggers LEAVE/OLEAVE/OXLEAVE hooks
-		// Would need proper database setup with test objects and attributes
-		await ValueTask.CompletedTask;
-	}
-
-	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database setup")]
-	public async ValueTask ExecuteMoveAsyncTriggersTeleportHooks()
-	{
-		// Test that ExecuteMoveAsync triggers OTELEPORT/OXTELEPORT hooks when cause is "teleport"
-		// Would need proper database setup with test objects and attributes
-		await ValueTask.CompletedTask;
+		var room = await Dig("SelfRoom");
+		var absolute = await MoveService.AbsoluteRoom(await Node(room));
+		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
 	}
 }

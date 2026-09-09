@@ -566,7 +566,8 @@ public class CachingBehaviorTests
 		foreach (var mover in movers)
 		{
 			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Known;
-			await moveService.ExecuteMoveAsync(Parser, moverObject.AsContent, destinationContainer, silent: true);
+			await moveService.MoveIt(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true,
+				moverObject.Object().DBRef, "move");
 
 			var contents = await mediator.CreateStream(new GetContentsQuery(destination)).ToListAsync();
 			if (contents.All(c => c.Object().DBRef != mover)) missing.Add(mover);

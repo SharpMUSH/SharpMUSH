@@ -1,6 +1,6 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -14,31 +14,56 @@ namespace SharpMUSH.Library.Services;
 
 public class MoveService(
 	IMediator mediator,
-	IAttributeService attributeService,
 	IPermissionService permissionService,
-	INotifyService notifyService) : IMoveService
+	INotifyService notifyService,
+	IDidItService didItService,
+	IOptionsMonitor<SharpMUSHOptions> configuration) : IMoveService
 {
-	/// <summary>
-	/// Standard attribute names for move hooks
-	/// </summary>
-	private static class MoveAttributes
+	/// <inheritdoc />
+	public async ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj)
 	{
-		public const string Enter = "ENTER";       // Seen by the object entering
-		public const string OEnter = "OENTER";     // Seen by others in the destination
-		public const string OXEnter = "OXENTER";   // Seen by the object entering (from others' perspective)
+		if (obj.IsRoom)
+		{
+			return obj.AsRoom;
+		}
 
-		public const string Leave = "LEAVE";       // Seen by the object leaving
-		public const string OLeave = "OLEAVE";     // Seen by others in the old location
-		public const string OXLeave = "OXLEAVE";   // Seen by the object leaving (from others' perspective)
+		if (!obj.IsContent)
+		{
+			return null;
+		}
 
-		public const string OTeleport = "OTELEPORT";   // Seen by others in destination
-		public const string OXTeleport = "OXTELEPORT"; // Seen by the teleported object
+		var current = await obj.AsContent.Location();
+		var maxDepth = (int)configuration.CurrentValue.Limit.MaxDepth;
+
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			if (current.IsRoom)
+			{
+				return current;
+			}
+
+			var next = await current.Location();
+
+			if (next.Object().DBRef.Equals(current.Object().DBRef))
+			{
+				return null;
+			}
+
+			current = next;
+		}
+
+		return null;
 	}
 
 	/// <summary>
 	/// Checks if moving an object to a destination would create a containment loop.
 	/// This prevents scenarios like: A contains B, B contains C, then moving A into C would create a loop.
 	/// </summary>
+	/// <remarks>
+	/// Bounded by the same <c>Limit.MaxDepth</c> as <see cref="AbsoluteRoom"/>, and fails closed:
+	/// a walk that ran out of depth cannot know whether the destination is a descendant further
+	/// down, and permitting the move on a truncated answer would build the cycle it could not see.
+	/// </remarks>
 	public async ValueTask<bool> WouldCreateLoop(AnySharpContent objectToMove, AnySharpContainer destination)
 	{
 		if (!destination.IsThing && !destination.IsPlayer)
@@ -50,19 +75,16 @@ public class MoveService(
 
 		var current = destination;
 		var visited = new HashSet<string> { current.Object().DBRef.ToString() };
+		var maxDepth = (int)configuration.CurrentValue.Limit.MaxDepth;
 
-		while (true)
+		for (var depth = 0; depth < maxDepth; depth++)
 		{
 			if (current.Object().DBRef.Equals(objectDBRef))
 			{
 				return true;
 			}
 
-			var location = await current.Match<ValueTask<AnySharpContainer>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer>(room),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None)
-			);
+			var location = await current.Location();
 
 			if (location.IsRoom || visited.Contains(location.Object().DBRef.ToString()))
 			{
@@ -72,103 +94,155 @@ public class MoveService(
 			visited.Add(location.Object().DBRef.ToString());
 			current = location;
 		}
+
+		return true;
 	}
 
 	/// <summary>
-	/// Executes a complete move operation including permission checks, cost calculation,
-	/// hook triggering, and notifications.
+	/// Sends an object somewhere and runs every triad the move fires, in PennMUSH's order.
+	/// PennMUSH <c>moveit</c> (<c>src/move.c:66</c>).
 	/// </summary>
-	public async ValueTask<OneOf<Success, Error<string>>> ExecuteMoveAsync(
+	public async ValueTask MoveIt(
 		IMUSHCodeParser parser,
-		AnySharpContent objectToMove,
-		AnySharpContainer destination,
-		DBRef? enactor = null,
-		string cause = "move",
-		bool silent = false)
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause)
 	{
-		var targetObj = objectToMove.Object();
-		var destObj = destination.Object();
-		var enactorRef = enactor ?? targetObj.DBRef;
-
-		var enactorQuery = await mediator.Send(new GetObjectNodeQuery(enactorRef));
-		if (enactorQuery.IsNone)
+		// "Don't move something into something it's holding" (move.c:73).
+		if (await WouldCreateLoop(what, where))
 		{
-			return new Error<string>("Invalid enactor");
-		}
-		var enactorObj = enactorQuery.Known;
-
-		if (await WouldCreateLoop(objectToMove, destination))
-		{
-			return new Error<string>("Cannot move - it would create a containment loop.");
+			return;
 		}
 
-		if (!await CanMoveAsync(enactorObj, objectToMove, destination))
+		var mover = what.WithRoomOption();
+		var oldContainer = await what.Location();
+		var old = oldContainer.Object().DBRef;
+		var destination = where.Object().DBRef;
+
+		// Both absolute rooms are resolved exactly twice per move, before and after, and handed to
+		// the zone triads. Walking per triad would multiply the location queries.
+		var absOld = await AbsoluteRoom(mover);
+
+		await mediator.Send(new MoveObjectCommand(
+			what, where, enactor, noMoveMsgs, cause, OldContainer: old));
+
+		var absNew = await AbsoluteRoom(mover);
+		var destinationObject = where.WithExitOption();
+		var oldObject = oldContainer.WithExitOption();
+
+		var wizardSuppressed = configuration.CurrentValue.Command.WizardNoAEnter
+			&& await mover.IsWizard() && await mover.IsDarkLegal();
+
+		if (!wizardSuppressed && !old.Equals(destination))
 		{
-			return new Error<string>("Permission denied.");
-		}
+			await didItService.DidIt(parser, new DidItRequest(
+				Player: mover, Thing: mover, OWhat: "OXMOVE",
+				Loc: oldContainer, Env0: destination, Env1: old,
+				Interact: IPermissionService.InteractType.Hear));
 
-		// In MUSH servers, quota typically affects object creation, not movement;
-		// move cost tracking is reserved for future use, so moves are allowed regardless of quota.
+			if (await permissionService.IsHearer(mover))
+			{
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: mover, Thing: oldObject,
+					What: "LEAVE", OWhat: "OLEAVE", ODef: ErrorMessages.Notifications.DefaultOLeave,
+					AWhat: "ALEAVE", Loc: oldContainer, Env0: destination,
+					Interact: IPermissionService.InteractType.Presence));
 
-		var oldLocation = await objectToMove.Match<ValueTask<DBRef>>(
-			async player =>
-			{
-				var location = await player.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			},
-			async exit =>
-			{
-				var location = await exit.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			},
-			async thing =>
-			{
-				var location = await thing.Location.WithCancellation(CancellationToken.None);
-				return location.Object().DBRef;
-			});
+				await ZoneTriad(parser, mover, absOld, absNew, leaving: true, loc: oldContainer);
 
-		if (!silent && oldLocation != destObj.DBRef)
-		{
-			var oldLocQuery = await mediator.Send(new GetObjectNodeQuery(oldLocation));
-			if (!oldLocQuery.IsNone)
+				if (!oldObject.IsRoom)
+				{
+					// OXLEAVE lives on the container being left and is shown where the mover arrives.
+					await didItService.DidIt(parser, new DidItRequest(
+						Player: mover, Thing: oldObject, OWhat: "OXLEAVE",
+						Loc: where,
+						Interact: IPermissionService.InteractType.See));
+				}
+
+				if (!destinationObject.IsRoom)
+				{
+					await didItService.DidIt(parser, new DidItRequest(
+						Player: mover, Thing: destinationObject, OWhat: "OXENTER",
+						Loc: oldContainer,
+						Interact: IPermissionService.InteractType.See));
+				}
+
+				await ZoneTriad(parser, mover, absOld, absNew, leaving: false, loc: where);
+
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: mover, Thing: destinationObject,
+					What: "ENTER", OWhat: "OENTER", ODef: ErrorMessages.Notifications.DefaultOEnter,
+					AWhat: "AENTER", Loc: where, Env0: old,
+					Interact: IPermissionService.InteractType.Presence));
+			}
+			else
 			{
-				var oldLocObj = oldLocQuery.Known;
-				await TriggerLeaveHooksAsync(parser, objectToMove, oldLocObj, enactorRef, cause);
+				// A non-hearer triggers the actions and none of the messages.
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: mover, Thing: oldObject, AWhat: "ALEAVE", Loc: oldContainer));
+				await ZoneTriad(parser, mover, absOld, absNew, leaving: true, loc: oldContainer, actionsOnly: true);
+				await ZoneTriad(parser, mover, absOld, absNew, leaving: false, loc: where, actionsOnly: true);
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: mover, Thing: destinationObject, AWhat: "AENTER", Loc: where));
 			}
 		}
 
-		await mediator.Send(new MoveObjectCommand(
-			objectToMove,
-			destination,
-			enactor,
-			silent,
-			cause,
-			OldContainer: oldLocation));
-
-		if (!silent)
+		if (!noMoveMsgs)
 		{
-			var destObjAny = destination.Match<AnySharpObject>(
-				player => player,
-				room => room,
-				thing => thing);
-			await TriggerEnterHooksAsync(parser, objectToMove, destObjAny, enactorRef, cause);
+			await didItService.DidIt(parser, new DidItRequest(
+				Player: mover, Thing: mover,
+				What: "MOVE", OWhat: "OMOVE", AWhat: "AMOVE",
+				Loc: where, Env0: destination, Env1: old,
+				Interact: IPermissionService.InteractType.See));
+		}
+	}
+
+	/// <summary>
+	/// The zone triad, fired only when the absolute room's zone actually changed.
+	/// PennMUSH <c>move.c:114-133</c>.
+	/// </summary>
+	private async ValueTask ZoneTriad(
+		IMUSHCodeParser parser,
+		AnySharpObject mover,
+		AnySharpContainer? absOld,
+		AnySharpContainer? absNew,
+		bool leaving,
+		AnySharpContainer loc,
+		bool actionsOnly = false)
+	{
+		var oldZone = absOld is null ? null : await ZoneOf(absOld);
+		var newZone = absNew is null ? null : await ZoneOf(absNew);
+
+		var zone = leaving ? oldZone : newZone;
+
+		if (zone is null)
+		{
+			return;
 		}
 
-		if (!silent && cause.Equals("teleport", StringComparison.OrdinalIgnoreCase))
+		var other = leaving ? newZone : oldZone;
+
+		if (other is not null && other.Object().DBRef.Equals(zone.Object().DBRef))
 		{
-			var destObjAny = destination.Match<AnySharpObject>(
-				player => player,
-				room => room,
-				thing => thing);
-			await TriggerTeleportHooksAsync(parser, objectToMove, destObjAny, enactorRef);
+			return;
 		}
 
-		if (!silent && (objectToMove.IsPlayer || objectToMove.IsThing))
-		{
-			await NotifyContentsOfMoveAsync(parser, objectToMove, oldLocation, destObj.DBRef);
-		}
+		await didItService.DidIt(parser, new DidItRequest(
+			Player: mover,
+			Thing: zone,
+			What: actionsOnly ? null : leaving ? "ZLEAVE" : "ZENTER",
+			OWhat: actionsOnly ? null : leaving ? "OZLEAVE" : "OZENTER",
+			AWhat: leaving ? "AZLEAVE" : "AZENTER",
+			Loc: loc,
+			Interact: IPermissionService.InteractType.See));
+	}
 
-		return new Success();
+	private async ValueTask<AnySharpObject?> ZoneOf(AnySharpContainer container)
+	{
+		var zone = await container.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
+		return zone.IsNone() ? null : zone.Known();
 	}
 
 	/// <summary>
@@ -243,335 +317,6 @@ public class MoveService(
 		// Cost might apply for teleporting or special circumstances
 		// For now, return 0 - this can be extended later
 		return ValueTask.FromResult(0);
-	}
-
-	/// <summary>
-	/// Triggers LEAVE-related hooks when an object leaves a location.
-	/// </summary>
-	private async ValueTask TriggerLeaveHooksAsync(
-		IMUSHCodeParser parser,
-		AnySharpContent objectToMove,
-		AnySharpObject oldLocation,
-		DBRef enactor,
-		string cause)
-	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
-		var targetDBRef = objectToMove.Object().DBRef;
-
-		// @LEAVE - message seen by the object leaving
-		var leaveAttr = await attributeService.GetAttributeAsync(
-			targetObj, oldLocation, MoveAttributes.Leave,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (leaveAttr.IsAttribute)
-		{
-			await attributeService.EvaluateAttributeFunctionAsync(
-				parser, targetObj, oldLocation, MoveAttributes.Leave,
-				new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(targetDBRef.ToString()),
-					["1"] = new CallState(cause)
-				},
-				evalParent: false);
-		}
-
-		// @OLEAVE - message seen by others in the old location
-		var oleaveAttr = await attributeService.GetAttributeAsync(
-			targetObj, oldLocation, MoveAttributes.OLeave,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oleaveAttr.IsAttribute)
-		{
-			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
-			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
-				{
-					contents.Add(content);
-				}
-			}
-
-			foreach (var content in contents)
-			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
-
-				var message = await attributeService.EvaluateAttributeFunctionAsync(
-					parser, contentObj, oldLocation, MoveAttributes.OLeave,
-					new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(targetDBRef.ToString()),
-						["1"] = new CallState(cause)
-					},
-					evalParent: false);
-
-				if (!string.IsNullOrEmpty(message.ToPlainText()))
-				{
-					await notifyService.Notify(content.Object().DBRef, message);
-				}
-			}
-		}
-		else
-		{
-			// Default OLEAVE: "{name} has left." (PennMUSH src/move.c)
-			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOLeave}";
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(oldLocation.Object().DBRef)))
-			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
-				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
-				}
-			}
-		}
-
-		// @OXLEAVE - message seen by the object leaving (from others' perspective)
-		var oxleaveAttr = await attributeService.GetAttributeAsync(
-			targetObj, oldLocation, MoveAttributes.OXLeave,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oxleaveAttr.IsAttribute)
-		{
-			var message = await attributeService.EvaluateAttributeFunctionAsync(
-				parser, targetObj, oldLocation, MoveAttributes.OXLeave,
-				new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(targetDBRef.ToString()),
-					["1"] = new CallState(cause)
-				},
-				evalParent: false);
-
-			if (!string.IsNullOrEmpty(message.ToPlainText()))
-			{
-				await notifyService.Notify(targetDBRef, message);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Triggers ENTER-related hooks when an object enters a location.
-	/// </summary>
-	private async ValueTask TriggerEnterHooksAsync(
-		IMUSHCodeParser parser,
-		AnySharpContent objectToMove,
-		AnySharpObject newLocation,
-		DBRef enactor,
-		string cause)
-	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
-		var targetDBRef = objectToMove.Object().DBRef;
-
-		// @ENTER - message seen by the object entering
-		var enterAttr = await attributeService.GetAttributeAsync(
-			targetObj, newLocation, MoveAttributes.Enter,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (enterAttr.IsAttribute)
-		{
-			await attributeService.EvaluateAttributeFunctionAsync(
-				parser, targetObj, newLocation, MoveAttributes.Enter,
-				new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(targetDBRef.ToString()),
-					["1"] = new CallState(cause)
-				},
-				evalParent: false);
-		}
-
-		// @OENTER - message seen by others in the new location
-		var oenterAttr = await attributeService.GetAttributeAsync(
-			targetObj, newLocation, MoveAttributes.OEnter,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oenterAttr.IsAttribute)
-		{
-			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
-			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
-				{
-					contents.Add(content);
-				}
-			}
-
-			foreach (var content in contents)
-			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
-
-				var message = await attributeService.EvaluateAttributeFunctionAsync(
-					parser, contentObj, newLocation, MoveAttributes.OEnter,
-					new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(targetDBRef.ToString()),
-						["1"] = new CallState(cause)
-					},
-					evalParent: false);
-
-				if (!string.IsNullOrEmpty(message.ToPlainText()))
-				{
-					await notifyService.Notify(content.Object().DBRef, message);
-				}
-			}
-		}
-		else
-		{
-			// Default OENTER: "{name} has arrived." (PennMUSH src/move.c)
-			var defaultMsg = $"{objectToMove.Object().Name} {ErrorMessages.Notifications.DefaultOEnter}";
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
-			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
-				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
-				}
-			}
-		}
-
-		// @OXENTER - message seen by the object entering (from others' perspective)
-		var oxenterAttr = await attributeService.GetAttributeAsync(
-			targetObj, newLocation, MoveAttributes.OXEnter,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oxenterAttr.IsAttribute)
-		{
-			var message = await attributeService.EvaluateAttributeFunctionAsync(
-				parser, targetObj, newLocation, MoveAttributes.OXEnter,
-				new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(targetDBRef.ToString()),
-					["1"] = new CallState(cause)
-				},
-				evalParent: false);
-
-			if (!string.IsNullOrEmpty(message.ToPlainText()))
-			{
-				await notifyService.Notify(targetDBRef, message);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Triggers TELEPORT-related hooks when an object is teleported.
-	/// </summary>
-	private async ValueTask TriggerTeleportHooksAsync(
-		IMUSHCodeParser parser,
-		AnySharpContent objectToMove,
-		AnySharpObject newLocation,
-		DBRef enactor)
-	{
-		var targetObj = objectToMove.Match<AnySharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing);
-		var targetDBRef = objectToMove.Object().DBRef;
-
-		// @OTELEPORT - message seen by others in destination
-		var oteleportAttr = await attributeService.GetAttributeAsync(
-			targetObj, newLocation, MoveAttributes.OTeleport,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oteleportAttr.IsAttribute)
-		{
-			var contents = new List<AnySharpContent>();
-			await foreach (var content in mediator.CreateStream(new GetContentsQuery(newLocation.Object().DBRef)))
-			{
-				if (!content.Object().DBRef.Equals(targetDBRef))
-				{
-					contents.Add(content);
-				}
-			}
-
-			foreach (var content in contents)
-			{
-				var contentObj = content.Match<AnySharpObject>(
-					player => player,
-					exit => exit,
-					thing => thing);
-
-				var message = await attributeService.EvaluateAttributeFunctionAsync(
-					parser, contentObj, newLocation, MoveAttributes.OTeleport,
-					new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(targetDBRef.ToString()),
-						["1"] = new CallState(enactor.ToString())
-					},
-					evalParent: false);
-
-				if (!string.IsNullOrEmpty(message.ToPlainText()))
-				{
-					await notifyService.Notify(content.Object().DBRef, message);
-				}
-			}
-		}
-
-		// @OXTELEPORT - message seen by the teleported object
-		var oxteleportAttr = await attributeService.GetAttributeAsync(
-			targetObj, newLocation, MoveAttributes.OXTeleport,
-			IAttributeService.AttributeMode.Execute, parent: false);
-
-		if (oxteleportAttr.IsAttribute)
-		{
-			var message = await attributeService.EvaluateAttributeFunctionAsync(
-				parser, targetObj, newLocation, MoveAttributes.OXTeleport,
-				new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(targetDBRef.ToString()),
-					["1"] = new CallState(enactor.ToString())
-				},
-				evalParent: false);
-
-			if (!string.IsNullOrEmpty(message.ToPlainText()))
-			{
-				await notifyService.Notify(targetDBRef, message);
-			}
-		}
-	}
-
-	/// <summary>
-	/// Notifies contents of a container when the container moves.
-	/// </summary>
-	private async ValueTask NotifyContentsOfMoveAsync(
-		IMUSHCodeParser parser,
-		AnySharpContent container,
-		DBRef oldLocation,
-		DBRef newLocation)
-	{
-		var contents = new List<AnySharpContent>();
-		await foreach (var content in mediator.CreateStream(new GetContentsQuery(container.Object().DBRef)))
-		{
-			contents.Add(content);
-		}
-
-		if (contents.Count == 0)
-		{
-			return;
-		}
-
-		var oldLocQuery = await mediator.Send(new GetObjectNodeQuery(oldLocation));
-		var newLocQuery = await mediator.Send(new GetObjectNodeQuery(newLocation));
-
-		if (!oldLocQuery.IsNone && !newLocQuery.IsNone)
-		{
-			var oldLocName = oldLocQuery.Known.Object().Name;
-			var newLocName = newLocQuery.Known.Object().Name;
-
-			foreach (var content in contents)
-			{
-				// This is typically used for players inside vehicles or containers
-				await notifyService.Notify(
-					content.Object().DBRef,
-					$"You sense that you have moved from {oldLocName} to {newLocName}.");
-			}
-		}
 	}
 
 	/// <inheritdoc />

@@ -1230,21 +1230,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Move object to current location using MoveService for proper hook triggering
 		var contentToDrop = objectToDrop.AsContent;
-		var moveResult = await MoveService.ExecuteMoveAsync(
-			parser,
-			contentToDrop,
-			currentRoom,
-			executor.Object().DBRef,
-			"drop",
-			silent: false);
-
-		if (moveResult.IsT1)
-		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
-			return CallState.Empty;
-		}
+		await MoveService.MoveIt(parser, contentToDrop, currentRoom, noMoveMsgs: false,
+			executor.Object().DBRef, "drop");
 
 		var dropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
 		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
@@ -1629,22 +1617,10 @@ public partial class Commands
 		// Get old location for %0 substitution
 		var oldLocation = await executor.Where();
 
-		// Move executor into object using MoveService for proper hook triggering
 		var executorAsContent = executor.AsContent;
 		var containerToEnter = objectToEnter.AsContainer;
-		var moveResult = await MoveService.ExecuteMoveAsync(
-			parser,
-			executorAsContent,
-			containerToEnter,
-			executor.Object().DBRef,
-			"enter",
-			silent: false);
-
-		if (moveResult.IsT1)
-		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
-			return CallState.Empty;
-		}
+		await MoveService.MoveIt(parser, executorAsContent, containerToEnter, noMoveMsgs: false,
+			executor.Object().DBRef, "enter");
 
 		var enterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
 		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
@@ -1845,22 +1821,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Move object to executor's inventory using MoveService for proper hook triggering
 		var executorContainer = executor.AsContainer;
 		var contentToGet = objectToGet.AsContent;
-		var moveResult = await MoveService.ExecuteMoveAsync(
-			parser,
-			contentToGet,
-			executorContainer,
-			executor.Object().DBRef,
-			"get",
-			silent: false);
-
-		if (moveResult.IsT1)
-		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
-			return CallState.Empty;
-		}
+		await MoveService.MoveIt(parser, contentToGet, executorContainer, noMoveMsgs: false,
+			executor.Object().DBRef, "get");
 
 		var successAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
@@ -2266,20 +2230,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Move to the container's location using MoveService for proper hook triggering
-		var moveResult = await MoveService.ExecuteMoveAsync(
-			parser,
-			executor.AsContent,
-			destinationLocation,
-			executor.Object().DBRef,
-			"leave",
-			silent: false);
-
-		if (moveResult.IsT1)
-		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
-			return CallState.Empty;
-		}
+		await MoveService.MoveIt(parser, executor.AsContent, destinationLocation, noMoveMsgs: false,
+			executor.Object().DBRef, "leave");
 
 		var leaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
 		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)

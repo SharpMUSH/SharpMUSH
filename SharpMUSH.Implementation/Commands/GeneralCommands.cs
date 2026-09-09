@@ -1465,19 +1465,8 @@ public partial class Commands
 			}
 
 			var isSilent = parser.CurrentState.Switches.Contains("SILENT");
-			var moveResult = await MoveService.ExecuteMoveAsync(
-				parser,
-				targetContent,
-				destinationContainer,
-				executor.Object().DBRef,
-				"teleport",
-				isSilent);
-
-			if (moveResult.IsT1)
-			{
-				await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
-				continue;
-			}
+			await MoveService.MoveIt(parser, targetContent, destinationContainer, isSilent,
+				executor.Object().DBRef, "teleport");
 
 			if (target.IsPlayer && !isSilent)
 			{
