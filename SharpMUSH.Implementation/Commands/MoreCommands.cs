@@ -94,7 +94,7 @@ public partial class Commands
 		// channel that does not exist, or @clock reports which names are taken. notify: true because the
 		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
 		// only makes a mistyped channel name fail in silence.
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, notify: true);
 
 		if (maybeChannel.IsError)

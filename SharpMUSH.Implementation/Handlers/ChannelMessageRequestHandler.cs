@@ -196,6 +196,13 @@ public class ChannelMessageRequestHandler(
 					continue;
 				}
 
+				// CB_CHECKQUIET (src/extchat.c:3957): a presence announcement is withheld from a member who
+				// muted the channel. This is the only reader of that flag.
+				if (notification.CheckQuiet && (status.Mute ?? false))
+				{
+					continue;
+				}
+
 				var isGagged = status.Gagged ?? false;
 				var wantsToHear = notification.Source.IsNone ||
 													await permissionService.CanInteract(notification.Source.Known(), member,

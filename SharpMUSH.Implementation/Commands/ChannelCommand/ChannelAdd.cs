@@ -42,8 +42,9 @@ public static class ChannelAdd
 		//
 		// The residual leak is that "CHAT: Channel already exists." tells a player a name is taken even
 		// when they cannot see the channel holding it. That is inherent to a global namespace and PennMUSH
-		// leaks it identically. notify: false keeps the lookup itself silent.
-		var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
+		// leaks it identically. The lookup itself says nothing, and it is exact: an abbreviation of an
+		// existing name is a new name, not a collision.
+		var maybeChannel = await ChannelHelper.GetChannelOrError(Mediator, channelName);
 		if (!maybeChannel.IsError)
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatAlreadyExists, executor);
