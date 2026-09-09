@@ -58,6 +58,32 @@ public class InputSessionCommandTests
 	}
 
 	[Test]
+	public async Task CallbackQRegistersAreUsableAndFreshForEveryReply()
+	{
+		var player = await Player();
+		try
+		{
+			await Command(player.Handle, "&CALLBACK me=&BEFORE me=listq(); &SET me=setq(LOCAL,%0); &VALUE me=%q<LOCAL>; &RETURN me=setr(OTHER,%0); &KEYS me=sort(listq()); &CLEAR me=unsetq(); &AFTER me=listq(); think setq(LEFTOVER,secret)");
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
+			foreach (var reply in new[] { "first", "second" })
+			{
+				await Assert.That((await Input(player.Handle, reply)).Accepted).IsTrue();
+				var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+				await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
+				await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+				await Assert.That(await Read(player.DbRef, "VALUE")).IsEqualTo(reply);
+				await Assert.That(await Read(player.DbRef, "RETURN")).IsEqualTo(reply);
+				await Assert.That(await Read(player.DbRef, "KEYS")).IsEqualTo("LOCAL OTHER");
+				await Assert.That(await Read(player.DbRef, "BEFORE") ?? "").IsEqualTo("");
+				await Assert.That(await Read(player.DbRef, "SET") ?? "").IsEqualTo("");
+				await Assert.That(await Read(player.DbRef, "AFTER") ?? "").IsEqualTo("");
+				await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
+			}
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
 	public async Task PasteLinesRemainCapturedAndCallbackCanEndTheSession()
 	{
 		var player = await Player();

@@ -234,7 +234,7 @@ public sealed class InputSessionService : IInputSessionService
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		if (timeout) Discard(session);
-		var state = ParserState.Empty with
+		var state = ParserState.RootFor(session.Executor) with
 		{
 			Executor = session.Executor,
 			Caller = session.Executor,
