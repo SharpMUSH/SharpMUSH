@@ -134,6 +134,9 @@ public interface ITaskScheduler
 	/// <param name="count">Optional number of tasks to drain (null = all)</param>
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 
+	/// <summary>Removes pending semaphore work and returns only reservations actually removed.</summary>
+	ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null);
+
 	/// <summary>
 	/// Halts an executor's jobs and waits targeting this semaphore object.
 	/// </summary>

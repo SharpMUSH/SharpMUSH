@@ -38,6 +38,8 @@ public class CloneAttributeTreeTests
 
 	private async Task<string> Eval(long handle, string expr)
 	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expr}"));
 		return result?.Message?.ToPlainText() ?? "";
 	}
@@ -49,8 +51,15 @@ public class CloneAttributeTreeTests
 	/// </summary>
 	private async Task<string> Cmd(long handle, string cmd)
 	{
+		// This fixture verifies tree-copy semantics, not the production one-second deadline under CI load.
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(cmd));
-		return result?.Message?.ToPlainText() ?? "";
+		var message = result?.Message?.ToPlainText() ?? "";
+		if (cmd.StartsWith("@clone ", StringComparison.OrdinalIgnoreCase))
+			await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(message, out _)).IsTrue()
+				.Because($"clone must return its new object identity, received: {message}");
+		return message;
 	}
 
 	/// <summary>

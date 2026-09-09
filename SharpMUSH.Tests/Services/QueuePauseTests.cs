@@ -24,6 +24,44 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CountedDrainOnlyRemovesPausedWorkStillWaitingForNotification(bool notified)
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
+		{ executed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser);
+		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think retained"), ParserState.Empty, semaphore, 1);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		if (notified) await queue.Notify(semaphore, 1);
+		await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(notified ? 0 : 1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(notified ? 1 : 0);
+		await Assert.That(executed.Task.IsCompleted).IsFalse();
+		if (notified)
+		{
+			await queue.ResumePending(job.Pid.Value);
+			await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		}
+	}
+
+	[Test]
+	public async Task ARepeatedReleaseCannotReplaceTheSignalHeldByAPause()
+	{
+		await using var queue = Create();
+		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value)).Accepted).IsTrue();
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true)).Reason)
+			.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(queue.GetQueueEntries().Single().ReleasePending).IsTrue();
+	}
+
+	[Test]
 	public async Task RacingFirePauseResumeAndCancelNeverExecuteTwice()
 	{
 		for (var iteration = 0; iteration < 25; iteration++)

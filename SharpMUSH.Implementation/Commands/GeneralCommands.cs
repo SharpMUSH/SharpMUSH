@@ -2117,6 +2117,12 @@ public partial class Commands
 
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
+		if (!await PermissionService.Controls(executor, objectToNotify) &&
+			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
@@ -2176,19 +2182,28 @@ public partial class Commands
 		}
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
+		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
+		if (validation.IsT1) return new CallState(validation.AsT1.Value);
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		async ValueTask SetCount(int value)
+		{
+			if (!await Mediator.Send(new SetAttributeCommand(dbRefAttribute.DbRef, dbRefAttribute.Attribute,
+				MarkupText.Plain(value.ToString()), god)))
+				throw new InvalidOperationException("Semaphore count update failed.");
+			if (attributeContents.IsNone)
+				await SemaphoreAttributes.InitializeAsync(Mediator, dbRefAttribute.DbRef, dbRefAttribute.Attribute);
+		}
 
 		switch (notifyType)
 		{
 			case "ANY":
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCount.ToString()));
+				await SetCount(newCount);
 				break;
 			case "ALL":
-				await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(0.ToString()));
+				var released = await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
+				await SetCount(Math.Max(0, oldSemaphoreCount - released.Count(x => x.Accepted)));
 				break;
 			case "SETQ":
 				var modified = await Mediator.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2199,8 +2214,7 @@ public partial class Commands
 				}
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCountSetQ.ToString()));
+				await SetCount(newCountSetQ);
 				return new None();
 		}
 
@@ -2704,7 +2718,7 @@ public partial class Commands
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
 		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute)).LastOrDefaultAsync();
-		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out _))
+		if (attrValue is not null && attrValue.Value.Length > 0 && !int.TryParse(attrValue.Value.ToPlainText(), out _))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
@@ -2980,6 +2994,12 @@ public partial class Commands
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
+		if (!await PermissionService.Controls(executor, objectToDrain) &&
+			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
 		var hasAll = switches.Contains("ALL");
 		var hasAny = switches.Contains("ANY");
@@ -3008,72 +3028,35 @@ public partial class Commands
 		}
 
 		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
+		async ValueTask DrainAttribute(DbRefAttribute target)
+		{
+			var removed = await Mediator.Send(new DrainSemaphoreCountedRequest(target, drainCount));
+			var currentAttr = await Mediator.CreateStream(
+				new GetAttributeQuery(objectToDrain.Object().DBRef, target.Attribute)).LastOrDefaultAsync();
+			var currentCount = currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var parsed)
+				? parsed : 0;
+			// Published timeout work still owns its count until the consumer performs bookkeeping.
+			// Draining must neither consume that reservation nor grant notification credits.
+			var newCount = drainCount.HasValue && currentCount < 0
+				? currentCount : Math.Max(0, (long)currentCount - removed);
+			if (newCount == 0)
+				await Mediator.Send(new ClearAttributeCommand(objectToDrain.Object().DBRef, target.Attribute));
+			else
+				await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, target.Attribute,
+					MarkupText.Plain(newCount.ToString()), one.AsPlayer));
+		}
+
 		if (hasAny)
 		{
 			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
-
-			await foreach (var uniqueAttribute in filteredPids)
-			{
-				var dbRefAttrToDrain = uniqueAttribute;
-				if (hasAll || !drainCount.HasValue)
-				{
-					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, null));
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-						MushText.Zero,
-						one.AsPlayer));
-				}
-				else
-				{
-					await Mediator.Send(new DrainSemaphoreRequest(dbRefAttrToDrain, drainCount.Value));
-					var currentAttr = await Mediator.CreateStream(
-						new GetAttributeQuery(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute)).LastOrDefaultAsync();
-					if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
-					{
-						var newCount = currentCount + drainCount.Value;
-						await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, dbRefAttrToDrain.Attribute,
-							MarkupText.Plain(newCount.ToString()),
-							one.AsPlayer));
-					}
-				}
-			}
+			await foreach (var uniqueAttribute in filteredPids) await DrainAttribute(uniqueAttribute);
 		}
 		else
 		{
-			var dbRefAttribute = new DbRefAttribute(objectToDrain.Object().DBRef, attribute);
-
-			if (hasAll || !drainCount.HasValue)
-			{
-				await Mediator.Send(new DrainSemaphoreRequest(dbRefAttribute, null));
-				if (hasAll)
-				{
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MushText.Zero,
-						one.AsPlayer));
-				}
-				else
-				{
-					// Without /all, set to -1 to indicate no tasks waiting
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MarkupText.Plain("-1"),
-						one.AsPlayer));
-				}
-			}
-			else
-			{
-				await Mediator.Send(new DrainSemaphoreRequest(dbRefAttribute, drainCount.Value));
-				var currentAttr = await Mediator.CreateStream(
-					new GetAttributeQuery(objectToDrain.Object().DBRef, attribute)).LastOrDefaultAsync();
-				if (currentAttr is not null && int.TryParse(currentAttr.Value.ToPlainText(), out var currentCount))
-				{
-					var newCount = currentCount + drainCount.Value;
-					await Mediator.Send(new SetAttributeCommand(objectToDrain.Object().DBRef, attribute,
-						MarkupText.Plain(newCount.ToString()),
-						one.AsPlayer));
-				}
-			}
+			await DrainAttribute(new DbRefAttribute(objectToDrain.Object().DBRef, attribute));
 		}
 
 		return CallState.Empty;

@@ -76,7 +76,9 @@ public class QueueAdmissionTests
 			var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
 			scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
 			await queue.ReleaseScheduledWork(pending.Pid!.Value, semaphoreTimeout: true);
-			using (await queue.EnterSemaphoreMutationAsync()) await queue.Drain(semaphore);
+			await Assert.That((await queue.ReleaseScheduledWork(pending.Pid.Value)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+			using (await queue.EnterSemaphoreMutationAsync())
+				await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(0);
 		}
 		finally { release.SetResult(); }
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -108,21 +110,37 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task CountedDrainCountsOnlyRemovedPendingReservations()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(global: 3, scheduler: scheduler);
+		var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var first = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think first"), ParserState.Empty, semaphore, 0);
+		var second = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think second"), ParserState.Empty, semaphore, 1);
+		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>())
+			.Returns(new[] { new TriggerKey($"dbref:-{first.Pid}", $"semaphore:{semaphore}"), new TriggerKey($"dbref:-{second.Pid}", $"semaphore:{semaphore}") });
+		await Assert.That(await queue.DrainCounted(semaphore, 1)).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(1);
+		await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task ManagedWaitDoesNotExposeReservationBeforeCounterLease()
 	{
 		var count = 2;
 		await using var queue = Create(mediator: CountingMediator(() => count, value => count = value));
-		var lease = await queue.EnterSemaphoreMutationAsync();
 		Task<QueueAdmissionResult>? pending = null;
 		try
 		{
+			using var lease = await queue.EnterSemaphoreMutationAsync();
 			pending = queue.WriteCommandList(MarkupString.MarkupText.Plain("think pending"), ParserState.Empty,
 				new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 2, TimeSpan.FromHours(1), manageSemaphoreCount: true).AsTask();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 		}
 		finally
 		{
-			lease.Dispose();
 			if (pending is not null)
 			{
 				var admitted = await pending;

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -138,6 +139,99 @@ public class SemaphoreCommandTests
 			MarkupText.Plain($"@drain {semObj}/{uniqueAttr}"));
 
 		// No assertion - just verify no exceptions
+	}
+
+	[Test]
+	public async ValueTask DrainCommandSubtractsActualWaitersAndClearsCredits()
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CountedDrain");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		await Command($"@wait {target}/{attribute}=think first");
+		await Command($"@wait {target}/{attribute}=think second");
+		await Assert.That(await Count()).IsEqualTo("2");
+		await Command($"@drain {target}/{attribute}=1");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+		await Command($"@notify {target}/{attribute}=2");
+		await Assert.That(await Count()).IsEqualTo("-2");
+		await Command($"@drain {target}/{attribute}=1");
+		await Assert.That(await Count()).IsEqualTo("-2");
+		await Command($"@drain/all {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+		await Command($"@wait {target}/{attribute}=think reused");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async ValueTask ReleaseAllPreservesPublishedTimeoutAccountingBeforeNewWait(bool notifyAll)
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DrainTimeout");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(
+			target, [attribute]);
+		var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		await Scheduler.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var timeout = await Scheduler.WriteCommandList(MarkupText.Plain("think timeout"), WebAppFactoryArg.FunctionParser.CurrentState,
+				semaphore, 0, manageSemaphoreCount: true);
+			await Command($"@wait {target}/{attribute}=think pending");
+			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
+			await Command($"@{(notifyAll ? "notify" : "drain")}/all {target}/{attribute}");
+			await Assert.That(await Count()).IsEqualTo("1");
+			await Command($"@wait {target}/{attribute}=think later");
+			await Assert.That(await Count()).IsEqualTo("2");
+			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain-complete", "test");
+		}
+		finally { release.SetResult(); }
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+	}
+
+	[Test]
+	public async ValueTask OrdinaryOwnerCanCreateAndConsumeCustomSemaphoreCredits()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "SemaphoreOwner");
+		var outsider = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "SemaphoreOutsider");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		async ValueTask Command(long handle, string command) => await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({player.DbRef}/{attribute})")))!.Message!.ToPlainText();
+		await Command(player.Handle, $"@notify me/{attribute}=2");
+		await Assert.That(await Count()).IsEqualTo("-2");
+		var created = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, [attribute])).LastAsync();
+		await Assert.That((await created.Owner.WithCancellation(CancellationToken.None))!.Object.Key).IsEqualTo(1);
+		await Assert.That(created.Flags.Select(x => x.Name).ToArray()).Contains("locked");
+		await Command(player.Handle, $"@wait me/{attribute}=think first credit");
+		await Assert.That(await Count()).IsEqualTo("-1");
+		await Command(player.Handle, $"@wait me/{attribute}=think second credit");
+		await Command(player.Handle, $"@wait me/{attribute}=think pending");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command(outsider.Handle, $"@notify {player.DbRef}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command(outsider.Handle, $"@drain {player.DbRef}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command(player.Handle, $"@notify me/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("0");
+		await Command(1, $"@set {player.DbRef}=LINK_OK");
+		await Command(outsider.Handle, $"@notify {player.DbRef}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("-1");
+		await Command(outsider.Handle, $"@drain {player.DbRef}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
 	}
 
 	[Test]

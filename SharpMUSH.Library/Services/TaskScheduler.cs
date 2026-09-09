@@ -216,10 +216,11 @@ public partial class TaskScheduler(
 			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (entry.Deferred?.Paused == true)
 			{
+				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true, ReleaseTimeout = semaphoreTimeout } };
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}
-			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
+			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			var group = entry.Group;
 			var semaphoreTarget = entry.SemaphoreTarget;
 			entry = entry with
@@ -433,12 +434,14 @@ public partial class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
-				currentCount = attribute is null ? 0 : int.Parse(attribute.Value.ToPlainText());
+				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
 					MarkupString.MarkupText.Plain(checked(currentCount + 1).ToString()), god)))
 					throw new InvalidOperationException("Semaphore count update failed.");
 				counterWritten = true;
+				if (attribute is null)
+					await SemaphoreAttributes.InitializeAsync(mediator, fullTarget, dbRefAttribute.Attribute);
 				if (currentCount < 0)
 				{
 					var activated = await Activate(admission.Pid!.Value);
@@ -507,6 +510,9 @@ public partial class TaskScheduler(
 	}
 
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
+		=> _ = await DrainCounted(dbAttribute, count);
+
+	public async ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
 	{
 		QueueEntry[] removed;
 		using (await LockDeferred())
@@ -525,6 +531,7 @@ public partial class TaskScheduler(
 			}
 		}
 		foreach (var entry in removed) DisposeEntry(entry);
+		return removed.Length;
 	}
 
 	public async ValueTask Halt(DBRef dbRef)
