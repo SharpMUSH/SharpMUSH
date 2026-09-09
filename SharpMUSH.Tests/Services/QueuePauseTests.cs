@@ -24,6 +24,59 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments("pause")]
+	[Arguments("resume")]
+	[Arguments("retime")]
+	public async Task PartialSemaphoreCleanupBlocksTimerChangesUntilRecovery(string operation)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var retained = new HashSet<TriggerKey>();
+		var schedules = 0;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				schedules++;
+				retained.Add(call.Arg<ITrigger>().Key);
+				return Task.FromResult(DateTimeOffset.UtcNow);
+			});
+		await using var queue = Create(scheduler: scheduler);
+		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var first = await queue.AdmitCommandList(MarkupText.Plain("first"), ParserState.Empty, target, 0);
+		var second = await queue.AdmitCommandList(MarkupText.Plain("second"), ParserState.Empty, target, 0);
+		if (operation == "resume") await queue.PausePending(first.Pid!.Value, "before cleanup");
+		var fail = true;
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var key = call.Arg<TriggerKey>();
+			if (fail && key.Name == $"dbref:-{second.Pid}") throw new IOException("second cleanup failed");
+			return Task.FromResult(retained.Remove(key));
+		});
+		using (await queue.EnterSemaphoreMutationAsync())
+			await Assert.ThrowsAsync<IOException>(async () => await queue.ApplySemaphoreCommandAsync(target, null, true,
+				_ => ValueTask.CompletedTask, () => ValueTask.FromException<bool>(new Exception("confirmed write"))));
+		await Assert.That(retained.Count).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
+		try
+		{
+			switch (operation)
+			{
+				case "pause": await Assert.That(await queue.PausePending(first.Pid!.Value, "during repair")).IsEqualTo(QueueControlResult.NotPending); break;
+				case "resume": await Assert.That(await queue.ResumePending(first.Pid!.Value)).IsEqualTo(QueueControlResult.NotPending); break;
+				case "retime": await queue.RescheduleSemaphoreTask(first.Pid!.Value, TimeSpan.FromHours(1)); break;
+			}
+			await Assert.That(schedules).IsEqualTo(2);
+		}
+		finally
+		{
+			fail = false;
+			using (await queue.EnterSemaphoreMutationAsync()) { }
+		}
+		await Assert.That(retained.Count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(queue.GetQueueEntries().Count).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments("notify")]
 	[Arguments("drain")]
 	[Arguments("halt")]
