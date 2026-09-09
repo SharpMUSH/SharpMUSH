@@ -69,4 +69,18 @@ public class DidItServiceTests
 			MarkupText.Plain($"&FORWARDLIST {thing}=#1"));
 		await Assert.That(await PermissionService.IsHearer(await Node(thing))).IsFalse();
 	}
+
+	[Test]
+	public async ValueTask ListenIsNotInheritedFromAParent()
+	{
+		var parent = await Thing("HearParent");
+		var child = await Thing("HearChild");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LISTEN {parent}=*"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {child}={parent}"));
+
+		// The parent hears; the child does not inherit that.
+		await Assert.That(await PermissionService.IsHearer(await Node(parent))).IsTrue();
+		await Assert.That(await PermissionService.IsHearer(await Node(child))).IsFalse();
+	}
 }
