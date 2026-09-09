@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -28,13 +29,15 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 	/// <summary>Existing Penn game permissions for PID operations, independent of account role grants.</summary>
 	public async Task<bool> CanAccessLegacyAsync(AnySharpObject actor, long pid, bool mutate, CancellationToken ct = default)
 	{
+		using var requestScope = new RequestScope(ct);
+		ct = ExecutionBudget.CurrentToken;
 		var entry = scheduler.GetQueueEntry(pid);
 		if (entry is null) return false;
 		if (mutate ? await actor.IsWizard() || await actor.HasPower("HALT")
 			: await actor.IsPriv() || await actor.HasPower("SEE_QUEUE")) return true;
 		if (entry.Source is not { IsObjid: true } source) return false;
 		var target = await mediator.Send(new GetObjectNodeQuery(source), ct);
-		return !target.IsNone && target.Known().Object().DBRef == source && await permissions.Controls(actor, target.Known());
+		return !target.IsNone && target.Known().Object().DBRef == source && await permissions.Controls(actor, target.Known()).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>Stops after the requested number of visible entries, without materializing the full ledger.</summary>
@@ -75,6 +78,8 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 
 	public async Task<bool> CanInspectAsync(QueueInspectionScope scope, DBRef? owner, DBRef? source, CancellationToken ct = default)
 	{
+		using var requestScope = new RequestScope(ct);
+		ct = ExecutionBudget.CurrentToken;
 		ct.ThrowIfCancellationRequested();
 		var own = owner == scope.Actor.ActiveCharacter;
 		return scope.Scopes.Contains(own ? PortalPermission.QueueInspectOwn : PortalPermission.QueueInspect)
@@ -83,6 +88,8 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 
 	public async Task<QueueControlResult> ChangeAsync(CapabilityActor actor, long pid, bool resume, string reason = "", CancellationToken ct = default)
 	{
+		using var requestScope = new RequestScope(ct);
+		ct = ExecutionBudget.CurrentToken;
 		ct.ThrowIfCancellationRequested();
 		if (!await ValidActor(actor, ct)) return QueueControlResult.NotFound;
 		var entry = scheduler.GetQueueEntry(pid);
@@ -108,6 +115,34 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		if (!player.IsPlayer || player.AsPlayer.Object.DBRef != actor.ActiveCharacter || target.IsNone
 			|| target.Known().Object().DBRef != source) return false;
 		if ((await target.Known().Object().Owner.WithCancellation(ct)).Object.DBRef != owner) return false;
-		return await permissions.Controls(player.Known(), target.Known());
+		return await permissions.Controls(player.Known(), target.Known()).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
+	}
+
+	// Queue controls are also called by HTTP and background services without a parser.
+	// Preserve an inherited deadline while carrying their cancellation through legacy
+	// permission APIs and directly awaited scheduler mutations.
+	private sealed class RequestScope : IDisposable
+	{
+		private readonly CancellationTokenSource _cancellation;
+		private readonly ExecutionBudget _budget;
+		private readonly IDisposable _scope;
+
+		public RequestScope(CancellationToken token)
+		{
+			token.ThrowIfCancellationRequested();
+			var inherited = ExecutionBudget.Current;
+			inherited?.ThrowIfExceeded();
+			var remaining = inherited?.Remaining ?? TimeSpan.MaxValue;
+			_cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, ExecutionBudget.CurrentToken);
+			_budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, _cancellation.Token);
+			_scope = _budget.Enter();
+		}
+
+		public void Dispose()
+		{
+			_scope.Dispose();
+			_budget.Dispose();
+			_cancellation.Dispose();
+		}
 	}
 }
