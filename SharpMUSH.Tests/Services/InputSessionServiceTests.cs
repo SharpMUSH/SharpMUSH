@@ -112,6 +112,28 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestartCannotEraseAnOwedTimeoutCallback(bool timeoutAlreadyTaken)
+	{
+		var h = new Harness();
+		var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		h.Time.Now += TimeSpan.FromMinutes(2);
+		if (timeoutAlreadyTaken) await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		var restarted = await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await Assert.That(restarted).IsNotNull();
+		if (!timeoutAlreadyTaken) await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
+		await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty, true);
+		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.ToPlainText()).IsEqualTo("timeout");
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsNotEqualTo(original.Id);
+	}
+
+	[Test]
 	[Arguments("object")]
 	[Arguments("actor-owner")]
 	[Arguments("target-owner")]

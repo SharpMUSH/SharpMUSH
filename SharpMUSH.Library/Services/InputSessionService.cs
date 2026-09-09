@@ -21,6 +21,7 @@ public sealed class InputSessionService : IInputSessionService
 	public const string InvalidCallback = "#-1 INVALID INPUT CALLBACK";
 	public const string SessionLimit = "#-1 INPUT SESSION LIMIT EXCEEDED";
 	public const string NotActive = "#-1 NO ACTIVE INPUT SESSION";
+	public const string PendingTimeout = "#-1 INPUT SESSION TIMEOUT CALLBACK IS PENDING";
 	public const string InvalidTimeout = "#-1 INPUT TIMEOUT MUST BE BETWEEN 1 AND 3600 SECONDS";
 
 	private sealed class Entry(InputSession session)
@@ -117,6 +118,8 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 		{
 			if (!BindingMatches(session)) return InvalidContext;
+			if (_sessions.TryGetValue(handle, out var previous) && BindingMatches(previous.Session)
+				&& (previous.TimeoutPending || previous.Session.ExpiresAt <= _time.GetUtcNow())) return PendingTimeout;
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
 			if (_sessions.Count(pair => pair.Key != handle && pair.Value.Session.Owner == owner) >= MaxOwnerSessions) return SessionLimit;
 			_sessions[handle] = new Entry(session);
