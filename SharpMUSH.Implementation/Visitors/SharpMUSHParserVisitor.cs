@@ -934,7 +934,7 @@ public class SharpMUSHParserVisitor(
 			return result with { Depth = contextDepth };
 		}
 		catch (RestrictedExpressionException) { success = false; throw; }
-		catch (OperationCanceledException) when (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		catch (OperationCanceledException)
 		{
 			success = false;
 			throw;

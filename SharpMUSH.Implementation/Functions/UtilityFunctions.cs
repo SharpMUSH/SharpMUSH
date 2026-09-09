@@ -2046,14 +2046,15 @@ public partial class Functions
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (parser.CurrentState.Arguments.Count == 0)
+		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		if (string.IsNullOrEmpty(argument))
 		{
 			var canPeek = parser.CurrentState.Registers.TryPeek(out var peek);
 			peek!.Clear();
 		}
 		else
 		{
-			var registers = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText().Split(" ");
+			var registers = argument.Split(" ");
 			foreach (var r in registers)
 			{
 				var canPeek = parser.CurrentState.Registers.TryPeek(out var peek);

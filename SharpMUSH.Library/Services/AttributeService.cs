@@ -34,6 +34,8 @@ public class AttributeService(
 		IAttributeService.AttributeMode mode,
 		bool checkParent = true)
 	{
+		var cancellationToken = ExecutionBudget.CurrentToken;
+		cancellationToken.ThrowIfCancellationRequested();
 		var attributePath = attribute.Split('`');
 
 		if (!await validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj))
@@ -59,9 +61,10 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent));
+			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent), cancellationToken);
 
-		var result = await attributeResult.FirstOrDefaultAsync();
+		var result = await attributeResult.FirstOrDefaultAsync(cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
 
 		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
 		// consult the type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING). Only when parent-checking
