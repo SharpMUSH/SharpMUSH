@@ -33,6 +33,25 @@ public class LocalFunctionTests
 	}
 
 	[Test]
+	public async Task NewAliasRejectsATargetClaimedByALiveBuiltinClone()
+	{
+		var name = "claimedTarget" + Guid.NewGuid().ToString("N");
+		var alias = name + "alias";
+		await Cmd($"&{name} me=local");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd($"@function/clone {name}=add");
+		try
+		{
+			var result = await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@function/local/alias {alias}={name}"));
+			await Assert.That(result.Message?.ToPlainText()).Contains("NOT FOUND");
+			var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+			var owner = (await god.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+			await Assert.That(Factory.Services.GetRequiredService<IUserDefinedFunctionService>().Get(alias, owner)).IsNull();
+		}
+		finally { await Cmd($"@function/delete {name}"); await Cmd($"@function/local/delete {name}"); }
+	}
+
+	[Test]
 	[Arguments("@function/local")]
 	[Arguments("@function/local unavailable")]
 	[Arguments("@function/local/restore *")]
