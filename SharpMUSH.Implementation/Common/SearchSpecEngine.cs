@@ -249,7 +249,7 @@ public static class SearchSpecEngine
 					var expression = evalExpression.Replace("##", objectDbRefNum);
 
 					var evalResult = await parser.FunctionParse(MarkupText.Plain(expression));
-					if (evalResult == null || !evalResult.Message.Truthy())
+					if (evalResult == null || !evalResult.Message.Truthy(parser))
 					{
 						matches = false;
 						break;
