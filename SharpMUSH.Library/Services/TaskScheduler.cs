@@ -183,6 +183,7 @@ public partial class TaskScheduler(
 			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (entry.Deferred?.Paused == true)
 			{
+				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true, ReleaseTimeout = semaphoreTimeout } };
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}

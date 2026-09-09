@@ -49,6 +49,19 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task ARepeatedReleaseCannotReplaceTheSignalHeldByAPause()
+	{
+		await using var queue = Create();
+		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value)).Accepted).IsTrue();
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true)).Reason)
+			.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(queue.GetQueueEntries().Single().ReleasePending).IsTrue();
+	}
+
+	[Test]
 	public async Task RacingFirePauseResumeAndCancelNeverExecuteTwice()
 	{
 		for (var iteration = 0; iteration < 25; iteration++)
