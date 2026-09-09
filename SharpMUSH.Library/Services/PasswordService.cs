@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Buffers;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -37,9 +38,9 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		if (string.IsNullOrEmpty(hash))
 			return false;
 
-		if (IsPennMUSHPasswordFormat(hash))
+		if (TryParsePennMUSHHash(hash, out var algo, out var saltedHash))
 		{
-			return VerifyPennMUSHPassword(pw, hash);
+			return VerifyPennMUSHPassword(pw, algo, saltedHash);
 		}
 
 		try
@@ -58,35 +59,55 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 	/// PennMUSH format: V:ALGO:HASH:TIMESTAMP (e.g., "2:SHA1:abXYZ123...:1234567890")
 	/// </summary>
 	private static bool IsPennMUSHPasswordFormat(string hash)
-	{
-		if (string.IsNullOrEmpty(hash))
-			return false;
-
-		var parts = hash.Split(':');
-		if (parts.Length < 3)
-			return false;
-
-		if (!int.TryParse(parts[0], out var version) || version < 1 || version > 2)
-			return false;
-
-		var algo = parts[1].ToUpperInvariant();
-		return algo is "SHA1" or "SHA-1" or "SHA256" or "SHA-256";
-	}
+		=> !string.IsNullOrEmpty(hash) && TryParsePennMUSHHash(hash, out _, out _);
 
 	/// <summary>
-	/// Verifies a password against a PennMUSH-format hash.
-	/// The hash format is: V:ALGO:SALTEDHASH:TIMESTAMP
-	/// The first 2 characters of SALTEDHASH are the salt, prepended to the plaintext before hashing.
+	/// Splits a PennMUSH-format hash (<c>V:ALGO:SALTEDHASH:TIMESTAMP</c>) into the algorithm and the
+	/// salted hash without allocating the parts. Fails on a version other than 1 or 2, an unknown
+	/// algorithm, or fewer than three fields; a trailing timestamp is optional and ignored.
 	/// </summary>
-	private static bool VerifyPennMUSHPassword(string plaintext, string storedHash)
+	private static bool TryParsePennMUSHHash(string hash, out ReadOnlySpan<char> algo, out ReadOnlySpan<char> saltedHash)
 	{
-		var parts = storedHash.Split(':');
-		if (parts.Length < 3)
+		algo = default;
+		saltedHash = default;
+
+		var text = hash.AsSpan();
+		var firstColon = text.IndexOf(':');
+		if (firstColon < 0)
 			return false;
 
-		var algo = parts[1].ToUpperInvariant();
-		var saltedHash = parts[2];
+		var rest = text[(firstColon + 1)..];
+		var secondColon = rest.IndexOf(':');
+		if (secondColon < 0)
+			return false;
 
+		if (!int.TryParse(text[..firstColon], out var version) || version < 1 || version > 2)
+			return false;
+
+		var candidateAlgo = rest[..secondColon];
+		if (!IsSha1(candidateAlgo) && !IsSha256(candidateAlgo))
+			return false;
+
+		var tail = rest[(secondColon + 1)..];
+		var thirdColon = tail.IndexOf(':');
+		algo = candidateAlgo;
+		saltedHash = thirdColon < 0 ? tail : tail[..thirdColon];
+		return true;
+	}
+
+	private static bool IsSha1(ReadOnlySpan<char> algo)
+		=> algo.Equals("SHA1", StringComparison.OrdinalIgnoreCase) || algo.Equals("SHA-1", StringComparison.OrdinalIgnoreCase);
+
+	private static bool IsSha256(ReadOnlySpan<char> algo)
+		=> algo.Equals("SHA256", StringComparison.OrdinalIgnoreCase) || algo.Equals("SHA-256", StringComparison.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Verifies a password against the parts of a PennMUSH-format hash.
+	/// The first 2 characters of <paramref name="saltedHash"/> are the salt, prepended to the plaintext
+	/// before hashing; the rest is the hex digest, in either case.
+	/// </summary>
+	private static bool VerifyPennMUSHPassword(string plaintext, ReadOnlySpan<char> algo, ReadOnlySpan<char> saltedHash)
+	{
 		// The salt is the first 2 characters of the stored hash
 		if (saltedHash.Length < 3)
 			return false;
@@ -94,44 +115,37 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		var salt = saltedHash[..2];
 		var expectedHash = saltedHash[2..];
 
-		var saltedPlaintext = salt + plaintext;
-		string computedHash;
-
-		if (algo is "SHA1" or "SHA-1")
+		var saltedPlaintext = string.Concat(salt, plaintext);
+		var byteCount = Encoding.UTF8.GetByteCount(saltedPlaintext);
+		var rented = ArrayPool<byte>.Shared.Rent(byteCount);
+		try
 		{
-			computedHash = ComputeSha1Hash(saltedPlaintext);
+			var input = rented.AsSpan(0, Encoding.UTF8.GetBytes(saltedPlaintext, rented));
+			Span<byte> digest = stackalloc byte[SHA256.HashSizeInBytes];
+			int digestLength;
+
+			if (IsSha1(algo))
+			{
+				digestLength = SHA1.HashData(input, digest);
+			}
+			else if (IsSha256(algo))
+			{
+				digestLength = SHA256.HashData(input, digest);
+			}
+			else
+			{
+				return false;
+			}
+
+			// Compare hashes (case-insensitive as hex can be upper or lower)
+			return expectedHash.Equals(Convert.ToHexString(digest[..digestLength]), StringComparison.OrdinalIgnoreCase);
 		}
-		else if (algo is "SHA256" or "SHA-256")
+		finally
 		{
-			computedHash = ComputeSha256Hash(saltedPlaintext);
+			// The pooled buffer held the salted plaintext.
+			CryptographicOperations.ZeroMemory(rented.AsSpan(0, byteCount));
+			ArrayPool<byte>.Shared.Return(rented);
 		}
-		else
-		{
-			return false;
-		}
-
-		// Compare hashes (case-insensitive as hex can be upper or lower)
-		return string.Equals(computedHash, expectedHash, StringComparison.OrdinalIgnoreCase);
-	}
-
-	/// <summary>
-	/// Computes SHA1 hash of the input string and returns it as a hex string.
-	/// </summary>
-	private static string ComputeSha1Hash(string input)
-	{
-		var bytes = Encoding.UTF8.GetBytes(input);
-		var hashBytes = SHA1.HashData(bytes);
-		return Convert.ToHexString(hashBytes).ToLowerInvariant();
-	}
-
-	/// <summary>
-	/// Computes SHA256 hash of the input string and returns it as a hex string.
-	/// </summary>
-	private static string ComputeSha256Hash(string input)
-	{
-		var bytes = Encoding.UTF8.GetBytes(input);
-		var hashBytes = SHA256.HashData(bytes);
-		return Convert.ToHexString(hashBytes).ToLowerInvariant();
 	}
 
 	public async ValueTask SetPassword(SharpPlayer user, string hashedPassword)

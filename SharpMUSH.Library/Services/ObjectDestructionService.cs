@@ -309,10 +309,11 @@ public class ObjectDestructionService(
 	/// </summary>
 	private async ValueTask RehomeDependentsAsync(DBRef dbref, CancellationToken ct)
 	{
-		var dependents = await mediator.CreateStream(new GetHomedAtQuery(dbref), ct).ToListAsync(ct);
-
 		// Exits are handled by RelinkEntrancesAsync — for an exit the home edge is its destination.
-		var homeless = dependents.Where(dependent => !dependent.IsExit).ToList();
+		// Materialized before mutating: the rehome below writes the edges this stream reads.
+		var homeless = await mediator.CreateStream(new GetHomedAtQuery(dbref), ct)
+			.Where(dependent => !dependent.IsExit)
+			.ToListAsync(ct);
 		if (homeless.Count == 0) return;
 
 		var defaultHome = await ResolveDefaultHomeAsync(ct);

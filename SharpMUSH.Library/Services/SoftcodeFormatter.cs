@@ -175,9 +175,20 @@ public static class SoftcodeFormatter
 				var length = error.OffendingToken?.Length ?? 1;
 				return (Start: start, End: start + length);
 			})
-			.ToList();
+			.ToArray();
 
-		return offset => spans.Any(span => offset >= span.Start && offset < span.End) ? ErrorStyle : null;
+		// Consulted once per character of the source, so the probe is a plain loop rather than a
+		// closure-allocating LINQ call per offset.
+		return offset =>
+		{
+			foreach (var span in spans)
+			{
+				if (offset >= span.Start && offset < span.End)
+					return ErrorStyle;
+			}
+
+			return null;
+		};
 	}
 
 	/// <summary>

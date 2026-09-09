@@ -93,7 +93,7 @@ public sealed partial class ObjectSnapshotService(
 				throw Error("recovery-required", "Recover the pending before-image before starting another restore.");
 			before = before with
 			{
-				AbsentAttributes = selection.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1))))
+				AbsentAttributes = selection.Attributes.SelectMany(AttributePathPrefixes)
 					.Except(before.Attributes.Select(a => a.Name)).ToArray(),
 				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).Except(before.Locks.Keys).ToArray() : [],
 				RecoverySelection = selection,
@@ -159,7 +159,7 @@ public sealed partial class ObjectSnapshotService(
 	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IReadOnlySet<string>? lockNames = null, ReadContext? reads = null)
 	{
 		reads ??= new(objects, attributes, obj.Object().DBRef);
-		var selectedNames = selection?.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1)))).ToHashSet(StringComparer.Ordinal);
+		var selectedNames = selection?.Attributes.SelectMany(AttributePathPrefixes).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
 		await foreach (var attribute in attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct))
@@ -189,6 +189,20 @@ public sealed partial class ObjectSnapshotService(
 			selection is null || selection.Name ? obj.Object().Name : "", captured.OrderBy(a => a.Name).ToArray(), lockData,
 			selection is null || selection.Flags ? (await obj.Object().Flags.Value.ToListAsync(ct)).Where(f => f.Name != obj.Object().Type).Select(f => f.Name).Order().ToArray() : [], "");
 		return FinalizeImage(snapshot);
+	}
+
+	/// <summary>
+	/// Every ancestor of a backtick-separated attribute name and the name itself, shortest first:
+	/// <c>A`B`C</c> yields <c>A</c>, <c>A`B</c>, <c>A`B`C</c>.
+	/// </summary>
+	private static IEnumerable<string> AttributePathPrefixes(string name)
+	{
+		for (var separator = name.IndexOf('`'); separator >= 0; separator = name.IndexOf('`', separator + 1))
+		{
+			yield return name[..separator];
+		}
+
+		yield return name;
 	}
 
 	private static ObjectSnapshot FinalizeImage(ObjectSnapshot snapshot)
@@ -309,7 +323,7 @@ public sealed partial class ObjectSnapshotService(
 				foreach (var name in value.Flags)
 					flags.Add(await reads.Flag(name, ct));
 				var historical = new SharpAttribute("", "", value.Name, flags, null, value.Name,
-					new(_ => Task.FromResult(Array.Empty<SharpAttribute>().ToAsyncEnumerable())),
+					new(_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
 					new(_ => Task.FromResult<SharpPlayer?>(owner)), new(_ => Task.FromResult<SharpAttributeEntry?>(null)));
 				historicalPath.Add(historical);
 			}

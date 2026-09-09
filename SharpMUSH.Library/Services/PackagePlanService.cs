@@ -1,3 +1,4 @@
+using System.Text;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -325,6 +326,13 @@ public class PackagePlanService : IPackagePlanService
 			}
 		}
 
+		// Reverse of objidByRef; the first ref to claim an objid wins, as it did in the dictionary walk.
+		var refByObjid = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var (reference, objid) in objidByRef)
+		{
+			refByObjid.TryAdd(objid, reference);
+		}
+
 		// Baselines whose attribute vanished from the manifest: delete / conflict / cleanup.
 		foreach (var baseline in inputs.Baselines)
 		{
@@ -342,7 +350,7 @@ public class PackagePlanService : IPackagePlanService
 				liveValue = lv;
 			}
 
-			var targetRef = objidByRef.FirstOrDefault(kv => kv.Value == baseline.Objid).Key ?? baseline.Objid;
+			var targetRef = refByObjid.GetValueOrDefault(baseline.Objid) ?? baseline.Objid;
 
 			var isLegacyRef = baseline.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase);
 			// A removed attachment has no incoming spec to establish provenance. Its
@@ -680,9 +688,24 @@ public class PackagePlanService : IPackagePlanService
 			return null;
 		}
 
-		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-		var collapsed = string.Join(' ',
-			pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-		return collapsed.ToLowerInvariant();
+		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value).AsSpan();
+		var collapsed = new StringBuilder(pattern.Length);
+		foreach (var range in pattern.Split(' '))
+		{
+			var word = pattern[range].Trim();
+			if (word.IsEmpty)
+			{
+				continue;
+			}
+
+			if (collapsed.Length > 0)
+			{
+				collapsed.Append(' ');
+			}
+
+			collapsed.Append(word);
+		}
+
+		return collapsed.ToString().ToLowerInvariant();
 	}
 }
