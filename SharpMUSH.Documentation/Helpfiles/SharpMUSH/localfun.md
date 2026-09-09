@@ -11,7 +11,9 @@ you must control it, and you must be able to read the attribute. Names contain
 ASCII letters, digits and underscores, up to 64 characters. Built-in names are
 reserved, including names contributed by loaded plugins. A temporary softcode
 deletion does not remove that reservation; compiled names stay reserved for the
-library's lifetime. Argument bounds default to zero through 32.
+library's lifetime. A live built-in clone also takes precedence over an existing
+local name, including calls through a local alias. Argument bounds default to zero
+through 32.
 
 For example, when entered as separate client commands:
 
