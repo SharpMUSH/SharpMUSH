@@ -86,6 +86,15 @@ public class ConditionalFunctionUnitTests
 	[Arguments("strfirstof(,bar,foo)", "bar")]
 	[Arguments("strfirstof(bar,,foo)", "bar")]
 	[Arguments("strfirstof(bar,baz,foo)", "bar")]
+	// NoParse defers evaluation; it does not make the answer the source text. Verified against
+	// PennMUSH 1.8.8: strfirstof(add(1,1),7) is 2 there, and returning "add(1,1)" here broke every
+	// caller of the form strfirstof(r(page,args),1) — the unevaluated text carries a comma, which
+	// then split the argument list of whatever consumed it.
+	[Arguments("strfirstof(add(1,1),7)", "2")]
+	[Arguments("strfirstof(mid(abc,0,1),z)", "a")]
+	[Arguments("strfirstof(mid(abc,0,0),z)", "z")]
+	// The default is evaluated too, not just the candidates.
+	[Arguments("strfirstof(,add(1,1))", "2")]
 	public async Task Strfirstof(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

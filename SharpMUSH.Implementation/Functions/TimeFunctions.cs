@@ -589,19 +589,45 @@ public partial class Functions
 		var minutes = totalSecs % 3600 / 60;
 		var secondsField = TimePrecisions.FormatSecondsField(totalSecs % 60, fractionMs, precision);
 
-		return pad switch
+		// fun_timestring (src/funtime.c:509-519) prints each field with printf's "%2u" — right-aligned
+		// in two columns — and separates fields with ONE space. Two-digit values therefore close up
+		// ("timestring(281)" is " 4m 41s", not " 4m  41s"), and only the leading field of the days
+		// form is unpadded. Joining single-digit fields with two spaces happens to agree; anything
+		// that reaches ten does not, which is what made every rendered age in the game an hour into
+		// its life read wrong.
+		if (pad == 2)
 		{
-			2 => ValueTask.FromResult<CallState>(
-				$"{days:D2}d {hours:D2}h {minutes:D2}m {PadSecondsField(secondsField, 2)}s"),
-			1 => ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {secondsField}s"),
-			_ => ValueTask.FromResult<CallState>(" " + string.Join("  ",
-				new[] {
-					days > 0 ? $"{days}d" : null,
-					hours > 0 ? $"{hours}h" : null,
-					minutes > 0 ? $"{minutes}m" : null,
-					$"{secondsField}s"
-				}.Where(s => s != null)))
-		};
+			return ValueTask.FromResult<CallState>(
+				$"{days:D2}d {hours:D2}h {minutes:D2}m {PadSecondsField(secondsField, 2)}s");
+		}
+
+		var seconds = AlignSecondsField(secondsField, 2);
+
+		// "pad || days > 0" in Penn: any non-zero pad, or a span that reached a day, shows every unit.
+		if (pad != 0 || days > 0)
+		{
+			return ValueTask.FromResult<CallState>(
+				$"{days}d {hours,2}h {minutes,2}m {seconds}");
+		}
+
+		return ValueTask.FromResult<CallState>(hours > 0
+			? $"{hours,2}h {minutes,2}m {seconds}"
+			: minutes > 0
+				? $"{minutes,2}m {seconds}"
+				: seconds);
+	}
+
+	/// <summary>
+	/// Right-aligns the whole-seconds part of a rendered seconds field to <paramref name="width"/>
+	/// with spaces and appends the unit, so a fraction (which widens the field on its own) is never
+	/// counted towards the alignment.
+	/// </summary>
+	private static string AlignSecondsField(string text, int width)
+	{
+		var point = text.IndexOf('.');
+		return point < 0
+			? text.PadLeft(width) + "s"
+			: text[..point].PadLeft(width) + text[point..] + "s";
 	}
 
 	/// <summary>

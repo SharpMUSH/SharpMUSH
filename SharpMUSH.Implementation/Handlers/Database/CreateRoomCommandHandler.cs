@@ -16,8 +16,11 @@ public class CreateRoomCommandHandler(
 	{
 		var created = await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken: cancellationToken);
 
-		await DefaultObjectFlags.ApplyAsync(flags, database, created,
-			configuration.CurrentValue.Flag.RoomFlags, cancellationToken: cancellationToken);
+		if (request.ApplyDefaultFlags)
+		{
+			await DefaultObjectFlags.ApplyAsync(flags, database, created,
+				configuration.CurrentValue.Flag.RoomFlags, cancellationToken: cancellationToken);
+		}
 
 		return created;
 	}
