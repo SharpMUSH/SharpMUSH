@@ -11,6 +11,7 @@ namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
 /// Tests to verify that recursion and invocation limits are tracked accurately.
+/// Counters start at explicit zero so these tests do not depend on null_eq_zero.
 /// These tests prove assumptions about how the limits work and ensure they are enforced correctly.
 /// </summary>
 public class RecursionAndInvocationLimitTests
@@ -36,7 +37,7 @@ public class RecursionAndInvocationLimitTests
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -116,7 +117,7 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FUNC_A_LIM_UNIQUE {objDbRef}=[setq(a,add(r(a),1))][if(lte(r(a),120),[u({objDbRef}/FUNC_B_LIM_UNIQUE)],DONE_A)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FUNC_B_LIM_UNIQUE {objDbRef}=[setq(b,add(r(b),1))][if(lte(r(b),120),[u({objDbRef}/FUNC_A_LIM_UNIQUE)],DONE_B)]"));
 
-		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(a,0,b,0)][u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -180,7 +181,7 @@ public class RecursionAndInvocationLimitTests
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WRAP_LIM_UNIQUE {objDbRef}=[setq(w,add(r(w),1))][if(lte(r(w),120),[u({objDbRef}/INNER_LIM_UNIQUE)],DONE_W)]"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&INNER_LIM_UNIQUE {objDbRef}=[setq(i,add(r(i),1))][if(lte(r(i),120),[u({objDbRef}/WRAP_LIM_UNIQUE)],DONE_I)]"));
 
-		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/WRAP_LIM_UNIQUE)]"));
+		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(w,0,i,0)][u({objDbRef}/WRAP_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
@@ -212,7 +213,7 @@ public class RecursionAndInvocationLimitTests
 
 		var recursiveAttr = $"[setq(c,add(r(c),1))][if(lte(r(c),150),[u({objDbRef}/REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&REC_LIM_UNIQUE {objDbRef}={recursiveAttr}"));
-		var recursionResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/REC_LIM_UNIQUE)]"));
+		var recursionResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][u({objDbRef}/REC_LIM_UNIQUE)]"));
 
 		var deepNest = "x";
 		for (int i = 0; i < 12; i++)
@@ -253,9 +254,9 @@ public class RecursionAndInvocationLimitTests
 		var ulocalRecursive = $"[setq(c,add(r(c),1))][if(lte(r(c),105),[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)],DONE)]";
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ULOCAL_REC_LIM_UNIQUE {objDbRef}={ulocalRecursive}"));
 
-		var uResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[u({objDbRef}/U_REC_LIM_UNIQUE)]"));
-		var ufunResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[ufun({objDbRef}/UFUN_REC_LIM_UNIQUE)]"));
-		var ulocalResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)]"));
+		var uResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][u({objDbRef}/U_REC_LIM_UNIQUE)]"));
+		var ufunResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][ufun({objDbRef}/UFUN_REC_LIM_UNIQUE)]"));
+		var ulocalResult = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][ulocal({objDbRef}/ULOCAL_REC_LIM_UNIQUE)]"));
 
 		await Assert.That(uResult).IsNotNull();
 		await Assert.That(ufunResult).IsNotNull();

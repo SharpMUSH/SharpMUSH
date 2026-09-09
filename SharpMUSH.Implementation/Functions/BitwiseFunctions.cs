@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Utilities;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -24,16 +25,17 @@ public partial class Functions
 	[SharpFunction(Name = "baseconv", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "from-base", "to-base"])]
 	public ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var input = parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!.ToPlainText();
 		var fromBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!.ToPlainText();
 		var toBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!.ToPlainText();
 
-		if (!int.TryParse(ArgHelpers.EmptyStringToZero(fromBaseStr), out var fromBase))
+		if (!numbers.TryInt32(fromBaseStr, out var fromBase))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
-		if (!int.TryParse(ArgHelpers.EmptyStringToZero(toBaseStr), out var toBase))
+		if (!numbers.TryInt32(toBaseStr, out var toBase))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
@@ -91,35 +93,35 @@ public partial class Functions
 	[SharpFunction(Name = "band",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x & y);
 
 	[SharpFunction(Name = "bnand", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer1", "integer2"])]
 	public ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x & ~y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x & ~y);
 
 	[SharpFunction(Name = "bnot", MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer"])]
 	public ValueTask<CallState> BNot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateUnsignedInteger(parser.CurrentState.ArgumentsOrdered, x => ~x);
+		=> ArgHelpers.EvaluateUnsignedInteger(parser, x => ~x);
 
 	[SharpFunction(Name = "bor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> Bor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x | y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x | y);
 
 	[SharpFunction(Name = "bxor",
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> BXor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x ^ y);
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x ^ y);
 
 	[SharpFunction(Name = "shr", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer", "positions"])]
 	public ValueTask<CallState> ShR(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x >> (int)(y & 63));
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x >> (int)(y & 63));
 
 	[SharpFunction(Name = "shl", MinArgs = 2, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer", "positions"])]
 	public ValueTask<CallState> ShL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.AggregateUnsignedIntegers(parser.CurrentState.ArgumentsOrdered, (x, y) => x << (int)(y & 63));
+		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x << (int)(y & 63));
 }

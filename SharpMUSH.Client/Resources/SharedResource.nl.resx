@@ -4544,4 +4544,6 @@
     <value>De ahelp-onderwerpen. Alleen voor Tovenaars en God, in het portaal net als in het spel.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>De expliciete regel met de hoogste prioriteit beslist; weigering wint bij gelijke prioriteit. Overerving geldt alleen zonder expliciete regel. Zonder toestemming wordt toegang geweigerd. Gedelegeerde beheerders mogen alleen eigen rechten met lagere prioriteit beheren en hun eigen rollen of beperkingen niet wijzigen.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Huidige toegang: {0}; prioriteit {1}; rollen {2}; beslissing {3}.</value></data>
 </root>

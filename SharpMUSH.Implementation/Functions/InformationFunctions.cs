@@ -1,3 +1,4 @@
+using System.Globalization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -133,11 +134,17 @@ public partial class Functions
 		return uptimeData?.Reboots ?? 0;
 	}
 
+	/// <remarks>
+	/// PennMUSH returns this in time() format, not as a number (game/txt/hlp/pennfunc.hlp).
+	/// uptime(reboot) is the numeric form.
+	/// </remarks>
 	[SharpFunction(Name = "restarttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> RestartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var uptimeData = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
-		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now).ToUnixTimeMilliseconds();
+		return (uptimeData?.LastRebootTime ?? DateTimeOffset.Now)
+			.ToLocalTime()
+			.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 	}
 
 	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "field", "delimiter"])]
