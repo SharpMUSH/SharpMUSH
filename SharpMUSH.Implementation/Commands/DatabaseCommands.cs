@@ -175,6 +175,17 @@ public partial class Commands
 
 				try
 				{
+					// Hold one counted completion slot before streaming any row callbacks. Publication
+					// happens at the FIFO tail only after those callbacks have been admitted.
+					using var completion = notifySwitch
+						? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), parser.CurrentState), ExecutionBudget.CurrentToken)
+						: null;
+					if (completion is not null && !completion.Admission.Accepted)
+					{
+						await NotifyService.Notify(executor, completion.Admission.Error, executor);
+						return new CallState(completion.Admission.Error);
+					}
+
 					var columnNames = new List<string>();
 					var firstRow = true;
 					var rowNumber = 1;
@@ -249,7 +260,7 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
+								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
 							if (!headerAdmission.Accepted) break;
 							firstRow = false;
@@ -275,32 +286,20 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
+							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
 						if (!rowAdmission.Accepted) break;
 						admittedRows++;
 						rowNumber++;
 					}
 
-					if (notifySwitch)
+					if (completion is not null)
 					{
-						var completion = MarkupText.Plain("@notify me");
-						var completionAdmission = await Mediator.Send(new QueueCommandListRequest(
-							completion,
-							parser.CurrentState,
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
-							-1));
-						if (completionAdmission.Reason is QueueRejectionReason.GlobalLimit or QueueRejectionReason.OwnerLimit)
+						var published = await completion.PublishAsync();
+						if (!published.Accepted)
 						{
-							// The waiter already owns its reservation. Releasing it through the normal
-							// command path preserves permissions and appends it after admitted rows,
-							// even when no extra slot is available for the completion command itself.
-							await parser.CommandParse(completion);
-						}
-						else if (!completionAdmission.Accepted)
-						{
-							await NotifyService.Notify(executor, completionAdmission.Error, executor);
-							return new CallState(completionAdmission.Error);
+							await NotifyService.Notify(executor, published.Error, executor);
+							return new CallState(published.Error);
 						}
 					}
 

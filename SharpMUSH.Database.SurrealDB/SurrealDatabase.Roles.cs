@@ -58,7 +58,10 @@ public partial class SurrealDatabase : IRoleRegistryService
 			""", parameters);
 	}
 
-	public async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken = default)
+	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)
+		=> GetRoleAsync(slug, CancellationToken.None);
+
+	public async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {RoleFields} FROM role WHERE slug = $slug",
