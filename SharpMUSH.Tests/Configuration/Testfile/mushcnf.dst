@@ -389,7 +389,9 @@ call_limit 10000000000
 # help prevent many malicious attacks, as well as accidently bad code,
 # from lagging the game. Setting it to 0 means unlimited, and is a bad 
 # idea. Remember there are 1000 milliseconds in a second.
-queue_entry_cpu_time 1500
+# Functional tests use a finite wall-clock budget that allows parallel provider I/O.
+# Deadline tests supply their own explicit short budgets.
+queue_entry_cpu_time 30000
 
 # The maximum number of Q registers one level of qregs can have. That is:
 # each localize(), ulocal(), etc will allow <max_named_qregs> to be set.
