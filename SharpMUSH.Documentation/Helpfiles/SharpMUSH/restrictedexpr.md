@@ -51,8 +51,9 @@ server-wide function permissions or other concurrent evaluations. The existing
 invocation, output, recursion, and elapsed execution limits remain in force, and
 nested restricted calls share the active execution budget. Inputs and expression
 text together, and each combined result, must fit the shared 5 MiB character
-ceiling. Each call also bounds its accumulated evaluated arguments before retaining
-another expansion. Expansion and concatenation are checked before allocation. Restricted
+ceiling. Arguments and expression fragments retained across active nested calls
+also share that ceiling; each expansion is checked before it is retained. Expansion
+and concatenation are checked before allocation. Restricted
 calls accept at most 33 arguments, including the target name supplied to `fn()`,
 and retain each target function's smaller argument limit. Excess arguments are
 rejected before argument arrays and maps are allocated.

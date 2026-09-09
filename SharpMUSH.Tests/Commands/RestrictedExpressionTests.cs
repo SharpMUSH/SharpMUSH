@@ -27,9 +27,13 @@ public class RestrictedExpressionTests
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task RestrictedSiblingArgumentsStopAtTheCombinedCeiling(bool restricted)
+	[Arguments(false, "flat")]
+	[Arguments(true, "flat")]
+	[Arguments(false, "nested")]
+	[Arguments(true, "nested")]
+	[Arguments(false, "fragments")]
+	[Arguments(true, "fragments")]
+	public async Task RestrictedSiblingArgumentsStopAtTheCombinedCeiling(bool restricted, string shape)
 	{
 		var original = (MUSHCodeParser)Factory.FunctionParser;
 		var library = new FunctionLibraryService();
@@ -39,10 +43,23 @@ public class RestrictedExpressionTests
 		library["space"] = (space with { Function = async parser => { expansions++; return await space.Function(parser); } }, true);
 		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
 		var size = FunctionLimits.MaxOutputCodeUnits / 2 + 1;
-		var expression = $"cat(space({size}),space({size}),space({size}))";
+		var expression = shape switch
+		{
+			"nested" => $"cat(space({size}),cat(space({size}),space({size})))",
+			"fragments" => $"cat([space({size})][cat(space({size}),space({size}))])",
+			_ => $"cat(space({size}),space({size}),space({size}))"
+		};
 		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(space cat,{expression})" : expression));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 		await Assert.That(expansions).IsEqualTo(restricted ? 2 : 3);
+	}
+
+	[Test]
+	public async Task RestrictedRetentionReleasesCompletedNestedArguments()
+	{
+		var size = FunctionLimits.MaxOutputCodeUnits * 3 / 4;
+		var result = await Eval($"restrictedexpr(space strlen cat,cat(strlen(space({size})),strlen(space({size}))))");
+		await Assert.That(result).IsEqualTo($"{size}{size}");
 	}
 
 	[Test]

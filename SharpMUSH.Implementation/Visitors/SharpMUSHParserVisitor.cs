@@ -151,20 +151,21 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
 	{
 		var parts = new MString[context.ChildCount];
-		long restrictedLength = 0;
+		using var retainedText = RetainExpandedText();
 
 		visitor._suppressFunctionEval++;
 		try
 		{
 			for (var i = 0; i < context.ChildCount; i++)
 			{
-				parts[i] = context.GetChild(i) switch
+				var part = context.GetChild(i) switch
 				{
 					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MarkupText.Empty,
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
 					_ => MarkupText.Empty
 				};
-				CheckRestrictedOutput(ref restrictedLength, parts[i]);
+				retainedText?.Add(part);
+				parts[i] = part;
 			}
 		}
 		finally
@@ -345,13 +346,54 @@ public class SharpMUSHParserVisitor(
 	}
 
 
-	private void CheckRestrictedOutput(ref long length, MString? message)
+	// A nested call must account for siblings still retained by its caller. Leases
+	// release their own accumulator when it returns, including exceptional exits.
+	private static readonly AsyncLocal<RetainedTextBudget?> ActiveRetainedText = new();
+
+	private RetainedTextLease? RetainExpandedText()
 	{
-		if (EvaluationRestrictions.Current is null && parser.CurrentState.Restrictions is null) return;
-		length += message?.Length ?? 0;
-		if (!FunctionLimits.ExceedsOutput(length)) return;
-		FunctionLimits.RejectOutput(parser.CurrentState);
-		throw new RestrictedExpressionException(ErrorMessages.Returns.OutputTooLarge);
+		if (EvaluationRestrictions.Current is null && parser.CurrentState.Restrictions is null) return null;
+		var previous = ActiveRetainedText.Value;
+		var budget = previous ?? new RetainedTextBudget();
+		ActiveRetainedText.Value = budget;
+		return new RetainedTextLease(budget, previous, parser.CurrentState);
+	}
+
+	private sealed class RetainedTextBudget
+	{
+		private readonly object _gate = new();
+		private long _characters;
+		public bool TryRetain(int characters)
+		{
+			lock (_gate)
+			{
+				if (characters > FunctionLimits.MaxOutputCodeUnits - _characters) return false;
+				_characters += characters;
+				return true;
+			}
+		}
+		public void Release(long characters) { lock (_gate) _characters -= characters; }
+	}
+
+	private sealed class RetainedTextLease(RetainedTextBudget budget, RetainedTextBudget? previous, ParserState state) : IDisposable
+	{
+		private long _characters;
+		public void Add(MString? message)
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var characters = message?.Length ?? 0;
+			if (!budget.TryRetain(characters))
+			{
+				FunctionLimits.RejectOutput(state);
+				throw new RestrictedExpressionException(ErrorMessages.Returns.OutputTooLarge);
+			}
+			_characters += characters;
+		}
+		public void Dispose()
+		{
+			budget.Release(_characters);
+			ActiveRetainedText.Value = previous;
+		}
 	}
 
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
@@ -372,7 +414,7 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var results = new List<CallState>(childCount);
-		long restrictedLength = 0;
+		using var retainedText = RetainExpandedText();
 
 		for (var i = 0; i < childCount; i++)
 		{
@@ -381,7 +423,7 @@ public class SharpMUSHParserVisitor(
 			var childResult = child is null ? null : await child.Accept(this);
 			if (childResult is not null)
 			{
-				CheckRestrictedOutput(ref restrictedLength, childResult.Message);
+				retainedText?.Add(childResult.Message);
 				results.Add(childResult);
 			}
 
@@ -882,6 +924,7 @@ public class SharpMUSHParserVisitor(
 			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
+			using var retainedArguments = RetainExpandedText();
 
 			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
 			{
@@ -898,7 +941,6 @@ public class SharpMUSHParserVisitor(
 				// the enumerable adapters and a state machine per argument were a twelfth of the bytes
 				// a nested call allocated.
 				refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
-				long retainedArgumentLength = 0;
 				foreach (var x in args)
 				{
 					if (x is null)
@@ -908,7 +950,7 @@ public class SharpMUSHParserVisitor(
 					}
 
 					var msg = (await visitor.VisitChildren(x))?.Message ?? MarkupText.Empty;
-					CheckRestrictedOutput(ref retainedArgumentLength, msg);
+					retainedArguments?.Add(msg);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
 					refinedArguments.Add(new CallState(msg, x.Depth()));
 				}
