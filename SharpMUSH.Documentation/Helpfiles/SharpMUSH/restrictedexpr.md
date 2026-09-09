@@ -1,0 +1,49 @@
+# restrictedexpr()
+
+`restrictedexpr(<allowlist>,<expression>[,<input0>,...,<input9>])`
+
+Evaluate an expression with a smaller set of operations and explicit literal inputs.
+The allowlist is a space-separated list of supported function names. An empty list
+allows literal text and input substitutions only. Inputs are not evaluated: `%0`
+through `%9` insert the corresponding supplied text. Unspecified inputs are empty.
+
+Examples:
+
+    restrictedexpr(add,add(%0,%1),2,3)
+    5
+
+    restrictedexpr(first ucstr,ucstr(first(%0)),hello world)
+    HELLO
+
+    restrictedexpr(,%0%b%1,hello,world)
+    hello world
+
+The initial profile supports `add`, `sub`, `mul`, `div`, `cat`, `strcat`, `strlen`,
+`ucstr`, `lcstr`, `trim`, `space`, `words`, `first`, `rest`, `extract`, `fn`, and
+`restrictedexpr`. Each must be explicitly allowed. Function aliases and builtin
+clones resolve to the original operation before the allowlist is checked. A
+nested `restrictedexpr()` intersects its requested operations with the caller's
+allowlist; it cannot enable an operation the caller omitted. `fn()` checks the
+resolved target under the same restrictions.
+
+Only `%0` through `%9`, `%b` (space), `%r` (newline), `%t` (tab), and `%%` are
+available as substitutions. Ordinary quoting and literal text still work. Parent
+Q-registers, regex captures, iteration registers, attribute values, and identity
+substitutions are not inputs. The expression receives fresh register frames.
+
+An unsupported operation or substitution returns `#-1 RESTRICTED EXPRESSION`.
+Object reads, attribute evaluation (`u()`), global and local user-defined
+functions, plugin functions, commands, SQL, HTTP, queueing, and other side effects
+are unavailable in this profile, even when the executor is God. Adding their
+names to the allowlist does not grant access. Operation permission and object
+access are separate: this profile grants no object-data access.
+
+Restrictions apply to this evaluation and its nested calls; they do not modify
+server-wide function permissions or other concurrent evaluations. The existing
+invocation, output, recursion, and elapsed execution limits remain in force, and
+nested restricted calls share the active execution budget. Inputs and expression
+text together, and each combined result, must fit the shared 5 MiB character
+ceiling. Expansion and concatenation are checked before allocation.
+
+This is a boundary for softcode expressions using the supported core operations.
+Native plugins and server code remain trusted code and are not isolated by it.

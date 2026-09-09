@@ -324,6 +324,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		parser ??= this;
+		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
+		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
+			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, false);
 		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
 		 ? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
 		var budget = ExecutionBudget.Current ?? (parser.State.IsEmpty ? null : parser.CurrentState.ExecutionBudget) ?? ownedBudget!;
@@ -376,6 +379,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		CallState? result;
 		try { result = await visitor.Visit(context); }
+		catch (RestrictedExpressionException ex)
+		{ return (new CallState(ex.Message) { HadErrors = true }, false); }
 		catch (OperationCanceledException) when (budget.IsExpired)
 		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false); }
 		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
@@ -450,7 +455,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			LimitExceeded: new LimitExceededFlag(),
+			ExecutionBudget: preserveCallerActors ? CurrentState.ExecutionBudget : null,
+			Restrictions: preserveCallerActors ? CurrentState.Restrictions : null));
 	}
 
 	/// <summary>

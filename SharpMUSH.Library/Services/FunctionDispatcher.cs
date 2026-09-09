@@ -14,6 +14,7 @@ public static class FunctionDispatcher
 	public static async ValueTask<CallState> InvokeAsync(IMUSHCodeParser parser, FunctionDefinition definition,
 		AnySharpObject executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
 	{
+		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
 		var flags = attribute.Flags;
 		var name = attribute.Name.ToUpperInvariant();

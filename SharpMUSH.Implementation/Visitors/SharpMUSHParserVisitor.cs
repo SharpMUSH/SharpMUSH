@@ -73,7 +73,7 @@ public class SharpMUSHParserVisitor(
 	/// otherwise let one evaluation consume unbounded memory. 5 MB (matching the connection server's
 	/// telnet line buffer) is far above any legitimate result while still bounding the damage.
 	/// </summary>
-	private const int MaxFunctionOutputChars = 5 * 1024 * 1024;
+	private const int MaxFunctionOutputChars = FunctionLimits.MaxOutputCharacters;
 
 	protected override ValueTask<CallState?> DefaultResult => ValueTask.FromResult<CallState?>(null);
 
@@ -157,6 +157,7 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
 	{
 		var parts = new MString[context.ChildCount];
+		long restrictedLength = 0;
 
 		visitor._suppressFunctionEval++;
 		try
@@ -169,6 +170,7 @@ public class SharpMUSHParserVisitor(
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
 					_ => MarkupText.Empty
 				};
+				CheckRestrictedOutput(ref restrictedLength, parts[i]);
 			}
 		}
 		finally
@@ -347,6 +349,15 @@ public class SharpMUSHParserVisitor(
 	}
 
 
+	private void CheckRestrictedOutput(ref long length, MString? message)
+	{
+		if (EvaluationRestrictions.Current is null) return;
+		length += message?.Length ?? 0;
+		if (!FunctionLimits.ExceedsOutput(length)) return;
+		FunctionLimits.RejectOutput(parser.CurrentState);
+		throw new RestrictedExpressionException(ErrorMessages.Returns.OutputTooLarge);
+	}
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		ExecutionBudget.Current?.ThrowIfExceeded();
@@ -365,13 +376,18 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var results = new List<CallState>(childCount);
+		long restrictedLength = 0;
 
 		for (var i = 0; i < childCount; i++)
 		{
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = node.GetChild(i);
 			var childResult = child is null ? null : await child.Accept(this);
-			if (childResult is not null) results.Add(childResult);
+			if (childResult is not null)
+			{
+				CheckRestrictedOutput(ref restrictedLength, childResult.Message);
+				results.Add(childResult);
+			}
 
 			if (parser.CurrentState.LimitExceeded?.IsExceeded == true) break;
 		}
@@ -635,6 +651,8 @@ public class SharpMUSHParserVisitor(
 				var userFunction = ResolveUserDefinedFunction(name);
 				if (userFunction is null)
 				{
+					if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+						throw new RestrictedExpressionException();
 					if (!IsUnknownFunctionAnError(context))
 					{
 						// Not a function and not required to be one: the text is prose, not a call.
@@ -655,7 +673,9 @@ public class SharpMUSHParserVisitor(
 				libraryMatch = (userFunction.Value, false);
 			}
 
-			var (attribute, function) = libraryMatch.LibraryInformation;
+			var definition = libraryMatch.LibraryInformation;
+			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
+			var attribute = definition.Attribute;
 
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
@@ -862,7 +882,7 @@ public class SharpMUSHParserVisitor(
 			));
 
 			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
-				new FunctionDefinition(attribute, function), executor,
+				definition, executor,
 				Configuration.CurrentValue.Function.FunctionSideEffects, NotifyService, logger,
 				argumentCount: args.Length, permissionsChecked: true, deferredArguments: true);
 
@@ -878,6 +898,7 @@ public class SharpMUSHParserVisitor(
 
 			return result with { Depth = contextDepth };
 		}
+		catch (RestrictedExpressionException) { throw; }
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
@@ -2670,6 +2691,7 @@ public class SharpMUSHParserVisitor(
 			return new CallState("%" + context.GetText());
 		}
 
+		EvaluationRestrictions.DemandSubstitution(context.GetText(), parser.CurrentState.Restrictions);
 		var textContents = MarkupText.Plain(context.GetText());
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();

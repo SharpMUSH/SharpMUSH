@@ -284,7 +284,8 @@ public partial record ParserState(
 	Dictionary<string, CallState>? CallerArguments = null,
 	BreakPropagation? BreakPropagation = null,
 	string? ConnectionSessionId = null,
-	ExecutionBudget? ExecutionBudget = null)
+	ExecutionBudget? ExecutionBudget = null,
+	EvaluationRestrictions? Restrictions = null)
 {
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;

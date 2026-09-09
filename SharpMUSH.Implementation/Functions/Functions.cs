@@ -97,7 +97,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		BooleanExpressionParser = booleanExpressionParser;
 		TextFileService = textFileService;
 
-		Builtins = Generated.FunctionLibrary.Create(this);
+		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
+			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });
 		foreach (var command in Builtins)
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
