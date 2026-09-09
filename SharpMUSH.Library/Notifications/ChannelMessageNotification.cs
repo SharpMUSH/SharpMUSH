@@ -25,9 +25,8 @@ public record ChannelMessageNotification(
 	/// <summary>
 	/// PennMUSH's <c>CB_CHECKQUIET</c> (<c>hdrs/extchat.h:84</c>): the line is a presence announcement,
 	/// so <c>channel_send</c> (<c>src/extchat.c:3957</c>) withholds it from a member who has set
-	/// <c>CU_QUIET</c> on the channel. That flag is what <c>@channel/mute</c> sets, and this is the only
-	/// thing that reads it — a mute with no <c>CB_CHECKQUIET</c> line to suppress does nothing at all.
-	/// Speech and poses are never sent with it, which is why muting a channel does not silence it.
+	/// <c>CU_QUIET</c> on the channel — the flag <c>@channel/mute</c> sets. Speech and poses are never
+	/// sent with it, which is why muting a channel does not silence the conversation on it.
 	/// </summary>
 	bool CheckQuiet = false
 	) : INotification;

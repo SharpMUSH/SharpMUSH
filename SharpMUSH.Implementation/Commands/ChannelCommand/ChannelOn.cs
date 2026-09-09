@@ -13,10 +13,8 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// <c>@channel/on</c> — PennMUSH <c>do_channel</c>'s ON branch (<c>src/extchat.c:1240-1284</c>) when a
 /// target is named, and <c>channel_join_self</c> (<c>:1330-1375</c>) when it is not.
 ///
-/// <para>Before this, joining ran straight from "does the channel exist?" to
-/// <c>AddUserToChannelCommand</c>: no type gate, no privilege gate, no join lock, no disabled check and
-/// no control check on a named target. A mortal could join themselves — or anyone else — to a wizard-only
-/// channel, a disabled channel, or a channel whose join lock they failed.</para>
+/// <para>A join passes the type gate, the privilege gate, the join lock and the disabled check; joining
+/// somebody else additionally requires control of them.</para>
 /// </summary>
 public static class ChannelOn
 {

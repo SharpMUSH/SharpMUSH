@@ -9,12 +9,11 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 /// <summary>
 /// <c>@channel/decompile[/brief] &lt;channel&gt;</c> — PennMUSH <c>do_chan_decompile</c>
-/// (<c>src/extchat.c:2810-2880</c>): the commands that would recreate the channel.
+/// (<c>src/extchat.c:2810-2880</c>): the commands that would recreate the channel — privileges, owner,
+/// mogrifier, locks, description, buffer size and membership, in that order.
 ///
-/// <para>It emitted <c>@channel/add &lt;name&gt;</c> with no privilege list, the description and the
-/// mogrifier, and stopped — no owner, no locks, no buffer size and no membership, so its output could not
-/// actually rebuild the channel it described. It also gated on <c>Chan_Can_Modify</c> where Penn asks for
-/// <c>Chan_Can_Decomp</c>, which is the right that <c>@channel/what</c> and <c>clock()</c> answer to.</para>
+/// <para>The gate is <c>Chan_Can_Decomp</c>, the same right <c>@channel/what</c>'s lock section and
+/// <c>clock()</c> answer to, rather than <c>Chan_Can_Modify</c>.</para>
 /// </summary>
 public static class ChannelDecompile
 {

@@ -662,11 +662,10 @@ public class ChannelPermissionTests
 	/// <summary>
 	/// With no channel named, the per-member switches walk the executor's OWN channel list and say one
 	/// thing about the lot of them (PennMUSH <c>do_chan_user_flags</c>, <c>src/extchat.c:1913-1936</c>).
-	/// They used to walk every channel in the game from <c>GetChannelListQuery</c> and notify per channel,
-	/// which named exactly the channels the visibility gate exists to hide.
 	///
-	/// <para>The summary line names no channel at all, so the assertion is that neither the channel the
-	/// mortal can see nor the one they cannot appears anywhere in what they were told.</para>
+	/// <para>The summary line names no channel at all — which is also what keeps the argument-less form
+	/// from being an enumeration oracle — so the assertion is that neither the channel the mortal can see
+	/// nor the one they cannot appears anywhere in what they were told.</para>
 	/// </summary>
 	[Test]
 	[Arguments("hide")]
@@ -697,9 +696,8 @@ public class ChannelPermissionTests
 	}
 
 	/// <summary>
-	/// The <c>un</c> switches had no dispatcher arm at all, so <c>@channel/ungag</c> answered "What do you
-	/// want to do with the channel?". PennMUSH routes them to the same handler with "n" for an answer
-	/// (<c>cmd_channel</c>, <c>src/extchat.c:3628-3640</c>).
+	/// PennMUSH routes the <c>un</c> switches to the same handler as their counterparts, with "n" for an
+	/// answer (<c>cmd_channel</c>, <c>src/extchat.c:3628-3640</c>).
 	/// </summary>
 	[Test]
 	[Arguments("gag", "ungag")]
@@ -733,10 +731,9 @@ public class ChannelPermissionTests
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>@channel/mute</c> is a personal preference — <c>CU_QUIET</c> on the CALLER, which
-	/// suppresses the channel's connect and disconnect announcements — and sharpchat.md documents it that
-	/// way. It was implemented as <c>&lt;channel&gt;=&lt;player&gt;</c>, silencing somebody else, which is
-	/// a command PennMUSH does not have; the documented behaviour had no implementation at all.
+	/// <c>@channel/mute</c> is a personal preference — <c>CU_QUIET</c> on the CALLER, which suppresses the
+	/// channel's connect and disconnect announcements. PennMUSH has no command for silencing somebody
+	/// else, and the second argument here is the yes/no answer rather than a target.
 	/// </summary>
 	[Test]
 	public async Task MuteSetsTheCallersOwnQuietFlag()

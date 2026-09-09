@@ -161,9 +161,8 @@ public static class ChannelHelper
 	/// space-separated privilege list to an existing set rather than replacing it, and honours a leading
 	/// <c>!</c> as removal. An empty list leaves <paramref name="originalPrivileges"/> untouched.
 	///
-	/// <para>Names are returned in the canonical casing of the <c>chan_privs</c> table, never in whatever
-	/// casing the player typed. <c>@channel/add Foo=wizard</c> used to persist the literal <c>"wizard"</c>,
-	/// which every ordinal <c>Privs.Contains("Wizard")</c> permission check then failed to see.</para>
+	/// <para>Names come back in the canonical casing of the <c>chan_privs</c> table, never in whatever
+	/// casing the player typed, because the permission checks compare <c>Privs</c> ordinally.</para>
 	///
 	/// <para>Unlike PennMUSH this matches full names exactly (case-insensitively) rather than by prefix;
 	/// single-character aliases are matched case-sensitively, as 'O' (Object) and 'o' (Open) differ.</para>
@@ -230,12 +229,10 @@ public static class ChannelHelper
 	/// no <c>|</c> (it separates the names in a combined connect announcement), and within the configured
 	/// length.
 	///
-	/// <para>There used to be a <c>length &gt; 3</c> floor, which PennMUSH does not have and which made
-	/// <c>OOC</c>, <c>RP</c> and every other short channel name every MUSH uses impossible to create.</para>
-	///
-	/// <para>The one deliberate divergence is the space: Penn permits them inside a channel name, and this
-	/// does not, because the <c>+&lt;channel&gt; &lt;message&gt;</c> token form splits on the first space
-	/// and could never address such a channel.</para>
+	/// <para>There is no minimum length: <c>OOC</c> and <c>RP</c> are legal names. The one deliberate
+	/// divergence is the space — Penn permits them inside a channel name and this does not, because the
+	/// <c>+&lt;channel&gt; &lt;message&gt;</c> token form splits on the first space and could never
+	/// address such a channel.</para>
 	/// </summary>
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
 		=> channelName.Length != 0
@@ -250,8 +247,8 @@ public static class ChannelHelper
 	///
 	/// <para>Only the two call sites that genuinely need an unfiltered exact lookup use it — the
 	/// uniqueness probe in <c>@channel/add</c> and the membership cleanup in <c>@delcom</c>. Everything a
-	/// player names goes through <see cref="MatchChannel"/> or
-	/// <see cref="GetVisibleChannelOrError"/>, which gate on visibility and accept an abbreviation.</para>
+	/// player names goes through <see cref="MatchChannel"/> or <see cref="GetVisibleChannelOrError"/>,
+	/// which gate on visibility and accept an abbreviation.</para>
 	/// </summary>
 	public static async ValueTask<ChannelOrError> GetChannelOrError(IMediator mediator, MString channelName)
 		=> await mediator.Send(new GetChannelQuery(NormalizeChannelName(channelName.ToPlainText()))) is { } channel
@@ -348,9 +345,9 @@ public static class ChannelHelper
 	/// every channel the viewer may see. One surviving candidate is the answer; several are
 	/// <see cref="ChannelMatchKind.Ambiguous"/>. This is why <c>@channel/on pub</c> joins <c>Public</c>.
 	///
-	/// <para>An exact name match ends the search whether or not the viewer may see it, exactly as Penn's
+	/// <para>An exact name match ends the search whether or not the viewer may see it, as Penn's
 	/// <c>find_channel</c> does — a hidden <c>Wizards</c> channel therefore answers "I don't recognize
-	/// that channel" rather than silently resolving to a visible <c>WizardsLounge</c> behind it.</para>
+	/// that channel" rather than resolving to a visible <c>WizardsLounge</c> behind it.</para>
 	///
 	/// <para>The exact store lookup up front is a fast path and nothing more: it can only produce the same
 	/// answer the scan would, since Penn returns on an exact match before considering any prefix. It keeps
@@ -641,6 +638,33 @@ public static class ChannelHelper
 	}
 
 	/// <summary>
+	/// The channel's owner, or <see langword="null"/> when it cannot be resolved.
+	///
+	/// <para>PennMUSH never dereferences a channel's creator to draw a listing: <c>do_channel_list</c>
+	/// (<c>src/extchat.c:2688</c>) compares <c>ChanCreator(c) == player</c>, a dbref, so a channel whose
+	/// creator is gone still lists. Here the owner is an object behind an <c>AsyncLazy</c> that THROWS
+	/// when it cannot be found, and the commands that walk every channel at once — <c>@channel/list</c>
+	/// and <c>@channel/what</c> — are exactly the ones that must not die because one row's owner is
+	/// unresolvable. It is reachable in practice: under <c>surrealdb</c> the owner is an edge rather than
+	/// a field, and a channel read while another connection is creating one has been observed with no
+	/// <c>owner_of_channel</c> edge yet.</para>
+	///
+	/// <para>Commands that act on a single named channel do NOT use this — a missing owner there is worth
+	/// surfacing, not rendering as a dash.</para>
+	/// </summary>
+	public static async ValueTask<SharpPlayer?> TryResolveOwner(SharpChannel channel)
+	{
+		try
+		{
+			return await channel.Owner.WithCancellation(CancellationToken.None);
+		}
+		catch (InvalidOperationException)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
 	/// Whether <paramref name="viewer"/> sees through <c>@channel/hide</c>: PennMUSH's <c>Priv_Who</c>
 	/// (<c>hdrs/mushtype.h</c>), which is privileged status or the <c>Who</c> power.
 	/// </summary>
@@ -652,9 +676,6 @@ public static class ChannelHelper
 	/// PennMUSH's listing rules (<see cref="ChannelMember.ListedAsOn"/> /
 	/// <see cref="ChannelMember.ListedAsOff"/>).
 	///
-	/// <para>Neither rule was applied before: <c>@channel/who</c> and <c>cwho()</c> listed every member
-	/// unconditionally, so <c>@channel/hide</c> — which the help file documents as hiding you from
-	/// <c>@channel/who</c> — did nothing, and both listings named players who were not online.</para>
 	/// </summary>
 	public static async ValueTask<List<ChannelMember>> ChannelMembers(IConnectionService connectionService,
 		SharpChannel channel)

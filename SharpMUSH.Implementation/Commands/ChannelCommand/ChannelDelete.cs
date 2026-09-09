@@ -28,8 +28,6 @@ public static class ChannelDelete
 
 		var channel = maybeChannel.AsChannel;
 
-		// The sense of this check was inverted: whoever COULD modify the channel was refused, and
-		// whoever could not fell through and deleted it.
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, "CHAT: You cannot modify this channel.", executor);

@@ -13,10 +13,9 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// (<c>src/extchat.c:3125-3185</c>). It is the speaker's own title, so it requires channel membership
 /// rather than channel ownership.
 ///
-/// <para>Three of Penn's four behaviours were missing: asking with no <c>=</c> at all reported your
-/// current title rather than clearing it, a title longer than <c>chan_title_len</c> was refused, and a
-/// title carrying a newline or a bell was refused. Nothing checked either, so a title could be any length
-/// and could carry a newline straight into every channel line you spoke.</para>
+/// <para>No <c>=</c> at all asks what the title is; an <c>=</c> with nothing after it clears it. A title
+/// is bounded by <c>chan_title_len</c> and may carry no whitespace but a plain space, since it is
+/// prepended to every line the member speaks.</para>
 /// </summary>
 public static class ChannelTitle
 {

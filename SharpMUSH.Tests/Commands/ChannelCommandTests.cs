@@ -81,8 +81,7 @@ public class ChannelCommandTests
 	}
 
 	/// <summary>
-	/// <c>@channel/list</c> opens with PennMUSH's column header (<c>src/extchat.c:2622</c>). It used to
-	/// print one "Name: &lt;channel&gt;" line per channel and none of the columns the header names.
+	/// <c>@channel/list</c> opens with PennMUSH's column header (<c>src/extchat.c:2622</c>).
 	/// </summary>
 	[Test]
 	public async ValueTask ChannelCommand()

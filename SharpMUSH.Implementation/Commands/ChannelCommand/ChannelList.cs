@@ -10,11 +10,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 /// <summary>
-/// <c>@channel/list</c> — PennMUSH <c>do_channel_list</c> (<c>src/extchat.c:2610-2700</c>).
-///
-/// <para>This printed one <c>Name: &lt;channel&gt;</c> line per channel and nothing else, so the command
-/// that exists to show a channel's population, privileges, locks and your own status on it showed none of
-/// them.</para>
+/// <c>@channel/list</c> — PennMUSH <c>do_channel_list</c> (<c>src/extchat.c:2610-2700</c>): one header
+/// line and one row per visible channel, carrying its population, message count, privileges, locks, your
+/// own standing on it and its buffer size. <c>/quiet</c> collapses all of that to a single line of names.
 /// </summary>
 public static class ChannelList
 {
@@ -79,13 +77,17 @@ public static class ChannelList
 			var messageCount = await Mediator
 				.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
 				.CountAsync();
-			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
+			// The owner is read only to decide one character, so an unresolvable one costs the '*' and not
+			// the listing — see ChannelHelper.TryResolveOwner.
+			var owner = await ChannelHelper.TryResolveOwner(channel);
+			var owned = owner is not null
+									&& owner.Object.DBRef.Number == executor.Object().DBRef.Number;
 
 			rows.Add(MarkupText.Concat([
 				channel.Name,
 				MarkupText.Plain(new string(' ', Math.Max(30 - channelName.Length, 0))),
 				MarkupText.Plain($" {members.Count,5} {messageCount,8}"
-												 + $" [{ChannelTypeColumn(channel)} {LockColumn(channel, owner.Object.DBRef.Number == executor.Object().DBRef.Number)}]"
+												 + $" [{ChannelTypeColumn(channel)} {LockColumn(channel, owned)}]"
 												 + $" [{StatusColumn(status)}] {channel.Buffer,3}")
 			]));
 		}

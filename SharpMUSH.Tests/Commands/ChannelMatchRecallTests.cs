@@ -75,9 +75,9 @@ public class ChannelMatchRecallTests
 	// --- find_channel: abbreviations resolve ------------------------------------------------------
 
 	/// <summary>
-	/// The reported bug: <c>@channel/on pub</c> answered "I don't recognize that channel" while
-	/// <c>Public</c> sat right there. PennMUSH's <c>string_prefix</c> branch
-	/// (<c>src/extchat.c:1104</c>) is what makes the abbreviation work.
+	/// A channel name may be abbreviated: PennMUSH prefix-matches it against the channels the caller can
+	/// see (<c>string_prefix</c>, <c>src/extchat.c:1104</c>), so <c>@channel/on pub</c> joins
+	/// <c>Public</c>.
 	/// </summary>
 	[Test]
 	public async Task ChannelOn_AcceptsAnAbbreviation()
@@ -225,8 +225,7 @@ public class ChannelMatchRecallTests
 
 	/// <summary>
 	/// Recall replays oldest line first, framed by the header and footer Penn prints, with a
-	/// <c>show_time</c> stamp per line (<c>src/extchat.c:4072-4097</c>). All four were missing: the lines
-	/// came back newest first, unframed and unstamped.
+	/// <c>show_time</c> stamp per line (<c>src/extchat.c:4072-4097</c>).
 	/// </summary>
 	[Test]
 	public async Task Recall_IsChronologicalAndFramedAndStamped()
@@ -369,9 +368,8 @@ public class ChannelMatchRecallTests
 	// --- do_channel_who / fun_cwho ----------------------------------------------------------------
 
 	/// <summary>
-	/// <c>@channel/hide</c> is documented (sharpchat.md:211) as hiding you from <c>@channel/who</c>, and
-	/// PennMUSH implements that in <c>do_channel_who</c> (<c>src/extchat.c:2963</c>). Neither listing
-	/// applied the rule, so the command had no observable effect at all.
+	/// <c>@channel/hide</c> hides you from <c>@channel/who</c> (sharpchat.md:211, and PennMUSH's
+	/// <c>do_channel_who</c>, <c>src/extchat.c:2963</c>). <c>cwho()</c> answers to the same rule.
 	/// </summary>
 	[Test]
 	public async Task ChannelWho_HidesAMemberWhoHid()
@@ -429,8 +427,8 @@ public class ChannelMatchRecallTests
 	// --- fun_cbufferadd ---------------------------------------------------------------------------
 
 	/// <summary>
-	/// <c>cbufferadd()</c> writes into the recall buffer without broadcasting (<c>src/extchat.c:2394</c>).
-	/// It used to log the message and return, so nothing was ever added.
+	/// <c>cbufferadd()</c> writes into the recall buffer without broadcasting
+	/// (<c>src/extchat.c:2394</c>), so <c>crecall()</c> reads back what it wrote.
 	/// </summary>
 	[Test]
 	public async Task Cbufferadd_WritesIntoTheRecallBuffer()
@@ -471,9 +469,9 @@ public class ChannelMatchRecallTests
 	// --- fun_clock --------------------------------------------------------------------------------
 
 	/// <summary>
-	/// PennMUSH takes <c>clock()</c>'s lock type as a suffix on the channel argument
-	/// (<c>src/extchat.c:3383</c>). Reading it from a second argument meant every
-	/// <c>clock(&lt;chan&gt;/&lt;type&gt;)</c> in existing softcode silently returned the JOIN lock.
+	/// <c>clock()</c> takes its lock type as a suffix on the channel argument
+	/// (<c>src/extchat.c:3383</c>), and answers <c>#-1 NO SUCH LOCK TYPE</c> to anything it does not
+	/// recognise.
 	/// </summary>
 	[Test]
 	public async Task Clock_ReadsTheLockTypeFromTheChannelArgument()
@@ -495,8 +493,8 @@ public class ChannelMatchRecallTests
 	// --- do_chan_title ----------------------------------------------------------------------------
 
 	/// <summary>
-	/// <c>@channel/title &lt;channel&gt;</c> with no <c>=</c> asks what your title is
-	/// (<c>src/extchat.c:3145</c>); it used to clear it. An <c>=</c> with nothing after it still clears.
+	/// <c>@channel/title &lt;channel&gt;</c> with no <c>=</c> asks what your title is; an <c>=</c> with
+	/// nothing after it clears it (<c>rhs_present</c>, <c>src/extchat.c:3145</c>).
 	/// </summary>
 	[Test]
 	public async Task ChannelTitle_WithoutAnEqualsAsksRatherThanClears()
@@ -529,9 +527,8 @@ public class ChannelMatchRecallTests
 	// --- ok_channel_name --------------------------------------------------------------------------
 
 	/// <summary>
-	/// PennMUSH's <c>ok_channel_name</c> (<c>src/extchat.c:1855</c>) has no minimum length. A
-	/// <c>length &gt; 3</c> floor here made <c>OOC</c> — three characters, and the name half the MUSHes in
-	/// existence give their out-of-character channel — impossible to create.
+	/// PennMUSH's <c>ok_channel_name</c> (<c>src/extchat.c:1855</c>) has no minimum length, so the
+	/// three-character names half the MUSHes in existence use — <c>OOC</c>, <c>RP</c> — are legal.
 	/// </summary>
 	[Test]
 	public async Task ChannelAdd_AcceptsAThreeCharacterName()
@@ -546,10 +543,8 @@ public class ChannelMatchRecallTests
 	// --- do_chan_decompile ------------------------------------------------------------------------
 
 	/// <summary>
-	/// A decompile has to be able to rebuild what it describes (<c>src/extchat.c:2833-2876</c>). This
-	/// emitted <c>@channel/add &lt;name&gt;</c> with no privilege list at all, plus the description and
-	/// mogrifier, and nothing else — replaying it produced a channel with no privileges, no owner, no
-	/// locks and no members.
+	/// A decompile has to be able to rebuild what it describes (<c>src/extchat.c:2833-2876</c>):
+	/// privileges, owner, locks, description and membership, not just the name.
 	/// </summary>
 	[Test]
 	public async Task Decompile_EmitsEverythingNeededToRebuildTheChannel()
@@ -576,8 +571,7 @@ public class ChannelMatchRecallTests
 
 	/// <summary>
 	/// <c>@channel/wipe</c> removes every member (<c>channel_wipe</c>, <c>src/extchat.c:2216</c>), which
-	/// is what the help file says it does. It used to assign 0 to the buffer size on a detached model
-	/// object and report success, leaving every member exactly where they were.
+	/// is what the help file says it does. Resizing the buffer is <c>@channel/buffer</c>'s job.
 	/// </summary>
 	[Test]
 	public async Task Wipe_RemovesEveryMember()
@@ -599,8 +593,7 @@ public class ChannelMatchRecallTests
 
 	/// <summary>
 	/// The <c>open</c> privilege is documented as "You may speak on the channel even when you are not
-	/// listening to it" and is PennMUSH's <c>Channel_Open</c> check (<c>src/extchat.c:1553</c>). Speech
-	/// required membership unconditionally, so the privilege did nothing.
+	/// listening to it", and is PennMUSH's <c>Channel_Open</c> check (<c>src/extchat.c:1553</c>).
 	/// </summary>
 	[Test]
 	public async Task Chat_OnAnOpenChannelDoesNotRequireMembership()

@@ -20,8 +20,7 @@ public static class ChannelOff
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
 
-		// extchat.c:1294 / :1384 — guests may not leave channels either. This gate was missing entirely,
-		// while its counterpart on the join side was enforced.
+		// extchat.c:1294 / :1384 — guests may not leave channels, as they may not join them.
 		if (await executor.IsGuest())
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatGuestsCantLeave, executor);

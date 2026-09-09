@@ -8,12 +8,10 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 /// <summary>
-/// <c>@channel/who</c> — PennMUSH <c>do_channel_who</c> (<c>src/extchat.c:2955-2985</c>).
-///
-/// <para>This listed every member of the channel, connected or not, hidden or not, as a bare
-/// comma-separated list. Three of PennMUSH's four rules were missing, and one of them —
-/// <c>Chanuser_Hide</c> — is the whole of what <c>@channel/hide</c> does, so that command had no
-/// observable effect anywhere.</para>
+/// <c>@channel/who</c> — PennMUSH <c>do_channel_who</c> (<c>src/extchat.c:2955-2985</c>): a THING always,
+/// a player while connected, and a member hiding on the channel only to a viewer with <c>Priv_Who</c>.
+/// <c>Chanuser_Hide</c> is the whole of what <c>@channel/hide</c> does, and this is one of its two
+/// readers.
 /// </summary>
 public static class ChannelWho
 {

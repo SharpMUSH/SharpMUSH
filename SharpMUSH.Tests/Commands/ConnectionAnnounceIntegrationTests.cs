@@ -724,8 +724,7 @@ public class ConnectionAnnounceIntegrationTests
 	/// <summary>
 	/// PennMUSH sends connect and disconnect lines with <c>CB_CHECKQUIET</c>
 	/// (<c>chat_player_announce</c>, src/extchat.c:3234), and <c>channel_send</c> (:3957) withholds such
-	/// a line from a member carrying <c>CU_QUIET</c>. That flag is all <c>@channel/mute</c> sets, so
-	/// without this gate the command reports success and changes nothing observable.
+	/// a line from a member carrying <c>CU_QUIET</c> — the flag <c>@channel/mute</c> sets.
 	/// </summary>
 	[Test]
 	public async ValueTask Connect_MutedMemberIsNotToldAndUnmutedMemberIs()
@@ -761,8 +760,8 @@ public class ConnectionAnnounceIntegrationTests
 	}
 
 	/// <summary>
-	/// The other half of <c>CB_CHECKQUIET</c>: it is set on presence lines and nothing else, so muting a
-	/// channel must not silence the conversation on it.
+	/// The other half of <c>CB_CHECKQUIET</c>: it is set on presence lines only, so muting a channel must
+	/// not silence the conversation on it.
 	/// </summary>
 	[Test]
 	public async ValueTask Mute_DoesNotSilenceOrdinarySpeech()

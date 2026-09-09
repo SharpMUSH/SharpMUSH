@@ -48,9 +48,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else. Requiring membership
-		// made @cemit unusable for exactly the objects it exists for: a wizard or a channel-owning object
-		// emitting onto a channel it does not listen to.
+		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else, so a wizard or a
+		// channel-owning object can emit onto a channel it does not listen to.
 		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
 								 ?? new SharpChannelStatus(null, null, null, null, null);
 
@@ -103,9 +102,8 @@ public partial class Commands
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
-		// extchat.c:1553-1562 — "If the channel isn't open, you must hear it in order to speak". The Open
-		// privilege is documented (sharpchat.md, @channel privs) as exactly this and did nothing: speech
-		// required membership unconditionally, and a member gagging the channel could still speak on it.
+		// extchat.c:1553-1562 — "If the channel isn't open, you must hear it in order to speak", which is
+		// the whole of what the Open privilege means.
 		if (!channel.Privs.Contains("Open", StringComparer.OrdinalIgnoreCase))
 		{
 			var refusalToSpeak = maybeMemberStatus switch
@@ -189,9 +187,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else. Requiring membership
-		// made @cemit unusable for exactly the objects it exists for: a wizard or a channel-owning object
-		// emitting onto a channel it does not listen to.
+		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else, so a wizard or a
+		// channel-owning object can emit onto a channel it does not listen to.
 		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
 								 ?? new SharpChannelStatus(null, null, null, null, null);
 

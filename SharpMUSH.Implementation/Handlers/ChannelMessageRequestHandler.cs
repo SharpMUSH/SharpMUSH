@@ -197,7 +197,7 @@ public class ChannelMessageRequestHandler(
 				}
 
 				// CB_CHECKQUIET (src/extchat.c:3957): a presence announcement is withheld from a member who
-				// muted the channel. @channel/mute sets nothing else, so without this it is inert.
+				// muted the channel. This is the only reader of that flag.
 				if (notification.CheckQuiet && (status.Mute ?? false))
 				{
 					continue;

@@ -45,10 +45,6 @@ public partial class Functions
 	/// PennMUSH <c>fun_cbufferadd</c> (<c>src/extchat.c:2348-2400</c>):
 	/// <c>cbufferadd(&lt;channel&gt;,&lt;message&gt;[,&lt;spoof?&gt;])</c> writes a line into the channel's
 	/// recall buffer WITHOUT broadcasting it, for softcode that reconstructs history.
-	///
-	/// <para>It never wrote anything: it logged the message and returned. The gate was wrong too — Penn
-	/// asks for <c>Chan_Can_Modify</c>, not membership, and a member who cannot modify the channel must not
-	/// be able to forge its history.</para>
 	/// </summary>
 	[SharpFunction(Name = "cbufferadd", MinArgs = 2, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message", "spoof"])]
@@ -160,9 +156,6 @@ public partial class Functions
 	/// <c>cflags()</c> and <c>clflags()</c>: with one argument the channel's privileges, with two a
 	/// member's own channel flags. <c>CL</c> spells them out; <c>C</c> abbreviates them to letters — that
 	/// is the ONLY difference between the two functions.
-	///
-	/// <para><c>cflags()</c> was returning uppercase privilege names and <c>clflags()</c> was returning the
-	/// names of the channel's LOCKS, which is neither what Penn returns nor what either name means.</para>
 	/// </summary>
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "object"])]
@@ -306,11 +299,6 @@ public partial class Functions
 	/// <summary>
 	/// PennMUSH <c>fun_clock</c> (<c>src/extchat.c:3377-3443</c>):
 	/// <c>clock(&lt;channel&gt;[/&lt;locktype&gt;])</c> returns that lock's key.
-	///
-	/// <para>The lock type is a suffix on the FIRST argument, not a second argument — Penn's second
-	/// argument is the new lock to set. Reading it from argument two meant <c>clock(Public/speak)</c>, the
-	/// spelling every other MUSH's softcode uses, silently returned the JOIN lock instead; and an
-	/// unrecognised type did the same rather than saying so.</para>
 	/// </summary>
 	[SharpFunction(Name = "clock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel/locktype", "lock"])]
@@ -405,8 +393,7 @@ public partial class Functions
 	/// <summary>
 	/// PennMUSH <c>fun_crecall</c> (<c>src/extchat.c:3461-3576</c>):
 	/// <c>crecall(&lt;channel&gt;[,&lt;lines&gt;[,&lt;start&gt;[,&lt;osep&gt;[,&lt;timestamps?&gt;]]]])</c>.
-	/// Lines come back oldest first, separated by <paramref name="_2"/>'s output separator (a space by
-	/// default) — not concatenated newest first, which is what this used to return.
+	/// Lines come back oldest first, separated by the output separator (a space by default).
 	/// </summary>
 	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "lines", "start", "osep", "timestamps"])]
@@ -549,10 +536,6 @@ public partial class Functions
 	/// PennMUSH <c>fun_cwho</c> (<c>src/extchat.c:3004-3079</c>):
 	/// <c>cwho(&lt;channel&gt;[,&lt;on|off|all&gt;[,&lt;skip gagged?&gt;]])</c>, returning space-separated
 	/// dbrefs.
-	///
-	/// <para>The second and third arguments were being read as output separators, and no filtering was
-	/// applied at all — so this returned every member of a channel including the ones hiding on it and the
-	/// ones not connected, which is exactly what <c>@channel/hide</c> exists to prevent.</para>
 	/// </summary>
 	[SharpFunction(Name = "cwho", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "type", "skipgagged"])]

@@ -74,8 +74,7 @@ public class InMemoryChannelBufferService : IChannelBufferService
 
 		/// <summary>
 		/// The last <paramref name="count"/> items, oldest first: walk back from the write head to find
-		/// where the window starts, then read forward from there. Reading backwards from the head is what
-		/// made <c>@channel/recall</c> and <c>crecall()</c> replay conversations in reverse.
+		/// where the window starts, then read forward from there.
 		/// </summary>
 		public List<T> GetRecent(int count)
 		{

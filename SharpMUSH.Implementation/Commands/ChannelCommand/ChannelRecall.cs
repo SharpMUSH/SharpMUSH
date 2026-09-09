@@ -14,9 +14,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// <c>@channel/recall</c> — PennMUSH <c>do_chan_recall</c> (<c>src/extchat.c:3990-4098</c>).
 ///
 /// <para>The buffer is replayed oldest line first, wrapped in the header and footer Penn prints, and each
-/// line carries the timestamp it was said at unless <c>/quiet</c> is given. The previous implementation
-/// emitted the raw lines newest-first with no framing at all, which read as though the conversation had
-/// happened backwards.</para>
+/// line carries the timestamp it was said at unless <c>/quiet</c> is given.</para>
 /// </summary>
 public static class ChannelRecall
 {

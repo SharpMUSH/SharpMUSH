@@ -12,10 +12,8 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// <summary>
 /// <c>@channel/what [&lt;prefix&gt;]</c> — PennMUSH <c>do_chan_what</c> (<c>src/extchat.c:2740-2800</c>):
 /// the name, description, owner, mogrifier, privileges, buffer and — to anyone who may decompile it — the
-/// locks, for every visible channel whose name starts with the prefix.
-///
-/// <para>It refused guests with "Guests may not modify channels.", which is a gate Penn puts on the
-/// channel ADMIN switches; <c>/what</c> is a read and Penn does not gate it at all.</para>
+/// locks, for every visible channel whose name starts with the prefix. It is a read, and Penn gates it
+/// no further than <c>Chan_Can_See</c>.
 /// </summary>
 public static class ChannelWhat
 {
@@ -38,11 +36,15 @@ public static class ChannelWhat
 				continue;
 			}
 
-			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
+			// One unresolvable owner must not take the whole sweep with it — see
+			// ChannelHelper.TryResolveOwner.
+			var owner = await ChannelHelper.TryResolveOwner(channel);
 
 			lines.Add(channel.Name);
 			lines.Add(MarkupText.Concat(MarkupText.Plain("Description: "), channel.Description));
-			lines.Add(MarkupText.Plain($"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
+			lines.Add(MarkupText.Plain(owner is null
+				? "Owner: #-1"
+				: $"Owner: {owner.Object.Name}(#{owner.Object.DBRef.Number})"));
 
 			// extchat.c:2757 — the mogrifier line only appears when one is set.
 			if (!string.IsNullOrEmpty(channel.Mogrifier))
