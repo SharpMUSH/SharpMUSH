@@ -255,6 +255,70 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("alphamax(apple,cherry,banana)", "cherry")]
+	[Arguments("alphamin(cherry,apple,banana)", "apple")]
+	public async Task AlphaMaxMin(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	// fun_escape: a leading backslash, and every special after the first character escaped.
+	[Test]
+	[Arguments("escape(a$b^c)", @"\a\$b\^c")]
+	[Arguments("escape($a)", @"\$a")]
+	[Arguments("escape(plain)", @"\plain")]
+	[Arguments("escape()", "")]
+	public async Task Escape(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	// fun_secure: every special character becomes a space, the backslash included.
+	[Test]
+	[Arguments("secure(a$b^c)", "a b c")]
+	[Arguments("secure(lit(a\\b))", "a b")]
+	[Arguments("secure(plain text)", "plain text")]
+	public async Task Secure(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	// Both edit the text around its markup: a styled argument comes back styled, with the
+	// specials escaped or blanked inside the run.
+	[Test]
+	[Arguments("escape(ansi(hr,a$b))", @"\a\$b")]
+	[Arguments("secure(ansi(hr,a$b))", "a b")]
+	public async Task EscapeAndSecureKeepMarkup(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var styled = MarkupText.Wrap(
+			AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, true)), MarkupText.Plain("x"))
+			.Render(MarkupFormat.Ansi);
+		var ansiStart = styled[..styled.IndexOf('x')];
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains(ansiStart);
+	}
+
+	[Test]
+	// fun_squish: the ends are trimmed, and every inner run collapses to one delimiter.
+	[Arguments("squish(a   b    c)", "a b c")]
+	[Arguments("squish(%b%ba%b%bb%b%b)", "a b")]
+	[Arguments("squish(%b%b%b)", "")]
+	[Arguments("squish(a|||b,|)", "a|b")]
+	[Arguments("squish(|a|,|)", "a")]
+	[Arguments("squish(abab,ab)", "")]
+	[Arguments("squish(a b)", "a b")]
+	public async Task Squish(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
 	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
 	public async Task Merge(string str, string expectedText)
 	{

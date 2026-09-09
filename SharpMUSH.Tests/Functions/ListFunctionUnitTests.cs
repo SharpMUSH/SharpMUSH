@@ -342,6 +342,34 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	// fun_elements: 1-based, answered in the order asked, negative from the end, unknown skipped.
+	[Test]
+	[Arguments("elements(ack bar eep foof yay,2 4)", "bar foof")]
+	[Arguments("elements(a b c d,4 2)", "d b")]
+	[Arguments("elements(a b c d,-1 1)", "d a")]
+	[Arguments("elements(a b c d,9 0 x)", "")]
+	[Arguments("elements(a|b|c,2 3,|,-)", "b-c")]
+	public async Task Elements(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	// help wordpos: delimiters belong to the word that follows them.
+	[Test]
+	[Arguments("wordpos(foo bar baz,5)", "2")]
+	[Arguments("wordpos(This is a test,4)", "1")]
+	[Arguments("wordpos(This is a test,5)", "2")]
+	[Arguments("wordpos(a  b,3)", "2")]
+	[Arguments("wordpos(a|b|c,3,|)", "2")]
+	[Arguments("wordpos(a b c,20)", "#-1 WORD NUMBER OUT OF RANGE")]
+	[Arguments("wordpos(a b c,0)", "#-1 WORD NUMBER OUT OF RANGE")]
+	public async Task Wordpos(string function, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	[Test]
 	[Arguments("remove(a b c b a,b a)", "c b a")]
 	[Arguments("remove(a|b|c|b,b,|)", "a|c|b")]
@@ -604,20 +632,29 @@ public class ListFunctionUnitTests
 	[Arguments("namegrab(#0 #1 #2,room)", "#0")]
 	[Arguments("namegrab(#0 #1 #2,Master Room)", "#2")]
 	[Arguments("namegrab(#0 #1 #2,God)", "#1")]
+	[Arguments("namegrab(#0 #1 #2,god)", "#1")]
+	// A dbref past the top of the db parses fine and names nothing: fun_namegrab walks its list
+	// with GoodObject() and steps over those rather than failing the whole call.
+	[Arguments("namegrab(#1 #999999,God)", "#1")]
+	[Arguments("namegrab(#999999 #1,God)", "#1")]
 	public async Task Namegrab(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
-		await Assert.That(result.ToString()).IsNotNull();
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test]
 	[Arguments("namegraball(#0 #1 #2,room)", "#0 #2")]
 	[Arguments("namegraball(#0 #1 #2,Master Room)", "#2")]
 	[Arguments("namegraball(#0 #1 #2,God)", "#1")]
+	[Arguments("namegraball(#0 #1 #2,nobody)", "")]
+	[Arguments("namegraball(#1 #999999,God)", "#1")]
+	// fun_namegraball separates with the input delimiter, not a space (src/funlist.c:1371-1373).
+	[Arguments("namegraball(#0|#1|#2,room,|)", "#0|#2")]
 	public async Task NameGrabAll(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
-		await Assert.That(result.ToString()).IsNotNull();
+		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
 	[Test, NotInParallel]

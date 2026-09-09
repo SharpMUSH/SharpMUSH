@@ -50,7 +50,8 @@ public static class OffsetPaginationHelper
 
 		var list = source.ToList();
 		var total = list.Count;
-		var items = list.Skip(page * pageSize).Take(pageSize).ToList();
+		var start = (int)Math.Min((long)page * pageSize, total);
+		var items = list.GetRange(start, Math.Min(pageSize, total - start));
 
 		return new PagedResult<T>
 		{

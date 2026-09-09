@@ -43,12 +43,10 @@ public static class ChannelList
 		// sharpchat.md:181 — "If a <prefix> is given, only channels whose names begin with <prefix> are shown."
 		var prefix = arg0.ToPlainText().Trim();
 
-		// Materialised before the per-channel membership reads, as everywhere else that walks the list.
-		var all = await Mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 		var rows = new List<MString>();
 		var names = new List<string>();
 
-		foreach (var channel in all)
+		await foreach (var channel in Mediator.CreateStream(new GetChannelListQuery()))
 		{
 			var channelName = channel.Name.ToPlainText();
 
@@ -113,14 +111,14 @@ public static class ChannelList
 	/// </summary>
 	private static string ChannelTypeColumn(SharpChannel channel)
 	{
-		var privs = channel.Privs.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		char On(string priv, char letter) => privs.Contains(priv) ? letter : '-';
+		bool Has(string priv) => channel.Privs.Contains(priv, StringComparer.OrdinalIgnoreCase);
+		char On(string priv, char letter) => Has(priv) ? letter : '-';
 
 		return string.Concat(
 			On("Disabled", 'D'),
 			On("Player", 'P'),
 			On("Object", 'T'),
-			privs.Contains("Admin") ? 'A' : privs.Contains("Wizard") ? 'W' : '-',
+			Has("Admin") ? 'A' : Has("Wizard") ? 'W' : '-',
 			On("Quiet", 'Q'),
 			On("Hide_Ok", 'H'),
 			On("Open", 'o'));

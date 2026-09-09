@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using MarkupString;
@@ -15,7 +16,7 @@ namespace SharpMUSH.Library.Markup;
 /// behaviours, and nothing about <see cref="MarkupText"/> implies them.
 /// </para>
 /// </summary>
-public static partial class MushText
+public static class MushText
 {
 	/// <summary>The generic MUSH error return, <c>#-1</c>.</summary>
 	public static readonly MarkupText Error = MarkupText.Plain("#-1");
@@ -79,20 +80,8 @@ public static partial class MushText
 	/// <summary>
 	/// Compiles MUSH glob patterns (<c>*</c>, <c>?</c>, with <c>\</c> escaping either) to .NET regex.
 	/// </summary>
-	public static partial class Glob
+	public static class Glob
 	{
-		[GeneratedRegex(@"(?<!\\)\\\*")]
-		private static partial Regex StarPattern();
-
-		[GeneratedRegex(@"(?<!\\)\\\?")]
-		private static partial Regex QuestionPattern();
-
-		[GeneratedRegex(@"\\\\\\\*")]
-		private static partial Regex EscapedStarPattern();
-
-		[GeneratedRegex(@"\\\\\\\?")]
-		private static partial Regex EscapedQuestionPattern();
-
 		/// <summary>
 		/// Inline single-line mode, so the <c>.</c> that <c>*</c> and <c>?</c> compile to also matches
 		/// a newline.
@@ -108,16 +97,49 @@ public static partial class MushText
 		/// </remarks>
 		private const string SingleLineMode = "(?s)";
 
+		/// <summary>The characters <see cref="Regex.Escape"/> puts a backslash in front of.</summary>
+		private static readonly SearchValues<char> Metacharacters = SearchValues.Create("\t\n\f\r #$()*+.?[\\^{|");
+
 		/// <summary>The anchored regex equivalent to the glob <paramref name="pattern"/>.</summary>
+		/// <remarks>
+		/// The pattern is cut at every metacharacter; the text between them is literal and each
+		/// metacharacter is spelled from its neighbours alone: a wildcard becomes a capture group unless
+		/// a backslash precedes it, a backslash is an escape only when a wildcard follows it, and every
+		/// other one is escaped the way <see cref="Regex.Escape"/> escapes it.
+		/// </remarks>
 		public static string ToRegex(string pattern)
 		{
 			ArgumentNullException.ThrowIfNull(pattern);
-			var escaped = $"^{Regex.Escape(pattern)}$";
-			escaped = StarPattern().Replace(escaped, "(.*?)");
-			escaped = QuestionPattern().Replace(escaped, "(.)");
-			escaped = EscapedStarPattern().Replace(escaped, @"\*");
-			escaped = EscapedQuestionPattern().Replace(escaped, @"\?");
-			return SingleLineMode + escaped;
+			var pieces = new List<string> { SingleLineMode, "^" };
+			foreach (var literal in pattern.AsSpan().SplitAny(Metacharacters))
+			{
+				pieces.Add(pattern[literal]);
+				if (literal.End.Value < pattern.Length)
+				{
+					pieces.Add(Metacharacter(pattern, literal.End.Value));
+				}
+			}
+
+			pieces.Add("$");
+			return string.Concat(pieces);
+		}
+
+		/// <summary>The regex text for the metacharacter at <paramref name="at"/> in <paramref name="pattern"/>.</summary>
+		private static string Metacharacter(string pattern, int at)
+		{
+			var escaped = at > 0 && pattern[at - 1] == '\\';
+			var escaping = at + 1 < pattern.Length && pattern[at + 1] is '*' or '?';
+			return pattern[at] switch
+			{
+				'*' => escaped ? "*" : "(.*?)",
+				'?' => escaped ? "?" : "(.)",
+				'\\' => escaping ? @"\" : @"\\",
+				'\n' => @"\n",
+				'\r' => @"\r",
+				'\t' => @"\t",
+				'\f' => @"\f",
+				var c => $@"\{c}",
+			};
 		}
 	}
 
@@ -150,9 +172,9 @@ public static partial class MushText
 	/// </summary>
 	public static IEnumerable<(Match Match, IEnumerable<MarkupText> Groups)> GetMatches(MarkupText input, string pattern)
 	{
-		foreach (var match in Regex.Matches(input.ToPlainText(), pattern).Cast<Match>())
+		foreach (Match match in Regex.Matches(input.ToPlainText(), pattern))
 		{
-			var groups = match.Groups.Cast<Group>().Select(g => input.Substring(g.Index, g.Length));
+			var groups = match.Groups.Values.Select(g => input.Substring(g.Index, g.Length));
 			yield return (match, groups);
 		}
 	}

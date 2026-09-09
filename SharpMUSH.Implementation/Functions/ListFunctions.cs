@@ -17,22 +17,59 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "elements", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "positions", "delimiter"])]
-	public async ValueTask<CallState> Elements(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Elements(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await Task.CompletedTask;
-
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
-		var numbersArg = args["1"].Message!.ToPlainText();
+		var positionsArg = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		var sep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var numbers = numbersArg.Split(" ");
 
-		var result = list.Where((_, i) => numbers.Contains(i.ToString()));
+		// fun_elements (src/funlist.c): the positions are answered in the order they were asked for,
+		// 1-based with a negative counting from the end, and one that names no element is skipped.
+		var picked = new List<MString>();
+		var positions = positionsArg.AsSpan();
+		foreach (var range in positions.Split(' '))
+		{
+			if (TryListPosition(positions[range], list.Length, out var index))
+			{
+				picked.Add(list[index]);
+			}
+		}
 
-		return new CallState(MarkupText.Join(sep, result));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(sep, picked));
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>find_list_position</c> without <c>insert</c>: a 1-based position, or a negative one
+	/// counting back from the end, as a 0-based index into a list of <paramref name="total"/> items.
+	/// </summary>
+	private static bool TryListPosition(ReadOnlySpan<char> text, int total, out int index)
+	{
+		index = -1;
+		if (!int.TryParse(text, out var position)) return false;
+		if (position < 0) position = total + 1 + position;
+		if (position < 1 || position > total) return false;
+		index = position - 1;
+		return true;
+	}
+
+	/// <summary>The 0-based indexes named by a space-separated list of positions, see <see cref="TryListPosition"/>.</summary>
+	private static HashSet<int> ListPositions(string positionsArg, int total)
+	{
+		var indexes = new HashSet<int>();
+		var positions = positionsArg.AsSpan();
+		foreach (var range in positions.Split(' '))
+		{
+			if (TryListPosition(positions[range], total, out var index))
+			{
+				indexes.Add(index);
+			}
+		}
+
+		return indexes;
 	}
 
 	[SharpFunction(Name = "elist", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "conjunction", "delim", "osep", "punctuation"])]
@@ -165,20 +202,23 @@ public partial class Functions
 			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
 		}
 
-		var result = await list.ToAsyncEnumerable()
-			.Where(async (item, _) =>
+		var result = new List<MString>();
+		foreach (var item in list)
+		{
+			var newParser = parser.Push(parser.CurrentState with
 			{
-				var newParser = parser.Push(parser.CurrentState with
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
 				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
-					{
-						["0"] = new CallState(item)
-					}
-				});
-				return (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText() == "1";
-			})
-			.ToListAsync();
+					["0"] = new CallState(item)
+				}
+			});
+
+			if ((await newParser.FunctionParse(attrValue))!.Message!.ToPlainText() == "1")
+			{
+				result.Add(item);
+			}
+		}
 
 		return new CallState(MarkupText.Join(sep, result));
 	}
@@ -258,20 +298,23 @@ public partial class Functions
 			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
 		}
 
-		var result = await list.ToAsyncEnumerable()
-			.Where(async (item, _) =>
+		var result = new List<MString>();
+		foreach (var item in list)
+		{
+			var newParser = parser.Push(parser.CurrentState with
 			{
-				var newParser = parser.Push(parser.CurrentState with
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
 				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
-					{
-						["0"] = new CallState(item)
-					}
-				});
-				return (await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser);
-			})
-			.ToListAsync();
+					["0"] = new CallState(item)
+				}
+			});
+
+			if ((await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser))
+			{
+				result.Add(item);
+			}
+		}
 
 		return new CallState(MarkupText.Join(sep, result));
 	}
@@ -535,9 +578,8 @@ public partial class Functions
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var patternParts = patternArg.Message!.Split("##");
-		MString? modifiedPattern = patternParts.Length > 1
-			? MarkupText.Join(MarkupText.Plain("%iL"), patternParts)
+		var modifiedPattern = patternArg.Message!.Text.Contains("##")
+			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
 			: null;
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
@@ -690,25 +732,10 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
-			.Where(p => p.HasValue)
-			.Select(p => p!.Value);
-		var positionsSet = new HashSet<int>(positions);
+		var deleted = ListPositions(positionsArg, list.Length);
 
-		var result = new List<MString>();
-		for (var i = 0; i < list.Length; i++)
-		{
-			var index = i + 1;
-			var negativeIndex = i - list.Length;
-
-			if (!positionsSet.Contains(index) && !positionsSet.Contains(negativeIndex))
-			{
-				result.Add(list[i]);
-			}
-		}
-
-		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
+		return ValueTask.FromResult<CallState>(
+			MarkupText.Join(outputSep, list.Where((_, i) => !deleted.Contains(i))));
 	}
 
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
@@ -772,18 +799,16 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		var mapResult = await list.ToAsyncEnumerable()
-			.Select((MString item, CancellationToken _) =>
+		var mapResult = new List<MString>(list.Length);
+		foreach (var item in list)
+		{
+			var newParser = parser.Push(parser.CurrentState with
 			{
-				var newParser = parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
-				});
-				return newParser.FunctionParse(attrValue);
-			})
-			.Select(cs => cs!.Message!)
-			.ToListAsync();
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+				EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
+			});
+			mapResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
+		}
 
 		return new CallState(MarkupText.Join(sep, mapResult));
 	}
@@ -843,9 +868,9 @@ public partial class Functions
 		var list = args["0"].Message!;
 		var word = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MushText.SplitList(delimiter, list).Select(x => x.ToPlainText()).ToList();
+		var index = Array.FindIndex(MushText.SplitList(delimiter, list), x => x.Text == word);
 
-		return ValueTask.FromResult<CallState>(splitList.IndexOf(word) + 1);
+		return ValueTask.FromResult<CallState>(index + 1);
 	}
 
 	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "outsep"])]
@@ -1067,45 +1092,53 @@ public partial class Functions
 		return new CallState(MarkupText.Join(sep, result));
 	}
 
+	/// <summary>One entry of a namegrab() list: the dbref as the caller spelled it, and the object's name.</summary>
+	private sealed record NamedDbRef(string Token, string Name);
+
+	/// <summary>
+	/// The objects named by a delimited list of dbrefs, each looked up once, or <c>null</c> when an
+	/// entry is not a dbref at all. An entry that names no object is skipped, as fun_namegrab skips
+	/// garbage.
+	/// </summary>
+	private async ValueTask<List<NamedDbRef>?> NamedDbRefs(string list, string delimiter)
+	{
+		var named = new List<NamedDbRef>();
+		foreach (var token in list.Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
+		{
+			var dbref = HelperFunctions.ParseDbRef(token);
+			if (dbref.IsNone())
+			{
+				return null;
+			}
+
+			var item = await Mediator.Send(new GetObjectNodeQuery(dbref.AsValue()));
+			if (!item.IsNone)
+			{
+				named.Add(new NamedDbRef(token, item.Known.Object().Name));
+			}
+		}
+
+		return named;
+	}
+
 	[SharpFunction(Name = "namegrab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
 	public async ValueTask<CallState> NameGrab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var dbrefList = args["0"].Message!.ToPlainText();
 		var name = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
-		var dbrefs = dbrefList.Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-		var dbRefsActualized = dbrefs.Select(HelperFunctions.ParseDbRef).ToArray();
-
-		if (dbRefsActualized.Any(x => x.IsNone()))
+		var named = await NamedDbRefs(args["0"].Message!.ToPlainText(), delimiter);
+		if (named is null)
 		{
 			return "INVALID DBREF IN LIST";
 		}
 
-		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
-		{
-			var item = await Mediator.Send(new GetObjectNodeQuery(dbref.AsT0));
-			return (dbref.AsT0, item.Object()!.Name);
-		});
+		// fun_namegrab: an exact name (strcasecmp) beats a partial one.
+		var match = named.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+			?? named.FirstOrDefault(x => x.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
 
-		var exact = await locatedNames.FirstOrDefaultAsync(async (x, ct)
-			=> (await x).Name == name);
-
-		if (exact != null)
-		{
-			return (await exact).AsT0;
-		}
-
-		var partial = await locatedNames.FirstOrDefaultAsync(async (x, ct)
-			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
-
-		if (partial != null)
-		{
-			return (await partial).AsT0;
-		}
-
-		return CallState.Empty;
+		return match is null ? CallState.Empty : match.Token;
 	}
 
 	[SharpFunction(Name = "namegraball", MinArgs = 2, MaxArgs = 3,
@@ -1113,41 +1146,24 @@ public partial class Functions
 	public async ValueTask<CallState> NameGrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var dbrefList = args["0"].Message!.ToPlainText();
 		var name = args["1"].Message!.ToPlainText();
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
-		var dbrefs = dbrefList.Split(delimiter, StringSplitOptions.RemoveEmptyEntries);
-		var dbRefsActualized = dbrefs.Select(HelperFunctions.ParseDbRef).ToArray();
-
-		if (dbRefsActualized.Any(x => x.IsNone()))
+		var named = await NamedDbRefs(args["0"].Message!.ToPlainText(), delimiter);
+		if (named is null)
 		{
 			return "INVALID DBREF IN LIST";
 		}
 
-		var locatedNames = dbRefsActualized.ToAsyncEnumerable().Select(async dbref =>
-		{
-			var item = await Mediator.Send(new GetObjectNodeQuery(dbref.AsT0));
-			return (dbref.AsT0, item.Object()!.Name);
-		});
+		var exact = named.Where(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToList();
+		var matches = exact.Count > 0
+			? exact
+			: named.Where(x => x.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
 
-		var exact = locatedNames.Where(async (x, ct)
-			=> (await x).Name == name);
-
-		if (await exact.AnyAsync())
-		{
-			return string.Join(" ", exact.Select(async x => (await x).AsT0.ToString()));
-		}
-
-		var partial = locatedNames.Where(async (x, ct)
-			=> (await x).Name.Contains(name, StringComparison.OrdinalIgnoreCase));
-
-		if (await partial.AnyAsync())
-		{
-			return string.Join(" ", partial.Select(async x => (await x).AsT0.ToString()));
-		}
-
-		return CallState.Empty;
+		// PennMUSH's fun_namegraball separates with the INPUT delimiter, not a space:
+		// `if (!first) safe_chr(sep, buff, bp);` (src/funlist.c:1371-1373). With a non-space
+		// delimiter the result was not a list in the delimiter the caller asked for.
+		return string.Join(delimiter, matches.Select(x => x.Token));
 	}
 
 	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "count", "delim", "type", "osep"])]
@@ -1217,7 +1233,8 @@ public partial class Functions
 
 		foreach (var word in splitWords)
 		{
-			var index = splitList.FindIndex(x => x.ToPlainText() == word.ToPlainText());
+			var text = word.Text;
+			var index = splitList.FindIndex(x => x.Text == text);
 			if (index != -1)
 			{
 				splitList.RemoveAt(index);
@@ -1237,22 +1254,10 @@ public partial class Functions
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Space);
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty).ToList();
-		var positions = positionsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-			.Select(p => int.TryParse(p, out var pos) ? pos : (int?)null)
-			.Where(p => p.HasValue)
-			.Select(p => p!.Value);
-		var positionsSet = new HashSet<int>(positions);
-
-		for (var i = 0; i < list.Count; i++)
+		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
+		foreach (var index in ListPositions(positionsArg, list.Length))
 		{
-			var index = i + 1;
-			var negativeIndex = i - list.Count;
-
-			if (positionsSet.Contains(index) || positionsSet.Contains(negativeIndex))
-			{
-				list[i] = newItem ?? MarkupText.Empty;
-			}
+			list[index] = newItem ?? MarkupText.Empty;
 		}
 
 		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, list));
@@ -1318,7 +1323,7 @@ public partial class Functions
 
 		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!).ToList();
+		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		async Task<int> CompareViaLambda(MString a, MString b)
 		{
@@ -1336,24 +1341,7 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var comparisonTasks = new List<Task<(int index, MString value, int order)>>();
-			for (var i = 0; i < list.Count; i++)
-			{
-				var index = i;
-				comparisonTasks.Add(Task.Run(async () =>
-				{
-					var orderSum = 0;
-					for (var j = 0; j < list.Count; j++)
-					{
-						if (index == j) continue;
-						orderSum += await CompareViaLambda(list[index], list[j]);
-					}
-					return (index, list[index], orderSum);
-				}));
-			}
-			var results = await Task.WhenAll(comparisonTasks);
-			var sorted = results.OrderBy(r => r.order).Select(r => r.value);
-			return new CallState(MarkupText.Join(sep, sorted));
+			return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1401,45 +1389,48 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// We need to do this synchronously since List.Sort doesn't support async
-		var attrComparisonTasks = new List<Task<(int index, MString value, int order)>>();
-		for (var i = 0; i < list.Count; i++)
+		async Task<int> CompareViaAttribute(MString a, MString b)
 		{
-			var index = i;
-			attrComparisonTasks.Add(Task.Run(async () =>
+			var newParser = parser.Push(parser.CurrentState with
 			{
-				var orderSum = 0;
-				for (var j = 0; j < list.Count; j++)
+				Arguments = new Dictionary<string, CallState>
 				{
-					if (index == j) continue;
-
-					var newParser = parser.Push(parser.CurrentState with
-					{
-						Arguments = new Dictionary<string, CallState>
-						{
-							{ "0", new CallState(list[index]) },
-							{ "1", new CallState(list[j]) }
-						},
-						EnvironmentRegisters = new Dictionary<string, CallState>
-						{
-							["0"] = new CallState(list[index]),
-							["1"] = new CallState(list[j])
-						}
-					});
-					var result = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
-					if (int.TryParse(result, out var cmp))
-					{
-						orderSum += cmp > 0 ? 1 : (cmp < 0 ? -1 : 0);
-					}
+					{ "0", new CallState(a) },
+					{ "1", new CallState(b) }
+				},
+				EnvironmentRegisters = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(a),
+					["1"] = new CallState(b)
 				}
-				return (index, list[index], orderSum);
-			}));
+			});
+			var result = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
+			return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
 		}
 
-		var attrResults = await Task.WhenAll(attrComparisonTasks);
-		var attrSorted = attrResults.OrderBy(r => r.order).Select(r => r.value);
+		return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaAttribute)));
+	}
 
-		return new CallState(MarkupText.Join(sep, attrSorted));
+	/// <summary>
+	/// fun_sortby's order: every item is compared against every other, its rank is the sum of those
+	/// results, and equal ranks keep list order. One item's comparisons run as a unit, the items
+	/// concurrently.
+	/// </summary>
+	private static async Task<IEnumerable<MString>> SortByComparisons(MString[] list,
+		Func<MString, MString, Task<int>> compare)
+	{
+		var ranked = await Task.WhenAll(list.Select((item, index) => Task.Run(async () =>
+		{
+			var rank = 0;
+			foreach (var other in list.Where((_, j) => j != index))
+			{
+				rank += await compare(item, other);
+			}
+
+			return (Item: item, Rank: rank);
+		})));
+
+		return ranked.OrderBy(r => r.Rank).Select(r => r.Item);
 	}
 
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]
@@ -1454,12 +1445,10 @@ public partial class Functions
 		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
 
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
-
-		IEnumerable<string> keys;
+		var keys = new List<string>(list.Length);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var keyList = new List<string>();
 			foreach (var item in list)
 			{
 				var keyResult = await AttributeService.EvaluateAttributeFunctionAsync(
@@ -1467,9 +1456,8 @@ public partial class Functions
 					executor,
 					rawAttrArg,
 					new Dictionary<string, CallState> { { "0", new CallState(item) } });
-				keyList.Add(keyResult.ToPlainText());
+				keys.Add(keyResult.ToPlainText());
 			}
-			keys = keyList;
 		}
 		else
 		{
@@ -1518,34 +1506,27 @@ public partial class Functions
 			var attr = maybeAttr.AsAttribute;
 			var attrValue = attr.Last().Value;
 
-			keys = await list.ToAsyncEnumerable()
-				.Select((MString item, CancellationToken _) =>
+			foreach (var item in list)
+			{
+				var newParser = parser.Push(parser.CurrentState with
 				{
-					var newParser = parser.Push(parser.CurrentState with
-					{
-						Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-						EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-					});
-					return newParser.FunctionParse(attrValue);
-				})
-				.Select(cs => cs!.Message!.ToPlainText())
-				.ToListAsync();
+					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
+				});
+				keys.Add((await newParser.FunctionParse(attrValue))!.Message!.ToPlainText());
+			}
 		}
 
-		var sortTypeStr = sortType.ToPlainText().ToLower();
-
-		var indexedKeys = keys.Select((k, i) => new { Index = i, Key = k }).ToList();
-
-		IEnumerable<int> sortedIndices = sortTypeStr switch
+		var indexes = Enumerable.Range(0, list.Length);
+		var sortedIndexes = sortType.ToPlainText().ToLower() switch
 		{
-			"n" => indexedKeys.OrderBy(x => int.TryParse(x.Key, out var n) ? n : 0).Select(x => x.Index),
-			"f" => indexedKeys.OrderBy(x => double.TryParse(x.Key, out var f) ? f : 0.0).Select(x => x.Index),
-			"i" => indexedKeys.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase).Select(x => x.Index),
-			_ => indexedKeys.OrderBy(x => x.Key).Select(x => x.Index)
+			"n" => indexes.OrderBy(i => int.TryParse(keys[i], out var n) ? n : 0),
+			"f" => indexes.OrderBy(i => double.TryParse(keys[i], out var f) ? f : 0.0),
+			"i" => indexes.OrderBy(i => keys[i], StringComparer.OrdinalIgnoreCase),
+			_ => indexes.OrderBy(i => keys[i])
 		};
 
-		var result = sortedIndices.Select(i => list[i]);
-		return new CallState(MarkupText.Join(sep, result));
+		return new CallState(MarkupText.Join(sep, sortedIndexes.Select(i => list[i])));
 	}
 
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
@@ -1716,18 +1697,12 @@ public partial class Functions
 			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		var delimiter = (args[(args.Count - 1).ToString()].Message ?? MarkupText.Empty).ToPlainText();
-		var nonEmptyValues = new List<string>();
-		for (var i = 0; i < args.Count - 1; i++)
-		{
-			var value = (args[i.ToString()].Message ?? MarkupText.Empty).ToPlainText();
-			if (!string.IsNullOrEmpty(value))
-			{
-				nonEmptyValues.Add(value);
-			}
-		}
+		var delimiter = args[(args.Count - 1).ToString()].Message ?? MarkupText.Empty;
+		var nonEmptyValues = Enumerable.Range(0, args.Count - 1)
+			.Select(i => args[i.ToString()].Message ?? MarkupText.Empty)
+			.Where(value => value.Length > 0);
 
-		return ValueTask.FromResult(new CallState(string.Join(delimiter, nonEmptyValues)));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, nonEmptyValues)));
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "width", "delimiter", "line-delimiter"])]
@@ -1797,65 +1772,55 @@ public partial class Functions
 		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, delimiter);
 
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
+		var sortTypeStr = sortType.ToPlainText().ToLower();
 
-		// Remove consecutive duplicates based on sort type comparison
-		var result = new List<MString>();
-		var sortTypeStr = sortType.ToPlainText();
-
-		for (var i = 0; i < list.Length; i++)
+		// Consecutive duplicates collapse, compared the way the sort type compares.
+		static bool SameItem(string sortType, string current, string previous) => sortType switch
 		{
-			if (i == 0)
-			{
-				result.Add(list[i]);
-			}
-			else
-			{
-				var current = list[i].ToPlainText();
-				var previous = list[i - 1].ToPlainText();
+			"f" => double.TryParse(current, out var c) && double.TryParse(previous, out var p) && Math.Abs(c - p) < 0.0000001,
+			"n" => int.TryParse(current, out var c) && int.TryParse(previous, out var p) && c == p,
+			_ => current == previous
+		};
 
-				var isDuplicate = sortTypeStr.ToLower() switch
-				{
-					"f" => double.TryParse(current, out var c1) && double.TryParse(previous, out var p1) && Math.Abs(c1 - p1) < 0.0000001,
-					"n" => int.TryParse(current, out var c2) && int.TryParse(previous, out var p2) && c2 == p2,
-					_ => current == previous
-				};
-
-				if (!isDuplicate)
-				{
-					result.Add(list[i]);
-				}
-			}
-		}
+		var result = list.Where((item, i) => i == 0 || !SameItem(sortTypeStr, item.Text, list[i - 1].Text));
 
 		return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, result));
 	}
 
 	[SharpFunction(Name = "wordpos", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "number", "delimiter"])]
-	public async ValueTask<CallState> WordPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> WordPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await Task.CompletedTask;
-
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var listArg = args["0"].Message;
+		var list = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
 		var numberArg = args["1"].Message!.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ");
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
 		if (!int.TryParse(numberArg, out var number))
 		{
-			return new CallState(ErrorMessages.Returns.PositiveInteger);
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var lengths = list.Select(x => x.Length).ToList();
-
-		if (number > lengths.Sum())
+		if (number < 1 || number > list.Length)
 		{
-			return new CallState(ErrorMessages.Returns.WordNumberOutOfRange);
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WordNumberOutOfRange));
 		}
 
-		var i = 0;
-		var result = lengths.TakeWhile(x => (i += x) <= number).Count();
-		return new CallState(result);
+		// fun_wordpos (src/funlist.c) walks the words in place and stops at the first one that ends past
+		// the character, so a delimiter belongs to the word after it: wordpos(foo bar baz, 5) is 2. A
+		// space delimiter merges its runs, every other delimiter counts an empty word between two of
+		// its own, which is what SplitList does with the items.
+		var target = number - 1;
+		var word = 1;
+		var text = list.AsSpan();
+		foreach (var range in text.Split(delimiter))
+		{
+			var (offset, length) = range.GetOffsetAndLength(text.Length);
+			if (delimiter == " " && length == 0) continue;
+			if (target < offset + length) break;
+			word++;
+		}
+
+		return ValueTask.FromResult(new CallState(word));
 	}
 
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "delimiter"])]

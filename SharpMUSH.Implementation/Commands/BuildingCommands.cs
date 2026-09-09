@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -105,7 +106,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		await foreach (var exit in args.ToAsyncEnumerable())
+		foreach (var exit in args)
 		{
 			// NOTE: Should verify executor has CONTROL permission over the room containing the exit
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -166,82 +167,12 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
+
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!split.TryPickT0(out var details, out _))
-		{
-			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
-		}
-
-		var (dbref, maybeAttribute) = details;
-
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor,
-			executor,
-			dbref,
-			LocateFlags.All);
-
-		if (locate.IsError)
-		{
-			return locate.AsError;
-		}
-
-		var realLocated = locate.AsSharpObject;
-
-		if (!string.IsNullOrEmpty(maybeAttribute))
-		{
-			// Every token is applied as ONE batch (Task 6 fix round 1, M2): Penn's
-			// do_attrib_flags/af_helper checks permission once for the whole flag argument,
-			// not once per flag, so `@set obj/attr=!safe wizard` isn't order-dependent on
-			// whether "!safe" or "wizard" is processed first.
-			var flagTokens = MushText.SplitList(MarkupText.Space, args["1"].Message!)
-				.Select(x => x.ToPlainText())
-				.ToList();
-
-			var flagResult = await AttributeService.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
-
-			if (flagResult.IsT1)
-			{
-				await NotifyService.Notify(executor, flagResult.AsT1.Value, executor);
-			}
-
-			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
-		}
-
-		var maybeColonLocation = args["1"].Message!.IndexOf(":");
-		if (maybeColonLocation > -1)
-		{
-			var arg1 = args["1"].Message!;
-			var attribute = arg1.Substring(0, maybeColonLocation);
-			var content = arg1.Substring(maybeColonLocation + 1, arg1.Length);
-
-			var setResult =
-				await AttributeService.SetAttributeAsync(executor, realLocated, attribute.ToPlainText(), content);
-
-			if (setResult.IsT0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					realLocated.Object().Name, attribute.ToPlainText());
-			}
-			else
-			{
-				await NotifyService.Notify(executor, setResult.AsT1.Value, executor);
-			}
-
-			return new CallState(setResult.Match(
-				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-				failure => failure.Value));
-		}
-
-		foreach (var flag in MushText.SplitList(MarkupText.Space, args["1"].Message!))
-		{
-			await ManipulateSharpObjectService.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
-		}
-
-		return CallState.Empty;
+		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+			NotifyService, executor, args["0"].Message!, args["1"].Message!);
 	}
 
 
@@ -917,9 +848,10 @@ public partial class Commands
 						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
 
 						// Default ChZone lock is the zone object itself (allows controlled objects)
-						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
+						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
 						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
+								zoneObj.Object().DBRef.ToString()));
 						}
 
 						// Clear privileged flags and powers unless /preserve is used
@@ -1053,11 +985,9 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			// Resolve to canonical lock name (e.g. "USE" -> "Use") if it's a known system lock
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "teleport" ->
+			// "TPort"); a switch naming no standard lock is a user lock and passes through as typed.
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1092,10 +1022,7 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1252,9 +1179,7 @@ public partial class Commands
 			return true;
 		}
 
-		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
-
-		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
+		return await destination.HasFlag("LINK_OK");
 	}
 
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
@@ -1544,14 +1469,14 @@ public partial class Commands
 				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
 				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
 				// The attribute-flag sync above works the same way, for the same reason.
-				var sourceObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(obj.Object().Flags.Value);
-				var copyable = sourceObjectFlags
+				var copyable = await obj.Object().Flags.Value
 					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 					.Select(flag => flag.Name)
-					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-				var clonedObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(clonedObj.Object().Flags.Value);
-				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
+				// Every provider reads the flags in full when enumeration starts, and an unset swaps the
+				// object's Flags for a new list rather than editing the one being walked.
+				await foreach (var flag in clonedObj.Object().Flags.Value.Where(flag => !copyable.Contains(flag.Name)))
 				{
 					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
 				}

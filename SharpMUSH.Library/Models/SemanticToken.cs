@@ -81,12 +81,7 @@ public record SemanticTokensData
 	/// <returns>The encoded semantic tokens data.</returns>
 	public static SemanticTokensData FromTokens(IReadOnlyList<SemanticToken> tokens)
 	{
-		var tokenTypes = Enum.GetNames(typeof(SemanticTokenType));
-		var tokenModifiers = Enum.GetNames(typeof(SemanticTokenModifier))
-			.Where(name => name != nameof(SemanticTokenModifier.None))
-			.ToArray();
-
-		var data = new List<int>();
+		var data = new List<int>(tokens.Count * 5);
 		int prevLine = 0;
 		int prevChar = 0;
 
@@ -112,31 +107,32 @@ public record SemanticTokensData
 
 		return new SemanticTokensData
 		{
-			TokenTypes = tokenTypes,
-			TokenModifiers = tokenModifiers,
+			TokenTypes = TokenTypeLegend,
+			TokenModifiers = TokenModifierLegend,
 			Data = [.. data]
 		};
 	}
+
+	/// <summary>The legend's entries, in the order the encoded bit positions refer to them.</summary>
+	private static readonly SemanticTokenModifier[] Modifiers =
+		Enum.GetValues<SemanticTokenModifier>().Where(modifier => modifier != SemanticTokenModifier.None).ToArray();
+
+	private static readonly string[] TokenTypeLegend = Enum.GetNames<SemanticTokenType>();
+
+	private static readonly string[] TokenModifierLegend = Modifiers.Select(modifier => modifier.ToString()).ToArray();
 
 	private static int EncodeModifiers(SemanticTokenModifier modifiers)
 	{
 		if (modifiers == SemanticTokenModifier.None)
 			return 0;
 
-		int result = 0;
-		int bitPosition = 0;
-
-		foreach (SemanticTokenModifier modifier in Enum.GetValues(typeof(SemanticTokenModifier)))
+		var result = 0;
+		for (var bit = 0; bit < Modifiers.Length; bit++)
 		{
-			if (modifier == SemanticTokenModifier.None)
-				continue;
-
-			if (modifiers.HasFlag(modifier))
+			if (modifiers.HasFlag(Modifiers[bit]))
 			{
-				result |= (1 << bitPosition);
+				result |= 1 << bit;
 			}
-
-			bitPosition++;
 		}
 
 		return result;

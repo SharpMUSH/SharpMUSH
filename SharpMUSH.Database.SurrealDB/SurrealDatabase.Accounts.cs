@@ -144,7 +144,7 @@ SELECT out.key AS dbref FROM account_owns_character WHERE in = $accountId
 			if (obj.IsPlayer)
 				players.Add(obj.AsPlayer);
 		}
-		return players.AsReadOnly();
+		return players;
 	}
 
 	public async ValueTask<SharpAccount?> GetAccountForCharacterAsync(DBRef characterRef, CancellationToken cancellationToken = default)
@@ -208,7 +208,7 @@ FROM account_owns_character WHERE out.key = $dbref
 	}
 
 	private static string NormalizeSurrealId(string id, string table) =>
-		id.Contains(':') ? id : $"{table}:{(id.Contains('/') ? id.Split('/')[1] : id)}";
+		id.Contains(':') ? id : $"{table}:{(id.Contains('/') ? SecondSegment(id) : id)}";
 
 	#endregion
 }

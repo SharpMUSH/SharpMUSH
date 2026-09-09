@@ -2,6 +2,7 @@ using NATS.Client.Core;
 using NATS.Client.Serializers.Json;
 using System.Buffers;
 using System.IO.Compression;
+using System.IO.Pipelines;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -67,8 +68,7 @@ public sealed class CompressingNatsSerializer<T> : INatsSerializer<T>
 	{
 		if (!IsGzip(buffer)) return _inner.Deserialize(buffer);
 
-		using var source = new MemoryStream(buffer.ToArray(), writable: false);
-		using var gzip = new GZipStream(source, CompressionMode.Decompress);
+		using var gzip = new GZipStream(PipeReader.Create(buffer).AsStream(), CompressionMode.Decompress);
 		using var expanded = new MemoryStream();
 		gzip.CopyTo(expanded);
 

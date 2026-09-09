@@ -238,7 +238,9 @@ public partial class Commands
 	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
-	[SharpCommand(Name = "THINK", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["expression"])]
+	// PennMUSH src/command.c: {"THINK", "NOEVAL", cmd_think, CMD_T_ANY | CMD_T_NOGAGGED, 0, 0}.
+	[SharpCommand(Name = "THINK", Switches = ["NOEVAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1,
+		ParameterNames = ["expression"])]
 	public async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -787,7 +789,7 @@ public partial class Commands
 
 		if (showInventory)
 		{
-			var allContents = await Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
+			var allContents = Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer));
 
 			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
 			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
@@ -796,7 +798,7 @@ public partial class Commands
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
 
-			foreach (var item in allContents)
+			await foreach (var item in allContents)
 			{
 				var itemObj = item.WithRoomOption();
 				var isDark = await itemObj.IsDarkLegal();
@@ -879,11 +881,8 @@ public partial class Commands
 				string? executorLocale = null;
 				if (ConnectionService != null)
 				{
-					await foreach (var connection in ConnectionService.Get(executor.Object().DBRef))
-					{
-						connection.Metadata.TryGetValue("Locale", out executorLocale);
-						break;
-					}
+					var firstConnection = await ConnectionService.Get(executor.Object().DBRef).FirstOrDefaultAsync();
+					firstConnection?.Metadata.TryGetValue("Locale", out executorLocale);
 				}
 				MString defaultExits;
 				if (isTransparent)
@@ -908,8 +907,7 @@ public partial class Commands
 							exitParts.Add(FormatExitNameToDestination(exitMString, destName, executorLocale));
 						}
 					}
-					defaultExits = MarkupText.Concat(exitParts.SelectMany<MString, MString>((part, i) =>
-						i > 0 ? [MarkupText.NewLine, part] : [part]).ToArray());
+					defaultExits = MarkupText.Join(MarkupText.NewLine, exitParts);
 				}
 				else
 				{
@@ -1061,7 +1059,6 @@ public partial class Commands
 				error => MarkupText.Empty);
 
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
-		var ownerObjFlags = await ownerObj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 		var objPowers = obj.Powers.Value;
 		var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
@@ -1070,7 +1067,7 @@ public partial class Commands
 
 		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 
-		var objFlagStr = showFlags ? string.Join(string.Empty, objFlags.Select(x => x.Symbol)) : string.Empty;
+		var objFlagStr = showFlags ? MessageHelpers.FlagSymbols(objFlags) : string.Empty;
 		var nameRow = Format($"{name.Hilight()}(#{obj.DBRef.Number}{objFlagStr})");
 		outputSections.Add(nameRow);
 
@@ -1090,13 +1087,11 @@ public partial class Commands
 		}
 		else
 		{
-			var zoneObject = objZone.Known.Object();
-			var zoneFlags = await zoneObject.Flags.Value.ToArrayAsync();
-			var zoneFlagStr = string.Join(string.Empty, zoneFlags.Select(x => x.Symbol));
-			zoneSection = Format($"  Zone: {zoneObject.Name.Hilight()}(#{zoneObject.DBRef.Number}{zoneFlagStr})");
+			var zoneLine = await MessageHelpers.FormatObjectWithDbrefMString(objZone.Known.Object());
+			zoneSection = Format($"  Zone: {zoneLine}");
 		}
 
-		var ownerFlagStr = showFlags ? string.Join(string.Empty, ownerObjFlags.Select(x => x.Symbol)) : string.Empty;
+		var ownerFlagStr = showFlags ? await MessageHelpers.FlagSymbolsAsync(ownerObj) : string.Empty;
 		var ownerRow = Format($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number}{ownerFlagStr}){zoneSection}");
 		outputSections.Add(ownerRow);
 
@@ -1107,9 +1102,8 @@ public partial class Commands
 		}
 		else
 		{
-			var parentFlags = await parentObject.Flags.Value.ToArrayAsync();
-			var parentFlagStr = string.Join(string.Empty, parentFlags.Select(x => x.Symbol));
-			outputSections.Add(Format($"Parent: {parentObject.Name.Hilight()}(#{parentObject.DBRef.Number}{parentFlagStr})"));
+			var parentLine = await MessageHelpers.FormatObjectWithDbrefMString(parentObject);
+			outputSections.Add(Format($"Parent: {parentLine}"));
 		}
 
 		foreach (var lockKvp in obj.Locks)
@@ -1252,16 +1246,9 @@ public partial class Commands
 				else
 				{
 					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
-					async ValueTask<MString> BuildContentLine(AnySharpContent content, CancellationToken _)
-					{
-						var cObj = content.Object();
-						var cFlags = await cObj.Flags.Value.ToArrayAsync();
-						var cFlagStr = string.Join(string.Empty, cFlags.Select(x => x.Symbol));
-						return Format($"{cObj.Name.Hilight()}(#{cObj.DBRef.Number}{cFlagStr})");
-					}
 					var contentItems = await contents
 						.ToAsyncEnumerable()
-						.Select(BuildContentLine)
+						.Select((AnySharpContent content, CancellationToken _) => MessageHelpers.FormatObjectWithDbrefMString(content.Object()))
 						.Prepend(MarkupText.Plain(contentsLabel))
 						.ToListAsync();
 					await NotifyService.Notify(enactor,
@@ -1276,16 +1263,9 @@ public partial class Commands
 
 				if (exits.Length > 0)
 				{
-					async ValueTask<MString> BuildExitLine(SharpExit exit, CancellationToken _)
-					{
-						var eObj = exit.Object;
-						var eFlags = await eObj.Flags.Value.ToArrayAsync();
-						var eFlagStr = string.Join(string.Empty, eFlags.Select(x => x.Symbol));
-						return Format($"{eObj.Name.Hilight()}(#{eObj.DBRef.Number}{eFlagStr})");
-					}
 					var exitLines = await exits
 						.ToAsyncEnumerable()
-						.Select(BuildExitLine)
+						.Select((SharpExit exit, CancellationToken _) => MessageHelpers.FormatObjectWithDbrefMString(exit.Object))
 						.Prepend(MarkupText.Plain("Exits:"))
 						.ToListAsync();
 					await NotifyService.Notify(enactor,
@@ -1298,9 +1278,7 @@ public partial class Commands
 				var homeContainer = await viewingKnown.MinusRoom().Home();
 				var locationContainer = await viewingKnown.AsContent.Location();
 
-				var locationObject = locationContainer.Object();
-				var locationFlags = await locationObject.Flags.Value.ToArrayAsync();
-				var locationFlagStr = string.Join(string.Empty, locationFlags.Select(x => x.Symbol));
+				var locationLine = await MessageHelpers.FormatObjectWithDbrefMString(locationContainer.Object());
 
 				// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
 				if (homeContainer.IsNone)
@@ -1309,13 +1287,11 @@ public partial class Commands
 				}
 				else
 				{
-					var homeObject = homeContainer.WithoutNone().Object();
-					var homeFlags = await homeObject.Flags.Value.ToArrayAsync();
-					var homeFlagStr = string.Join(string.Empty, homeFlags.Select(x => x.Symbol));
-					await NotifyService.Notify(enactor, Format($"Home: {homeObject.Name.Hilight()}(#{homeObject.DBRef.Number}{homeFlagStr})"), enactor);
+					var homeLine = await MessageHelpers.FormatObjectWithDbrefMString(homeContainer.WithoutNone().Object());
+					await NotifyService.Notify(enactor, Format($"Home: {homeLine}"), enactor);
 				}
 
-				await NotifyService.Notify(enactor, Format($"Location: {locationObject.Name.Hilight()}(#{locationObject.DBRef.Number}{locationFlagStr})"), enactor);
+				await NotifyService.Notify(enactor, Format($"Location: {locationLine}"), enactor);
 			}
 		}
 
@@ -1570,9 +1546,7 @@ public partial class Commands
 			return true;
 		}
 
-		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
-
-		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase))
+		return await destination.HasFlag("LINK_OK")
 					 && await LockService.Evaluate(LockType.Link, destination, exitObject);
 	}
 
@@ -1883,9 +1857,7 @@ public partial class Commands
 			MaxDbRef = endDbref
 		};
 
-		var results = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter)).ToListAsync();
-
-		var controlledResults = await results.ToAsyncEnumerable()
+		var controlledResults = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter))
 			.Where(async (obj, ct) =>
 			{
 				var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef), ct);
@@ -2169,18 +2141,28 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 
+		// The semaphore attribute is owned by God and stamped LOCKED, as PennMUSH's add_to_sem
+		// maintains it (atr_add(..., GOD, SEMAPHORE_FLAGS), src/cque.c:216). Writing the count back
+		// through the permission-checked service therefore fails CanSet for an ordinary player, and
+		// the result is discarded — releasing the task while leaving the count stale. Maintain it on
+		// the same system path that QueueSemaphore creates it on.
+		var systemOwner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var semaphorePath = attribute.Split("`");
+
+		async ValueTask WriteSemaphoreCount(int value) =>
+			await Mediator.Send(new SetAttributeCommand(objectToNotify.Object().DBRef, semaphorePath,
+				MarkupText.Plain(value.ToString()), systemOwner));
+
 		switch (notifyType)
 		{
 			case "ANY":
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCount.ToString()));
+				await WriteSemaphoreCount(newCount);
 				break;
 			case "ALL":
 				await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(0.ToString()));
+				await WriteSemaphoreCount(0);
 				break;
 			case "SETQ":
 				var modified = await Mediator.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2191,8 +2173,7 @@ public partial class Commands
 				}
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCountSetQ.ToString()));
+				await WriteSemaphoreCount(newCountSetQ);
 				return new None();
 		}
 
@@ -2421,8 +2402,8 @@ public partial class Commands
 		var remainingArgs = args.Values.Skip(1).ToList();
 		if (args.Count % 2 == 0)
 		{
-			defaultArg = remainingArgs.Last().Message!;
-			remainingArgs = remainingArgs.Take(remainingArgs.Count - 1).ToList();
+			defaultArg = remainingArgs[^1].Message!;
+			remainingArgs.RemoveAt(remainingArgs.Count - 1);
 		}
 
 		var isFirst = switches.Contains("FIRST") && !switches.Contains("ALL");
@@ -2678,6 +2659,13 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>SEMAPHORE_FLAGS</c> (<c>src/cque.c:98</c>), which <c>add_to_sem</c> stamps on the
+	/// attribute as GOD every time it touches it, and which <c>waitable_attr</c> (<c>:125</c>) then
+	/// requires before it will let a later @wait use that attribute at all.
+	/// </summary>
+	private static readonly string[] SemaphoreAttributeFlags = ["no_inherit", "no_clone", "locked"];
+
+	/// <summary>
 	/// Runs one matched <c>@switch</c>/<c>@select</c> action. Default is a NEW queue entry, exactly as
 	/// PennMUSH's <c>do_switch</c> does with <c>QUEUE_DEFAULT</c>; <c>/inline</c> (and <c>/inplace</c>)
 	/// run the action in the calling action list instead. An <c>@break</c> inside an inline action stops
@@ -2788,21 +2776,14 @@ public partial class Commands
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
-		if (attrValue is null)
-		{
-
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-
-			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-
-			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-				dbRefAttr, 0));
-
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		// PennMUSH's semaphore attribute holds the number of tasks waiting on it. A parking @wait is
+		// add_to_sem(thing, 1, aname) (src/cque.c:1615), and add_to_generic reads a MISSING attribute
+		// as zero before adding — so the first @wait on a fresh object must leave 1 behind, not 0.
+		// Writing 0 made the matching @notify drive the count to -1, which reads as a banked notify,
+		// so the NEXT @wait on that object ran its command immediately instead of parking. Treating
+		// "absent" as zero and falling through to the common path is add_to_generic's own shape.
+		var last = 0;
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out last))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
@@ -2811,10 +2792,15 @@ public partial class Commands
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
 
-		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
+		if (attrValue is null)
+		{
+			await StampSemaphoreFlags(located, attribute);
+		}
+
+		var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 
 		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-			dbRefAttr2, last));
+			dbRefAttr, last));
 
 	}
 
@@ -2827,16 +2813,9 @@ public partial class Commands
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
-		if (attrValue is null)
-		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		// Same counting rule as QueueSemaphore above: absent means zero, and this wait makes it one.
+		var last = 0;
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out last))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
@@ -2844,8 +2823,46 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
+
+		if (attrValue is null)
+		{
+			await StampSemaphoreFlags(located, attribute);
+		}
+
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+	}
+
+	/// <summary>
+	/// A semaphore attribute this command just created carries no flags, but <c>waitable_attr</c>
+	/// refuses an existing attribute that does not have all of <see cref="SemaphoreAttributeFlags"/> —
+	/// so without this the FIRST @wait works and every later one on the same attribute is refused.
+	/// Stamped as God, matching Penn's <c>atr_add(player, name, buff, GOD, flags)</c>.
+	/// </summary>
+	private async ValueTask StampSemaphoreFlags(AnySharpObject located, string[] attribute)
+	{
+		// Not AttributeService.SetAttributeFlagsAsync: that is the @set/attribute-flag path and reports
+		// "flags set" to the executor it is handed, so every fresh semaphore would tell a connected #1
+		// about bookkeeping it did not ask for. This is internal, so it goes straight to the command.
+		var stamped = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute))
+			.LastOrDefaultAsync();
+
+		if (stamped is null)
+		{
+			return;
+		}
+
+		var known = await Mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+
+		foreach (var name in SemaphoreAttributeFlags)
+		{
+			var flag = known.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+			if (flag is not null)
+			{
+				await Mediator.Send(new SetAttributeFlagCommand(located.Object().DBRef, stamped, flag));
+			}
+		}
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
@@ -3376,8 +3393,32 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["room", "message"])]
 	public async ValueTask<Option<CallState>> NoSpoofRoomEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// PennMUSH cmd_remit (cmds.c:1347): @nsremit is @remit with PEMIT_SPOOF, which suppresses the
+		// recipients' NOSPOOF tagging, for anyone allowed to do that.
+		var notificationType = await PermissionService.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+
+		return await RemitToRooms(parser, executor, executor, notificationType);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_remit</c> (<c>speech.c:1299</c>): under <c>/list</c> the target argument is a
+	/// space-separated list of rooms, each of which is remitted into; without it the whole argument is
+	/// one room name, so a name containing spaces still matches.
+	/// </summary>
+	/// <param name="speaker">
+	/// Who the sound is attributed to — the executor, unless <c>/spoof</c> moved it to the enactor.
+	/// </param>
+	private async ValueTask<Option<CallState>> RemitToRooms(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject speaker,
+		INotifyService.NotificationType notificationType)
+	{
+		var args = parser.CurrentState.Arguments;
 
 		if (args.Count < 2)
 		{
@@ -3385,40 +3426,44 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
+		var switches = parser.CurrentState.Switches;
 		var objects = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
-		var notificationType = await PermissionService.CanNoSpoof(executor)
-			? INotifyService.NotificationType.NSEmit
-			: INotifyService.NotificationType.Emit;
+		IEnumerable<string> targets = switches.Contains("LIST")
+			? ArgHelpers.NameListString(objects)
+			: [objects.Trim()];
 
-		await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser,
-			executor,
-			executor,
-			objects,
-			LocateFlags.All,
-			async target =>
-			{
-				// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
-				if (!target.IsContainer)
+		foreach (var target in targets)
+		{
+			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser,
+				executor,
+				executor,
+				target,
+				LocateFlags.All,
+				async located =>
 				{
-					await NotifyService.NotifyLocalized(executor,
-						nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
+					// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
+					if (!located.IsContainer)
+					{
+						await NotifyService.NotifyLocalized(executor,
+							nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
+						return CallState.Empty;
+					}
+
+					await CommunicationService.SendToRoomAsync(
+						executor,
+						located.AsContainer,
+						_ => message,
+						notificationType,
+						sender: speaker);
+
+					await EchoRemitToSender(executor, switches, located, message);
+
 					return CallState.Empty;
-				}
-
-				var container = target.AsContainer;
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					container,
-					_ => message,
-					notificationType);
-
-				await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
-
-				return CallState.Empty;
-			});
+				});
+		}
 
 		return CallState.Empty;
 	}
@@ -3689,8 +3734,8 @@ public partial class Commands
 		var targetPlayer = target.AsPlayer;
 		var targetObject = target.Object();
 
-		var targetFlags = await targetObject.Flags.Value.ToListAsync();
-		var isUnfindable = targetFlags.Any(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
+		var isUnfindable = await targetObject.Flags.Value
+			.AnyAsync(f => f.Symbol == "U" || f.Name.Equals("UNFINDABLE", StringComparison.OrdinalIgnoreCase));
 
 		if (isUnfindable)
 		{
@@ -3777,21 +3822,12 @@ public partial class Commands
 
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
 
-		var getAllOptions = () =>
-		{
-			var options = new List<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)>();
-
-			foreach (var propName in ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys)
-			{
-				var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[propName];
-				var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, propName);
-				var category = ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "";
-
-				options.Add((category, propName, attr, value));
-			}
-
-			return options;
-		};
+		IEnumerable<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)> getAllOptions() =>
+			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys.Select(propName => (
+				Category: ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "",
+				PropertyName: propName,
+				ConfigAttr: ConfigGenerated.ConfigMetadata.PropertyMetadata[propName],
+				Value: ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, propName)));
 
 		if (switches.Contains("SET") || switches.Contains("SAVE"))
 		{
@@ -4098,8 +4134,7 @@ public partial class Commands
 			if (all)
 			{
 				// Replace all matches, working backwards
-				var matches = regex.Matches(text).Cast<Match>().Reverse().ToList();
-				foreach (var match in matches)
+				foreach (var match in regex.Matches(text).Reverse())
 				{
 					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
 					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
@@ -4755,14 +4790,13 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			var tasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
-			if (tasks.Length == 0)
+			var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).FirstOrDefaultAsync();
+			if (task is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
 				return new CallState(ErrorMessages.Returns.NotFound);
 			}
 
-			var task = tasks[0];
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), executor, pid);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, task.Owner);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), executor, task.SemaphoreSource);
@@ -5471,8 +5505,7 @@ public partial class Commands
 			};
 			outputs.Add($"{prefix}{createCmd}");
 
-			var flags = await obj.Flags.Value.ToArrayAsync();
-			foreach (var flag in flags)
+			await foreach (var flag in obj.Flags.Value)
 			{
 				if (skipDefaults && IsDefaultFlag(obj.Type, flag.Name))
 				{
@@ -5481,8 +5514,7 @@ public partial class Commands
 				outputs.Add($"{prefix}@set {objectRef}={flag.Name}");
 			}
 
-			var powers = await obj.Powers.Value.ToArrayAsync();
-			foreach (var power in powers)
+			await foreach (var power in obj.Powers.Value)
 			{
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
@@ -5658,8 +5690,8 @@ public partial class Commands
 			return !flags.Any();
 		}
 
-		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n).ToList();
-		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n).ToList();
+		var currentFlagNames = flags.Select(f => f.Name.ToUpper()).OrderBy(n => n);
+		var defaultFlagNames = entry.DefaultFlags.Select(f => f.ToUpper()).OrderBy(n => n);
 
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
@@ -5672,6 +5704,12 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		// PennMUSH's do_emit speaks into speech_loc(), the immediate location (src/speech.c:109,
+		// 1218), and emit() does the same here. This reads OutermostWhere() instead because
+		// SendToRoomAsync implements only half of PennMUSH's na_loc: na_loc yields the location
+		// object itself and then its contents, while SendToRoomAsync yields contents alone. An
+		// object in a player's inventory therefore emits to nobody under Where() — PennMUSH would
+		// notify the carrier. Unifying the two needs that seam fixed first; see #959.
 		var executorLocation = await executor.OutermostWhere();
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
@@ -5746,49 +5784,20 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// The no-spoof form of <see cref="OmitEmit"/>: PennMUSH <c>do_oemit_list</c> (<c>speech.c</c>)
+	/// emits to everyone in the room EXCEPT the objects listed in argument 0, and accepts the same
+	/// <c>&lt;room&gt;/&lt;object list&gt;</c> target syntax. It differs from <c>@OEMIT</c> only in
+	/// the <see cref="IPermissionService.CanSpoofAs"/> gate and the no-spoof notification type.
+	/// </summary>
 	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSNoParse, MinArgs = 0,
-		MaxArgs = 0, ParameterNames = ["message"])]
+		MaxArgs = 0, ParameterNames = ["objects", "message"])]
 	public async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		var executorLocation = await executor.OutermostWhere();
-		var contents = executorLocation.Content(Mediator);
-		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
-		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
-
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
-
-		if (!await PermissionService.CanSpoofAs(executor, enactor))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService.Notify(
-				obj.WithRoomOption(),
-				message,
-				enactor,
-				INotifyService.NotificationType.Emit);
-		}
-
-		return new CallState(message);
-	}
-
-	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (args.Count < 2)
 		{
@@ -5796,14 +5805,61 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var objects = args["0"].Message!.ToPlainText();
-		var message = args["1"].Message!;
+		if (!await PermissionService.CanSpoofAs(executor, enactor))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
-		// Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
-		// This allows emitting to a specific room while excluding specific objects.
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
+
+		var (targetRoom, excludeObjects) = await ResolveOmitEmitTarget(parser, executor, args["0"].Message!.ToPlainText());
+
+		if (targetRoom is null)
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
+		}
+
+		// Same selection @NSEMIT, @NSREMIT, @NSPEMIT and @NSZEMIT make: the no-spoof type is
+		// what the executor is permitted to send, not what the command is named.
+		var notificationType = await PermissionService.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+
+		await CommunicationService.SendToRoomAsync(
+			executor,
+			targetRoom,
+			_ => message,
+			notificationType,
+			sender: enactor,
+			excludeObjects: excludeObjects);
+
+		return new CallState(message);
+	}
+
+	/// <summary>
+	/// Resolves the <c>@oemit</c> target list — <c>[&lt;room&gt;/]&lt;object list&gt;</c>, per PennMUSH
+	/// <c>do_oemit_list</c> (<c>speech.c</c>) — into the room that hears the emit and the objects
+	/// inside it that must not.
+	/// </summary>
+	/// <returns>
+	/// The room to emit into and the objects to leave out, or a null room when a
+	/// <c>&lt;room&gt;/</c> prefix named something that cannot hold anything (the caller has already
+	/// been told).
+	/// </returns>
+	private async ValueTask<(AnySharpContainer? Room, List<AnySharpObject> Excluded)> ResolveOmitEmitTarget(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		string objects)
+	{
 		AnySharpContainer targetRoom;
 		string objectsToExclude;
 
+		// Support room/obj format like PennMUSH (e.g., @oemit #123/obj1 obj2=message)
+		// This allows emitting to a specific room while excluding specific objects.
 		if (objects.Contains('/'))
 		{
 			var parts = objects.Split('/', 2);
@@ -5820,7 +5876,7 @@ public partial class Commands
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
-				return new CallState(ErrorMessages.Returns.InvalidRoom);
+				return (null, []);
 			}
 
 			targetRoom = roomResult.IsRoom
@@ -5836,22 +5892,45 @@ public partial class Commands
 		var objectList = ArgHelpers.NameList(objectsToExclude);
 		var excludeObjects = new List<AnySharpObject>();
 
-		_ = await objectList
-			.ToAsyncEnumerable()
-			.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1)
-			.Select(objName =>
-				LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-					parser,
-					executor,
-					executor,
-					objName,
-					LocateFlags.All,
-					target =>
-					{
-						excludeObjects.Add(target);
-						return CallState.Empty;
-					}))
-			.ToArrayAsync();
+		foreach (var objName in objectList.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1))
+		{
+			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser,
+				executor,
+				executor,
+				objName,
+				LocateFlags.All,
+				target =>
+				{
+					excludeObjects.Add(target);
+					return CallState.Empty;
+				});
+		}
+
+		return (targetRoom, excludeObjects);
+	}
+
+	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0, ParameterNames = ["objects", "message"])]
+	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (args.Count < 2)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
+			return new CallState(ErrorMessages.Returns.NothingToDo);
+		}
+
+		var message = args["1"].Message!;
+
+		var (targetRoom, excludeObjects) = await ResolveOmitEmitTarget(parser, executor, args["0"].Message!.ToPlainText());
+
+		if (targetRoom is null)
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
+		}
 
 		await CommunicationService.SendToRoomAsync(
 			executor,
@@ -5867,51 +5946,18 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["room", "message"])]
 	public async ValueTask<Option<CallState>> RoomEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
-		if (args.Count < 2)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
-			return new CallState(ErrorMessages.Returns.NothingToDo);
-		}
+		// PennMUSH cmd_remit (cmds.c:1343) resolves the speaker through the SPOOF macro
+		// (dbdefs.h:334): /spoof attributes the sound to the enactor for anyone who may spoof as them,
+		// and silently stays with the executor for anyone who may not.
+		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
+		var speaker = isSpoof && await PermissionService.CanSpoofAs(executor, enactor)
+			? enactor
+			: executor;
 
-		var objects = args["0"].Message!.ToPlainText();
-		var message = args["1"].Message!;
-
-		var objectList = ArgHelpers.NameListString(objects);
-
-		foreach (var obj in objectList)
-		{
-			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser,
-				executor,
-				executor,
-				obj,
-				LocateFlags.All,
-				async target =>
-				{
-					// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
-					if (!target.IsContainer)
-					{
-						await NotifyService.NotifyLocalized(executor,
-							nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
-						return CallState.Empty;
-					}
-
-					await CommunicationService.SendToRoomAsync(
-						executor,
-						target.AsContainer,
-						_ => message,
-						INotifyService.NotificationType.Emit);
-
-					await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
-
-					return CallState.Empty;
-				});
-		}
-
-		return CallState.Empty;
+		return await RemitToRooms(parser, executor, speaker, INotifyService.NotificationType.Emit);
 	}
 
 	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
@@ -5954,11 +6000,13 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsForPlayerFormat), executor, playerName);
 		}
 
-		var allObjects = await Mediator.CreateStream(new GetAllObjectsQuery()).ToListAsync();
-		var roomCount = allObjects.Count(o => o.Type == "ROOM");
-		var exitCount = allObjects.Count(o => o.Type == "EXIT");
-		var thingCount = allObjects.Count(o => o.Type == "THING");
-		var playerCount = allObjects.Count(o => o.Type == "PLAYER");
+		var countsByType = await Mediator.CreateStream(new GetAllObjectsQuery())
+			.CountBy(o => o.Type)
+			.ToDictionaryAsync(x => x.Key, x => x.Value);
+		var roomCount = countsByType.GetValueOrDefault("ROOM");
+		var exitCount = countsByType.GetValueOrDefault("EXIT");
+		var thingCount = countsByType.GetValueOrDefault("THING");
+		var playerCount = countsByType.GetValueOrDefault("PLAYER");
 		var totalCount = roomCount + exitCount + thingCount + playerCount;
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsRoomsFormat), executor, roomCount);
@@ -6879,12 +6927,26 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private bool IsIntegerList(string input)
+	private static bool IsIntegerList(string input)
 	{
-		if (string.IsNullOrWhiteSpace(input)) return false;
+		var anyToken = false;
+		foreach (var range in input.AsSpan().Split(' '))
+		{
+			var token = input.AsSpan(range);
+			if (token.IsEmpty)
+			{
+				continue;
+			}
 
-		var tokens = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
+			if (!long.TryParse(token, out _))
+			{
+				return false;
+			}
+
+			anyToken = true;
+		}
+
+		return anyToken;
 	}
 
 	[SharpCommand(Name = "@PASSWORD", Switches = [],
@@ -7203,7 +7265,7 @@ public partial class Commands
 
 		lines.Add(MarkupText.Plain(Implementation.Generated.VersionInfo.Version));
 
-		var result = MarkupText.Join(MarkupText.NewLine, lines.ToArray());
+		var result = MarkupText.Join(MarkupText.NewLine, lines);
 
 		await NotifyService.Notify(executor, result, executor);
 
@@ -7356,13 +7418,12 @@ public partial class Commands
 			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
 			var retroactive = switches.Contains("RETROACTIVE");
 
-			var allEntries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).ToArrayAsync();
-
-			var matchingEntries = allEntries.Where(entry =>
-				pattern == "*" ||
-				entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
-				(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern))
-			).ToArray();
+			var matchingEntries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
+				.Where(entry =>
+					pattern == "*" ||
+					entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
+					(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern)))
+				.ToArrayAsync();
 
 			if (matchingEntries.Length == 0)
 			{

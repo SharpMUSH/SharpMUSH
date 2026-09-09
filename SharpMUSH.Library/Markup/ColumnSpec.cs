@@ -74,13 +74,5 @@ public static partial class ColumnSpecParser
 		return new ColumnSpec(width, justification, options, ansi);
 	}
 
-	public static List<ColumnSpec> ParseList(string spec)
-	{
-		var result = new List<ColumnSpec>();
-		foreach (var token in spec.Split(' '))
-		{
-			result.Add(Parse(token));
-		}
-		return result;
-	}
+	public static List<ColumnSpec> ParseList(string spec) => spec.Split(' ').Select(Parse).ToList();
 }

@@ -533,6 +533,13 @@ public static class ErrorMessages
 		// --- Speech lock enforcement (PennMUSH src/speech.c) ---
 		public const string MayNotSpeakHere = "You may not speak here!";
 
+		/// <summary>
+		/// The Speech-lock refusal for a room the speaker is not standing in — what @remit and
+		/// @lemit report, against MayNotSpeakHere for the speaker's own room
+		/// (PennMUSH src/speech.c, do_one_remit and do_lemit).
+		/// </summary>
+		public const string MayNotSpeakThere = "You may not speak there!";
+
 		// --- @force guardrails (PennMUSH src/wiz.c) ---
 		public const string CantForceGod = "You can't force God!";
 
