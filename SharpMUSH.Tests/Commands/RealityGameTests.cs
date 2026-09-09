@@ -22,6 +22,40 @@ public class RealityGameTests
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
 	[Test, NotInParallel]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task NestedMovementNoticesRespectContainerAndLocationPerception(bool containerVisible, bool destinationVisible)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle origin", actor)))).AsRoom;
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle destination", actor)))).AsRoom;
+		var vehicle = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality vehicle", origin, actor, origin)))).AsThing;
+		var occupant = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("vehicle occupant", vehicle, actor, origin)))).AsThing;
+		try
+		{
+			await policy.SaveObjectAsync(vehicle.Object.Id!, ObjectReality.Default(vehicle.Object.DBRef) with
+			{ Receive = ["normal", "ghost"], Transmit = [containerVisible ? "normal" : "ghost"] }, default);
+			await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with
+			{ Transmit = [destinationVisible ? "normal" : "ghost"] }, default);
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			var output = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(occupant.Object.Key, output))
+			{
+				var moved = await Get<IMoveService>().ExecuteMoveAsync(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)), vehicle, destination, actor.Object.DBRef);
+				await Assert.That(moved.IsT0).IsTrue();
+			}
+			await Assert.That(output.Body.ToString().Contains("You sense that you have moved")).IsEqualTo(containerVisible);
+			await Assert.That(output.Body.ToString().Contains(destination.Object.Name)).IsEqualTo(containerVisible && destinationVisible);
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task SpoofedRoomEmitUsesTheEffectiveSendersReality(bool sourceVisible)

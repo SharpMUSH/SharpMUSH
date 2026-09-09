@@ -570,10 +570,15 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				// This is typically used for players inside vehicles or containers
+				// This is typically used for players inside vehicles or containers.
+				var receiver = content.Object().DBRef;
+				if (!await reality.CanPerceiveAsync(receiver, container.Object().DBRef)) continue;
+				var visibleOrigin = await reality.CanPerceiveAsync(receiver, oldLocation) ? oldLocName : "somewhere";
+				var visibleDestination = await reality.CanPerceiveAsync(receiver, newLocation) ? newLocName : "somewhere";
 				await notifyService.Notify(
-					content.Object().DBRef,
-					$"You sense that you have moved from {oldLocName} to {newLocName}.");
+					receiver,
+					$"You sense that you have moved from {visibleOrigin} to {visibleDestination}.",
+					container.WithRoomOption());
 			}
 		}
 	}
