@@ -60,6 +60,19 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task AbandoningReservedCommandClosesTheDiagnosticObservation()
+	{
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(diagnostics: diagnostics);
+		using var reservation = await queue.ReserveCommandList(MarkupText.Plain("think unpublished"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(reservation.Admission.Accepted).IsTrue();
+		reservation.Dispose();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(diagnostics.Recent().Count).IsEqualTo(1);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
+	}
+
+	[Test]
 	public async Task ManagedDrainCompletesTheDiagnosticObservation()
 	{
 		var diagnostics = new QueueDiagnosticsRecorder();
