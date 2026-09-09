@@ -24,6 +24,101 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task DelayedReleaseRetainsWorkUntilTransportCleanupSucceeds()
+	{
+		var fail = true;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			fail ? throw new InvalidOperationException("cleanup failed") : Task.FromResult(true));
+		var parser = Substitute.For<IMUSHCodeParser>(); parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser, scheduler);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, TimeSpan.FromHours(1));
+		await Assert.That(async () => await queue.ReleaseScheduledWork(job.Pid!.Value)).Throws<InvalidOperationException>();
+		await Assert.That(ran.Task.IsCompleted).IsFalse();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		fail = false;
+		await queue.ReleaseScheduledWork(job.Pid!.Value);
+		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	[Arguments(false, false, false)]
+	[Arguments(true, false, false)]
+	[Arguments(false, true, false)]
+	[Arguments(true, true, false)]
+	[Arguments(false, false, true)]
+	[Arguments(true, false, true)]
+	[Arguments(false, true, true)]
+	[Arguments(true, true, true)]
+	public async Task TimeoutCleanupFailureRetainsAccountedWork(bool paused, bool recoverWrite, bool failDelete)
+	{
+		var count = 0; var writes = 0; var writeFails = false; var cleanupFails = false;
+		var mediator = QueueAdmissionTests.CountingMediator(() => count, value => { count = value; writes++; });
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				if (writeFails) return ValueTask.FromResult(false);
+				count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				writes++; return ValueTask.FromResult(true);
+			});
+		var triggers = new Dictionary<TriggerKey, ITrigger>(); var jobs = new HashSet<JobKey>();
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var job = call.Arg<IJobDetail>(); var trigger = call.Arg<ITrigger>().GetTriggerBuilder().ForJob(job).Build();
+			triggers[trigger.Key] = trigger; jobs.Add(job.Key); return Task.FromResult(DateTimeOffset.UtcNow);
+		});
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(call => Task.FromResult(triggers.GetValueOrDefault(call.Arg<TriggerKey>())));
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			if (cleanupFails && !failDelete) throw new InvalidOperationException("unschedule failed");
+			return Task.FromResult(triggers.Remove(call.Arg<TriggerKey>()));
+		});
+		scheduler.DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			if (cleanupFails && failDelete) throw new InvalidOperationException("delete failed");
+			return Task.FromResult(jobs.Remove(call.Arg<JobKey>()));
+		});
+		var parser = Substitute.For<IMUSHCodeParser>(); parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = 0; var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { Interlocked.Increment(ref ran); executed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser, scheduler, mediator);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		if (paused) await queue.PausePending(job.Pid!.Value, "hold");
+		writes = 0;
+		if (recoverWrite)
+		{
+			writeFails = true;
+			await Assert.That(async () => await queue.ReleaseScheduledWork(job.Pid!.Value, true)).Throws<InvalidOperationException>();
+			writeFails = false;
+		}
+		cleanupFails = true;
+		await Assert.That(async () => await queue.ReleaseScheduledWork(job.Pid!.Value, true)).Throws<InvalidOperationException>();
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(writes).IsEqualTo(1);
+		await Assert.That(ran).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		if (paused) await Assert.That(await queue.ResumePending(job.Pid!.Value)).IsEqualTo(QueueControlResult.NotPending);
+		cleanupFails = false;
+		await queue.ReleaseScheduledWork(job.Pid!.Value, true);
+		if (paused)
+		{
+			await Assert.That(ran).IsEqualTo(0);
+			await Assert.That(await queue.ResumePending(job.Pid!.Value)).IsEqualTo(QueueControlResult.Applied);
+		}
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		for (var i = 0; i < 100 && queue.GetQueueUsage().Total != 0; i++) await Task.Delay(10);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(writes).IsEqualTo(1);
+		await Assert.That(ran).IsEqualTo(1);
+		await Assert.That(triggers.Count).IsEqualTo(0);
+		await Assert.That(jobs.Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task StalledQuartzPauseHonorsBudgetAndReleasesTransitionLease()
 	{
 		var scheduler = Substitute.For<IScheduler>();
@@ -352,7 +447,7 @@ public class QueuePauseTests
 		await queue.PausePending(job.Pid!.Value, "hold");
 		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: timeout)).Accepted).IsTrue();
 		if (!timeout) count--; // Notification command has already persisted its counter.
-		await Assert.That(count).IsEqualTo(timeout && !managed ? 1 : 0);
+		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(await queue.HaltByPid(job.Pid.Value)).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);

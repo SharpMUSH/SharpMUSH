@@ -1477,6 +1477,7 @@ public class QueueAdmissionTests
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), managed ? 0 : 1, TimeSpan.FromHours(1), managed);
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		var job = new SemaphoreTask(queue);
@@ -1532,8 +1533,11 @@ public class QueueAdmissionTests
 
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		var storedTrigger = context.Trigger.GetTriggerBuilder().ForJob(context.JobDetail).Build();
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(storedTrigger);
 		var job = new SemaphoreTask(queue);
 		fail = true;
 		await Assert.That(async () => await job.Execute(context)).Throws<JobExecutionException>();
@@ -1559,6 +1563,7 @@ public class QueueAdmissionTests
 		var queue = Substitute.For<ITaskScheduler>();
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });

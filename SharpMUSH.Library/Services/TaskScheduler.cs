@@ -222,9 +222,9 @@ public partial class TaskScheduler(
 		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
 			throw new InvalidOperationException("Semaphore count update failed.");
 	}
-	// Caller holds the semaphore mutation lease. Keep an uncertain timeout write behind
-	// the existing command-repair barrier until its before/after value is reconciled.
-	private async ValueTask AdjustTimeoutSemaphoreCountCore(QueueEntry entry)
+	// Caller owns both transition leases. Counter confirmation and transport cleanup
+	// form one settlement; the existing command barrier retains failed settlements.
+	private async ValueTask<QueueAdmissionResult> SettleTimeout(QueueEntry entry)
 	{
 		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
@@ -232,39 +232,45 @@ public partial class TaskScheduler(
 			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
 			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
 		var attribute = await Read();
-		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
+		var original = 0;
+		var accounted = attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out original);
 		var expected = original > 0 ? original - 1 : 0;
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-		if (!god.IsPlayer) return;
-		async ValueTask Write()
+		var god = accounted ? default : await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
+		accounted = accounted || god?.IsPlayer != true;
+		JobKey? transportJob = null;
+		async ValueTask<QueueAdmissionResult> Complete(bool retry)
 		{
-			if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-				MarkupString.MarkupText.Plain(expected.ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
-				throw new InvalidOperationException("Semaphore timeout count update failed.");
+			if (!accounted)
+			{
+				var current = original;
+				if (retry)
+				{
+					var observed = await Read();
+					if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out current)
+						|| current != expected && current != original)
+						throw new InvalidOperationException("Semaphore changed during uncertain timeout accounting.");
+				}
+				if ((!retry || current != expected) && !await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
+					MarkupString.MarkupText.Plain(expected.ToString()), god!.AsPlayer), ExecutionBudget.CurrentToken))
+					throw new InvalidOperationException("Semaphore timeout count update failed.");
+				accounted = true;
+			}
 			ExecutionBudget.Current?.ThrowIfExceeded();
+			// Normal settlement already holds the deferred lease; repair enters from the semaphore gate.
+			using DeferredLease? lease = retry ? await LockDeferred() : null;
+			var key = new TriggerKey(entry.TriggerName, entry.Group);
+			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
+			transportJob ??= trigger?.JobKey;
+			await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+			if (transportJob is not null) await _scheduler.DeleteJob(transportJob, ExecutionBudget.CurrentToken);
+			lock (_admissionLock) _semaphoreCommandReservations.Remove(entry.Pid);
+			return await Activate(entry.Pid);
 		}
-		try { await Write(); }
+		try { return await Complete(retry: false); }
 		catch
 		{
-			lock (_admissionLock)
-			{
-				_ready.Remove(entry.Pid);
-				_semaphoreCommandReservations.Add(entry.Pid);
-			}
-			_semaphoreCommandRepair = async () =>
-			{
-				var observed = await Read();
-				if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out var current)
-					|| current != expected && current != original)
-					throw new InvalidOperationException("Semaphore changed during uncertain timeout accounting.");
-				if (current != expected) await Write();
-				ExecutionBudget.Current?.ThrowIfExceeded();
-				using var lease = await LockDeferred();
-				try { await RemoveDeferredTrigger(entry); }
-				catch (Exception ex) { logger.LogWarning(ex, "Trigger cleanup failed for recovered PID {Pid}; continuing admitted work", entry.Pid); }
-				lock (_admissionLock) _semaphoreCommandReservations.Remove(entry.Pid);
-				await Activate(entry.Pid);
-			};
+			lock (_admissionLock) _semaphoreCommandReservations.Add(entry.Pid);
+			_semaphoreCommandRepair = async () => { await Complete(retry: true); };
 			throw;
 		}
 	}
@@ -390,9 +396,8 @@ public partial class TaskScheduler(
 				return new(null, QueueRejectionReason.AlreadyReleased);
 		}
 		if (semaphoreTimeout && entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal))
-			await AdjustTimeoutSemaphoreCountCore(entry);
-		try { await RemoveDeferredTrigger(entry); }
-		catch (Exception ex) { logger.LogWarning(ex, "Trigger cleanup failed for PID {Pid}; continuing admitted work", pid); }
+			return await SettleTimeout(entry);
+		await RemoveDeferredTrigger(entry);
 		return await Activate(pid);
 	}
 
