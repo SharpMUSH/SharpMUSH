@@ -93,6 +93,9 @@ public sealed class ScenePlugin
 		"DEFINE TABLE IF NOT EXISTS scene_pose SCHEMALESS",
 		"DEFINE TABLE IF NOT EXISTS scene_pose_edit SCHEMALESS",
 		"DEFINE TABLE IF NOT EXISTS scene_plot SCHEMALESS",
+		// One row per player, rewritten by every focus change so that two concurrent changes conflict
+		// and retry instead of both committing under snapshot isolation.
+		"DEFINE TABLE IF NOT EXISTS scene_focus SCHEMALESS",
 		// Older versions reset these counters on every boot. Repair them from stored numeric IDs,
 		// without lowering a counter whose higher IDs have since been deleted.
 		"UPSERT counter:scene_id SET seq = math::max(array::concat([seq ?? 0, 0], " +

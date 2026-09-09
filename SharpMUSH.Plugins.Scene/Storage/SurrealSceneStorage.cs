@@ -752,8 +752,15 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (string.IsNullOrWhiteSpace(sceneId))
 		{
 			await ExecuteMembershipWriteAsync(
-				"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk",
-				new Dictionary<string, object?> { ["pk"] = playerKey.Value });
+				"BEGIN TRANSACTION; " +
+				"UPSERT scene_focus:$pk SET scene = NONE, updatedAt = $now; " +
+				"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk; " +
+				"COMMIT TRANSACTION;",
+				new Dictionary<string, object?>
+				{
+					["pk"] = playerKey.Value,
+					["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+				});
 			return new OkNone();
 		}
 
@@ -763,8 +770,12 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		// Clear the old focus and create/update the target in the same transaction. A simultaneous
 		// role grant cannot create another edge or lose its role, persona, or original grant time.
+		// The player's scene_focus row is rewritten first: two concurrent focus changes touch
+		// disjoint member edges, so without a shared row both would commit and leave two current
+		// scenes; writing the same row makes the second one conflict and retry.
 		await ExecuteMembershipWriteAsync(
 			"BEGIN TRANSACTION; " +
+			"UPSERT scene_focus:$pk SET scene = scene:⟨$sid⟩, updatedAt = $now; " +
 			"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk; " +
 			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, isCurrent, grantedAt, memberName) " +
 			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, '', '', true, $now, $name) " +
