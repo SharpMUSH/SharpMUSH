@@ -133,3 +133,12 @@ public class ModifyQRegistersHandler(ITaskScheduler scheduler) : IRequestHandler
 	public async ValueTask<bool> Handle(ModifyQRegistersRequest request, CancellationToken cancellationToken)
 		=> await scheduler.ModifyQRegisters(request.DbRefAttribute, request.QRegisters);
 }
+
+public class ReservedCommandListHandler(ITaskScheduler scheduler) : IRequestHandler<ReserveCommandListRequest, QueueCommandReservation>
+{
+	public ValueTask<QueueCommandReservation> Handle(ReserveCommandListRequest request, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return scheduler.ReserveCommandList(request.Command, request.State);
+	}
+}
