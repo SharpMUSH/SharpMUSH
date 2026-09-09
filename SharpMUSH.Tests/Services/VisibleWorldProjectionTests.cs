@@ -7,6 +7,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
@@ -76,6 +77,31 @@ public class VisibleWorldProjectionTests
 		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, new DBRef(12, 1), RoomEventType.Say)).IsFalse();
 		_reality.CanPerceiveAsync(_player.Object.DBRef, source.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
 		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsFalse();
+	}
+
+	[Test]
+	[Arguments(RoomEventType.Say)]
+	[Arguments(RoomEventType.Pose)]
+	[Arguments(RoomEventType.Depart)]
+	public async Task DispatchCancellationBoundsInteractionWithoutAmbientBudget(RoomEventType type)
+	{
+		var source = _objects.CreatePlayer(12, "Speaker", _room).AsPlayer;
+		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
+		using var cancellation = new CancellationTokenSource();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>())
+			.Returns(_ => { entered.TrySetResult(ExecutionBudget.CurrentToken); return new ValueTask<bool>(release.Task); });
+		var pending = _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, type, cancellation.Token).AsTask();
+		try
+		{
+			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(observed.CanBeCanceled).IsTrue();
+			cancellation.Cancel();
+			await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();
+			await Assert.That(observed.IsCancellationRequested).IsTrue();
+		}
+		finally { release.TrySetResult(true); }
 	}
 
 	[Test]

@@ -5,6 +5,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -64,10 +65,17 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		var sender = await mediator.Send(new GetObjectNodeQuery(source), ct);
 		if (sender.IsNone || sender.Known.Object().DBRef != source
 			|| !await reality.CanPerceiveAsync(player.Object.DBRef, source, ct)) return false;
+		// Legacy permission implementations have no token parameter. Give built-in reads the
+		// dispatch lifetime and bound this read-only await for implementations without cancellation.
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
+		using var budget = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
+		using var scope = budget.Enter();
+		budget.ThrowIfExceeded();
 		// Hearing is directed from sender to receiver; visual interaction is viewer to target.
-		return type is RoomEventType.Say or RoomEventType.Pose
-			? await permissions.CanInteract(sender.Known, (AnySharpObject)player, IPermissionService.InteractType.Hear)
-			: await permissions.CanInteract(player, sender.Known, IPermissionService.InteractType.See);
+		var interaction = type is RoomEventType.Say or RoomEventType.Pose
+			? permissions.CanInteract(sender.Known, (AnySharpObject)player, IPermissionService.InteractType.Hear)
+			: permissions.CanInteract(player, sender.Known, IPermissionService.InteractType.See);
+		return await interaction.AsTask().WaitAsync(budget.Token);
 	}
 
 	public async ValueTask<EngineStateResponse?> GetStateAsync(CapabilityActor actor, CancellationToken ct = default)
