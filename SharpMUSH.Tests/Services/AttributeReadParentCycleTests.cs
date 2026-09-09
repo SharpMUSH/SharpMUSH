@@ -42,8 +42,12 @@ public class AttributeReadParentCycleTests
 
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
+		await Assert.That(result.Message).IsNotNull();
+		await Assert.That(DBRef.TryParse(result.Message!.ToPlainText(), out _)).IsTrue();
+		var dbref = DBRef.Parse(result.Message.ToPlainText());
 		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
 		return node.Known;
 	}

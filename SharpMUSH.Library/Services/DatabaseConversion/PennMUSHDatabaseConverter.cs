@@ -64,6 +64,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IProgress<ConversionProgress>? progress,
 		CancellationToken cancellationToken = default)
 	{
+		// A singleton holding per-conversion state: uncleared, every dbref looks already-converted and
+		// a second import in the same process silently creates nothing.
+		_dbrefMapping.Clear();
+
 		var stopwatch = Stopwatch.StartNew();
 		var result = new ConversionResult();
 		var errors = new List<string>();
@@ -157,6 +161,51 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return result;
 	}
 
+	/// <summary>
+	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c> writes <c>o-&gt;creation_time</c>
+	/// as an int) while SharpMUSH keeps milliseconds and puts them in the objid, so unscaled stamps
+	/// would date every imported object to January 1970.
+	/// <para>An object with no recorded creation time (a 0 field) defaults to now, since 1970 is not
+	/// a more truthful answer than the import date.</para>
+	/// </remarks>
+	/// <summary>
+	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
+	/// </summary>
+	/// <remarks>
+	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
+	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
+	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which
+	/// imported softcode references constantly.
+	/// </remarks>
+	private async Task<DBRef> RestampReusedObjectAsync(int dbrefNumber, PennMUSHObject? pennObject,
+		CancellationToken cancellationToken)
+	{
+		if (pennObject is null)
+		{
+			return new DBRef(dbrefNumber);
+		}
+
+		var (created, modified) = PennTimestamps(pennObject);
+		if (created is null)
+		{
+			return new DBRef(dbrefNumber);
+		}
+
+		await _database.SetObjectTimestampsAsync(new DBRef(dbrefNumber), created.Value, modified,
+			cancellationToken);
+		_logger.LogDebug("Restamped reused object #{DBRef} with its PennMUSH creation time {Created}",
+			dbrefNumber, created.Value);
+
+		return new DBRef(dbrefNumber, created.Value);
+	}
+
+	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
+		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
+			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
+
 	private async Task<(int players, int rooms, int things, int exits)> CreateObjectsAsync(
 		PennMUSHDatabase pennDatabase,
 		List<string> errors,
@@ -197,6 +246,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
 				}
 
+				// After the password, because SetPlayerPasswordAsync takes the object read before the
+				// restamp. The order is otherwise free: an imported PennMUSH hash validates against
+				// salt + plaintext, never against the objid.
+				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
+				_dbrefMapping[1] = tempGodDbRef;
+
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
 		}
@@ -207,6 +262,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
 				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
+				var (godCreated, godModified) = PennTimestamps(godPennObject);
 				tempGodDbRef = await _database.CreatePlayerAsync(
 					godPennObject.Name,
 					godHash,
@@ -214,6 +270,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					new DBRef(0), // Home is also Limbo
 					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
 					godSalt,
+					godCreated,
+					godModified,
 					cancellationToken);
 
 				_dbrefMapping[1] = tempGodDbRef;
@@ -230,7 +288,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					new DBRef(0),
 					10000,
 					null,
-					cancellationToken);
+					cancellationToken: cancellationToken);
 				_dbrefMapping[1] = tempGodDbRef;
 				playersConverted++;
 				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
@@ -260,6 +318,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				await _database.SetObjectName(existingRoom0.AsT1, MarkupText.Plain(room0Penn.Name), cancellationToken);
+				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
+				_dbrefMapping[0] = tempRoom0DbRef;
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -269,9 +329,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
+				var (room0Created, room0Modified) = PennTimestamps(room0Penn);
 				tempRoom0DbRef = await _database.CreateRoomAsync(
 					room0Penn.Name,
 					godPlayer,
+					room0Created,
+					room0Modified,
 					cancellationToken);
 				_dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
@@ -282,7 +345,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				tempRoom0DbRef = await _database.CreateRoomAsync(
 					"Limbo",
 					godPlayer,
-					cancellationToken);
+					cancellationToken: cancellationToken);
 				_dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
 				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
@@ -294,10 +357,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (existingRoom2.IsT0)
 		{
-			// Master Room #2 already exists (from database migration), reuse it
-			_dbrefMapping[2] = new DBRef(2);
-
 			var room2Penn = pennDatabase.GetObject(2);
+
+			// Master Room #2 already exists (from database migration), reuse it
+			_dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
+
 			if (room2Penn != null)
 			{
 				switch (room2Penn.Type)
@@ -346,6 +410,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			try
 			{
 				DBRef newDbRef;
+				var (created, modified) = PennTimestamps(pennObj);
 
 				switch (pennObj.Type)
 				{
@@ -361,6 +426,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								tempRoom0DbRef, // Home is Limbo for now
 								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
 								playerSalt,
+								created,
+								modified,
 								cancellationToken);
 							playersConverted++;
 							break;
@@ -372,6 +439,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							newDbRef = await _database.CreateRoomAsync(
 								pennObj.Name,
 								godPlayer,
+								created,
+								modified,
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -394,6 +463,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
 								room0, // Home is Limbo for now
+								created,
+								modified,
 								cancellationToken);
 							thingsConverted++;
 							break;
@@ -417,6 +488,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								aliases.aliases,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
+								created,
+								modified,
 								cancellationToken);
 							exitsConverted++;
 							break;

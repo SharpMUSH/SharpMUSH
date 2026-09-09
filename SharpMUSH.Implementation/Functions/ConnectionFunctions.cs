@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Time;
 using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using SharpMUSH.Library.Markup;
@@ -456,9 +457,32 @@ public partial class Functions
 		return new CallState(connectionData.HostName);
 	}
 
-	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	/// <summary>
+	/// Renders an idle duration. A player who is not connected, or whom the executor cannot see, is
+	/// -1 — PennMUSH's sentinel, and not a duration, so precision does not apply to it.
+	/// </summary>
+	private static string FormatIdle(TimeSpan? idle, TimePrecision precision)
+		=> idle is null
+			? "-1"
+			: TimePrecisions.Format((long)idle.Value.TotalMilliseconds, precision);
+
+	/// <remarks>
+	/// PennMUSH's idle() is a whole number of seconds, and idlesecs() is an alias for it, so the two
+	/// must render the same value.
+	/// </remarks>
+	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> IdleSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TimePrecisions.TryParse(
+					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
+						? precisionArg.Message?.ToPlainText()
+						: null,
+					out var precision))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
@@ -476,7 +500,7 @@ public partial class Functions
 				return new CallState("-1");
 			}
 
-			return new CallState(data2.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+			return new CallState(FormatIdle(data2.Idle, precision));
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
@@ -493,7 +517,7 @@ public partial class Functions
 		}
 
 		var connectionData = await LeastIdleConnectionAsync(locate.Object.DBRef);
-		return new CallState(connectionData?.Idle?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+		return new CallState(FormatIdle(connectionData?.Idle, precision));
 	}
 
 	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1600,8 +1624,8 @@ public partial class Functions
 		return string.Join(" ", terminfo);
 	}
 
-	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["player"])]
+	[SharpFunction(Name = "IDLESECS", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["player", "precision"])]
 	public async ValueTask<CallState> IdleSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// Note: the parser always injects Arguments["0"] = CallState.Empty via DefaultIfEmpty,
@@ -1610,18 +1634,33 @@ public partial class Functions
 			? arg0State.Message?.ToPlainText()
 			: null;
 
-		if (string.IsNullOrEmpty(arg0))
+		if (!string.IsNullOrEmpty(arg0))
 		{
-			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-			var data = ConnectionService.Get(executor.Object().DBRef);
-			var idleSeconds = await data
-				.Select(x => x.Idle?.TotalSeconds ?? -1)
-				.DefaultIfEmpty(-1)
-				.MinAsync();
-			return new CallState(((int)idleSeconds).ToString());
+			return await IdleSeconds(parser, _2);
 		}
 
-		return await IdleSeconds(parser, _2);
+		if (!TimePrecisions.TryParse(
+					parser.CurrentState.Arguments.TryGetValue("1", out var precisionArg)
+						? precisionArg.Message?.ToPlainText()
+						: null,
+					out var precision))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidPrecision);
+		}
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// Connections with no known idle time are filtered out rather than mapped to -1: mixed in,
+		// the sentinel wins the Min() and one unavailable connection hides every real idle time.
+		var data = ConnectionService.Get(executor.Object().DBRef);
+		var idleMilliseconds = await data
+			.Where(x => x.Idle is not null)
+			.Select(x => (long)x.Idle!.Value.TotalMilliseconds)
+			.DefaultIfEmpty(-1L)
+			.MinAsync();
+
+		return new CallState(idleMilliseconds < 0
+			? "-1"
+			: TimePrecisions.Format(idleMilliseconds, precision));
 	}
 }

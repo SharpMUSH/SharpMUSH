@@ -5,8 +5,10 @@ namespace SharpMUSH.Library.Definitions;
 /// <summary>Shared output ceiling, checked before expanding or joining text as well as at dispatch.</summary>
 public static class FunctionLimits
 {
-	public const int MaxOutputCharacters = 5 * 1024 * 1024;
-	public static bool ExceedsOutput(long characters) => characters > MaxOutputCharacters;
+	/// <summary>Maximum UTF-16 code units in one function result. Producers check before
+	/// expansion; the evaluator also checks every completed result.</summary>
+	public const int MaxOutputCodeUnits = 5 * 1024 * 1024;
+	public static bool ExceedsOutput(long characters) => characters > MaxOutputCodeUnits;
 
 	public static bool ExceedsCombinedOutput(IEnumerable<MString> values, int separatorLength = 0)
 	{

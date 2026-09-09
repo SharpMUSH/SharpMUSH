@@ -26,6 +26,39 @@ public class FunctionParameterNamesTests
 		}
 	}
 
+	[Test]
+	public async Task StringDistanceExposesItsTwoArgumentSignature()
+	{
+		var function = AllFunctions().Single(f => f.Name == "strdistance").Attr;
+		await Assert.That(function.MinArgs).IsEqualTo(2);
+		await Assert.That(function.MaxArgs).IsEqualTo(2);
+		await Assert.That(function.ParameterNames.SequenceEqual(new[] { "source", "target" })).IsTrue();
+	}
+
+	[Test]
+	public async Task PrintfExposesItsBoundedVariadicSignature()
+	{
+		var function = AllFunctions().Single(f => f.Name == "printf").Attr;
+		await Assert.That(function.MinArgs).IsEqualTo(1);
+		await Assert.That(function.MaxArgs).IsEqualTo(129);
+		await Assert.That(function.ParameterNames.SequenceEqual(new[] { "format", "value..." })).IsTrue();
+	}
+
+	[Test]
+	[Arguments("displaywidth", 1)]
+	[Arguments("graphemecount", 1)]
+	[Arguments("graphemes", 2)]
+	public async Task UnicodeFunctionsExposeAccurateSignatures(string name, int maxArgs)
+	{
+		var fn = AllFunctions().Single(f => f.Name == name).Attr;
+		await Assert.That(fn.MinArgs).IsEqualTo(1);
+		await Assert.That(fn.MaxArgs).IsEqualTo(maxArgs);
+		await Assert.That(fn.ParameterNames[0]).IsEqualTo("string");
+		await Assert.That(fn.ParameterNames.Length).IsEqualTo(maxArgs);
+		if (maxArgs == 2)
+			await Assert.That(fn.ParameterNames[1]).IsEqualTo("output-separator");
+	}
+
 	/// <summary>
 	/// A name can only annotate an argument the function actually accepts. More names than MaxArgs
 	/// means at least one hint is attached to a position that can never be supplied.

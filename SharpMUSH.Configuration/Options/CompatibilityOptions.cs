@@ -12,7 +12,7 @@ public record CompatibilityOptions(
 	[property: SharpConfig(
 		Name = "tiny_booleans",
 		Category = "Compatibility",
-		Description = "Use TinyMUSH-style boolean evaluation (0/1 instead of true/false)",
+		Description = "Only values with a nonzero leading signed integer are true (TinyMUSH booleans)",
 		Group = "TinyMUSH Compatibility",
 		Order = 1)]
 	bool TinyBooleans,
@@ -28,7 +28,7 @@ public record CompatibilityOptions(
 	[property: SharpConfig(
 		Name = "tiny_math",
 		Category = "Compatibility",
-		Description = "Use TinyMUSH-style math operations and precedence",
+		Description = "Treat nonnumeric strings as zero in numeric operations (TinyMUSH math)",
 		Group = "TinyMUSH Compatibility",
 		Order = 3)]
 	bool TinyMath,
