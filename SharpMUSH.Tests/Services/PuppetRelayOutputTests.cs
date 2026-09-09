@@ -139,7 +139,7 @@ public class PuppetRelayOutputTests
 			Substitute.For<ILockService>(),
 			connections,
 			services,
-			bus);
+			bus, DisabledRealityPolicy.Instance);
 
 		return (service, bus);
 	}

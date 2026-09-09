@@ -22,14 +22,23 @@ public class NotifyService(
 	IMessageBus publishEndpoint,
 	IConnectionService connections,
 	ILocalizationService localizationService,
+	IRealityPolicy reality,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
-	IHttpOutputCapture? httpOutputCapture = null,
-	IRealityPolicy? reality = null) : INotifyService
+	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
 {
+	// A notification caches only perception results, never a connection binding.
+	private async ValueTask<bool> CanReceiveBound(long handle, DBRef intended, AnySharpObject? sender, Dictionary<DBRef, bool> perceptions)
+	{
+		if (connections.Get(handle)?.Ref is not { } current || !current.Matches(intended)) return false;
+		if (!perceptions.TryGetValue(current, out var allowed))
+			perceptions[current] = allowed = await CanReceive(current, sender);
+		return allowed && connections.Get(handle)?.Ref is { } latest && latest.Equals(current);
+	}
+
 	private async ValueTask<bool> CanReceive(DBRef? receiver, AnySharpObject? sender)
 	{
-		if (reality is null || sender is null) return true;
+		if (sender is null) return true;
 		if (receiver is null) return !await reality.IsEnabledAsync();
 		return await reality.CanPerceiveAsync(receiver.Value, sender.Object().DBRef);
 	}
@@ -141,9 +150,10 @@ public class NotifyService(
 			}
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			if (await CanReceive(connections.Get(conn.Handle)?.Ref, sender)) await PublishMarkup(conn.Handle, what);
+			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkup(conn.Handle, what);
 		}
 	}
 
@@ -190,9 +200,10 @@ public class NotifyService(
 			return;
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			if (await CanReceive(connections.Get(conn.Handle)?.Ref, sender)) await PublishMarkupPrompt(conn.Handle, what);
+			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkupPrompt(conn.Handle, what);
 		}
 	}
 

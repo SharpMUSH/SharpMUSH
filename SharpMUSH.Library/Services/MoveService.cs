@@ -18,7 +18,7 @@ public class MoveService(
 	IAttributeService attributeService,
 	IPermissionService permissionService,
 	INotifyService notifyService,
-	IRealityPolicy? reality = null) : IMoveService
+	IRealityPolicy reality) : IMoveService
 {
 	/// <summary>
 	/// Standard attribute names for move hooks
@@ -191,7 +191,7 @@ public class MoveService(
 			room => room,
 			thing => thing);
 
-		if (reality is not null && !await reality.CanPerceiveAsync(target.Object().DBRef, dest.Object().DBRef)) return false;
+		if (!await reality.CanPerceiveAsync(target.Object().DBRef, dest.Object().DBRef)) return false;
 
 		if (!await permissionService.Controls(who, target))
 		{

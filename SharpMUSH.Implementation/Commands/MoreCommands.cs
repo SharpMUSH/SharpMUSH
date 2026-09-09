@@ -1482,7 +1482,8 @@ public partial class Commands
 					continue;
 				}
 
-				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, executor.Object().DBRef))
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, executor.Object().DBRef)
+					|| !await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
 				{
 					failedCount++;
 					continue;

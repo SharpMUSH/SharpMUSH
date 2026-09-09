@@ -253,4 +253,46 @@ public class RealityGameTests
 		}
 	}
 
+	[Test, NotInParallel]
+	public async Task EmptyRejectsBothHopsBeforeRemovingAnItem()
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var originalLocation = await player.Location.WithCancellation(default);
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("empty target", player)))).AsRoom;
+		var name = "empty-bag-" + Guid.NewGuid().ToString("N");
+		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).AsThing;
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("item", bag, player, room)))).AsThing;
+		await policy.SaveObjectAsync(room.Object.Id!, ObjectReality.Default(room.Object.DBRef) with { Transmit = ["ghost"] }, default);
+		await mediator.Send(new MoveObjectCommand(player, room));
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"empty {name}"));
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(bag.Object.DBRef);
+		}
+		finally
+		{
+			await policy.SaveConfigurationAsync(original, default);
+			await mediator.Send(new MoveObjectCommand(player, originalLocation));
+		}
+	}
+
+	[Test, NotInParallel]
+	public async Task CorruptProfileProducesAnAdministrativeError()
+	{
+		var objects = Get<IObjectStore>();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var location = await player.Location.WithCancellation(default);
+		var target = (await objects.GetObjectNodeAsync(await Get<IMediator>().Send(new CreateThingCommand("corrupt reality", player, player, location)))).AsThing;
+		await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Version = 2 }, default);
+		var output = await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef))
+			.CommandListParse(MarkupText.Plain($"@reality/inspect {target.Object.DBRef}"));
+		await Assert.That(output!.Message!.ToPlainText()).IsEqualTo("#-1 Invalid object reality data.");
+	}
+
 }

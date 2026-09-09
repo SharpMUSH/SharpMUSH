@@ -20,23 +20,27 @@ public sealed class RoomEventDispatcher(IHubContext<GameHub, IGameHubClient> hub
 		if (!DBRef.TryParse(message.RoomDbref, out var room) || room is not { IsObjid: true }) return;
 		var enabled = await reality.IsEnabledAsync(ct);
 		var hasSource = DBRef.TryParse(message.ActorDbref, out var source) && source is { IsObjid: true };
-		if (enabled && !hasSource) return;
-		foreach (var subscription in registry.Subscribers(room.Value))
+		if (enabled && !hasSource)
 		{
-			ct.ThrowIfCancellationRequested();
+			logger.LogWarning("Dropping room event for {Room}: enabled reality requires a full actor objid", room.Value);
+			return;
+		}
+		await Parallel.ForEachAsync(registry.Subscribers(room.Value),
+			new ParallelOptions { MaxDegreeOfParallelism = 8, CancellationToken = ct }, async (subscription, token) =>
+		{
 			try
 			{
 				if (!registry.IsCurrent(subscription)
 					|| !(hasSource
-						? await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source!.Value, message.EventType, ct)
-						: await projection.CanSubscribeRoomAsync(subscription.Actor, room.Value, ct))
-					|| !registry.IsCurrent(subscription)) continue;
-				await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message);
+						? await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source!.Value, message.EventType, token)
+						: await projection.CanSubscribeRoomAsync(subscription.Actor, room.Value, token))
+					|| !registry.IsCurrent(subscription)) return;
+				await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message).WaitAsync(token);
 			}
-			catch (Exception ex) when (ex is not OperationCanceledException)
+			catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
 			{
 				logger.LogWarning(ex, "Room event delivery failed for connection {ConnectionId}", subscription.ConnectionId);
 			}
-		}
+		});
 	}
 }

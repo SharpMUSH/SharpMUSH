@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
@@ -19,13 +19,14 @@ public class RealityRoomEventTests
 	private readonly DBRef _room = new(10, 1);
 	private readonly DBRef _source = new(20, 1);
 	private readonly RoomEventDispatcher _dispatcher;
+	private readonly ILogger<RoomEventDispatcher> _logger = Substitute.For<ILogger<RoomEventDispatcher>>();
 
 	public RealityRoomEventTests()
 	{
 		_hub.Clients.Returns(Substitute.For<IHubClients<IGameHubClient>>());
 		_hub.Clients.Group(Arg.Any<string>()).Returns(Substitute.For<IGameHubClient>());
 		_hub.Clients.Client(Arg.Any<string>()).Returns(_ => Substitute.For<IGameHubClient>());
-		_dispatcher = new(_hub, _registry, _projection, _reality, NullLogger<RoomEventDispatcher>.Instance);
+		_dispatcher = new(_hub, _registry, _projection, _reality, _logger);
 	}
 
 	private CapabilityActor Subscribe(string connection, int character)
@@ -62,6 +63,8 @@ public class RealityRoomEventTests
 	{
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
 		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Secret name", "Secret text", source));
+		await Assert.That(_logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log"
+			&& call.GetArguments()[0] is LogLevel.Warning)).IsTrue();
 		_hub.Clients.DidNotReceive().Group(Arg.Any<string>());
 		_hub.Clients.DidNotReceive().Client(Arg.Any<string>());
 	}
@@ -82,7 +85,9 @@ public class RealityRoomEventTests
 	}
 
 	[Test]
-	public async Task FailedRecipientDoesNotPreventDeliveryToOtherObservers()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FailedRecipientDoesNotPreventDeliveryToOtherObservers(bool canceled)
 	{
 		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
 		Subscribe("first", 30);
@@ -91,8 +96,8 @@ public class RealityRoomEventTests
 		var client = Substitute.For<IGameHubClient>();
 		_hub.Clients.Client(Arg.Any<string>()).Returns(client);
 		var attempts = 0;
-		client.ReceiveRoomEvent(Arg.Any<RoomEventMessage>()).Returns(_ => ++attempts == 1
-			? Task.FromException(new IOException("Disconnected client")) : Task.CompletedTask);
+		client.ReceiveRoomEvent(Arg.Any<RoomEventMessage>()).Returns(_ => Interlocked.Increment(ref attempts) == 1
+			? Task.FromException(canceled ? new OperationCanceledException("Disconnected client") : new IOException("Disconnected client")) : Task.CompletedTask);
 		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Words", _source.ToString()));
 		await Assert.That(attempts).IsEqualTo(2);
 	}
@@ -119,4 +124,25 @@ public class RealityRoomEventTests
 		_hub.Clients.DidNotReceive().Client("left");
 		_hub.Clients.DidNotReceive().Group(Arg.Any<string>());
 	}
+	[Test]
+	public async Task SlowRecipientDoesNotBlockOtherRecipients()
+	{
+		Subscribe("one", 30);
+		Subscribe("two", 31);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var second = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var calls = 0;
+		async ValueTask<bool> Authorize()
+		{
+			if (Interlocked.Increment(ref calls) == 1) await release.Task;
+			else second.TrySetResult();
+			return true;
+		}
+		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>())
+			.Returns(_ => Authorize());
+		var delivery = _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Words", _source.ToString()));
+		try { await second.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+		finally { release.TrySetResult(); await delivery; }
+	}
+
 }

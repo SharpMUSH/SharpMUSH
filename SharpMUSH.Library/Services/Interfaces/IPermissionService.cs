@@ -8,7 +8,7 @@ public interface IPermissionService
 	[Flags]
 	enum InteractType
 	{
-		See = 0, Hear = 1, Match = 2, Presence = 4, Page = 8
+		None = 0, Hear = 1, Match = 2, Presence = 4, Page = 8, See = 16
 	}
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);

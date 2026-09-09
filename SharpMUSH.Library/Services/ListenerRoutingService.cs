@@ -35,7 +35,7 @@ public class ListenerRoutingService(
 	IConnectionService connectionService,
 	IServiceProvider serviceProvider,
 	IMessageBus publishEndpoint,
-	IRealityPolicy? reality = null) : IListenerRoutingService
+	IRealityPolicy reality) : IListenerRoutingService
 {
 	private IAttributeService? _attributeService;
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
@@ -236,8 +236,8 @@ public class ListenerRoutingService(
 
 		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
 		if (owner is null) return;
-		if (reality is not null && (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
-			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef))) return;
+		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
+			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef)) return;
 
 		var connections = connectionService.Get(owner.Object.DBRef);
 		var isConnected = await connections.AnyAsync();

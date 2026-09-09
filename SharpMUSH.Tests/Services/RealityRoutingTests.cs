@@ -54,7 +54,7 @@ public class RealityRoutingTests
 		var bus = Substitute.For<IMessageBus>();
 		var capture = Substitute.For<IHttpOutputCapture>();
 		var listeners = Substitute.For<IListenerRoutingService>();
-		var notify = new NotifyService(bus, connections, new LocalizationService(), listeners, Substitute.For<IMediator>(), capture, reality);
+		var notify = new NotifyService(bus, connections, new LocalizationService(), reality, listeners, Substitute.For<IMediator>(), capture);
 		switch (route)
 		{
 			case "notify": await notify.Notify(5L, "hidden", sender); break;
@@ -69,4 +69,55 @@ public class RealityRoutingTests
 		await Assert.That(capture.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(listeners.ReceivedCalls().Any()).IsFalse();
 	}
+	[Test]
+	public async Task VisualInteractionHasADistinctNonzeroBit()
+	{
+		var visual = Enum.Parse<IPermissionService.InteractType>("See");
+		await Assert.That((int)visual).IsNotEqualTo(0);
+		await Assert.That(IPermissionService.InteractType.Hear.HasFlag(IPermissionService.InteractType.See)).IsFalse();
+	}
+
+	[Test]
+	[Arguments(typeof(PermissionService))]
+	[Arguments(typeof(NotifyService))]
+	[Arguments(typeof(MoveService))]
+	[Arguments(typeof(ListenerRoutingService))]
+	public async Task PerceptionPolicyIsARequiredDependency(Type service)
+	{
+		var parameter = service.GetConstructors().Single().GetParameters().Single(p => p.ParameterType == typeof(IRealityPolicy));
+		await Assert.That(parameter.HasDefaultValue).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MultipleConnectionsReusePerceptionWithoutFollowingReboundHandles(bool prompt)
+	{
+		var sender = new TestObjectFactory().CreatePlayer(10, "sender");
+		var receiver = new DBRef(11, 1);
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		var connections = Substitute.For<IConnectionService>();
+		IConnectionService.ConnectionData Connection(long handle, DBRef reference) => new(handle, reference,
+			IConnectionService.ConnectionState.LoggedIn, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+			() => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+		async IAsyncEnumerable<IConnectionService.ConnectionData> Current()
+		{
+			for (var handle = 1; handle <= 3; handle++)
+			{
+				var captured = Connection(handle, receiver);
+				connections.Get(handle).Returns(handle == 3 ? Connection(handle, new DBRef(12, 1)) : captured);
+				yield return captured;
+				await Task.Yield();
+			}
+		}
+		connections.Get(receiver).Returns(Current());
+		var bus = Substitute.For<IMessageBus>();
+		var notify = new NotifyService(bus, connections, new LocalizationService(), reality: reality);
+		if (prompt) await notify.Prompt(receiver, "private", sender);
+		else await notify.Notify(receiver, "private", sender);
+		await reality.Received(1).CanPerceiveAsync(receiver, sender.Object().DBRef, Arg.Any<CancellationToken>());
+		await Assert.That(bus.ReceivedCalls().Count()).IsEqualTo(2);
+	}
+
 }

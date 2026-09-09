@@ -128,4 +128,91 @@ public class NatsBridgeServiceTests
 
 		await Assert.That(caught).IsNull();
 	}
+	[Test]
+	public async Task RoomStreamsPreserveOrderingWithoutBlockingUnrelatedRooms()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var other = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var order = new System.Collections.Concurrent.ConcurrentQueue<string>();
+		dispatcher.DispatchAsync(Arg.Any<RoomEventMessage>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			var message = call.ArgAt<RoomEventMessage>(0);
+			if (message.Content == "first") await release.Task;
+			order.Enqueue(message.Content);
+			if (message.Content == "other") other.TrySetResult();
+		});
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			yield return new("#1:1", RoomEventType.Say, "actor", "first", "#3:1");
+			yield return new("#1:1", RoomEventType.Say, "actor", "second", "#3:1");
+			yield return new("#2:1", RoomEventType.Say, "actor", "other", "#3:1");
+			await Task.CompletedTask;
+		}
+		var forwarding = service.ForwardRoomEventsAsync(Messages());
+		try
+		{
+			await other.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(order.Contains("second")).IsFalse();
+		}
+		finally { release.TrySetResult(); await forwarding; }
+		await Assert.That(string.Join(",", order.Where(x => x != "other"))).IsEqualTo("first,second");
+	}
+
+	[Test]
+	public async Task FullRoomLaneAppliesBackpressureAndCancelsPendingDelivery()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		dispatcher.DispatchAsync(Arg.Any<RoomEventMessage>(), Arg.Any<CancellationToken>())
+			.Returns(call => release.Task.WaitAsync(call.ArgAt<CancellationToken>(1)));
+		var full = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var produced = 0;
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			for (var index = 0; index < 1000; index++)
+			{
+				if (Interlocked.Increment(ref produced) == 34) full.TrySetResult();
+				yield return new("#1:1", RoomEventType.Say, "actor", "words", "#3:1");
+			}
+			await Task.CompletedTask;
+		}
+		using var cancellation = new CancellationTokenSource();
+		var forwarding = service.ForwardRoomEventsAsync(Messages(), cancellation.Token);
+		try
+		{
+			await full.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(Volatile.Read(ref produced)).IsEqualTo(34);
+		}
+		finally
+		{
+			cancellation.Cancel();
+			try { await forwarding; }
+			catch (OperationCanceledException) { }
+		}
+		await Assert.That(forwarding.IsCanceled).IsTrue();
+	}
+
+	[Test]
+	public async Task RoomStreamPreservesIngressFailuresAfterStoppingWorkers()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			yield return new("#1:1", RoomEventType.Say, "actor", "first", "#3:1");
+			await Task.Yield();
+			throw new IOException("NATS ingress disconnected");
+		}
+		await Assert.That(async () => await service.ForwardRoomEventsAsync(Messages())).Throws<IOException>();
+	}
+
 }

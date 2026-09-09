@@ -35,7 +35,7 @@ public partial class Commands
 			var value = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message?.ToPlainText() ?? "" : "";
 			output = await parser.ServiceProvider.GetRequiredService<RealityAdministration>().ExecuteAsync(actor, operation, target, value);
 		}
-		catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException)
+		catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException or InvalidDataException)
 		{
 			output = "#-1 " + ex.Message;
 		}

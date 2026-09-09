@@ -31,9 +31,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		var receiving = await ReadObjectAsync(receiver, ct);
 		var transmitting = await ReadObjectAsync(target, ct);
 		if (receiving is null || transmitting is null) return null;
-		foreach (var layer in SharedLayers(config, receiving, transmitting))
-			if (transmitting.Descriptions.TryGetValue(layer, out var attribute)) return attribute;
-		return null;
+		return SharedLayers(config, receiving, transmitting)
+			.Select(layer => transmitting.Descriptions.GetValueOrDefault(layer)).FirstOrDefault(attribute => attribute is not null);
 	}
 
 	private static IEnumerable<string> SharedLayers(RealityConfiguration config, ObjectReality receiver, ObjectReality target)
