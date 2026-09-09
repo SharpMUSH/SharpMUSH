@@ -338,7 +338,7 @@ public class ObjectSnapshotTests
 		var probe = await service.CaptureAsync(actor, target, "probe");
 		var bytes = System.Text.Encoding.UTF8.GetByteCount(System.Text.Json.JsonSerializer.Serialize(probe, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain(new string('x', 2 * 1024 * 1024 - bytes - 500 + 1)), player));
-		var selection = new SnapshotSelection(names);
+		var selection = new SnapshotSelection(names.Append("DESC").ToArray());
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		SnapshotOperationException? failure = null;
 		try { await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token); }
@@ -348,6 +348,26 @@ public class ObjectSnapshotTests
 		await Assert.That(history.PendingRecoveryId).IsNull();
 		await Assert.That(history.Snapshots.Length).IsEqualTo(2);
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, [names[0]]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
+	public async Task SelectiveRestoreIgnoresUnrelatedOversizedAttributes()
+	{
+		var (actor, target, player) = await Setup();
+		var service = Get<IObjectSnapshotService>();
+		var saved = await service.CaptureAsync(actor, target, "small original");
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("changed"), player));
+		var unrelated = new string('x', 2 * 1024 * 1024 + 1);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["UNRELATED"], MarkupText.Plain(unrelated), player));
+		var selection = new SnapshotSelection(["DESC"]);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
+		await Assert.That(result.Completed).IsTrue();
+		var history = await service.ListAsync(actor, target);
+		var recovery = history.Snapshots.Single(image => image.Id == result.RecoverySnapshotId);
+		await Assert.That(recovery.Attributes.Select(attribute => attribute.Name).SequenceEqual(["DESC"])).IsTrue();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["UNRELATED"]).LastAsync()).Value.ToPlainText()).IsEqualTo(unrelated);
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("original");
 	}
 
 	[Test, NotInParallel]

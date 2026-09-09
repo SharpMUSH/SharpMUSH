@@ -67,8 +67,8 @@ public sealed partial class ObjectSnapshotService(
 	{
 		var (executor, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
 		var snapshot = Find(await Read(obj, ct), snapshotId, obj, actor.AccountId);
-		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct);
 		await ValidateSelection(executor, obj, snapshot, selection, ct);
+		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot);
 		return Preview(snapshot, current, selection);
 	}
 
@@ -80,8 +80,8 @@ public sealed partial class ObjectSnapshotService(
 			var (executor, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
 			var history = await Read(obj, ct);
 			var snapshot = Find(history, snapshotId, obj, actor.AccountId);
-			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct);
 			await ValidateSelection(executor, obj, snapshot, selection, ct);
+			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot);
 			if (Preview(snapshot, before, selection).Token != previewToken)
 				throw Error("stale-preview", "The object or selection changed. Preview again before restoring.");
 			if (history.PendingRecoveryId is not null && history.PendingRecoveryId != snapshot.Id)
@@ -151,12 +151,14 @@ public sealed partial class ObjectSnapshotService(
 		return (executor.Known, obj.Known);
 	}
 
-	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct)
+	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, ObjectSnapshot? saved = null)
 	{
+		var selectedNames = selection?.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1)))).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
 		await foreach (var attribute in attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct))
 		{
+			if (selectedNames is not null && !selectedNames.Contains(attribute.LongName)) continue;
 			var path = await attributes.GetAttributeAsync(obj.Object().DBRef, attribute.LongName.Split('`'), ct).ToArrayAsync(ct);
 			if (!await permissions.CanViewAttribute(executor, obj, path)) continue;
 			if (captured.Count == MaxAttributes) throw Error("limit", "Snapshot exceeds 1024 attributes.");
@@ -175,11 +177,11 @@ public sealed partial class ObjectSnapshotService(
 		}
 		var lockData = new Dictionary<string, SnapshotLock>(StringComparer.Ordinal);
 		foreach (var (name, value) in obj.Object().Locks.OrderBy(p => p.Key))
-			if (await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
+			if ((selection is null || selection.Locks && (saved!.Locks.ContainsKey(name) || saved.AbsentLocks.Contains(name))) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
 		var snapshot = new ObjectSnapshot(Guid.NewGuid().ToString("N"), 1, obj.Object().DBRef.ToString(), obj.Object().Type,
 			actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), description, retain,
-			obj.Object().Name, captured.OrderBy(a => a.Name).ToArray(), lockData,
-			(await obj.Object().Flags.Value.ToListAsync(ct)).Where(f => f.Name != obj.Object().Type).Select(f => f.Name).Order().ToArray(), "");
+			selection is null || selection.Name ? obj.Object().Name : "", captured.OrderBy(a => a.Name).ToArray(), lockData,
+			selection is null || selection.Flags ? (await obj.Object().Flags.Value.ToListAsync(ct)).Where(f => f.Name != obj.Object().Type).Select(f => f.Name).Order().ToArray() : [], "");
 		return FinalizeImage(snapshot);
 	}
 
@@ -364,7 +366,7 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var (name, value) in saved.Locks) merged[name] = value;
 			changes.Add(new("locks", JsonSerializer.Serialize(current.Locks, Json), JsonSerializer.Serialize(merged, Json)));
 		}
-		// Exclude capture identity/time: the token binds all current content, destination and selection.
+		// Exclude capture identity/time: the token binds the affected current content, destination and selection.
 		var state = new { current.ObjectId, current.ObjectType, current.Name, current.Attributes, current.Locks, current.Flags, saved.Digest, selection };
 		return new(saved.Id, current.ObjectId, Hash(JsonSerializer.Serialize(state, Json)), selection, changes.ToArray());
 	}
