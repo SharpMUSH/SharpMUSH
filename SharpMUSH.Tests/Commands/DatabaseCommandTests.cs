@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Requests;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -202,10 +203,8 @@ public class DatabaseCommandTests
 			await parser.CommandParse(player.Handle, ConnectionService,
 				MarkupText.Plain("@mapsql/notify me/MAPCAPACITY=SELECT 1 AS col1"));
 			release.TrySetResult();
-			await WaitForNotificationAsync(NotifyService, text => text == marker, timeoutMs: 3000);
-			var messages = NotifyService.ReceivedCalls().Select(call => call.GetArguments())
-				.Where(args => args.Length > 1 && args[1] is OneOf<MString, string>)
-				.Select(args => ((OneOf<MString, string>)args[1]!).Match(text => text.ToString(), text => text))
+			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
+			var messages = SqlWebAppFactoryArg.Notifications.For(player.DbRef)
 				.Where(text => text == marker || text == "row-" + marker).ToArray();
 			await Assert.That(messages).IsEquivalentTo(new[] { "row-" + marker, marker });
 			await Assert.That(messages[0]).IsEqualTo("row-" + marker);
@@ -250,10 +249,8 @@ public class DatabaseCommandTests
 			counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
 			await Assert.That(counter!.Value.ToPlainText()).IsEqualTo("1");
 			release.TrySetResult();
-			await WaitForNotificationAsync(NotifyService, text => text == marker, timeoutMs: 3000);
-			var messages = NotifyService.ReceivedCalls().Select(call => call.GetArguments())
-				.Where(args => args.Length > 1 && args[1] is OneOf<MString, string>)
-				.Select(args => ((OneOf<MString, string>)args[1]!).Match(text => text.ToString(), text => text))
+			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
+			var messages = SqlWebAppFactoryArg.Notifications.For(player.DbRef)
 				.Where(text => text == marker || text == "row-" + marker).ToArray();
 			await Assert.That(messages[0]).IsEqualTo("row-" + marker);
 			await Assert.That(messages[^1]).IsEqualTo(marker);
@@ -290,7 +287,7 @@ public class DatabaseCommandTests
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPEMPTY me=think unexpected-row"));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPEMPTY=SELECT 1 WHERE 0"));
-		await WaitForNotificationAsync(NotifyService, text => text == marker, timeoutMs: 3000);
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
 	}
 
 	[Test]
@@ -491,7 +488,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_Basic"));
 
 		await NotifyService
 			.Received(1)
@@ -511,7 +508,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -551,7 +548,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
 
 		await NotifyService
 			.Received(1)
@@ -666,7 +663,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
 
 		await NotifyService
 			.Received(1)
@@ -686,7 +683,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
 
 		await NotifyService
 			.Received(1)
@@ -731,32 +728,21 @@ public class DatabaseCommandTests
 	}
 
 	/// <summary>
-	/// Polls <see cref="INotifyService.ReceivedCalls"/> until a notification whose plain-text message
-	/// satisfies <paramref name="messagePredicate"/> arrives, avoiding a fixed-duration sleep.
-	/// Only new calls since the previous iteration are examined to avoid redundant work.
+	/// Polls the thread-safe recipient queue until the expected message arrives.
 	/// </summary>
 	private static async Task WaitForNotificationAsync(
-		INotifyService notifyService,
+		TestHelpers.NotificationRecorder notifications,
+		DBRef recipient,
 		Func<string, bool> messagePredicate,
 		int timeoutMs = 15000,
 		int pollIntervalMs = 50)
 	{
-		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-		var scannedCount = 0;
-		while (DateTime.UtcNow < deadline)
+		var started = System.Diagnostics.Stopwatch.GetTimestamp();
+		while (System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds < timeoutMs)
 		{
-			var calls = notifyService.ReceivedCalls().ToList();
-			var found = calls.Skip(scannedCount).Any(call =>
-			{
-				var args = call.GetArguments();
-				if (args.Length < 2) return false;
-				return args[1] is OneOf<MString, string> msg &&
-					msg.Match(m => messagePredicate(m.ToString()), s => messagePredicate(s));
-			});
-			if (found) return;
-			scannedCount = calls.Count;
+			if (notifications.For(recipient).Any(messagePredicate)) return;
 			await Task.Delay(pollIntervalMs);
 		}
-		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification.");
+		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification for {recipient}.");
 	}
 }
