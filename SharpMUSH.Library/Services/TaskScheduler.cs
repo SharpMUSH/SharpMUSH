@@ -305,7 +305,10 @@ public partial class TaskScheduler(
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
 		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
-		if (notifyService is null || entry.Cts.IsCancellationRequested) return;
+		if (notifyService is null || entry.Cts.IsCancellationRequested || _shutdownCts.IsCancellationRequested) return;
+		// Reporting has its own bounded I/O lifetime after the user execution deadline.
+		using var reportBudget = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
+		using var reportScope = reportBudget.Enter();
 		try
 		{
 			if (DBRef.TryParse(entry.Owner, out var owner))

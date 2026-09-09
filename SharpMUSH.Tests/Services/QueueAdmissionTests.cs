@@ -58,6 +58,34 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(new[]
+		{
+			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
+		}.ToAsyncEnumerable());
+		var notifications = Substitute.For<INotifyService>();
+		var reported = new TaskCompletionSource<(bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
+		notifications.Notify(12L, Arg.Any<OneOf.OneOf<MarkupText, string>>(), null, INotifyService.NotificationType.Announce)
+			.Returns(_ =>
+			{
+				reported.TrySetResult((ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
+				return ValueTask.CompletedTask;
+			});
+		await using var queue = Create(milliseconds: 10, connections: connections, notifications: notifications);
+		await queue.EnqueueWork(async () =>
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return CallState.Empty;
+		}, "expired", "test", new DBRef(10, 1));
+		var result = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result.Cancelled).IsFalse();
+		await Assert.That(result.Remaining > TimeSpan.Zero && result.Remaining <= TimeSpan.FromSeconds(1)).IsTrue();
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task BackgroundAdmissionCanSuppressRejectionPublication(bool notify)
