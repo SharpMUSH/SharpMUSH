@@ -40,6 +40,43 @@ public class QueueDiagnosticsAuthorizationTests
 	}
 
 	[Test]
+	public async Task OwnHistoryDoesNotExposeGlobalOutcomeSequenceNumbers()
+	{
+		var h = new Harness();
+		h.Recorder.Rejected(h.Actor.Executor, h.Actor.ActiveCharacter, "enqueue", QueueOutcome.OwnerLimit);
+		for (var i = 0; i < 5; i++) h.Recorder.Rejected(new DBRef(9, 100), new DBRef(9, 100), "enqueue", QueueOutcome.OwnerLimit);
+		h.Recorder.Rejected(h.Actor.Executor, h.Actor.ActiveCharacter, "enqueue", QueueOutcome.OwnerLimit);
+		var result = (await h.Service.InspectAsync(h.Actor)).AsT0;
+		await Assert.That(result.Recent.Count).IsEqualTo(2);
+		await Assert.That(result.Recent.All(row => row.Pid is null)).IsTrue();
+		await Assert.That(JsonSerializer.Serialize(result.Recent).Contains("Sequence", StringComparison.Ordinal)).IsFalse();
+		h.Controls = false;
+		var empty = (await h.Service.InspectAsync(h.Actor, 1)).AsT0;
+		await Assert.That(empty.Recent.Count).IsEqualTo(0);
+		await Assert.That(empty.NextHistoryCursor).IsNull();
+	}
+
+	[Test]
+	public async Task HistoryCursorMustStillReferToAnAuthorizedAnchor()
+	{
+		var h = new Harness();
+		h.Record(1, h.Actor.ActiveCharacter!.Value, "OWN");
+		h.Record(2, new DBRef(9, 100), "OTHER");
+		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspect, PortalPermission.QueueInspectOwn });
+		var first = (await h.Service.InspectAsync(h.Actor, 1)).AsT0;
+		await Assert.That(first.NextHistoryCursor).IsNotNull();
+		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspectOwn });
+		var denied = await h.Service.InspectAsync(h.Actor, 1, first.NextHistoryCursor);
+		await Assert.That(denied.IsT1).IsTrue();
+		await Assert.That(denied.AsT1).IsEqualTo(DiagnosticsError.InvalidRequest);
+		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspect, PortalPermission.QueueInspectOwn });
+		for (var i = 0; i < QueueDiagnosticsRecorder.HistoryCapacity; i++) h.Record(i + 10, h.Actor.ActiveCharacter.Value, "NEW");
+		await Assert.That(h.Recorder.Recent().Count).IsEqualTo(QueueDiagnosticsRecorder.HistoryCapacity);
+		var expired = await h.Service.InspectAsync(h.Actor, 1, first.NextHistoryCursor);
+		await Assert.That(expired.AsT1).IsEqualTo(DiagnosticsError.InvalidRequest);
+	}
+
+	[Test]
 	public async Task HistoryFiltersBeforePaginationAndNeverReturnsHiddenMetadata()
 	{
 		var h = new Harness();

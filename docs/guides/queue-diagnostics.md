@@ -103,3 +103,5 @@ The shared host was running other validation work. The wide and overlapping elap
 mean this run does not establish a
 reliable latency percentage. Allocation figures cover the whole test process, not
 retained diagnostic memory. The separate capacity tests establish retention bounds.
+
+History pagination uses random opaque cursors tied to retained, currently authorized rows. Global sequence numbers are not exposed. An expired or newly unauthorized cursor must be replaced by refreshing history. Empty authorized pages have no continuation cursor.

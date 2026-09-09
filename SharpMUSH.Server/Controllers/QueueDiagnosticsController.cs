@@ -20,10 +20,10 @@ public sealed class QueueDiagnosticsController(IQueueDiagnosticsService diagnost
 
 	[HttpGet]
 	public async Task<IActionResult> Inspect([FromQuery] string character, [FromQuery] int limit = 50,
-		[FromQuery] long? beforeSequence = null, CancellationToken ct = default)
+		[FromQuery] Guid? beforeCursor = null, CancellationToken ct = default)
 	{
 		if (Actor(character) is not { } actor) return StatusCode(403);
-		var result = await diagnostics.InspectAsync(actor, limit, beforeSequence, ct);
+		var result = await diagnostics.InspectAsync(actor, limit, beforeCursor, ct);
 		return result.Match<IActionResult>(Ok, Error);
 	}
 

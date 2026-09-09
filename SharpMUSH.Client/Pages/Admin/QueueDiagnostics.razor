@@ -93,7 +93,7 @@
     }
     private Task Refresh() => Load(null);
     private Task Older() => Load(_report?.NextHistoryCursor);
-    private async Task Load(long? cursor)
+    private async Task Load(Guid? cursor)
     {
         _busy = true;
         _error = null;
@@ -101,7 +101,7 @@
         try
         {
             using var response = await HttpFactory.CreateClient("api").GetAsync($"api/diagnostics?{Query}&limit=50" +
-                (cursor is null ? "" : $"&beforeSequence={cursor}"));
+                (cursor is null ? "" : $"&beforeCursor={cursor}"));
             if (response.IsSuccessStatusCode) _report = await response.Content.ReadFromJsonAsync<QueueDiagnosticsReport>();
             else _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied" : "DiagError";
         }

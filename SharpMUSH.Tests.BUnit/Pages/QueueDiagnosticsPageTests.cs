@@ -23,6 +23,7 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 		public string? StartBody;
 		public string? StopQuery;
 		public string? LastQuery;
+		public Guid? Cursor;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			if (request.RequestUri!.AbsolutePath == "/api/account/characters")
@@ -44,11 +45,11 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 			}
 			return new(HttpStatusCode.OK)
 			{
-				Content = JsonContent.Create(new QueueDiagnosticsReport([], [new DiagnosticQueueRow(9, 1,
+				Content = JsonContent.Create(new QueueDiagnosticsReport([], [new DiagnosticQueueRow(9,
 					"#7:123", "#7:123", "enqueue", "Completed", "<script>hidden()</script>", DateTimeOffset.UnixEpoch,
 					null, DateTimeOffset.UnixEpoch, TimeSpan.Zero, null, 0, 0)], StartBody is null ? null
 					: new DiagnosticProfileReport(DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddMinutes(1), Recording,
-						[new("#7:123", "#7:123", "ACTION", "Function", "ADD", 3, 0, 2.5, 1)]), CanProfile, null, false))
+						[new("#7:123", "#7:123", "ACTION", "Function", "ADD", 3, 0, 2.5, 1)]), CanProfile, Cursor, false))
 			};
 		}
 	}
@@ -77,6 +78,18 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 		await Assert.That(cut.FindAll("script").Count).IsEqualTo(0);
 		await Assert.That(cut.Markup).Contains("&lt;script&gt;");
 		await Assert.That(cut.FindAll("button").Any(button => button.TextContent.Contains("DiagStart"))).IsFalse();
+	}
+
+	[Test]
+	public async Task OlderHistoryForwardsTheOpaqueCursorUnchanged()
+	{
+		var api = Setup(); api.Cursor = Guid.NewGuid();
+		var cut = Render<QueueDiagnostics>();
+		cut.WaitForAssertion(() => cut.Find("option[value='#7:123']"));
+		await cut.Find("select").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "#7:123" });
+		await cut.FindAll("button").Single(button => button.TextContent == "DiagOlder").ClickAsync(new());
+		await Assert.That(api.LastQuery).Contains($"beforeCursor={api.Cursor}");
+		await Assert.That(api.LastQuery).DoesNotContain("beforeSequence");
 	}
 
 	[Test]

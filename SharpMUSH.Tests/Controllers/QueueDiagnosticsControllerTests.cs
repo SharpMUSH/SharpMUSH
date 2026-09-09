@@ -44,10 +44,11 @@ public class QueueDiagnosticsControllerTests
 	{
 		var service = Substitute.For<IQueueDiagnosticsService>();
 		var actor = new CapabilityActor("account", DBRef.Parse("#7:123"), DBRef.Parse("#7:123"));
-		service.InspectAsync(actor, 10, 90, Arg.Any<CancellationToken>()).Returns(DiagnosticsError.PermissionDenied);
-		var response = await Controller(service).Inspect("#7:123", 10, 90);
+		var cursor = Guid.NewGuid();
+		service.InspectAsync(actor, 10, cursor, Arg.Any<CancellationToken>()).Returns(DiagnosticsError.PermissionDenied);
+		var response = await Controller(service).Inspect("#7:123", 10, cursor);
 		await Assert.That(((StatusCodeResult)response).StatusCode).IsEqualTo(403);
-		await service.Received(1).InspectAsync(actor, 10, 90, Arg.Any<CancellationToken>());
+		await service.Received(1).InspectAsync(actor, 10, cursor, Arg.Any<CancellationToken>());
 	}
 
 	[Test]

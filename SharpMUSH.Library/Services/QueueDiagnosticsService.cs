@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Services;
 public interface IQueueDiagnosticsService
 {
 	Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
-		long? beforeSequence = null, CancellationToken ct = default);
+		Guid? beforeCursor = null, CancellationToken ct = default);
 	Task<OneOf<Guid, DiagnosticsError>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default);
 	Task<OneOf<Success, DiagnosticsError>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default);
 	Task CollectProfilesAsync(CancellationToken ct = default);
@@ -29,26 +29,37 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		&& scope!.Scopes.Contains(PortalPermission.DiagnosticsProfile);
 
 	public async Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
-		long? beforeSequence = null, CancellationToken ct = default)
+		Guid? beforeCursor = null, CancellationToken ct = default)
 	{
-		if (limit is < 1 or > 100 || beforeSequence is <= 0) return DiagnosticsError.InvalidRequest;
+		if (limit is < 1 or > 100 || beforeCursor == Guid.Empty) return DiagnosticsError.InvalidRequest;
 		var scope = await queues.GetInspectionScopeAsync(actor, ct);
 		if (!CanInspect(scope)) return DiagnosticsError.PermissionDenied;
 		var active = await queues.ListAsync(actor, 101, ct);
-		var current = active.Take(100).Select(entry => new DiagnosticQueueRow(entry.Pid, null,
+		var current = active.Take(100).Select(entry => new DiagnosticQueueRow(entry.Pid,
 			entry.Source?.ToString(), entry.Owner?.ToString(), entry.Kind, entry.State.ToString(), entry.SourceAttribute,
 			entry.EnqueuedAt, entry.StartedAt, null, entry.WaitDuration, entry.ExecutionDuration, entry.InvocationCount, null)).ToArray();
+		var recent = recorder.Recent();
+		long? beforeSequence = null;
+		if (beforeCursor is { } cursor)
+		{
+			var anchor = recent.FirstOrDefault(row => row.Cursor == cursor);
+			if (anchor is null || !await queues.CanInspectAsync(scope!, anchor.Owner, anchor.Source, ct))
+				return DiagnosticsError.InvalidRequest;
+			beforeSequence = anchor.Sequence;
+		}
 		var history = new List<DiagnosticQueueRow>();
-		foreach (var row in recorder.Recent())
+		Guid? next = null;
+		foreach (var row in recent)
 		{
 			if (beforeSequence is { } before && row.Sequence >= before) continue;
 			if (!await queues.CanInspectAsync(scope!, row.Owner, row.Source, ct)) continue;
-			history.Add(new(row.Pid, row.Sequence, row.Source?.ToString(), row.Owner?.ToString(), row.Kind,
+			history.Add(new(row.Pid, row.Source?.ToString(), row.Owner?.ToString(), row.Kind,
 				row.Outcome.ToString(), row.SourceAttribute, row.EnqueuedAt, row.StartedAt, row.EndedAt,
 				row.WaitDuration, row.ExecutionDuration, row.InvocationCount, row.FailedInvocations));
+			if (history.Count == limit) next = row.Cursor;
 			if (history.Count > limit) break;
 		}
-		var next = history.Count > limit ? history[limit - 1].Sequence : null;
+		if (history.Count <= limit) next = null;
 		DiagnosticProfileReport? profile = null;
 		var registration = recorder.ProfileRegistrations().SingleOrDefault(p => p.Actor == actor);
 		if (registration is not null)

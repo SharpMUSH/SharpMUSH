@@ -10,4 +10,8 @@ public enum QueueOutcome
 public sealed record QueueHistoryRecord(long Sequence, long? Pid, DBRef? Source, DBRef? Owner,
 	string Kind, string? SourceAttribute, DateTimeOffset EnqueuedAt, DateTimeOffset? StartedAt,
 	DateTimeOffset EndedAt, TimeSpan WaitDuration, TimeSpan? ExecutionDuration,
-	long InvocationCount, long FailedInvocations, QueueOutcome Outcome);
+	long InvocationCount, long FailedInvocations, QueueOutcome Outcome)
+{
+	// Cursor identity has the same bounded lifetime as its retained history row.
+	public Guid Cursor { get; init; } = Guid.NewGuid();
+}
