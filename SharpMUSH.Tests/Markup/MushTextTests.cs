@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Text.RegularExpressions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using M = MarkupString.Ansi.AnsiMarkup;
@@ -176,6 +177,48 @@ public class MushTextTests
 	[Arguments(@"abc\\?efg*xyz")]
 	public async Task Glob_ToRegex_AlwaysOpensWithSingleLineMode(string wildcardPattern)
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).StartsWith("(?s)");
+
+	/// <summary>
+	/// A backslash makes a wildcard after it literal and is otherwise a literal backslash itself,
+	/// including at the end of the pattern and in front of a backslash that escapes a wildcard.
+	/// </summary>
+	[Test]
+	[Arguments(@"a\*b", @"(?s)^a\*b$")]
+	[Arguments(@"a\\*b", @"(?s)^a\\\*b$")]
+	[Arguments(@"a\b", @"(?s)^a\\b$")]
+	[Arguments(@"a\", @"(?s)^a\\$")]
+	[Arguments(@"\", @"(?s)^\\$")]
+	[Arguments(@"\\", @"(?s)^\\\\$")]
+	public async Task Glob_ToRegex_TreatsABackslashAsAnEscapeOnlyBeforeAWildcard(string wildcardPattern, string expectedRegex)
+		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
+
+	/// <summary>
+	/// Every literal is escaped the way <see cref="Regex.Escape"/> escapes it, so a pattern's text is
+	/// never regex syntax: the metacharacters, the whitespace <c>Regex.Escape</c> spells as
+	/// <c>\t</c>/<c>\n</c>, and the characters it leaves alone.
+	/// </summary>
+	[Test]
+	[Arguments("a.b+c|d", @"(?s)^a\.b\+c\|d$")]
+	[Arguments("(x)[y]{z}", @"(?s)^\(x\)\[y]\{z}$")]
+	[Arguments("^a$", @"(?s)^\^a\$$")]
+	[Arguments("a b#c", @"(?s)^a\ b\#c$")]
+	[Arguments("a\tb\nc\rd\fe", @"(?s)^a\tb\nc\rd\fe$")]
+	[Arguments("plain-text_0", @"(?s)^plain-text_0$")]
+	[Arguments("", @"(?s)^$")]
+	public async Task Glob_ToRegex_EscapesEveryLiteralAsRegexEscapeDoes(string wildcardPattern, string expectedRegex)
+	{
+		await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
+		await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo($"(?s)^{Regex.Escape(wildcardPattern)}$");
+	}
+
+	[Test]
+	public async Task Glob_ToRegex_MatchesTheTextItWasEscapedFrom()
+	{
+		const string awkward = "a.b (c) [d] {e} ^f$ g|h+i\tj\nk#l\\m";
+
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward), awkward)).IsTrue();
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward + "!"), awkward)).IsFalse();
+	}
 
 	[Test]
 	public async Task GetWildcardMatches_ReturnsGroupsCarryingTheirMarkup()

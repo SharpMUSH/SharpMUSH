@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using MarkupString;
 
@@ -14,7 +16,7 @@ namespace SharpMUSH.Library.Markup;
 /// behaviours, and nothing about <see cref="MarkupText"/> implies them.
 /// </para>
 /// </summary>
-public static partial class MushText
+public static class MushText
 {
 	/// <summary>The generic MUSH error return, <c>#-1</c>.</summary>
 	public static readonly MarkupText Error = MarkupText.Plain("#-1");
@@ -78,20 +80,8 @@ public static partial class MushText
 	/// <summary>
 	/// Compiles MUSH glob patterns (<c>*</c>, <c>?</c>, with <c>\</c> escaping either) to .NET regex.
 	/// </summary>
-	public static partial class Glob
+	public static class Glob
 	{
-		[GeneratedRegex(@"(?<!\\)\\\*")]
-		private static partial Regex StarPattern();
-
-		[GeneratedRegex(@"(?<!\\)\\\?")]
-		private static partial Regex QuestionPattern();
-
-		[GeneratedRegex(@"\\\\\\\*")]
-		private static partial Regex EscapedStarPattern();
-
-		[GeneratedRegex(@"\\\\\\\?")]
-		private static partial Regex EscapedQuestionPattern();
-
 		/// <summary>
 		/// Inline single-line mode, so the <c>.</c> that <c>*</c> and <c>?</c> compile to also matches
 		/// a newline.
@@ -107,16 +97,51 @@ public static partial class MushText
 		/// </remarks>
 		private const string SingleLineMode = "(?s)";
 
+		/// <summary>The characters <see cref="Regex.Escape"/> puts a backslash in front of.</summary>
+		private static readonly SearchValues<char> Metacharacters = SearchValues.Create("\t\n\f\r #$()*+.?[\\^{|");
+
 		/// <summary>The anchored regex equivalent to the glob <paramref name="pattern"/>.</summary>
+		/// <remarks>
+		/// One left-to-right pass: a wildcard becomes a capture group, a backslash makes a wildcard
+		/// after it literal and is otherwise a literal itself, and every literal is escaped the way
+		/// <see cref="Regex.Escape"/> would escape it.
+		/// </remarks>
 		public static string ToRegex(string pattern)
 		{
 			ArgumentNullException.ThrowIfNull(pattern);
-			var escaped = $"^{Regex.Escape(pattern)}$";
-			escaped = StarPattern().Replace(escaped, "(.*?)");
-			escaped = QuestionPattern().Replace(escaped, "(.)");
-			escaped = EscapedStarPattern().Replace(escaped, @"\*");
-			escaped = EscapedQuestionPattern().Replace(escaped, @"\?");
-			return SingleLineMode + escaped;
+			var regex = new StringBuilder(pattern.Length + 16).Append(SingleLineMode).Append('^');
+			var rest = pattern.AsSpan();
+			while (!rest.IsEmpty)
+			{
+				var special = rest.IndexOfAny(Metacharacters);
+				if (special < 0)
+				{
+					regex.Append(rest);
+					break;
+				}
+
+				regex.Append(rest[..special]);
+				var c = rest[special];
+				rest = rest[(special + 1)..];
+				switch (c)
+				{
+					case '*':
+						regex.Append("(.*?)");
+						break;
+					case '?':
+						regex.Append("(.)");
+						break;
+					case '\\' when !rest.IsEmpty && rest[0] is '*' or '?':
+						regex.Append('\\').Append(rest[0]);
+						rest = rest[1..];
+						break;
+					default:
+						regex.Append('\\').Append(c switch { '\n' => 'n', '\r' => 'r', '\t' => 't', '\f' => 'f', _ => c });
+						break;
+				}
+			}
+
+			return regex.Append('$').ToString();
 		}
 	}
 
@@ -134,9 +159,9 @@ public static partial class MushText
 	/// </summary>
 	public static IEnumerable<(Match Match, IEnumerable<MarkupText> Groups)> GetMatches(MarkupText input, string pattern)
 	{
-		foreach (var match in Regex.Matches(input.ToPlainText(), pattern).Cast<Match>())
+		foreach (Match match in Regex.Matches(input.ToPlainText(), pattern))
 		{
-			var groups = match.Groups.Cast<Group>().Select(g => input.Substring(g.Index, g.Length));
+			var groups = match.Groups.Values.Select(g => input.Substring(g.Index, g.Length));
 			yield return (match, groups);
 		}
 	}

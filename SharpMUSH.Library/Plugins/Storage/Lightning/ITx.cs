@@ -20,6 +20,11 @@ public interface ITx
 	IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey);
 	/// <summary>All duplicate values stored under <paramref name="key"/>, in order.</summary>
 	IEnumerable<byte[]> Dups(TableDef table, byte[] key);
+	/// <summary>
+	/// How many values are stored under <paramref name="key"/>, answered by LMDB from the key's
+	/// duplicate count rather than by reading the values out; zero for a key that is absent.
+	/// </summary>
+	long CountDups(TableDef table, ReadOnlySpan<byte> key);
 	/// <summary>Deletes every entry under the prefix; returns how many.</summary>
 	int DeletePrefix(TableDef table, byte[] prefix);
 }

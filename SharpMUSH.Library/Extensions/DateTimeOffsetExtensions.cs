@@ -8,11 +8,10 @@ public static class DateTimeOffsetExtensions
 			: 7 - (int)date.DayOfWeek + (int)dow);
 
 	public static DateTimeOffset FirstOfYear(this DateTimeOffset date, DayOfWeek day)
-		=> ((Func<DateTimeOffset, DateTimeOffset>)(
-			startOfYearDate => startOfYearDate.DayOfWeek == day
-				? startOfYearDate
-				: Next(startOfYearDate, day)))
-			(date.AddDays(-date.DayOfYear));
+	{
+		var startOfYear = date.AddDays(-date.DayOfYear);
+		return startOfYear.DayOfWeek == day ? startOfYear : Next(startOfYear, day);
+	}
 
 	public static double DaysSinceDateToDate(this DateTimeOffset date, DateTimeOffset other)
 		=> (date - other).TotalDays;

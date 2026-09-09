@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace SharpMUSH.Library.Utilities;
 
 /// <summary>
@@ -15,13 +13,12 @@ public static class RegisterNames
 	/// outside [A-Z0-9_.-] replaced by an underscore.
 	/// </summary>
 	public static string NormalizeSegment(string name)
-	{
-		var builder = new StringBuilder(name.Length);
-		foreach (var c in name.ToUpperInvariant())
+		=> string.Create(name.Length, name, static (normalized, source) =>
 		{
-			builder.Append(c is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-' ? c : '_');
-		}
-
-		return builder.ToString();
-	}
+			for (var i = 0; i < source.Length; i++)
+			{
+				var c = char.ToUpperInvariant(source[i]);
+				normalized[i] = c is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-' ? c : '_';
+			}
+		});
 }

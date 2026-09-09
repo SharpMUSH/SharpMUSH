@@ -561,6 +561,17 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
 		}
 
+		public long CountDups(TableDef table, ReadOnlySpan<byte> key)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			if (cursor.Set(key) != MDBResultCode.Success) return 0;
+			// mdb_cursor_count is only defined for a DUPSORT database; a plain one holds one value per key.
+			if (!table.Duplicates) return 1;
+			var code = cursor.Count(out var count);
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"count {table}");
+			return count;
+		}
+
 		public int DeletePrefix(TableDef table, byte[] prefix)
 		{
 			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
