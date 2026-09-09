@@ -243,7 +243,7 @@ public partial class Commands
 						{
 							columnNames = row.Keys.ToList();
 
-							var headerAdmission = await Mediator.Send(new QueueAttributeRequest(
+							var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
 								() =>
 								{
 									var remainder = columnNames
@@ -267,7 +267,7 @@ public partial class Commands
 						}
 
 						var currentRow = rowNumber;
-						var rowAdmission = await Mediator.Send(new QueueAttributeRequest(
+						var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
 							() =>
 							{
 								var values = row.Values.ToList();

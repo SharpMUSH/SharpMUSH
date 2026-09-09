@@ -32,8 +32,8 @@ public class QueuePauseTests
 		await using var queue = Create(mediator: mediator);
 		var state = ParserState.Empty with { Executor = new DBRef(7, 1) };
 		var job = semaphore
-			? await queue.WriteCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
-			: await queue.WriteCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
+			? await queue.AdmitCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
+			: await queue.AdmitCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
 		await queue.PausePending(job.Pid!.Value, "hold");
 		var read = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
@@ -67,7 +67,7 @@ public class QueuePauseTests
 		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
 			.Returns(call => { latest = call.Arg<ITrigger>(); return Task.FromResult(latest.StartTimeUtc); });
 		await using var queue = Create(scheduler: scheduler);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think later"), ParserState.Empty, TimeSpan.FromHours(1));
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think later"), ParserState.Empty, TimeSpan.FromHours(1));
 		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(async _ => { await Task.Delay(150); return true; });
 		await queue.RescheduleSemaphoreTask(job.Pid!.Value, TimeSpan.FromSeconds(10));
 		await queue.PausePending(job.Pid.Value, "compare deadlines");
@@ -98,7 +98,7 @@ public class QueuePauseTests
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 		await using var queue = Create(parser);
 		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		var count = 1;
 		ValueTask Persist(int selected) { count -= selected; return ValueTask.CompletedTask; }
@@ -130,7 +130,7 @@ public class QueuePauseTests
 			return release.Task;
 		});
 		await using var queue = Create(scheduler: scheduler);
-		var pending = queue.WriteCommandList(MarkupText.Plain("think later"), ParserState.Empty,
+		var pending = queue.AdmitCommandList(MarkupText.Plain("think later"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1)).AsTask();
 		await scheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
@@ -159,7 +159,7 @@ public class QueuePauseTests
 		{ executed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 		await using var queue = Create(parser);
 		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think retained"), ParserState.Empty, semaphore, 1);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		if (notified) await queue.Notify(semaphore, 1);
 		await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(notified ? 0 : 1);
@@ -183,7 +183,7 @@ public class QueuePauseTests
 		var mediator = QueueAdmissionTests.CountingMediator(() => count, value => count = value);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		await using var queue = Create(parser, mediator: mediator);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10, 1), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1), manageSemaphoreCount: managed);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: timeout)).Accepted).IsTrue();
@@ -206,7 +206,7 @@ public class QueuePauseTests
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
 		{ ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 		await using var queue = Create(parser, mediator: mediator);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty,
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10, 1), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true, generation: 0)).Reason)
@@ -226,7 +226,7 @@ public class QueuePauseTests
 	{
 		await using var queue = Create();
 		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value)).Accepted).IsTrue();
 		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true)).Reason)
@@ -245,7 +245,7 @@ public class QueuePauseTests
 			parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
 			{ Interlocked.Increment(ref count); return ValueTask.FromResult<CallState?>(null); });
 			var queue = Create(parser);
-			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromHours(1));
+			var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromHours(1));
 			var pid = job.Pid!.Value;
 			await Task.WhenAll(
 				Task.Run(async () => { await queue.PausePending(pid, "race"); await queue.ResumePending(pid); }),
@@ -263,7 +263,7 @@ public class QueuePauseTests
 		await using var queue = Create();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var job = await queue.EnqueueWork(async () =>
+		var job = await queue.AdmitWork(async () =>
 		{ entered.SetResult(); await release.Task; return null; }, "private trigger", "private group payload");
 		try
 		{
@@ -283,8 +283,8 @@ public class QueuePauseTests
 		await using var queue = Create(mediator: mediator);
 		var state = ParserState.Empty with { Executor = new DBRef(7, 1) };
 		var job = semaphore
-			? await queue.WriteCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
-			: await queue.WriteCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
+			? await queue.AdmitCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
+			: await queue.AdmitCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
 		await queue.PausePending(job.Pid!.Value, "hold");
 		var missing = new DBRef(semaphore ? 8 : 7, 1);
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == missing), Arg.Any<CancellationToken>())
@@ -304,7 +304,7 @@ public class QueuePauseTests
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 		await using var queue = Create(parser);
 		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think signal"), ParserState.Empty, semaphore, 1);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think signal"), ParserState.Empty, semaphore, 1);
 		await queue.PausePending(job.Pid!.Value, "hold");
 		await Assert.That(await queue.ModifyQRegisters(semaphore, new() { ["signal"] = MarkupText.Plain("retained") })).IsTrue();
 		await queue.Notify(semaphore, 1);
@@ -335,7 +335,7 @@ public class QueuePauseTests
 			var jobFactory = Substitute.For<Quartz.Spi.IJobFactory>();
 			jobFactory.NewJob(Arg.Any<Quartz.Spi.TriggerFiredBundle>(), quartz).Returns(new DelayedTask(queue));
 			quartz.JobFactory = jobFactory;
-			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromSeconds(1));
+			var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromSeconds(1));
 			await Assert.That(await queue.PausePending(job.Pid!.Value, "hold")).IsEqualTo(QueueControlResult.Applied);
 			await Task.Delay(1200);
 			await Assert.That(count).IsEqualTo(0);
@@ -350,7 +350,7 @@ public class QueuePauseTests
 	public async Task PauseRetainsPendingPidAndQuota()
 	{
 		await using var queue = Create();
-		var admitted = await queue.WriteCommandList(MarkupText.Plain("think retained"), ParserState.Empty, TimeSpan.FromHours(1));
+		var admitted = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, TimeSpan.FromHours(1));
 		await Assert.That(admitted.Accepted).IsTrue();
 		await Assert.That(await queue.PausePending(admitted.Pid!.Value, "Inspect timed system")).IsEqualTo(QueueControlResult.Applied);
 		var paused = queue.GetQueueEntries().Single();
@@ -378,7 +378,7 @@ public class QueuePauseTests
 		await using var queue = Create(parser);
 		var state = ParserState.Empty;
 		state.Registers.Push(new Dictionary<string, MarkupText> { ["CHECK"] = MarkupText.Plain("retained") });
-		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), state, TimeSpan.FromHours(1));
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), state, TimeSpan.FromHours(1));
 		var pid = job.Pid!.Value;
 		await queue.PausePending(pid, "inspect");
 		await Assert.That((await queue.ReleaseScheduledWork(pid, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
@@ -401,7 +401,7 @@ public class QueuePauseTests
 		var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 		await using var queue = Create(parser);
-		var job = await queue.WriteCommandList(MarkupText.Plain("think notified"), ParserState.Empty, new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think notified"), ParserState.Empty, new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
 		await queue.PausePending(job.Pid!.Value, "inspect");
 		await queue.Notify(new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]), 1);
 		await Assert.That(ran.Task.IsCompleted).IsFalse();
@@ -417,7 +417,7 @@ public class QueuePauseTests
 		await using var queue = Create();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var job = await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "active", "test");
+		var job = await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "active", "test");
 		try
 		{
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -431,7 +431,7 @@ public class QueuePauseTests
 	public async Task CancelledPauseCannotBeResumedOrFired()
 	{
 		await using var queue = Create();
-		var job = await queue.WriteCommandList(MarkupText.Plain("think cancelled"), ParserState.Empty, TimeSpan.FromHours(1));
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think cancelled"), ParserState.Empty, TimeSpan.FromHours(1));
 		await queue.PausePending(job.Pid!.Value, "inspect");
 		await queue.HaltByPid(job.Pid.Value);
 		await Assert.That(await queue.ResumePending(job.Pid.Value)).IsEqualTo(QueueControlResult.NotFound);
@@ -444,7 +444,7 @@ public class QueuePauseTests
 	{
 		await using (var prior = Create())
 		{
-			var job = await prior.WriteCommandList(MarkupText.Plain("think old process"), ParserState.Empty, TimeSpan.FromHours(1));
+			var job = await prior.AdmitCommandList(MarkupText.Plain("think old process"), ParserState.Empty, TimeSpan.FromHours(1));
 			await prior.PausePending(job.Pid!.Value, "inspect");
 		}
 		await using var fresh = Create();

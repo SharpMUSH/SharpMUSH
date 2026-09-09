@@ -81,7 +81,7 @@ public partial class Commands
 				var requestBody = dataArg?.Message?.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
-				await Mediator.Send(new QueueAttributeRequest(
+				await Mediator.Send(new AdmitAttributeRequest(
 					async () =>
 					{
 						var client = HttpClientFactory.CreateClient("api");
