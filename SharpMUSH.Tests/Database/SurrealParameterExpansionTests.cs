@@ -60,6 +60,20 @@ public class SurrealParameterExpansionTests
 	}
 
 	[Test]
+	public async Task AParameterCanOpenOrCloseTheQuery()
+	{
+		var expanded = Expand("$key = $key", ("key", 1));
+		await Assert.That(expanded).IsEqualTo("1 = 1");
+	}
+
+	[Test]
+	public async Task ADollarThatNamesNoParameterIsKept_EvenBesideOne()
+	{
+		var expanded = Expand("$$key$ $", ("key", 1));
+		await Assert.That(expanded).IsEqualTo("$1$ $");
+	}
+
+	[Test]
 	public async Task AQueryWithoutParametersIsReturnedAsIs()
 	{
 		const string query = "SELECT * FROM object WHERE type = 'PLAYER'";

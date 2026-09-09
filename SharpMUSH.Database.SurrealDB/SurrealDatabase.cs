@@ -14,7 +14,6 @@ using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -105,11 +104,8 @@ public partial class SurrealDatabase(
 	/// <summary>The text between the first and second <c>/</c> of a typed id (<c>Attribute/5_FOO</c> → <c>5_FOO</c>); empty when there is no <c>/</c>.</summary>
 	private static ReadOnlySpan<char> SecondSegment(string id)
 	{
-		var first = id.IndexOf('/');
-		if (first < 0) return [];
-		var rest = id.AsSpan(first + 1);
-		var second = rest.IndexOf('/');
-		return second < 0 ? rest : rest[..second];
+		Span<System.Range> segments = stackalloc System.Range[3];
+		return id.AsSpan().Split(segments, '/') < 2 ? [] : id.AsSpan()[segments[1]];
 	}
 
 	/// <summary>
@@ -117,11 +113,11 @@ public partial class SurrealDatabase(
 	/// </summary>
 	private static string ExtractTable(string typedId)
 	{
-		var slash = typedId.IndexOf('/');
-		if (slash < 0 || typedId.AsSpan(0, slash).IsWhiteSpace())
+		Span<System.Range> segments = stackalloc System.Range[2];
+		if (typedId.AsSpan().Split(segments, '/') < 2 || typedId.AsSpan()[segments[0]].IsWhiteSpace())
 			throw new ArgumentException($"Invalid ID format: '{typedId}'. Expected 'Label/key'.", nameof(typedId));
 
-		return typedId[..slash].ToLowerInvariant();
+		return typedId[segments[0]].ToLowerInvariant();
 	}
 
 	private const string AttributeChildrenByParentQuery =
@@ -235,41 +231,52 @@ public partial class SurrealDatabase(
 			return query;
 		}
 
-		var tokens = parameters
-			.OrderByDescending(parameter => parameter.Key.Length)
-			.Select(parameter => (Token: "$" + parameter.Key, parameter.Value))
-			.ToArray();
-
-		var expanded = new StringBuilder(query.Length + 64);
+		var names = parameters.Keys.OrderByDescending(name => name.Length).ToArray();
+		var text = query.AsSpan();
+		var pieces = new List<string>();
 		var inRecordId = false;
-		var position = 0;
-		while (position < query.Length)
+
+		// Every segment after the first begins right after a `$`.
+		foreach (var range in text.Split('$'))
 		{
-			var c = query[position];
-			if (c == '⟨') inRecordId = true;
-			else if (c == '⟩') inRecordId = false;
-
-			if (c == '$')
+			var segment = text[range];
+			if (range.Start.Value == 0)
 			{
-				var rest = query.AsSpan(position);
-				var matched = false;
-				foreach (var (token, value) in tokens)
-				{
-					if (!rest.StartsWith(token, StringComparison.Ordinal)) continue;
-					expanded.Append(inRecordId ? SerializeValueRaw(value) : SerializeValue(value));
-					position += token.Length;
-					matched = true;
-					break;
-				}
-
-				if (matched) continue;
+				pieces.Add(query[range]);
+			}
+			else if (ParameterNameAtStart(segment, names) is { } name)
+			{
+				pieces.Add(inRecordId ? SerializeValueRaw(parameters[name]) : SerializeValue(parameters[name]));
+				pieces.Add(segment[name.Length..].ToString());
+			}
+			else
+			{
+				pieces.Add(string.Concat("$", segment));
 			}
 
-			expanded.Append(c);
-			position++;
+			// Only the query's own text opens or closes a record id, never a substituted value.
+			var bracket = segment.LastIndexOfAny('⟨', '⟩');
+			if (bracket >= 0)
+			{
+				inRecordId = segment[bracket] == '⟨';
+			}
 		}
 
-		return expanded.ToString();
+		return string.Concat(pieces);
+	}
+
+	/// <summary>The longest parameter name <paramref name="segment"/> starts with, or null.</summary>
+	private static string? ParameterNameAtStart(ReadOnlySpan<char> segment, string[] namesLongestFirst)
+	{
+		foreach (var name in namesLongestFirst)
+		{
+			if (segment.StartsWith(name, StringComparison.Ordinal))
+			{
+				return name;
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>

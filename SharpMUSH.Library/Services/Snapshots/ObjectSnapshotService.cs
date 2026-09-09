@@ -197,12 +197,13 @@ public sealed partial class ObjectSnapshotService(
 	/// </summary>
 	private static IEnumerable<string> AttributePathPrefixes(string name)
 	{
-		for (var separator = name.IndexOf('`'); separator >= 0; separator = name.IndexOf('`', separator + 1))
+		var prefixes = new List<string>();
+		foreach (var segment in name.AsSpan().Split('`'))
 		{
-			yield return name[..separator];
+			prefixes.Add(name[..segment.End]);
 		}
 
-		yield return name;
+		return prefixes;
 	}
 
 	private static ObjectSnapshot FinalizeImage(ObjectSnapshot snapshot)

@@ -873,30 +873,18 @@ public class AttributeService(
 	/// </summary>
 	private static bool AttributePathEquals(ReadOnlySpan<char> longName, string[] path)
 	{
-		for (var i = 0; i < path.Length; i++)
+		var depth = 0;
+		foreach (var segment in longName.Split('`'))
 		{
-			var segment = path[i];
-			if (!longName.StartsWith(segment, StringComparison.OrdinalIgnoreCase))
+			if (depth == path.Length || !longName[segment].Equals(path[depth], StringComparison.OrdinalIgnoreCase))
 			{
 				return false;
 			}
 
-			longName = longName[segment.Length..];
-
-			if (i == path.Length - 1)
-			{
-				return longName.IsEmpty;
-			}
-
-			if (longName.IsEmpty || longName[0] != '`')
-			{
-				return false;
-			}
-
-			longName = longName[1..];
+			depth++;
 		}
 
-		return false;
+		return depth == path.Length;
 	}
 
 	/// <summary>

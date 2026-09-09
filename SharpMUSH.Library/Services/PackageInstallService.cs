@@ -1481,13 +1481,14 @@ public class PackageInstallService(
 		}
 
 		var body = objid.AsSpan(1);
-		var colon = body.IndexOf(':');
-		if (!int.TryParse(colon < 0 ? body : body[..colon], out var number))
+		Span<System.Range> fields = stackalloc System.Range[2];
+		var fieldCount = body.Split(fields, ':');
+		if (!int.TryParse(body[fields[0]], out var number))
 		{
 			return null;
 		}
 
-		return colon >= 0 && long.TryParse(body[(colon + 1)..], out var milliseconds)
+		return fieldCount == 2 && long.TryParse(body[fields[1]], out var milliseconds)
 			? new DBRef(number, milliseconds)
 			: new DBRef(number);
 	}
@@ -1497,8 +1498,9 @@ public class PackageInstallService(
 
 	private static string PrimaryName(string name)
 	{
-		var semicolon = name.IndexOf(';');
-		return (semicolon < 0 ? name : name[..semicolon]).Trim();
+		Span<System.Range> aliases = stackalloc System.Range[2];
+		name.AsSpan().Split(aliases, ';', StringSplitOptions.TrimEntries);
+		return name[aliases[0]];
 	}
 
 	private static string DecisionKey(string targetRef, string attribute) =>

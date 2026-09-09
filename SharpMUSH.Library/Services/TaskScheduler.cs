@@ -539,13 +539,10 @@ int oldValue)
 			identity = identity["handle:".Length..];
 		}
 
-		var dash = identity.IndexOf('-');
-		if (dash >= 0)
-		{
-			identity = identity[..dash];
-		}
+		Span<System.Range> parts = stackalloc System.Range[2];
+		identity.Split(parts, '-');
 
-		return DBRef.TryParse(identity.ToString(), out var dbref)
+		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
 			? OneOf<string, DBRef>.FromT1(dbref!.Value)
 			: OneOf<string, DBRef>.FromT0(triggerName);
 	}
@@ -556,14 +553,14 @@ int oldValue)
 	private static bool TryParsePid(string triggerName, out long pid)
 	{
 		var name = triggerName.AsSpan();
-		var dash = name.IndexOf('-');
-		if (dash < 0 || name[(dash + 1)..].Contains('-'))
+		Span<System.Range> parts = stackalloc System.Range[3];
+		if (name.Split(parts, '-') != 2)
 		{
 			pid = 0;
 			return false;
 		}
 
-		return long.TryParse(name[(dash + 1)..], out pid);
+		return long.TryParse(name[parts[1]], out pid);
 	}
 
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
@@ -634,8 +631,12 @@ int oldValue)
 			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
 		// The group is "semaphore:<objid>/<attribute>"; everything after the first colon is the source.
 		var group = trigger.JobKey.Group;
-		var semaphoreSource = DbRefAttribute.Parse(group[(group.IndexOf(':') + 1)..]);
-		var pid = long.Parse(triggerKey.Name.AsSpan(triggerKey.Name.LastIndexOf('-') + 1));
+		Span<System.Range> groupParts = stackalloc System.Range[2];
+		group.AsSpan().Split(groupParts, ':');
+		var semaphoreSource = DbRefAttribute.Parse(group[groupParts[1]]);
+		var pid = TryParsePid(triggerKey.Name, out var parsed)
+			? parsed
+			: throw new FormatException($"Semaphore trigger '{triggerKey.Name}' does not end in a PID.");
 
 		return new SemaphoreTaskData(pid, command, state.Caller!.Value, semaphoreSource, fireDelay);
 	}

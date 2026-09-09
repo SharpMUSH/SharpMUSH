@@ -189,6 +189,10 @@ public class MushTextTests
 	[Arguments(@"a\", @"(?s)^a\\$")]
 	[Arguments(@"\", @"(?s)^\\$")]
 	[Arguments(@"\\", @"(?s)^\\\\$")]
+	[Arguments(@"\\\*", @"(?s)^\\\\\*$")]
+	[Arguments(@"\*\?", @"(?s)^\*\?$")]
+	[Arguments(@"*?*", @"(?s)^(.*?)(.)(.*?)$")]
+	[Arguments(@"*\", @"(?s)^(.*?)\\$")]
 	public async Task Glob_ToRegex_TreatsABackslashAsAnEscapeOnlyBeforeAWildcard(string wildcardPattern, string expectedRegex)
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
 

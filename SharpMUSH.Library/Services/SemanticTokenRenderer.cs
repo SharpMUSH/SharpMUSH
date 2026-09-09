@@ -149,15 +149,13 @@ public static class SemanticTokenRenderer
 	/// </summary>
 	internal static int[] BuildLineStartTable(string plainText)
 	{
-		var text = plainText.AsSpan();
-		var starts = new int[text.Count('\n') + 1];
-		var line = 1;
-		for (var i = 0; i < text.Length; i++)
+		var starts = new List<int>();
+		foreach (var line in plainText.AsSpan().Split('\n'))
 		{
-			if (text[i] == '\n')
-				starts[line++] = i + 1;
+			starts.Add(line.Start.Value);
 		}
-		return starts;
+
+		return [.. starts];
 	}
 
 	/// <summary>

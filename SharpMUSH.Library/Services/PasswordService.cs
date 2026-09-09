@@ -72,26 +72,19 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		saltedHash = default;
 
 		var text = hash.AsSpan();
-		var firstColon = text.IndexOf(':');
-		if (firstColon < 0)
+		Span<System.Range> fields = stackalloc System.Range[4];
+		if (text.Split(fields, ':') < 3)
 			return false;
 
-		var rest = text[(firstColon + 1)..];
-		var secondColon = rest.IndexOf(':');
-		if (secondColon < 0)
+		if (!int.TryParse(text[fields[0]], out var version) || version < 1 || version > 2)
 			return false;
 
-		if (!int.TryParse(text[..firstColon], out var version) || version < 1 || version > 2)
-			return false;
-
-		var candidateAlgo = rest[..secondColon];
+		var candidateAlgo = text[fields[1]];
 		if (!IsSha1(candidateAlgo) && !IsSha256(candidateAlgo))
 			return false;
 
-		var tail = rest[(secondColon + 1)..];
-		var thirdColon = tail.IndexOf(':');
 		algo = candidateAlgo;
-		saltedHash = thirdColon < 0 ? tail : tail[..thirdColon];
+		saltedHash = text[fields[2]];
 		return true;
 	}
 

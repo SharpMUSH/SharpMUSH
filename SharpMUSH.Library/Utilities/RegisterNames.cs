@@ -15,10 +15,13 @@ public static class RegisterNames
 	public static string NormalizeSegment(string name)
 		=> string.Create(name.Length, name, static (normalized, source) =>
 		{
-			for (var i = 0; i < source.Length; i++)
+			source.AsSpan().ToUpperInvariant(normalized);
+			foreach (ref var c in normalized)
 			{
-				var c = char.ToUpperInvariant(source[i]);
-				normalized[i] = c is (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-' ? c : '_';
+				if (c is not ((>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-'))
+				{
+					c = '_';
+				}
 			}
 		});
 }

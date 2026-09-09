@@ -1,4 +1,3 @@
-using System.Text;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -688,24 +687,8 @@ public class PackagePlanService : IPackagePlanService
 			return null;
 		}
 
-		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value).AsSpan();
-		var collapsed = new StringBuilder(pattern.Length);
-		foreach (var range in pattern.Split(' '))
-		{
-			var word = pattern[range].Trim();
-			if (word.IsEmpty)
-			{
-				continue;
-			}
-
-			if (collapsed.Length > 0)
-			{
-				collapsed.Append(' ');
-			}
-
-			collapsed.Append(word);
-		}
-
-		return collapsed.ToString().ToLowerInvariant();
+		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
+		var words = pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return string.Join(' ', words).ToLowerInvariant();
 	}
 }

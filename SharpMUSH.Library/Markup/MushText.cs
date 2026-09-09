@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using MarkupString;
 
@@ -102,46 +101,44 @@ public static class MushText
 
 		/// <summary>The anchored regex equivalent to the glob <paramref name="pattern"/>.</summary>
 		/// <remarks>
-		/// One left-to-right pass: a wildcard becomes a capture group, a backslash makes a wildcard
-		/// after it literal and is otherwise a literal itself, and every literal is escaped the way
-		/// <see cref="Regex.Escape"/> would escape it.
+		/// The pattern is cut at every metacharacter; the text between them is literal and each
+		/// metacharacter is spelled from its neighbours alone: a wildcard becomes a capture group unless
+		/// a backslash precedes it, a backslash is an escape only when a wildcard follows it, and every
+		/// other one is escaped the way <see cref="Regex.Escape"/> escapes it.
 		/// </remarks>
 		public static string ToRegex(string pattern)
 		{
 			ArgumentNullException.ThrowIfNull(pattern);
-			var regex = new StringBuilder(pattern.Length + 16).Append(SingleLineMode).Append('^');
-			var rest = pattern.AsSpan();
-			while (!rest.IsEmpty)
+			var pieces = new List<string> { SingleLineMode, "^" };
+			foreach (var literal in pattern.AsSpan().SplitAny(Metacharacters))
 			{
-				var special = rest.IndexOfAny(Metacharacters);
-				if (special < 0)
+				pieces.Add(pattern[literal]);
+				if (literal.End.Value < pattern.Length)
 				{
-					regex.Append(rest);
-					break;
-				}
-
-				regex.Append(rest[..special]);
-				var c = rest[special];
-				rest = rest[(special + 1)..];
-				switch (c)
-				{
-					case '*':
-						regex.Append("(.*?)");
-						break;
-					case '?':
-						regex.Append("(.)");
-						break;
-					case '\\' when !rest.IsEmpty && rest[0] is '*' or '?':
-						regex.Append('\\').Append(rest[0]);
-						rest = rest[1..];
-						break;
-					default:
-						regex.Append('\\').Append(c switch { '\n' => 'n', '\r' => 'r', '\t' => 't', '\f' => 'f', _ => c });
-						break;
+					pieces.Add(Metacharacter(pattern, literal.End.Value));
 				}
 			}
 
-			return regex.Append('$').ToString();
+			pieces.Add("$");
+			return string.Concat(pieces);
+		}
+
+		/// <summary>The regex text for the metacharacter at <paramref name="at"/> in <paramref name="pattern"/>.</summary>
+		private static string Metacharacter(string pattern, int at)
+		{
+			var escaped = at > 0 && pattern[at - 1] == '\\';
+			var escaping = at + 1 < pattern.Length && pattern[at + 1] is '*' or '?';
+			return pattern[at] switch
+			{
+				'*' => escaped ? "*" : "(.*?)",
+				'?' => escaped ? "?" : "(.)",
+				'\\' => escaping ? @"\" : @"\\",
+				'\n' => @"\n",
+				'\r' => @"\r",
+				'\t' => @"\t",
+				'\f' => @"\f",
+				var c => $@"\{c}",
+			};
 		}
 	}
 

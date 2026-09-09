@@ -77,20 +77,18 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 			return arguments;
 		}
 
-		var groups = match.Groups;
-		for (var i = isRegex ? 0 : 1; i < groups.Count; i++)
+		foreach (var (index, group) in match.Groups.Values.Index().Skip(isRegex ? 0 : 1))
 		{
-			var group = groups[i];
 			var captured = trimmed.Substring(group.Index, group.Length);
 
 			if (isRegex)
 			{
-				arguments.TryAdd(i.ToString(), new CallState(captured, 0));
+				arguments.TryAdd(index.ToString(), new CallState(captured, 0));
 				arguments.TryAdd(group.Name, new CallState(captured, 0));
 			}
 			else
 			{
-				arguments.TryAdd((i - 1).ToString(), new CallState(captured, 0));
+				arguments.TryAdd((index - 1).ToString(), new CallState(captured, 0));
 			}
 		}
 
