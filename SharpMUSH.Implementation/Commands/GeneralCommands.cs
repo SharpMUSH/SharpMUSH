@@ -2173,9 +2173,10 @@ public partial class Commands
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
+		if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
-			accounting.Persist, accounting.Reconcile, qRegisters);
+			accounting.AsT0.Persist, accounting.AsT0.Reconcile, qRegisters);
 		if (notifyType == "SETQ")
 		{
 			if (changed == 0)
@@ -3006,14 +3007,16 @@ public partial class Commands
 		}
 
 		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
-		async ValueTask DrainAttribute(DbRefAttribute target)
+		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
-			if (validation.IsT1) throw new InvalidOperationException(validation.AsT1.Value);
+			if (validation.IsT1) return new CallState(validation.AsT1.Value);
 			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
 				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
+			if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
-				drainCount, true, accounting.Persist, accounting.Reconcile);
+				drainCount, true, accounting.AsT0.Persist, accounting.AsT0.Reconcile);
+			return null;
 		}
 
 		if (hasAny)
@@ -3022,11 +3025,14 @@ public partial class Commands
 			var filteredPids = pids
 				.GroupBy(data => string.Join('`', data.SemaphoreSource.Attribute), x => x.SemaphoreSource)
 				.Select(x => x.First());
-			await foreach (var uniqueAttribute in filteredPids.WithCancellation(ExecutionBudget.CurrentToken)) await DrainAttribute(uniqueAttribute);
+			await foreach (var uniqueAttribute in filteredPids.WithCancellation(ExecutionBudget.CurrentToken))
+			{
+				if (await DrainAttribute(uniqueAttribute) is { } error) return error;
+			}
 		}
 		else
 		{
-			await DrainAttribute(new DbRefAttribute(objectToDrain.Object().DBRef, attribute));
+			if (await DrainAttribute(new DbRefAttribute(objectToDrain.Object().DBRef, attribute)) is { } error) return error;
 		}
 
 		return CallState.Empty;
