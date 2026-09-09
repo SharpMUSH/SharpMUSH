@@ -104,7 +104,7 @@ public class InputSessionServiceTests
 			Object = new SharpObject
 			{
 				Key = number, CreationTime = 1000, Name = "Session test", Type = "PLAYER", Locks = null!, Owner = null!,
-				Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+				Powers = new(AsyncEnumerable.Empty<SharpPower>), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
 				Flags = new(AsyncEnumerable.Empty<SharpObjectFlag>), Parent = null!, Zone = null!, Children = null!
 			},
 			Location = null!, Home = null!, PasswordHash = "", Quota = 0
@@ -418,8 +418,15 @@ public class InputSessionServiceTests
 		var captures = Substitute.For<IInputSessionService>();
 		var queue = Queue(h, captures);
 		var cleanupCouldReadQueue = false;
+		var cleanupFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		captures.When(service => service.Discard(session)).Do(_ =>
-			cleanupCouldReadQueue = Task.Run(() => queue.GetQueueUsage()).Wait(TimeSpan.FromSeconds(2)));
+		{
+			// A dedicated thread tests the lock boundary without depending on thread-pool availability.
+			var probe = new Thread(() => queue.GetQueueUsage()) { IsBackground = true };
+			probe.Start();
+			cleanupCouldReadQueue = probe.Join(TimeSpan.FromSeconds(5));
+			cleanupFinished.TrySetResult();
+		});
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var disposed = false;
@@ -441,6 +448,8 @@ public class InputSessionServiceTests
 				release.TrySetResult();
 				await Drained(queue);
 			}
+			// Ledger removal precedes the out-of-lock callback; an empty queue alone is not completion.
+			await cleanupFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
 			captures.Received(1).Discard(session);
 			await captures.DidNotReceive().DeliverAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<InputSession>(), Arg.Any<MarkupText>(), Arg.Any<bool>());
 			await Assert.That(cleanupCouldReadQueue).IsTrue();
