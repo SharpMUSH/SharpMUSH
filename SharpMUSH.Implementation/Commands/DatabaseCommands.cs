@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
@@ -50,35 +51,7 @@ public partial class Commands
 
 			if (prepareSwitch)
 			{
-				// For prepared statements, we need to split the input on commas
-				// The first part is the query, remaining parts are parameters
-				var parts = new List<string>();
-				var currentPart = new System.Text.StringBuilder();
-				var escaped = false;
-
-				for (var i = 0; i < rawInput.Length; i++)
-				{
-					var ch = rawInput[i];
-					if (escaped)
-					{
-						currentPart.Append(ch);
-						escaped = false;
-					}
-					else if (ch == '\\')
-					{
-						escaped = true;
-					}
-					else if (ch == ',')
-					{
-						parts.Add(currentPart.ToString().Trim());
-						currentPart.Clear();
-					}
-					else
-					{
-						currentPart.Append(ch);
-					}
-				}
-				parts.Add(currentPart.ToString().Trim());
+				var parts = SplitPreparedInput(rawInput);
 
 				if (parts.Count == 0)
 				{
@@ -182,36 +155,7 @@ public partial class Commands
 
 					if (prepareSwitch)
 					{
-						// For prepared statements, we need to split the query input on commas
-						// The first part is the query, remaining parts are parameters
-						var parts = new List<string>();
-						var currentPart = new System.Text.StringBuilder();
-						var escaped = false;
-
-						for (var i = 0; i < rawQueryInput.Length; i++)
-						{
-							var ch = rawQueryInput[i];
-							if (escaped)
-							{
-								currentPart.Append(ch);
-								escaped = false;
-							}
-							else if (ch == '\\')
-							{
-								escaped = true;
-							}
-							else if (ch == ',')
-							{
-								parts.Add(currentPart.ToString().Trim());
-								currentPart.Clear();
-							}
-							else
-							{
-								currentPart.Append(ch);
-							}
-						}
-						parts.Add(currentPart.ToString().Trim());
-
+						var parts = SplitPreparedInput(rawQueryInput);
 						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
 						var parameters = parts.Skip(1).Cast<object?>().ToArray();
 
@@ -254,11 +198,9 @@ public partial class Commands
 						await Mediator.Send(new QueueAttributeRequest(
 							() =>
 							{
-								var values = row.Values.ToList();
-
 								parser.CurrentState.AddRegister("0", MarkupText.Plain(currentRow.ToString()));
 
-								var dict = values.Select((x, i) =>
+								var dict = row.Values.Select((x, i) =>
 										new KeyValuePair<string, CallState>((i + 1).ToString(),
 											MarkupText.Plain(x?.ToString() ?? string.Empty)))
 									.ToDictionary();
@@ -308,4 +250,34 @@ public partial class Commands
 				}
 			});
 	}
+
+	/// <summary>
+	/// Splits a prepared statement's <c>query,param,param...</c> input on unescaped commas; a
+	/// backslash escapes the character after it. Every part comes back trimmed.
+	/// </summary>
+	internal static List<string> SplitPreparedInput(string rawInput)
+	{
+		// A comma after an odd run of backslashes is escaped, so its segment continues into the next one.
+		var parts = new List<string>();
+		var escapedComma = false;
+		foreach (var segment in rawInput.Split(','))
+		{
+			if (escapedComma)
+			{
+				parts[^1] = $"{parts[^1]},{segment}";
+			}
+			else
+			{
+				parts.Add(segment);
+			}
+
+			escapedComma = (segment.Length - segment.AsSpan().TrimEnd('\\').Length) % 2 == 1;
+		}
+
+		return parts.ConvertAll(part => EscapedCharacter().Replace(part, "$1").Trim());
+	}
+
+	/// <summary>A backslash and the character it escapes, or a bare backslash ending the input.</summary>
+	[GeneratedRegex(@"\\([\s\S]?)")]
+	private static partial Regex EscapedCharacter();
 }

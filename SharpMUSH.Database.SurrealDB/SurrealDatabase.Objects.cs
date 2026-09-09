@@ -276,8 +276,11 @@ public partial class SurrealDatabase
 
 	public async ValueTask SetLockAsync(SharpObject target, string lockName, SharpLockData lockData, CancellationToken cancellationToken = default)
 	{
-		var newLocks = target.Locks
-		.SetItem(lockName, lockData);
+		// target.Locks came from DeserializeLocks, so it is already folded onto canonical,
+		// case-insensitive keys; canonicalising the incoming name is what makes SetItem replace an
+		// existing lock rather than add a second spelling of it.
+		var newLocks = LockNames.FoldToImmutable(target.Locks, static data => data)
+			.SetItem(LockNames.Canonical(lockName), lockData);
 		var locksJson = SerializeLocks(newLocks);
 		var parameters = new Dictionary<string, object?>
 		{
@@ -289,7 +292,9 @@ public partial class SurrealDatabase
 
 	public async ValueTask UnsetLockAsync(SharpObject target, string lockName, CancellationToken cancellationToken = default)
 	{
-		var newLocks = target.Locks.Remove(lockName);
+		// Folding first is what makes @unlock able to clear a lock stored under an old spelling.
+		var newLocks = LockNames.FoldToImmutable(target.Locks, static data => data)
+			.Remove(LockNames.Canonical(lockName));
 		var locksJson = SerializeLocks(newLocks);
 		var parameters = new Dictionary<string, object?>
 		{
@@ -894,7 +899,7 @@ public partial class SurrealDatabase
 			"COMMIT TRANSACTION",
 			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
 
-		var sweep = string.Join(string.Empty, ObjectRelationTables.Select(relation =>
+		var sweep = string.Concat(ObjectRelationTables.Select(relation =>
 			$"DELETE {relation} WHERE in IN $doomed OR out IN $doomed;"));
 
 		await ExecuteAsync(

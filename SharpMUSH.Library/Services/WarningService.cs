@@ -151,9 +151,9 @@ public class WarningService(
 			// no secondary GetObjectNodeQuery calls needed.
 			var ownerAny = new AnySharpObject(owner);
 
-			if (!warningsByOwner.TryGetValue(ownerDbRef, out _))
+			if (!warningsByOwner.TryGetValue(ownerDbRef, out var entry))
 			{
-				warningsByOwner[ownerDbRef] = (ownerAny, []);
+				warningsByOwner[ownerDbRef] = entry = (ownerAny, []);
 			}
 
 			var hadWarnings = await CheckObjectAsync(ownerAny, obj);
@@ -161,20 +161,17 @@ public class WarningService(
 			if (hadWarnings)
 			{
 				var objBase = obj.Object();
-				warningsByOwner[ownerDbRef].Warnings.Add($"{objBase.Name}(#{objBase.Key})");
+				entry.Warnings.Add($"{objBase.Name}(#{objBase.Key})");
 			}
 		}
 
-		foreach (var (ownerDbRef, (owner, warnings)) in warningsByOwner)
+		foreach (var (owner, warnings) in warningsByOwner.Values.Where(x => x.Warnings.Count > 0))
 		{
-			if (warnings.Count > 0)
+			// Notify connected owners only (already filtered via ConnectionService)
+			await notifyService.Notify(owner, $"Warning check complete: {warnings.Count} warnings found on your objects:");
+			foreach (var warning in warnings)
 			{
-				// Notify connected owners only (already filtered via ConnectionService)
-				await notifyService.Notify(owner, $"Warning check complete: {warnings.Count} warnings found on your objects:");
-				foreach (var warning in warnings)
-				{
-					await notifyService.Notify(owner, $"  - {warning}");
-				}
+				await notifyService.Notify(owner, $"  - {warning}");
 			}
 		}
 
@@ -297,36 +294,39 @@ public class WarningService(
 		{
 			if (target.IsExit)
 			{
-				var exit = target.AsExit;
+				// One read of the destination edge serves both checks below.
+				int? destinationNumber = null;
+				var destinationReadable = true;
 				try
 				{
-					var destination = await exit.Home.WithCancellation(CancellationToken.None);
-
-					// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still
-					// point at NOTHING. #0 is the master room, a real destination, so only negative
-					// dbrefs are invalid.
-					if (destination.IsNone || destination.WithoutNone().Object().DBRef.Number < 0)
-					{
-						await Complain(checker, target, "exit-unlinked",
-							"Exit is unlinked (no destination set). This exit can be stolen.");
-						hasWarnings = true;
-					}
+					var destination = await target.AsExit.Home.WithCancellation(CancellationToken.None);
+					destinationNumber = destination.IsNone ? null : destination.WithoutNone().Object().DBRef.Number;
 				}
 				catch
 				{
 					// If we can't get the location, consider it unlinked
+					destinationReadable = false;
 					await Complain(checker, target, "exit-unlinked",
 						"Exit is unlinked (no valid destination). This exit can be stolen.");
 					hasWarnings = true;
 				}
 
-				// Check for variable exits without DESTINATION or EXITTO attribute
-				// Variable exits are exits with a destination of HOME (#-1) that use
-				// DESTINATION or EXITTO attributes to dynamically determine the target
-				try
+				if (destinationReadable)
 				{
-					var exitDestination = await target.AsExit.Home.WithCancellation(CancellationToken.None);
-					if (!exitDestination.IsNone && exitDestination.WithoutNone().Object().DBRef.Number == -1)
+					// An @open'd or @unlink'd exit has no destination edge at all; a linked one may still
+					// point at NOTHING. #0 is the master room, a real destination, so only negative
+					// dbrefs are invalid.
+					if (destinationNumber is null or < 0)
+					{
+						await Complain(checker, target, "exit-unlinked",
+							"Exit is unlinked (no destination set). This exit can be stolen.");
+						hasWarnings = true;
+					}
+
+					// Check for variable exits without DESTINATION or EXITTO attribute
+					// Variable exits are exits with a destination of HOME (#-1) that use
+					// DESTINATION or EXITTO attributes to dynamically determine the target
+					if (destinationNumber == -1)
 					{
 						var destAttr = await attributeService.GetAttributeAsync(checker, target, "DESTINATION", IAttributeService.AttributeMode.Read, false);
 						var exitToAttr = await attributeService.GetAttributeAsync(checker, target, "EXITTO", IAttributeService.AttributeMode.Read, false);
@@ -338,10 +338,6 @@ public class WarningService(
 							hasWarnings = true;
 						}
 					}
-				}
-				catch
-				{
-					// If we can't get the location for checking variable exit, skip this check
 				}
 			}
 		}

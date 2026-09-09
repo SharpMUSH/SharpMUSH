@@ -209,10 +209,14 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 
 			default:
 				// Plain text (banners / pre-markup server text): legacy line-by-line, ANSI-stripped.
-				foreach (var raw in message.Split('\n'))
+				var text = message.AsSpan();
+				foreach (var range in text.Split('\n'))
 				{
-					var line = StripAnsi(raw.TrimEnd('\r'));
-					if (!string.IsNullOrEmpty(line))
+					var raw = text[range].TrimEnd('\r');
+					if (raw.IsEmpty)
+						continue;
+					var line = StripAnsi(raw.ToString());
+					if (line.Length > 0)
 						AddLine(line, TerminalLineSource.Server);
 				}
 				return;

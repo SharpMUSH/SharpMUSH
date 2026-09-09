@@ -49,12 +49,20 @@ public partial class OutputTransformService : IOutputTransformService
 	{
 		try
 		{
+			var targetEncoding = GetTargetEncoding(capabilities.Charset);
+
+			// Every transformation keys off an escape, so text without one bound for UTF-8 is already in
+			// its wire form.
+			if (targetEncoding == Encoding.UTF8 && !rawOutput.AsSpan().Contains((byte)0x1b))
+			{
+				return rawOutput;
+			}
+
 			var text = Encoding.UTF8.GetString(rawOutput);
 
 			text = ApplyAnsiTransformations(text, capabilities, preferences);
 			text = ApplyCharsetTransformations(text, capabilities);
 
-			var targetEncoding = GetTargetEncoding(capabilities.Charset);
 			return targetEncoding.GetBytes(text);
 		}
 		catch (Exception ex)
@@ -126,7 +134,7 @@ public partial class OutputTransformService : IOutputTransformService
 	{
 		// MXP line modes share CSI syntax with ANSI, but are needed even with colour disabled.
 		return AnsiEscapeSequenceRegex().Replace(text, match =>
-			preserveMxp && match.Value.EndsWith('z') ? match.Value : string.Empty);
+			preserveMxp && match.ValueSpan.EndsWith('z') ? match.Value : string.Empty);
 	}
 
 	private string StripOsc8Hyperlinks(string text)
@@ -152,15 +160,26 @@ public partial class OutputTransformService : IOutputTransformService
 
 		return SgrRegex().Replace(text, match =>
 		{
-			var parameters = match.Groups[1].Value;
+			var parameters = match.Groups[1].ValueSpan;
 
 			// ESC[m is ESC[0m.
-			var parts = parameters.Length == 0 ? ["0"] : parameters.Split(';');
-			var kept = new List<string>(parts.Length);
-
-			for (var index = 0; index < parts.Length; index++)
+			if (parameters.IsEmpty)
 			{
-				if (!int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var code))
+				parameters = "0";
+			}
+
+			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrChars + 1]);
+			var kept = new SgrSequence(parameters.Length <= StackSgrChars
+				? stackalloc char[parameters.Length]
+				: new char[parameters.Length]);
+
+			// Indexed rather than enumerated: an extended-colour introducer consumes the parameters that
+			// follow it, and how many depends on the selector after it.
+			for (var index = 0; index < ranges.Length; index++)
+			{
+				var code = Parameter(parameters, ranges, index);
+
+				if (code < 0)
 				{
 					continue;
 				}
@@ -169,11 +188,7 @@ public partial class OutputTransformService : IOutputTransformService
 				{
 					// The selector says how many arguments follow: 5 is one palette index, 2 is an RGB
 					// triple. Skipping them as a unit keeps a stray "5" from being emitted as blink.
-					var selector = index + 1 < parts.Length
-						&& int.TryParse(parts[index + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var kind)
-						? kind
-						: -1;
-					index += selector switch { 5 => 2, 2 => 4, _ => 1 };
+					index += Parameter(parameters, ranges, index + 1) switch { 5 => 2, 2 => 4, _ => 1 };
 					continue;
 				}
 
@@ -201,11 +216,80 @@ public partial class OutputTransformService : IOutputTransformService
 					attributeOpen = true;
 				}
 
-				kept.Add(code.ToString(CultureInfo.InvariantCulture));
+				kept.Append(code);
 			}
 
-			return kept.Count == 0 ? string.Empty : $"\x1b[{string.Join(';', kept)}m";
+			return kept.ToString();
 		});
+	}
+
+	/// <summary>Parameter lists up to this many characters are split and rewritten on the stack.</summary>
+	private const int StackSgrChars = 256;
+
+	/// <summary>
+	/// The parameter list split on <c>;</c>, one range per parameter — including the empty ones a
+	/// doubled separator produces, which the callers decide about themselves. A list of n characters
+	/// holds at most n + 1 parameters, so the ranges never run short.
+	/// </summary>
+	private static Span<Range> SplitSgrParameters(ReadOnlySpan<char> parameters, Span<Range> scratch)
+	{
+		var ranges = parameters.Length < scratch.Length ? scratch : new Range[parameters.Length + 1];
+		return ranges[..parameters.Split(ranges, ';')];
+	}
+
+	/// <summary>
+	/// The parameter at <paramref name="index"/>, or -1 when there is none or it is not a number. The
+	/// regex admits only digits and separators, so a real parameter is never negative.
+	/// </summary>
+	private static int Parameter(ReadOnlySpan<char> parameters, ReadOnlySpan<Range> ranges, int index) =>
+		index < ranges.Length
+		&& int.TryParse(parameters[ranges[index]], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+			? value
+			: -1;
+
+	/// <summary>
+	/// Assembles the parameter list of one rewritten SGR sequence. Every rewrite keeps or shortens each
+	/// parameter, so a buffer the size of the original list always holds the result. It is written in
+	/// place rather than joined from a list because this runs for every SGR sequence on every output
+	/// line, and the parameters it keeps verbatim are spans with no string to hand to a join.
+	/// </summary>
+	private ref struct SgrSequence(Span<char> buffer)
+	{
+		private readonly Span<char> _buffer = buffer;
+		private int _length;
+		private bool _hasParameter;
+
+		public void Append(ReadOnlySpan<char> parameter)
+		{
+			Separate();
+			parameter.CopyTo(_buffer[_length..]);
+			_length += parameter.Length;
+		}
+
+		public void Append(int parameter)
+		{
+			Separate();
+			parameter.TryFormat(_buffer[_length..], out var written, provider: CultureInfo.InvariantCulture);
+			_length += written;
+		}
+
+		/// <summary>
+		/// Counted by parameter rather than by character written, because an empty parameter — the
+		/// reset a leading <c>;</c> spells — adds nothing to the buffer yet still needs its separator.
+		/// </summary>
+		private void Separate()
+		{
+			if (_hasParameter)
+			{
+				_buffer[_length++] = ';';
+			}
+
+			_hasParameter = true;
+		}
+
+		/// <summary>The sequence, or nothing at all when every parameter was dropped.</summary>
+		public override string ToString() =>
+			_hasParameter ? $"\x1b[{_buffer[.._length]}m" : string.Empty;
 	}
 
 	/// <summary>Foreground, background, their defaults, and the bright aixterm ranges.</summary>
@@ -237,34 +321,39 @@ public partial class OutputTransformService : IOutputTransformService
 
 		return SgrRegex().Replace(text, match =>
 		{
-			var parameters = match.Groups[1].Value;
+			var parameters = match.Groups[1].ValueSpan;
 
-			if (parameters.Length == 0)
+			if (parameters.IsEmpty)
 			{
 				return match.Value;
 			}
 
-			var parts = parameters.Split(';');
-			var rewritten = new List<string>(parts.Length);
+			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrChars + 1]);
+			var rewritten = new SgrSequence(parameters.Length <= StackSgrChars
+				? stackalloc char[parameters.Length]
+				: new char[parameters.Length]);
 
-			for (var index = 0; index < parts.Length; index++)
+			// Indexed rather than enumerated: a well-formed extended colour is read and skipped as a group,
+			// while a malformed one is kept as it was and its arguments are read as plain parameters.
+			for (var index = 0; index < ranges.Length; index++)
 			{
-				if (!int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var code)
-						|| code is not (38 or 48))
+				var code = Parameter(parameters, ranges, index);
+
+				if (code is not (38 or 48))
 				{
-					rewritten.Add(parts[index]);
+					rewritten.Append(parameters[ranges[index]]);
 					continue;
 				}
 
 				var layer = code == 38 ? 3 : 4;
-				var selector = Parameter(parts, index + 1);
+				var selector = Parameter(parameters, ranges, index + 1);
 				var palette = selector switch
 				{
-					2 when Parameter(parts, index + 2) is >= 0 and <= 255 and var r
-								 && Parameter(parts, index + 3) is >= 0 and <= 255 and var g
-								 && Parameter(parts, index + 4) is >= 0 and <= 255 and var b
+					2 when Parameter(parameters, ranges, index + 2) is >= 0 and <= 255 and var r
+								 && Parameter(parameters, ranges, index + 3) is >= 0 and <= 255 and var g
+								 && Parameter(parameters, ranges, index + 4) is >= 0 and <= 255 and var b
 						=> MapRgbTo256Color((byte)r, (byte)g, (byte)b),
-					5 => Parameter(parts, index + 1 + 1),
+					5 => Parameter(parameters, ranges, index + 2),
 					_ => -1
 				};
 
@@ -272,24 +361,26 @@ public partial class OutputTransformService : IOutputTransformService
 				// would leave the rest of the line coloured by whatever came before.
 				if (palette is < 0 or > 255)
 				{
-					rewritten.Add(parts[index]);
+					rewritten.Append(parameters[ranges[index]]);
 					continue;
 				}
 
 				index += selector switch { 2 => 4, 5 => 2, _ => 0 };
-				rewritten.AddRange(toBasic
-					? [BasicColorParameter(layer, Map256ColorTo16Color(palette))]
-					: new[] { code.ToString(CultureInfo.InvariantCulture), "5", palette.ToString(CultureInfo.InvariantCulture) });
+
+				if (toBasic)
+				{
+					rewritten.Append(BasicColorParameter(layer, Map256ColorTo16Color(palette)));
+				}
+				else
+				{
+					rewritten.Append(code);
+					rewritten.Append(5);
+					rewritten.Append(palette);
+				}
 			}
 
-			return rewritten.Count == 0 ? string.Empty : $"\x1b[{string.Join(';', rewritten)}m";
+			return rewritten.ToString();
 		});
-
-		static int Parameter(string[] parts, int index) =>
-			index < parts.Length
-			&& int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-				? value
-				: -1;
 	}
 
 	/// <summary>
@@ -297,11 +388,10 @@ public partial class OutputTransformService : IOutputTransformService
 	/// index — that spells 38 and 39, which are the extended-colour introducer and the default
 	/// foreground — but the aixterm ranges 90-97 and 100-107.
 	/// </summary>
-	private static string BasicColorParameter(int layer, int color) =>
-		(color < 8
+	private static int BasicColorParameter(int layer, int color) =>
+		color < 8
 			? (layer == 3 ? 30 : 40) + color
-			: (layer == 3 ? 90 : 100) + color - 8)
-		.ToString(CultureInfo.InvariantCulture);
+			: (layer == 3 ? 90 : 100) + color - 8;
 
 	/// <summary>
 	/// The standard xterm-256 quantisation: the 6×6×6 colour cube for anything with a hue, and the
@@ -377,12 +467,18 @@ public partial class OutputTransformService : IOutputTransformService
 
 	private static Encoding GetTargetEncoding(string charset)
 	{
-		return charset.ToUpperInvariant() switch
+		if (charset.Equals("ASCII", StringComparison.OrdinalIgnoreCase))
 		{
-			"UTF-8" => Encoding.UTF8,
-			"ASCII" => Encoding.ASCII,
-			"LATIN-1" or "ISO-8859-1" => Encoding.Latin1,
-			_ => Encoding.UTF8 // Default to UTF-8
-		};
+			return Encoding.ASCII;
+		}
+
+		if (charset.Equals("LATIN-1", StringComparison.OrdinalIgnoreCase)
+				|| charset.Equals("ISO-8859-1", StringComparison.OrdinalIgnoreCase))
+		{
+			return Encoding.Latin1;
+		}
+
+		// UTF-8, and the default for anything unrecognised.
+		return Encoding.UTF8;
 	}
 }

@@ -1,5 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
@@ -12,6 +16,8 @@ public class ListenPatternMatcherTests
 	private IListenPatternMatcher ListenPatternMatcher =>
 		WebAppFactoryArg.Services.GetRequiredService<IListenPatternMatcher>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	[Test]
 	[Category("NeedsSetup")]
@@ -25,17 +31,26 @@ public class ListenPatternMatcherTests
 		await ValueTask.CompletedTask;
 	}
 
+	/// <summary>
+	/// A wildcard <c>^</c>-pattern binds the whole match as group 0 and each star after it, in
+	/// pattern order - the registers ProcessListenPatternsAsync hands the attribute as %0..%N.
+	/// </summary>
 	[Test]
-	[Category("NeedsSetup")]
-	[Skip("Integration test - requires database with ^-listen patterns")]
 	public async ValueTask MatchListenPatternsAsync_WithMatchingPattern_ReturnsMatch()
 	{
-		// This test would require:
-		// 1. An object with MONITOR flag set
-		// 2. ^-listen pattern attributes (e.g., ^*says*)
-		// 3. Message that matches the pattern
-		// 4. Verification that match is returned with captured groups
-		await ValueTask.CompletedTask;
+		var created = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ListenMatch");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&LISTEN1 #{created.Number}=^* says *:think %0"));
+
+		var listener = (await Mediator.Send(new GetObjectNodeQuery(created))).Known;
+		var speaker = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+
+		var matches = await ListenPatternMatcher.MatchListenPatternsAsync(listener, "God says hello", speaker);
+
+		await Assert.That(matches).HasSingleItem();
+		await Assert.That(matches[0].Attribute.Name).IsEqualTo("LISTEN1");
+		await Assert.That(matches[0].Behavior).IsEqualTo(ListenBehavior.AHear);
+		await Assert.That(matches[0].CapturedGroups).IsEquivalentTo(new[] { "God says hello", "God", "hello" });
 	}
 
 	[Test]

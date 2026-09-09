@@ -90,7 +90,7 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Tagged)),
 			"urgent"
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Urgent)),
-			"folder"
+			"folder" or "all"
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
@@ -154,6 +154,8 @@ public static class MessageListHelper
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Tagged)),
 			"urgent"
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Where(x => x.Urgent)),
+			"folder" or "all"
+				=> ErrorOrMailList.FromAsyncEnumerable(mailList),
 			_ when rangeSplit.Length == 2
 						 && int.TryParse(rangeSplit[0], out var left) && int.TryParse(rangeSplit[1], out var right)
 				=> ErrorOrMailList.FromAsyncEnumerable(mailList.Skip(left - 1).Take(right - left)),

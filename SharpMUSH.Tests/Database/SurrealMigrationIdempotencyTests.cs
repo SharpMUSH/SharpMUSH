@@ -138,4 +138,39 @@ public class SurrealMigrationIdempotencyTests
 
 		await Assert.That(created.Number).IsEqualTo(43);
 	}
+
+	/// <summary>
+	/// PennMUSH renames Pueblo_Send to Send_OOB at load (<c>src/flags.c:850-855</c>) by rewriting the
+	/// FLAG struct in place, so grants follow the rename for free. Grants here are graph edges to a
+	/// record keyed by the power's name, so migration has to move them and drop the superseded
+	/// record — otherwise a world seeded before the rename keeps an edge to an orphan and the holder
+	/// silently loses the power.
+	/// </summary>
+	[Test]
+	public async Task Migrate_MovesLegacyPuebloSendGrantsOntoSendOob()
+	{
+		var (_, client) = await CreateMigratedAsync("pueblosendrename");
+
+		// A world seeded before the rename: the old record, and God holding it.
+		await client.RawQuery(
+			"CREATE power:Pueblo_Send SET name = 'Pueblo_Send', alias = '', symbol = '', system = true, " +
+			"disabled = false, setPermissions = ['wizard','log'], unsetPermissions = ['wizard'], " +
+			"typeRestrictions = ['ROOM','PLAYER','EXIT','THING']");
+		await client.RawQuery("RELATE object:1->has_powers->power:Pueblo_Send");
+
+		await NewDatabase(client).Migrate();
+
+		await Assert.That(await CountAsync(client,
+				"SELECT count() AS cnt FROM has_powers WHERE in = object:1 AND out = power:Send_OOB GROUP ALL"))
+			.IsEqualTo(1L)
+			.Because("the grant has to follow the rename, as it does in PennMUSH");
+		await Assert.That(await CountAsync(client,
+				"SELECT count() AS cnt FROM has_powers WHERE out = power:Pueblo_Send GROUP ALL"))
+			.IsEqualTo(0L)
+			.Because("leaving the old edge behind would double-count the power");
+		await Assert.That(await CountAsync(client,
+				"SELECT count() AS cnt FROM power WHERE id = power:Pueblo_Send GROUP ALL"))
+			.IsEqualTo(0L)
+			.Because("the superseded record is dropped, not left orphaned beside the new one");
+	}
 }

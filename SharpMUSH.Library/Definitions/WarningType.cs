@@ -158,14 +158,19 @@ public static class WarningTypeHelper
 		var flags = WarningType.None;
 		var negateFlags = WarningType.None;
 
-		var warnings = warningList.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-		foreach (var warning in warnings)
+		var names = WarningNames.GetAlternateLookup<ReadOnlySpan<char>>();
+		foreach (var range in warningList.AsSpan().Split(' '))
 		{
-			var isNegated = warning.StartsWith('!');
+			var warning = warningList.AsSpan(range).Trim();
+			if (warning.IsEmpty)
+			{
+				continue;
+			}
+
+			var isNegated = warning[0] == '!';
 			var warningName = isNegated ? warning[1..] : warning;
 
-			if (WarningNames.TryGetValue(warningName, out var flag))
+			if (names.TryGetValue(warningName, out var flag))
 			{
 				if (isNegated)
 				{
@@ -178,7 +183,7 @@ public static class WarningTypeHelper
 			}
 			else
 			{
-				unknownWarnings?.Add(warning);
+				unknownWarnings?.Add(warning.ToString());
 			}
 		}
 

@@ -1,3 +1,4 @@
+using System.Buffers;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
@@ -51,10 +52,20 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 		}
 	}
 
+	/// <summary>
+	/// Every character that cannot appear in a literal NATS subject token: the separator and the two
+	/// wildcards, plus all whitespace and control characters.
+	/// </summary>
+	private static readonly SearchValues<char> NotASubjectToken = SearchValues.Create(
+		Enumerable.Range(char.MinValue, char.MaxValue + 1)
+			.Select(codePoint => (char)codePoint)
+			.Where(c => c is '.' or '*' or '>' || char.IsWhiteSpace(c) || char.IsControl(c))
+			.ToArray());
+
 	private static string Subject(string session)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(session);
-		if (session.Any(c => c is '.' or '*' or '>' || char.IsWhiteSpace(c) || char.IsControl(c)))
+		if (session.AsSpan().ContainsAny(NotASubjectToken))
 			throw new ArgumentException("A replay session must be a single literal NATS subject token.", nameof(session));
 		return $"{SubjectPrefix}.{session}";
 	}

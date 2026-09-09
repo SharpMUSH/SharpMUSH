@@ -23,11 +23,9 @@ public static class ChannelWhat
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var prefix = prefixArgument.ToPlainText().Trim();
 
-		// Materialised before the per-channel reads, as everywhere else that walks the channel list.
-		var all = await mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 		List<MString> lines = [];
 
-		foreach (var channel in all)
+		await foreach (var channel in mediator.CreateStream(new GetChannelListQuery()))
 		{
 			if (!await permissionService.ChannelCanSeeAsync(executor, channel)
 					|| (prefix.Length != 0

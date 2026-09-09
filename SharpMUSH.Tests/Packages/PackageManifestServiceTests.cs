@@ -120,9 +120,25 @@ public class PackageManifestServiceTests
 	[Arguments("1.-2")]
 	[Arguments("1.0-")]
 	[Arguments("1.0.0+build5")]
+	[Arguments("1..2")]
+	[Arguments(".1")]
+	[Arguments("1.")]
 	public async Task PackageVersion_RejectsInvalidForms(string input)
 	{
 		await Assert.That(PackageVersion.TryParse(input, out _)).IsFalse();
+	}
+
+	[Test]
+	[Arguments("1.0.0-beta.1", "1.0.0-beta.1")]
+	[Arguments("1.0.0-rc", "1.0.0-rc")]
+	[Arguments(" 1.0.0 ", "1.0.0")]
+	public async Task PackageVersion_ComparesEqualIdentifiersAsEqual(string left, string right)
+	{
+		PackageVersion.TryParse(left, out var a);
+		PackageVersion.TryParse(right, out var b);
+
+		await Assert.That(a.CompareTo(b)).IsEqualTo(0);
+		await Assert.That(b.CompareTo(a)).IsEqualTo(0);
 	}
 
 	[Test]
