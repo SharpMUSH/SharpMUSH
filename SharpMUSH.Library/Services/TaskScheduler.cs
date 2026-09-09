@@ -3,6 +3,11 @@ using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -11,6 +16,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace SharpMUSH.Library.Services;
 
@@ -37,6 +43,8 @@ public class TaskScheduler(
 	ISchedulerFactory schedulerFactory,
 	IAttributeService attributeService,
 	IMediator mediator,
+	INotifyService notifyService,
+	IOptionsMonitor<SharpMUSHOptions> options,
 	ILogger<TaskScheduler> logger) : ITaskScheduler, IAsyncDisposable
 {
 	private long _nextPid = 0;
@@ -45,8 +53,20 @@ public class TaskScheduler(
 	/// <summary>
 	/// Represents a queued command entry for the FIFO immediate-execution queue.
 	/// </summary>
+	/// <param name="Executor">
+	/// The object the entry runs as, or <see langword="null"/> for work that belongs to no object
+	/// (the scheduler's own plumbing, and test fixtures). Entries without an executor are not
+	/// charged against anyone's queue quota.
+	/// </param>
+	/// <param name="OwnerNumber">
+	/// The dbref number of <paramref name="Executor"/>'s owner at admission time, which is the key
+	/// the quota is counted under. Held on the entry rather than looked up again on release, so a
+	/// <c>@chown</c> between admission and completion cannot credit the decrement to the wrong owner.
+	/// </param>
 	private sealed record QueueEntry(
 		long Pid,
+		DBRef? Executor,
+		int? OwnerNumber,
 		string TriggerName,
 		string Group,
 		Func<ValueTask<CallState?>> Action,
@@ -62,6 +82,14 @@ public class TaskScheduler(
 			FullMode = BoundedChannelFullMode.Wait
 		});
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
+
+	/// <summary>
+	/// Pending immediate-queue entries per owner dbref number — PennMUSH's per-object <c>QUEUE</c>
+	/// counter (<c>src/cque.c:173</c>), incremented on admission and decremented when the entry
+	/// leaves the queue.
+	/// </summary>
+	private readonly ConcurrentDictionary<int, int> _pendingByOwner = new();
+
 	private readonly CancellationTokenSource _shutdownCts = new();
 	private Task? _consumerTask;
 
@@ -78,8 +106,7 @@ public class TaskScheduler(
 			{
 				if (entry.Cts.IsCancellationRequested)
 				{
-					_pendingEntries.TryRemove(entry.Pid, out _);
-					entry.Cts.Dispose();
+					ReleaseEntry(entry);
 					continue;
 				}
 
@@ -93,14 +120,169 @@ public class TaskScheduler(
 				}
 				finally
 				{
-					_pendingEntries.TryRemove(entry.Pid, out _);
-					entry.Cts.Dispose();
+					ReleaseEntry(entry);
 				}
 			}
 		}
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested)
 		{
 		}
+	}
+
+	/// <summary>
+	/// Takes one entry out of the pending set and gives its owner the quota slot back — the
+	/// <c>add_to(executor, -1)</c> that PennMUSH pairs with every admission (<c>src/cque.c:1133</c>).
+	/// </summary>
+	/// <remarks>
+	/// The <see cref="ConcurrentDictionary{TKey,TValue}.TryRemove(TKey,out TValue)"/> is what makes
+	/// this exactly-once: an entry can reach here twice — cancelled by <see cref="Halt(DBRef)"/> and
+	/// then read off the channel by the consumer — and only the first call releases anything.
+	/// </remarks>
+	private void ReleaseEntry(QueueEntry entry)
+	{
+		if (!_pendingEntries.TryRemove(entry.Pid, out _))
+		{
+			return;
+		}
+
+		if (entry.OwnerNumber is { } owner)
+		{
+			_pendingByOwner.AddOrUpdate(owner, 0, (_, current) => Math.Max(0, current - 1));
+		}
+
+		entry.Cts.Dispose();
+	}
+
+	/// <summary>
+	/// Builds a queue entry, charges it to its owner's quota, and writes it to the immediate queue.
+	/// This is the one admission point for that queue: PennMUSH's <c>insert_que</c>.
+	/// </summary>
+	/// <param name="executor">
+	/// The object the entry runs as, or <see langword="null"/> for work owned by nobody, which is
+	/// admitted unconditionally.
+	/// </param>
+	private async ValueTask Admit(
+		long pid,
+		DBRef? executor,
+		string triggerName,
+		string group,
+		Func<ValueTask<CallState?>> action)
+	{
+		var owner = executor is null ? null : await OwnerOf(executor.Value);
+
+		if (owner is not null && !await Charge(owner, executor!.Value))
+		{
+			return;
+		}
+
+		var entry = new QueueEntry(
+			pid, executor, owner?.Object().DBRef.Number, triggerName, group, action, new CancellationTokenSource());
+		_pendingEntries[pid] = entry;
+
+		if (_immediateQueue.Writer.TryWrite(entry))
+		{
+			return;
+		}
+
+		ReleaseEntry(entry);
+		logger.LogWarning(
+			"Immediate queue is full at {Capacity} entries; dropped PID {Pid} in group {Group}",
+			ImmediateQueueCapacity, pid, group);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>queue_limit</c> (<c>src/cque.c:226</c>): increment the owner's pending count, and
+	/// refuse the entry if that count is now past the owner's quota.
+	/// </summary>
+	/// <remarks>
+	/// The count is incremented before the quota is read, so concurrent admissions cannot both slip
+	/// past the same free slot. Reading the quota costs a wizard-and-power lookup, so it is only read
+	/// once the cheap configured floor has been passed — every owner's quota is at least that floor.
+	/// </remarks>
+	private async ValueTask<bool> Charge(AnySharpObject owner, DBRef offender)
+	{
+		var ownerNumber = owner.Object().DBRef.Number;
+		var pending = _pendingByOwner.AddOrUpdate(ownerNumber, 1, (_, current) => current + 1);
+
+		if (pending <= (int)options.CurrentValue.Limit.PlayerQueueLimit || pending <= await QuotaFor(owner))
+		{
+			return true;
+		}
+
+		_pendingByOwner.AddOrUpdate(ownerNumber, 0, (_, current) => Math.Max(0, current - 1));
+		await HaltRunaway(offender, owner);
+		return false;
+	}
+
+	/// <summary>
+	/// How many entries this owner may hold. Wizards and holders of the <c>Queue</c> power get the
+	/// configured limit plus the size of the database, as <c>help @queue</c> documents and
+	/// <c>HugeQueue</c> (<c>hdrs/mushdb.h:36</c>) decides.
+	/// </summary>
+	private async ValueTask<int> QuotaFor(AnySharpObject owner)
+	{
+		var limit = (int)options.CurrentValue.Limit.PlayerQueueLimit;
+
+		return await owner.IsWizard() || await owner.HasPower("QUEUE")
+			? limit + await mediator.Send(new GetObjectCountQuery())
+			: limit;
+	}
+
+	/// <summary>
+	/// The object an entry is charged to. PennMUSH counts per owner when <c>QUEUE_PER_OWNER</c> is
+	/// set (<c>src/cque.c:180</c>); SharpMUSH has no such switch and always counts per owner, so one
+	/// player cannot multiply their allowance by spreading a loop over their objects.
+	/// </summary>
+	private async ValueTask<AnySharpObject?> OwnerOf(DBRef executor)
+	{
+		var node = await mediator.Send(new GetObjectNodeQuery(executor));
+
+		if (node.IsNone)
+		{
+			return null;
+		}
+
+		// An object whose owner cannot be resolved is charged to nobody rather than to a guessed
+		// stand-in: a wrong owner would spend someone else's allowance.
+		var owner = await node.Known.Object().Owner.WithCancellation(CancellationToken.None);
+
+		return owner is null ? null : new AnySharpObject(owner);
+	}
+
+	/// <summary>
+	/// PennMUSH's "Runaway object" path (<c>src/cque.c:303-310</c>): tell the owner, log it, wipe the
+	/// offender's queue and set it HALT. The refused entry is simply not queued.
+	/// </summary>
+	private async ValueTask HaltRunaway(DBRef offender, AnySharpObject owner)
+	{
+		var node = await mediator.Send(new GetObjectNodeQuery(offender));
+		var name = node.IsNone ? offender.ToString() : node.Known.Object().Name;
+
+		// The wipe has to happen: without it the backlog the object already built keeps running, each
+		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
+		await Halt(offender);
+
+		if (!node.IsNone)
+		{
+			// The @halt flag path (GeneralCommands.cs:2055): the flag is looked up by name, and a
+			// database missing it is a seeding problem rather than something to invent a flag for.
+			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"));
+
+			if (haltFlag is not null)
+			{
+				await mediator.Send(new SetObjectFlagCommand(node.Known, haltFlag));
+			}
+		}
+
+		// Penn notifies first and halts second, which it can afford because insert_que refuses to
+		// queue anything for a halted object. SharpMUSH has no such gate, so the flag goes on before
+		// the notification: a @listen or ^-pattern woken by that notification would otherwise be able
+		// to queue as the offender again and land straight back here.
+		await notifyService.NotifyLocalized(owner.Object().DBRef,
+			nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, offender.ToString());
+
+		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its queue quota; commands halted",
+			name, offender);
 	}
 
 	public async ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
@@ -124,19 +306,11 @@ public class TaskScheduler(
 		}
 	}
 
-	public ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+	public ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group,
+		DBRef? executor = null)
 	{
 		EnsureConsumerStarted();
-		var pid = NextPid();
-		var entry = new QueueEntry(pid, triggerName, group, action, new CancellationTokenSource());
-		_pendingEntries[pid] = entry;
-		if (!_immediateQueue.Writer.TryWrite(entry))
-		{
-			_pendingEntries.TryRemove(pid, out _);
-			entry.Cts.Dispose();
-			logger.LogWarning("Failed to enqueue work (PID {Pid}, Group {Group}) - queue may be completed", pid, group);
-		}
-		return ValueTask.CompletedTask;
+		return Admit(NextPid(), executor, triggerName, group, action);
 	}
 
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
@@ -172,47 +346,23 @@ public class TaskScheduler(
 	{
 		EnsureConsumerStarted();
 		var pid = NextPid();
-		var entry = new QueueEntry(
-			pid,
-			$"handle:{handle}-{pid}",
-			DirectInputGroup,
+
+		return Admit(pid, state.Executor, $"handle:{handle}-{pid}", DirectInputGroup,
 			async () =>
 			{
 				if (!string.IsNullOrEmpty(state.ConnectionSessionId) &&
 					connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
 				return await parser.FromState(state).CommandParse(handle, connectionService, command);
-			},
-			new CancellationTokenSource()
-		);
-		_pendingEntries[pid] = entry;
-		if (!_immediateQueue.Writer.TryWrite(entry))
-		{
-			_pendingEntries.TryRemove(pid, out _);
-			entry.Cts.Dispose();
-			logger.LogWarning("Failed to enqueue user command (PID {Pid}) - queue may be completed", pid);
-		}
-		return ValueTask.CompletedTask;
+			});
 	}
 
 	public ValueTask WriteCommandList(MString command, ParserState state)
 	{
 		EnsureConsumerStarted();
 		var pid = NextPid();
-		var entry = new QueueEntry(
-			pid,
-			$"dbref:{state.Executor}-{pid}",
-			EnqueueGroup,
-			() => parser.FromState(state).CommandListParse(command),
-			new CancellationTokenSource()
-		);
-		_pendingEntries[pid] = entry;
-		if (!_immediateQueue.Writer.TryWrite(entry))
-		{
-			_pendingEntries.TryRemove(pid, out _);
-			entry.Cts.Dispose();
-			logger.LogWarning("Failed to enqueue command list (PID {Pid}) - queue may be completed", pid);
-		}
-		return ValueTask.CompletedTask;
+
+		return Admit(pid, state.Executor, $"dbref:{state.Executor}-{pid}", EnqueueGroup,
+			() => parser.FromState(state).CommandListParse(command));
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
@@ -247,10 +397,10 @@ int oldValue)
 	{
 		EnsureConsumerStarted();
 		var pid = NextPid();
-		var entry = new QueueEntry(
-			pid,
-			$"async:{dbAttribute}-{pid}",
-			EnqueueGroup,
+
+		// The state the closure produces is not available until the entry runs, so the attribute's own
+		// object stands in as the executor: an attribute queued this way always runs as its holder.
+		return Admit(pid, dbAttribute.DbRef, $"async:{dbAttribute}-{pid}", EnqueueGroup,
 			async () =>
 			{
 				var parserState = await function();
@@ -267,17 +417,7 @@ int oldValue)
 				if (!attr.IsAttribute) return new CallState("#-1");
 
 				return await parser.FromState(parserState).CommandListParse(attr.AsAttribute.Last().Value);
-			},
-			new CancellationTokenSource()
-		);
-		_pendingEntries[pid] = entry;
-		if (!_immediateQueue.Writer.TryWrite(entry))
-		{
-			_pendingEntries.TryRemove(pid, out _);
-			entry.Cts.Dispose();
-			logger.LogWarning("Failed to enqueue async attribute (PID {Pid}) - queue may be completed", pid);
-		}
-		return ValueTask.CompletedTask;
+			});
 	}
 
 	public async ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute,
@@ -347,7 +487,8 @@ int oldValue)
 					await EnqueueWork(
 						() => parser.FromState(state).CommandListParse(command),
 						triggerKey.Name,
-						triggerKey.Group);
+						triggerKey.Group,
+						state.Executor);
 				}
 			}
 			catch (Exception ex)
@@ -383,7 +524,8 @@ int oldValue)
 					await EnqueueWork(
 						() => parser.FromState(state).CommandListParse(command),
 						triggerKey.Name,
-						triggerKey.Group);
+						triggerKey.Group,
+						state.Executor);
 				}
 			}
 			catch (Exception ex)
@@ -482,26 +624,29 @@ int oldValue)
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
 		await _scheduler.UnscheduleJobs(delayed);
 
-		var dbRefPrefix = $"dbref:{dbRef}-";
-		foreach (var kvp in _pendingEntries)
+		foreach (var entry in _pendingEntries.Values.Where(e => IsQueuedFor(e, dbRef)))
 		{
-			if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
-			{
-				kvp.Value.Cts.Cancel();
-				if (_pendingEntries.TryRemove(kvp.Key, out var removed))
-				{
-					removed.Cts.Dispose();
-				}
-			}
+			entry.Cts.Cancel();
+			ReleaseEntry(entry);
 		}
 	}
 
+	/// <summary>
+	/// Whether an immediate-queue entry belongs to <paramref name="dbRef"/>'s object queue, which is
+	/// what <c>@halt &lt;object&gt;</c> and <c>@ps</c> ask about. The entry's executor answers this
+	/// directly; the trigger name does not, because an attribute queued by
+	/// <see cref="WriteAsyncAttribute"/> is named after its attribute rather than its object.
+	/// Direct player input is deliberately excluded, as it is in PennMUSH.
+	/// </summary>
+	private static bool IsQueuedFor(QueueEntry entry, DBRef dbRef)
+		=> entry.Group == EnqueueGroup && entry.Executor?.Number == dbRef.Number;
+
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		if (_pendingEntries.TryRemove(pid, out var entry))
+		if (_pendingEntries.TryGetValue(pid, out var entry))
 		{
 			entry.Cts.Cancel();
-			entry.Cts.Dispose();
+			ReleaseEntry(entry);
 			return true;
 		}
 
@@ -524,7 +669,8 @@ int oldValue)
 			async () => await EnqueueWork(
 				() => parser.FromState(state).CommandListParse(command),
 				$"dbref:{state.Executor}-{pid}",
-				EnqueueGroup),
+				EnqueueGroup,
+				state.Executor),
 			builder => builder
 				.StartAt(DateTimeOffset.UtcNow + delay)
 				.WithSimpleSchedule(x => x.WithRepeatCount(0))
@@ -621,10 +767,9 @@ int oldValue)
 
 	public IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
 	{
-		var dbRefPrefix = $"dbref:{obj}-";
-		return _pendingEntries
-			.Where(kvp => kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
-			.Select(kvp => kvp.Key)
+		return _pendingEntries.Values
+			.Where(entry => IsQueuedFor(entry, obj))
+			.Select(entry => entry.Pid)
 			.ToAsyncEnumerable();
 	}
 

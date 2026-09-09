@@ -1270,6 +1270,9 @@
   <data name="HaltedObjectFormat" xml:space="preserve">
     <value>Halted {0}.</value>
   </data>
+  <data name="RunawayObjectFormat" xml:space="preserve">
+    <value>Runaway object: {0}({1}). Commands halted.</value>
+  </data>
 
   <!-- @notify command (semaphore) -->
   <data name="NotifyMustSpecifySemaphoreObject" xml:space="preserve">

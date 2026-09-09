@@ -1219,6 +1219,9 @@ public static class ErrorMessages
 		public const string HaltedObjectWithActionsFormat = "Halted {0} with replacement actions.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HaltedObjectFormat = "Halted {0}.";
+		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
 
 		public const string NotifyMustSpecifySemaphoreObject = "You must specify an object to use for the semaphore.";
 		public const string NotifyMustSpecifyValidObjectAttribute = "You must specify a valid object with an optional valid attribute to use for the semaphore.";

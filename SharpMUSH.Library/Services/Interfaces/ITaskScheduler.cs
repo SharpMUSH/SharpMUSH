@@ -152,7 +152,12 @@ public interface ITaskScheduler
 	/// <param name="action">The action to execute</param>
 	/// <param name="triggerName">Trigger identifier for tracking</param>
 	/// <param name="group">Group identifier for categorization</param>
-	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
+	/// <param name="executor">
+	/// The object the work runs as, whose owner the entry is charged to for the per-owner queue
+	/// quota, and whose <c>@halt</c> reaches it. Omit it only for work that belongs to no object.
+	/// </param>
+	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group,
+		DBRef? executor = null);
 
 	/// <summary>
 	/// Waits until the immediate-execution queue has no entries left to run, so a test can assert on

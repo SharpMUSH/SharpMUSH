@@ -214,6 +214,12 @@ public class DidItService(
 		// scheduler's own thread while the command that queued it is still running, so sharing the
 		// caller's would be both a data race and a semantic leak — setq() in the action would write the
 		// caller's register frame, and an already-tripped LimitExceeded would silence the action.
+		//
+		// CommandHistory, BreakPropagation and HttpResponse go with them. Each is a channel back into
+		// the frame that queued the action, and a queue entry is a new top-level command list with no
+		// such frame: @retry in the action would replay the triggering command, an @break would be
+		// re-raised by an @include the action never ran under, and @respond would edit an HTTP
+		// response that was assembled and sent long before the queue drained.
 		await mediator.Send(new QueueAttributeRequest(
 			() => ValueTask.FromResult(baseState with
 			{
@@ -231,7 +237,10 @@ public class DidItService(
 				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations = new InvocationCounter(),
 				LimitExceeded = new LimitExceededFlag(),
-				MoveDepth = new InvocationCounter()
+				MoveDepth = new InvocationCounter(),
+				CommandHistory = null,
+				BreakPropagation = null,
+				HttpResponse = null
 			}),
 			new DbRefAttribute(executor, attributePath)));
 
