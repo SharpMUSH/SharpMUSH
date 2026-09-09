@@ -202,7 +202,9 @@ public interface ITaskScheduler
 	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 
-	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null)
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
 		=> throw new NotSupportedException("This scheduler does not support queue control.");

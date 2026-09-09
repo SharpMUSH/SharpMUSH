@@ -339,7 +339,10 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
-	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null)
+	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
+
+	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 	{
 		QueueEntry entry;
 		lock (_admissionLock)
