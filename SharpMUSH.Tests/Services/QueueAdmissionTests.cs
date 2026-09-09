@@ -331,14 +331,21 @@ public class QueueAdmissionTests
 		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
 		var ran = false;
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran = true; return ValueTask.FromResult<CallState?>(null); });
-		await using var queue = Create(parser: parser, mediator: CountingMediator(() => 1, _ => { }));
-		var waiting = await queue.WriteCommandList(MarkupText.Plain("think expired"), ParserState.Empty,
-			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
-		using var held = await queue.EnterSemaphoreMutationAsync();
-		await queue.ReleaseScheduledWork(waiting.Pid!.Value, semaphoreTimeout: true);
-		var drained = Signal();
-		await queue.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
-		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await using var queue = Create(global: 3, parser: parser, mediator: CountingMediator(() => 1, _ => { }));
+		var entered = Signal(); var release = Signal(); var drained = Signal();
+		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var waiting = await queue.WriteCommandList(MarkupText.Plain("think expired"), ParserState.Empty,
+				new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
+			await queue.ReleaseScheduledWork(waiting.Pid!.Value, semaphoreTimeout: true);
+			using var held = await queue.EnterSemaphoreMutationAsync();
+			await queue.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+			release.TrySetResult();
+			await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		}
+		finally { release.TrySetResult(); }
 		await Assert.That(ran).IsFalse();
 	}
 
