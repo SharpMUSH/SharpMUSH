@@ -2593,12 +2593,12 @@ public partial class Commands
 	/// otherwise be silently dropped by an overwrite based on a stale in-memory copy.
 	/// </summary>
 	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
-		=> await Database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+		=> await ObjectDataService.GetExpandedServerDataAsync<SharpMUSHOptions>()
 			?? Configuration.CurrentValue;
 
 	/// <summary>
 	/// Adds or replaces the sitelock rule for <paramref name="pattern"/> with <paramref name="flags"/>,
-	/// persists it via <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, signals a reload via
+	/// persists it via <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, signals a reload via
 	/// <see cref="ConfigurationReloadService.SignalChange"/>, and immediately enforces it via
 	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
 	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
@@ -2616,14 +2616,14 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
 		await BanEnforcer.EnforceHostRuleAsync(pattern);
 	}
 
 	/// <summary>
 	/// Removes the sitelock rule for <paramref name="pattern"/>, persists via
-	/// <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, and signals a reload via
+	/// <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, and signals a reload via
 	/// <see cref="ConfigurationReloadService.SignalChange"/>. Mirrors
 	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
 	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
@@ -2643,7 +2643,7 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
 		return true;
 	}

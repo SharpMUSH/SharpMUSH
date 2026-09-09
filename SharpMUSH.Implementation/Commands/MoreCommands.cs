@@ -3306,7 +3306,10 @@ public partial class Commands
 			else
 			{
 				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
-				current = await Database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None)
+				// Through the Mediator, not the store: GetAttributeQuery is ICacheable, and reading the
+				// same attribute around the cache is what leaves a write's invalidation with nothing
+				// to invalidate (engine data trunk §1).
+				current = await Mediator.CreateStream(new GetAttributeQuery(executor.Object().DBRef, ["LOCALE"]))
 					.Select(attr => attr.Value.ToPlainText())
 					.FirstOrDefaultAsync(saved => !string.IsNullOrEmpty(saved)) ?? current;
 			}

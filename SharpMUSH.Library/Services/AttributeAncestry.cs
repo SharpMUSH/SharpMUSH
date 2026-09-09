@@ -40,8 +40,160 @@ namespace SharpMUSH.Library.Services;
 /// shadowing case right and every inherited tree attribute wrong. Both are needed, in order.
 /// </para>
 /// </remarks>
-internal static class AttributeAncestry
+public static class AttributeAncestry
 {
+	/// <summary>
+	/// The target chain a read walks: <paramref name="origin"/> itself, then its <c>@parent</c>
+	/// chain outward, nearest first.
+	/// </summary>
+	/// <remarks>
+	/// Cycle-guarded and depth-capped. A <c>@parent</c> cycle would otherwise spin here forever —
+	/// defence in depth, since the write-side guards (<c>SafeToAddParent</c>,
+	/// <c>ExceedsMaxParentDepthAsync</c>) should already prevent one from existing at all.
+	/// <paramref name="maxDepth"/> counts parents, not targets, so the chain is at most
+	/// <c>maxDepth + 1</c> long.
+	/// </remarks>
+	public static async ValueTask<DBRef[]> ChainAsync(
+		SharpObject origin, int maxDepth, CancellationToken cancellationToken = default)
+	{
+		var chain = new List<DBRef> { origin.DBRef };
+		var visited = new HashSet<int> { origin.DBRef.Number };
+		var current = origin;
+
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			var parent = await current.Parent.WithCancellation(cancellationToken);
+			if (parent.IsNone) break;
+
+			var parentObj = parent.Known.Object();
+			if (!visited.Add(parentObj.DBRef.Number)) break;
+
+			chain.Add(parentObj.DBRef);
+			current = parentObj;
+		}
+
+		return chain.ToArray();
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>atr_iter_get_parent</c> (<c>src/attrib.c:1500-1622</c>): every attribute
+	/// matching a pattern on <paramref name="originRef"/>, then on each <c>@parent</c> outward,
+	/// each match paired with the object it was read from.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// Generic over the attribute representation so the eager and the lazy readers are one walk and
+	/// cannot drift: the two share a documented contract (<c>GetLazyAttributesQuery</c> is an
+	/// <c>&lt;inheritdoc&gt;</c> of <c>GetAttributesQuery</c>), and the lazy handler used to ignore
+	/// <c>CheckParents</c> outright.
+	/// </para>
+	/// <para>
+	/// <paramref name="originNode"/> is a callback rather than a parameter because the origin's own
+	/// matches are streamed before the object node is ever loaded — an object that does not resolve
+	/// still yields whatever the flat read found, exactly as Penn's iteration does.
+	/// </para>
+	/// </remarks>
+	/// <param name="originRef">The object the lookup was made against.</param>
+	/// <param name="originNode">Loads that object, or null when it does not resolve.</param>
+	/// <param name="maxDepth">The configured <c>MaxParents</c> cap.</param>
+	/// <param name="matches">Streams one target's matches for the caller's pattern and mode.</param>
+	/// <param name="resolvePath">Resolves a full <c>`</c>-path on one target, for the no_inherit test.</param>
+	/// <param name="longNameOf">The attribute's full <c>`</c>-separated name.</param>
+	/// <param name="isNoInherit">Penn's <c>AF_PRIVATE</c> test.</param>
+	public static async IAsyncEnumerable<(T Attribute, DBRef Source)> MatchesWithParentsAsync<T>(
+		DBRef originRef,
+		Func<ValueTask<SharpObject?>> originNode,
+		int maxDepth,
+		Func<DBRef, IAsyncEnumerable<T>> matches,
+		Func<DBRef, string[], IAsyncEnumerable<T>> resolvePath,
+		Func<T, string> longNameOf,
+		Func<T, bool> isNoInherit,
+		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+		await foreach (var attr in matches(originRef).WithCancellation(cancellationToken))
+		{
+			if (seen.Add(longNameOf(attr)))
+			{
+				yield return (attr, originRef);
+			}
+		}
+
+		var origin = await originNode();
+		if (origin is null) yield break;
+
+		var visited = new HashSet<int> { origin.DBRef.Number };
+		var current = origin;
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			var parent = await current.Parent.WithCancellation(cancellationToken);
+			if (parent.IsNone) break;
+
+			var parentObj = parent.Known.Object();
+
+			// A @parent cycle would otherwise spin here forever - defence in depth, since the
+			// write-side guards (SafeToAddParent, ExceedsMaxParentDepthAsync) should already
+			// prevent one from existing at all. See ChainAsync, which mirrors this.
+			if (!visited.Add(parentObj.DBRef.Number)) break;
+
+			await foreach (var attr in matches(parentObj.DBRef).WithCancellation(cancellationToken))
+			{
+				// Penn's atr_iter_get_parent (attrib.c:1500-1622) has an early fast-path
+				// (attrib.c:1522-1529): any literal, non-wildcarded pattern is routed straight
+				// through atr_get_with_parent -- the same function backing get() -- and never
+				// reaches the seen/st_insert iteration loop at all. Every pattern this walk
+				// sees under AttributePatternMode.Exact is literal, so the operative reference
+				// for those is atr_get_with_parent (attrib.c:1232-1252), identical to the fix
+				// in GetAttributeWithInheritanceAsync: a private hit on a nearer ancestor
+				// blocks resolution outright and never falls through to a farther ancestor's
+				// unflagged copy. Recording membership before the flag check reproduces that
+				// outcome for exact-mode lookups.
+				//
+				// The iteration loop (attrib.c:1580-1622, entered only for a genuine wildcard
+				// or regex pattern) has its own st_insert-before-AF_Private ordering, which
+				// gives the same shadowing property there too -- but that loop's private test
+				// only continues the walk rather than aborting it, so a farther ancestor CAN
+				// still surface under a different branch than the one that shadowed it. See
+				// the task report for a known, narrow case where that leaves SharpMUSH
+				// stricter than live Penn for a genuine wildcard pattern.
+				var longName = longNameOf(attr);
+				if (!seen.Add(longName))
+				{
+					continue;
+				}
+
+				// no_inherit on ANY level of the branch blocks the whole path when crossing
+				// this parent boundary (Penn: AF_Private test in atr_get_with_parent,
+				// attrib.c:1232-1252 -- checking the leaf's flags alone only covers the leaf).
+				// Only pay for the full-path re-resolution when there's a branch to check at
+				// all -- a flat (no backtick) attribute IS the whole path, so its own flags
+				// suffice and the common case costs nothing extra.
+				if (longName.Contains('`'))
+				{
+					var segments = longName.Split('`');
+					var path = await resolvePath(parentObj.DBRef, segments).ToArrayAsync(cancellationToken);
+					// Fail closed: if re-resolution doesn't return the full path (a race, or a
+					// name-normalisation mismatch), deny rather than yield the attribute.
+					if (path.Length != segments.Length || path.Any(isNoInherit))
+					{
+						continue;
+					}
+				}
+				else if (isNoInherit(attr))
+				{
+					continue;
+				}
+
+				// The source object rides along with the match: it is what a downstream read
+				// gate has to re-walk the ancestor path against.
+				yield return (attr, parentObj.DBRef);
+			}
+
+			current = parentObj;
+		}
+	}
+
 	/// <summary>
 	/// Whether <paramref name="leaf"/>, found on <paramref name="source"/>, may be read through
 	/// the target chain <paramref name="chain"/>.
