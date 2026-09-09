@@ -68,7 +68,22 @@ public static class LockNames
 		var folded = new Dictionary<string, TValue>(locks.Count, Comparer);
 		if (locks.Count == 0) return folded;
 
-		// Ordered so the winner among two non-canonical spellings does not depend on hash order.
+		// Object load runs this on every object, and a colliding pair is the rare legacy row, so the
+		// first pass allocates nothing beyond the result and bails the moment two keys collide.
+		var collided = false;
+		foreach (var (name, value) in locks)
+		{
+			if (!folded.TryAdd(Canonical(name), value))
+			{
+				collided = true;
+				break;
+			}
+		}
+
+		if (!collided) return folded;
+
+		// Ordered, so which of two non-canonical spellings wins does not depend on hash order.
+		folded.Clear();
 		foreach (var (name, value) in locks.OrderBy(pair => pair.Key, StringComparer.Ordinal))
 		{
 			var canonical = Canonical(name);
