@@ -14,12 +14,51 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	/// <summary>
+	/// The Speech lock every emit-family function has to clear before it may put a message into
+	/// <paramref name="room"/>.
+	/// <para>
+	/// PennMUSH reaches these functions through the very same handlers as the commands —
+	/// <c>fun_emit</c> calls <c>do_emit</c>, <c>fun_lemit</c> calls <c>do_lemit</c>,
+	/// <c>fun_remit</c> calls <c>do_remit</c> (<c>src/funmisc.c:221-296</c>) — so the
+	/// <c>eval_lock_with(..., Speech_Lock, ...)</c> in <c>src/speech.c</c> gates softcode exactly
+	/// as it gates the typed command. Enforcing it in the commands alone leaves the lock a
+	/// suggestion, since <c>emit()</c> is reachable from any softcode the locked-out player runs.
+	/// </para>
+	/// </summary>
+	/// <param name="room">The room the message would land in.</param>
+	/// <param name="executor">Who is trying to speak.</param>
+	/// <param name="notificationKey">
+	/// <see cref="ErrorMessages.Notifications.MayNotSpeakHere"/> for the executor's own location,
+	/// <see cref="ErrorMessages.Notifications.MayNotSpeakThere"/> for any other room, matching
+	/// PennMUSH's two <c>fail_lock</c> strings.
+	/// </param>
+	private async ValueTask<bool> CanSpeakIn(
+		AnySharpContainer room,
+		AnySharpObject executor,
+		string notificationKey)
+	{
+		if (await LockService.Evaluate(LockType.Speech, room.WithExitOption(), executor))
+		{
+			return true;
+		}
+
+		await NotifyService.NotifyLocalized(executor, notificationKey, executor);
+		return false;
+	}
+
 	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.Where();
 		var message = parser.CurrentState.Arguments["0"].Message!;
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakHere)))
+		{
+			return CallState.Empty;
+		}
 
 		await CommunicationService.SendToRoomAsync(
 			executor,
@@ -36,6 +75,12 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.OutermostWhere();
 		var message = parser.CurrentState.Arguments["0"].Message!;
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+		{
+			return CallState.Empty;
+		}
 
 		await CommunicationService.SendToRoomAsync(
 			executor,
@@ -88,6 +133,13 @@ public partial class Functions
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakHere)))
+		{
+			return CallState.Empty;
+		}
+
 		var contents = executorLocation.Content(Mediator);
 
 		await foreach (var obj in contents
@@ -112,7 +164,16 @@ public partial class Functions
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		var executorLocation = await executor.Where();
+		// nslemit() is @nslemit is do_lemit, which speaks into absolute_room(), not the immediate
+		// location (PennMUSH src/speech.c:1333). Reading Where() here made it a second nsemit().
+		var executorLocation = await executor.OutermostWhere();
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+		{
+			return CallState.Empty;
+		}
+
 		var contents = executorLocation.Content(Mediator);
 
 		await foreach (var obj in contents
@@ -327,6 +388,13 @@ public partial class Functions
 				}
 
 				var container = target.AsContainer;
+
+				if (!await CanSpeakIn(container, executor,
+							nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+				{
+					return CallState.Empty;
+				}
+
 				await CommunicationService.SendToRoomAsync(
 					executor,
 					container,
@@ -563,6 +631,12 @@ public partial class Functions
 				async target =>
 				{
 					if (!target.IsContainer)
+					{
+						return CallState.Empty;
+					}
+
+					if (!await CanSpeakIn(target.AsContainer, executor,
+								nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
 					{
 						return CallState.Empty;
 					}
