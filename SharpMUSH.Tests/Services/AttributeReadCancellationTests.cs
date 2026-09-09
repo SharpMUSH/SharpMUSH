@@ -41,6 +41,11 @@ public class AttributeReadCancellationTests
 	[Arguments(true, "permission")]
 	[Arguments(true, "caller-query")]
 	[Arguments(true, "caller-permission")]
+	[Arguments(true, "consumer-query")]
+	[Arguments(true, "consumer-permission")]
+	[Arguments(true, "second-permission")]
+	[Arguments(true, "second-parent")]
+	[Arguments(true, "second-prefix")]
 	[Arguments(true, "privileged-query")]
 	[Arguments(false, "parent")]
 	[Arguments(true, "parent")]
@@ -60,7 +65,7 @@ public class AttributeReadCancellationTests
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
-		using var scope = stage.StartsWith("caller-") ? null : budget.Enter();
+		using var scope = stage.StartsWith("caller-") || stage.StartsWith("consumer-") || stage.StartsWith("second-") ? null : budget.Enter();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		async Task Block(CancellationToken token)
 		{
@@ -83,7 +88,7 @@ public class AttributeReadCancellationTests
 		mediator.CreateStream(Arg.Any<GetAttributesQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
 			stage.EndsWith("query") ? BlockStream<AttributeWithSource>() : new[] { new AttributeWithSource(attr, source) }.ToAsyncEnumerable());
 		mediator.CreateStream(Arg.Any<GetLazyAttributesQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
-			stage.EndsWith("query") ? BlockStream<LazyAttributeWithSource>() : new[] { new LazyAttributeWithSource(lazyAttr, source) }.ToAsyncEnumerable());
+			stage.EndsWith("query") ? BlockStream<LazyAttributeWithSource>() : (stage.StartsWith("second-") ? new[] { new LazyAttributeWithSource(lazyAttr with { Name = "A", Key = "A", LongName = "A" }, target.Object().DBRef), new LazyAttributeWithSource(lazyAttr, source) } : new[] { new LazyAttributeWithSource(lazyAttr, source) }).ToAsyncEnumerable());
 		if (stage == "flags") target.Object().Flags = new(() => BlockStream<SharpObjectFlag>());
 		if (stage == "privileged-query") target.Object().Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", UnsetPermissions = [], SetPermissions = [], System = false, TypeRestrictions = [] } }.ToAsyncEnumerable());
 		async ValueTask<bool> Permission()
@@ -92,14 +97,15 @@ public class AttributeReadCancellationTests
 			return true;
 		}
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Permission());
-		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute[]>()).Returns(_ => Permission());
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute[]>()).Returns(call => stage.StartsWith("second-") && call.Arg<LazySharpAttribute[]>().Last().LongName == "A" ? new ValueTask<bool>(true) : Permission());
 		async Task Read()
 		{
 			if (!lazy) await service.GetAttributePatternAsync(target, target, "*", false, IAttributeService.AttributePatternMode.Wildcard);
 			else
 			{
 				var result = await service.LazilyGetAttributePatternAsync(target, target, "*", false);
-				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") ? cancel.Token : default);
+				using var enumerationScope = stage.StartsWith("consumer-") ? budget.Enter() : null;
+				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
 			}
 		}
 		var operation = Read();
