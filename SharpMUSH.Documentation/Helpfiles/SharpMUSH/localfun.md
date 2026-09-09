@@ -9,7 +9,9 @@ this explicit call. Two owners can register the same local name independently.
 function in your executor's owner scope. The object must have that same owner,
 you must control it, and you must be able to read the attribute. Names contain
 ASCII letters, digits and underscores, up to 64 characters. Built-in names are
-reserved. Argument bounds default to zero through 32.
+reserved, including names contributed by loaded plugins. A temporary softcode
+deletion does not remove that reservation; compiled names stay reserved for the
+library's lifetime. Argument bounds default to zero through 32.
 
 For example, when entered as separate client commands:
 

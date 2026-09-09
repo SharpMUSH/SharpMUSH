@@ -5,13 +5,22 @@ namespace SharpMUSH.Library.Services;
 public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInformation, bool IsSystem)>
 	where TKey : notnull
 {
-	public LibraryService() : base()
+	private readonly HashSet<TKey> _systemNames;
+
+	public LibraryService() : this(null)
 	{
 	}
 
 	protected LibraryService(IEqualityComparer<TKey>? comparer) : base(comparer)
 	{
+		_systemNames = new HashSet<TKey>(Comparer);
 	}
+
+	/// <summary>Reserve a compiled contribution's name for this library's lifetime, including softcode deletion.</summary>
+	public void ReserveSystemName(TKey name) { lock (_systemNames) _systemNames.Add(name); }
+
+	/// <summary>Whether a compiled contribution registered this name, independent of mutable lookup entries.</summary>
+	public bool IsSystemNameReserved(TKey name) { lock (_systemNames) return _systemNames.Contains(name); }
 
 	public static LibraryService<TKey, TValue> FromDictionary(Dictionary<TKey, TValue> dictionary)
 	{

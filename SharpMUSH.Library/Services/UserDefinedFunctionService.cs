@@ -77,6 +77,7 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 	public bool Alias(string alias, string target, DBRef? owner = null)
 	{
 		var targetKey = target.ToLowerInvariant();
+		if (string.Equals(alias, target, StringComparison.OrdinalIgnoreCase)) return false;
 		if (!_functions.TryGetValue(Key(targetKey, owner), out var targetEntry) || targetEntry.AliasOf is not null)
 		{
 			return false;

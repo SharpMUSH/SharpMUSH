@@ -74,4 +74,14 @@ public class LocalFunctionRegistryTests
 		await Assert.That(registry.Resolve("alias")).IsNull();
 	}
 
+	[Test]
+	public async Task SelfAliasLeavesTheConcreteDefinitionIntact()
+	{
+		var registry = new UserDefinedFunctionService();
+		var owner = Ref("#10:100");
+		registry.Define(Entry("source", owner, Ref("#20:100")));
+		await Assert.That(registry.Alias("SOURCE", "source", owner)).IsFalse();
+		await Assert.That(registry.Resolve("source", owner)).IsNotNull();
+	}
+
 }

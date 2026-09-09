@@ -37,8 +37,11 @@ public class SetObjectOwnerCommandHandler(IObjectStore database, IUserDefinedFun
 {
 	public async ValueTask<Unit> Handle(SetObjectOwnerCommand request, CancellationToken cancellationToken)
 	{
+		// Read the current owner from storage: the request's object may carry an older lazy owner.
+		var previous = functions is null ? null : await database.GetBaseObjectNodeAsync(request.Target.Object().DBRef, cancellationToken);
+		var unchanged = previous is not null && (await previous.Owner.WithCancellation(cancellationToken)).Object.DBRef == request.Owner.Object.DBRef;
 		await database.SetObjectOwner(request.Target, request.Owner, cancellationToken);
-		functions?.InvalidateLocalDefinitions(request.Target.Object().DBRef);
+		if (!unchanged) functions?.InvalidateLocalDefinitions(request.Target.Object().DBRef);
 		return Unit.Value;
 	}
 }

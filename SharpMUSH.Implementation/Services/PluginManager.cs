@@ -308,6 +308,7 @@ public sealed class PluginManager(
 			if (functionLibrary.TryAdd(name, (definition, true)))
 			{
 				tracked.FunctionNames.Add(name);
+				functionLibrary.ReserveSystemName(name);
 				added++;
 			}
 			else

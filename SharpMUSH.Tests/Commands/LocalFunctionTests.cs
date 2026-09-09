@@ -148,4 +148,33 @@ public class LocalFunctionTests
 		await Assert.That(local).IsEqualTo(ordinary);
 	}
 
+	[Test]
+	public async Task TemporarilyDeletedBuiltinsRemainReservedForLocals()
+	{
+		var name = "reserved" + Guid.NewGuid().ToString("N");
+		await Cmd($"&{name} me=local");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Cmd("@function/delete add");
+		try
+		{
+			await Cmd($"@function/local add=me,{name}");
+			await Assert.That(await Eval("localfun(add)")).Contains("NOT FOUND");
+			await Cmd($"@function/local/alias add={name}");
+			await Assert.That(await Eval("localfun(add)")).Contains("NOT FOUND");
+		}
+		finally { await Cmd("@function/builtin add"); await Cmd("@function/local/delete add"); }
+	}
+
+	[Test]
+	public async Task AssigningExistingOwnerPreservesLocalDefinitions()
+	{
+		var name = "sameowner" + Guid.NewGuid().ToString("N");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "LocalSameOwner");
+		await Cmd($"&CODE {thing}=unchanged");
+		await Cmd($"@function/local {name}={thing},CODE");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known;
+		await Mediator.Send(new SetObjectOwnerCommand(obj, await obj.Object().Owner.WithCancellation(CancellationToken.None)));
+		await Assert.That(await Eval($"localfun({name})")).IsEqualTo("unchanged");
+	}
+
 }

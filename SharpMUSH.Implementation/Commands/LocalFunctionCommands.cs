@@ -9,7 +9,10 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	private bool IsReservedLocalFunctionName(string name) => FunctionLibrary is not null && FunctionLibrary.TryGetValue(name, out var definition) && definition.IsSystem;
+	private bool IsReservedLocalFunctionName(string name) =>
+		Functions.Builtins.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
+		|| FunctionLibrary.IsSystemNameReserved(name)
+		|| (FunctionLibrary.TryGetValue(name, out var definition) && definition.IsSystem);
 
 	private async ValueTask<Option<CallState>> LocalFunctionCommand(IMUSHCodeParser parser, AnySharpObject executor, string[] switches)
 	{
