@@ -486,7 +486,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		MString? resultMessage,
 		bool didEmitFunctionDebug)
 	{
-		if (didEmitFunctionDebug || resultMessage is null)
+		if (EvaluationRestrictions.Current is not null || callerState.Restrictions is not null
+			|| didEmitFunctionDebug || resultMessage is null)
 		{
 			return;
 		}

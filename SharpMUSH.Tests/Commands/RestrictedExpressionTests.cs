@@ -65,6 +65,26 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestrictedSubstitutionTraceCannotEmitAfterParsing(bool ambient)
+	{
+		var restrictions = new EvaluationRestrictions([]);
+		var state = ParserState.RootFor(Factory.FunctionParser.CurrentState.Executor!.Value) with
+		{
+			Flags = ParserStateFlags.Debug,
+			Restrictions = ambient ? null : restrictions,
+			EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new("private-input") }
+		};
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		using var scope = ambient ? restrictions.Enter() : null;
+		var result = await Factory.FunctionParser.FromState(state).FunctionParse(MarkupText.Plain("%0"), true);
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("private-input");
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
 	public async Task ParentRegistersAndIdentityAreNotInputs()
 	{
 		var parent = ParserState.RootFor(Factory.FunctionParser.CurrentState.Executor!.Value) with
