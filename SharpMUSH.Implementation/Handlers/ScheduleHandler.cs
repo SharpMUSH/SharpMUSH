@@ -12,6 +12,7 @@ public class AdmissionScheduleHandler(ITaskScheduler scheduler) : IRequestHandle
 {
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitCommandListRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.AdmitCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue, request.ManageSemaphoreCount);
 	}
 }
@@ -20,6 +21,7 @@ public class AdmissionAsyncScheduleHandler(ITaskScheduler scheduler) : IRequestH
 {
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitAttributeRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.AdmitAsyncAttribute(request.Input, request.DbRefAttribute, request.Executor);
 	}
 }
@@ -44,6 +46,7 @@ public class AdmissionDelayedScheduleHandler(ITaskScheduler scheduler) : IReques
 {
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitDelayedCommandListRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.AdmitCommandList(request.Command, request.State, request.Delay);
 	}
 }
@@ -52,6 +55,7 @@ public class AdmissionScheduleTimeoutHandler(ITaskScheduler scheduler) : IReques
 {
 	public async ValueTask<QueueAdmissionResult> Handle(AdmitCommandListWithTimeoutRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.AdmitCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue,
 			request.Timeout, request.ManageSemaphoreCount);
 	}
@@ -61,6 +65,7 @@ public class AdmissionScheduleNotifyHandler(ITaskScheduler scheduler) : IRequest
 {
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Handle(NotifySemaphoreCountedRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.NotifyCounted(request.DbRefAttribute, request.OldValue, request.Count);
 	}
 }
@@ -78,6 +83,7 @@ public class AdmissionScheduleNotifyAllHandler(ITaskScheduler scheduler) : IRequ
 {
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Handle(NotifyAllSemaphoreCountedRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		return await scheduler.NotifyAllCounted(request.DbRefAttribute);
 	}
 }
@@ -86,6 +92,7 @@ public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<Dr
 {
 	public async ValueTask<Unit> Handle(DrainSemaphoreRequest request, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		await scheduler.Drain(request.DbRefAttribute, request.Count);
 		return await Unit.ValueTask;
 	}
@@ -94,7 +101,10 @@ public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<Dr
 public class ScheduleDrainCountedHandler(ITaskScheduler scheduler) : IRequestHandler<DrainSemaphoreCountedRequest, int>
 {
 	public ValueTask<int> Handle(DrainSemaphoreCountedRequest request, CancellationToken cancellationToken)
-		=> scheduler.DrainCounted(request.DbRefAttribute, request.Count);
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return scheduler.DrainCounted(request.DbRefAttribute, request.Count);
+	}
 }
 
 public class ScheduleHaltHandler(ITaskScheduler scheduler) : IRequestHandler<HaltObjectQueueRequest>

@@ -131,7 +131,8 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true)
 	{
-		string owner = $"handle:{handle}";
+		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
+		string owner = handle is null ? "system" : $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{
@@ -806,7 +807,7 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
-			.Where(trigger => trigger is not null).Select(trigger => trigger!)
+			.Where(trigger => trigger?.FinalFireTimeUtc is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
