@@ -169,6 +169,7 @@ public partial class TaskScheduler(
 	}
 	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
 	private readonly HashSet<long> _delayedRepairs = [];
+	private readonly HashSet<long> _semaphorePublications = [];
 
 	// Failed admission repairs retain their PID/quota. No later semaphore transaction
 	// may pass this gate until the uncertain write has been restored.
@@ -340,10 +341,18 @@ public partial class TaskScheduler(
 
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null)
 	{
-		// Counter writes precede deferred transitions; failed persistence leaves the reservation retryable.
-		using var mutation = semaphoreTimeout ? await EnterSemaphoreMutationAsync() : null;
-		using var lease = await LockDeferred();
 		QueueEntry entry;
+		lock (_admissionLock)
+		{
+			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
+			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
+				|| _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid))
+				return new(null, QueueRejectionReason.AlreadyReleased);
+		}
+		// Counter writes precede deferred transitions; failed persistence leaves the reservation retryable.
+		using var mutation = entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
+			? await EnterSemaphoreMutationAsync() : null;
+		using var lease = await LockDeferred();
 		lock (_admissionLock)
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
@@ -444,7 +453,7 @@ public partial class TaskScheduler(
 	{
 		if (!manageSemaphoreCount && oldValue < 0) return await AdmitCommandList(command, state);
 		// Serialize counter mutation before exposing a reservation or taking the deferred lease.
-		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
+		using var mutation = await EnterSemaphoreMutationAsync();
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
@@ -453,13 +462,21 @@ public partial class TaskScheduler(
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
+		lock (_admissionLock) _semaphorePublications.Add(pid);
+		var scheduleWriteAttempted = false;
+		var triggerKey = new TriggerKey($"dbref:{state.Executor}-{pid}", group);
 		async ValueTask Schedule(DateTimeOffset due, long generation)
 		{
+			QueueEntry publicationEntry;
+			lock (_admissionLock) publicationEntry = _pendingEntries[pid];
+			using var publication = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, publicationEntry.Cts.Token);
 			await _scheduler.ScheduleJob(JobBuilder.Create<SemaphoreTask>()
 				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
 				{ { "Command", command }, { "State", state }, { "Generation", generation } })).Build(),
 				TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(due)
-					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build(), ExecutionBudget.CurrentToken);
+					.WithIdentity(triggerKey).Build(), publication.Token);
+			publication.Token.ThrowIfCancellationRequested();
+			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
 		var counterWriteAttempted = false;
 		var counterCreated = false;
@@ -506,6 +523,7 @@ public partial class TaskScheduler(
 			var due = DateTimeOffset.UtcNow + timeout;
 			lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
 			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) };
+			scheduleWriteAttempted = true;
 			await Schedule(due, 0);
 			return admission;
 		}
@@ -514,6 +532,14 @@ public partial class TaskScheduler(
 			SemaphoreRepairIdentity? createdIdentity = null;
 			async ValueTask Restore(bool retry)
 			{
+				// A failed acknowledgement may hide a committed trigger. Remove it before
+				// restoring the counter or making its PID available for another admission.
+				if (scheduleWriteAttempted)
+				{
+					await _scheduler.UnscheduleJob(triggerKey, ExecutionBudget.CurrentToken);
+					scheduleWriteAttempted = false;
+				}
+				if (!counterWriteAttempted) return;
 				if (retry || counterCreated)
 				{
 					var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
@@ -548,12 +574,9 @@ public partial class TaskScheduler(
 			}
 			try
 			{
-				if (counterWriteAttempted)
-				{
-					using var cleanup = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
-					using var cleanupScope = cleanup.Enter();
-					await Restore(retry: false);
-				}
+				using var cleanup = ExecutionBudget.FromMilliseconds(1000);
+				using var cleanupScope = cleanup.Enter();
+				await Restore(retry: false);
 			}
 			catch (Exception cleanupFailure)
 			{
@@ -566,6 +589,10 @@ public partial class TaskScheduler(
 			Release(admission.Pid!.Value);
 			throw;
 		}
+		finally
+		{
+			lock (_admissionLock) _semaphorePublications.Remove(admission.Pid!.Value);
+		}
 	}
 
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
@@ -575,7 +602,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
 		{
@@ -597,7 +624,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).MinBy(e => e.Pid);
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).MinBy(e => e.Pid);
 		if (entry?.Deferred is not { } deferred) return false;
 		if (!deferred.State.Registers.TryPeek(out var registers))
 		{
@@ -620,7 +647,7 @@ public partial class TaskScheduler(
 			lock (_admissionLock)
 			{
 				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
+					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
 				foreach (var entry in removed) RemoveEntry(entry.Pid);
 			}
 			foreach (var entry in removed)
@@ -852,6 +879,8 @@ public partial class TaskScheduler(
 		}
 		// Publication observes the cancelled entry token and settles its provider write
 		// before shutdown disposes the reservation. Release callbacks run after this gate.
+		await _semaphoreMutations.WaitAsync();
+		_semaphoreMutations.Release();
 		await _deferredChanges.WaitAsync();
 		_deferredChanges.Release();
 		lock (_admissionLock)

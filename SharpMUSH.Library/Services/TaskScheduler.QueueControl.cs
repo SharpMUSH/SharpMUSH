@@ -65,7 +65,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (_ready.Contains(pid) || _delayedRepairs.Contains(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
+			if (_ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
 			if (entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 			entry = entry with
 			{
@@ -95,7 +95,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (entry.Deferred is null || _ready.Contains(pid) || _delayedRepairs.Contains(pid)) return QueueControlResult.NotPending;
+			if (entry.Deferred is null || _ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid)) return QueueControlResult.NotPending;
 			if (!entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 		}
 		if (!await ValidQueuedIdentity(entry)) return QueueControlResult.InvalidIdentity;

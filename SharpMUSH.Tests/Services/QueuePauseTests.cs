@@ -24,7 +24,9 @@ public class QueuePauseTests
 	}
 
 	[Test]
-	public async Task UncertainDelayedCleanupCannotBePausedOrResumed()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task UncertainDeferredCleanupCannotBePausedOrResumed(bool semaphore)
 	{
 		var unavailable = true;
 		var scheduler = Substitute.For<IScheduler>();
@@ -36,8 +38,13 @@ public class QueuePauseTests
 			return true;
 		});
 		await using var queue = Create(scheduler: scheduler);
-		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-			await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromHours(1)));
+		if (semaphore)
+			await Assert.ThrowsAsync<AggregateException>(async () =>
+				await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+					new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1)));
+		else
+			await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+				await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromHours(1)));
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
 		await Assert.That(await queue.PausePending(1, "hold")).IsEqualTo(QueueControlResult.NotPending);
 		await Assert.That(await queue.ResumePending(1)).IsEqualTo(QueueControlResult.NotPending);
