@@ -337,4 +337,88 @@ public class SemaphoreCommandTests
 		await Assert.That(attrValue).DoesNotContain("-1")
 			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
 	}
+
+	private async Task<string> SemaphoreCountAsync(object semObj, string attr)
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({semObj}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
+
+	/// <summary>
+	/// PennMUSH's semaphore attribute holds the number of tasks waiting on it. A parking @wait is
+	/// <c>add_to_sem(thing, 1, aname)</c> (<c>src/cque.c:1615</c>), and <c>add_to_generic</c> reads a
+	/// missing attribute as zero before adding — so the first @wait on a fresh object leaves 1, not 0.
+	/// </summary>
+	[Test]
+	public async ValueTask FirstWaitOnAFreshSemaphore_LeavesTheCountAtOne()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemFresh");
+		var attr = $"SEM_{Guid.NewGuid():N}";
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait {semObj}/{attr}=think ignored"));
+		await Task.Delay(400);
+
+		await Assert.That(await SemaphoreCountAsync(semObj, attr)).IsEqualTo("1")
+			.Because("the semaphore attribute counts waiting tasks, and exactly one task is waiting");
+	}
+
+	/// <summary>
+	/// One @notify releases the one waiter and takes the count back to zero. It may only go negative
+	/// when a notify finds fewer waiters than it was asked to release — PennMUSH does that
+	/// deliberately (<c>src/cque.c:1438-1441</c>: "If @notify and count was higher than the number of
+	/// queue entries, make the semaphore go negative") — which is not this case.
+	/// </summary>
+	[Test]
+	public async ValueTask NotifyingTheOnlyWaiter_LeavesTheCountAtZero()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemZero");
+		var attr = $"SEM_{Guid.NewGuid():N}";
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait {semObj}/{attr}=think ignored"));
+		await Task.Delay(400);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {semObj}/{attr}"));
+		await Task.Delay(800);
+
+		await Assert.That(await SemaphoreCountAsync(semObj, attr)).IsEqualTo("0")
+			.Because("releasing the only waiter returns the count to zero, not below it");
+	}
+
+	/// <summary>
+	/// The symptom the miscount produces: a semaphore driven negative by its first wait/notify cycle
+	/// reads as "a notify is already banked", so the NEXT @wait on that object runs its command
+	/// immediately instead of parking. One stray @wait poisons the semaphore for every later use.
+	/// </summary>
+	[Test]
+	public async ValueTask AWaitAfterACompletedCycle_StillParksInsteadOfFiringImmediately()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemCycle");
+		var attr = $"SEM_{Guid.NewGuid():N}";
+		var token = $"SecondWait_{Guid.NewGuid():N}";
+
+		// First cycle: park a task, then release it.
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait {semObj}/{attr}=think first"));
+		await Task.Delay(400);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {semObj}/{attr}"));
+		await Task.Delay(800);
+
+		// Second cycle: this must PARK, not run.
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait {semObj}/{attr}=think {token}"));
+		await Task.Delay(800);
+
+		await NotifyService.DidNotReceive().Notify(
+			TestHelpers.MatchingObject(executor),
+			TestHelpers.MatchingMessage(token), TestHelpers.MatchingObject(executor),
+			INotifyService.NotificationType.Announce);
+
+		// ...and still runs once released, so the test cannot pass by the task being lost.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {semObj}/{attr}"));
+		await Task.Delay(1200);
+
+		await NotifyService.Received(1).Notify(
+			TestHelpers.MatchingObject(executor),
+			TestHelpers.MatchingMessage(token), TestHelpers.MatchingObject(executor),
+			INotifyService.NotificationType.Announce);
+	}
 }
