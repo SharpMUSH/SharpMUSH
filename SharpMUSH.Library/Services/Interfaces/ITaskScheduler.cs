@@ -171,6 +171,9 @@ public interface ITaskScheduler
 	/// <param name="group">Group identifier for categorization</param>
 	ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
+	/// <summary>Admit work under an explicit canonical executor identity. Background callers that persist rejection status may disable user notifications.</summary>
+	ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true);
+
 	/// <summary>Transfer an existing delayed or semaphore reservation without admitting it again.</summary>
 	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false);
 }
