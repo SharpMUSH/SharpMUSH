@@ -5,6 +5,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,60 +17,35 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+	public async ValueTask<Option<CallState>> ChannelEmitCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> await EmitOnChannel(parser, spoof: parser.CurrentState.Switches.Contains("SPOOF"));
 
-		if (!arg0Check || !arg1Check)
+	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
+	public async ValueTask<Option<CallState>> NoSpoofChannelEmitCommand(IMUSHCodeParser parser,
+		SharpCommandAttribute _2)
+		=> await EmitOnChannel(parser, spoof: true);
+
+	/// <summary>
+	/// The four spellings of PennMUSH's <c>do_cemit</c> differ only in whether they ask to spoof, so this
+	/// reads the arguments and <see cref="ChannelEmit"/> does the rest. <c>cmd_cemit</c>
+	/// (<c>src/extchat.c:3583</c>) sets <c>PEMIT_SPOOF</c> for <c>@NSCEMIT</c> and for <c>@CEMIT/SPOOF</c>;
+	/// whether the caller MAY spoof is decided inside.
+	/// </summary>
+	private async ValueTask<Option<CallState>> EmitOnChannel(IMUSHCodeParser parser, bool spoof)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message;
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
+
+		if (arg0 is null || arg1 is null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var channelName = arg0CallState!.Message!;
-		var message = arg1CallState!.Message!;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
-		{
-			await NotifyService.Notify(executor, refusal, executor);
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
-		}
-
-		var (_, status) = maybeMemberStatus;
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-		return new CallState(string.Empty);
+		return await ChannelEmit.Handle(PermissionService, Mediator, NotifyService, executor, arg0, arg1, spoof);
 	}
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
@@ -88,7 +64,7 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 
 		if (maybeChannel.IsError)
@@ -107,14 +83,14 @@ public partial class Commands
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
-		if (maybeMemberStatus is null)
+		// extchat.c:1553 — the same rule @cemit answers to, from the same helper.
+		if (ChannelHelper.OpenChannelRefusal(channel, maybeMemberStatus) is { } refusalToSpeak)
 		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
+			await NotifyService.Notify(executor, refusalToSpeak, executor);
+			return new CallState(refusalToSpeak);
 		}
 
-		var (_, status) = maybeMemberStatus;
+		var status = maybeMemberStatus?.Status ?? new SharpChannelStatus(null, null, null, null, null);
 
 		// sharpchat.md:33 — "If <message> begins with a ':' or ';' it will be posed (or semiposed)
 		// instead of spoken." Anything else is speech, which is what produces the documented
@@ -148,68 +124,6 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (!arg0Check || !arg1Check)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
-			return new CallState(ErrorMessages.Returns.NothingToDo);
-		}
-
-		var channelName = arg0CallState!.Message!;
-		var message = arg1CallState!.Message!;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
-		{
-			await NotifyService.Notify(executor, refusal, executor);
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			var notOnMsg = string.Format(ErrorMessages.Notifications.ChatNotOnChannel, channelName.ToPlainText());
-			await NotifyService.Notify(parser.CurrentState.Executor!.Value, notOnMsg, executor);
-			return new CallState(notOnMsg);
-		}
-
-		var (_, status) = maybeMemberStatus;
-
-		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			canNoSpoof
-				? INotifyService.NotificationType.NSEmit
-				: INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-		return new CallState(string.Empty);
-	}
-
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
 	public async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -233,7 +147,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
@@ -340,7 +254,7 @@ public partial class Commands
 				// send RemoveUserFromChannelCommand, and delcom answers "Alias deleted." either way. There is
 				// no observable difference to leak. A visible lookup would instead strand a membership the
 				// player can no longer reach — leaving them on a channel they just removed their alias for.
-				var maybeChannel = await ChannelHelper.GetChannelOrError(parser, Mediator, NotifyService, channelName, false);
+				var maybeChannel = await ChannelHelper.GetChannelOrError(Mediator, channelName);
 				if (!maybeChannel.IsError)
 				{
 					await Mediator.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
@@ -366,6 +280,7 @@ public partial class Commands
 			PermissionService,
 			Mediator,
 			NotifyService,
+			ConnectionService,
 			MarkupText.Empty,
 			MarkupText.Empty,
 			switches);
@@ -411,7 +326,7 @@ public partial class Commands
 
 		var channelName = maybeAttribute.AsAttribute.Last().Value;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(parser, PermissionService, Mediator,
+		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true);
 		if (maybeChannel.IsError)
 		{
@@ -420,7 +335,8 @@ public partial class Commands
 
 		var channel = maybeChannel.AsChannel;
 
-		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService, channelName, title);
+		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+			Configuration, channelName, title);
 
 		if (result.Message != null && !result.Message.ToPlainText().StartsWith("#-1"))
 		{
