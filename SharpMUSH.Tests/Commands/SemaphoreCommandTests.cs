@@ -156,7 +156,42 @@ public class SemaphoreCommandTests
 		await Assert.That(await Count()).IsEqualTo("");
 		await Command($"@notify {target}/{attribute}=2");
 		await Assert.That(await Count()).IsEqualTo("-2");
+		await Command($"@drain {target}/{attribute}=1");
+		await Assert.That(await Count()).IsEqualTo("-2");
 		await Command($"@drain/all {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+	}
+
+	[Test]
+	public async ValueTask DrainPreservesPublishedTimeoutAccountingBeforeNewWait()
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DrainTimeout");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(
+			target, [attribute]);
+		var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		await Scheduler.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var timeout = await Scheduler.WriteCommandList(MarkupText.Plain("think timeout"), WebAppFactoryArg.FunctionParser.CurrentState,
+				semaphore, 0, manageSemaphoreCount: true);
+			await Command($"@wait {target}/{attribute}=think pending");
+			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
+			await Command($"@drain/all {target}/{attribute}");
+			await Assert.That(await Count()).IsEqualTo("1");
+			await Command($"@wait {target}/{attribute}=think later");
+			await Assert.That(await Count()).IsEqualTo("2");
+			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain-complete", "test");
+		}
+		finally { release.SetResult(); }
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
 		await Assert.That(await Count()).IsEqualTo("");
 	}
 
