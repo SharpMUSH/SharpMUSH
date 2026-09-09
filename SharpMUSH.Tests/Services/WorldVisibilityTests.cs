@@ -1,4 +1,5 @@
 using NSubstitute;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -12,6 +13,51 @@ public class WorldVisibilityTests
 {
 	internal static void Flags(SharpObject obj, params string[] names) => obj.Flags = new(() => names.Select(name =>
 		new SharpObjectFlag { Name = name, Symbol = "", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] }).ToAsyncEnumerable());
+
+	[Test]
+	[Arguments("room-light")]
+	[Arguments("room-dark")]
+	[Arguments("viewer-power")]
+	[Arguments("item-dark")]
+	[Arguments("item-light")]
+	public async Task ExplicitScanCancellationReachesVisibilityStreams(string stage)
+	{
+		var objects = new TestObjectFactory();
+		var room = objects.CreateRoom(10, "Room");
+		var viewer = objects.CreatePlayer(11, "Viewer", room);
+		var item = objects.CreateThing(12, "Thing", room).AsContent;
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		using var cancellation = new CancellationTokenSource();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var count = 0;
+		var skip = stage is "room-dark" or "item-light" ? 1 : 0;
+		async IAsyncEnumerable<T> Block<T>([EnumeratorCancellation] CancellationToken token = default)
+		{
+			if (count++ < skip) yield break;
+			entered.TrySetResult(token);
+			await release.Task.WaitAsync(token);
+			yield break;
+		}
+		if (stage.StartsWith("room")) room.Object.Flags = new(() => Block<SharpObjectFlag>());
+		else if (stage == "viewer-power") viewer.Object().Powers = new(() => Block<SharpPower>());
+		else item.Object().Flags = new(() => Block<SharpObjectFlag>());
+		async Task Run()
+		{
+			var scan = await WorldVisibility.CreateScanAsync(viewer, room, reality, Substitute.For<IConnectionService>(), cancellation.Token);
+			await scan(item, cancellation.Token);
+		}
+		var pending = Run();
+		try
+		{
+			var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(token.CanBeCanceled).IsTrue();
+			cancellation.Cancel();
+			await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(5))).Throws<OperationCanceledException>();
+		}
+		finally { release.TrySetResult(); }
+	}
 
 	[Test]
 	[Arguments(false, false, false, false, false, true)]
