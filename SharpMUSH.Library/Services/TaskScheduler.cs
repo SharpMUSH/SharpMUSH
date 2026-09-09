@@ -58,7 +58,8 @@ public class TaskScheduler(
 		CancellationTokenSource Cts,
 		string Owner,
 		DBRef? Executor,
-		Func<ValueTask>? BeforeExecution = null
+		Func<ValueTask>? BeforeExecution = null,
+		DBRef? SemaphoreTarget = null
 	);
 
 	// The reservation ledger bounds this channel, including cancelled entries until consumed.
@@ -111,7 +112,7 @@ public class TaskScheduler(
 		else entry.Cts.Dispose();
 	}
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
-	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true)
+	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
 	{
 		string owner = $"handle:{handle}";
 		if (executor is not null)
@@ -130,7 +131,7 @@ public class TaskScheduler(
 			else
 			{
 				var pid = NextPid();
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor);
+				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget);
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -146,9 +147,10 @@ public class TaskScheduler(
 		}
 		return result;
 	}
-	private async ValueTask AdjustSemaphoreCount(string group)
+	private async ValueTask AdjustSemaphoreCount(string group, DBRef? target = null)
 	{
 		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
+		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
 		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute)).LastOrDefaultAsync();
 		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
@@ -164,12 +166,13 @@ public class TaskScheduler(
 			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			var group = entry.Group;
+			var semaphoreTarget = entry.SemaphoreTarget;
 			entry = entry with
 			{
 				Group = EnqueueGroup,
 				// Run accounting on the serialized consumer, including when this released job is halted.
 				// This prevents timeout updates racing a command's @notify attribute update.
-				BeforeExecution = semaphoreTimeout && group.StartsWith(SemaphoreGroup + ":") ? () => AdjustSemaphoreCount(group) : null
+				BeforeExecution = semaphoreTimeout && group.StartsWith(SemaphoreGroup + ":") ? () => AdjustSemaphoreCount(group, semaphoreTarget) : null
 			};
 			_pendingEntries[pid] = entry;
 			_immediateQueue.Writer.TryWrite(entry);
@@ -318,8 +321,10 @@ public class TaskScheduler(
 	{
 		if (oldValue < 0) return await WriteCommandList(command, state);
 		state = await CaptureExecutor(state);
+		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef));
+		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef);
 		if (!admission.Accepted) return admission;
 		try
 		{
@@ -431,7 +436,9 @@ public class TaskScheduler(
 	{
 		long[] pids;
 		lock (_admissionLock) pids = _pendingEntries.Values
-			.Where(entry => entry.Executor?.Matches(dbRef) == true).Select(entry => entry.Pid).ToArray();
+			.Where(entry => entry.Executor?.Matches(dbRef) == true
+				|| (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.SemaphoreTarget?.Matches(dbRef) == true))
+			.Select(entry => entry.Pid).ToArray();
 		foreach (var pid in pids) await HaltByPid(pid);
 	}
 
@@ -459,7 +466,7 @@ public class TaskScheduler(
 		removed.Cts.Dispose();
 		if (removed.Group.StartsWith(SemaphoreGroup + ":"))
 		{
-			try { await AdjustSemaphoreCount(removed.Group); }
+			try { await AdjustSemaphoreCount(removed.Group, removed.SemaphoreTarget); }
 			catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed while halting PID {Pid}", pid); }
 		}
 		return true;
