@@ -24,6 +24,35 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments("notify")]
+	[Arguments("drain")]
+	[Arguments("halt")]
+	public async Task LegacySemaphoreCleanupFailureRetainsInspectablePid(string operation)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think waiting"), ParserState.Empty, target, 0);
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>())
+			.Returns(_ => Task.FromException<bool>(new IOException("Quartz unavailable")));
+		async Task Change()
+		{
+			switch (operation)
+			{
+				case "notify": await queue.NotifyCounted(target, 1); break;
+				case "drain": await queue.DrainCounted(target); break;
+				case "halt": await queue.HaltByPid(admission.Pid!.Value); break;
+			}
+		}
+		await Assert.ThrowsAsync<IOException>(Change);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(queue.GetQueueEntries().Single().Pid).IsEqualTo(admission.Pid!.Value);
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(true);
+		await Change();
+		if (operation != "notify") await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task OverflowingDelayDoesNotReserveAQueueEntry()
 	{
 		await using var queue = Create(scheduler: Substitute.For<IScheduler>());

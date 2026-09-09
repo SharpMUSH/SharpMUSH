@@ -609,8 +609,7 @@ public partial class TaskScheduler(
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
 		{
-			try { await RemoveDeferredTrigger(entry); }
-			catch (Exception ex) { logger.LogWarning(ex, "Could not remove notified trigger for PID {Pid}", entry.Pid); }
+			await RemoveDeferredTrigger(entry);
 			outcomes.Add(await Activate(entry.Pid));
 		}
 		return outcomes;
@@ -651,13 +650,10 @@ public partial class TaskScheduler(
 			{
 				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
+			}
+			foreach (var entry in removed) await RemoveDeferredTrigger(entry);
+			lock (_admissionLock)
 				foreach (var entry in removed) RemoveEntry(entry.Pid);
-			}
-			foreach (var entry in removed)
-			{
-				try { await RemoveDeferredTrigger(entry); }
-				catch (Exception ex) { logger.LogWarning(ex, "Could not remove drained trigger for PID {Pid}", entry.Pid); }
-			}
 		}
 		foreach (var entry in removed) entry.Cts.Dispose();
 		return removed.Length;
@@ -697,25 +693,19 @@ public partial class TaskScheduler(
 			{
 				if (!_pendingEntries.TryGetValue(pid, out entry) || _ready.Contains(pid)) return true;
 			}
+			await RemoveDeferredTrigger(entry);
 			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
 			// Unmanaged timeouts defer accounting until execution; a paused entry halted here
 			// will never execute. Notifications and managed timeouts have already accounted.
 			if (entry.Group.StartsWith(SemaphoreGroup + ":") && (entry.Deferred?.ReleasePending != true
 				|| entry.Deferred is { ReleaseTimeout: true } && !entry.ManagesSemaphoreCount))
 				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
-			var delayed = entry.Group.StartsWith(DelayGroup + ":", StringComparison.Ordinal);
-			if (delayed) await RemoveDeferredTrigger(entry);
 			lock (_admissionLock)
 			{
 				_delayedRepairs.Remove(pid);
 				entry = RemoveEntry(pid);
 			}
 			if (entry is null) return true;
-			if (!delayed)
-			{
-				try { await RemoveDeferredTrigger(entry); }
-				catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
-			}
 		}
 		entry.Cts.Dispose();
 		return true;
