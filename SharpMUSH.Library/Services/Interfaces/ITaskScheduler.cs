@@ -9,6 +9,7 @@ public interface ITaskScheduler
 {
 	QueueUsage GetQueueUsage();
 	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries();
+	QueueEntrySnapshot? GetQueueEntry(long pid);
 	ValueTask<QueueControlResult> PausePending(long pid, string reason);
 	ValueTask<QueueControlResult> ResumePending(long pid);
 	/// <summary>
@@ -159,5 +160,5 @@ public interface ITaskScheduler
 	ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
 	/// <summary>Transfer an existing delayed or semaphore reservation without admitting it again.</summary>
-	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false);
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null);
 }
