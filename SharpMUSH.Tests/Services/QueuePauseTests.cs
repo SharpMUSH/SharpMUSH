@@ -24,6 +24,17 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task QuartzDelayedJobPreservesItsScheduleGeneration()
+	{
+		var queue = Substitute.For<ITaskScheduler>();
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "delay:10").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 7L });
+		await new DelayedTask(queue).Execute(context);
+		await queue.Received(1).ReleaseScheduledWork(42, false, 7);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ManagedCommandsDoNotConsumeAlreadyNotifiedPausedWaiters(bool drainAgain)
