@@ -34,7 +34,7 @@ public class NotifyService(
 	{
 		var ms = what.Match(markup => markup, MarkupText.Plain);
 		ms = ApplyOutputPrefixSuffix(handle, ms);
-		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MarkupTextSerializer.Serialize(ms)));
+		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MarkupTextSerializer.Serialize(ms)), ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
@@ -44,7 +44,7 @@ public class NotifyService(
 	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what)
 	{
 		var ms = what.Match(markup => markup, MarkupText.Plain);
-		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)));
+		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)), ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
