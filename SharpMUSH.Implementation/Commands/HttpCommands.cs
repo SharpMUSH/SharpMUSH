@@ -120,7 +120,11 @@ public partial class Commands
 
 				if (!admission.Accepted)
 				{
-					await NotifyService.Notify(executor, admission.Error, executor);
+					// Capacity and shutdown failures are already reported by the scheduler.
+					// Preflight failures return before that generic reporting boundary.
+					if (admission.Reason is SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.InvalidTarget
+						or SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.AlreadyReleased)
+						await NotifyService.Notify(executor, admission.Error, executor);
 					return new CallState(admission.Error);
 				}
 
