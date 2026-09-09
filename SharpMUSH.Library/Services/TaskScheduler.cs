@@ -314,6 +314,9 @@ public class TaskScheduler(
 		return await Admit(async () =>
 		{
 			if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
+			// A queued start may have opened capture after transport admission.
+			if (capture is null && inputSessions is not null &&
+				await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command)) return null;
 			// A captured generation never becomes ordinary command text, even if cancelled while queued.
 			var session = capture ?? inputSessions?.GetCapturing(handle);
 			if (session is not null)
@@ -321,6 +324,7 @@ public class TaskScheduler(
 				if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
 				return await inputSessions!.DeliverAsync(parser, session, command);
 			}
+			if (string.IsNullOrWhiteSpace(command.Text)) return null;
 			return await parser.FromState(state).CommandParse(handle, connectionService, command);
 		}, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle);
 	}

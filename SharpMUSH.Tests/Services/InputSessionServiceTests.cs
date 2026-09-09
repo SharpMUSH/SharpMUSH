@@ -381,6 +381,59 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments(false, "")]
+	[Arguments(true, "")]
+	[Arguments(false, "  \t ")]
+	[Arguments(true, "  \t ")]
+	[Arguments(false, "@input/cancel")]
+	[Arguments(true, "@input/cancel")]
+	public async Task ReplyQueuedBehindSessionStartPreservesBlankAndEscapeSemantics(bool websocket, string payload)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await using var queue = Queue(h);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.EnqueueWork(async () =>
+		{
+			entered.SetResult();
+			await release.Task;
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			return null;
+		}, "queued-session-start", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			if (websocket)
+				await new WebSocketInputConsumer(NullLogger<WebSocketInputConsumer>.Instance, queue, h.Connections, h.Sessions)
+					.HandleAsync(new WebSocketInputMessage(1, payload, "transport"));
+			else
+				await new TelnetInputConsumer(NullLogger<TelnetInputConsumer>.Instance, queue, h.Connections, h.Sessions)
+					.HandleAsync(new TelnetInputMessage(1, payload, "transport"));
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
+		}
+		finally { release.TrySetResult(); }
+		await Drained(queue);
+		if (payload == "@input/cancel")
+		{
+			await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+			await Assert.That(h.Deliveries.Count).IsEqualTo(0);
+		}
+		else
+			await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo(payload);
+		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
+	}
+
+	[Test]
+	public async Task BlankInputWithoutCaptureDoesNotInvokeTheCommandParser()
+	{
+		var h = new Harness(); await h.Connect();
+		await using var queue = Queue(h);
+		await queue.WriteUserCommand(1, MarkupText.Plain(" \t "), ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
+		await Drained(queue);
+		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
+	}
+
+	[Test]
 	public async Task MissingTransportIncarnationCannotDeliverToModernCapture()
 	{
 		var h = new Harness(); await h.Start();

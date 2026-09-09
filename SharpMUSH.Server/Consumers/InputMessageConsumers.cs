@@ -24,7 +24,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 		{
 			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
 
-			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions?.GetCapturing(message.Handle) is null)
+			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions is null)
 			{
 				logger.LogDebug("[NATS-RECV] TelnetInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
@@ -59,7 +59,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 		{
 			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
 
-			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions?.GetCapturing(message.Handle) is null)
+			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions is null)
 			{
 				logger.LogDebug("[NATS-RECV] WebSocketInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
