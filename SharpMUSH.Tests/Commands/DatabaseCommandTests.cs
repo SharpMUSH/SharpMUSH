@@ -291,6 +291,35 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Arguments(false, QueueRejectionReason.InvalidTarget)]
+	[Arguments(true, QueueRejectionReason.InvalidTarget)]
+	[Arguments(false, QueueRejectionReason.OwnerLimit)]
+	[Arguments(true, QueueRejectionReason.OwnerLimit)]
+	public async Task MapSqlReportsInvalidTargetAdmission(bool header, QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlInvalidAdmission");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPINVALID me=think unreachable"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = header ? ["COLNAMES"] : [],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPINVALID"), ["1"] = new CallState("SELECT 1 AS col1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var admission = Substitute.For<IMediator>();
+		var rejected = new QueueAdmissionResult(null, reason);
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(rejected);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).Count(message => message == rejected.Error))
+			.IsEqualTo(reason == QueueRejectionReason.InvalidTarget ? 1 : 0);
+	}
+
+	[Test]
 	[Arguments("reservation")]
 	[Arguments("header")]
 	[Arguments("row")]

@@ -17,7 +17,6 @@ public partial class TaskScheduler
 		public string Reason { get; init; } = "";
 		public long Generation { get; init; }
 		public bool ReleasePending { get; init; }
-		public bool ReleaseTimeout { get; init; }
 	}
 	private readonly HashSet<long> _running = [];
 	private readonly SemaphoreSlim _deferredChanges = new(1, 1);
@@ -57,6 +56,11 @@ public partial class TaskScheduler
 			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false);
 	}
 
+	// Caller owns the admission lock. Every timer control uses the same repair exclusions.
+	private bool HasPendingCleanup(long pid)
+		=> _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid)
+			|| _semaphoreCommandReservations.Contains(pid);
+
 	public async ValueTask<QueueControlResult> PausePending(long pid, string reason)
 	{
 		if (reason is null || reason.Length > 160 || reason.Any(char.IsControl)) return QueueControlResult.InvalidReason;
@@ -65,7 +69,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (_ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
+			if (_ready.Contains(pid) || HasPendingCleanup(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
 			if (entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 			entry = entry with
 			{
@@ -79,7 +83,7 @@ public partial class TaskScheduler
 			};
 			_pendingEntries[pid] = entry;
 		}
-		try { await _scheduler.PauseTrigger(new TriggerKey(entry.TriggerName, entry.Group)); }
+		try { await _scheduler.PauseTrigger(new TriggerKey(entry.TriggerName, entry.Group), ExecutionBudget.CurrentToken); }
 		catch (Exception ex)
 		{
 			// The ledger and generation already prevent execution, even if Quartz is unavailable.
@@ -95,7 +99,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (entry.Deferred is null || _ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return QueueControlResult.NotPending;
+			if (entry.Deferred is null || _ready.Contains(pid) || HasPendingCleanup(pid)) return QueueControlResult.NotPending;
 			if (!entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 		}
 		if (!await ValidQueuedIdentity(entry)) return QueueControlResult.InvalidIdentity;
@@ -116,7 +120,7 @@ public partial class TaskScheduler
 			deferred = entry.Deferred!;
 			_pendingEntries[pid] = entry with { Deferred = deferred with { Paused = false, Reason = "" } };
 		}
-		if (deferred.ReleasePending) await Activate(pid, deferred.ReleaseTimeout);
+		if (deferred.ReleasePending) await Activate(pid);
 		return QueueControlResult.Applied;
 	}
 
