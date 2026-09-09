@@ -124,7 +124,7 @@ public class DatabaseCommandTests
 		{
 			for (var i = 0; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
 			{
-				var admitted = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				var admitted = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
 				await Assert.That(admitted.Accepted).IsTrue();
 				pids.Add(admitted.Pid!.Value);
 			}
@@ -157,7 +157,7 @@ public class DatabaseCommandTests
 		parser.CurrentState.Returns(state);
 		parser.CommandParse(Arg.Any<MString>()).Returns(CallState.Empty);
 		var admission = Substitute.For<IMediator>();
-		admission.Send(Arg.Any<QueueAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
 		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(QueueCommandReservation.Rejected(reason));
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
@@ -181,7 +181,7 @@ public class DatabaseCommandTests
 		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var blocker = await scheduler.EnqueueWork(async () =>
+		var blocker = await scheduler.AdmitWork(async () =>
 		{
 			started.TrySetResult();
 			await release.Task;
@@ -195,7 +195,7 @@ public class DatabaseCommandTests
 			{
 				for (var i = 3; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
 				{
-					var admission = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"),
+					var admission = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"),
 						ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
 					await Assert.That(admission.Accepted).IsTrue();
 				}
@@ -229,14 +229,14 @@ public class DatabaseCommandTests
 		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var blocker = await scheduler.EnqueueWork(async () => { started.TrySetResult(); await release.Task; return null; }, "mapsql-order-test", "test");
+		var blocker = await scheduler.AdmitWork(async () => { started.TrySetResult(); await release.Task; return null; }, "mapsql-order-test", "test");
 		var reservations = new List<long>();
 		try
 		{
 			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			for (var i = 2; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
 			{
-				var admission = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				var admission = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
 				await Assert.That(admission.Accepted).IsTrue();
 				reservations.Add(admission.Pid!.Value);
 			}
@@ -324,7 +324,7 @@ public class DatabaseCommandTests
 		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
 			boundary == "reservation" ? new ValueTask<QueueCommandReservation>(Block<QueueCommandReservation>(call.Arg<CancellationToken>()))
 				: Mediator.Send(call.Arg<ReserveCommandListRequest>(), call.Arg<CancellationToken>()));
-		admission.Send(Arg.Any<QueueAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
 			new ValueTask<QueueAdmissionResult>(Block<QueueAdmissionResult>(call.Arg<CancellationToken>())));
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
 		var operation = commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" }).AsTask();
