@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.RecurringJobs;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -18,11 +19,12 @@ public partial class Commands
 		ParameterNames = ["target/attribute or job-id", "schedule|timezone|description"])]
 	public async ValueTask<Option<CallState>> RecurringJob(IMUSHCodeParser parser, SharpCommandAttribute command)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var ct = ExecutionBudget.CurrentToken;
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value), ct)).Known;
 		var output = "";
 		try
 		{
-			var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>().GetGameActorAsync(executor.Object().DBRef)
+			var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>().GetGameActorAsync(executor.Object().DBRef, ct)
 				?? throw new RecurringJobException("denied", "A linked active player is required.");
 			var service = parser.ServiceProvider.GetRequiredService<IRecurringJobService>();
 			var switches = parser.CurrentState.Switches;
@@ -32,7 +34,7 @@ public partial class Commands
 			var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message?.ToPlainText() ?? "" : "";
 			if (operation[0] == "LIST")
 			{
-				var jobs = await service.ListAsync(actor, switches.Contains("ALL"));
+				var jobs = await service.ListAsync(actor, switches.Contains("ALL"), ct);
 				output = jobs.Length == 0 ? "No recurring jobs." : string.Join('\n', jobs.Select(j => $"{j.Id} {j.Target}/{j.Attribute} | {j.Schedule} {j.TimeZone} | {j.Status} | next={j.NextRun} last={j.LastRun} error={j.LastError}"));
 			}
 			else if (operation[0] == "CREATE")
@@ -40,17 +42,17 @@ public partial class Commands
 				var target = lhs.Split('/', 2);
 				var schedule = rhs.Split('|', 3);
 				if (target.Length != 2 || schedule.Length < 2) throw new RecurringJobException("invalid", "Use target/attribute=schedule|timezone|description.");
-				var job = await service.CreateAsync(actor, new(target[0].Trim(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""));
+				var job = await service.CreateAsync(actor, new(target[0].Trim(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""), ct);
 				output = "Created recurring job " + job.Id;
 			}
-			else if (operation[0] == "DELETE") { await service.DeleteAsync(actor, lhs); output = "Recurring job deleted."; }
+			else if (operation[0] == "DELETE") { await service.DeleteAsync(actor, lhs, ct); output = "Recurring job deleted."; }
 			else
 			{
-				var job = (await service.ListAsync(actor, switches.Contains("ALL"))).SingleOrDefault(j => j.Id == lhs)
+				var job = (await service.ListAsync(actor, switches.Contains("ALL"), ct)).SingleOrDefault(j => j.Id == lhs)
 					?? throw new RecurringJobException("missing", "Job not found.");
 				var schedule = operation[0] == "SCHEDULE" ? rhs.Split('|', 2) : [job.Schedule, job.TimeZone];
 				if (schedule.Length != 2) throw new RecurringJobException("invalid", "Use job-id=schedule|timezone.");
-				await service.ConfigureAsync(actor, job.Id, schedule[0].Trim(), schedule[1].Trim(), operation[0] == "ENABLE" || operation[0] == "SCHEDULE" && job.Enabled);
+				await service.ConfigureAsync(actor, job.Id, schedule[0].Trim(), schedule[1].Trim(), operation[0] == "ENABLE" || operation[0] == "SCHEDULE" && job.Enabled, ct);
 				output = "Recurring job updated.";
 			}
 		}

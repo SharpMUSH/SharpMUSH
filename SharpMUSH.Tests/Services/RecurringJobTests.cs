@@ -65,6 +65,58 @@ public class RecurringJobTests
 	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 
 	[Test, NotInParallel]
+	[Arguments("LIST")]
+	[Arguments("CREATE")]
+	[Arguments("DELETE")]
+	[Arguments("ENABLE")]
+	[Arguments("DISABLE")]
+	[Arguments("SCHEDULE")]
+	public async Task JobCommandsForwardTheQueueExecutionToken(string operation)
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		var tokens = new List<CancellationToken>();
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.GetGameActorAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => { tokens.Add(call.Arg<CancellationToken>()); return context.Actor; });
+		var jobs = Substitute.For<IRecurringJobService>();
+		jobs.ListAsync(Arg.Any<CapabilityActor>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(call => { tokens.Add(call.Arg<CancellationToken>()); return new[] { job }; });
+		jobs.CreateAsync(Arg.Any<CapabilityActor>(), Arg.Any<RecurringJobRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => { tokens.Add(call.Arg<CancellationToken>()); return job; });
+		jobs.ConfigureAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			.Returns(call => { tokens.Add(call.Arg<CancellationToken>()); return job; });
+		jobs.DeleteAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => { tokens.Add(call.Arg<CancellationToken>()); return Task.CompletedTask; });
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(typeof(IAdministrativeCapabilityService)).Returns(capabilities);
+		services.GetService(typeof(IRecurringJobService)).Returns(jobs);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(services);
+		parser.CurrentState.Returns(ParserState.RootFor(context.Actor.ActiveCharacter!.Value) with
+		{
+			Switches = [operation],
+			Arguments = new()
+			{
+				["0"] = new CallState(operation == "CREATE" ? context.Target + "/RUN" : job.Id),
+				["1"] = new CallState("* * * * *|UTC")
+			}
+		});
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			tokens.Add(call.Arg<CancellationToken>());
+			return Get<IMediator>().Send(call.Arg<GetObjectNodeQuery>(), call.Arg<CancellationToken>());
+		});
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services, mediator);
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(5));
+		using var scope = budget.Enter();
+		await commands.RecurringJob(parser, new SharpMUSH.Library.Attributes.SharpCommandAttribute { Name = "@JOB" });
+		await Assert.That(tokens.Count).IsEqualTo(operation is "ENABLE" or "DISABLE" or "SCHEDULE" ? 4 : 3);
+		await Assert.That(tokens.All(token => token == budget.Token)).IsTrue();
+	}
+
+	[Test, NotInParallel]
 	public async Task PollingCancellationReachesQueueAdmissionAndReleasesTheGate()
 	{
 		var context = await Setup();
