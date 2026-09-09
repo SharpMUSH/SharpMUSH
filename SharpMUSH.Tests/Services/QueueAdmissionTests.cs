@@ -868,6 +868,42 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ShutdownCancelsHaltProviderCallBeforeWaitingForDelayedLease()
+	{
+		var entered = Signal();
+		var release = Signal();
+		var settled = false;
+		CancellationToken providerToken = default;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			providerToken = call.Arg<CancellationToken>();
+			entered.TrySetResult();
+			try { await release.Task.WaitAsync(providerToken); }
+			finally { settled = true; }
+			return true;
+		});
+		var queue = Create(scheduler: scheduler);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100));
+		var halt = queue.HaltByPid(admission.Pid!.Value).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		var stopping = queue.DisposeAsync().AsTask();
+		try
+		{
+			await stopping.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(providerToken.IsCancellationRequested).IsTrue();
+			await Assert.That(settled).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally
+		{
+			release.TrySetResult();
+			try { await halt; } catch (OperationCanceledException) { }
+			await stopping;
+		}
+	}
+
+	[Test]
 	public async Task ShutdownWaitsForDelayedPublicationCleanup()
 	{
 		var entered = Signal();
@@ -948,6 +984,118 @@ public class QueueAdmissionTests
 		}
 		await Assert.That(exists).IsFalse();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ShutdownSettlesSemaphorePublicationBeforeReleasingItsReservation(bool managed)
+	{
+		var entered = Signal();
+		var finish = Signal();
+		var exists = false;
+		var count = 0;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			entered.TrySetResult();
+			await finish.Task;
+			exists = true;
+			return DateTimeOffset.UtcNow;
+		});
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { exists = false; return true; });
+		var queue = Create(mediator: CountingMediator(() => count, value => count = value), scheduler: scheduler);
+		var admission = queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromDays(36500), managed).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		var stopping = queue.DisposeAsync().AsTask();
+		try { await Assert.That(stopping.IsCompleted).IsFalse(); }
+		finally
+		{
+			finish.TrySetResult();
+			try { await admission; } catch (OperationCanceledException) { }
+			await stopping.WaitAsync(TimeSpan.FromSeconds(2));
+		}
+		await Assert.That(exists).IsFalse();
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task UnmanagedSemaphorePublicationSerializesHaltAndTimeout(bool halt)
+	{
+		var entered = Signal();
+		var finish = Signal();
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			entered.TrySetResult();
+			await finish.Task;
+			return await Task.FromException<DateTimeOffset>(new InvalidOperationException("Publication acknowledgement lost"));
+		});
+		await using var queue = Create(scheduler: scheduler);
+		var admission = queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.Zero).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		Task operation = halt ? queue.HaltByPid(1).AsTask() : queue.ReleaseScheduledWork(1, true).AsTask();
+		try
+		{
+			await Assert.That(operation.IsCompleted).IsFalse();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		}
+		finally
+		{
+			finish.TrySetResult();
+			try { await admission; } catch (InvalidOperationException) { }
+			await operation.WaitAsync(TimeSpan.FromSeconds(2));
+		}
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task LostSemaphorePublicationRetainsQuotaUntilTriggerAndCounterAreRestored(bool managed, bool cleanupFails)
+	{
+		var exists = false;
+		var cleanupWasBounded = false;
+		var count = 0;
+		var mediator = CountingMediator(() => count, value => count = value);
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns<DateTimeOffset>(_ =>
+		{
+			exists = true;
+			throw new InvalidOperationException("Schedule acknowledgement lost");
+		});
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			if (cleanupFails) throw new InvalidOperationException("Cleanup unavailable");
+			cleanupWasBounded = call.Arg<CancellationToken>().CanBeCanceled;
+			exists = false;
+			return true;
+		});
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		async Task Admit() => await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromDays(36500), managed);
+		if (cleanupFails) await Assert.ThrowsAsync<AggregateException>(Admit);
+		else await Assert.ThrowsAsync<InvalidOperationException>(Admit);
+		await Assert.That(exists).IsEqualTo(cleanupFails);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(cleanupFails ? 1 : 0);
+		await Assert.That(count).IsEqualTo(cleanupFails && managed ? 1 : 0);
+		if (cleanupFails)
+		{
+			await Assert.That((await queue.ReleaseScheduledWork(1)).Accepted).IsFalse();
+			cleanupFails = false;
+			using (await queue.EnterSemaphoreMutationAsync()) { }
+			await Assert.That(exists).IsFalse();
+			await Assert.That(count).IsEqualTo(0);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		await Assert.That(cleanupWasBounded).IsTrue();
 	}
 
 	[Test]
