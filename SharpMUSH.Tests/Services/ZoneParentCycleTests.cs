@@ -24,11 +24,11 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DirectParentCycle_ShouldFail()
 	{
-		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create TestObj1"));
+		var obj1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "TestObj1");
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 
-		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create TestObj2"));
+		var obj2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "TestObj2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 
@@ -45,11 +45,11 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DirectZoneCycle_ShouldFail()
 	{
-		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create TestZone1"));
+		var zone1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "TestZone1");
 		var zone1DbRef = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 		var zone1 = await Mediator.Send(new GetObjectNodeQuery(zone1DbRef));
 
-		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create TestZone2"));
+		var zone2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "TestZone2");
 		var zone2DbRef = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
 		var zone2 = await Mediator.Send(new GetObjectNodeQuery(zone2DbRef));
 
@@ -66,11 +66,11 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ParentWithZoneCycle_ShouldFail()
 	{
-		var objAResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MixedCycleA"));
+		var objAResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MixedCycleA");
 		var objADbRef = DBRef.Parse(objAResult.Message!.ToPlainText()!);
 		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
 
-		var objBResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MixedCycleB"));
+		var objBResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MixedCycleB");
 		var objBDbRef = DBRef.Parse(objBResult.Message!.ToPlainText()!);
 		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
 
@@ -87,11 +87,11 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ZoneWithParentCycle_ShouldFail()
 	{
-		var objXResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MixedCycleX"));
+		var objXResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MixedCycleX");
 		var objXDbRef = DBRef.Parse(objXResult.Message!.ToPlainText()!);
 		var objX = await Mediator.Send(new GetObjectNodeQuery(objXDbRef));
 
-		var objYResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MixedCycleY"));
+		var objYResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MixedCycleY");
 		var objYDbRef = DBRef.Parse(objYResult.Message!.ToPlainText()!);
 		var objY = await Mediator.Send(new GetObjectNodeQuery(objYDbRef));
 
@@ -108,15 +108,15 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask MultiHopParentZoneCycle_ShouldFail()
 	{
-		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MultiHop1"));
+		var obj1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MultiHop1");
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 
-		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MultiHop2"));
+		var obj2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MultiHop2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 
-		var obj3Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MultiHop3"));
+		var obj3Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "MultiHop3");
 		var obj3DbRef = DBRef.Parse(obj3Result.Message!.ToPlainText()!);
 		var obj3 = await Mediator.Send(new GetObjectNodeQuery(obj3DbRef));
 
@@ -135,15 +135,15 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ValidParentAndZone_ShouldSucceed()
 	{
-		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ValidParent"));
+		var parentResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "ValidParent");
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 		var parent = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
 
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ValidZone"));
+		var zoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "ValidZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zone = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ValidObject"));
+		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "ValidObject");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -166,7 +166,7 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask SelfParent_ShouldFail()
 	{
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create SelfParentTest"));
+		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "SelfParentTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -181,7 +181,7 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask SelfZone_ShouldFail()
 	{
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create SelfZoneTest"));
+		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "SelfZoneTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 
@@ -196,10 +196,10 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_WithCycle_ShouldFail()
 	{
-		var zone1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ChzoneCycle1"));
+		var zone1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "ChzoneCycle1");
 		var zone1DbRefParsed = DBRef.Parse(zone1Result.Message!.ToPlainText()!);
 
-		var zone2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ChzoneCycle2"));
+		var zone2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "ChzoneCycle2");
 		var zone2DbRefParsed = DBRef.Parse(zone2Result.Message!.ToPlainText()!);
 
 		// Clear any inherited zones for clean isolation
@@ -257,10 +257,10 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask ChzoneCommand_Simple_ShouldSucceed()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create SimpleZone"));
+		var zoneResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "SimpleZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create SimpleObj"));
+		var objResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "SimpleObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
@@ -275,10 +275,10 @@ public class ZoneParentCycleTests
 	[Test]
 	public async ValueTask DebugChzoneBasic()
 	{
-		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DebugObj1"));
+		var obj1Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DebugObj1");
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 
-		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create DebugObj2"));
+		var obj2Result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, "DebugObj2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 
 		// Clear any inherited zones for clean isolation

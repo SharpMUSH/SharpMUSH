@@ -59,7 +59,8 @@ public class TaskScheduler(
 		string Owner,
 		DBRef? Executor,
 		Func<ValueTask>? BeforeExecution = null,
-		DBRef? SemaphoreTarget = null
+		DBRef? SemaphoreTarget = null,
+		bool ManagesSemaphoreCount = false
 	);
 
 	// The reservation ledger bounds this channel, including cancelled entries until consumed.
@@ -110,7 +111,7 @@ public class TaskScheduler(
 	}
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
-	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
+	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, bool managesSemaphoreCount = false)
 	{
 		string owner = $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
@@ -132,7 +133,7 @@ public class TaskScheduler(
 			else
 			{
 				var pid = NextPid();
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget);
+				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, ManagesSemaphoreCount: managesSemaphoreCount);
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -178,16 +179,17 @@ public class TaskScheduler(
 		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		if (!god.IsPlayer) return;
-		await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer));
+		if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
+		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer)))
+			throw new InvalidOperationException("Semaphore count update failed.");
 	}
-	private ValueTask<QueueAdmissionResult> Activate(long pid, bool semaphoreTimeout = false)
+	private ValueTask<QueueAdmissionResult> Activate(long pid, bool semaphoreTimeout = false, bool readyReserved = false)
 	{
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
 			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
-			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
+			if (readyReserved ? !_ready.Contains(pid) : !_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			var group = entry.Group;
 			var semaphoreTarget = entry.SemaphoreTarget;
 			entry = entry with
@@ -206,7 +208,8 @@ public class TaskScheduler(
 	private async ValueTask<CallState?> ExecuteList(MString command, ParserState state)
 	{
 		if (state.Executor is not null && (await mediator.Send(new GetObjectNodeQuery(state.Executor.Value))).IsNone) return null;
-		return await parser.FromState(state).CommandListParse(command);
+		// Deferred bodies cannot consume the submitting command list's break/include state.
+		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null }).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
 	private readonly CancellationTokenSource _shutdownCts = new();
@@ -265,8 +268,33 @@ public class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	 => Admit(action, triggerName, group, null);
 
-	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
-	 => Activate(pid, semaphoreTimeout);
+	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+	{
+		QueueEntry? entry;
+		lock (_admissionLock) _pendingEntries.TryGetValue(pid, out entry);
+		if (!semaphoreTimeout || entry?.ManagesSemaphoreCount is not true)
+			return await Activate(pid, semaphoreTimeout);
+
+		using var mutation = await EnterSemaphoreMutationAsync();
+		lock (_admissionLock)
+		{
+			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
+			if (!_pendingEntries.TryGetValue(pid, out entry) || !_ready.Add(pid))
+				return new(null, QueueRejectionReason.AlreadyReleased);
+		}
+		try
+		{
+			// Claim the release before awaiting persistence. Halt retains the reservation and
+			// drain excludes it, while notify cannot turn its outstanding count into lost credit.
+			await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
+			return await Activate(pid, readyReserved: true);
+		}
+		catch
+		{
+			lock (_admissionLock) _ready.Remove(pid);
+			throw;
+		}
+	}
 
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";
@@ -349,7 +377,7 @@ public class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
 		// Do not expose a reservation to halt until its counter transaction owns the lease.
 		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var counterWritten = false;
 		var currentCount = oldValue;

@@ -718,4 +718,72 @@ public class ConnectionAnnounceIntegrationTests
 		await Assert.That(MessagesTo(mortalWitness.DbRef, before)).Contains(
 			$"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}");
 	}
+
+	// --- Test 16: CB_CHECKQUIET, which is the whole of what @channel/mute does ---------------------
+
+	/// <summary>
+	/// PennMUSH sends connect and disconnect lines with <c>CB_CHECKQUIET</c>
+	/// (<c>chat_player_announce</c>, src/extchat.c:3234), and <c>channel_send</c> (:3957) withholds such
+	/// a line from a member carrying <c>CU_QUIET</c> — the flag <c>@channel/mute</c> sets.
+	/// </summary>
+	[Test]
+	public async ValueTask Connect_MutedMemberIsNotToldAndUnmutedMemberIs()
+	{
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan16", "Open");
+
+		var muted = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMuted16");
+		await JoinChannelAsync(channel, muted.DbRef);
+
+		var listening = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceUnmuted16");
+		await JoinChannelAsync(channel, listening.DbRef);
+
+		await Parser.CommandParse(muted.Handle, ConnectionService, MarkupText.Plain($"@channel/mute {chanName}"));
+
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnounceConn16");
+		await JoinChannelAsync(channel, playerRef);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var expected = $"<{chanName}> {playerName} {ErrorMessages.Notifications.GameHasConnected}";
+		var mutedBefore = WebAppFactoryArg.Notifications.CountFor(muted.DbRef);
+		var listeningBefore = WebAppFactoryArg.Notifications.CountFor(listening.DbRef);
+
+		var handle = await AnonymousHandleAsync();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+
+		await Assert.That(MessagesTo(listening.DbRef, listeningBefore)).Contains(expected)
+			.Because("the control: a member who did not mute the channel still hears the connect line");
+		await Assert.That(MessagesTo(muted.DbRef, mutedBefore)).DoesNotContain(expected)
+			.Because("CB_CHECKQUIET withholds a presence announcement from a member who muted the channel");
+	}
+
+	/// <summary>
+	/// The other half of <c>CB_CHECKQUIET</c>: it is set on presence lines only, so muting a channel must
+	/// not silence the conversation on it.
+	/// </summary>
+	[Test]
+	public async ValueTask Mute_DoesNotSilenceOrdinarySpeech()
+	{
+		// "Player" as well as "Open": speaking answers to Chan_Ok_Type, which the connect
+		// announcements above never reach.
+		var (chanName, channel) = await CreateChannelAsync("AnnounceChan17", "Player", "Open");
+
+		var muted = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMuted17");
+		await JoinChannelAsync(channel, muted.DbRef);
+
+		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceSpeaker17");
+		await JoinChannelAsync(channel, speaker.DbRef);
+
+		await Parser.CommandParse(muted.Handle, ConnectionService, MarkupText.Plain($"@channel/mute {chanName}"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(muted.DbRef);
+		await Parser.CommandParse(speaker.Handle, ConnectionService,
+			MarkupText.Plain($"@chat {chanName}=still audible"));
+
+		await Assert.That(string.Join("\n", MessagesTo(muted.DbRef, before))).Contains("still audible");
+	}
 }
