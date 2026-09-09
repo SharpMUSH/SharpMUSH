@@ -1738,10 +1738,12 @@ public partial class Functions
 					var value = attr.Value.ToPlainText();
 					if (value != null)
 					{
-						var valueToMatch = caseInsensitive ? value.ToLower() : value;
-						var patternToMatch = caseInsensitive ? valuePattern!.ToLower() : valuePattern;
-
-						if (MushText.IsWildcardMatch(MarkupText.Plain(valueToMatch), MarkupText.Plain(patternToMatch!)))
+						// Case is an argument to the matcher, not something to pre-fold into the
+						// operands: lowercasing both sides also lowercases the pattern's escapes and
+						// leaves nothing to distinguish wildgrep from wildgrepi once the matcher
+						// itself is case-insensitive (which it is, matching quick_wild).
+						if (MushText.IsWildcardMatch(MarkupText.Plain(value), valuePattern!,
+								caseSensitive: !caseInsensitive))
 						{
 							matchingAttrs.Add(attr.LongName!);
 						}
