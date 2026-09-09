@@ -86,6 +86,14 @@
             <AuthorizeView Policy="layout.admin">
                 <Authorized>@NavItem("/admin/layout", Icons.Material.Filled.Dashboard, Loc["LayLayouts"])</Authorized>
             </AuthorizeView>
+            <AuthorizeView>
+                <Authorized Context="snapshotAuth">
+                    @if (snapshotAuth.User.HasClaim("perm", "snapshots.capture") || snapshotAuth.User.HasClaim("perm", "snapshots.restore"))
+                    {
+                        @NavItem("/admin/snapshots", Icons.Material.Filled.History, Loc["SnapshotsTitle"])
+                    }
+                </Authorized>
+            </AuthorizeView>
             <AuthorizeView Policy="packages.admin">
                 <Authorized>@NavItem("/admin/packages", Icons.Material.Filled.Inventory2, Loc["PkgPackages"])</Authorized>
             </AuthorizeView>
