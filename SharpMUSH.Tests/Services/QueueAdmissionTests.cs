@@ -74,6 +74,89 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(new[]
+		{
+			new IConnectionService.ConnectionData(12, new DBRef(10), IConnectionService.ConnectionState.LoggedIn,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new())
+		}.ToAsyncEnumerable());
+		var notifications = Substitute.For<INotifyService>();
+		var reported = new TaskCompletionSource<(bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
+		notifications.Notify(12L, Arg.Any<OneOf.OneOf<MarkupText, string>>(), null, INotifyService.NotificationType.Announce)
+			.Returns(_ =>
+			{
+				reported.TrySetResult((ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
+				return ValueTask.CompletedTask;
+			});
+		await using var queue = Create(milliseconds: 10, connections: connections, notifications: notifications);
+		await queue.EnqueueWork(async () =>
+		{
+			await Task.Delay(Timeout.Infinite, ExecutionBudget.CurrentToken);
+			return CallState.Empty;
+		}, "expired", "test", new DBRef(10, 1));
+		var result = await reported.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result.Cancelled).IsFalse();
+		await Assert.That(result.Remaining > TimeSpan.Zero && result.Remaining <= TimeSpan.FromSeconds(1)).IsTrue();
+	}
+
+	[Test]
+	public async Task ReservedCompletionCountsQuotaAndPublishesAtFifoTailExactlyOnce()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var completed = Signal(); var started = Signal(); var release = Signal();
+		var order = new List<string>();
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => { order.Add("completion"); completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(global: 3, parser: parser);
+		var blocker = await queue.EnqueueWork(async () => { started.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+			await Assert.That(reserved.Admission.Accepted).IsTrue();
+			await Assert.That((await queue.EnqueueWork(() => { order.Add("row"); return ValueTask.FromResult<CallState?>(null); }, "row", "test")).Accepted).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(3);
+			await Assert.That((await queue.EnqueueWork(() => ValueTask.FromResult<CallState?>(null), "overflow", "test")).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
+			await Assert.That((await reserved.PublishAsync()).Accepted).IsTrue();
+			await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+			reserved.Dispose();
+			release.TrySetResult();
+			await completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(order.ToArray()).IsEquivalentTo(new[] { "row", "completion" });
+			await Assert.That(order[0]).IsEqualTo("row");
+		}
+		finally { release.TrySetResult(); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AbandonedOrHaltedReservationReleasesQuotaWithoutPublishing(bool halt)
+	{
+		await using var queue = Create(global: 1, scheduler: Substitute.For<IScheduler>());
+		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(reserved.Admission.Accepted).IsTrue();
+		if (halt) await queue.HaltByPid(reserved.Admission.Pid!.Value);
+		else reserved.Dispose();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		using var next = await queue.ReserveCommandList(MarkupText.Plain("next"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(next.Admission.Accepted).IsTrue();
+	}
+
+	[Test]
+	public async Task ShutdownReleasesUnpublishedCompletion()
+	{
+		var queue = Create(global: 1, scheduler: Substitute.For<IScheduler>());
+		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+		await queue.DisposeAsync();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.ShuttingDown);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task BackgroundAdmissionCanSuppressRejectionPublication(bool notify)

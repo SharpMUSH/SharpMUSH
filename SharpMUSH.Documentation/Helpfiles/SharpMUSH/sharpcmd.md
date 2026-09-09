@@ -3782,7 +3782,7 @@ This command issues an SQL query if the MUSH supports SQL and can connect to an 
 
 For each row returned by the query, the action list in `<obj>/<attr>` is queued, with row number passed as %0 and the columns passed as %1-%9 and v(10) to v(29). Row numbers start at 1. The MUSH will also set named arguments, with arg names matching the SQL field names. These are accessible as `r(<name>, arg)`.
 
-The `/notify` switch causes the executor to do queue "@notify me" after all the rows are processed. Note that this is the object running "@mapsql", and not `<obj>`.
+The `/notify` switch queues `@notify me` after the admitted row callbacks. This runs as the object executing `@mapsql`. One queue slot is reserved for completion before the query starts; if that reservation fails, the query does not run. Completion still runs for an empty result or partial row admission, but a query error releases its reservation without notifying.
 
 The `/colnames` switch causes @mapsql to first queue the obj/attr with row number (%0) set to 0 and args %1 to v(29) being the column names.
 

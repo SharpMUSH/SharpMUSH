@@ -24,6 +24,11 @@ public interface ITaskScheduler
 	QueueEntrySnapshot? GetQueueEntry(long pid);
 	ValueTask<QueueControlResult> PausePending(long pid, string reason);
 	ValueTask<QueueControlResult> ResumePending(long pid);
+	/// <summary>Reserve quota now and publish the command later at the FIFO tail. Dispose
+	/// the reservation on every path; existing scheduler plugins may explicitly reject this feature.</summary>
+	ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support reserved command publication.");
+
 	/// <summary>
 	/// Write a user command to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>

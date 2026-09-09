@@ -366,7 +366,10 @@ public partial class TaskScheduler(
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
 		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
-		if (notifyService is null || entry.Cts.IsCancellationRequested) return;
+		if (notifyService is null || entry.Cts.IsCancellationRequested || _shutdownCts.IsCancellationRequested) return;
+		// Reporting has its own bounded I/O lifetime after the user execution deadline.
+		using var reportBudget = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
+		using var reportScope = reportBudget.Enter();
 		try
 		{
 			if (DBRef.TryParse(entry.Owner, out var owner))
@@ -452,6 +455,15 @@ public partial class TaskScheduler(
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state));
 	}
 
+	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+	{
+		state = await CaptureExecutor(state);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, ready: false);
+		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
+		var pid = admission.Pid!.Value;
+		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
+	}
+
 	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
 	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
@@ -489,12 +501,12 @@ public partial class TaskScheduler(
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
-		async ValueTask Schedule(TimeSpan delay, long generation)
+		async ValueTask Schedule(DateTimeOffset due, long generation)
 		{
 			await _scheduler.ScheduleJob(JobBuilder.Create<SemaphoreTask>()
 				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
 				{ { "Command", command }, { "State", state }, { "Generation", generation } })).Build(),
-				TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + delay)
+				TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(due)
 					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build(), ExecutionBudget.CurrentToken);
 		}
 		var counterWriteAttempted = false;
@@ -539,9 +551,10 @@ public partial class TaskScheduler(
 				}
 			}
 			timeout = Nonnegative(timeout);
+			var due = DateTimeOffset.UtcNow + timeout;
 			lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-			{ Deferred = new(DateTimeOffset.UtcNow + timeout, Schedule, dbRefAttribute, command, state) };
-			await Schedule(timeout, 0);
+			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) };
+			await Schedule(due, 0);
 			return admission;
 		}
 		catch (Exception admissionFailure)
@@ -720,17 +733,18 @@ public partial class TaskScheduler(
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
-		async ValueTask Schedule(TimeSpan nextDelay, long generation)
+		async ValueTask Schedule(DateTimeOffset due, long generation)
 		{
 			await _scheduler.ScheduleJob(JobBuilder.Create<DelayedTask>()
 				.SetJobData(new JobDataMap { ["Generation"] = generation }).Build(),
-				TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow + nextDelay).WithSimpleSchedule(x => x.WithRepeatCount(0))
+				TriggerBuilder.Create().StartAt(due).WithSimpleSchedule(x => x.WithRepeatCount(0))
 					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build(), ExecutionBudget.CurrentToken);
 		}
 		delay = Nonnegative(delay);
+		var due = DateTimeOffset.UtcNow + delay;
 		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-		{ Deferred = new(DateTimeOffset.UtcNow + delay, Schedule, null, command, state) };
-		try { await Schedule(delay, 0); return admission; }
+		{ Deferred = new(due, Schedule, null, command, state) };
+		try { await Schedule(due, 0); return admission; }
 		catch { Release(pid, QueueOutcome.ScheduleFailed); throw; }
 	}
 
