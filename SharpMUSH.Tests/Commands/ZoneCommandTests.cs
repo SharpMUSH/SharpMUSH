@@ -111,6 +111,64 @@ public class ZoneCommandTests
 		await Assert.That(zone.IsNone).IsTrue();
 	}
 
+	/// <summary>Power names currently granted to an object.</summary>
+	private async Task<string[]> PowerNamesOf(DBRef dbref)
+	{
+		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
+		var powers = await node.Known.Object().Powers.Value.ToArrayAsync();
+		return powers.Select(p => p.Name).ToArray();
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_chzone: zoning a non-player strips its privileged flags and every
+	/// power, unless /preserve is given. @CHZONE gets this from the same
+	/// ManipulateSharpObjectService.ClearAllPowers that @CHZONEALL uses.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneStripsPowers()
+	{
+		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerStripZone");
+		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+
+		var objName = TestIsolationHelpers.GenerateUniqueName("PowerStripObject");
+		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder Boot"));
+		var granted = await PowerNamesOf(objDbRef);
+		await Assert.That(granted).Contains("Builder");
+		await Assert.That(granted).Contains("Boot");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
+
+		await Assert.That(await PowerNamesOf(objDbRef)).IsEmpty();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {objDbRef}"));
+	}
+
+	/// <summary>@CHZONE/PRESERVE keeps the powers the plain command strips.</summary>
+	[Test]
+	public async ValueTask ChzonePreserveKeepsPowers()
+	{
+		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerKeepZone");
+		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+
+		var objName = TestIsolationHelpers.GenerateUniqueName("PowerKeepObject");
+		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder"));
+		await Assert.That(await PowerNamesOf(objDbRef)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone/preserve {objDbRef}={zoneDbRef}"));
+
+		await Assert.That(await PowerNamesOf(objDbRef)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {objDbRef}"));
+	}
+
 	[Test]
 	public async ValueTask ChzonePermissionSuccess()
 	{
