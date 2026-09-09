@@ -19,11 +19,11 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = 1000 } });
+		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds } });
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
@@ -219,6 +219,82 @@ public class QueueAdmissionTests
 		fail = false;
 		await Assert.That((await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true)).Accepted).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("read")]
+	[Arguments("god")]
+	[Arguments("write")]
+	public async Task ManagedSemaphoreProviderWorkHonorsEntryDeadline(string phase)
+	{
+		using var release = new CancellationTokenSource();
+		var entered = Signal();
+		var drained = Signal();
+		async Task<T> Stall<T>(CancellationToken token)
+		{
+			entered.TrySetResult();
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
+			return default!;
+		}
+		async IAsyncEnumerable<SharpAttribute> Read([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
+		{
+			await Stall<bool>(token);
+			yield break;
+		}
+		var count = 0;
+		var writes = 0;
+		var mediator = CountingMediator(() => count, value => count = value);
+		if (phase == "read") mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(c => Read(c.Arg<CancellationToken>()));
+		if (phase == "god") mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 1), Arg.Any<CancellationToken>())
+			.Returns(c => new ValueTask<AnyOptionalSharpObject>(Stall<AnyOptionalSharpObject>(c.Arg<CancellationToken>())));
+		if (phase == "write") mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(c =>
+			{
+				// The provider may commit before cancellation wins delivery of its acknowledgement.
+				count = int.Parse(c.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				return Interlocked.Increment(ref writes) == 1
+					? new ValueTask<bool>(Stall<bool>(c.Arg<CancellationToken>())) : ValueTask.FromResult(true);
+			});
+		await using var queue = Create(global: 10, mediator: mediator);
+		await queue.EnqueueWork(async () =>
+		{
+			await queue.WriteCommandList(MarkupString.MarkupText.Plain("think waiting"), ParserState.Empty,
+				new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+			return null;
+		}, "managed-stall", "test");
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await queue.EnqueueWork(() => { drained.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "after-stall", "test");
+			await drained.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await Assert.That(count).IsEqualTo(0);
+		}
+		finally { release.Cancel(); }
+	}
+
+	[Test]
+	public async Task ShutdownCancelsBookkeepingWithUnlimitedEntryBudget()
+	{
+		using var release = new CancellationTokenSource();
+		var entered = Signal();
+		async IAsyncEnumerable<SharpAttribute> Read([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
+		{
+			entered.TrySetResult();
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
+			yield break;
+		}
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(c => Read(c.Arg<CancellationToken>()));
+		var queue = Create(mediator: mediator, milliseconds: 0);
+		var entry = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think timeout"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
+		await queue.ReleaseScheduledWork(entry.Pid!.Value, semaphoreTimeout: true);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var shutdown = queue.DisposeAsync().AsTask();
+		try { await shutdown.WaitAsync(TimeSpan.FromSeconds(1)); }
+		finally { release.Cancel(); await shutdown; }
 	}
 
 	[Test]
