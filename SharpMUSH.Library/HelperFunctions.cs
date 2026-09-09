@@ -45,7 +45,7 @@ public static partial class HelperFunctions
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
 	/// </summary>
 	public static ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> obj.IsWizard(CancellationToken.None);
+		=> obj.IsWizard(ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> IsWizard(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
@@ -55,7 +55,7 @@ public static partial class HelperFunctions
 	}
 
 	public static ValueTask<bool> IsRoyalty(this AnySharpObject obj)
-		=> obj.IsRoyalty(CancellationToken.None);
+		=> obj.IsRoyalty(ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
@@ -65,7 +65,7 @@ public static partial class HelperFunctions
 	}
 
 	public static ValueTask<bool> IsMistrust(this AnySharpObject obj)
-		=> obj.IsMistrust(CancellationToken.None);
+		=> obj.IsMistrust(ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
@@ -78,7 +78,7 @@ public static partial class HelperFunctions
 		=> obj.Object().Key == 1;
 
 	public static ValueTask<bool> IsPriv(this AnySharpObject obj)
-		=> obj.IsPriv(CancellationToken.None);
+		=> obj.IsPriv(ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> IsPriv(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
@@ -220,14 +220,12 @@ public static partial class HelperFunctions
 		=> obj.Object().HasPower(power, cancellationToken);
 
 	/// <summary>
-	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
-	/// property and handed it to every consumer, so one consumer's disposal could land on another's
-	/// live enumeration. <c>FreshAsyncEnumerable</c> gives each enumeration its own machine, and the
-	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
-	/// fail-open for anything phrased as a restriction. See issue #798.
+	/// Power-read failures propagate instead of being reported as "no power", which
+	/// could fail open when the caller is checking a restriction. Database streams use
+	/// <c>FreshAsyncEnumerable</c> to isolate each reader's enumeration state. See issue #798.
 	/// </summary>
 	public static ValueTask<bool> HasPower(this SharpObject obj, string power)
-		=> obj.HasPower(power, CancellationToken.None);
+		=> obj.HasPower(power, ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
 		=> await obj.Powers.Value
@@ -324,7 +322,7 @@ public static partial class HelperFunctions
 	/// </para>
 	/// </remarks>
 	public static ValueTask<bool> HasFlag(this SharpObject obj, string flag)
-		=> HasFlag(obj, flag, CancellationToken.None);
+		=> HasFlag(obj, flag, ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> await obj.Flags.Value
@@ -386,7 +384,7 @@ public static partial class HelperFunctions
 	}
 
 	public static ValueTask<bool> Inheritable(this AnySharpObject obj)
-		=> obj.Inheritable(CancellationToken.None);
+		=> obj.Inheritable(ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, CancellationToken cancellationToken)
 	{
@@ -399,7 +397,7 @@ public static partial class HelperFunctions
 	}
 
 	public static ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what)
-		=> who.Owns(what, CancellationToken.None);
+		=> who.Owns(what, ExecutionBudget.CurrentToken);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what, CancellationToken cancellationToken)
 		=> (await who.Object().Owner.WithCancellation(cancellationToken)).Object.Id ==
