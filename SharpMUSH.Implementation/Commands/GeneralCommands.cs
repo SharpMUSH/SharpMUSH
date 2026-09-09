@@ -387,7 +387,7 @@ public partial class Commands
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -411,7 +411,7 @@ public partial class Commands
 					Caller = parser.CurrentState.Executor
 				};
 
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					attribute.Value,
 					stateForElement,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -420,7 +420,7 @@ public partial class Commands
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -507,7 +507,7 @@ public partial class Commands
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -515,7 +515,7 @@ public partial class Commands
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -549,7 +549,7 @@ public partial class Commands
 					IterationRegisters = iterationStack
 				};
 
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					command,
 					stateForIteration,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -558,7 +558,7 @@ public partial class Commands
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -566,7 +566,7 @@ public partial class Commands
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -773,7 +773,7 @@ public partial class Commands
 					CurrentEvaluation = new DBAttribute(viewingObject.DBRef, action.LongName!),
 					Function = null
 				};
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					action.Value,
 					actionState,
 					new DbRefAttribute(viewingObject.DBRef, action.LongName!.Split('`')),
@@ -1827,7 +1827,7 @@ public partial class Commands
 					Enactor = target.Object().DBRef
 				};
 
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("look"),
 					targetPlayerState,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -2028,7 +2028,7 @@ public partial class Commands
 
 			if (hasReplacementActions)
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					replacementActions!,
 					parser.CurrentState,
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
@@ -2043,7 +2043,7 @@ public partial class Commands
 
 			if (hasReplacementActions)
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					replacementActions!,
 					parser.CurrentState,
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
@@ -2169,11 +2169,11 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
-		if (validation.IsT1) return new CallState(validation.AsT1.Value);
+		if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
-		if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
+		if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			accounting.AsT0.Persist, accounting.AsT0.Reconcile, qRegisters);
@@ -2494,7 +2494,7 @@ public partial class Commands
 
 			if (switches.Contains("NOTIFY"))
 			{
-				await Mediator.Send(new QueueCommandListRequest(
+				await Mediator.Send(new AdmitCommandListRequest(
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
@@ -2562,7 +2562,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime), ExecutionBudget.CurrentToken);
+			await Mediator.Send(new AdmitDelayedCommandListRequest(arg1, callbackState, convertedTime), ExecutionBudget.CurrentToken);
 			return CallState.Empty;
 		}
 
@@ -2695,7 +2695,7 @@ public partial class Commands
 			return;
 		}
 		// Admission owns the counter transaction, including negative credits and schedule rollback.
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, callbackState ?? parser.CurrentState,
+		await Mediator.Send(new AdmitCommandListWithTimeoutRequest(arg1, callbackState ?? parser.CurrentState,
 			new DbRefAttribute(located.Object().DBRef, attribute), 0, delay, ManageSemaphoreCount: true), token);
 	}
 
@@ -3010,10 +3010,10 @@ public partial class Commands
 		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
-			if (validation.IsT1) return new CallState(validation.AsT1.Value);
+			if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
 			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
 				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
-			if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
+			if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, accounting.AsT0.Persist, accounting.AsT0.Reconcile);
 			return null;
@@ -3104,7 +3104,7 @@ public partial class Commands
 
 		try
 		{
-			// Note: Queue infrastructure available via QueueCommandListRequest if needed
+			// Note: Queue infrastructure available via AdmitCommandListRequest if needed
 			// Currently executes inline for immediate response (default PennMUSH behavior)
 			await parser.With(
 				state => state with
@@ -3561,7 +3561,7 @@ public partial class Commands
 				if (useQueue)
 				{
 					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
-					await Mediator.Send(new QueueCommandListRequest(
+					await Mediator.Send(new AdmitCommandListRequest(
 						command!,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["BREAK"]),
@@ -4849,7 +4849,7 @@ public partial class Commands
 					}
 					else
 					{
-						await Mediator.Send(new QueueCommandListRequest(
+						await Mediator.Send(new AdmitCommandListRequest(
 							actionMString,
 							parser.CurrentState,
 							new DbRefAttribute(executor.Object().DBRef, []),
@@ -4876,7 +4876,7 @@ public partial class Commands
 					}
 					else
 					{
-						await Mediator.Send(new QueueCommandListRequest(
+						await Mediator.Send(new AdmitCommandListRequest(
 							actionMString,
 							parser.CurrentState,
 							new DbRefAttribute(executor.Object().DBRef, []),
@@ -5045,7 +5045,7 @@ public partial class Commands
 		}
 
 		// Note: INLINE switch executes immediately (current default behavior).
-		// Queue dispatch available via QueueCommandListRequest if needed for future enhancements.
+		// Queue dispatch available via AdmitCommandListRequest if needed for future enhancements.
 
 		return await ExecuteAttributeWithTracking(parser, attributeLongName, async () =>
 		{
@@ -7211,7 +7211,7 @@ public partial class Commands
 				if (useQueue)
 				{
 					var executor = parser.CurrentState.Executor ?? throw new InvalidOperationException("Executor cannot be null");
-					await Mediator.Send(new QueueCommandListRequest(
+					await Mediator.Send(new AdmitCommandListRequest(
 						command!,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["ASSERT"]),

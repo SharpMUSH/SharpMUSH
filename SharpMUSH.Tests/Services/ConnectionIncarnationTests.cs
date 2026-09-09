@@ -97,6 +97,22 @@ public class ConnectionIncarnationTests
 	}
 
 	[Test]
+	public async Task CurrentInputUsesThePublishedSchedulerEntryPoint()
+	{
+		var service = new ConnectionService(Substitute.For<IPublisher>());
+		await Register(service, "current", 200);
+		var scheduler = Substitute.For<ITaskScheduler>();
+		await new TelnetInputConsumer(NullLogger<TelnetInputConsumer>.Instance, scheduler, service)
+			.HandleAsync(new TelnetInputMessage(Handle, "look", "current"));
+		await new WebSocketInputConsumer(NullLogger<WebSocketInputConsumer>.Instance, scheduler, service)
+			.HandleAsync(new WebSocketInputMessage(Handle, "look", "current"));
+
+		await scheduler.Received(2).WriteUserCommand(Handle, Arg.Any<MarkupText>(),
+			Arg.Is<ParserState>(state => state.ConnectionSessionId == "current"));
+		await scheduler.DidNotReceive().AdmitUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
+	}
+
+	[Test]
 	public async Task DelayedEstablishedEventCannotReplaceAuthoritativeKvIncarnation()
 	{
 		var service = Substitute.For<IConnectionService>();
@@ -151,14 +167,14 @@ public class ConnectionIncarnationTests
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await scheduler.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await scheduler.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
 			await scheduler.WriteUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
 				ParserState.Empty with { Handle = Handle, ConnectionSessionId = "old" });
 			await Register(service, "replacement", 200);
-			await scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");
+			await scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");
 		}
 		finally { release.TrySetResult(); }
 		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));

@@ -7,37 +7,20 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface ITaskScheduler
 {
-	/// <summary>Serialize semaphore counter updates; acquire before deferred queue locks.</summary>
-	ValueTask<IDisposable> EnterSemaphoreMutationAsync();
-
-	/// <summary>
-	/// Apply a game semaphore command while its mutation lease is held. Persistence precedes
-	/// publication/removal; reconciliation returns true only when the intended count committed.
-	/// An unreadable or conflicting count must throw so reservations remain protected for retry.
-	/// </summary>
-	ValueTask<int> ApplySemaphoreCommandAsync(DbRefAttribute target, int? count, bool drain,
-		Func<int, ValueTask> persist, Func<ValueTask<bool>> reconcile, Dictionary<string, MString>? registers = null);
-
-	QueueUsage GetQueueUsage();
-	/// <summary>Reserve quota now and publish the command later at the FIFO tail. Dispose
-	/// the reservation on every path; existing scheduler plugins may explicitly reject this feature.</summary>
-	ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
-		=> throw new NotSupportedException("This scheduler does not support reserved command publication.");
-
 	/// <summary>
 	/// Write a user command to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>
 	/// <param name="handle">The identifier for the handle to send to.</param>
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
-	ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state);
+	ValueTask WriteUserCommand(long handle, MString command, ParserState state);
 
 	/// <summary>
 	/// Write a command-list to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state);
+	ValueTask WriteCommandList(MString command, ParserState state);
 
 	/// <summary>
 	/// Write a command-list to the scheduler on semaphore, to be immediately executed when the scheduler runs.
@@ -45,9 +28,8 @@ public interface ITaskScheduler
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="dbAttribute">Attribute to register under.</param>
-	/// <param name="oldValue">Count supplied by callers managing the attribute themselves.</param>
-	/// <param name="manageSemaphoreCount">Atomically read and update the count before publishing work; ignore oldValue.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, bool manageSemaphoreCount = false);
+	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
+	ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue);
 
 	/// <summary>
 	/// Write an async function to the scheduler, to be immediately executed when the scheduler runs.
@@ -55,7 +37,7 @@ public interface ITaskScheduler
 	/// <param name="function">Function to run, before invoking the DbRefAttribute</param>
 	/// <param name="dbAttribute">Attribute to register under.</param>
 	/// <returns></returns>
-	ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null);
+	ValueTask WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute);
 
 	/// <summary>
 	/// Write a command-list to the scheduler on semaphore with a timeout, to be immediately executed when the scheduler runs.
@@ -64,9 +46,8 @@ public interface ITaskScheduler
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="timeout">Timeout after which the command is re-queued as a regular command to be immediately run.</param>
 	/// <param name="dbAttribute">Attribute to register under.</param>
-	/// <param name="oldValue">Count supplied by callers managing the attribute themselves.</param>
-	/// <param name="manageSemaphoreCount">Atomically read and update the count before publishing work; ignore oldValue.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false);
+	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
+	ValueTask WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout);
 
 	/// <summary>
 	/// Write a commandlist to the scheduler on semaphore with a timeout, to be immediately executed when the scheduler runs.
@@ -74,7 +55,7 @@ public interface ITaskScheduler
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="delay">Timeout after which the command is re-queued as a regular command to be immediately run.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, TimeSpan delay);
+	ValueTask WriteCommandList(MString command, ParserState state, TimeSpan delay);
 
 	/// <summary>
 	/// Get all Tasks currently running on the scheduler, when they are due, and the handle they are associated with.
@@ -121,13 +102,13 @@ public interface ITaskScheduler
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
 	/// <param name="oldValue">The old value, before notifying.</param>
 	/// <param name="count">Number of tasks to notify (default 1)</param>
-	ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1);
+	ValueTask Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1);
 
 	/// <summary>
 	/// Notify a Semaphore trigger to trigger all waiting jobs.
 	/// </summary>
 	/// <param name="dbAttribute">DbRef and Attribute with a value</param>
-	ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAll(DbRefAttribute dbAttribute);
+	ValueTask NotifyAll(DbRefAttribute dbAttribute);
 
 	/// <summary>
 	/// Modify Q-registers of the first waiting task on a semaphore.
@@ -144,11 +125,8 @@ public interface ITaskScheduler
 	/// <param name="count">Optional number of tasks to drain (null = all)</param>
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 
-	/// <summary>Removes pending semaphore work and returns only reservations actually removed.</summary>
-	ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null);
-
 	/// <summary>
-	/// Halts an executor's jobs and waits targeting this semaphore object.
+	/// Halts queued jobs related to a DBRef, including semaphore waits.
 	/// </summary>
 	/// <param name="dbRef">DbRef</param>
 	ValueTask Halt(DBRef dbRef);
@@ -174,11 +152,56 @@ public interface ITaskScheduler
 	/// <param name="action">The action to execute</param>
 	/// <param name="triggerName">Trigger identifier for tracking</param>
 	/// <param name="group">Group identifier for categorization</param>
-	ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
+	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
-	/// <summary>Admit work under an explicit canonical executor identity. Background callers that persist rejection status may disable user notifications.</summary>
-	ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true);
+	// Additive admission and control APIs. Legacy implementations remain loadable and fail explicitly
+	// if a caller requests a feature they have not implemented.
+	ValueTask<IDisposable> EnterSemaphoreMutationAsync()
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 
-	/// <summary>Transfer an existing delayed or semaphore reservation without admitting it again.</summary>
-	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false);
+	ValueTask<int> ApplySemaphoreCommandAsync(DbRefAttribute target, int? count, bool drain,
+		Func<int, ValueTask> persist, Func<ValueTask<bool>> reconcile, Dictionary<string, MString>? registers = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	QueueUsage GetQueueUsage()
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, bool manageSemaphoreCount = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, TimeSpan delay)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 }
