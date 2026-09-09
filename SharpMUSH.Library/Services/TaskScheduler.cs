@@ -636,7 +636,10 @@ public partial class TaskScheduler(
 				if (!_pendingEntries.TryGetValue(pid, out entry) || _ready.Contains(pid)) return true;
 			}
 			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
-			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
+			// Unmanaged timeouts defer accounting until execution; a paused entry halted here
+			// will never execute. Notifications and managed timeouts have already accounted.
+			if (entry.Group.StartsWith(SemaphoreGroup + ":") && (entry.Deferred?.ReleasePending != true
+				|| entry.Deferred is { ReleaseTimeout: true } && !entry.ManagesSemaphoreCount))
 				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
 			lock (_admissionLock) entry = RemoveEntry(pid);
 			if (entry is null) return true;
