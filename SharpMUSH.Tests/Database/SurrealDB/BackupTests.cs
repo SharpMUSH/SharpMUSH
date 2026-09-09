@@ -58,7 +58,9 @@ public class BackupTests
 			var backups = new SurrealWorldBackupService(client,
 				new WorldBackupOptions { Root = root }, NullLogger<SurrealWorldBackupService>.Instance);
 
-			var result = await backups.CreateAsync();
+			using var exportCancellation = new CancellationTokenSource();
+			var result = await backups.CreateAsync(exportCancellation.Token);
+			exportCancellation.Cancel();
 
 			await Assert.That(result.IsT0).IsTrue();
 			var script = await File.ReadAllTextAsync(
@@ -71,7 +73,9 @@ public class BackupTests
 			{
 				var restoredClient = target.GetRequiredService<ISurrealDbClient>();
 				await restoredClient.Connect();
-				await restoredClient.Import(script);
+				using var importCancellation = new CancellationTokenSource();
+				await SurrealRequestCancellation.RunAsync(token => restoredClient.Import(script, token), importCancellation.Token);
+				importCancellation.Cancel();
 
 				var names = await restoredClient.Select<ThingRecord>("thing");
 				await Assert.That(names.Select(t => t.Name).OrderBy(n => n).ToArray())
