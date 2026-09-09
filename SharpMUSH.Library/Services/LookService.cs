@@ -30,8 +30,7 @@ public class LookService(
 		AnySharpObject looker,
 		AnyOptionalSharpObject viewing,
 		LookKey key,
-		bool lookOutside = false,
-		bool forceOpaque = false)
+		bool lookOutside = false)
 	{
 		// look_room (look.c:461): NOTHING is shown nothing.
 		if (viewing.IsNone())
@@ -44,7 +43,7 @@ public class LookService(
 
 		// LOOK_CLOUDYTRANS (externs.h:248) is the mask of both transparent-exit bits, and look.c:458
 		// derives "am I looking through an exit" from either of them being set.
-		var lookThroughExit = key.HasFlag(LookKey.Trans) || key.HasFlag(LookKey.CloudyTrans);
+		var lookThroughExit = key.HasFlag(LookKey.Trans) || key.HasFlag(LookKey.Cloudy);
 
 		// look.c:492 and look.c:503: an automatic look — the one a mover gets on arrival — shows a
 		// TERSE player no description at all.
@@ -190,15 +189,11 @@ public class LookService(
 
 		if (showDescription && oDescribeAttribute is not null)
 		{
-			// A HALTED object runs none of its softcode (AttributeService.cs:417), so its action
-			// attribute is not queued; the o-message is plain text and still goes out.
-			var halted = await realViewing.HasFlag("HALT");
-
 			await didItService.DidIt(parser, new DidItRequest(
 				Player: looker,
 				Thing: realViewing,
 				OWhat: oDescribeAttribute,
-				AWhat: halted ? null : aDescribeAttribute));
+				AWhat: aDescribeAttribute));
 		}
 
 		// look.c:510-526: a terse automatic look gets only the o-message and the action of whichever
@@ -230,17 +225,21 @@ public class LookService(
 			}
 		}
 
-		// look.c:528-529: look/opaque drops the contents, and so does a look through an exit that is
-		// both cloudy and transparent.
+		// look.c:528-530: LOOK_NOCONTENTS drops the contents, and so does a look through an exit that
+		// is both cloudy and transparent.
 		var showContents = !key.HasFlag(LookKey.NoContents)
-			&& !(key.HasFlag(LookKey.Trans) && key.HasFlag(LookKey.CloudyTrans));
+			&& !(key.HasFlag(LookKey.Trans) && key.HasFlag(LookKey.Cloudy));
 
+		// An opaque container shows no contents from outside.
 		var showInventory = showContents
 			&& realViewing.IsContainer
-			&& !forceOpaque
 			&& !(await realViewing.IsOpaque());
 
-		if (showInventory)
+		// look.c:531-533: look_exits is called independently of look_contents, gated only on the look
+		// not arriving through an exit. LOOK_NOCONTENTS and an opaque container do not silence it.
+		var showExits = realViewing.IsRoom && !lookThroughExit;
+
+		if (realViewing.IsContainer && (showInventory || showExits))
 		{
 			var allContents = await mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
 
@@ -292,7 +291,7 @@ public class LookService(
 				}
 			}
 
-			if (visibleContents.Count > 0)
+			if (showInventory && visibleContents.Count > 0)
 			{
 				var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
 				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
@@ -322,8 +321,7 @@ public class LookService(
 				await notifyService.Notify(looker, formattedContents, looker);
 			}
 
-			// look.c:531-533: the exits are listed only for a look that is not coming through an exit.
-			if (visibleExits.Count > 0 && realViewing.IsRoom && !lookThroughExit)
+			if (showExits && visibleExits.Count > 0)
 			{
 				var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
 				var exitFormatArgs = new Dictionary<string, CallState>

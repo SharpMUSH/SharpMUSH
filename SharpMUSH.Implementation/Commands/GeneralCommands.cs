@@ -557,7 +557,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var forceOpaque = switches.Contains("OPAQUE");
+		// cmds.c:1742: the /opaque switch is LOOK_NOCONTENTS.
+		var key = switches.Contains("OPAQUE") ? LookKey.NoContents : LookKey.Normal;
 		var lookOutside = switches.Contains("OUTSIDE");
 
 		if (executor.IsPlayer)
@@ -616,7 +617,7 @@ public partial class Commands
 			return new None();
 		}
 
-		return await LookService.LookRoom(parser, executor, viewing, LookKey.Normal, lookOutside, forceOpaque);
+		return await LookService.LookRoom(parser, executor, viewing, key, lookOutside);
 	}
 
 	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]

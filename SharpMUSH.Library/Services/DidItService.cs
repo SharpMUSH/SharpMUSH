@@ -189,6 +189,18 @@ public class DidItService(
 	private async ValueTask<bool> QueueAction(IMUSHCodeParser parser, DidItRequest request)
 	{
 		var thing = request.Thing;
+
+		// SharpMUSH deviation from PennMUSH: queue_attribute_useatr queues the action list without
+		// consulting the object's flags, so in Penn a HALTed object still runs its @a-attributes.
+		// SharpMUSH treats HALT as "runs none of its softcode" everywhere — the same rule
+		// AttributeService applies to u() and the $-command matcher — because @halt is what an owner
+		// reaches for to stop a runaway object, and an object whose actions keep queueing is not
+		// stopped. The o-message is plain text and still goes out.
+		if (await thing.HasFlag("HALT"))
+		{
+			return false;
+		}
+
 		var attr = await attributeService.GetAttributeAsync(
 			thing, thing, request.AWhat!, IAttributeService.AttributeMode.Execute, parent: true);
 
@@ -197,10 +209,12 @@ public class DidItService(
 			return false;
 		}
 
+		var command = StripCommandPrefix(attr.AsAttribute.Last().Value);
+
 		// queue_attribute_base (src/cque.c:786-795) returns 1 as soon as the attribute is found, so a
 		// present-but-empty action attribute still counts as used for fail_lock's return value even
 		// though there is nothing to run.
-		if (string.IsNullOrEmpty(attr.AsAttribute.Last().Value.ToPlainText()))
+		if (string.IsNullOrEmpty(command.ToPlainText()))
 		{
 			return true;
 		}
@@ -224,7 +238,7 @@ public class DidItService(
 		// re-raised by an @include the action never ran under, and @respond would edit an HTTP
 		// response that was assembled and sent long before the queue drained.
 		await mediator.Send(new QueueCommandListRequest(
-			attr.AsAttribute.Last().Value,
+			command,
 			baseState with
 			{
 				Executor = executor,
@@ -250,5 +264,40 @@ public class DidItService(
 			-1));
 
 		return true;
+	}
+
+	/// <summary>
+	/// Strips a <c>$command</c> / <c>^listen</c> prefix off an action list before it is queued, the
+	/// way <c>queue_attribute_useatr</c> does (<c>src/cque.c:842-857</c>): from a leading <c>$</c> or
+	/// <c>^</c> up to and including the first colon not preceded by a backslash. A value that opens
+	/// with one of those characters but carries no unescaped colon is not a prefixed command, and is
+	/// queued whole.
+	/// </summary>
+	private static MString StripCommandPrefix(MString value)
+	{
+		var plain = value.ToPlainText();
+
+		if (plain.Length == 0 || (plain[0] != '$' && plain[0] != '^'))
+		{
+			return value;
+		}
+
+		for (var index = 0; index < plain.Length; index++)
+		{
+			if (plain[index] == '\\')
+			{
+				// The backslash escapes whatever follows it, colon included, and stays in the queued
+				// text — Penn advances past both characters without copying either out.
+				index++;
+				continue;
+			}
+
+			if (plain[index] == ':')
+			{
+				return value.Substring(index + 1);
+			}
+		}
+
+		return value;
 	}
 }
