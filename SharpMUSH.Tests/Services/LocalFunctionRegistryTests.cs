@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.Services;
 public class LocalFunctionRegistryTests
 {
 	private static DBRef Ref(string value) => DBRef.Parse(value);
-	private static UserDefinedFunction Entry(string name, DBRef? owner, DBRef target) => new(name, target, "CODE", 0, 32, true, null, Owner: owner);
+	private static UserDefinedFunction Entry(string name, DBRef? owner, DBRef target) => new(name, target, "CODE", 0, 32, true, null) { Owner = owner };
 
 	[Test]
 	[Arguments(false)]

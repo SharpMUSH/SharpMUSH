@@ -25,7 +25,6 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// When <c>true</c>, the entry was marked via <c>@function/preserve</c> so it survives a bulk
 /// reset (<c>@function/restore</c> with no argument) and is reported for re-registration.
 /// </param>
-/// <param name="Owner">Full owner identity for a local definition; null for a global definition.</param>
 public record UserDefinedFunction(
 	string Name,
 	DBRef Object,
@@ -35,8 +34,11 @@ public record UserDefinedFunction(
 	bool Enabled,
 	string? AliasOf,
 	string? Restriction = null,
-	bool Preserved = false,
-	DBRef? Owner = null);
+	bool Preserved = false)
+{
+	/// <summary>Full owner identity for a local definition; null for a global definition.</summary>
+	public DBRef? Owner { get; init; }
+}
 
 /// <summary>
 /// In-memory registry of global and owner-local user-defined functions (<c>@function</c>).
@@ -53,10 +55,12 @@ public record UserDefinedFunction(
 public interface IUserDefinedFunctionService
 {
 	/// <summary>Removes local definitions backed by, or scoped to, a deleted or re-owned object.</summary>
-	void InvalidateLocalDefinitions(DBRef target);
+	void InvalidateLocalDefinitions(DBRef target)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Remove local definitions and aliases displaced by a compiled system name.</summary>
-	void InvalidateLocalName(string name);
+	void InvalidateLocalName(string name)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Registers (or overwrites) a user-defined function in its declared scope.</summary>
 	void Define(UserDefinedFunction function);
@@ -70,26 +74,50 @@ public interface IUserDefinedFunctionService
 	/// <see cref="UserDefinedFunction.Attribute"/> / arg-count bounds to evaluate, while
 	/// <see cref="UserDefinedFunction.Name"/> remains the requested name.
 	/// </remarks>
-	UserDefinedFunction? Resolve(string name, DBRef? owner = null);
+	UserDefinedFunction? Resolve(string name);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	UserDefinedFunction? Resolve(string name, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Returns the raw entry for a name (case-insensitive) without following aliases.</summary>
-	UserDefinedFunction? Get(string name, DBRef? owner = null);
+	UserDefinedFunction? Get(string name);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	UserDefinedFunction? Get(string name, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Removes a function (or alias) by name. Returns whether an entry was removed.</summary>
-	bool Delete(string name, DBRef? owner = null);
+	bool Delete(string name);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool Delete(string name, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Enables or disables a function by name. Returns whether an entry was found.</summary>
-	bool SetEnabled(string name, bool enabled, DBRef? owner = null);
+	bool SetEnabled(string name, bool enabled);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool SetEnabled(string name, bool enabled, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Registers <paramref name="alias"/> as another name for the existing function <paramref name="target"/>.</summary>
 	/// <returns><c>true</c> if <paramref name="target"/> exists and the alias was created.</returns>
-	bool Alias(string alias, string target, DBRef? owner = null);
+	bool Alias(string alias, string target);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool Alias(string alias, string target, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>
 	/// Sets (or clears, when <paramref name="restriction"/> is <c>null</c>/empty) the permission
 	/// restriction on an existing user function. Returns whether an entry was found.
 	/// </summary>
-	bool SetRestriction(string name, string? restriction, DBRef? owner = null);
+	bool SetRestriction(string name, string? restriction);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool SetRestriction(string name, string? restriction, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>
 	/// Creates <paramref name="newName"/> as an independent copy of the existing user function
@@ -97,18 +125,30 @@ public interface IUserDefinedFunctionService
 	/// reset). The clone can be restricted, disabled, or deleted without touching the original.
 	/// </summary>
 	/// <returns><c>true</c> if <paramref name="existing"/> resolves and the clone was created.</returns>
-	bool Clone(string newName, string existing, DBRef? owner = null);
+	bool Clone(string newName, string existing);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool Clone(string newName, string existing, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>Marks or unmarks a user function as preserved (survives <see cref="ResetUnpreserved"/>).</summary>
 	/// <returns>Whether an entry was found.</returns>
-	bool SetPreserved(string name, bool preserved, DBRef? owner = null);
+	bool SetPreserved(string name, bool preserved);
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	bool SetPreserved(string name, bool preserved, DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>
 	/// Removes every entry that is NOT marked <see cref="UserDefinedFunction.Preserved"/>.
 	/// Implements <c>@function/restore</c> (no argument): preserved entries survive a bulk reset.
 	/// </summary>
 	/// <returns>The number of entries removed.</returns>
-	int ResetUnpreserved(DBRef? owner = null);
+	int ResetUnpreserved();
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	int ResetUnpreserved(DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>
 	/// Sets (or clears, when <paramref name="restriction"/> is <c>null</c>/empty) a restriction
@@ -121,5 +161,9 @@ public interface IUserDefinedFunctionService
 	string? GetBuiltinRestriction(string name);
 
 	/// <summary>All registered entries, including aliases and disabled ones.</summary>
-	IReadOnlyCollection<UserDefinedFunction> All(DBRef? owner = null);
+	IReadOnlyCollection<UserDefinedFunction> All();
+
+	/// <summary>Owner-scoped overload for local function registries.</summary>
+	IReadOnlyCollection<UserDefinedFunction> All(DBRef? owner)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 }
