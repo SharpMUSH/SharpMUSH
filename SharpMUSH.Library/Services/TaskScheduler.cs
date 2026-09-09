@@ -127,7 +127,8 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true)
 	{
-		string owner = $"handle:{handle}";
+		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
+		string owner = handle is null ? "system" : $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{

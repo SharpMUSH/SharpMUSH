@@ -1752,7 +1752,7 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
-	public async Task OwnerBudgetIncludesRunningWork()
+	public async Task SystemOwnerBudgetIncludesRunningWork()
 	{
 		await using var queue = Create(global: 10, owner: 1);
 		var entered = Signal(); var release = Signal();
@@ -1762,6 +1762,8 @@ public class QueueAdmissionTests
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			var rejected = await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "second", "test");
 			await Assert.That(rejected.Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+			await Assert.That(queue.GetQueueUsage().Owners["system"]).IsEqualTo(1);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
 		}
 		finally { release.TrySetResult(); }
 	}
