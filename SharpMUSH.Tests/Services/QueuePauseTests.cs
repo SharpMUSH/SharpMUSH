@@ -110,6 +110,29 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments(false, false)]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task HaltingReleasedPausedSemaphoreAccountsOnlyOutstandingTimeout(bool managed, bool timeout)
+	{
+		var count = managed ? 0 : 1;
+		var mediator = QueueAdmissionTests.CountingMediator(() => count, value => count = value);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		await using var queue = Create(parser, mediator: mediator);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10, 1), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1), manageSemaphoreCount: managed);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: timeout)).Accepted).IsTrue();
+		if (!timeout) count--; // Notification command has already persisted its counter.
+		await Assert.That(count).IsEqualTo(timeout && !managed ? 1 : 0);
+		await Assert.That(await queue.HaltByPid(job.Pid.Value)).IsTrue();
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await parser.DidNotReceiveWithAnyArgs().CommandListParse(default!);
+	}
+
+	[Test]
 	public async Task ObsoletePausedTimerCannotDecrementTheManagedSemaphore()
 	{
 		var count = 0;
