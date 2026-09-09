@@ -628,15 +628,15 @@ public partial class TaskScheduler(
 
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"), ExecutionBudget.CurrentToken);
 		var outcomes = new List<QueueAdmissionResult>();
 		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
 			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(Math.Max(0, count)))
 		{
-			var trigger = await _scheduler.GetTrigger(key);
+			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
 			if (trigger is null) continue;
-			await _scheduler.UnscheduleJob(key);
-			await _scheduler.DeleteJob(trigger.JobKey);
+			await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+			await _scheduler.DeleteJob(trigger.JobKey, ExecutionBudget.CurrentToken);
 			outcomes.Add(await Activate(long.Parse(key.Name.Split('-').Last())));
 		}
 		return outcomes;
@@ -653,7 +653,7 @@ public partial class TaskScheduler(
 		}
 
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"), ExecutionBudget.CurrentToken);
 
 		var firstTrigger = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
 			.FirstOrDefault(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last())));
@@ -664,13 +664,13 @@ public partial class TaskScheduler(
 
 		try
 		{
-			var trigger = await _scheduler.GetTrigger(firstTrigger, CancellationToken.None);
+			var trigger = await _scheduler.GetTrigger(firstTrigger, ExecutionBudget.CurrentToken);
 			if (trigger == null)
 			{
 				return false;
 			}
 
-			var job = await _scheduler.GetJobDetail(trigger.JobKey);
+			var job = await _scheduler.GetJobDetail(trigger.JobKey, ExecutionBudget.CurrentToken);
 			if (job == null)
 			{
 				return false;
@@ -702,10 +702,11 @@ public partial class TaskScheduler(
 
 			data["State"] = state;
 
-			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
+			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true, cancellationToken: ExecutionBudget.CurrentToken);
 
 			return true;
 		}
+		catch (OperationCanceledException) { throw; }
 		catch (Exception)
 		{
 			// Job may have been removed or modified concurrently
@@ -719,12 +720,12 @@ public partial class TaskScheduler(
 	public async ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
+			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"), ExecutionBudget.CurrentToken);
 
 		var selected = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
 			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(count ?? int.MaxValue).ToArray();
 		if (selected.Length == 0) return 0;
-		await _scheduler.UnscheduleJobs(selected);
+		await _scheduler.UnscheduleJobs(selected, ExecutionBudget.CurrentToken);
 		return selected.Count(key => ReleasePending(long.Parse(key.Name.Split('-').Last())));
 	}
 
@@ -946,14 +947,14 @@ public partial class TaskScheduler(
 
 	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
 	{
-		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"));
+		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"), ExecutionBudget.CurrentToken);
 
 		// This should return just one or zero, but using it as an iterator simplifies the code.
 		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
 		{
-			var trigger = await _scheduler.GetTrigger(key);
+			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
 			if (trigger is null) continue;
-			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());
+			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build(), ExecutionBudget.CurrentToken);
 		}
 	}
 
