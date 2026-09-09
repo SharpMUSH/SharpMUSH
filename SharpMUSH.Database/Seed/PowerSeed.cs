@@ -34,12 +34,15 @@ public static class PowerSeed
 		("Pick_DBRefs", "", ["wizard","log"], ["wizard"]),
 		("Player_Create", "", ["wizard","log"], ["wizard"]),
 		("Poll", "", ["wizard","log"], ["wizard"]),
-		("Pueblo_Send", "", ["wizard","log"], ["wizard"]),
 		("Queue", "", ["wizard","log"], ["wizard"]),
 		("Search", "", ["wizard","log"], ["wizard"]),
 		("See_All", "", ["wizard","log"], ["wizard"]),
 		("See_Queue", "", ["wizard","log"], ["wizard"]),
 		("See_OOB", "", ["wizard","log"], ["wizard"]),
+		// PennMUSH renamed Pueblo_Send to Send_OOB "to reflect its new use for other,
+		// non-Pueblo-related, out of band messages. Pueblo_Send remains as an alias."
+		// (game/txt/hlp/pennv186.hlp:86; the rename is applied at load in src/flags.c:850-855.)
+		("Send_OOB", "Pueblo_Send", ["wizard","log"], ["wizard"]),
 		("SQL_OK", "", ["wizard","log"], ["wizard"]),
 		("Tport_Anything", "", ["wizard","log"], ["wizard"]),
 		("Tport_Anywhere", "", ["wizard","log"], ["wizard"]),
