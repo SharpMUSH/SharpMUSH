@@ -120,25 +120,17 @@ public partial class SurrealDatabase
 
 	public async ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default)
 	{
-		try
-		{
-			var parameters = new Dictionary<string, object?> { ["dataType"] = dataType };
-			var response = await ExecuteAsync(
-				"SELECT data FROM server_data:⟨$dataType⟩",
-				parameters, cancellationToken);
+		var parameters = new Dictionary<string, object?> { ["dataType"] = dataType };
+		var response = await ExecuteAsync(
+			"SELECT data FROM server_data:⟨$dataType⟩",
+			parameters, cancellationToken);
 
-			var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
-			if (results.Count == 0) return default;
+		var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
+		if (results.Count == 0) return default;
 
-			var jsonData = results[0].data;
-			if (string.IsNullOrEmpty(jsonData)) return default;
-			return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
-		}
-		catch (Exception ex)
-		{
-			logger.LogWarning(ex, "Failed to retrieve expanded server data for type '{DataType}'", dataType);
-			return default;
-		}
+		var jsonData = results[0].data;
+		if (string.IsNullOrEmpty(jsonData)) return default;
+		return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
 	}
 
 	#endregion
