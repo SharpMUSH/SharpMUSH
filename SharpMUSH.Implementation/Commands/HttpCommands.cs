@@ -81,7 +81,7 @@ public partial class Commands
 				var requestBody = dataArg?.Message?.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
-				await Mediator.Send(new AdmitAttributeRequest(
+				var admission = await Mediator.Send(new AdmitAttributeRequest(
 					async () =>
 					{
 						var client = HttpClientFactory.CreateClient("api");
@@ -116,7 +116,13 @@ public partial class Commands
 							EnvironmentRegisters = contentDict
 						};
 					},
-					dbRefAttribute, parser.CurrentState.Executor));
+					dbRefAttribute, parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+
+				if (!admission.Accepted)
+				{
+					await NotifyService.Notify(executor, admission.Error, executor);
+					return new CallState(admission.Error);
+				}
 
 				return CallState.Empty;
 			});

@@ -27,6 +27,23 @@ public class LocalFunctionTests
 	private async Task<string> Eval(string expression) =>
 		(await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
+	private sealed class RegistryOverride(IServiceProvider services, IUserDefinedFunctionService registry) : IServiceProvider
+	{
+		public object? GetService(Type type) => type == typeof(IUserDefinedFunctionService) ? registry : services.GetService(type);
+	}
+
+	[Test]
+	public async Task LegacyRegistryCannotTurnLocalCreationIntoGlobalDefinition()
+	{
+		var name = "legacy" + Guid.NewGuid().ToString("N");
+		await Cmd($"&{name} me=local");
+		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
+		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
+		try { await parser.CommandParse(1, Connections, MarkupText.Plain($"@function/local {name}=me,{name}")); }
+		catch (NotSupportedException) { }
+		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task LocalRegistrationRequiresExplicitCallAndLeavesGlobalLookupUnchanged()
 	{

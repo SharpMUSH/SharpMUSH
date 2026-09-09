@@ -55,15 +55,17 @@ public record UserDefinedFunction(
 public interface IUserDefinedFunctionService
 {
 	/// <summary>Removes local definitions backed by, or scoped to, a deleted or re-owned object.</summary>
-	void InvalidateLocalDefinitions(DBRef target)
-		=> throw new NotSupportedException("This registry does not support owner-local functions.");
+	void InvalidateLocalDefinitions(DBRef target) { }
 
 	/// <summary>Remove local definitions and aliases displaced by a compiled system name.</summary>
-	void InvalidateLocalName(string name)
-		=> throw new NotSupportedException("This registry does not support owner-local functions.");
+	void InvalidateLocalName(string name) { }
 
 	/// <summary>Registers (or overwrites) a user-defined function in its declared scope.</summary>
 	void Define(UserDefinedFunction function);
+
+	/// <summary>Registers a function only in its explicit owner scope. Legacy registries must fail closed.</summary>
+	void DefineLocal(UserDefinedFunction function)
+		=> throw new NotSupportedException("This registry does not support owner-local functions.");
 
 	/// <summary>
 	/// Resolves a function by name (case-insensitive), following an alias to its target.
