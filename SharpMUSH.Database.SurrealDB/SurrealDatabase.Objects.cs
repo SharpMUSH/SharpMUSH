@@ -894,7 +894,7 @@ public partial class SurrealDatabase
 			"COMMIT TRANSACTION",
 			new Dictionary<string, object?> { ["table"] = table, ["key"] = key }, cancellationToken);
 
-		var sweep = string.Join(string.Empty, ObjectRelationTables.Select(relation =>
+		var sweep = string.Concat(ObjectRelationTables.Select(relation =>
 			$"DELETE {relation} WHERE in IN $doomed OR out IN $doomed;"));
 
 		await ExecuteAsync(

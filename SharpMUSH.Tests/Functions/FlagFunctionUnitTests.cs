@@ -42,6 +42,19 @@ public class FlagFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// With no argument these list every flag the game defines — as symbols and as names, not as the
+	// type name of an unenumerated stream.
+	[Test]
+	public async Task FlagsAndLflags_WithNoArgument_ListEveryFlag()
+	{
+		var symbols = (await Parser.FunctionParse(MarkupText.Plain("flags()")))?.Message!.ToPlainText();
+		var names = (await Parser.FunctionParse(MarkupText.Plain("lflags()")))?.Message!.ToPlainText();
+
+		await Assert.That(symbols).DoesNotContain("System.");
+		await Assert.That(symbols).Contains("W");
+		await Assert.That(names).Contains("WIZARD");
+	}
+
 	[Test]
 	[Arguments("orlflags(%#,PLAYER WIZARD)", "1")]
 	public async Task Orlflags(string str, string expected)

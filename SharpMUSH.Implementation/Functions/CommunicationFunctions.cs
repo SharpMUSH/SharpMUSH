@@ -57,8 +57,7 @@ public partial class Functions
 		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
 		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
-			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
-			.ToList();
+			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 
 		var switchesText = parser.CurrentState.Arguments.TryGetValue("13", out var switchArg)
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
@@ -228,12 +227,8 @@ public partial class Functions
 			? INotifyService.NotificationType.NSAnnounce
 			: INotifyService.NotificationType.Announce;
 
-		if (IsIntegerList(recipients))
+		if (TryParsePorts(recipients, out var ports))
 		{
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(long.Parse)
-				.ToArray();
-
 			await CommunicationService.SendToPortsAsync(executor, ports, _ => message, notificationType);
 			return CallState.Empty;
 		}
@@ -468,12 +463,8 @@ public partial class Functions
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		if (IsIntegerList(recipients))
+		if (TryParsePorts(recipients, out var ports))
 		{
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(long.Parse)
-				.ToArray();
-
 			await CommunicationService.SendToPortsAsync(executor, ports, _ => message,
 				INotifyService.NotificationType.Announce);
 			return CallState.Empty;
@@ -503,12 +494,24 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	private bool IsIntegerList(string input)
+	/// <summary>
+	/// A recipient list made entirely of descriptor numbers, which pemit() sends to as ports rather
+	/// than matching as names.
+	/// </summary>
+	private static bool TryParsePorts(string recipients, out long[] ports)
 	{
-		if (string.IsNullOrWhiteSpace(input)) return false;
+		var tokens = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		ports = new long[tokens.Length];
 
-		var tokens = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
+		foreach (var (i, token) in tokens.Index())
+		{
+			if (!long.TryParse(token, out ports[i]))
+			{
+				return false;
+			}
+		}
+
+		return tokens.Length > 0;
 	}
 
 	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]

@@ -101,8 +101,7 @@ public static partial class Substitutions
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 		var location = await enactor.Where();
-		var locationDbRef = location.Object().DBRef.Number.ToString();
-		return $"#{locationDbRef}";
+		return $"#{location.Object().DBRef.Number}";
 	}
 
 	public static async ValueTask<CallState> ParseComplexSubstitution(CallState? symbol, IMUSHCodeParser parser,

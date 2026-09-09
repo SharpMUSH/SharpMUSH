@@ -18,8 +18,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using static SharpMUSHParser;
 using SharpMUSH.Library.Markup;
 
@@ -324,16 +324,17 @@ public class SharpMUSHParserVisitor(
 
 		var attr = debugForwardAttr.AsAttribute.Last();
 		var forwardListText = attr.Value.ToPlainText();
-		if (!string.IsNullOrWhiteSpace(forwardListText))
+		if (string.IsNullOrWhiteSpace(forwardListText))
 		{
-			var targets = forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			await foreach (var locateResult in targets.ToAsyncEnumerable()
-											 .Select((string targetStr, CancellationToken _) => LocateService.Locate(
-												 parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch))
-											 .Where(result => result.IsValid()))
+			return;
+		}
+
+		foreach (var targetStr in forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch);
+			if (locateResult.IsValid())
 			{
-				var forwardTarget = locateResult.WithoutError().WithoutNone();
-				await NotifyService.Notify(forwardTarget, MarkupText.Plain(message));
+				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message));
 			}
 		}
 	}
@@ -370,7 +371,7 @@ public class SharpMUSHParserVisitor(
 		{
 			0 => null,
 			1 => results[0],
-			_ => BatchMergeResults(results)
+			_ => BatchMergeResults(CollectionsMarshal.AsSpan(results))
 		};
 	}
 
@@ -400,30 +401,37 @@ public class SharpMUSHParserVisitor(
 		if (results.Count == 1)
 			return results[0];
 
-		return BatchMergeResults(results);
+		return BatchMergeResults(CollectionsMarshal.AsSpan(results));
 	}
 
 	/// <summary>
-	/// Merges a list of child CallState results in O(N) instead of the previous
-	/// pairwise AggregateResult approach which was O(N²) for Message concatenation.
-	/// Uses ConcatMany for messages (single StringBuilder pass) and batched array
-	/// construction for arguments.
+	/// Merges the child CallState results of one node in a single pass: one array copy for
+	/// arguments, one <see cref="MarkupText.Concat(MString[])"/> for messages. This runs for every
+	/// multi-child node of every evaluation, so it is written as plain loops over the span.
 	/// </summary>
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static CallState BatchMergeResults(List<CallState> results)
+	private static CallState BatchMergeResults(ReadOnlySpan<CallState> results)
 	{
-		var argumentSource = results.FirstOrDefault(x => x.Arguments is not null);
+		CallState? argumentSource = null;
+		var totalArgs = 0;
+		var preserveSpaces = false;
+		foreach (var result in results)
+		{
+			if (result.Arguments is { } args)
+			{
+				argumentSource ??= result;
+				totalArgs += args.Length;
+			}
+
+			preserveSpaces |= result.PreserveSpaces;
+		}
 
 		if (argumentSource is not null)
 		{
-			// Batch merge arguments: count total first, then copy once — no LINQ
-			var totalArgs = results.Sum(t => t.Arguments?.Length ?? 0);
-
 			var merged = new MString[totalArgs];
 			var offset = 0;
-			foreach (var args in results.Select(t => t.Arguments))
+			foreach (var result in results)
 			{
-				if (args is { Length: > 0 })
+				if (result.Arguments is { Length: > 0 } args)
 				{
 					args.CopyTo(merged, offset);
 					offset += args.Length;
@@ -433,15 +441,13 @@ public class SharpMUSHParserVisitor(
 			return argumentSource with { Arguments = merged };
 		}
 
-		// Message merge path: use ConcatMany for O(N) instead of O(N²)
-		var messages = new MString[results.Count];
-		for (var i = 0; i < results.Count; i++)
+		var messages = new MString[results.Length];
+		for (var i = 0; i < results.Length; i++)
 		{
 			messages[i] = results[i].Message ?? MarkupText.Empty;
 		}
 
 		var combined = MarkupText.Concat(messages);
-		var preserveSpaces = results.Any(r => r.PreserveSpaces);
 		return new CallState(combined, results[0].Depth, null,
 			() => ValueTask.FromResult<MString?>(combined))
 		{
@@ -485,6 +491,34 @@ public class SharpMUSHParserVisitor(
 		return stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message;
 	};
 
+	/// <summary>
+	/// The lower-cased name of the function a call invokes. The FUNCHAR token is the name, any
+	/// whitespace the lexer folded in, and the opening parenthesis; this slices the name out of it
+	/// and lower-cases it in one allocation, which is what the library and the telemetry key on.
+	/// </summary>
+	private static string FunctionNameOf(FunctionContext context)
+	{
+		var funChar = context.FUNCHAR().GetText();
+		var length = funChar.AsSpan().TrimEnd().Length - 1;
+		return string.Create(length, funChar,
+			static (span, text) => text.AsSpan(0, span.Length).ToLowerInvariant(span));
+	}
+
+	/// <summary>
+	/// The positional arguments a call or command binds to <c>%0</c>, <c>%1</c>, … — the dictionary a
+	/// <see cref="ParserState.Arguments"/> expects, sized once.
+	/// </summary>
+	private static Dictionary<string, CallState> NumberedArguments(List<CallState> values)
+	{
+		var arguments = new Dictionary<string, CallState>(values.Count);
+		foreach (var (i, value) in values.Index())
+		{
+			arguments[i.ToString()] = value;
+		}
+
+		return arguments;
+	}
+
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
@@ -503,7 +537,7 @@ public class SharpMUSHParserVisitor(
 			return await LiteralFunctionCall(context, this);
 		}
 
-		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
+		var functionName = FunctionNameOf(context);
 		var evalStrings = context.evaluationString();
 		var commas = context.COMMAWS();
 
@@ -575,7 +609,7 @@ public class SharpMUSHParserVisitor(
 
 		if (shouldDebug) _debugNestDepth++;
 
-		var result = await CallFunction(functionName.ToLower(), source, context, arguments, this);
+		var result = await CallFunction(functionName, source, context, arguments, this);
 
 		if (shouldDebug) _debugNestDepth--;
 
@@ -798,15 +832,24 @@ public class SharpMUSHParserVisitor(
 			else
 			{
 				// Store NoParse arguments as unevaluated text with deferred evaluation.
-				refinedArguments = args.Select(x =>
+				refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
+				foreach (var x in args)
+				{
+					if (x is null)
 					{
-						if (x is null) return CallState.Empty;
-						var text = GetContextText(x);
-						var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
-						return new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi));
-					})
-					.DefaultIfEmpty(new CallState(MarkupText.Empty, context.Depth()))
-					.ToList();
+						refinedArguments.Add(CallState.Empty);
+						continue;
+					}
+
+					var text = GetContextText(x);
+					var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
+					refinedArguments.Add(new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi)));
+				}
+
+				if (refinedArguments.Count == 0)
+				{
+					refinedArguments.Add(new CallState(MarkupText.Empty, context.Depth()));
+				}
 			}
 
 			// If a limit was exceeded during argument evaluation, return immediately with the error
@@ -833,9 +876,7 @@ public class SharpMUSHParserVisitor(
 				Command: null,
 				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 				Switches: [],
-				Arguments: refinedArguments.Select((value, i) =>
-						new KeyValuePair<string, CallState>(i.ToString(), value))
-					.ToDictionary(),
+				Arguments: NumberedArguments(refinedArguments),
 				Executor: currentState.Executor,
 				Enactor: currentState.Enactor,
 				Caller: currentState.Caller,
@@ -1034,9 +1075,7 @@ public class SharpMUSHParserVisitor(
 					&& socketCandidate.IsSystem
 					&& socketCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SOCKET))
 			{
-				return await HandleSocketCommandPattern(parser, src, context, command,
-					[new KeyValuePair<string, (CommandDefinition, bool)>(command, socketCandidate)],
-					socketCandidate.LibraryInformation);
+				return await HandleSocketCommandPattern(parser, src, context, command, socketCandidate.LibraryInformation);
 			}
 
 			// PennMUSH-style unambiguous prefix abbreviation for pre-login SOCKET commands
@@ -1053,7 +1092,7 @@ public class SharpMUSHParserVisitor(
 
 				if (socketPrefixMatches.Count == 1)
 				{
-					return await HandleSocketCommandPattern(parser, src, context, command, socketPrefixMatches,
+					return await HandleSocketCommandPattern(parser, src, context, command,
 						socketPrefixMatches[0].Value.LibraryInformation);
 				}
 			}
@@ -1069,17 +1108,11 @@ public class SharpMUSHParserVisitor(
 			// filter of "foo" rather than an unknown command.
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null
 					&& (command.StartsWith("DOING", StringComparison.OrdinalIgnoreCase)
-							|| command.StartsWith("SESSION", StringComparison.OrdinalIgnoreCase)))
+							|| command.StartsWith("SESSION", StringComparison.OrdinalIgnoreCase))
+					&& parser.CommandLibrary.TryGetValue("WHO", out var who)
+					&& who.IsSystem)
 			{
-				var whoLookup = parser.CommandLibrary
-					.Where(x => x.Value.IsSystem && x.Key.Equals("WHO", StringComparison.OrdinalIgnoreCase))
-					.ToList();
-
-				if (whoLookup.Count == 1)
-				{
-					return await HandleSocketCommandPattern(parser, src, context, command, whoLookup,
-						whoLookup[0].Value.LibraryInformation);
-				}
+				return await HandleSocketCommandPattern(parser, src, context, command, who.LibraryInformation);
 			}
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
@@ -1153,7 +1186,7 @@ public class SharpMUSHParserVisitor(
 					&& singleTokenCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken))
 			{
 				return await HandleSingleTokenCommandPattern(parser, src, context, command,
-					[new KeyValuePair<string, (CommandDefinition, bool)>(command[..1], singleTokenCandidate)]);
+					singleTokenCandidate.LibraryInformation);
 			}
 
 			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
@@ -1184,8 +1217,9 @@ public class SharpMUSHParserVisitor(
 			var slashIndex = command.AsSpan().IndexOf('/');
 			var rootCommand =
 				command[..(slashIndex > -1 ? slashIndex : command.Length)];
-			var switchString = command[(slashIndex > -1 ? slashIndex : command.Length)..];
-			var switches = switchString.Split('/').Where(s => !string.IsNullOrWhiteSpace(s));
+			var switches = slashIndex > -1
+				? command[slashIndex..].Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+				: [];
 
 			var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
 				? null
@@ -1661,7 +1695,7 @@ public class SharpMUSHParserVisitor(
 	}
 
 	private async ValueTask<Option<CallState>> HandleInternalCommandPattern(IMUSHCodeParser prs, MString src,
-		CommandContext context, string rootCommand, IEnumerable<string> switches,
+		CommandContext context, string rootCommand, string[] switches,
 		CommandDefinition libraryCommandDefinition)
 	{
 		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
@@ -1679,10 +1713,12 @@ public class SharpMUSHParserVisitor(
 			["ARGS"] = src // The entire argument string before evaluation
 		};
 
-		var switchArray = switches.ToArray().AsReadOnly();
-		if (switchArray.Count > 0)
+		// Commands test their switches by name, so the state carries them upper-cased once rather
+		// than as a projection re-run on every lookup.
+		var upperSwitches = Array.ConvertAll(switches, static s => s.ToUpperInvariant());
+		if (switches.Length > 0)
 		{
-			namedRegisters["SWITCHES"] = MarkupText.Plain(string.Join(" ", switchArray));
+			namedRegisters["SWITCHES"] = MarkupText.Plain(string.Join(" ", switches));
 		}
 
 		// For EQSPLIT commands, populate LS/RS registers
@@ -1726,10 +1762,8 @@ public class SharpMUSHParserVisitor(
 				var newState = state with
 				{
 					Command = rootCommand,
-					Switches = switchArray.Select(x => x.ToUpper()),
-					Arguments = arguments
-						.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value))
-						.ToDictionary(),
+					Switches = upperSwitches,
+					Arguments = NumberedArguments(arguments),
 					CommandInvoker = libraryCommandDefinition.Command,
 					Function = null,
 					CallerArguments = callerArgs.Count > 0 ? callerArgs : null
@@ -1827,10 +1861,9 @@ public class SharpMUSHParserVisitor(
 
 				// Validate switches and check for /extend hook if invalid switches are found
 				var allowedSwitches = libraryCommandDefinition.Attribute.Switches ?? [];
-				var allowsAnySwitch = allowedSwitches.Contains("*", StringComparer.OrdinalIgnoreCase);
-				var invalidSwitches = allowsAnySwitch
+				var invalidSwitches = switches.Length == 0 || allowedSwitches.Contains("*", StringComparer.OrdinalIgnoreCase)
 					? []
-					: switchArray.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
+					: switches.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
 
 				if (invalidSwitches.Length > 0)
 				{
@@ -2067,10 +2100,7 @@ public class SharpMUSHParserVisitor(
 	}
 
 	private async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
-		CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> socketCommandPattern,
-		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
-			librarySocketCommandDefinition)
+		CommandContext context, string command, CommandDefinition librarySocketCommandDefinition)
 	{
 		// The typed token is passed as the root command so ArgumentSplit's no-space branch strips it.
 		// Without it a bare "IDLE" splits to a single argument equal to "IDLE" itself, and every socket
@@ -2089,28 +2119,23 @@ public class SharpMUSHParserVisitor(
 		return await prs.With(state => state with
 		{
 			Command = command,
-			Arguments = arguments.Select((value, i) =>
-					new KeyValuePair<string, CallState>(i.ToString(), value))
-				.ToDictionary(),
+			Arguments = NumberedArguments(arguments),
 			Function = null
-		}, async newParser => await socketCommandPattern.First().Value.LibraryInformation.Command.Invoke(newParser));
+		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
 	}
 
 	private async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
-		MString src, CommandContext context, string command,
-		IEnumerable<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>> singleTokenCommandPattern)
+		MString src, CommandContext context, string command, CommandDefinition singleLibraryCommandDefinition)
 	{
 		var singleRootCommand = command[..1];
 		var rest = command[1..];
-		var singleLibraryCommandDefinition = singleTokenCommandPattern.Single().Value;
 
 		// TODO: Investigate if single-token commands should support argument splitting.
 		// Currently causing errors, may require special handling for single-character commands.
 		// The root command must be passed so the no-space branch strips the token: without it, a bare
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
-		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition.LibraryInformation,
-			singleRootCommand);
+		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)
@@ -2118,17 +2143,21 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
+		// %0 is the text glued to the token itself; the split arguments follow from %1.
+		var numbered = new Dictionary<string, CallState>(arguments.Count + 1) { ["0"] = new CallState(rest) };
+		foreach (var (i, argument) in arguments.Index())
+		{
+			numbered[(i + 1).ToString()] = argument;
+		}
+
 		return await prs.With(state =>
 				state with
 				{
 					Command = singleRootCommand,
-					Arguments = ImmutableDictionary<string, CallState>.Empty
-						.Add("0", new CallState(rest))
-						.AddRange(arguments.Select((value, i) => new KeyValuePair<string, CallState>((i + 1).ToString(), value)))
-						.ToDictionary(),
+					Arguments = numbered,
 					Function = null
 				},
-			async newParser => await singleLibraryCommandDefinition.LibraryInformation.Command.Invoke(newParser)
+			async newParser => await singleLibraryCommandDefinition.Command.Invoke(newParser)
 		);
 	}
 
@@ -2322,13 +2351,7 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				arguments.AddRange(await argCallState.Arguments.Skip(1)
-						.Select((x, idx) => (Argument: x, Context: ContextAt(idx + 1)))
-						.ToAsyncEnumerable()
-						.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
-							EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
-						.Select(cs => cs!)
-						.ToListAsync());
+				await EvaluateArgumentsInto(arguments, argCallState.Arguments, firstIndex: 1);
 			}
 		}
 		else
@@ -2343,17 +2366,21 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				arguments.AddRange(await (argCallState.Arguments ?? [])
-					.Select((x, idx) => (Argument: x, Context: ContextAt(idx)))
-					.ToAsyncEnumerable()
-					.Select(((MString Argument, object? Context) pair, CancellationToken _) =>
-						EvaluateArgumentSubtree(prs, parsedArgumentText, pair.Context, pair.Argument, emitSubstDebug: true, splitHadErrors))
-					.Select(cs => cs!)
-					.ToListAsync());
+				await EvaluateArgumentsInto(arguments, argCallState.Arguments, firstIndex: 0);
 			}
 		}
 
 		return arguments;
+
+		// Arguments evaluate left to right, one at a time, each against the parse-tree slot it came from.
+		async ValueTask EvaluateArgumentsInto(List<CallState> target, MString[] raw, int firstIndex)
+		{
+			for (var i = firstIndex; i < raw.Length; i++)
+			{
+				target.Add((await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(i), raw[i],
+					emitSubstDebug: true, splitHadErrors))!);
+			}
+		}
 	}
 
 	/// <summary>
@@ -2656,7 +2683,6 @@ public class SharpMUSHParserVisitor(
 			return new CallState("%" + context.GetText());
 		}
 
-		var textContents = MarkupText.Plain(context.GetText());
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 
@@ -2679,7 +2705,7 @@ public class SharpMUSHParserVisitor(
 		}
 		else
 		{
-			result = await VisitChildren(context) ?? new CallState(textContents, context.Depth());
+			result = await VisitChildren(context) ?? new CallState(MarkupText.Plain(context.GetText()), context.Depth());
 		}
 
 		return CapitalizeForUpperSelector(context, result);
@@ -2700,8 +2726,23 @@ public class SharpMUSHParserVisitor(
 			return result;
 		}
 
-		var selector = context.GetText();
-		if (selector.Length == 0 || !char.IsAsciiLetterUpper(selector[0]))
+		// The selector is the first character of the substitution's first token; only a rule with at
+		// least one token has one.
+		var start = context.Start;
+		var stop = context.Stop;
+		if (start is null || stop is null || stop.TokenIndex < start.TokenIndex)
+		{
+			return result;
+		}
+
+		var selector = start.Text;
+		if (string.IsNullOrEmpty(selector) || !char.IsAsciiLetterUpper(selector[0]))
+		{
+			return result;
+		}
+
+		var first = result.Message.ToPlainText()[0];
+		if (char.ToUpperInvariant(first) == first)
 		{
 			return result;
 		}

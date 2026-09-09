@@ -82,8 +82,8 @@ public static class StatsMail
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 		var stats = await mediator.CreateStream(new GetMailListQuery(target.AsPlayer, currentFolder)).ToArrayAsync();
-		var unread = stats.Sum(x => x.Read ? 0 : 1);
-		var cleared = stats.Sum(x => x.Cleared ? 1 : 0);
+		var unread = stats.Count(x => !x.Read);
+		var cleared = stats.Count(x => x.Cleared);
 
 		await notifyService.Notify(executor,
 			$"MAIL: {stats.Length} messages in folder [{currentFolder}] ({unread} unread, {cleared} cleared).", executor);
@@ -99,16 +99,16 @@ public static class StatsMail
 
 		var allSentMail = await allSentMailIe.ToArrayAsync();
 		var sentSize = allSentMail.Sum(x => x.Content.Length);
-		var sentUnread = allSentMail.Sum(x => x.Read ? 0 : 1);
-		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
+		var sentUnread = allSentMail.Count(x => !x.Read);
+		var sentCleared = allSentMail.Count(x => x.Cleared);
 
 		await notifyService.Notify(executor,
 			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared, totalling {sentSize} characters.", executor);
 
 		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
 		var receivedSize = allReceivedMail.Sum(x => x.Content.Length);
-		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
-		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
+		var receivedUnread = allReceivedMail.Count(x => !x.Read);
+		var receivedCleared = allReceivedMail.Count(x => x.Cleared);
 
 		await notifyService.Notify(executor,
 			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared, totalling {receivedSize} characters.", executor);
@@ -123,15 +123,15 @@ public static class StatsMail
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
 	{
 		var allSentMail = await allSentMailIe.ToArrayAsync();
-		var sentUnread = allSentMail.Sum(x => x.Read ? 0 : 1);
-		var sentCleared = allSentMail.Sum(x => x.Cleared ? 1 : 0);
+		var sentUnread = allSentMail.Count(x => !x.Read);
+		var sentCleared = allSentMail.Count(x => x.Cleared);
 		await notifyService.Notify(executor, $"Mail statistics for {targetName}:", executor);
 		await notifyService.Notify(executor,
 			$"{allSentMail.Length} messages sent, {sentUnread} unread, {sentCleared} cleared.", executor);
 
 		var allReceivedMail = await allReceivedMailIe.ToArrayAsync();
-		var receivedUnread = allReceivedMail.Sum(x => x.Read ? 0 : 1);
-		var receivedCleared = allReceivedMail.Sum(x => x.Cleared ? 1 : 0);
+		var receivedUnread = allReceivedMail.Count(x => !x.Read);
+		var receivedCleared = allReceivedMail.Count(x => x.Cleared);
 
 		await notifyService.Notify(executor,
 			$"{allReceivedMail.Length} messages received, {receivedUnread} unread, {receivedCleared} cleared.", executor);

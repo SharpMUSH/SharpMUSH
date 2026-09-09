@@ -77,15 +77,12 @@ public partial class Functions
 		// separator the code list is split on. Splitting naively tore it into "<255", "0", "0>" -
 		// the <...> branch below could never fire, and the stray "0" was then read as xterm 0, so
 		// ansi(<255 0 0>,test) silently produced some other colour entirely.
-		var ansiCodes = AnsiCodeTokenRegex()
-			.Matches(args["0"].Message!.ToPlainText())
-			.Select(m => m.Value)
-			.ToArray();
+		var ansiCodes = AnsiCodeTokenRegex().Matches(args["0"].Message!.ToPlainText());
 		var colorsConfig = ColorConfiguration?.CurrentValue;
 
-		foreach (var cde in ansiCodes)
+		foreach (Match token in ansiCodes)
 		{
-			var code = cde.AsSpan();
+			var code = token.ValueSpan;
 			var curHilight = false;
 			var isBackground = false;
 
@@ -513,10 +510,10 @@ public partial class Functions
 				}
 				else if (obj.IsExit)
 				{
-					var nameParts = newName.Split(";");
+					var nameParts = newName.Split(';');
 					cloneDbRef = await Mediator.Send(new CreateExitCommand(
 						nameParts[0],
-						nameParts.Skip(1).ToArray(),
+						nameParts[1..],
 						await executor.Where(),
 						owner
 					));
@@ -546,13 +543,13 @@ public partial class Functions
 				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
 				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
 				// The attribute-flag sync above works the same way, for the same reason.
-				var sourceObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(obj.Object().Flags.Value);
-				var copyable = sourceObjectFlags
+				var copyable = await obj.Object().Flags.Value
 					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 					.Select(flag => flag.Name)
-					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-				var clonedObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(clonedObj.Object().Flags.Value);
+				// Materialized: the clone's flags are unset while this list is walked.
+				var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
 				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
 				{
 					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
@@ -921,17 +918,9 @@ public partial class Functions
 
 							var destinationRoom = destObj.AsRoom;
 
-							bool canLink = await PermissionService.Controls(executor, destObj);
-
-							if (!canLink)
+							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("LINK_OK"))
 							{
-								var destFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(destinationRoom.Object.Flags.Value);
-								var hasLinkOk = destFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
-
-								if (!hasLinkOk)
-								{
-									return ErrorMessages.Returns.PermissionDenied;
-								}
+								return ErrorMessages.Returns.PermissionDenied;
 							}
 
 							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
@@ -1040,16 +1029,7 @@ public partial class Functions
 					return new CallState(JoinSpace(names));
 				}
 			case "attribs":
-				{
-					var list = new List<string>();
-					var attributes = Mediator.CreateStream(new GetAllAttributeEntriesQuery());
-					await foreach (var attr in attributes)
-					{
-						list.Add(attr.Name.ToLowerInvariant());
-					}
-					list.Sort(StringComparer.OrdinalIgnoreCase);
-					return new CallState(JoinSpace(list));
-				}
+				return await SortedNames(Mediator.CreateStream(new GetAllAttributeEntriesQuery()).Select(x => x.Name));
 			case "locks":
 				{
 					var lockNames = Enum.GetNames(typeof(LockType))
@@ -1058,29 +1038,18 @@ public partial class Functions
 					return new CallState(JoinSpace(lockNames));
 				}
 			case "flags":
-				{
-					var list = new List<string>();
-					var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-					await foreach (var f in flags)
-					{
-						list.Add(f.Name.ToLowerInvariant());
-					}
-					list.Sort(StringComparer.OrdinalIgnoreCase);
-					return new CallState(JoinSpace(list));
-				}
+				return await SortedNames(Mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(x => x.Name));
 			case "powers":
-				{
-					var list = new List<string>();
-					var powers = Mediator.CreateStream(new GetPowersQuery());
-					await foreach (var p in powers)
-					{
-						list.Add(p.Name.ToLowerInvariant());
-					}
-					list.Sort(StringComparer.OrdinalIgnoreCase);
-					return new CallState(JoinSpace(list));
-				}
+				return await SortedNames(Mediator.CreateStream(new GetPowersQuery()).Select(x => x.Name));
 			default:
 				return CallState.Empty;
+		}
+
+		static async ValueTask<CallState> SortedNames(IAsyncEnumerable<string> names)
+		{
+			var list = await names.Select(name => name.ToLowerInvariant()).ToListAsync();
+			list.Sort(StringComparer.OrdinalIgnoreCase);
+			return new CallState(JoinSpace(list));
 		}
 
 		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
@@ -1143,9 +1112,9 @@ public partial class Functions
 			outputDelimiter = (arg4.Message ?? MarkupText.Empty).ToPlainText();
 		}
 
-		var items = MushText.SplitList(MarkupText.Plain(inputDelimiter), listStr).ToList();
+		var items = MushText.SplitList(MarkupText.Plain(inputDelimiter), listStr);
 
-		if (position < 1 || position > items.Count)
+		if (position < 1 || position > items.Length)
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
@@ -1153,8 +1122,7 @@ public partial class Functions
 		// Set the item at the position (convert to 0-based)
 		items[position - 1] = newValue;
 
-		var result = string.Join(outputDelimiter, items.Select(x => x.ToPlainText()));
-		return ValueTask.FromResult(new CallState(result));
+		return ValueTask.FromResult(new CallState(MarkupText.Join(MarkupText.Plain(outputDelimiter), items)));
 	}
 
 	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
@@ -1169,9 +1137,9 @@ public partial class Functions
 		var exitName = args["0"].Message!.ToPlainText();
 
 		// Parse exit name and aliases
-		var exitParts = exitName.Split(";");
+		var exitParts = exitName.Split(';');
 		var primaryName = exitParts[0];
-		var aliases = exitParts.Skip(1).ToArray();
+		var aliases = exitParts[1..];
 
 		// Get source location (default to executor's location)
 		var sourceRoom = await executor.Where();
@@ -1212,8 +1180,7 @@ public partial class Functions
 		// "sw"→switch). The five type names have distinct first letters, so any prefix matches at most one.
 		var canonicalType = string.IsNullOrEmpty(typeArgStr)
 			? "qregisters"
-			: new[] { "qregisters", "args", "iter", "switch", "regexp" }
-				.FirstOrDefault(t => t.StartsWith(typeArgStr, StringComparison.OrdinalIgnoreCase));
+			: RegisterTypes.FirstOrDefault(t => t.StartsWith(typeArgStr, StringComparison.OrdinalIgnoreCase));
 		if (canonicalType is null)
 			return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
 
@@ -1277,6 +1244,9 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
 		}
 	}
+
+	/// <summary>The register stores r() reads from; each is matched by unambiguous prefix.</summary>
+	private static readonly string[] RegisterTypes = ["qregisters", "args", "iter", "switch", "regexp"];
 
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1455,40 +1425,34 @@ public partial class Functions
 			objectsToScan.Add(looker);
 		}
 
-		if (checkInventory && looker.IsContainer)
+		async ValueTask AddContents(AnySharpContainer container)
 		{
-			var inventory = await System.Linq.AsyncEnumerable.ToListAsync(
-				Mediator.CreateStream(new GetContentsQuery(looker.AsContainer)));
-			foreach (var item in inventory)
+			await foreach (var item in Mediator.CreateStream(new GetContentsQuery(container)))
 			{
 				objectsToScan.Add(item.WithRoomOption());
 			}
 		}
 
+		if (checkInventory && looker.IsContainer)
+		{
+			await AddContents(looker.AsContainer);
+		}
+
 		if (checkRoom)
 		{
-			var dbref = looker.Object().DBRef;
-			var locationQuery = new GetLocationQuery(dbref);
-			var locationOpt = await Mediator.Send(locationQuery);
+			var locationOpt = await Mediator.Send(new GetLocationQuery(looker.Object().DBRef));
 
 			if (!locationOpt.IsNone)
 			{
 				var location = locationOpt.WithoutNone();
 				objectsToScan.Add(location.WithExitOption());
-
-				var contents = await System.Linq.AsyncEnumerable.ToListAsync(
-					Mediator.CreateStream(new GetContentsQuery(location)));
-				foreach (var item in contents)
-				{
-					objectsToScan.Add(item.WithRoomOption());
-				}
+				await AddContents(location);
 			}
 		}
 
 		if (checkGlobals)
 		{
-			var masterRoomDbref = new DBRef(0);
-			var masterRoomResult = await Mediator.Send(new GetObjectNodeQuery(masterRoomDbref));
+			var masterRoomResult = await Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
 			if (!masterRoomResult.IsNone)
 			{
 				var masterRoom = masterRoomResult.Known;
@@ -1496,12 +1460,7 @@ public partial class Functions
 
 				if (masterRoom.IsContainer)
 				{
-					var masterContents = await System.Linq.AsyncEnumerable.ToListAsync(
-						Mediator.CreateStream(new GetContentsQuery(masterRoom.AsContainer)));
-					foreach (var item in masterContents)
-					{
-						objectsToScan.Add(item.WithRoomOption());
-					}
+					await AddContents(masterRoom.AsContainer);
 				}
 			}
 		}
@@ -1789,8 +1748,9 @@ public partial class Functions
 		}
 
 		// Calculate Levenshtein distance for each word and sort by distance
+		var wordLower = word.ToLower();
 		var suggestions = vocabulary
-			.Select(v => new { Word = v, Distance = CalculateLevenshteinDistance(word.ToLower(), v.ToLower()) })
+			.Select(v => (Word: v, Distance: CalculateLevenshteinDistance(wordLower, v.ToLower())))
 			.OrderBy(x => x.Distance)
 			.ThenBy(x => x.Word) // Secondary sort by word for consistency
 			.Take(limit)
@@ -1804,7 +1764,7 @@ public partial class Functions
 	/// This is the minimum number of single-character edits (insertions, deletions, or substitutions)
 	/// required to change one word into the other.
 	/// </summary>
-	private int CalculateLevenshteinDistance(string source, string target)
+	private static int CalculateLevenshteinDistance(string source, string target)
 	{
 		if (string.IsNullOrEmpty(source))
 		{
@@ -1816,37 +1776,36 @@ public partial class Functions
 			return source.Length;
 		}
 
-		var sourceLength = source.Length;
-		var targetLength = target.Length;
-		var distance = new int[sourceLength + 1, targetLength + 1];
+		// Each row of the distance table depends only on the row before it, so two rows suffice.
+		var width = target.Length + 1;
+		Span<int> previous = width <= 128 ? stackalloc int[width] : new int[width];
+		Span<int> current = width <= 128 ? stackalloc int[width] : new int[width];
 
-		// Initialize first column and row
-		for (var i = 0; i <= sourceLength; i++)
+		for (var j = 0; j < width; j++)
 		{
-			distance[i, 0] = i;
+			previous[j] = j;
 		}
 
-		for (var j = 0; j <= targetLength; j++)
+		for (var i = 1; i <= source.Length; i++)
 		{
-			distance[0, j] = j;
-		}
-
-		// Calculate distances
-		for (var i = 1; i <= sourceLength; i++)
-		{
-			for (var j = 1; j <= targetLength; j++)
+			current[0] = i;
+			for (var j = 1; j <= target.Length; j++)
 			{
 				var cost = source[i - 1] == target[j - 1] ? 0 : 1;
 
-				distance[i, j] = Math.Min(
+				current[j] = Math.Min(
 					Math.Min(
-						distance[i - 1, j] + 1,      // Deletion
-						distance[i, j - 1] + 1),     // Insertion
-					distance[i - 1, j - 1] + cost);  // Substitution
+						previous[j] + 1,      // Deletion
+						current[j - 1] + 1),  // Insertion
+					previous[j - 1] + cost);  // Substitution
 			}
+
+			var finished = current;
+			current = previous;
+			previous = finished;
 		}
 
-		return distance[sourceLength, targetLength];
+		return previous[target.Length];
 	}
 
 	[SharpFunction(Name = "slev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular)]
@@ -2044,18 +2003,17 @@ public partial class Functions
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		_ = parser.CurrentState.Registers.TryPeek(out var registers);
+
 		if (parser.CurrentState.Arguments.Count == 0)
 		{
-			var canPeek = parser.CurrentState.Registers.TryPeek(out var peek);
-			peek!.Clear();
+			registers!.Clear();
 		}
 		else
 		{
-			var registers = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText().Split(" ");
-			foreach (var r in registers)
+			foreach (var name in (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText().Split(' '))
 			{
-				var canPeek = parser.CurrentState.Registers.TryPeek(out var peek);
-				peek!.TryRemove(r);
+				registers!.TryRemove(name);
 			}
 		}
 
@@ -2078,15 +2036,12 @@ public partial class Functions
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				// Collect all non-system attributes (those not starting with _)
-				var attributesToClear = new List<string>();
-				await foreach (var attr in obj.Object().Attributes.Value)
-				{
-					if (!attr.Name.StartsWith("_"))
-					{
-						attributesToClear.Add(attr.Name);
-					}
-				}
+				// Every non-system attribute (those not starting with _), materialized: they are cleared
+				// while this list is walked.
+				var attributesToClear = await obj.Object().Attributes.Value
+					.Where(attr => !attr.Name.StartsWith('_'))
+					.Select(attr => attr.Name)
+					.ToListAsync();
 
 				foreach (var attrName in attributesToClear)
 				{

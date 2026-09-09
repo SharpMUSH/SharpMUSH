@@ -241,7 +241,7 @@ public class LookService(
 
 		if (realViewing.IsContainer && (showInventory || showExits))
 		{
-			var allContents = await mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
+			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer));
 
 			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
 			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
@@ -250,7 +250,7 @@ public class LookService(
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
 
-			foreach (var item in allContents)
+			await foreach (var item in allContents)
 			{
 				var itemObj = item.WithRoomOption();
 				var isDark = await itemObj.IsDarkLegal();
@@ -331,11 +331,8 @@ public class LookService(
 
 				var isTransparent = await realViewing.IsTransparent();
 				string? lookerLocale = null;
-				await foreach (var connection in connectionService.Get(looker.Object().DBRef))
-				{
-					connection.Metadata.TryGetValue("Locale", out lookerLocale);
-					break;
-				}
+				var firstConnection = await connectionService.Get(looker.Object().DBRef).FirstOrDefaultAsync();
+				firstConnection?.Metadata.TryGetValue("Locale", out lookerLocale);
 
 				MString defaultExits;
 				if (isTransparent)
@@ -360,8 +357,7 @@ public class LookService(
 							exitParts.Add(FormatExitNameToDestination(exitMString, destName, lookerLocale));
 						}
 					}
-					defaultExits = MarkupText.Concat(exitParts.SelectMany<MString, MString>((part, i) =>
-						i > 0 ? [MarkupText.NewLine, part] : [part]).ToArray());
+					defaultExits = MarkupText.Join(MarkupText.NewLine, exitParts);
 				}
 				else
 				{

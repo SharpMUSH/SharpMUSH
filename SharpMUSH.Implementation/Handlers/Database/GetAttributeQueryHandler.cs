@@ -12,7 +12,7 @@ public class GetAttributeQueryHandler(IAttributeStore database)
 {
 	public IAsyncEnumerable<SharpAttribute> Handle(GetAttributeQuery request,
 		CancellationToken cancellationToken)
-		=> database.GetAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
+		=> database.GetAttributeAsync(request.DBRef, Array.ConvertAll(request.Attribute, x => x.ToUpper()), cancellationToken);
 }
 
 public class GetLazyAttributeQueryHandler(IAttributeStore database)
@@ -20,7 +20,7 @@ public class GetLazyAttributeQueryHandler(IAttributeStore database)
 {
 	public IAsyncEnumerable<LazySharpAttribute> Handle(GetLazyAttributeQuery request,
 		CancellationToken cancellationToken)
-		=> database.GetLazyAttributeAsync(request.DBRef, request.Attribute.Select(x => x.ToUpper()).ToArray(), cancellationToken);
+		=> database.GetLazyAttributeAsync(request.DBRef, Array.ConvertAll(request.Attribute, x => x.ToUpper()), cancellationToken);
 }
 
 public class GetAttributesQueryHandler(

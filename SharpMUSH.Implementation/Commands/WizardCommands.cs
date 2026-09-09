@@ -51,22 +51,16 @@ public partial class Commands
 	// PennMUSH src/flags.c:955 letter_to_flagptr: a letter is only taken by a definition whose object
 	// types overlap, so two definitions with no type in common may share one
 	// (game/txt/hlp/pennv177.hlp:20). The letter comparison is case-sensitive.
-	private async ValueTask<string?> FindLetterConflict(
+	private static ValueTask<string?> FindLetterConflict(
 		IAsyncEnumerable<(string Name, string Symbol, string[] TypeRestrictions)> definitions,
 		string ownName, string letter, string[] ownTypes)
-	{
-		await foreach (var (name, symbol, types) in definitions)
-		{
-			if (!name.Equals(ownName, StringComparison.OrdinalIgnoreCase)
-					&& string.Equals(symbol, letter, StringComparison.Ordinal)
-					&& types.Intersect(ownTypes, StringComparer.OrdinalIgnoreCase).Any())
-			{
-				return name;
-			}
-		}
-
-		return null;
-	}
+		=> definitions
+			.Where(definition =>
+				!definition.Name.Equals(ownName, StringComparison.OrdinalIgnoreCase)
+				&& string.Equals(definition.Symbol, letter, StringComparison.Ordinal)
+				&& definition.TypeRestrictions.Intersect(ownTypes, StringComparer.OrdinalIgnoreCase).Any())
+			.Select(definition => (string?)definition.Name)
+			.FirstOrDefaultAsync();
 
 	[SharpCommand(Name = "@FLAG",
 		Switches =
@@ -590,31 +584,24 @@ public partial class Commands
 
 			count = Math.Max(1, Math.Min(count, 1000));
 
-			var logs = Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count));
-			var logList = new List<LogEventEntity>();
-
-			await foreach (var log in logs)
+			var shown = 0;
+			var lines = new System.Text.StringBuilder();
+			await foreach (var log in Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count)))
 			{
-				logList.Add(log);
+				shown++;
+				var timestamp = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
+				var message = log.Message ?? log.MessageTemplate ?? "(no message)";
+				lines.AppendLine($"[{timestamp}] {message}");
 			}
 
-			if (logList.Count == 0)
+			if (shown == 0)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, category);
 				return CallState.Empty;
 			}
 
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"--- Log entries for {category} (showing {logList.Count}) ---");
-
-			foreach (var log in logList)
-			{
-				var timestamp = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
-				var message = log.Message ?? log.MessageTemplate ?? "(no message)";
-				output.AppendLine($"[{timestamp}] {message}");
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor,
+				$"--- Log entries for {category} (showing {shown}) ---{Environment.NewLine}{lines.ToString().TrimEnd()}", executor);
 			return CallState.Empty;
 		}
 
@@ -1696,11 +1683,7 @@ public partial class Commands
 			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
 			var targetDbRef = playerObj.Object.DBRef;
 			// Boot only the last active connection to match PennMUSH behavior
-			IConnectionService.ConnectionData? lastConnection = null;
-			await foreach (var cd in ConnectionService.Get(targetDbRef))
-			{
-				lastConnection = cd;
-			}
+			var lastConnection = await ConnectionService.Get(targetDbRef).LastOrDefaultAsync();
 			if (lastConnection is not null)
 			{
 				targetHandles.Add(lastConnection.Handle);

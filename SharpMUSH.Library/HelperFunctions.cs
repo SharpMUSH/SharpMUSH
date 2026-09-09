@@ -382,7 +382,7 @@ public static partial class HelperFunctions
 			return new None();
 
 		return !string.IsNullOrEmpty(attr) && DBRef.TryParse(obj, out var dbRef)
-				? new DbRefAttribute(dbRef!.Value, attr.ToUpper().Split("`").ToArray())
+				? new DbRefAttribute(dbRef!.Value, attr.ToUpper().Split('`'))
 				: new None()
 			;
 	}

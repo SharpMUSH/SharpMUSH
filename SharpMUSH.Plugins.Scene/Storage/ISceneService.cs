@@ -132,8 +132,8 @@ public interface ISceneService
 	Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref);
 
 	/// <summary>
-	/// Sets the player's current (focused) scene — clears <c>isCurrent</c> on the
-	/// player's other member edges. Pass a null/empty <paramref name="sceneId"/> to
+	/// Sets the player's single current (focused) scene. Other memberships report
+	/// <c>IsCurrent = false</c>. Pass a null/empty <paramref name="sceneId"/> to
 	/// clear focus entirely. <c>NotFound</c> if a non-empty scene is missing.
 	/// </summary>
 	Task<OneOf<None, NotFound>> SetFocusAsync(string playerDbref, string? sceneId = null);

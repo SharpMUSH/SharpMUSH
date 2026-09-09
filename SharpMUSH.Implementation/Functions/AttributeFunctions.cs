@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Utilities;
 
@@ -255,14 +256,15 @@ public partial class Functions
 	[SharpFunction(Name = "flags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Flags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (parser.CurrentState.Arguments.Count == 0)
+		// The parser hands a no-argument call an empty Arguments["0"], so "no argument" is an empty one.
+		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
+		if (arg0.Length == 0)
 		{
 			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			return string.Join("", flags.Select(x => x.Symbol));
+			return string.Concat(await flags.Select(x => x.Symbol).ToArrayAsync());
 		}
 
-		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -396,19 +398,13 @@ public partial class Functions
 					return attributes.AsError;
 				}
 
-				var matchingAttrs = new List<string>();
 				var comparison = caseInsensitive
 					? StringComparison.OrdinalIgnoreCase
 					: StringComparison.Ordinal;
 
-				foreach (var attr in attributes.AsAttributes)
-				{
-					var value = attr.Value.ToPlainText();
-					if (value != null && value.Contains(substring!, comparison))
-					{
-						matchingAttrs.Add(attr.LongName!);
-					}
-				}
+				var matchingAttrs = attributes.AsAttributes
+					.Where(attr => attr.Value.ToPlainText().Contains(substring, comparison))
+					.Select(attr => attr.LongName);
 
 				return string.Join(" ", matchingAttrs);
 			});
@@ -640,14 +636,15 @@ public partial class Functions
 	[SharpFunction(Name = "lflags", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (parser.CurrentState.Arguments.Count == 0)
+		// The parser hands a no-argument call an empty Arguments["0"], so "no argument" is an empty one.
+		var arg0 = (parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty).ToPlainText();
+		if (arg0.Length == 0)
 		{
 			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			return string.Join(" ", flags.Select(x => x.Name));
+			return string.Join(" ", await flags.Select(x => x.Name).ToArrayAsync());
 		}
 
-		var dbrefAndAttr =
-			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
+		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndAttr is { IsT1: true }) // IsNone
@@ -945,25 +942,28 @@ public partial class Functions
 
 				if (all)
 				{
-					var matches = regex.Matches(str!).Cast<Match>().Reverse().ToList();
-					foreach (var match in matches)
+					// Every match is replaced against the text the pattern ran on, in one splice, so the
+					// indexes never shift under the edits.
+					var edits = new List<MarkupString.Edit>();
+					foreach (Match match in regex.Matches(str))
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						var before = mstr.Substring(0, match.Index);
-						var after = mstr.Substring(match.Index + match.Length, mstr.Length - match.Index - match.Length);
-						mstr = MarkupText.Concat(MarkupText.Concat(before, MarkupText.Plain(replacement)), after);
+						edits.Add(new MarkupString.Edit(match.Index, match.Length, MarkupText.Plain(replacement)));
+					}
+
+					if (edits.Count > 0)
+					{
+						mstr = mstr.Splice(CollectionsMarshal.AsSpan(edits));
 						str = mstr.ToPlainText();
 					}
 				}
 				else
 				{
-					var match = regex.Match(str!);
+					var match = regex.Match(str);
 					if (match.Success)
 					{
 						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						var before = mstr.Substring(0, match.Index);
-						var after = mstr.Substring(match.Index + match.Length, mstr.Length - match.Index - match.Length);
-						mstr = MarkupText.Concat(MarkupText.Concat(before, MarkupText.Plain(replacement)), after);
+						mstr = mstr.Replace(match.Index, match.Length, MarkupText.Plain(replacement));
 						str = mstr.ToPlainText();
 					}
 				}
@@ -1044,16 +1044,9 @@ public partial class Functions
 						return CallState.Empty;
 					}
 
-					var matchingAttributes = new List<string>();
-
-					foreach (var attr in attributes.AsAttributes)
-					{
-						var attrValue = attr.Value.ToPlainText();
-						if (!string.IsNullOrEmpty(attrValue) && regex.IsMatch(attrValue))
-						{
-							matchingAttributes.Add(attr.Name);
-						}
-					}
+					var matchingAttributes = attributes.AsAttributes
+						.Where(attr => attr.Value.ToPlainText() is { Length: > 0 } value && regex.IsMatch(value))
+						.Select(attr => attr.Name);
 
 					return new CallState(string.Join(" ", matchingAttributes));
 				});
@@ -1718,38 +1711,37 @@ public partial class Functions
 		var valuePattern = args["2"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectStr!, LocateFlags.All,
-			async found =>
-			{
-				var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
-					attrsPattern ?? "*", false,
-					IAttributeService.AttributePatternMode.Wildcard);
+		// Compiled once for every attribute it is held against; grep_util asks for a case-sensitive
+		// glob unless the caller used the "i" spelling.
+		var regex = SoftcodeRegex.Wildcard(valuePattern, caseSensitive: !caseInsensitive);
 
-				if (attributes.IsError)
+		try
+		{
+			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+				executor, executor, objectStr!, LocateFlags.All,
+				async found =>
 				{
-					return attributes.AsError;
-				}
+					var attributes = await AttributeService.GetAttributePatternAsync(executor, found,
+						attrsPattern ?? "*", false,
+						IAttributeService.AttributePatternMode.Wildcard);
 
-				var matchingAttrs = new List<string>();
-
-				foreach (var attr in attributes.AsAttributes)
-				{
-					var value = attr.Value.ToPlainText();
-					if (value != null)
+					if (attributes.IsError)
 					{
-						var valueToMatch = caseInsensitive ? value.ToLower() : value;
-						var patternToMatch = caseInsensitive ? valuePattern!.ToLower() : valuePattern;
-
-						if (MushText.IsWildcardMatch(MarkupText.Plain(valueToMatch), MarkupText.Plain(patternToMatch!)))
-						{
-							matchingAttrs.Add(attr.LongName!);
-						}
+						return attributes.AsError;
 					}
-				}
 
-				return string.Join(" ", matchingAttrs);
-			});
+					var matchingAttrs = attributes.AsAttributes
+						.Where(attr => regex.IsMatch(attr.Value.ToPlainText()))
+						.Select(attr => attr.LongName);
+
+					return string.Join(" ", matchingAttrs);
+				});
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpTimeout);
+		}
 	}
 
 	[SharpFunction(Name = "xattr", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]

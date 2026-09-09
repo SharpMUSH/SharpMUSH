@@ -175,9 +175,9 @@ public static class SoftcodeLayout
 	/// Token types that open a group. <c>OPAREN</c> is deliberately absent: the grammar opens
 	/// <c>function</c> on <c>FUNCHAR</c> alone, so a bare <c>(</c> is text, not structure.
 	/// </summary>
-	private static readonly string[] Openers = ["FUNCHAR", "OBRACK", "OBRACE"];
+	private static bool IsOpener(string tokenType) => tokenType is "FUNCHAR" or "OBRACK" or "OBRACE";
 
-	private static readonly string[] Closers = ["CPAREN", "CBRACK", "CBRACE"];
+	private static bool IsCloser(string tokenType) => tokenType is "CPAREN" or "CBRACK" or "CBRACE";
 
 	/// <summary>
 	/// The opener type a closing token may close, or <c>null</c> if the type is not a closer. A closer
@@ -506,7 +506,7 @@ public static class SoftcodeLayout
 		for (var i = codeStart; i < tokens.Count; i++)
 		{
 			var type = tokens[i].Type;
-			if (Array.IndexOf(Openers, type) >= 0)
+			if (IsOpener(type))
 			{
 				var enclosingSuppresses = stack.Peek().SuppressesFunctions;
 				var kind = type == "FUNCHAR"
@@ -661,7 +661,7 @@ public static class SoftcodeLayout
 	private static int LastContentIndex(Group group, IReadOnlyList<TokenInfo> tokens)
 	{
 		var lastContent = group.CloseIndex;
-		while (lastContent >= group.FirstIndex && Array.IndexOf(Closers, tokens[lastContent].Type) >= 0)
+		while (lastContent >= group.FirstIndex && IsCloser(tokens[lastContent].Type))
 		{
 			lastContent--;
 		}

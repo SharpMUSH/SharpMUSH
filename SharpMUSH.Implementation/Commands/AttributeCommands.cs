@@ -156,8 +156,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var attrValue = sourceAttribute.AsAttribute.Last().Value;
-		var attrFlags = sourceAttribute.AsAttribute.Last().Flags.ToList();
+		var sourceLeaf = sourceAttribute.AsAttribute.Last();
+		var attrValue = sourceLeaf.Value;
+		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
 
 		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
 		// starting at index 1. Collect all destination args in order.
@@ -208,15 +209,13 @@ public partial class Commands
 				continue;
 			}
 
-			if (copyFlags && attrFlags.Count > 0)
+			if (copyFlags && attrFlagNames.Count > 0)
 			{
-				// One batch, not one call per flag (Task 6 fix round 1, M3): applying flags
-				// one at a time re-checks permission after each mutation, so a source
-				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
-				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
-				// and applies the whole mask.
-				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
-					attrFlags.Select(flag => flag.Name).ToList());
+				// One batch, not one call per flag: applying flags one at a time re-checks permission
+				// after each mutation, so a source attribute carrying both SAFE and (say) WIZARD would
+				// have WIZARD silently fail to copy once SAFE landed first - Penn's copy_attrib_flags
+				// checks once and applies the whole mask.
+				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
 			}
 
 			copiedCount++;
@@ -281,8 +280,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var attrValue = sourceAttribute.AsAttribute.Last().Value;
-		var attrFlags = sourceAttribute.AsAttribute.Last().Flags.ToList();
+		var sourceLeaf = sourceAttribute.AsAttribute.Last();
+		var attrValue = sourceLeaf.Value;
+		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
 
 		// With CB.RSArgs + CB.EqSplit, each comma-separated destination becomes a separate arg
 		// starting at index 1. Collect all destination args in order.
@@ -333,15 +333,13 @@ public partial class Commands
 				continue;
 			}
 
-			if (copyFlags && attrFlags.Count > 0)
+			if (copyFlags && attrFlagNames.Count > 0)
 			{
-				// One batch, not one call per flag (Task 6 fix round 1, M3): applying flags
-				// one at a time re-checks permission after each mutation, so a source
-				// attribute carrying both SAFE and (say) WIZARD would have WIZARD silently
-				// fail to copy once SAFE landed first - Penn's copy_attrib_flags checks once
-				// and applies the whole mask.
-				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName,
-					attrFlags.Select(flag => flag.Name).ToList());
+				// One batch, not one call per flag: applying flags one at a time re-checks permission
+				// after each mutation, so a source attribute carrying both SAFE and (say) WIZARD would
+				// have WIZARD silently fail to copy once SAFE landed first - Penn's copy_attrib_flags
+				// checks once and applies the whole mask.
+				await AttributeService.SetAttributeFlagsAsync(executor, destObject, targetAttrName, attrFlagNames);
 			}
 
 			copiedCount++;
@@ -528,13 +526,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.Safe);
 		}
 
-		// Task 6 fix round 3: PennMUSH's do_wipe/wipe_helper (set.c:1493-1577) owns its own
-		// reporting entirely - a notify per denied/tree-blocked match as they're discovered
-		// during iteration, THEN an unconditional final tally ("No/One/N attributes wiped.")
-		// regardless of whether anything was blocked. ClearAttributeAsync's wipe branch now
-		// does exactly that internally, so this command has nothing left to report itself -
-		// doing so here too would either duplicate or (worse) silently override one class of
-		// outcome with a generic "success" line that used to print unconditionally.
+		// PennMUSH's do_wipe/wipe_helper (set.c:1493-1577) owns its own reporting entirely - a
+		// notify per denied/tree-blocked match as they're discovered during iteration, THEN an
+		// unconditional final tally ("No/One/N attributes wiped.") regardless of whether anything
+		// was blocked. ClearAttributeAsync's wipe branch does exactly that internally, so this
+		// command has nothing left to report itself - doing so here too would either duplicate or
+		// (worse) silently override one class of outcome with a generic "success" line.
 		var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
 		await AttributeService.ClearAttributeAsync(executor, targetObject, attributePattern,
 			IAttributeService.AttributePatternMode.Wildcard);

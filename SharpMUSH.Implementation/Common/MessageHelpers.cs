@@ -70,7 +70,7 @@ public static class MessageHelpers
 			}
 
 			objToEvaluate = maybeLocateTarget.AsSharpObject;
-			attrToEvaluate = string.Join("/", attrObjSplit.Skip(1));
+			attrToEvaluate = attrObjSplit[1];
 
 			var attr = await attributeService.GetAttributeAsync(
 				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);

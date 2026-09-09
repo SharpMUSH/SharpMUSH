@@ -1,5 +1,6 @@
 using MarkupString;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using static MarkupString.MStringInterpolation;
 
 namespace SharpMUSH.Library.Common;
@@ -7,16 +8,27 @@ namespace SharpMUSH.Library.Common;
 public static class MessageFormatting
 {
 	/// <summary>
+	/// The concatenated flag symbols of an object, as PennMUSH appends them after a dbref.
+	/// </summary>
+	/// <param name="obj">The object whose flags to read</param>
+	/// <returns>A task yielding the concatenated symbols</returns>
+	public static async ValueTask<string> FlagSymbolsAsync(SharpObject obj)
+		=> string.Concat(await obj.Flags.Value.Select(flag => flag.Symbol).ToArrayAsync());
+
+	/// <inheritdoc cref="FlagSymbolsAsync"/>
+	public static string FlagSymbols(IEnumerable<SharpObjectFlag> flags)
+		=> string.Concat(flags.Select(flag => flag.Symbol));
+
+	/// <summary>
 	/// Formats an object name with its dbref and flag symbols as a markup-preserving MString.
 	/// The name portion is hilighted (white foreground); the dbref and flag symbols are plain text.
 	/// Example: an MString with "Chest" hilighted followed by plain "(#5Tn)".
 	/// </summary>
 	/// <param name="obj">The sharp object to format</param>
 	/// <returns>A task yielding the formatted MString with the name hilighted</returns>
-	public static async ValueTask<MString> FormatObjectWithDbrefMString(Models.SharpObject obj)
+	public static async ValueTask<MString> FormatObjectWithDbrefMString(SharpObject obj)
 	{
-		var flags = await obj.Flags.Value.ToArrayAsync();
-		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		var flagSymbols = await FlagSymbolsAsync(obj);
 		return Format($"{obj.Name.Hilight()}(#{obj.DBRef.Number}{flagSymbols})");
 	}
 
@@ -26,10 +38,9 @@ public static class MessageFormatting
 	/// </summary>
 	/// <param name="obj">The sharp object to format</param>
 	/// <returns>A task yielding the formatted string</returns>
-	public static async ValueTask<string> FormatObjectWithDbref(Models.SharpObject obj)
+	public static async ValueTask<string> FormatObjectWithDbref(SharpObject obj)
 	{
-		var flags = await obj.Flags.Value.ToArrayAsync();
-		var flagSymbols = string.Join(string.Empty, flags.Select(x => x.Symbol));
+		var flagSymbols = await FlagSymbolsAsync(obj);
 		return $"{obj.Name}(#{obj.DBRef.Number}{flagSymbols})";
 	}
 

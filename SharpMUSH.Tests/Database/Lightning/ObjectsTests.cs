@@ -57,6 +57,21 @@ public class ObjectsTests
 	}
 
 	[Test]
+	public async Task OwnedObjectCountFollowsCreationAndDestruction()
+	{
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var before = await _db.GetOwnedObjectCountAsync(god);
+
+		var first = await _db.CreateThingAsync("First", room, god, room);
+		await _db.CreateThingAsync("Second", room, god, room);
+		await Assert.That(await _db.GetOwnedObjectCountAsync(god)).IsEqualTo(before + 2);
+
+		await _db.DeleteObjectAsync(first);
+		await Assert.That(await _db.GetOwnedObjectCountAsync(god)).IsEqualTo(before + 1);
+	}
+
+	[Test]
 	public async Task DeleteObjectRemovesEveryEdgeInBothDirections()
 	{
 		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;

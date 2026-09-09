@@ -23,38 +23,34 @@ public class CommunicationService(
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
-		var validPorts = new List<long>();
-		foreach (var port in ports)
-		{
-			var connectionData = connectionService.Get(port);
+		var validPorts = await ports
+			.ToAsyncEnumerable()
+			.Where(async (port, _) => await CanHearOnPortAsync(executor, port))
+			.ToArrayAsync();
 
-			if (connectionData?.Ref is null)
-			{
-				validPorts.Add(port);
-				continue;
-			}
-
-			var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-
-			if (playerResult.IsNone())
-			{
-				validPorts.Add(port);
-				continue;
-			}
-
-			var player = playerResult.WithoutNone();
-
-			if (await permissionService.CanInteract(executor, player, InteractType.Hear))
-			{
-				validPorts.Add(port);
-			}
-		}
-
-		if (validPorts.Count > 0)
+		if (validPorts.Length > 0)
 		{
 			var message = messageFunc(executor);
-			await notifyService.Notify(validPorts.ToArray(), message, executor, notificationType);
+			await notifyService.Notify(validPorts, message, executor, notificationType);
 		}
+	}
+
+	/// <summary>
+	/// A port is delivered to unless it is bound to a player who exists and cannot hear
+	/// <paramref name="executor"/>.
+	/// </summary>
+	private async ValueTask<bool> CanHearOnPortAsync(AnySharpObject executor, long port)
+	{
+		var connectionData = connectionService.Get(port);
+		if (connectionData?.Ref is null)
+		{
+			return true;
+		}
+
+		var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
+
+		return playerResult.IsNone()
+			|| await permissionService.CanInteract(executor, playerResult.WithoutNone(), InteractType.Hear);
 	}
 
 	public async ValueTask SendToRoomAsync(

@@ -497,11 +497,7 @@ int oldValue)
 
 		// Sort by PID to ensure FIFO ordering for semaphore notifications
 		var sorted = semaphoresForObject
-			.OrderBy(k =>
-			{
-				var parts = k.Name.Split('-');
-				return parts.Length == 2 && long.TryParse(parts[1], out var pid) ? pid : long.MaxValue;
-			});
+			.OrderBy(k => TryParsePid(k.Name, out var pid) ? pid : long.MaxValue);
 
 		// If oldValue is negative, we notify the specified number of tasks
 		// If oldValue is >= 0, we notify based on count
@@ -700,9 +696,9 @@ int oldValue)
 		}
 
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
-		var pidString = $"-{pid}";
+		var pidSuffix = $"-{pid}";
 
-		var matchingKeys = allKeys.Where(key => key.Name.EndsWith(pidString)).ToList();
+		var matchingKeys = allKeys.Where(key => key.Name.EndsWith(pidSuffix)).ToList();
 
 		if (matchingKeys.Count == 0)
 			return false;
@@ -728,59 +724,79 @@ int oldValue)
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
 	{
-		var translate = new Func<string, string>(x =>
-			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-				.TakeWhile(c => c != '-').ToArray()));
-
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
 			.GroupBy(trigger => trigger.JobKey.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
-			yield return (key.Key, key.Select(x => (
-				x.Value,
-				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(x.Name)
-			)).ToArray());
+			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
 		foreach (var group in _pendingEntries.Values.GroupBy(e => e.Group))
 		{
-			yield return (group.Key, group.Select(e => (
-				DateTimeOffset.UtcNow,
-				DBRef.TryParse(translate(e.TriggerName), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(e.TriggerName)
-			)).ToArray());
+			yield return (group.Key, group.Select(e => (DateTimeOffset.UtcNow, DescribeTrigger(e.TriggerName))).ToArray());
 		}
+	}
+
+	/// <summary>
+	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
+	/// or the raw name when it does not carry one.
+	/// </summary>
+	private static OneOf<string, DBRef> DescribeTrigger(string triggerName)
+	{
+		var identity = triggerName.AsSpan();
+		if (identity.StartsWith("dbref:"))
+		{
+			identity = identity["dbref:".Length..];
+		}
+		else if (identity.StartsWith("handle:"))
+		{
+			identity = identity["handle:".Length..];
+		}
+
+		Span<System.Range> parts = stackalloc System.Range[2];
+		identity.Split(parts, '-');
+
+		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
+			? OneOf<string, DBRef>.FromT1(dbref!.Value)
+			: OneOf<string, DBRef>.FromT0(triggerName);
+	}
+
+	/// <summary>
+	/// The PID from a trigger name shaped <c>prefix-pid</c>: exactly one dash, followed by the number.
+	/// </summary>
+	private static bool TryParsePid(string triggerName, out long pid)
+	{
+		var name = triggerName.AsSpan();
+		Span<System.Range> parts = stackalloc System.Range[3];
+		if (name.Split(parts, '-') != 2)
+		{
+			pid = 0;
+			return false;
+		}
+
+		return long.TryParse(name[parts[1]], out pid);
 	}
 
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
 
-		await foreach (var key in keyTriggers)
+		foreach (var key in keys)
 		{
-			yield return key;
+			yield return await MapSemaphoreTaskData(_scheduler, key);
 		}
 	}
 
 	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
+		var pidSuffix = $"-{pid}";
 
-		await foreach (var key in keyTriggers)
+		foreach (var key in keys.Where(key => key.Name.EndsWith(pidSuffix)))
 		{
-			yield return key;
+			yield return await MapSemaphoreTaskData(_scheduler, key);
 		}
 	}
 
@@ -788,13 +804,10 @@ int oldValue)
 	{
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
 
-		await foreach (var key in keyTriggers)
+		foreach (var key in keys)
 		{
-			yield return key;
+			yield return await MapSemaphoreTaskData(_scheduler, key);
 		}
 	}
 
@@ -803,11 +816,10 @@ int oldValue)
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"));
 
+		// Extract PID from identity: "dbref:{executor}-{pid}"
 		foreach (var key in keys)
 		{
-			// Extract PID from identity: "dbref:{executor}-{pid}"
-			var parts = key.Name.Split('-');
-			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
+			if (TryParsePid(key.Name, out var pid))
 			{
 				yield return pid;
 			}
@@ -832,9 +844,14 @@ int oldValue)
 		var fireDelay = trigger.FinalFireTimeUtc is null
 			? null
 			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
-		var semaphoreSourceString = string.Join(':', trigger.JobKey.Group.Split(':').Skip(1));
-		var semaphoreSource = DbRefAttribute.Parse(semaphoreSourceString);
-		var pid = long.Parse(triggerKey.Name.Split('-').Last());
+		// The group is "semaphore:<objid>/<attribute>"; everything after the first colon is the source.
+		var group = trigger.JobKey.Group;
+		Span<System.Range> groupParts = stackalloc System.Range[2];
+		group.AsSpan().Split(groupParts, ':');
+		var semaphoreSource = DbRefAttribute.Parse(group[groupParts[1]]);
+		var pid = TryParsePid(triggerKey.Name, out var parsed)
+			? parsed
+			: throw new FormatException($"Semaphore trigger '{triggerKey.Name}' does not end in a PID.");
 
 		return new SemaphoreTaskData(pid, command, state.Caller!.Value, semaphoreSource, fireDelay);
 	}
@@ -842,9 +859,10 @@ int oldValue)
 	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
 	{
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"));
+		var pidSuffix = $"-{pid}";
 
 		// This should return just one or zero, but using it as an iterator simplifies the code.
-		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
+		foreach (var key in allKeys.Where(x => x.Name.EndsWith(pidSuffix)))
 		{
 			var trigger = await _scheduler.GetTrigger(key);
 			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());

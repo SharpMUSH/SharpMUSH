@@ -85,7 +85,7 @@ public class SurrealSceneMembershipTests
 	public async Task Migration_ConsolidatesLegacyDuplicatesAndSurvivesRestart()
 	{
 		await using var world = await CreateWorld();
-		await world.Query("DELETE migration:scene_member_ids_v1");
+		await world.Query("DELETE migration:scene_member_ids_v1; DELETE migration:scene_focus_pointer_v1");
 		await world.Query("""
 			RELATE object:1->scene_member:old->scene:⟨1⟩ SET
 				role = 'owner', showAs = '', isCurrent = false, grantedAt = 10, memberName = 'Player';
@@ -134,12 +134,15 @@ public class SurrealSceneMembershipTests
 	{
 		await using var world = await CreateWorld();
 		await world.Storage.AddMemberAsync("1", "#1", "owner");
+		await world.Storage.SetFocusAsync("#1", "1");
 		await world.Storage.RemoveMemberAsync("1", "#1");
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).IsT1).IsTrue();
 		await Assert.That((await world.Storage.GetMembersAsync("1")).AsT0.Count).IsEqualTo(0);
 		await world.Storage.AddMemberAsync("1", "#1", "guest");
 		await world.Query("IF array::len((SELECT VALUE ->scene_member FROM object:1)[0]) != 1 { THROW 'Broken outgoing traversal'; }");
 		await world.Query("IF array::len((SELECT VALUE <-scene_member FROM scene:⟨1⟩)[0]) != 1 { THROW 'Broken incoming traversal'; }");
 		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.Role).IsEqualTo("guest");
+		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsFalse();
 	}
 
 	[Test]
@@ -161,11 +164,46 @@ public class SurrealSceneMembershipTests
 	}
 
 	[Test]
-	public async Task ConcurrentFocusOnDifferentScenes_LeavesOnlyOneCurrentScene()
+	public async Task FocusMigrationRepairsPreviouslyFocusedScenesOnceWithoutLosingMembershipData()
+	{
+		await using var world = await CreateWorld();
+		await world.Storage.CreateSceneAsync("#1", "#1");
+		await world.Storage.AddMemberAsync("1", "#1", "owner");
+		await world.Storage.AddMemberAsync("2", "#1", "participant");
+		await world.Storage.SetShowAsAsync("2", "#1", "Persona");
+		await world.Query("UPDATE scene_member SET isCurrent = true, grantedAt = IF out = scene:⟨1⟩ { 1 } ELSE { 2 }; DELETE migration:scene_focus_pointer_v1;");
+		await world.Migrate();
+		await world.Migrate();
+		await world.Query("IF array::len((SELECT * FROM scene_focus WHERE scene != NONE)) != 1 { THROW 'Multiple focused scenes'; }");
+		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
+		var second = (await world.Storage.GetMemberAsync("2", "#1")).AsT0;
+		await Assert.That(second.Role).IsEqualTo("participant");
+		await Assert.That(second.ShowAs).IsEqualTo("Persona");
+		await world.Query("IF array::len((SELECT * FROM scene_member_duplicate_backup)) != 2 { THROW 'Focus originals not archived exactly once'; }");
+	}
+
+	[Test]
+	public async Task ClearFocusPreservesMembershipAndAllowsAnotherStorageInstanceToFocus()
+	{
+		await using var world = await CreateWorld();
+		await world.Storage.AddMemberAsync("1", "#1", "owner");
+		await world.Storage.SetFocusAsync("#1", "1");
+		await new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1");
+		var member = (await world.Storage.GetMemberAsync("1", "#1")).AsT0;
+		await Assert.That(member.IsCurrent).IsFalse();
+		await Assert.That(member.Role).IsEqualTo("owner");
+		await new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1", "1");
+		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
+	}
+
+	[Test]
+	[Arguments(16)]
+	[Arguments(64)]
+	public async Task ConcurrentFocusOnDifferentScenes_LeavesOnlyOneCurrentScene(int writers)
 	{
 		await using var world = await CreateWorld();
 		var scenes = new List<string> { "1" };
-		for (var i = 0; i < 15; i++)
+		for (var i = 1; i < writers; i++)
 			scenes.Add((await world.Storage.CreateSceneAsync("#1", "#1")).Id);
 		var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var writes = scenes.Select(id => Task.Run(async () =>
@@ -175,7 +213,36 @@ public class SurrealSceneMembershipTests
 		})).ToArray();
 		start.SetResult();
 		await Task.WhenAll(writes);
-		await world.Query("IF array::len((SELECT * FROM scene_member WHERE isCurrent = true)) != 1 { THROW 'Multiple focused scenes'; }");
+		var current = (await world.Storage.GetCurrentSceneAsync("#1")).AsT0;
+		var focused = new List<string>();
+		foreach (var id in scenes)
+		{
+			var member = (await world.Storage.GetMemberAsync(id, "#1")).AsT0;
+			var members = (await world.Storage.GetMembersAsync(id)).AsT0;
+			await Assert.That(members.Single().IsCurrent).IsEqualTo(member.IsCurrent);
+			if (member.IsCurrent) focused.Add(id);
+		}
+		await Assert.That(focused.Count).IsEqualTo(1);
+		await Assert.That(focused.Single()).IsEqualTo(current.Id);
+		await world.Query("IF array::len((SELECT * FROM scene_focus)) != 1 { THROW 'Multiple focus pointers'; }");
+	}
+
+	[Test]
+	public async Task FocusPointersAreIndependentAndSurviveRestart()
+	{
+		await using var world = await CreateWorld();
+		await world.Query("CREATE object:2 SET key = 2, name = 'Second'");
+		await world.Storage.CreateSceneAsync("#1", "#1");
+		await Task.WhenAll(
+			new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1", "1"),
+			new SurrealSceneStorage(world.Accessor).SetFocusAsync("#2", "2"));
+		await world.Migrate();
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).AsT0.Id).IsEqualTo("1");
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#2")).AsT0.Id).IsEqualTo("2");
+		await world.Storage.SetFocusAsync("#1");
+		await world.Migrate();
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).IsT1).IsTrue();
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#2")).AsT0.Id).IsEqualTo("2");
 	}
 
 	private sealed class FailedMigration : IMigrationSource
@@ -247,7 +314,7 @@ public class SurrealSceneMembershipTests
 		await using var world = await CreateWorld();
 		await world.Storage.CreateSceneAsync("#1", "#1");
 		await world.Query("""
-			DELETE migration:scene_member_ids_v1;
+			DELETE migration:scene_member_ids_v1; DELETE migration:scene_focus_pointer_v1;
 			RELATE object:1->scene_member:older->scene:⟨1⟩ SET
 				role = 'owner', showAs = 'One', isCurrent = true, grantedAt = 10, memberName = 'Player';
 			RELATE object:1->scene_member:newer->scene:⟨2⟩ SET

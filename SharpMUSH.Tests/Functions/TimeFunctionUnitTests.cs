@@ -68,9 +68,21 @@ public class TimeFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	// TIMESTRING tests - Penn timestring.1-timestring.3
+	// TIMESTRING tests - Penn timestring.1-timestring.3.
+	// fun_timestring (src/funtime.c:503-519) prints "%2u" per field and ONE space between fields, and
+	// the days form leaves its leading field unpadded. Every expectation below was read off a live
+	// PennMUSH 1.8.8 before it was written down: two-digit fields close up (" 4m 41s"), a span that
+	// reaches a day shows every unit ("1d  0h  0m  0s"), and a bare seconds count keeps its two
+	// columns (" 0s", but "45s").
 	[Test]
-	[Arguments("timestring(86400)", " 1d  0s")]
+	[Arguments("timestring(0)", " 0s")]
+	[Arguments("timestring(45)", "45s")]
+	[Arguments("timestring(90)", " 1m 30s")]
+	[Arguments("timestring(281)", " 4m 41s")]
+	[Arguments("timestring(3600)", " 1h  0m  0s")]
+	[Arguments("timestring(3725)", " 1h  2m  5s")]
+	[Arguments("timestring(86400)", "1d  0h  0m  0s")]
+	[Arguments("timestring(90061)", "1d  1h  1m  1s")]
 	[Arguments("timestring(301)", " 5m  1s")]
 	[Arguments("timestring(301,1)", "0d  0h  5m  1s")]
 	[Arguments("timestring(301,2)", "00d 00h 05m 01s")]
@@ -78,10 +90,10 @@ public class TimeFunctionUnitTests
 	// seconds and the function came back EMPTY, which a caller cannot tell from a real answer.
 	// PennMUSH refuses anything past 32 bits, its seconds being an "unsigned int"
 	// (src/funtime.c:484-501); that ceiling belongs to the C type, and SharpMUSH is 64-bit.
-	[Arguments("timestring(4294967295)", " 49710d  6h  28m  15s")]
-	[Arguments("timestring(4294967296)", " 49710d  6h  28m  16s")]
-	[Arguments("timestring(1788678403736)", " 20702296d  8h  8m  56s")]
-	[Arguments("timestring(9223372036854775807)", " 106751991167300d  15h  30m  7s")]
+	[Arguments("timestring(4294967295)", "49710d  6h 28m 15s")]
+	[Arguments("timestring(4294967296)", "49710d  6h 28m 16s")]
+	[Arguments("timestring(1788678403736)", "20702296d  8h  8m 56s")]
+	[Arguments("timestring(9223372036854775807)", "106751991167300d 15h 30m  7s")]
 	public async Task Timestring(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

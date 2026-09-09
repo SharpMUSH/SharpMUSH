@@ -108,6 +108,23 @@ embedded `'`). Never use plain or double-quoted style for code. Two block
 scalar rules: indent with spaces (tabs are a YAML error) and use `|-` (strip)
 unless you want a trailing newline.
 
+### Literal brackets and parentheses
+
+The escaping rules are the language's, not the package format's — see the
+`writing-sharpmush-softcode` skill under **Language › Evaluation**. In short:
+`%[` `%]` `%(` `%)`, and `[[]x[]]` is not an escape for anything — an empty
+`[]` is refused, sometimes silently.
+
+Two places it bites a manifest in particular:
+
+- A bare `(` inside `header(...)` / `footer(...)` / `line(...)` closes the call
+  early, so the title truncates at the paren and the `)` leaks out after the
+  rule.
+- A `+help` topic body is evaluated before it is rendered, so
+  `+help/list [<source>]` documents a syntax with no brackets in it. Write
+  `%[<source>%]` (or `\[<source>\]` — the manifest's backslashes reach the
+  parser intact, unlike a client-typed `&`).
+
 ### Refs: `{{...}}` tokens, never dbrefs
 
 | Syntax | Kind | Resolved from |
