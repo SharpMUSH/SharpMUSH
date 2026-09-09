@@ -68,6 +68,10 @@ public class TaskScheduler(
 
 	private static async ValueTask<SemaphoreRepairIdentity> CaptureRepairIdentity(SharpAttribute attribute)
 	{
+		// Wipe removes the whole subtree. Never remove children created after this counter.
+		if (attribute.Leaves is not null
+			&& await (await attribute.Leaves.WithCancellation(ExecutionBudget.CurrentToken)).AnyAsync(ExecutionBudget.CurrentToken))
+			throw new InvalidOperationException("Created semaphore has child attributes; refusing admission cleanup of the subtree.");
 		var owner = attribute.Owner is null ? null : await attribute.Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		return new(attribute.Id, attribute.Key, attribute.Name, attribute.LongName, attribute.CommandListIndex,
 			owner?.Object.DBRef, string.Join('\0', attribute.Flags.Select(flag => flag.Name).Order(StringComparer.Ordinal)));
@@ -271,7 +275,7 @@ public class TaskScheduler(
 					if (entry.Cts.IsCancellationRequested) continue;
 					if (accountingBudget?.IsExceeded == true)
 					{
-						await NotifyExpired(entry);
+						if (!shutdownToken.IsCancellationRequested) await NotifyExpired(entry);
 						continue;
 					}
 					using var budget = accountingBudget is null
@@ -441,7 +445,12 @@ public class TaskScheduler(
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
 				counterCreated = attribute is null;
-				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
+				if (attribute is null || attribute.Value.Length == 0) currentCount = 0;
+				else if (!int.TryParse(attribute.Value.ToPlainText(), out currentCount) || currentCount == int.MaxValue)
+				{
+					Release(admission.Pid!.Value);
+					return Reject(QueueRejectionReason.InvalidTarget);
+				}
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken)).AsPlayer;
 				var nextCount = checked(currentCount + 1);
 				// A cancelled acknowledgement does not prove the provider failed to commit.
@@ -482,7 +491,15 @@ public class TaskScheduler(
 					if (counterCreated)
 					{
 						var identity = await CaptureRepairIdentity(attribute);
-						if (!retry) createdIdentity = identity;
+						// A read outage may prevent the first snapshot. Accept the first successful
+						// read only if it still has the exact counter and metadata we create.
+						var expectedCreation = identity.Owner == god!.Object.DBRef
+							&& identity.CommandListIndex is null
+							&& identity.Name.Equals(dbRefAttribute.Attribute[^1], StringComparison.OrdinalIgnoreCase)
+							&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
+							&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
+								.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
+						if (!retry || createdIdentity is null && expectedCreation) createdIdentity = identity;
 						else if (createdIdentity != identity)
 							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
 					}
@@ -634,7 +651,8 @@ public class TaskScheduler(
 		}
 		CancelEntry(entry);
 		if (ready) return true;
-		using var mutation = await EnterSemaphoreMutationAsync();
+		using var mutation = entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
+			? await EnterSemaphoreMutationAsync() : null;
 		await _scheduler.UnscheduleJob(new TriggerKey(entry.TriggerName, entry.Group));
 		lock (_admissionLock)
 		{
