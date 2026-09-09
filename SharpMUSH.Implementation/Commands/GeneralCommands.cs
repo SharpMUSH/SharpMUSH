@@ -2184,7 +2184,15 @@ public partial class Commands
 				MarkupText.Plain(value.ToString()), god)))
 				throw new InvalidOperationException("Semaphore count update failed.");
 			if (attributeContents.IsNone)
-				await SemaphoreAttributes.InitializeAsync(Mediator, dbRefAttribute.DbRef, dbRefAttribute.Attribute);
+			{
+				try { await SemaphoreAttributes.InitializeAsync(Mediator, dbRefAttribute.DbRef, dbRefAttribute.Attribute); }
+				catch
+				{
+					if (!await Mediator.Send(new WipeAttributeCommand(dbRefAttribute.DbRef, dbRefAttribute.Attribute)))
+						throw new InvalidOperationException("Semaphore creation rollback failed.");
+					throw;
+				}
+			}
 		}
 
 		switch (notifyType)

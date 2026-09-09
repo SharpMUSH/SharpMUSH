@@ -380,6 +380,7 @@ public class TaskScheduler(
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var counterWritten = false;
+		var counterCreated = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
 		var fullTarget = target.Known().Object().DBRef;
@@ -396,6 +397,7 @@ public class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
+				counterCreated = attribute is null;
 				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
@@ -423,8 +425,14 @@ public class TaskScheduler(
 			{
 				// The mutation lease excludes notify, drain and timeout bookkeeping until rollback completes.
 				if (counterWritten)
-					await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-						MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+				{
+					// Restore absence as well as value: partial custom flags cannot pass validation.
+					var restored = counterCreated
+						? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute))
+						: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
+							MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+					if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
+				}
 			}
 			finally { Release(admission.Pid!.Value); }
 			throw;
