@@ -61,6 +61,8 @@ public partial class TaskScheduler
 						else activation = Activate(entry.Pid);
 					}
 				}
+				// Semaphore admissions never attach OnReleased; it belongs to direct-input
+				// entries, which cannot be selected by this transaction.
 				removed?.Cts.Dispose();
 				if (activation is { } pending) await pending;
 			}
