@@ -2211,6 +2211,8 @@ Only wizards and objects with the halt @power can @halt other player's objects. 
 
 `@halt/pid` will cancel a single queue entry with the given pid (the number in parenthesis before it in @ps). You must control the object that queued the command or have the halt power to do this.
 
+A cancelled delayed entry remains reserved until its scheduled trigger is confirmed removed. If scheduling or cancellation reports a cleanup failure, the command stays cancelled and consumes its queue allowance; retry `@halt/pid <pid>` after the scheduler is available to finish cleanup.
+
 `@halt/all` is a synonym for @allhalt, and is a wizard-only command which halts all objects in the game in an effort to free up the queue.
 
 

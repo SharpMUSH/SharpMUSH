@@ -26,7 +26,7 @@ public class InputSessionCommandTests
 		(await Database.GetAttributeAsync(player, [name], CancellationToken.None).LastOrDefaultAsync())?.Value.Text;
 	private Task Command(long handle, string command) => Parser.CommandParse(handle, Connections, MarkupText.Plain(command)).AsTask();
 	private ValueTask<SharpMUSH.Library.Models.SchedulerModels.QueueAdmissionResult> Input(long handle, string input) =>
-		Scheduler.WriteUserCommand(handle, MarkupText.Plain(input), ParserState.Empty with { Handle = handle });
+		Scheduler.AdmitUserCommand(handle, MarkupText.Plain(input), ParserState.Empty with { Handle = handle });
 
 	private async Task WaitFor(DBRef player, string attribute, string expected)
 	{

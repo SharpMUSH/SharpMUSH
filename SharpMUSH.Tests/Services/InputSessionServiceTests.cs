@@ -164,7 +164,7 @@ public class InputSessionServiceTests
 		sessions.TryEscapeAsync(1, "transport", Arg.Any<MarkupText>(), Arg.Any<Guid?>())
 			.Returns(call => h.Sessions.TryEscapeAsync(1, "transport", call.Arg<MarkupText>(), call.Arg<Guid?>()));
 		await using var queue = Queue(h, sessions);
-		await Assert.That((await queue.WriteUserCommand(1, MarkupText.Plain("@input/cancel"),
+		await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/cancel"),
 			ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" })).Accepted).IsTrue();
 		await Assert.That(h.Sessions.GetCapturing(1)?.CallbackAttribute).IsEqualTo("SECOND");
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
@@ -398,9 +398,9 @@ public class InputSessionServiceTests
 		try
 		{
 			var state = ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" };
-			await Assert.That((await queue.WriteUserCommand(1, MarkupText.Plain("[dangerous()];@destroy me"), state)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("[dangerous()];@destroy me"), state)).Accepted).IsTrue();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
-			await Assert.That((await queue.WriteUserCommand(1, MarkupText.Plain("@input/cancel"), state)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/cancel"), state)).Accepted).IsTrue();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
 		}
 		finally { release.TrySetResult(); }
