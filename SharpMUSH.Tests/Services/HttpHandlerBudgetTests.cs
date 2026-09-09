@@ -15,11 +15,11 @@ namespace SharpMUSH.Tests.Services;
 public class HttpHandlerBudgetTests
 {
 	private static (HttpHandlerCommandService Service, IMUSHCodeParser Parser, HttpOutputCapture Capture) Create(
-		Func<ParserState, ValueTask<CallState?>> execute, uint milliseconds = 0, IAttributeService? attributeService = null)
+		Func<ParserState, ValueTask<CallState?>> execute, uint milliseconds = 0, IAttributeService? attributeService = null, IMediator? handlerMediator = null)
 	{
 		var handler = new TestObjectFactory().CreateThing(8, "HTTP handler").AsThing;
-		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(handler);
+		var mediator = handlerMediator ?? Substitute.For<IMediator>();
+		if (handlerMediator is null) mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(handler);
 		var attributes = attributeService ?? Substitute.For<IAttributeService>();
 		if (attributeService is null) attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
 			IAttributeService.AttributeMode.Execute, false).Returns((OptionalSharpAttributeOrError)new[]
@@ -38,6 +38,42 @@ public class HttpHandlerBudgetTests
 		var capture = new HttpOutputCapture();
 		return (new(mediator, attributes, parser, capture, Substitute.For<IEventService>(), options,
 			NullLogger<HttpHandlerCommandService>.Instance), parser, capture);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HandlerObjectLookupHonorsRequestCancellationAndDeadline(bool expire)
+	{
+		var mediator = Substitute.For<IMediator>();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var release = new CancellationTokenSource();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
+			{
+				entered.TrySetResult();
+				using var linked = CancellationTokenSource.CreateLinkedTokenSource(call.Arg<CancellationToken>(), release.Token);
+				await Task.Delay(Timeout.Infinite, linked.Token);
+				throw new InvalidOperationException("The blocked object lookup must be cancelled.");
+			});
+		var (service, _, _) = Create(_ => ValueTask.FromResult<CallState?>(CallState.Empty), expire ? 100u : 0u, handlerMediator: mediator);
+		using var cancellation = new CancellationTokenSource();
+		var dispatch = service.DispatchAsync("GET", "/object", "", [], cancellation.Token).AsTask();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).AsT0.Status).IsEqualTo(503);
+			else
+			{
+				cancellation.Cancel();
+				await Assert.That(async () => await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+			}
+		}
+		finally
+		{
+			release.Cancel();
+			try { await dispatch; } catch (OperationCanceledException) { }
+		}
 	}
 
 	[Test]

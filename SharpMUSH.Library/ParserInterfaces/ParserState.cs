@@ -283,10 +283,14 @@ public partial record ParserState(
 	ParserStateFlags Flags = ParserStateFlags.None,
 	Dictionary<string, CallState>? CallerArguments = null,
 	BreakPropagation? BreakPropagation = null,
-	string? ConnectionSessionId = null,
-	ExecutionBudget? ExecutionBudget = null,
-	EvaluationRestrictions? Restrictions = null)
+	string? ConnectionSessionId = null)
 {
+	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
+	public ExecutionBudget? ExecutionBudget { get; init; }
+
+	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
+	public EvaluationRestrictions? Restrictions { get; init; }
+
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;

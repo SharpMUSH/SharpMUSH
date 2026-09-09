@@ -473,9 +473,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag(),
-			ExecutionBudget: preserveCallerActors ? CurrentState.ExecutionBudget : null,
-			Restrictions: preserveCallerActors ? CurrentState.Restrictions : null));
+			LimitExceeded: new LimitExceededFlag())
+		{
+			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
+			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null
+		});
 	}
 
 	/// <summary>
