@@ -119,8 +119,9 @@ public sealed class ScenePlugin
 		"DEFINE TABLE IF NOT EXISTS scene_pose_origin TYPE RELATION",
 		"DEFINE TABLE IF NOT EXISTS scene_edit_editor TYPE RELATION",
 		"DEFINE TABLE IF NOT EXISTS scene_plot_owner TYPE RELATION",
-		// The member edge (player -> scene) carries {role, showAs, isCurrent, grantedAt, memberName}.
+		// The member edge (player -> scene) carries {role, showAs, grantedAt, memberName}; focus has one player pointer.
 		"DEFINE TABLE IF NOT EXISTS scene_member TYPE RELATION",
+		"DEFINE TABLE IF NOT EXISTS scene_focus SCHEMALESS",
 		"DEFINE INDEX IF NOT EXISTS scene_first_pose_in ON scene_first_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_last_pose_in ON scene_last_pose FIELDS in",
 		"DEFINE INDEX IF NOT EXISTS scene_pose_next_in ON scene_pose_next FIELDS in",
@@ -179,6 +180,26 @@ public sealed class ScenePlugin
 				};
 			};
 			CREATE migration:scene_member_ids_v1 SET appliedAt = time::now();
+		};
+		COMMIT TRANSACTION;
+		""",
+		// Older focus transactions could commit different current edges concurrently. Repair those
+		// players once, preserving originals and moving the earliest focus into one player pointer.
+		"""
+		BEGIN TRANSACTION;
+		IF !record::exists(migration:scene_focus_pointer_v1) {
+			LET $players = SELECT in, count() AS total FROM scene_member WHERE isCurrent = true GROUP BY in;
+			FOR $player IN $players {
+				LET $focused = SELECT * FROM scene_member
+					WHERE in = $player.in AND isCurrent = true ORDER BY grantedAt, id;
+				FOR $edge IN $focused {
+					IF $player.total > 1 { CREATE scene_member_duplicate_backup CONTENT { original: $edge }; };
+				};
+				LET $pointer = type::thing('scene_focus', [$player.in]);
+				UPSERT $pointer SET scene = $focused[0].out;
+			};
+			UPDATE scene_member UNSET isCurrent;
+			CREATE migration:scene_focus_pointer_v1 SET appliedAt = time::now();
 		};
 		COMMIT TRANSACTION;
 		"""
