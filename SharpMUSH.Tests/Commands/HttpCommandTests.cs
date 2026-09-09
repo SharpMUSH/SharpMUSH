@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -59,9 +60,80 @@ public class HttpCommandTests
 		await Assert.That(result.AsValue().Message?.ToPlainText() ?? "").IsEqualTo(admission.Accepted ? "" : admission.Error);
 		await mediator.Received(1).Send(Arg.Any<AdmitAttributeRequest>(), budget.Token);
 		clients.DidNotReceive().CreateClient(Arg.Any<string>());
-		if (!admission.Accepted)
+		if (reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
 			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
 				TestHelpers.MatchingMessage(admission.Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	[Arguments(QueueRejectionReason.GlobalLimit)]
+	[Arguments(QueueRejectionReason.OwnerLimit)]
+	[Arguments(QueueRejectionReason.ShuttingDown)]
+	[Arguments(QueueRejectionReason.InvalidTarget)]
+	public async Task HttpRejectionEmitsOneNoticeThroughTheRealScheduler(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpCapacityNotice");
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Arguments = new()
+			{
+				["0"] = new CallState(player.DbRef + "/CALLBACK"),
+				["1"] = new CallState("https://example.invalid/queued")
+			}
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var notifications = Substitute.For<INotifyService>();
+		var notices = 0;
+		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>())
+			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
+		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<OneOf.OneOf<MarkupText, string>>(),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce)
+			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
+		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with
+		{
+			Limit = baseline.Limit with
+			{
+				GlobalQueueLimit = reason == QueueRejectionReason.GlobalLimit ? 0u : 10u,
+				PlayerQueueLimit = reason == QueueRejectionReason.OwnerLimit ? 0u : 10u
+			}
+		});
+		var lookup = reason == QueueRejectionReason.InvalidTarget ? Substitute.For<IMediator>() : Mediator;
+		if (reason == QueueRejectionReason.InvalidTarget)
+			lookup.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(new None()));
+		var scheduler = new SharpMUSH.Library.Services.TaskScheduler(parser, ConnectionService,
+			Substitute.For<Quartz.ISchedulerFactory>(), WebAppFactoryArg.Services.GetRequiredService<IAttributeService>(),
+			lookup, Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance,
+			options, notifications);
+		var handler = new SharpMUSH.Implementation.Handlers.AdmissionAsyncScheduleHandler(scheduler);
+		var admissionMediator = Substitute.For<IMediator>();
+		admissionMediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => handler.Handle(call.Arg<AdmitAttributeRequest>(), call.Arg<CancellationToken>()));
+		var clients = Substitute.For<IHttpClientFactory>();
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, admissionMediator, clients, notifications);
+
+		if (reason == QueueRejectionReason.ShuttingDown) await scheduler.DisposeAsync();
+		try
+		{
+			var result = await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" });
+
+			await Assert.That(result.AsValue().Message!.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
+			await notifications.Received(reason == QueueRejectionReason.InvalidTarget ? 0 : 1)
+				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
+			await Assert.That(notices).IsEqualTo(1);
+			await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(0);
+			clients.DidNotReceive().CreateClient(Arg.Any<string>());
+		}
+		finally
+		{
+			if (reason != QueueRejectionReason.ShuttingDown) await scheduler.DisposeAsync();
+		}
 	}
 
 	/// <summary>
