@@ -684,9 +684,12 @@ public class InputSessionServiceTests
 			// A dedicated thread tests the lock boundary without depending on thread-pool availability.
 			var probe = new Thread(() =>
 			{
+				using var probeBudget = new ExecutionBudget(Timeout.InfiniteTimeSpan);
+				using var probeScope = probeBudget.Enter();
 				queue.GetQueueUsage();
 				queue.PausePending(long.MaxValue, "probe").AsTask().GetAwaiter().GetResult();
-			}) { IsBackground = true };
+			})
+			{ IsBackground = true };
 			probe.Start();
 			cleanupCouldReadQueue = probe.Join(TimeSpan.FromSeconds(5));
 			cleanupFinished.TrySetResult();
