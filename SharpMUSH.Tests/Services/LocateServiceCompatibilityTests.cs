@@ -1258,10 +1258,12 @@ public class LocateServiceCompatibilityTests
 	}
 
 	[Test]
-	public async Task Locate_AbsoluteDbref_BypassesVisibility()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task Locate_AbsoluteDbref_BypassesOrdinaryVisibilityButHonorsInteractionPolicy(bool canInteract)
 	{
-		// PennMUSH: #N always bypasses visibility check (match_absolute). The object
-		// should be returned even when CanExamine and CanInteract both return false.
+		// Absolute identity bypasses ordinary examination visibility.
+		// Reality interaction policy still applies, including for staff.
 
 		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
 		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
@@ -1276,14 +1278,15 @@ public class LocateServiceCompatibilityTests
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				Arg.Any<IPermissionService.InteractType>())
-			.Returns(false);
+			.Returns(canInteract);
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(false);
 
 		var result = await _locateService.Locate(_parser, player, player, "#42",
 			LocateFlags.AbsoluteMatch | LocateFlags.PreferLockPass);
 
-		await Assert.That(result.IsValid()).IsTrue();
+		await Assert.That(result.IsValid()).IsEqualTo(canInteract);
+		if (!canInteract) return;
 		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 

@@ -76,10 +76,11 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 			|| await VisibleLocationAsync(player, ct) is not { } room) return null;
 		var visible = new List<string>();
 		var truncated = false;
+		var canSeeContent = await WorldVisibility.CreateScanAsync(player, room.WithExitOption(), reality, connections, ct);
 		await foreach (var item in mediator.CreateStream(new GetContentsQuery(room), ct))
 		{
 			ct.ThrowIfCancellationRequested();
-			if (!await WorldVisibility.CanSeeContentAsync(player, room.WithExitOption(), item, reality, connections, ct)) continue;
+			if (!await canSeeContent(item, ct)) continue;
 			if (visible.Count == MaxVisibleObjects) { truncated = true; break; }
 			visible.Add(item.Object().DBRef.ToString());
 		}

@@ -1092,7 +1092,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.", executor);
 			}
 		}
 
@@ -1128,7 +1128,7 @@ public partial class Commands
 								continue;
 							}
 
-							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
+							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 							dismissedCount++;
 						}
 						break;
@@ -1177,7 +1177,7 @@ public partial class Commands
 		}
 
 		await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 
 		return CallState.Empty;
 	}
@@ -1779,7 +1779,7 @@ public partial class Commands
 		}
 
 		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.", executor);
 
 		return CallState.Empty;
 	}
@@ -1961,7 +1961,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage);
+		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
@@ -2096,12 +2096,12 @@ public partial class Commands
 			var receiveMsg = receiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
 			{
-				await NotifyService.Notify(recipient, receiveMsg);
+				await NotifyService.Notify(recipient, receiveMsg, executor);
 			}
 		}
 		else if (!isSilent)
 		{
-			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
+			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.", executor);
 		}
 
 		var oreceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
@@ -3102,7 +3102,7 @@ public partial class Commands
 
 				var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
 				await NotifyService.Notify(obj.WithRoomOption(),
-					$"{executor.Object().Name} whispers something to {targetList}.");
+					$"{executor.Object().Name} whispers something to {targetList}.", executor);
 			}
 		}
 

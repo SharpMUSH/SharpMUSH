@@ -1,4 +1,5 @@
 using NSubstitute;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -32,6 +33,40 @@ public class WorldVisibilityTests
 		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		await Assert.That(await WorldVisibility.CanSeeContentAsync(viewer, room, item, reality,
 			Substitute.For<IConnectionService>())).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task AContentsScanReadsReceiverAndContainerOnceAndRefreshesForTheNextScan()
+	{
+		var factory = new TestObjectFactory();
+		var room = factory.CreateRoom(10, "Room");
+		var viewer = factory.CreatePlayer(11, "Viewer", room);
+		var first = factory.CreateThing(12, "First", room);
+		var second = factory.CreateThing(13, "Second", room);
+		var objects = Substitute.For<IObjectStore>();
+		foreach (var obj in new AnySharpObject[] { room, viewer, first, second })
+		{
+			obj.Object().Id = obj.Object().DBRef.ToString();
+			objects.GetObjectNodeAsync(obj.Object().DBRef, Arg.Any<CancellationToken>()).Returns(obj.Match<AnyOptionalSharpObject>(player => player, room => room, exit => exit, thing => thing));
+		}
+		var store = Substitute.For<IExpandedDataStore>();
+		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())
+			.Returns(new RealityConfiguration(1, true, ["normal", "ghost"]));
+		var policy = new RealityPolicy(store, objects);
+		var connections = Substitute.For<IConnectionService>();
+		var scan = await WorldVisibility.CreateScanAsync(viewer, room, policy, connections);
+		await Assert.That(await scan(viewer.AsContent, default)).IsFalse(); // Offline players remain omitted.
+		await Assert.That(await scan(first.AsContent, default)).IsTrue();
+		await Assert.That(await scan(second.AsContent, default)).IsTrue();
+		await store.Received(1).GetExpandedObjectData<ObjectReality>(viewer.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>());
+		await store.Received(1).GetExpandedObjectData<ObjectReality>(room.Object.Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>());
+		store.GetExpandedObjectData<ObjectReality>(second.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>())
+			.Returns(ObjectReality.Default(second.Object().DBRef) with { Transmit = ["ghost"] });
+		await Assert.That(await scan(second.AsContent, default)).IsFalse();
+		store.GetExpandedObjectData<ObjectReality>(viewer.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>())
+			.Returns(ObjectReality.Default(viewer.Object().DBRef) with { Receive = ["ghost"] });
+		var next = await WorldVisibility.CreateScanAsync(viewer, room, policy, Substitute.For<IConnectionService>());
+		await Assert.That(await next(first.AsContent, default)).IsFalse();
 	}
 
 	[Test]

@@ -194,7 +194,10 @@ public class NatsBridgeServiceTests
 		{
 			cancellation.Cancel();
 			try { await forwarding; }
-			catch (OperationCanceledException) { }
+			catch (OperationCanceledException ex)
+			{
+				await Assert.That(ex.CancellationToken.IsCancellationRequested).IsTrue();
+			}
 		}
 		await Assert.That(forwarding.IsCanceled).IsTrue();
 	}

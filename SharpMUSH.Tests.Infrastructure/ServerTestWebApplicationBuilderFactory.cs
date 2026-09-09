@@ -18,7 +18,7 @@ namespace SharpMUSH.Tests;
 public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
-	INotifyService notifier,
+	INotifyService? notifier,
 	string sqlPlatform = "mysql") :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
@@ -116,8 +116,11 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
 				sc.AddSingleton(substitute);
 
-				sc.RemoveAll<INotifyService>();
-				sc.AddSingleton(notifier);
+				if (notifier is not null)
+				{
+					sc.RemoveAll<INotifyService>();
+					sc.AddSingleton(notifier);
+				}
 
 				sc.RemoveAll<ISqlService>();
 				sc.AddSingleton<ISqlService>(new SqlService(sqlOptionsMonitor));

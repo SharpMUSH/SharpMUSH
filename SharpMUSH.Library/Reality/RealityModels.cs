@@ -19,3 +19,9 @@ public interface IRealityPolicy
 	ValueTask<bool> IsEnabledAsync(CancellationToken ct = default);
 	ValueTask<string?> DescriptionAttributeAsync(DBRef receiver, DBRef target, CancellationToken ct = default);
 }
+
+/// <summary>Optional request-scoped observation support; implementations keep receiver state only for one scan.</summary>
+public interface IRealityObservationProvider
+{
+	ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveAsync(DBRef receiver, CancellationToken ct = default);
+}

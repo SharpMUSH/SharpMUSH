@@ -120,4 +120,70 @@ public class RealityRoutingTests
 		await Assert.That(bus.ReceivedCalls().Count()).IsEqualTo(2);
 	}
 
+	[Test]
+	[Arguments("notify", false)]
+	[Arguments("notify", true)]
+	[Arguments("handles", false)]
+	[Arguments("handles", true)]
+	[Arguments("prompt", false)]
+	[Arguments("prompt", true)]
+	[Arguments("prompts", false)]
+	[Arguments("prompts", true)]
+	public async Task RawHandleRoutesRejectACharacterReboundDuringPerception(string route, bool sessionOnly)
+	{
+		var sender = new TestObjectFactory().CreatePlayer(10, "sender");
+		var receiver = new DBRef(11, 1);
+		var check = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(receiver, sender.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new ValueTask<bool>(check.Task));
+		var connections = Substitute.For<IConnectionService>();
+		var current = new IConnectionService.ConnectionData(5, receiver, IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+		connections.Get(5).Returns(_ => current);
+		var bus = Substitute.For<IMessageBus>();
+		var notify = new NotifyService(bus, connections, new LocalizationService(), reality);
+		var pending = (route switch
+		{
+			"notify" => notify.Notify(5L, "hidden", sender),
+			"handles" => notify.Notify([5L], "hidden", sender),
+			"prompt" => notify.Prompt(5L, "hidden", sender),
+			_ => notify.Prompt([5L], "hidden", sender)
+		}).AsTask();
+		await Assert.That(pending.IsCompleted).IsFalse();
+		current = sessionOnly
+			? current with { Metadata = new ConcurrentDictionary<string, string>(new[] { KeyValuePair.Create("SessionId", "replacement") }) }
+			: current with { Ref = new DBRef(12, 1) };
+		check.SetResult(true);
+		await pending;
+		await Assert.That(bus.ReceivedCalls().Any()).IsFalse();
+	}
+
+	[Test]
+	[Arguments("localized")]
+	[Arguments("system")]
+	[Arguments("markup")]
+	[Arguments("except")]
+	public async Task ObjectTargetedVariantsDoNotFollowAReboundHandle(string route)
+	{
+		var sender = new TestObjectFactory().CreatePlayer(10, "sender");
+		var receiver = new DBRef(11, 1);
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		var connections = Substitute.For<IConnectionService>();
+		var old = new IConnectionService.ConnectionData(5, receiver, IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+		connections.Get(receiver).Returns(new[] { old }.ToAsyncEnumerable());
+		connections.Get(5).Returns(old with { Ref = new DBRef(12, 1) });
+		var bus = Substitute.For<IMessageBus>();
+		var notify = new NotifyService(bus, connections, new LocalizationService(), reality);
+		switch (route)
+		{
+			case "localized": await notify.NotifyLocalized(receiver, "private", sender); break;
+			case "system": await notify.NotifyLocalized(receiver, "private"); break;
+			case "markup": await notify.NotifyLocalizedMarkup(receiver, "private", sender); break;
+			default: await notify.NotifyExcept(receiver, "private", [], sender); break;
+		}
+		await Assert.That(bus.ReceivedCalls().Any()).IsFalse();
+	}
+
 }

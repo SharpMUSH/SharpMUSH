@@ -808,9 +808,10 @@ public partial class Commands
 			var canSeeAll = await executor.IsSee_All();
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
+			var canSeeContent = await WorldVisibility.CreateScanAsync(executor, realViewing, reality, ConnectionService);
 			foreach (var item in allContents)
 			{
-				if (!await WorldVisibility.CanSeeContentAsync(executor, realViewing, item, reality, ConnectionService)) continue;
+				if (!await canSeeContent(item, default)) continue;
 				if (item.IsExit) visibleExits.Add(item);
 				else visibleContents.Add(item);
 			}
@@ -3373,7 +3374,7 @@ public partial class Commands
 				continue;
 			}
 
-			await NotifyService.Prompt(locateTarget, notification);
+			await NotifyService.Prompt(locateTarget, notification, executor);
 		}
 
 		return new None();
@@ -3582,7 +3583,7 @@ public partial class Commands
 		if (isUnfindable)
 		{
 			await NotifyService.Notify(target,
-				$"{executor.Object().Name} tried to locate you, but was unable to.");
+				$"{executor.Object().Name} tried to locate you, but was unable to.", executor);
 			await NotifyService.Notify(executor,
 				$"{targetObject.Name} is UNFINDABLE.", executor);
 			return new CallState(ErrorMessages.Returns.Unfindable);
@@ -3592,7 +3593,7 @@ public partial class Commands
 		var locationName = targetLocation.Object().Name;
 
 		await NotifyService.Notify(target,
-			$"{executor.Object().Name} has just located your position.");
+			$"{executor.Object().Name} has just located your position.", executor);
 
 		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.", executor);
@@ -6004,7 +6005,7 @@ public partial class Commands
 		var actorMessage = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, what, whatd, stackArgs);
 
-		await NotifyService.Notify(actor, actorMessage);
+		await NotifyService.Notify(actor, actorMessage, actor);
 
 		var actorLocation = await actor.Where();
 		var othersMessage = await GetAttributeOrDefault(

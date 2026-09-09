@@ -3,7 +3,7 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Reality;
 
-public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects) : IRealityPolicy
+public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects) : IRealityPolicy, IRealityObservationProvider
 {
 	public const string ConfigurationKey = "sharpmush.reality.config.v1";
 	public const string ObjectKey = "sharpmush.reality.object.v1";
@@ -19,10 +19,26 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		if (!config.Enabled) return true;
 		var receiving = await ReadObjectAsync(receiver, ct);
 		var transmitting = await ReadObjectAsync(target, ct);
-		if (receiving is null || transmitting is null) return false;
-		if (receiving.Object.Equals(transmitting.Object)) return true;
-		return SharedLayers(config, receiving, transmitting).Any();
+		return Perceives(config, receiving, transmitting);
 	}
+
+	public async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveAsync(DBRef receiver, CancellationToken ct = default)
+	{
+		var config = await ConfigurationAsync(ct);
+		var receiving = config.Enabled ? await ReadObjectAsync(receiver, ct) : null;
+		return async (target, token) =>
+		{
+			token.ThrowIfCancellationRequested();
+			if (!config.Enabled) return true;
+			if (receiving is null) return false;
+			if (target.Equals(receiving.Object)) return true;
+			return Perceives(config, receiving, await ReadObjectAsync(target, token));
+		};
+	}
+
+	private static bool Perceives(RealityConfiguration config, ObjectReality? receiving, ObjectReality? transmitting)
+		=> receiving is not null && transmitting is not null
+			&& (receiving.Object.Equals(transmitting.Object) || SharedLayers(config, receiving, transmitting).Any());
 
 	public async ValueTask<string?> DescriptionAttributeAsync(DBRef receiver, DBRef target, CancellationToken ct = default)
 	{

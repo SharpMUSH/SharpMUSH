@@ -10,11 +10,73 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+public class RealityGameServerFactory : ServerWebAppFactory
+{
+	protected override bool UseRealNotifications => true;
+}
+
 public class RealityGameTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory Factory { get; init; }
+	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
+	public required RealityGameServerFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MovementAnnouncementsDoNotRevealAnUnperceivedMover(bool arriving)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality origin", actor)))).AsRoom;
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality destination", actor)))).AsRoom;
+		var mover = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden mover", origin, actor, origin)))).AsThing;
+		var observer = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality observer", arriving ? destination : origin, actor, origin)))).AsThing;
+		try
+		{
+			await policy.SaveObjectAsync(observer.Object.Id!, ObjectReality.Default(observer.Object.DBRef) with { Receive = ["ghost"] }, default);
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			var output = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(observer.Object.Key, output))
+			{
+				var moved = await Get<IMoveService>().ExecuteMoveAsync(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)), mover, destination, actor.Object.DBRef);
+				await Assert.That(moved.IsT0).IsTrue();
+			}
+			await Assert.That(output.Body.ToString()).IsEmpty();
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FollowingNotificationsDoNotRevealAnUnperceivedActor(bool dismiss)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var home = await actor.Location.WithCancellation(default);
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality follower", home, actor, home)))).AsThing;
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost"]), default);
+			if (dismiss)
+				await Factory.CommandParser.FromState(ParserState.RootFor(target.Object.DBRef)).CommandListParse(MarkupText.Plain($"follow {actor.Object.DBRef}"));
+			await policy.SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Receive = ["ghost"] }, default);
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			var output = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(target.Object.Key, output))
+				await Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)).CommandListParse(
+					MarkupText.Plain($"{(dismiss ? "dismiss" : "follow")} {target.Object.DBRef}"));
+			await Assert.That(output.Body.ToString()).IsEmpty();
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
 
 	[Test, NotInParallel]
 	public async Task TelCannotMoveAnObjectIntoAnUnperceivedDestination()
@@ -70,6 +132,32 @@ public class RealityGameTests
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(
 					MarkupText.Plain($"page{(overrideLock ? "/override" : "")} {(byName ? "*" + name : target.Object.DBRef.ToString())}=directional-page-message"));
 			await Assert.That(output.Body.ToString()).Contains("directional-page-message");
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task GiveLocatesRecipientsInTheGiversReceivingDirection(bool byName)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var home = await player.Location.WithCancellation(default);
+		var name = "RealityReceiver" + Guid.NewGuid().ToString("N")[..12];
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, home, player, home)))).AsThing;
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality gift", player, player, home)))).AsThing;
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			await policy.SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Receive = ["ghost"] }, default);
+			await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(
+				MarkupText.Plain($"give {(byName ? name : target.Object.DBRef.ToString())}={item.Object.DBRef}"));
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(target.Object.DBRef);
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}

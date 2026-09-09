@@ -316,7 +316,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -328,7 +328,7 @@ public class MoveService(
 			{
 				if (!content.Object().DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object().DBRef, defaultMsg, targetObj);
 				}
 			}
 		}
@@ -351,7 +351,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}
@@ -423,7 +423,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -435,7 +435,7 @@ public class MoveService(
 			{
 				if (!content.Object().DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object().DBRef, defaultMsg, targetObj);
 				}
 			}
 		}
@@ -458,7 +458,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}
@@ -512,7 +512,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -535,7 +535,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}

@@ -36,6 +36,17 @@ public class NotifyService(
 		return allowed && connections.Get(handle)?.Ref is { } latest && latest.Equals(current);
 	}
 
+	private async ValueTask<bool> CanReceiveHandle(long handle, AnySharpObject? sender)
+	{
+		var initial = connections.Get(handle);
+		var reference = initial?.Ref;
+		var session = initial?.Metadata.GetValueOrDefault("SessionId");
+		if (!await CanReceive(reference, sender)) return false;
+		var latest = connections.Get(handle);
+		return Nullable.Equals(reference, latest?.Ref)
+			&& string.Equals(session, latest?.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal);
+	}
+
 	private async ValueTask<bool> CanReceive(DBRef? receiver, AnySharpObject? sender)
 	{
 		if (sender is null) return true;
@@ -170,7 +181,7 @@ public class NotifyService(
 			return;
 		}
 
-		if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkup(handle, what);
+		if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, what);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -185,7 +196,7 @@ public class NotifyService(
 
 		foreach (var handle in handles)
 		{
-			if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkup(handle, what);
+			if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, what);
 		}
 	}
 
@@ -225,7 +236,7 @@ public class NotifyService(
 
 		foreach (var handle in handles)
 		{
-			if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkupPrompt(handle, what);
+			if (await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, what);
 		}
 	}
 
@@ -246,11 +257,11 @@ public class NotifyService(
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
-		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
-
-		if (notifyHandles.Length > 0)
+		if (!await CanReceive(who, sender)) return;
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
+		foreach (var handle in targetHandles.Where(h => !excludeHandles.Contains(h)))
 		{
-			await Notify(notifyHandles, what, sender, type);
+			if (await CanReceiveBound(handle, who, sender, perceptions)) await PublishMarkup(handle, what);
 		}
 	}
 
@@ -293,20 +304,8 @@ public class NotifyService(
 	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
 		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
 
-	public async ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
-	{
-		if (TryCaptureLocalized(who, key, args))
-		{
-			return;
-		}
-
-		await foreach (var conn in connections.Get(who))
-		{
-			conn.Metadata.TryGetValue("Locale", out var locale);
-			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: null);
-		}
-	}
+	public ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
+		=> NotifyLocalized(who, key, sender: null, args: args);
 
 	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
 		=> NotifyLocalized(who.Object().DBRef, key, args);
@@ -327,11 +326,13 @@ public class NotifyService(
 			return;
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
+			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
 			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: sender);
+			if (message.Length > 0) await PublishMarkup(conn.Handle, message);
 		}
 	}
 
@@ -358,12 +359,14 @@ public class NotifyService(
 			}
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
+			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
 			var template = localizationService.Get(key, locale);
 			var message = MarkupTemplateFormatter.Format(template, args);
-			await Notify(conn.Handle, message, sender);
+			if (message.Length > 0) await PublishMarkup(conn.Handle, message);
 		}
 	}
 
