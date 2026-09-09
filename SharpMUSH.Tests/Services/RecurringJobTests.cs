@@ -112,8 +112,32 @@ public class RecurringJobTests
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(5));
 		using var scope = budget.Enter();
 		await commands.RecurringJob(parser, new SharpMUSH.Library.Attributes.SharpCommandAttribute { Name = "@JOB" });
-		await Assert.That(tokens.Count).IsEqualTo(operation is "ENABLE" or "DISABLE" or "SCHEDULE" ? 4 : 3);
+		await Assert.That(tokens.Count).IsEqualTo(operation is "ENABLE" or "DISABLE" or "SCHEDULE" or "DELETE" ? 4 : 3);
 		await Assert.That(tokens.All(token => token == budget.Token)).IsTrue();
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DeletingAnotherAccountsJobRequiresExplicitAllSwitch(bool all)
+	{
+		var context = await Setup();
+		var job = (await Create(context)) with { OwnerAccount = "another-account" };
+		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([job]));
+		context.Capabilities.GetGameActorAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(context.Actor);
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(typeof(IAdministrativeCapabilityService)).Returns(context.Capabilities);
+		services.GetService(typeof(IRecurringJobService)).Returns(context.Service);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(services);
+		parser.CurrentState.Returns(ParserState.RootFor(context.Actor.ActiveCharacter!.Value) with
+		{
+			Switches = all ? ["DELETE", "ALL"] : ["DELETE"],
+			Arguments = new() { ["0"] = new CallState(job.Id) }
+		});
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services);
+		await commands.RecurringJob(parser, new SharpMUSH.Library.Attributes.SharpCommandAttribute { Name = "@JOB" });
+		await Assert.That((await context.Service.ListAsync(context.Actor, true)).Any(entry => entry.Id == job.Id)).IsEqualTo(!all);
 	}
 
 	[Test, NotInParallel]

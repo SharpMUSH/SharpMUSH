@@ -45,15 +45,22 @@ public partial class Commands
 				var job = await service.CreateAsync(actor, new(target[0].Trim(), target[1].Trim(), schedule[0].Trim(), schedule[1].Trim(), schedule.Length == 3 ? schedule[2].Trim() : ""), ct);
 				output = "Created recurring job " + job.Id;
 			}
-			else if (operation[0] == "DELETE") { await service.DeleteAsync(actor, lhs, ct); output = "Recurring job deleted."; }
 			else
 			{
 				var job = (await service.ListAsync(actor, switches.Contains("ALL"), ct)).SingleOrDefault(j => j.Id == lhs)
 					?? throw new RecurringJobException("missing", "Job not found.");
-				var schedule = operation[0] == "SCHEDULE" ? rhs.Split('|', 2) : [job.Schedule, job.TimeZone];
-				if (schedule.Length != 2) throw new RecurringJobException("invalid", "Use job-id=schedule|timezone.");
-				await service.ConfigureAsync(actor, job.Id, schedule[0].Trim(), schedule[1].Trim(), operation[0] == "ENABLE" || operation[0] == "SCHEDULE" && job.Enabled, ct);
-				output = "Recurring job updated.";
+				if (operation[0] == "DELETE")
+				{
+					await service.DeleteAsync(actor, job.Id, ct);
+					output = "Recurring job deleted.";
+				}
+				else
+				{
+					var schedule = operation[0] == "SCHEDULE" ? rhs.Split('|', 2) : [job.Schedule, job.TimeZone];
+					if (schedule.Length != 2) throw new RecurringJobException("invalid", "Use job-id=schedule|timezone.");
+					await service.ConfigureAsync(actor, job.Id, schedule[0].Trim(), schedule[1].Trim(), operation[0] == "ENABLE" || operation[0] == "SCHEDULE" && job.Enabled, ct);
+					output = "Recurring job updated.";
+				}
 			}
 		}
 		catch (RecurringJobException ex) { output = "#-1 " + ex.Message; }
