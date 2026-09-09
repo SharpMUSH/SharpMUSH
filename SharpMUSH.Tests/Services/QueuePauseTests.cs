@@ -24,6 +24,38 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ManagedCommandsDoNotConsumeAlreadyNotifiedPausedWaiters(bool drainAgain)
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		ParserState? captured = null;
+		parser.FromState(Arg.Any<ParserState>()).Returns(call => { captured = call.Arg<ParserState>(); return parser; });
+		var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser);
+		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, semaphore, 1);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		var count = 1;
+		ValueTask Persist(int selected) { count -= selected; return ValueTask.CompletedTask; }
+		using (await queue.EnterSemaphoreMutationAsync())
+		{
+			await Assert.That(await queue.ApplySemaphoreCommandAsync(semaphore, 1, false, Persist,
+				() => ValueTask.FromResult(false), new() { ["signal"] = MarkupText.Plain("retained") })).IsEqualTo(1);
+			await Assert.That(await queue.ApplySemaphoreCommandAsync(semaphore, null, drainAgain, Persist,
+				() => ValueTask.FromResult(false))).IsEqualTo(0);
+		}
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(ran.Task.IsCompleted).IsFalse();
+		await queue.ResumePending(job.Pid.Value);
+		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		captured!.Registers.TryPeek(out var registers);
+		await Assert.That(registers!["SIGNAL"].ToPlainText()).IsEqualTo("retained");
+	}
+
+	[Test]
 	public async Task ContendedDeferredTransitionHonorsExecutionDeadline()
 	{
 		var scheduler = Substitute.For<IScheduler>();

@@ -58,6 +58,144 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task CreditOnlyReconciliationUsesFreshBudgetAfterCommandCancellation()
+	{
+		await using var queue = Create(scheduler: Substitute.For<IScheduler>());
+		var readable = false;
+		var fresh = true;
+		using var cancelled = new CancellationTokenSource();
+		using var original = ExecutionBudget.FromMilliseconds(30000, cancelled.Token);
+		using (await queue.EnterSemaphoreMutationAsync())
+		using (original.Enter())
+		{
+			try
+			{
+				await queue.ApplySemaphoreCommandAsync(new(new DBRef(10), ["SEMAPHORE"]), 1, false,
+					_ => { cancelled.Cancel(); return ValueTask.FromException(new OperationCanceledException(cancelled.Token)); },
+					() =>
+					{
+						fresh &= ExecutionBudget.CurrentToken != original.Token && !ExecutionBudget.CurrentToken.IsCancellationRequested;
+						return readable ? ValueTask.FromResult(false) : ValueTask.FromException<bool>(new IOException("unreadable credit"));
+					});
+			}
+			catch (AggregateException) { }
+		}
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.ThrowsAsync<IOException>(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); });
+		readable = true;
+		using (await queue.EnterSemaphoreMutationAsync()) { }
+		await Assert.That(fresh).IsTrue();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CommittedSemaphoreCommandFinishesDespiteLostAcknowledgementAndTimerCleanup(bool drain)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(global: 3, scheduler: scheduler);
+		var block = Signal(); var release = Signal();
+		await queue.EnqueueWork(async () => { block.SetResult(); await release.Task; return null; }, "block", "test");
+		await block.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+			var pending = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think waiting"), ParserState.Empty, semaphore, 0);
+			scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(Task.FromException<bool>(new IOException("Quartz unavailable")));
+			using (await queue.EnterSemaphoreMutationAsync())
+			{
+				try
+				{
+					await queue.ApplySemaphoreCommandAsync(semaphore, 1, drain,
+					_ => ValueTask.FromException(new IOException("committed acknowledgement lost")), () => ValueTask.FromResult(true));
+				}
+				catch (IOException) { }
+				await Assert.That((await queue.ReleaseScheduledWork(pending.Pid!.Value)).Accepted).IsFalse();
+				await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(drain ? 1 : 2);
+			}
+		}
+		finally { release.SetResult(); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AmbiguousSemaphoreCommandRetainsReservationUntilReconciled(bool drain)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var pending = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think waiting"), ParserState.Empty, semaphore, 0);
+		var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
+		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
+		scheduler.GetTrigger(key, Arg.Any<CancellationToken>()).Returns(TriggerBuilder.Create().WithIdentity(key).ForJob("waiter").Build());
+		var readable = false;
+		using (await queue.EnterSemaphoreMutationAsync())
+		{
+			try
+			{
+				await queue.ApplySemaphoreCommandAsync(semaphore, 1, drain,
+				_ => ValueTask.FromException(new IOException("commit acknowledgement lost")),
+				() => readable ? ValueTask.FromResult(false) : ValueTask.FromException<bool>(new IOException("provider unavailable")));
+			}
+			catch (Exception) { }
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That((await queue.ReleaseScheduledWork(pending.Pid!.Value)).Accepted).IsFalse();
+		}
+		var blocked = false;
+		try { using var ignored = await queue.EnterSemaphoreMutationAsync(); }
+		catch (IOException) { blocked = true; }
+		await Assert.That(blocked).IsTrue();
+		readable = true;
+		using (await queue.EnterSemaphoreMutationAsync())
+			await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(1);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task FailedSemaphoreCommandPersistenceLeavesWaiterPending(bool drain)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var pending = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think waiting"), ParserState.Empty, semaphore, 0);
+		var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
+		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
+		scheduler.GetTrigger(key, Arg.Any<CancellationToken>()).Returns(TriggerBuilder.Create().WithIdentity(key).ForJob("waiter").Build());
+		using (await queue.EnterSemaphoreMutationAsync())
+		{
+			try
+			{
+				await queue.ApplySemaphoreCommandAsync(semaphore, 1, drain,
+				_ => ValueTask.FromException(new IOException("counter write rejected")), () => ValueTask.FromResult(false));
+			}
+			catch (IOException) { }
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(1);
+		}
+	}
+
+	[Test]
+	public async Task SemaphoreAttributeReadUsesTheExecutionToken()
+	{
+		var mediator = TargetMediator();
+		var validation = Substitute.For<IValidateService>();
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>()).Returns(true);
+		CancellationToken observed = default;
+		mediator.CreateStream(Arg.Any<GetAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => { observed = call.ArgAt<CancellationToken>(1); return AsyncEnumerable.Empty<AttributeWithInheritance>(); });
+		var service = new SharpMUSH.Library.Services.AttributeService(mediator, Substitute.For<IPermissionService>(),
+			Substitute.For<ILocateService>(), validation, Substitute.For<INotifyService>(),
+			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+		var target = (await mediator.Send(new GetObjectNodeQuery(new DBRef(10)))).Known;
+		using var budget = ExecutionBudget.FromMilliseconds(30000);
+		using var scope = budget.Enter();
+		await service.GetAttributeAsync(target, target, "SEMAPHORE", IAttributeService.AttributeMode.Execute, false);
+		await Assert.That(observed).IsEqualTo(budget.Token);
+	}
+
+	[Test]
 	public async Task QueuedWorkDoesNotConsumeSubmittingBreakState()
 	{
 		var parser = Substitute.For<IMUSHCodeParser>();
