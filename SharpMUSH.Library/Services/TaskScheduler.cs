@@ -134,7 +134,7 @@ public partial class TaskScheduler(
 			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken);
 			if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 			executor = target.Known().Object().DBRef;
-			if (await target.Known().IsWizard() || await target.Known().HasPower("Queue"))
+			if (await target.Known().IsWizard(ExecutionBudget.CurrentToken) || await target.Known().HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
 			owner = (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
 		}

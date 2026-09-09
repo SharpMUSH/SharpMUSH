@@ -33,6 +33,17 @@ public class LocalFunctionTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LegacyScopedLookupReturnsTheNormalNotFoundError(bool supportsScopedGet)
+	{
+		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry(supportsScopedGet);
+		var parser = (MUSHCodeParser)Factory.FunctionParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
+		var result = await parser.FunctionParse(MarkupText.Plain("localfun(unavailable)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(string.Format(ErrorMessages.Returns.NoSuchFunction, "UNAVAILABLE"));
+	}
+
+	[Test]
 	public async Task LegacyRegistryCannotTurnLocalCreationIntoGlobalDefinition()
 	{
 		var name = "legacy" + Guid.NewGuid().ToString("N");

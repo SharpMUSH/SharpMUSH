@@ -59,7 +59,7 @@ public class UserFunctionRegistryCompatibilityTests
 		await Assert.That(instance.Resolve("missing")).IsNull();
 	}
 
-	internal static IUserDefinedFunctionService CreateLegacyRegistry()
+	internal static IUserDefinedFunctionService CreateLegacyRegistry(bool supportsScopedGet = false)
 	{
 		var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("LegacyRegistry" + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
 		var type = assembly.DefineDynamicModule("legacy").DefineType("LegacyImplementation", TypeAttributes.Public);
@@ -73,6 +73,7 @@ public class UserFunctionRegistryCompatibilityTests
 			var il = method.GetILGenerator();
 			il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Dup); il.Emit(OpCodes.Ldfld, calls); il.Emit(OpCodes.Ldc_I4_1); il.Emit(OpCodes.Add); il.Emit(OpCodes.Stfld, calls); il.Emit(OpCodes.Ret);
 		}
+		if (supportsScopedGet) DefineDefaultMethod(type, "Get", typeof(UserDefinedFunction), [typeof(string), typeof(DBRef?)]);
 		return (IUserDefinedFunctionService)Activator.CreateInstance(type.CreateType()!)!;
 	}
 
