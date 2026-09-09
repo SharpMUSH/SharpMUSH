@@ -107,7 +107,7 @@ public partial class Functions
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		var arg1Split = arg1.Split('/');
+		var arg1Split = arg1.Split('/', 2);
 		var isAttributeCheck = arg1Split.Length > 1;
 
 		var maybeLocateObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -126,7 +126,7 @@ public partial class Functions
 		if (isAttributeCheck)
 		{
 			var attributeObj = arg1Split[0];
-			var attribute = string.Join("/", arg1Split.Skip(1));
+			var attribute = arg1Split[1];
 			var maybeLocateAttributeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor,
 				executor,
@@ -196,14 +196,6 @@ public partial class Functions
 			target = maybeTarget.AsAnyObject;
 		}
 
-		var exits = Mediator.CreateStream(new GetEntrancesQuery(target.Object().DBRef));
-		var entrances = new List<AnySharpObject>();
-
-		await foreach (var exit in exits)
-		{
-			entrances.Add(exit);
-		}
-
 		var typeFilter = "a";
 		if (args.TryGetValue("1", out var typeArg))
 		{
@@ -228,30 +220,27 @@ public partial class Functions
 			}
 		}
 
-		var filtered = entrances.Where(entrance =>
-		{
-			var obj = entrance.Object();
-			var dbrefNum = obj.DBRef.Number;
-
-			if (dbrefNum < beginFilter || dbrefNum > endFilter)
+		var entrances = Mediator.CreateStream(new GetEntrancesQuery(target.Object().DBRef))
+			.Select(AnySharpObject (exit) => exit)
+			.Where(entrance =>
 			{
-				return false;
-			}
+				var dbrefNum = entrance.Object().DBRef.Number;
 
-			if (typeFilter.Contains('a'))
-			{
-				return true; // 'a' means all types
-			}
+				if (dbrefNum < beginFilter || dbrefNum > endFilter)
+				{
+					return false;
+				}
 
-			if (typeFilter.Contains('e') && entrance.IsExit) return true;
-			if (typeFilter.Contains('t') && entrance.IsThing) return true;
-			if (typeFilter.Contains('p') && entrance.IsPlayer) return true;
-			if (typeFilter.Contains('r') && entrance.IsRoom) return true;
+				// 'a' means all types
+				return typeFilter.Contains('a')
+					|| (typeFilter.Contains('e') && entrance.IsExit)
+					|| (typeFilter.Contains('t') && entrance.IsThing)
+					|| (typeFilter.Contains('p') && entrance.IsPlayer)
+					|| (typeFilter.Contains('r') && entrance.IsRoom);
+			})
+			.Select(e => e.Object().DBRef.ToString());
 
-			return false;
-		}).Select(e => e.Object().DBRef.ToString());
-
-		return new CallState(string.Join(" ", filtered));
+		return new CallState(string.Join(" ", await entrances.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "exit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -269,24 +258,13 @@ public partial class Functions
 			async found =>
 			{
 				var targetDbref = found.Object().DBRef.ToString();
-				var followers = new List<string>();
 
-				var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
+				var followers = Mediator.CreateStream(new GetAllObjectsQuery())
+					.Where(async (obj, _) => await obj.Attributes.Value
+						.AnyAsync(attr => attr.LongName == "FOLLOWING" && attr.Value.Text == targetDbref))
+					.Select(obj => obj.DBRef.ToString());
 
-				await foreach (var obj in allObjects)
-				{
-					var objAttributes = obj.Attributes.Value;
-					await foreach (var attr in objAttributes)
-					{
-						if (attr.LongName == "FOLLOWING" && attr.Value.ToPlainText() == targetDbref)
-						{
-							followers.Add(obj.DBRef.ToString());
-							break;
-						}
-					}
-				}
-
-				return new CallState(string.Join(" ", followers));
+				return new CallState(string.Join(" ", await followers.ToArrayAsync()));
 			});
 	}
 
@@ -361,25 +339,27 @@ public partial class Functions
 		var lockType = args["0"].Message!.ToPlainText();
 		if (LockService.SystemLocks.TryGetValue(lockType, out var lockFlags))
 		{
-			var flagList = new List<string>();
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Visual))
-				flagList.Add("visual");
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Private))
-				flagList.Add("no_inherit");
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.NoClone))
-				flagList.Add("no_clone");
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Wizard))
-				flagList.Add("wizard");
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Owner))
-				flagList.Add("owner");
-			if (lockFlags.HasFlag(Library.Services.LockService.LockFlags.Locked))
-				flagList.Add("locked");
-
-			return new CallState(string.Join(" ", flagList));
+			return new CallState(string.Join(" ",
+				LockFlagTable.Where(x => lockFlags.HasFlag(x.Flag)).Select(x => x.Name)));
 		}
 
 		return new CallState(string.Empty);
 	}
+
+	/// <summary>
+	/// The lock flags in the order lockflags() and llockflags() list them, with the letter the one
+	/// reports and the name the other does; the letters spell the "vncwol" lockflags() answers with no
+	/// argument.
+	/// </summary>
+	private static readonly (Library.Services.LockService.LockFlags Flag, string Name, char Letter)[] LockFlagTable =
+	[
+		(Library.Services.LockService.LockFlags.Visual, "visual", 'v'),
+		(Library.Services.LockService.LockFlags.Private, "no_inherit", 'n'),
+		(Library.Services.LockService.LockFlags.NoClone, "no_clone", 'c'),
+		(Library.Services.LockService.LockFlags.Wizard, "wizard", 'w'),
+		(Library.Services.LockService.LockFlags.Owner, "owner", 'o'),
+		(Library.Services.LockService.LockFlags.Locked, "locked", 'l')
+	];
 
 	[SharpFunction(Name = "lockflags", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -418,21 +398,7 @@ public partial class Functions
 					return new CallState("#-1 NO SUCH LOCK");
 				}
 
-				var flagChars = new List<char>();
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Visual))
-					flagChars.Add('v');
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Private))
-					flagChars.Add('n');
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone))
-					flagChars.Add('c');
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Wizard))
-					flagChars.Add('w');
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Owner))
-					flagChars.Add('o');
-				if (lockData.Flags.HasFlag(Library.Services.LockService.LockFlags.Locked))
-					flagChars.Add('l');
-
-				return new CallState(new string(flagChars.ToArray()));
+				return new CallState(new string([.. LockFlagTable.Where(x => lockData.Flags.HasFlag(x.Flag)).Select(x => x.Letter)]));
 			});
 	}
 
@@ -1062,20 +1028,14 @@ public partial class Functions
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var allObjects = await Mediator.CreateStream(new GetAllObjectsQuery())
-			.ToListAsync();
+		// One past the highest key, or #0 for an empty database.
+		var maxKey = await Mediator.CreateStream(new GetAllObjectsQuery())
+			.Select(o => o.Key)
+			.DefaultIfEmpty(-1)
+			.MaxAsync();
 
-		if (allObjects.Count == 0)
-		{
-			return new CallState("#0:0");
-		}
-
-		// Find the highest dbref key - use DefaultIfEmpty for safety
-		var maxKey = allObjects.Select(o => o.Key).DefaultIfEmpty(-1).Max();
-		var nextKey = maxKey + 1;
-
-		// Return the next dbref with timestamp 0 (will be set when created)
-		return new CallState($"#{nextKey}:0");
+		// The next dbref with timestamp 0 (set when created)
+		return new CallState($"#{maxKey + 1}:0");
 	}
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]

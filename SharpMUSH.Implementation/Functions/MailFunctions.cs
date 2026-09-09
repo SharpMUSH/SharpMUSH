@@ -118,6 +118,19 @@ public partial class Functions
 		return await executor.IsWizard();
 	}
 
+	/// <summary>The counts the mail statistics functions report, taken in one pass over a mailbox.</summary>
+	private readonly record struct MailTally(int Total, int Read, int Cleared, int Bytes)
+	{
+		public int Unread => Total - Read;
+	}
+
+	private static ValueTask<MailTally> TallyMail(IAsyncEnumerable<SharpMail> mail)
+		=> mail.AggregateAsync(new MailTally(), (tally, m) => new MailTally(
+			tally.Total + 1,
+			tally.Read + (m.Read ? 1 : 0),
+			tally.Cleared + (m.Cleared ? 1 : 0),
+			tally.Bytes + m.Content.Length));
+
 	[SharpFunction(Name = "mail", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player", "status"])]
 	public async ValueTask<CallState> mail(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -146,12 +159,8 @@ public partial class Functions
 				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 				async target =>
 				{
-					var allMail = Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer));
-					var mailArray = await allMail.ToArrayAsync();
-					var read = mailArray.Count(m => m.Read);
-					var unread = mailArray.Count(m => !m.Read);
-					var cleared = mailArray.Count(m => m.Cleared);
-					return new CallState($"{read} {unread} {cleared}");
+					var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
+					return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
 				});
 		}
 
@@ -209,18 +218,14 @@ public partial class Functions
 			return false;
 		}
 
-		if (arg.All(char.IsDigit))
+		var text = arg.AsSpan();
+		var colon = text.IndexOf(':');
+		if (colon < 0)
 		{
-			return true;
+			return !text.ContainsAnyExceptInRange('0', '9');
 		}
 
-		if (arg.Contains(':'))
-		{
-			var parts = arg.Split(':', 2);
-			return parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[0]) && parts[1].All(char.IsDigit);
-		}
-
-		return false;
+		return !text[..colon].IsWhiteSpace() && !text[(colon + 1)..].ContainsAnyExceptInRange('0', '9');
 	}
 	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder", "flags"])]
 	public async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -269,16 +274,16 @@ public partial class Functions
 		var results = new List<string>();
 		await foreach (var mail in mailList)
 		{
-			var folderMail = Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder));
-			var index = 0;
-			await foreach (var m in folderMail)
+			// The message's 1-based position within its folder, which is how @mail names it.
+			var position = await Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder))
+				.Select((m, index) => (m.Id, Position: index + 1))
+				.Where(x => x.Id == mail.Id)
+				.Select(x => x.Position)
+				.FirstOrDefaultAsync();
+
+			if (position > 0)
 			{
-				if (m.Id == mail.Id)
-				{
-					results.Add($"{mail.Folder}:{index + 1}");
-					break;
-				}
-				index++;
+				results.Add($"{mail.Folder}:{position}");
 			}
 		}
 
@@ -397,18 +402,10 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
+		var received = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
 
-		var sentCount = allSentMail.Length;
-		var sentUnread = allSentMail.Count(m => !m.Read);
-		var sentCleared = allSentMail.Count(m => m.Cleared);
-
-		var receivedCount = allReceivedMail.Length;
-		var receivedUnread = allReceivedMail.Count(m => !m.Read);
-		var receivedCleared = allReceivedMail.Count(m => m.Cleared);
-
-		return new CallState($"{sentCount} {sentUnread} {sentCleared} {receivedCount} {receivedUnread} {receivedCleared}");
+		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {received.Total} {received.Unread} {received.Cleared}");
 	}
 	[SharpFunction(Name = "mailfstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder"])]
 	public async ValueTask<CallState> mailfstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -441,20 +438,10 @@ public partial class Functions
 			target = locateResult.AsPlayer;
 		}
 
-		var allSentMail = await (Mediator.CreateStream(new GetAllSentMailListQuery(target.Object()))).ToArrayAsync();
-		var allReceivedMail = await (Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer))).ToArrayAsync();
+		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
+		var received = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
 
-		var sentCount = allSentMail.Length;
-		var sentUnread = allSentMail.Count(m => !m.Read);
-		var sentCleared = allSentMail.Count(m => m.Cleared);
-		var sentBytes = allSentMail.Sum(m => m.Content.Length);
-
-		var receivedCount = allReceivedMail.Length;
-		var receivedUnread = allReceivedMail.Count(m => !m.Read);
-		var receivedCleared = allReceivedMail.Count(m => m.Cleared);
-		var receivedBytes = allReceivedMail.Sum(m => m.Content.Length);
-
-		return new CallState($"{sentCount} {sentUnread} {sentCleared} {sentBytes} {receivedCount} {receivedUnread} {receivedCleared} {receivedBytes}");
+		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {sent.Bytes} {received.Total} {received.Unread} {received.Cleared} {received.Bytes}");
 	}
 	[SharpFunction(Name = "mailstatus", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailstatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)

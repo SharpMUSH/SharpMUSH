@@ -218,7 +218,7 @@ public partial class Functions
 			}
 
 			// Parse numeric modifiers like "5 days", "3 hours", etc.
-			var parts = modifier.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length == 2)
 			{
 				if (double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))

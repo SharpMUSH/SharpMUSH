@@ -17,9 +17,11 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Markup;
+using System.Buffers;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -56,7 +58,7 @@ public partial class Functions
 	{
 		// lit() with Literal flag: args are already the raw unevaluated text (set by visitor's Literal branch).
 		// With zero args, return empty string. Otherwise return the single raw argument.
-		if (!parser.CurrentState.ArgumentsOrdered.Any())
+		if (parser.CurrentState.ArgumentsOrdered.IsEmpty)
 			return ValueTask.FromResult(CallState.Empty);
 
 		return ValueTask.FromResult(new CallState(parser.CurrentState.Arguments["0"].Message) { PreserveSpaces = true });
@@ -308,12 +310,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(MarkupText.Concat(str, insert)));
 		}
 
-		// Insert at position
-		var left = str.Substring(0, position);
-		var right = str.Substring(position, str.Length - position);
-		var result = MarkupText.Concat(MarkupText.Concat(left, insert), right);
-
-		return ValueTask.FromResult(new CallState(result));
+		return ValueTask.FromResult(new CallState(str.Insert(position, insert)));
 	}
 
 	[SharpFunction(Name = "strreplace", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "character"])]
@@ -366,20 +363,19 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 		}
 
-		var result = new StringBuilder();
-		for (int i = 0; i < str.Length; i++)
+		var result = string.Create(str.Length, (str, template), static (span, state) =>
 		{
-			var c = str[i];
-			var t = template[i];
+			var (text, accents) = state;
+			for (var i = 0; i < span.Length; i++)
+			{
+				span[i] = ApplyAccent(text[i], accents[i]);
+			}
+		});
 
-			var accented = ApplyAccent(c, t);
-			result.Append(accented);
-		}
-
-		return ValueTask.FromResult(new CallState(result.ToString()));
+		return ValueTask.FromResult(new CallState(result));
 	}
 
-	private char ApplyAccent(char c, char template)
+	private static char ApplyAccent(char c, char template)
 	{
 		// Accent mappings based on pennfunc.md ACCENTS table
 		return (template, c) switch
@@ -506,9 +502,9 @@ public partial class Functions
 
 		return TextAligner.Align(widths,
 			columnArguments,
-			filler: remainder.Skip(0).FirstOrDefault(MarkupText.Space),
-			columnSeparator: remainder.Skip(1).FirstOrDefault(MarkupText.Space),
-			rowSeparator: remainder.Skip(2).FirstOrDefault(MarkupText.NewLine));
+			filler: remainder.ElementAtOrDefault(0) ?? MarkupText.Space,
+			columnSeparator: remainder.ElementAtOrDefault(1) ?? MarkupText.Space,
+			rowSeparator: remainder.ElementAtOrDefault(2) ?? MarkupText.NewLine);
 	}
 
 	[SharpFunction(Name = "lalign", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular, ParameterNames = ["widths", "colList", "delim", "filler", "colsep", "rowsep"])]
@@ -538,7 +534,7 @@ public partial class Functions
 	public ValueTask<CallState> AlphaMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
-		return ValueTask.FromResult(new CallState(list.Order().First()));
+		return ValueTask.FromResult(new CallState(list.Max()!));
 	}
 
 	[SharpFunction(Name = "alphamin", MinArgs = 1, MaxArgs = int.MaxValue,
@@ -546,7 +542,7 @@ public partial class Functions
 	public ValueTask<CallState> AlphaMin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
-		return ValueTask.FromResult(new CallState(list.OrderDescending().First()));
+		return ValueTask.FromResult(new CallState(list.Min()!));
 	}
 
 	/// <summary>
@@ -560,7 +556,6 @@ public partial class Functions
 	public async ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var nounPhrase = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var charList = new[] { 'a', 'e', 'd', 'h', 'i', 'l', 'm', 'n', 'o', 'r', 's', 'x' };
 		await ValueTask.CompletedTask;
 
 		var m = GetWord().Match(nounPhrase);
@@ -573,7 +568,7 @@ public partial class Functions
 		var word = m.Groups[0].Value;
 		var wordLower = word.ToLower();
 
-		if (new[] { "euler", "heir", "honest", "hono" }.Any(anWord => wordLower.StartsWith(anWord)))
+		if (AnWordPrefixes.Any(anWord => wordLower.StartsWith(anWord)))
 		{
 			return "an";
 		}
@@ -586,7 +581,7 @@ public partial class Functions
 
 		if (wordLower.Length == 1)
 		{
-			return wordLower.IndexOfAny(charList) == 0
+			return AnLetters.Contains(wordLower[0])
 				? "an"
 				: "a";
 		}
@@ -611,18 +606,23 @@ public partial class Functions
 
 		if (word == word.ToUpper())
 		{
-			return wordLower.IndexOfAny(charList) == 0
+			return AnLetters.Contains(wordLower[0])
 				? "an"
 				: "a";
 		}
 
-		if (wordLower.IndexOfAny(['a', 'e', 'i', 'o', 'u']) == 0)
+		if (wordLower[0] is 'a' or 'e' or 'i' or 'o' or 'u')
 		{
 			return "an";
 		}
 
 		return ArticleRegex3().IsMatch(wordLower) ? "an" : "a";
 	}
+
+	/// <summary>Letters that take "an" when read as a letter (a single letter, or an initialism).</summary>
+	private const string AnLetters = "aedhilmnorsx";
+
+	private static readonly string[] AnWordPrefixes = ["euler", "heir", "honest", "hono"];
 
 	[SharpFunction(Name = "before", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string1", "string2"])]
 	public ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -647,12 +647,19 @@ public partial class Functions
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var leftSquare = arg0.Count(c => c == '[');
-		var rightSquare = arg0.Count(c => c == ']');
-		var leftParen = arg0.Count(c => c == '(');
-		var rightParen = arg0.Count(c => c == ')');
-		var leftCurly = arg0.Count(c => c == '{');
-		var rightCurly = arg0.Count(c => c == '}');
+		int leftSquare = 0, rightSquare = 0, leftParen = 0, rightParen = 0, leftCurly = 0, rightCurly = 0;
+		foreach (var c in arg0)
+		{
+			switch (c)
+			{
+				case '[': leftSquare++; break;
+				case ']': rightSquare++; break;
+				case '(': leftParen++; break;
+				case ')': rightParen++; break;
+				case '{': leftCurly++; break;
+				case '}': rightCurly++; break;
+			}
+		}
 
 		return ValueTask.FromResult(
 			new CallState($"{leftSquare} {rightSquare} {leftParen} {rightParen} {leftCurly} {rightCurly}"));
@@ -899,27 +906,44 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(str));
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>escaped_chars</c> table (src/tables.c): the characters the parser gives meaning
+	/// to, which escape() backslashes and secure() blanks.
+	/// </summary>
+	private static readonly SearchValues<char> SoftcodeSpecials = SearchValues.Create(@"$%(),;[\]^{}");
+
+	/// <summary>
+	/// <paramref name="text"/> with a backslash before every character in <see cref="SoftcodeSpecials"/>,
+	/// as one pass; the text comes back unchanged when it holds none of them.
+	/// </summary>
+	private static string EscapeSoftcode(string text)
+	{
+		if (text.AsSpan().IndexOfAny(SoftcodeSpecials) < 0) return text;
+
+		var result = new StringBuilder(text.Length + 8);
+		foreach (var c in text)
+		{
+			if (SoftcodeSpecials.Contains(c)) result.Append('\\');
+			result.Append(c);
+		}
+
+		return result.ToString();
+	}
+
+	/// <summary>
+	/// fun_escape (src/funstr.c): a leading backslash, then the text with every special escaped
+	/// except one standing first — the leading backslash already protects it.
+	/// </summary>
 	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Escape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var str = MarkupText.Concat(MarkupText.Plain("\\"), parser.CurrentState.Arguments["0"].Message!);
+		var text = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		if (text.Length == 0)
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
 
-		return ValueTask.FromResult<CallState>(str.Apply(x => x switch
-			{
-				"%" => "\\%",
-				";" => "\\;",
-				"[" => "\\[",
-				"]" => "\\]",
-				"{" => "\\{",
-				"}" => "\\}",
-				"\\" => @"\\",
-				"(" => "\\(",
-				")" => "\\)",
-				"," => "\\,",
-				"^" => "\\^",
-				"$" => "\\$",
-				_ => x
-			}));
+		return ValueTask.FromResult<CallState>("\\" + text[0] + EscapeSoftcode(text[1..]));
 	}
 
 	/// <summary>
@@ -952,9 +976,8 @@ public partial class Functions
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var patternParts = patternArg.Message!.Split("##");
-		MString? modifiedPattern = patternParts.Length > 1
-			? MarkupText.Join(MarkupText.Plain("%iL"), patternParts)
+		var modifiedPattern = patternArg.Message!.IndexOf("##") >= 0
+			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
 			: null;
 
 		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
@@ -1008,19 +1031,7 @@ public partial class Functions
 			};
 		}, input);
 
-		var result = reconstructed
-			.Replace("\\", @"\\")
-			.Replace("%", "\\%")
-			.Replace(";", "\\;")
-			.Replace("[", "\\[")
-			.Replace("]", "\\]")
-			.Replace("{", "\\{")
-			.Replace("}", "\\}")
-			.Replace("(", "\\(")
-			.Replace(")", "\\)")
-			.Replace(",", "\\,")
-			.Replace("^", "\\^")
-			.Replace("$", "\\$");
+		var result = EscapeSoftcode(reconstructed);
 
 		// PennMUSH decompose space algorithm (from escape_marked_str in markup.c):
 		// - 5+ consecutive spaces → [space(N)]
@@ -1584,13 +1595,19 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MarkupText.Concat(shuffled));
 	}
 
+	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeSpecials"/> character becomes a space.</summary>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Apply(x => x switch
-			{
-				"%" or ";" or "[" or "]" or "(" or ")" or "{" or "}" or "$" or "," or "^" => " ",
-				_ => x
-			}));
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Apply(text =>
+			text.AsSpan().IndexOfAny(SoftcodeSpecials) < 0
+				? text
+				: string.Create(text.Length, text, static (span, source) =>
+				{
+					for (var i = 0; i < span.Length; i++)
+					{
+						span[i] = SoftcodeSpecials.Contains(source[i]) ? ' ' : source[i];
+					}
+				})));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1632,28 +1649,55 @@ public partial class Functions
 		var arg1 = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1,
 			MarkupText.Space);
 
-		var arg0Plain = arg0.ToPlainText();
+		var text = arg0.ToPlainText();
+		var delimiter = arg1.ToPlainText();
+		if (delimiter.Length == 0)
+		{
+			return ValueTask.FromResult<CallState>(arg0);
+		}
 
-		// Not an exact match. PennMUSH is conscious of the ANSI to look for.
-		// Also, this technically acts more like a replace than a true squish.
-		var regex = SoftcodeRegex.Create($"{Regex.Escape(arg1.ToPlainText())}+", RegexOptions.None);
+		// fun_squish (src/funstr.c): a run of delimiters at either end goes, and every other run of two
+		// or more collapses to one. Spliced in a single pass so the markup around each run is kept.
+		var edits = new List<MarkupString.Edit>();
+		var start = text.IndexOf(delimiter, StringComparison.Ordinal);
+		while (start >= 0)
+		{
+			var end = start + delimiter.Length;
+			while (text.AsSpan(end).StartsWith(delimiter)) end += delimiter.Length;
+			if (start == 0 || end == text.Length)
+			{
+				edits.Add(new MarkupString.Edit(start, end - start, MarkupText.Empty));
+			}
+			else if (end - start > delimiter.Length)
+			{
+				edits.Add(new MarkupString.Edit(start, end - start, arg1));
+			}
 
-		return ValueTask.FromResult<CallState>(regex.Matches(arg0Plain)
-			.Reverse()
-			.Aggregate(arg0, (current, match) => current.Replace(match.Index, match.Length, arg1)));
+			start = text.IndexOf(delimiter, end, StringComparison.Ordinal);
+		}
+
+		return ValueTask.FromResult<CallState>(edits.Count == 0
+			? arg0
+			: arg0.Splice(CollectionsMarshal.AsSpan(edits)));
 	}
 
-	private string RemoveDiacritics(string text)
+	private static string RemoveDiacritics(string text)
 	{
 		if (string.IsNullOrWhiteSpace(text))
 			return text;
 
-		return new string(text
-				.Normalize(NormalizationForm.FormD)
-				.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-				.ToArray()
-				.AsSpan())
-			.Normalize(NormalizationForm.FormC);
+		var decomposed = text.Normalize(NormalizationForm.FormD);
+		Span<char> kept = decomposed.Length <= 256 ? stackalloc char[decomposed.Length] : new char[decomposed.Length];
+		var length = 0;
+		foreach (var c in decomposed)
+		{
+			if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+			{
+				kept[length++] = c;
+			}
+		}
+
+		return new string(kept[..length]).Normalize(NormalizationForm.FormC);
 	}
 
 	[SharpFunction(Name = "stripaccents", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1815,23 +1859,19 @@ public partial class Functions
 			translationMap[expandedFind[i]] = expandedReplace[i];
 		}
 
-		var result = new StringBuilder(str.Length);
-		foreach (var c in str)
+		var result = string.Create(str.Length, (str, translationMap), static (span, state) =>
 		{
-			if (translationMap.TryGetValue(c, out var replacement))
+			var (source, map) = state;
+			for (var i = 0; i < span.Length; i++)
 			{
-				result.Append(replacement);
+				span[i] = map.TryGetValue(source[i], out var replacement) ? replacement : source[i];
 			}
-			else
-			{
-				result.Append(c);
-			}
-		}
+		});
 
-		return ValueTask.FromResult(new CallState(result.ToString()));
+		return ValueTask.FromResult(new CallState(result));
 	}
 
-	private string ExpandRanges(string input)
+	private static string ExpandRanges(string input)
 	{
 		if (string.IsNullOrEmpty(input)) return input;
 
@@ -1956,27 +1996,23 @@ public partial class Functions
 	/// left untouched (unlike form decoding) — and any decoded byte that is not printable ASCII
 	/// (0x20–0x7E) is replaced with <c>?</c>, matching Penn's per-byte <c>isprint</c> filter.
 	/// </summary>
-	private string PercentDecode(string input)
+	private static string PercentDecode(string input)
 	{
-		var src = Encoding.UTF8.GetBytes(input);
-		var decoded = new List<byte>(src.Length);
+		var byteCount = Encoding.UTF8.GetByteCount(input);
+		Span<byte> src = byteCount <= 512 ? stackalloc byte[byteCount] : new byte[byteCount];
+		Encoding.UTF8.GetBytes(input, src);
+
+		var result = new StringBuilder(src.Length);
 		for (var i = 0; i < src.Length; i++)
 		{
-			if (src[i] == (byte)'%' && i + 2 < src.Length
+			var b = src[i];
+			if (b == (byte)'%' && i + 2 < src.Length
 				&& Uri.IsHexDigit((char)src[i + 1]) && Uri.IsHexDigit((char)src[i + 2]))
 			{
-				decoded.Add((byte)((Uri.FromHex((char)src[i + 1]) << 4) | Uri.FromHex((char)src[i + 2])));
+				b = (byte)((Uri.FromHex((char)src[i + 1]) << 4) | Uri.FromHex((char)src[i + 2]));
 				i += 2;
 			}
-			else
-			{
-				decoded.Add(src[i]);
-			}
-		}
 
-		var result = new StringBuilder(decoded.Count);
-		foreach (var b in decoded)
-		{
 			result.Append(b is >= 0x20 and <= 0x7E ? (char)b : '?');
 		}
 

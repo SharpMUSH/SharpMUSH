@@ -26,9 +26,10 @@ public partial class Functions
 	public ValueTask<CallState> BaseConv(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var numbers = NumericEvaluation.For(parser);
-		var input = parser.CurrentState.ArgumentsOrdered.ElementAt(0).Value.Message!.ToPlainText();
-		var fromBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(1).Value.Message!.ToPlainText();
-		var toBaseStr = parser.CurrentState.ArgumentsOrdered.ElementAt(2).Value.Message!.ToPlainText();
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var input = args["0"].Message!.ToPlainText();
+		var fromBaseStr = args["1"].Message!.ToPlainText();
+		var toBaseStr = args["2"].Message!.ToPlainText();
 
 		if (!numbers.TryInt32(fromBaseStr, out var fromBase))
 		{
@@ -63,13 +64,23 @@ public partial class Functions
 			input = input.Replace('+', '-').Replace('/', '_');
 		}
 
-		if (input.Length == 0 || input.Any(c => fromBaseChars.IndexOf(c) < 0 || fromBaseChars.IndexOf(c) >= fromBase))
+		if (input.Length == 0)
 		{
 			return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
 		}
 
-		var number = input.Aggregate(BigInteger.Zero,
-			(current, c) => current * fromBase + fromBaseChars.IndexOf(c));
+		// The digit values, each checked once against the source base; a fold over them is the number.
+		var number = BigInteger.Zero;
+		foreach (var c in input)
+		{
+			var digit = fromBaseChars.IndexOf(c);
+			if (digit < 0 || digit >= fromBase)
+			{
+				return ValueTask.FromResult<CallState>(new(ErrorMessages.Returns.MalformedNumber));
+			}
+
+			number = number * fromBase + digit;
+		}
 
 		if (toBase == 10)
 		{
@@ -77,17 +88,28 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(new(isNegative && number != 0 ? "-" + numStr : numStr));
 		}
 
-		var result = string.Empty;
+		// Digits come out least significant first, so they fill a buffer from its end: a base-2 result
+		// needs at most six digits per base-64 source digit, plus the sign.
+		var capacity = input.Length * 6 + 2;
+		Span<char> digits = capacity <= 512 ? stackalloc char[capacity] : new char[capacity];
+		var start = digits.Length;
 		while (number > 0)
 		{
-			result = toBaseChars[(int)(number % toBase)] + result;
+			digits[--start] = toBaseChars[(int)(number % toBase)];
 			number /= toBase;
 		}
 
-		var output = result == string.Empty ? "0" : result;
+		if (start == digits.Length)
+		{
+			digits[--start] = '0';
+		}
+
 		if (isNegative && toBase <= 36)
-			output = "-" + output;
-		return ValueTask.FromResult<CallState>(new(output));
+		{
+			digits[--start] = '-';
+		}
+
+		return ValueTask.FromResult<CallState>(new(new string(digits[start..])));
 	}
 
 	[SharpFunction(Name = "band",
