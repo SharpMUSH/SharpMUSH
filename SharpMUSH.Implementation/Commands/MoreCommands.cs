@@ -7,6 +7,7 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -2177,7 +2178,7 @@ public partial class Commands
 		var items = new System.Collections.Generic.List<string>();
 		await foreach (var item in contents)
 		{
-			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object()));
+			items.Add(await MessageFormatting.FormatObjectWithDbref(item.Object()));
 		}
 
 		if (items.Count == 0)
@@ -2382,7 +2383,7 @@ public partial class Commands
 			}
 			else
 			{
-				var recipientList = MessageHelpers.FormatWithOxfordComma(lastPagedNames.ToArray());
+				var recipientList = MessageFormatting.FormatWithOxfordComma(lastPagedNames.ToArray());
 				await NotifyService.Notify(executor, $"You last paged {recipientList}.", executor);
 			}
 
@@ -2529,7 +2530,7 @@ public partial class Commands
 
 		if (successfulRecipients.Count > 0)
 		{
-			var recipientList = MessageHelpers.FormatWithOxfordComma(
+			var recipientList = MessageFormatting.FormatWithOxfordComma(
 				successfulRecipients.Select(r => r.Object().Name).ToArray());
 			var recipientRefs = string.Join(" ",
 				successfulRecipients.Select(r => $"#{r.Object().DBRef.Number}"));

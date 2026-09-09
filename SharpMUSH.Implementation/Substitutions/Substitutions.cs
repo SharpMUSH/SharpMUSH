@@ -1,7 +1,7 @@
 using Humanizer;
 using Mediator;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;

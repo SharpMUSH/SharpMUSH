@@ -11,6 +11,7 @@ using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using System.Net;
@@ -848,7 +849,7 @@ public partial class Commands
 				{
 					if (canSeeAll)
 					{
-						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object());
+						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object());
 					}
 					return MarkupText.Plain(item.Object().Name);
 				}));
@@ -914,7 +915,7 @@ public partial class Commands
 				else
 				{
 					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
-					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageHelpers.FormatMStringsWithOxfordComma(exitMStrings));
+					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageFormatting.FormatMStringsWithOxfordComma(exitMStrings));
 				}
 
 				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(

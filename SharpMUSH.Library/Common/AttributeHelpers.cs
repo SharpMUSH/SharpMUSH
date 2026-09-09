@@ -6,7 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Implementation.Common;
+namespace SharpMUSH.Library.Common;
 
 public static class AttributeHelpers
 {
