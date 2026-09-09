@@ -57,9 +57,9 @@ public class SemaphoreCommandTests
 			.Returns(call => Mediator.Send(call.ArgAt<GetObjectNodeQuery>(0), call.ArgAt<CancellationToken>(1)));
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call => Read(call.ArgAt<CancellationToken>(1)));
-		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.QueueCommandListWithTimeoutRequest>(), Arg.Any<CancellationToken>())
+		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.AdmitCommandListWithTimeoutRequest>(), Arg.Any<CancellationToken>())
 			.Returns(call => Admit(call.ArgAt<CancellationToken>(1)));
-		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.QueueDelayedCommandListRequest>(), Arg.Any<CancellationToken>())
+		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.AdmitDelayedCommandListRequest>(), Arg.Any<CancellationToken>())
 			.Returns(call => Admit(call.ArgAt<CancellationToken>(1)));
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -192,7 +192,7 @@ public class SemaphoreCommandTests
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("invalid-counter-" + Guid.NewGuid().ToString("N"), player));
 		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
 		var state = ParserState.RootFor(player.Object.DBRef);
-		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think must-remain-pending"), state, semaphore, 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		var admitted = await Scheduler.AdmitCommandList(MarkupText.Plain("think must-remain-pending"), state, semaphore, 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
 		await Assert.That(admitted.Accepted).IsTrue();
 		try
 		{
@@ -246,7 +246,7 @@ public class SemaphoreCommandTests
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("command-accounting-" + Guid.NewGuid().ToString("N"), player));
 		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
 		var state = ParserState.RootFor(player.Object.DBRef);
-		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think accounting-finished"), state,
+		var admitted = await Scheduler.AdmitCommandList(MarkupText.Plain("think accounting-finished"), state,
 			semaphore, 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
 		await Assert.That(admitted.Accepted).IsTrue();
 		var mediator = Substitute.For<IMediator>();
@@ -438,11 +438,11 @@ public class SemaphoreCommandTests
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
-		await Scheduler.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
+		await Scheduler.AdmitWork(async () => { blocked.SetResult(); await release.Task; return null; }, "drain-block", "test");
 		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			var timeout = await Scheduler.WriteCommandList(MarkupText.Plain("think timeout"), WebAppFactoryArg.FunctionParser.CurrentState,
+			var timeout = await Scheduler.AdmitCommandList(MarkupText.Plain("think timeout"), WebAppFactoryArg.FunctionParser.CurrentState,
 				semaphore, 0, manageSemaphoreCount: true);
 			await Command($"@wait {target}/{attribute}=think pending");
 			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
@@ -450,7 +450,7 @@ public class SemaphoreCommandTests
 			await Assert.That(await Count()).IsIn("", "0");
 			await Command($"@wait {target}/{attribute}=think later");
 			await Assert.That(await Count()).IsEqualTo("1");
-			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain-complete", "test");
+			await Scheduler.AdmitWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain-complete", "test");
 		}
 		finally { release.SetResult(); }
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -468,15 +468,15 @@ public class SemaphoreCommandTests
 		var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await Scheduler.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "credit-block", "test");
+		await Scheduler.AdmitWork(async () => { blocked.SetResult(); await release.Task; return null; }, "credit-block", "test");
 		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			var timeout = await Scheduler.WriteCommandList(MarkupText.Plain("think timeout"),
+			var timeout = await Scheduler.AdmitCommandList(MarkupText.Plain("think timeout"),
 				WebAppFactoryArg.FunctionParser.CurrentState, semaphore, 0, manageSemaphoreCount: true);
 			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {target}/{attribute}"));
-			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "credit-complete", "test");
+			await Scheduler.AdmitWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "credit-complete", "test");
 		}
 		finally { release.SetResult(); }
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -745,7 +745,7 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semObj}=0"));
 		await Scheduler.ReleaseScheduledWork(tasks.Single().Pid, semaphoreTimeout: true);
 		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "reset-drained", "test");
+		await Scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "reset-drained", "test");
 		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
 		var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
@@ -763,7 +763,7 @@ public class SemaphoreCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semaphore}=1"));
 		var attribute = new SharpMUSH.Library.Models.DbRefAttribute(semaphore, [name]);
 		var before = Scheduler.GetQueueUsage().Total;
-		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
+		var admitted = await Scheduler.AdmitCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
 		await Assert.That(admitted.Accepted).IsTrue();
 		var haltedObject = haltTarget ? semaphore : executor;
 		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(haltedObject))).AsThing.Object.DBRef;

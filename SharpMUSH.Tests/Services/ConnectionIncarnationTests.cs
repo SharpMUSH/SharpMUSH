@@ -151,14 +151,14 @@ public class ConnectionIncarnationTests
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await scheduler.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await scheduler.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			await scheduler.WriteUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
+			await scheduler.AdmitUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
 				ParserState.Empty with { Handle = Handle, ConnectionSessionId = "old" });
 			await Register(service, "replacement", 200);
-			await scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");
+			await scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");
 		}
 		finally { release.TrySetResult(); }
 		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));

@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Extensions;
@@ -327,10 +327,10 @@ public partial class TaskScheduler(
 		catch (Exception ex) { logger.LogWarning(ex, "Could not report execution limit for PID {Pid}", entry.Pid); }
 	}
 
-	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	 => Admit(action, triggerName, group, null);
 
-	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
@@ -392,7 +392,7 @@ public partial class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
+	public ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
 	 => Admit(async () =>
 	 {
 		 if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
@@ -405,7 +405,7 @@ public partial class TaskScheduler(
 		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
 		return target.IsNone ? state : state with { Executor = target.Known().Object().DBRef };
 	}
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state)
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor);
@@ -420,10 +420,10 @@ public partial class TaskScheduler(
 		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
-	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
+	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
+	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
-	public async ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
 		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
@@ -443,10 +443,10 @@ public partial class TaskScheduler(
 		}, $"async:{dbAttribute}", EnqueueGroup, executor);
 	}
 
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state,
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
 	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
-		if (!manageSemaphoreCount && oldValue < 0) return await WriteCommandList(command, state);
+		if (!manageSemaphoreCount && oldValue < 0) return await AdmitCommandList(command, state);
 		state = await CaptureExecutor(state);
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
@@ -568,7 +568,7 @@ public partial class TaskScheduler(
 				&& !_semaphoreRepairs.ContainsKey(pid) && !_semaphoreCommandReservations.Contains(pid);
 	}
 
-	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
+	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 		var outcomes = new List<QueueAdmissionResult>();
@@ -584,8 +584,8 @@ public partial class TaskScheduler(
 		return outcomes;
 	}
 
-	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAll(DbRefAttribute dbAttribute)
-	 => Notify(dbAttribute, 0, int.MaxValue);
+	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
+	 => NotifyCounted(dbAttribute, 0, int.MaxValue);
 
 	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
 	{
@@ -723,7 +723,7 @@ public partial class TaskScheduler(
 		return true;
 	}
 
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, TimeSpan delay)
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, TimeSpan delay)
 	{
 		state = await CaptureExecutor(state);
 		using var transition = await EnterDelayedTransitionAsync();

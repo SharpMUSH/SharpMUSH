@@ -200,7 +200,7 @@ public class AttributeTreePatternVisibilityTests
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 		// /QUIET: a plain @teleport queues a "look" command for the target (GeneralCommands.cs's
-		// Teleport, QueueCommandListRequest) rather than running it inline, so its arrival autolook
+		// Teleport, AdmitCommandListRequest) rather than running it inline, so its arrival autolook
 		// can land at an unpredictable later tick - inside some OTHER, unrelated test's notification
 		// capture window, since the shared NotifyService substitute is session-wide. /QUIET skips
 		// that queued look entirely.
