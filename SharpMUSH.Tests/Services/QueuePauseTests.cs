@@ -280,6 +280,9 @@ public class QueuePauseTests
 			parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
 			{ Interlocked.Increment(ref count); ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 			await using var queue = Create(parser, quartz);
+			var jobFactory = Substitute.For<Quartz.Spi.IJobFactory>();
+			jobFactory.NewJob(Arg.Any<Quartz.Spi.TriggerFiredBundle>(), quartz).Returns(new DelayedTask(queue));
+			quartz.JobFactory = jobFactory;
 			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromSeconds(1));
 			await Assert.That(await queue.PausePending(job.Pid!.Value, "hold")).IsEqualTo(QueueControlResult.Applied);
 			await Task.Delay(1200);
