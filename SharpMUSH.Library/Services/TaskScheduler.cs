@@ -226,7 +226,7 @@ public partial class TaskScheduler(
 				{
 					await repair();
 					_semaphoreRepairs.TryRemove(pid, out _);
-					Release(pid);
+					Release(pid, QueueOutcome.ScheduleFailed);
 				}
 			}
 			return new SemaphoreMutationLease(_semaphoreMutations);

@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Quartz;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Diagnostics;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Utilities;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration;
@@ -19,7 +21,7 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -28,7 +30,7 @@ public class QueueAdmissionTests
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
 		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
-		 NullLogger<Scheduler>.Instance, options);
+		 NullLogger<Scheduler>.Instance, options, diagnostics: diagnostics);
 	}
 	internal static IMediator TargetMediator()
 	{
@@ -482,6 +484,7 @@ public class QueueAdmissionTests
 	public async Task FailedAdmissionRollbackRetainsRepairUntilProviderRecovers(string failure)
 	{
 		var count = 0;
+		var diagnostics = new QueueDiagnosticsRecorder();
 		var broken = true;
 		var writes = 0;
 		var mediator = CountingMediator(() => count, value => count = value);
@@ -500,7 +503,7 @@ public class QueueAdmissionTests
 		var scheduler = Substitute.For<IScheduler>();
 		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
 			.Returns(_ => Task.FromException<DateTimeOffset>(new InvalidOperationException("schedule unavailable")));
-		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler, diagnostics: diagnostics);
 		await Assert.That(async () => await queue.WriteCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true)).Throws<AggregateException>();
 		await Assert.That(count).IsEqualTo(1);
@@ -520,6 +523,7 @@ public class QueueAdmissionTests
 		await Assert.That(await queue.HaltByPid(1)).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ScheduleFailed);
 	}
 
 	[Test]
