@@ -1,4 +1,4 @@
-﻿using SharpMUSH.Implementation.Common;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -39,27 +39,27 @@ public partial class Functions
 
 	[SharpFunction(Name = "eq", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> ExactEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 == pair.Item2);
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 == pair.Item2);
 
 	[SharpFunction(Name = "gt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> GreaterThan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 > pair.Item2);
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 > pair.Item2);
 
 	[SharpFunction(Name = "gte", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> GreaterThanOrEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 >= pair.Item2);
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 >= pair.Item2);
 
 	[SharpFunction(Name = "lt", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> LessThan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 < pair.Item2);
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 < pair.Item2);
 
 	[SharpFunction(Name = "lte", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> LessThanOrEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered, pair => pair.Item1 <= pair.Item2);
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 <= pair.Item2);
 
 	[SharpFunction(Name = "nand", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> NegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -87,7 +87,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "neq", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> Neq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser.CurrentState.ArgumentsOrdered,
+		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser,
 			pair => pair.Item1 == pair.Item2, negate: true);
 
 	[SharpFunction(Name = "nor", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
