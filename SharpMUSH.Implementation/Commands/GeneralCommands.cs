@@ -3285,8 +3285,32 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["room", "message"])]
 	public async ValueTask<Option<CallState>> NoSpoofRoomEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// PennMUSH cmd_remit (cmds.c:1347): @nsremit is @remit with PEMIT_SPOOF, which suppresses the
+		// recipients' NOSPOOF tagging, for anyone allowed to do that.
+		var notificationType = await PermissionService.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+
+		return await RemitToRooms(parser, executor, executor, notificationType);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_remit</c> (<c>speech.c:1299</c>): under <c>/list</c> the target argument is a
+	/// space-separated list of rooms, each of which is remitted into; without it the whole argument is
+	/// one room name, so a name containing spaces still matches.
+	/// </summary>
+	/// <param name="speaker">
+	/// Who the sound is attributed to — the executor, unless <c>/spoof</c> moved it to the enactor.
+	/// </param>
+	private async ValueTask<Option<CallState>> RemitToRooms(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject speaker,
+		INotifyService.NotificationType notificationType)
+	{
+		var args = parser.CurrentState.Arguments;
 
 		if (args.Count < 2)
 		{
@@ -3294,40 +3318,44 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
+		var switches = parser.CurrentState.Switches;
 		var objects = args["0"].Message!.ToPlainText();
 		var message = args["1"].Message!;
 
-		var notificationType = await PermissionService.CanNoSpoof(executor)
-			? INotifyService.NotificationType.NSEmit
-			: INotifyService.NotificationType.Emit;
+		IEnumerable<string> targets = switches.Contains("LIST")
+			? ArgHelpers.NameListString(objects)
+			: [objects.Trim()];
 
-		await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser,
-			executor,
-			executor,
-			objects,
-			LocateFlags.All,
-			async target =>
-			{
-				// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
-				if (!target.IsContainer)
+		foreach (var target in targets)
+		{
+			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+				parser,
+				executor,
+				executor,
+				target,
+				LocateFlags.All,
+				async located =>
 				{
-					await NotifyService.NotifyLocalized(executor,
-						nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
+					// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
+					if (!located.IsContainer)
+					{
+						await NotifyService.NotifyLocalized(executor,
+							nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
+						return CallState.Empty;
+					}
+
+					await CommunicationService.SendToRoomAsync(
+						executor,
+						located.AsContainer,
+						_ => message,
+						notificationType,
+						sender: speaker);
+
+					await EchoRemitToSender(executor, switches, located, message);
+
 					return CallState.Empty;
-				}
-
-				var container = target.AsContainer;
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					container,
-					_ => message,
-					notificationType);
-
-				await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
-
-				return CallState.Empty;
-			});
+				});
+		}
 
 		return CallState.Empty;
 	}
@@ -5850,51 +5878,18 @@ public partial class Commands
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["room", "message"])]
 	public async ValueTask<Option<CallState>> RoomEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
-		if (args.Count < 2)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
-			return new CallState(ErrorMessages.Returns.NothingToDo);
-		}
+		// PennMUSH cmd_remit (cmds.c:1343) resolves the speaker through the SPOOF macro
+		// (dbdefs.h:334): /spoof attributes the sound to the enactor for anyone who may spoof as them,
+		// and silently stays with the executor for anyone who may not.
+		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
+		var speaker = isSpoof && await PermissionService.CanSpoofAs(executor, enactor)
+			? enactor
+			: executor;
 
-		var objects = args["0"].Message!.ToPlainText();
-		var message = args["1"].Message!;
-
-		var objectList = ArgHelpers.NameListString(objects);
-
-		foreach (var obj in objectList)
-		{
-			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser,
-				executor,
-				executor,
-				obj,
-				LocateFlags.All,
-				async target =>
-				{
-					// PennMUSH do_one_remit (speech.c:1263): only containers hold anything.
-					if (!target.IsContainer)
-					{
-						await NotifyService.NotifyLocalized(executor,
-							nameof(ErrorMessages.Notifications.ThereCantBeAnythingInThat), executor);
-						return CallState.Empty;
-					}
-
-					await CommunicationService.SendToRoomAsync(
-						executor,
-						target.AsContainer,
-						_ => message,
-						INotifyService.NotificationType.Emit);
-
-					await EchoRemitToSender(executor, parser.CurrentState.Switches, target, message);
-
-					return CallState.Empty;
-				});
-		}
-
-		return CallState.Empty;
+		return await RemitToRooms(parser, executor, speaker, INotifyService.NotificationType.Emit);
 	}
 
 	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
