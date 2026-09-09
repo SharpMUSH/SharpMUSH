@@ -40,7 +40,7 @@ public class PermissionServiceControlTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlNoLock");
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlNoLockThing");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName);
 
 		var thing = await ObjectAt(createResult.Message!.ToPlainText()!.Trim());
 		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
@@ -55,7 +55,7 @@ public class PermissionServiceControlTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlPassLock");
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlPassLockThing");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName);
 		var thingDbRef = createResult.Message!.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService,
@@ -74,7 +74,7 @@ public class PermissionServiceControlTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlFailLock");
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlFailLockThing");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName);
 		var thingDbRef = createResult.Message!.ToPlainText()!.Trim();
 
 		// Locked to God, who is not our mortal.
@@ -93,8 +93,7 @@ public class PermissionServiceControlTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlOwner");
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlOwnerThing");
-		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
-			MarkupText.Plain($"@create {thingName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName, player.Handle);
 
 		var thing = await ObjectAt(createResult.Message!.ToPlainText()!.Trim());
 		var owner = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
@@ -115,7 +114,7 @@ public class PermissionServiceControlTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "CtrlExplicitTrue");
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("CtrlExplicitTrueThing");
-		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName);
 		var thingDbRef = createResult.Message!.ToPlainText()!.Trim();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/control {thingDbRef}=#TRUE"));
