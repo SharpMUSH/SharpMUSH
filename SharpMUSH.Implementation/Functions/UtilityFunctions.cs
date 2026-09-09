@@ -677,8 +677,9 @@ public partial class Functions
 			return new CallState("#-1 FUNCTION (No function name given)");
 		}
 
-		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out _))
+		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
 		{
+			EvaluationRestrictions.Demand(targetFunction.LibraryInformation, parser.CurrentState.Restrictions);
 			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
 			var fnArgs = parser.CurrentState.ArgumentsOrdered
 				.Skip(1)
@@ -688,7 +689,8 @@ public partial class Functions
 			return result ?? CallState.Empty;
 		}
 
-		// Fall back to user-defined attribute function
+		// Fall back to user-defined attribute function only when object-data access is allowed.
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var result2 = await AttributeService.EvaluateAttributeFunctionAsync(
 			parser,

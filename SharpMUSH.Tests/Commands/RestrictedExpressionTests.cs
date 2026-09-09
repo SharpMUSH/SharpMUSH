@@ -70,6 +70,53 @@ public class RestrictedExpressionTests
 		await Assert.That(await Eval("add(2,3)")).IsEqualTo("5");
 	}
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task IndirectFunctionCannotReadAnAttributeFallback(bool halted)
+	{
+		var attribute = "restrictedfn" + Guid.NewGuid().ToString("N");
+		var target = "me";
+		using (var setupBudget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+		using (setupBudget.Enter())
+		{
+			if (halted)
+			{
+				var created = await Factory.CommandParser.CommandParse(1,
+					Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain($"@create {attribute}"));
+				target = created.Message!.ToPlainText();
+				await Assert.That(SharpMUSH.Library.Models.DBRef.TryParse(target, out _)).IsTrue();
+			}
+			await Cmd($"&{attribute} {target}=classified attribute");
+			if (halted) await Cmd($"@set {target}=HALT");
+		}
+		await Assert.That(await Eval($"get({target}/{attribute})")).IsEqualTo("classified attribute");
+		if (halted) await Assert.That(await Eval($"hasflag({target},HALT)")).IsEqualTo("1");
+		await Assert.That(await Eval($"restrictedexpr(fn,fn({target}/{attribute}))")).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(await Eval("restrictedexpr(fn add,fn(add,2,3))")).IsEqualTo("5");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AttributeEvaluationCannotBypassObjectDataRestriction(bool stringTarget)
+	{
+		var original = Factory.FunctionParser;
+		var parser = original.Push(original.CurrentState with { Restrictions = new EvaluationRestrictions(["add"]) });
+		var executor = await parser.CurrentState.KnownExecutorObject(Factory.Services.GetRequiredService<Mediator.IMediator>());
+		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
+		var denied = false;
+		try
+		{
+			if (stringTarget)
+				await attributes.EvaluateAttributeFunctionAsync(parser, executor, MarkupText.Plain("me/DESC"), [], ignorePermissions: true);
+			else
+				await attributes.EvaluateAttributeFunctionAsync(parser, executor, executor, "DESC", [], ignorePermissions: true);
+		}
+		catch (RestrictedExpressionException) { denied = true; }
+		await Assert.That(denied).IsTrue();
+	}
+
+	[Test]
 	public async Task AliasesUseCanonicalOperationsAndPluginNamesCannotImpersonateThem()
 	{
 		var original = (MUSHCodeParser)Factory.FunctionParser;

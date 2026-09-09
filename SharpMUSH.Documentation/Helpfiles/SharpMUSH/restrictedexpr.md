@@ -24,7 +24,7 @@ The initial profile supports `add`, `sub`, `mul`, `div`, `cat`, `strcat`, `strle
 clones resolve to the original operation before the allowlist is checked. A
 nested `restrictedexpr()` intersects its requested operations with the caller's
 allowlist; it cannot enable an operation the caller omitted. `fn()` checks the
-resolved target under the same restrictions.
+resolved target under the same restrictions and cannot use its attribute fallback.
 
 Only `%0` through `%9`, `%b` (space), `%r` (newline), `%t` (tab), and `%%` are
 available as substitutions. Ordinary quoting and literal text still work. Parent

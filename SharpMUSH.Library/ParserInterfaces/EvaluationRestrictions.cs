@@ -33,6 +33,13 @@ public sealed class EvaluationRestrictions
 			throw new RestrictedExpressionException();
 	}
 
+	/// <summary>Object and attribute evaluation is independent of operation permission.</summary>
+	public static void DemandObjectDataAccess(EvaluationRestrictions? state = null)
+	{
+		if (Current is { AllowObjectDataAccess: false } || state is { AllowObjectDataAccess: false })
+			throw new RestrictedExpressionException();
+	}
+
 	public static void DemandSubstitution(string symbol, EvaluationRestrictions? state = null)
 	{
 		if (Current is null && state is null) return;

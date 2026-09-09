@@ -18,7 +18,7 @@ public class RestrictedEvaluationContextTests
 				await Assert.That(EvaluationRestrictions.Current.AllowObjectDataAccess).IsFalse();
 				throw new InvalidOperationException("test unwind");
 			}
-			catch (InvalidOperationException) { }
+			catch (InvalidOperationException ex) { await Assert.That(ex.Message).IsEqualTo("test unwind"); }
 			await Assert.That(EvaluationRestrictions.Current).IsEqualTo(outer);
 		}
 		await Assert.That(EvaluationRestrictions.Current).IsNull();
