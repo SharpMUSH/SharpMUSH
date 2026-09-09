@@ -537,11 +537,19 @@ public partial class TaskScheduler(
 		}
 	}
 
+	private bool CanReleasePendingSemaphore(long pid)
+	{
+		lock (_admissionLock)
+			return _pendingEntries.ContainsKey(pid) && !_ready.Contains(pid)
+				&& !_semaphoreRepairs.ContainsKey(pid) && !_semaphoreCommandReservations.Contains(pid);
+	}
+
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 		var outcomes = new List<QueueAdmissionResult>();
-		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last())).Take(Math.Max(0, count)))
+		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
+			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(Math.Max(0, count)))
 		{
 			var trigger = await _scheduler.GetTrigger(key);
 			if (trigger is null) continue;
@@ -565,7 +573,8 @@ public partial class TaskScheduler(
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		var firstTrigger = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last())).FirstOrDefault();
+		var firstTrigger = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
+			.FirstOrDefault(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last())));
 		if (firstTrigger == null)
 		{
 			return false;
@@ -630,7 +639,9 @@ public partial class TaskScheduler(
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
-		var selected = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last())).Take(count ?? int.MaxValue).ToArray();
+		var selected = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
+			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(count ?? int.MaxValue).ToArray();
+		if (selected.Length == 0) return 0;
 		await _scheduler.UnscheduleJobs(selected);
 		return selected.Count(key => ReleasePending(long.Parse(key.Name.Split('-').Last())));
 	}

@@ -129,6 +129,8 @@ public class QueueAdmissionTests
 		var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
 		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
 		scheduler.GetTrigger(key, Arg.Any<CancellationToken>()).Returns(TriggerBuilder.Create().WithIdentity(key).ForJob("waiter").Build());
+		scheduler.GetJobDetail(Arg.Any<JobKey>(), Arg.Any<CancellationToken>()).Returns(JobBuilder.Create<SemaphoreTask>()
+			.SetJobData(new JobDataMap { ["State"] = ParserState.Empty }).Build());
 		var readable = false;
 		using (await queue.EnterSemaphoreMutationAsync())
 		{
@@ -140,6 +142,10 @@ public class QueueAdmissionTests
 			}
 			catch (Exception) { }
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That(await queue.ModifyQRegisters(semaphore, new() { ["unexpected"] = MarkupText.Plain("change") })).IsFalse();
+			await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(0);
+			await Assert.That((await queue.Notify(semaphore, 1)).Count).IsEqualTo(0);
+			await Assert.That(scheduler.ReceivedCalls().Any(call => call.GetMethodInfo().Name is "UnscheduleJob" or "UnscheduleJobs")).IsFalse();
 			await Assert.That((await queue.ReleaseScheduledWork(pending.Pid!.Value)).Accepted).IsFalse();
 		}
 		var blocked = false;

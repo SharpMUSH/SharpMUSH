@@ -22,6 +22,7 @@ public partial class Commands
 		async ValueTask Persist(int selected)
 		{
 			expected = checked((int)nextCount(oldCount, selected));
+			if (original is null && clearZero && expected == 0) return;
 			var written = clearZero && expected == 0
 				? await Mediator.Send(new ClearAttributeCommand(fullTarget, path), ExecutionBudget.CurrentToken)
 				: await Mediator.Send(new SetAttributeCommand(fullTarget, path, MarkupText.Plain(expected.Value.ToString()), god), ExecutionBudget.CurrentToken);

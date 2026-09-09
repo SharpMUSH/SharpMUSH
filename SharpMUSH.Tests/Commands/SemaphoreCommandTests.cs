@@ -25,6 +25,28 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	public async Task DrainOfAnAbsentSemaphoreIsANoOp()
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("empty-drain-" + Guid.NewGuid().ToString("N"), player));
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.Send(call.ArgAt<GetObjectNodeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.ArgAt<GetAttributeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.ClearAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(false);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Drain")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+		await commands.Drain(parser, metadata);
+		await mediator.DidNotReceive().Send(Arg.Any<SharpMUSH.Library.Commands.Database.ClearAttributeCommand>(), Arg.Any<CancellationToken>());
+		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).CountAsync()).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task RejectedCommandCounterWriteRetainsTheWaitingEntry(bool drain)
