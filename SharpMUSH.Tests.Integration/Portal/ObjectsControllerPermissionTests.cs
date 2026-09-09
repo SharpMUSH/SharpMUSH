@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
@@ -36,9 +37,22 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 	private IAttributeService AttributeService => factory.Services.GetRequiredService<IAttributeService>();
 
 	/// <summary>A controller acting as <paramref name="actor"/>, wired exactly as DI would build it.</summary>
-	private ObjectsController ControllerAs(DBRef actor)
-		=> ControllerFor(new ClaimsIdentity(
-			[new Claim(GameHub.CharacterDbrefClaim, actor.ToString())], "TestScheme"));
+	private async Task<ObjectsController> ControllerAs(DBRef actor)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(actor))).AsPlayer;
+		var fullIdentity = player.Object.DBRef;
+		var accounts = factory.Services.GetRequiredService<IAccountService>();
+		var account = await accounts.GetAccountForCharacterAsync(fullIdentity);
+		if (account is null)
+		{
+			var created = await accounts.CreateAccountAsync("objapi_" + Guid.NewGuid().ToString("N"), null, "TestPassword123!");
+			await Assert.That(created.IsT0).IsTrue();
+			account = created.AsT0;
+			await accounts.LinkCharacterAsync(account.Id!, fullIdentity);
+		}
+		return ControllerFor(new ClaimsIdentity(
+			[new Claim(ClaimTypes.NameIdentifier, account.Id!), new Claim(GameHub.CharacterDbrefClaim, fullIdentity.ToString())], "TestScheme"));
+	}
 
 	private ObjectsController ControllerFor(ClaimsIdentity identity) =>
 		new(
@@ -46,7 +60,9 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 			AttributeService,
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
-			factory.Services.GetRequiredService<IPermissionService>())
+			factory.Services.GetRequiredService<IPermissionService>(),
+			factory.Services.GetRequiredService<IRealityPolicy>(),
+			factory.Services.GetRequiredService<IVisibleWorldProjection>())
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -63,7 +79,7 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var intruder = await NewPlayerAsync("ObjApiIntruder");
 		var victim = await NewPlayerAsync("ObjApiVictim");
 
-		var result = await ControllerAs(intruder).SetAttribute(
+		var result = await (await ControllerAs(intruder)).SetAttribute(
 			victim.Number, "PWNED", new SetAttributeRequest("intruder was here"), CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<ObjectResult>();
@@ -76,11 +92,11 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var intruder = await NewPlayerAsync("ObjApiNoWrite");
 		var victim = await NewPlayerAsync("ObjApiUntouched");
 
-		await ControllerAs(intruder).SetAttribute(
+		await (await ControllerAs(intruder)).SetAttribute(
 			victim.Number, "PWNED", new SetAttributeRequest("intruder was here"), CancellationToken.None);
 
 		// Read back as the victim, who would be allowed to see it if it existed.
-		var read = await ControllerAs(victim).GetAttribute(victim.Number, "PWNED", CancellationToken.None);
+		var read = await (await ControllerAs(victim)).GetAttribute(victim.Number, "PWNED", CancellationToken.None);
 
 		await Assert.That(read).IsTypeOf<NotFoundResult>()
 			.Because("a refused write must not reach the database");
@@ -91,7 +107,7 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 	{
 		var actor = await NewPlayerAsync("ObjApiSelf");
 
-		var result = await ControllerAs(actor).SetAttribute(
+		var result = await (await ControllerAs(actor)).SetAttribute(
 			actor.Number, "SELF_SET", new SetAttributeRequest("line one\nline two"), CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<NoContentResult>()
@@ -104,16 +120,16 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var owner = await NewPlayerAsync("ObjApiClearOwner");
 		var intruder = await NewPlayerAsync("ObjApiClearIntruder");
 
-		await ControllerAs(owner).SetAttribute(
+		await (await ControllerAs(owner)).SetAttribute(
 			owner.Number, "KEEP_ME", new SetAttributeRequest("still here"), CancellationToken.None);
 
-		var attempt = await ControllerAs(intruder).ClearAttribute(
+		var attempt = await (await ControllerAs(intruder)).ClearAttribute(
 			owner.Number, "KEEP_ME", CancellationToken.None);
 
 		await Assert.That(attempt).IsTypeOf<ObjectResult>();
 		await Assert.That(((ObjectResult)attempt).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
 
-		var stillThere = await ControllerAs(owner).GetAttribute(owner.Number, "KEEP_ME", CancellationToken.None);
+		var stillThere = await (await ControllerAs(owner)).GetAttribute(owner.Number, "KEEP_ME", CancellationToken.None);
 		await Assert.That(stillThere).IsTypeOf<OkObjectResult>();
 	}
 
@@ -127,10 +143,10 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var owner = await NewPlayerAsync("ObjApiReadOwner");
 		var snooper = await NewPlayerAsync("ObjApiSnooper");
 
-		await ControllerAs(owner).SetAttribute(
+		await (await ControllerAs(owner)).SetAttribute(
 			owner.Number, "PRIVATE_NOTE", new SetAttributeRequest("for my eyes only"), CancellationToken.None);
 
-		var result = await ControllerAs(snooper).GetAttribute(owner.Number, "PRIVATE_NOTE", CancellationToken.None);
+		var result = await (await ControllerAs(snooper)).GetAttribute(owner.Number, "PRIVATE_NOTE", CancellationToken.None);
 
 		var leaked = result is OkObjectResult { Value: AttributeDto dto } && dto.Value.Contains("eyes only");
 		await Assert.That(leaked).IsFalse()
@@ -156,7 +172,7 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		await Assert.That(mayExamine).IsFalse()
 			.Because("two unrelated mortals must not be able to examine each other, or this test proves nothing");
 
-		var result = await ControllerAs(snooper).GetObject(owner.Number, CancellationToken.None);
+		var result = await (await ControllerAs(snooper)).GetObject(owner.Number, CancellationToken.None);
 
 		await Assert.That(result).IsTypeOf<ObjectResult>();
 		await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
