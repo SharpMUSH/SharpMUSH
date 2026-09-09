@@ -551,24 +551,27 @@ public class TaskScheduler(
 		CancelEntry(entry);
 		if (ready) return true;
 		using var mutation = await EnterSemaphoreMutationAsync();
-		lock (_admissionLock)
-			if (!_pendingEntries.ContainsKey(pid)) return true;
 		await _scheduler.UnscheduleJob(new TriggerKey(entry.TriggerName, entry.Group));
-		QueueEntry? removed;
 		lock (_admissionLock)
 		{
-			// A timeout may have published the entry while Quartz was being awaited.
-			// Its consumer retains the reservation and owns timeout accounting.
-			if (_ready.Contains(pid)) return true;
-			removed = RemoveEntry(pid);
+			if (!_pendingEntries.TryGetValue(pid, out entry)) return true;
+			// Reserve the transition against timeout publication while persistence is awaited.
+			if (!_ready.Add(pid)) return true;
 		}
-		if (removed is null) return true;
-		removed.Cts.Dispose();
-		if (removed.Group.StartsWith(SemaphoreGroup + ":"))
+		try
 		{
-			try { await AdjustSemaphoreCountCore(removed.Group, removed.SemaphoreTarget); }
-			catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed while halting PID {Pid}", pid); }
+			if (entry.Group.StartsWith(SemaphoreGroup + ":"))
+				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
 		}
+		catch
+		{
+			// Preserve the cancelled PID and its quota so a later halt or timer can retry.
+			lock (_admissionLock) _ready.Remove(pid);
+			throw;
+		}
+		QueueEntry? removed;
+		lock (_admissionLock) removed = RemoveEntry(pid);
+		removed?.Cts.Dispose();
 		return true;
 	}
 
