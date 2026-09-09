@@ -49,17 +49,6 @@ public class HttpHandlerCommandService(
 		var handler = handlerResult.Known;
 		var handlerRef = handler.Object().DBRef;
 
-		// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
-		// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
-		// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
-		var attributeName = method.ToUpperInvariant();
-		var attributeResult = await attributeService.GetAttributeAsync(
-			handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
-		if (!attributeResult.IsAttribute)
-		{
-			return new NotFound();
-		}
-
 		ct.ThrowIfCancellationRequested();
 		var parentBudget = ExecutionBudget.Current;
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, parentBudget?.Token ?? default);
@@ -74,27 +63,38 @@ public class HttpHandlerCommandService(
 		// on the parser state for @respond, and in the output-capture frame for emitted output.
 		var context = new HttpResponseContext();
 
-		// Build a fresh parser state — there is no ambient parser on the HTTP request path.
-		// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
-		var evalParser = parser.Push(ParserState.RootFor(handlerRef) with
-		{
-			Registers = new([BuildHeaderRegisters(headers)]),
-			EnvironmentRegisters = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(path),
-				["1"] = new CallState(body)
-			},
-			ExecutionBudget = budget,
-			HttpResponse = context
-		});
-
-		var attributeValue = attributeResult.AsAttribute.Last().Value;
-
 		using (budget.Enter())
 		using (outputCapture.BeginCapture(handlerRef.Number, context))
 		{
 			try
 			{
+				budget.ThrowIfExceeded();
+				// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
+				// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
+				// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
+				var attributeName = method.ToUpperInvariant();
+				var attributeResult = await attributeService.GetAttributeAsync(
+					handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
+				if (!attributeResult.IsAttribute)
+				{
+					return new NotFound();
+				}
+
+				// Build a fresh parser state — there is no ambient parser on the HTTP request path.
+				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
+				var evalParser = parser.Push(ParserState.RootFor(handlerRef) with
+				{
+					Registers = new([BuildHeaderRegisters(headers)]),
+					EnvironmentRegisters = new Dictionary<string, CallState>
+					{
+						["0"] = new CallState(path),
+						["1"] = new CallState(body)
+					},
+					ExecutionBudget = budget,
+					HttpResponse = context
+				});
+
+				var attributeValue = attributeResult.AsAttribute.Last().Value;
 				budget.ThrowIfExceeded();
 				await evalParser.CommandListParse(attributeValue);
 			}
