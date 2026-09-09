@@ -514,7 +514,29 @@ public class SharpMUSHParserVisitor(
 		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
 			|| definition.LibraryInformation.RestrictedOperation == "fn"
 			&& EvaluationRestrictions.BeginsRestrictedEvaluation(definition.LibraryInformation,
-				context.evaluationString().Select(argument => GetContextText(argument).ToPlainText()), parser.FunctionLibrary);
+				RestrictedTargetNames(context), parser.FunctionLibrary);
+	}
+
+	private IEnumerable<string> RestrictedTargetNames(FunctionContext context)
+	{
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			if (context.GetChild(index) is EvaluationStringContext argument)
+				yield return GetContextText(argument).ToPlainText();
+		}
+	}
+
+	private static void DemandBoundedArguments(FunctionContext context)
+	{
+		var count = 1;
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			if (context.GetChild(index) is ITerminalNode terminal && terminal.Symbol.Type == COMMAWS
+				&& ++count > EvaluationRestrictions.MaximumArguments)
+				throw new RestrictedExpressionException();
+		}
 	}
 
 	private bool ContainsRestrictedEvaluation(IParseTree context)
@@ -548,6 +570,11 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = context.FUNCHAR().GetText().TrimEnd()[..^1];
+		// Reject oversized calls before ANTLR child-array and argument-map materialization.
+		var restricted = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
+		if (restricted) DemandBoundedArguments(context);
+		var restrictedWrapper = BeginsRestrictedEvaluation(context);
+		if (!restricted && restrictedWrapper) DemandBoundedArguments(context);
 		var evalStrings = context.evaluationString();
 		var commas = context.COMMAWS();
 
@@ -573,7 +600,6 @@ public class SharpMUSHParserVisitor(
 		}
 
 		// Recognize the wrapper before its implementation enters the operation scope.
-		var restrictedWrapper = BeginsRestrictedEvaluation(context);
 		_containsRestrictedWrapper |= restrictedWrapper;
 		// Restricted evaluation must not read DEBUG flags or forwarding attributes.
 		var executor = restrictedWrapper || EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
@@ -706,6 +732,9 @@ public class SharpMUSHParserVisitor(
 
 			var definition = libraryMatch.LibraryInformation;
 			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
+			if ((EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+				&& args.Length > EvaluationRestrictions.MaximumArguments)
+				throw new RestrictedExpressionException();
 			var attribute = definition.Attribute;
 
 			var currentState = parser.CurrentState;

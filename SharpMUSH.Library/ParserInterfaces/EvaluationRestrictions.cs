@@ -9,6 +9,8 @@ public sealed class EvaluationRestrictions
 {
 	private static readonly AsyncLocal<EvaluationRestrictions?> Ambient = new();
 	private readonly FrozenSet<string> _operations;
+	// The audited targets accept at most 32 arguments; fn adds its target name.
+	public const int MaximumArguments = 33;
 	public const string Error = "#-1 RESTRICTED EXPRESSION";
 	public static EvaluationRestrictions? Current => Ambient.Value;
 	public bool AllowObjectDataAccess => false;

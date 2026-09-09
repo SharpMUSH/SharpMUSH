@@ -51,7 +51,10 @@ server-wide function permissions or other concurrent evaluations. The existing
 invocation, output, recursion, and elapsed execution limits remain in force, and
 nested restricted calls share the active execution budget. Inputs and expression
 text together, and each combined result, must fit the shared 5 MiB character
-ceiling. Expansion and concatenation are checked before allocation.
+ceiling. Expansion and concatenation are checked before allocation. Restricted
+calls accept at most 33 arguments, including the target name supplied to `fn()`,
+and retain each target function's smaller argument limit. Excess arguments are
+rejected before argument arrays and maps are allocated.
 
 This is a boundary for softcode expressions using the supported core operations.
 Native plugins and server code remain trusted code and are not isolated by it.

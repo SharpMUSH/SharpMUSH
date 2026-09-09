@@ -27,6 +27,36 @@ public class RestrictedExpressionTests
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
 	[Test]
+	[Arguments("fn", true)]
+	[Arguments("arityalias", true)]
+	[Arguments("fn", false)]
+	[Arguments("arityalias", false)]
+	public async Task RestrictedIndirectionRejectsExcessArgumentsBeforeDispatch(string name, bool restricted)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var invoked = false;
+		library[name] = (library["fn"].LibraryInformation with
+		{
+			Function = _ => { invoked = true; return ValueTask.FromResult(new CallState(MarkupText.Plain("DISPATCHED"))); }
+		}, true);
+		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
+		var arguments = string.Join(',', Enumerable.Repeat("", 33));
+		var expression = $"{name}(cat,{arguments})";
+		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(fn cat,{expression})" : expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(restricted ? EvaluationRestrictions.Error : "DISPATCHED");
+		await Assert.That(invoked).IsEqualTo(!restricted);
+	}
+
+	[Test]
+	public async Task RestrictedIndirectionAllowsMaximumAuditedTargetArity()
+	{
+		var arguments = string.Join(',', Enumerable.Repeat("x", 32));
+		await Assert.That(await Eval($"restrictedexpr(fn cat,fn(cat,{arguments}))")).IsEqualTo(string.Join(' ', Enumerable.Repeat("x", 32)));
+	}
+
+	[Test]
 	[Arguments("first", "first(%0)")]
 	[Arguments("rest", "rest(%0)")]
 	[Arguments("extract", "extract(%0,1,1)")]

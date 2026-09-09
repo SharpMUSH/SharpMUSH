@@ -152,6 +152,7 @@ public class AttributeVisibilityCancellationTests
 			.Returns(async ValueTask<bool> (_) => { if (!identity) await Block(CancellationToken.None); return true; });
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) => { await Block(call.Arg<CancellationToken>()); return new None(); });
 		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(ParserState.RootFor(target.Object().DBRef));
 		var operation = stringTarget
 			? service.EvaluateAttributeFunctionAsync(parser, target, MarkupString.MarkupText.Plain("#10/RUN"), [], ignorePermissions: true).AsTask()
 			: service.EvaluateAttributeFunctionAsync(parser, target, target, "RUN", [], ignorePermissions: true).AsTask();
