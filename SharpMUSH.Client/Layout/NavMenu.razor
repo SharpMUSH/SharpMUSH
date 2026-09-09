@@ -96,6 +96,10 @@
             <AuthorizeView Policy="players.view">
                 <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, Loc["AdmBreadcrumb"], NavLinkMatch.All)</Authorized>
             </AuthorizeView>
+            <AuthorizeView Policy="jobs.manage.own">
+                <Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized>
+                <NotAuthorized><AuthorizeView Policy="jobs.manage" Context="jobAdmin"><Authorized>@NavItem("/admin/jobs", Icons.Material.Filled.Schedule, Loc["JobsTitle"])</Authorized></AuthorizeView></NotAuthorized>
+            </AuthorizeView>
             <AuthorizeView Policy="roles.admin">
                 <Authorized>@NavItem("/admin/roles", Icons.Material.Filled.Shield, Loc["AdmRolesTitle"])</Authorized>
             </AuthorizeView>

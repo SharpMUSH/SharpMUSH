@@ -242,6 +242,9 @@ public class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	 => Admit(action, triggerName, group, null);
 
+	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor)
+	 => Admit(action, triggerName, group, executor);
+
 	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 	 => Activate(pid, semaphoreTimeout);
 

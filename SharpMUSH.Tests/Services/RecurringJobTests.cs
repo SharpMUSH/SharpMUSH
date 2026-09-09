@@ -1,0 +1,226 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using SharpMUSH.Server.Services;
+using NSubstitute;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.RecurringJobs;
+using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services.RecurringJobs;
+using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
+
+namespace SharpMUSH.Tests.Services;
+
+public class RecurringJobTests
+{
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory Factory { get; init; }
+	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
+	private sealed class Clock : TimeProvider
+	{
+		public DateTimeOffset Now = DateTimeOffset.Parse("2026-09-14T12:00:00Z");
+		public override DateTimeOffset GetUtcNow() => Now;
+	}
+	private sealed record Context(RecurringJobService Service, CapabilityActor Actor, DBRef Target, Clock Clock, QueueScheduler Queue,
+		List<Func<ValueTask<CallState?>>> Callbacks, IAdministrativeCapabilityService Capabilities);
+	private RecurringJobService Service(Clock clock, QueueScheduler queue, IAdministrativeCapabilityService capabilities) => new(
+		Get<IExpandedDataStore>(), Get<IObjectStore>(), capabilities, Get<IPermissionService>(), Get<IAttributeService>(), queue, Factory.CommandParser, clock);
+	private async Task<Context> Setup()
+	{
+		foreach (var runner in Factory.Services.GetServices<IHostedService>().OfType<RecurringJobRunner>()) await runner.StopAsync(default);
+		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]));
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var actor = await Get<IAdministrativeCapabilityService>().GetGameActorAsync(player.Object.DBRef);
+		var target = await Get<IMediator>().Send(new CreateRoomCommand("job-test-" + Guid.NewGuid().ToString("N"), player));
+		target = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().DBRef;
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["RUN"], MarkupText.Plain($"&FIRED {target}=yes"), player));
+		var clock = new Clock();
+		var callbacks = new List<Func<ValueTask<CallState?>>>();
+		var queue = Substitute.For<QueueScheduler>();
+		queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+			.Returns(call => { callbacks.Add(call.ArgAt<Func<ValueTask<CallState?>>>(0)); return new QueueAdmissionResult(callbacks.Count, QueueRejectionReason.None); });
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+		var service = Service(clock, queue, capabilities);
+		await service.InitializeAsync();
+		return new(service, actor!, target, clock, queue, callbacks, capabilities);
+	}
+	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+
+	[Test, NotInParallel]
+	public async Task DurableClaimsPreventDuplicateTicksAndRestartReplay()
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		await context.Service.RunDueAsync();
+		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
+		var restarted = Service(context.Clock, context.Queue, context.Capabilities);
+		await restarted.InitializeAsync();
+		await restarted.InitializeAsync();
+		await context.Callbacks[0]();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		await Assert.That((await restarted.ListAsync(context.Actor)).Single().Id).IsEqualTo(job.Id);
+		context.Clock.Now = context.Clock.Now.AddHours(12);
+		await restarted.RunDueAsync();
+		await Assert.That(context.Callbacks.Count).IsEqualTo(2);
+		await context.Callbacks[1]();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).LastAsync()).Value.ToPlainText()).IsEqualTo("yes");
+		await Assert.That((await restarted.ListAsync(context.Actor)).Single().Status).IsEqualTo("completed");
+	}
+
+	[Test, NotInParallel]
+	[Arguments("disable")]
+	[Arguments("delete")]
+	[Arguments("revoke")]
+	[Arguments("missing-attribute")]
+	[Arguments("recycled-target")]
+	[Arguments("halt-target")]
+	[Arguments("destroying-target")]
+	public async Task QueuedWorkRechecksLifecycleIdentityAndAuthority(string change)
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		if (change == "disable") await context.Service.ConfigureAsync(context.Actor, job.Id, job.Schedule, job.TimeZone, false);
+		else if (change == "delete") await context.Service.DeleteAsync(context.Actor, job.Id);
+		else if (change == "revoke") context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+		else if (change == "missing-attribute")
+		{
+			var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Known;
+			var target = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Known;
+			await Get<IAttributeService>().ClearAttributeAsync(player, target, "RUN", IAttributeService.AttributePatternMode.Exact);
+		}
+		else if (change is "halt-target" or "destroying-target")
+		{
+			var node = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Known;
+			var flag = await Get<IMediator>().Send(new GetObjectFlagQuery(change == "halt-target" ? "HALT" : "GOING"));
+			await Get<IMediator>().Send(new SetObjectFlagCommand(node, flag!));
+		}
+		else
+		{
+			var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+			await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, document! with { Jobs = [document.Jobs.Single() with { Target = new DBRef(context.Target.Number, context.Target.CreationMilliseconds + 1).ToString() }] });
+		}
+		await context.Callbacks.Single()();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
+	public async Task QueueRejectionIsDurableAndDoesNotRetryTheSameFiring()
+	{
+		var context = await Setup();
+		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+			.Returns(new QueueAdmissionResult(null, QueueRejectionReason.OwnerLimit));
+		await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		await context.Service.RunDueAsync();
+		var job = (await context.Service.ListAsync(context.Actor)).Single();
+		await Assert.That(job.Status).IsEqualTo("rejected");
+		await Assert.That(job.LastError).Contains("OwnerLimit");
+		await Assert.That(job.RunToken).IsNull();
+		await context.Queue.Received(1).EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), "recurring", context.Actor.ActiveCharacter!.Value);
+	}
+
+	[Test, NotInParallel]
+	public async Task ReschedulingInvalidatesQueuedWorkAndKeepsTheOwner()
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		var changed = await context.Service.ConfigureAsync(context.Actor, job.Id, "0 9 * * *", "Asia/Tokyo", true);
+		await context.Callbacks.Single()();
+		await Assert.That(changed.OwnerAccount).IsEqualTo(job.OwnerAccount);
+		await Assert.That(changed.NextRun).IsEqualTo(DateTimeOffset.Parse("2026-09-15T00:00:00Z").ToUnixTimeMilliseconds());
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+	[Test, NotInParallel]
+	public async Task OwnCapabilityCannotMutateAnotherAccountsJob()
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.JobsManage, Arg.Any<CancellationToken>()).Returns(false);
+		var other = context.Actor with { AccountId = "other-account" };
+		await Assert.That((await context.Service.ListAsync(other)).Length).IsEqualTo(0);
+		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.DeleteAsync(other, job.Id));
+		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.ConfigureAsync(other, job.Id, job.Schedule, job.TimeZone, false));
+		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.ListAsync(other, true));
+		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.JobsManage, Arg.Any<CancellationToken>()).Returns(true);
+		var updated = await context.Service.ConfigureAsync(other, job.Id, job.Schedule, job.TimeZone, false);
+		await Assert.That(updated.OwnerAccount).IsEqualTo(context.Actor.AccountId);
+		await Assert.That(updated.Character).IsEqualTo(context.Actor.ActiveCharacter!.Value.ToString());
+	}
+
+	[Test, NotInParallel]
+	public async Task ActualQueueSuppliesAFreshBudgetToAttributeEvaluation()
+	{
+		var context = await Setup();
+		var parser = Substitute.For<IMUSHCodeParser>();
+		ParserState? state = null;
+		parser.FromState(Arg.Any<ParserState>()).Returns(call => { state = call.ArgAt<ParserState>(0); return parser; });
+		var observed = new TaskCompletionSource<ExecutionBudget?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { observed.TrySetResult(ExecutionBudget.Current); return ValueTask.FromResult<CallState?>(CallState.Empty); });
+		var service = new RecurringJobService(Get<IExpandedDataStore>(), Get<IObjectStore>(), context.Capabilities,
+			Get<IPermissionService>(), Get<IAttributeService>(), Get<QueueScheduler>(), parser, context.Clock);
+		await service.InitializeAsync();
+		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		var budget = await observed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		await Assert.That(budget).IsNotNull();
+		await Assert.That(state!.ExecutionBudget).IsEqualTo(budget);
+		await Assert.That(state.Executor).IsEqualTo(context.Actor.ActiveCharacter);
+		for (var attempt = 0; attempt < 100 && (await service.ListAsync(context.Actor)).Single().Status != "completed"; attempt++) await Task.Delay(10);
+		await Assert.That((await service.ListAsync(context.Actor)).Single().Status).IsEqualTo("completed");
+	}
+
+	[Test, NotInParallel]
+	public async Task GameCommandsCreateDisableAndDeleteThroughTheSharedService()
+	{
+		var context = await Setup();
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@job/create {context.Target}/RUN=* * * * *|UTC|game job"));
+		var job = (await context.Service.ListAsync(context.Actor)).Single();
+		await Assert.That(job.Description).IsEqualTo("game job");
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@job/disable {job.Id}"));
+		await Assert.That((await context.Service.ListAsync(context.Actor)).Single().Enabled).IsFalse();
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@job/delete {job.Id}"));
+		await Assert.That((await context.Service.ListAsync(context.Actor)).Length).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ExecutionRechecksDisabledAndUnlinkedAccounts(bool unlink)
+	{
+		var context = await Setup();
+		var account = new SharpAccount { Id = context.Actor.AccountId, Username = "job-owner", PasswordHash = "", Status = AccountStatus.Active };
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var accounts = Substitute.For<IAccountService>();
+		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
+		var capabilities = new AdministrativeCapabilityService(accounts, Get<IRoleRegistryService>(), Get<IRoleDerivationService>(), Get<IPermissionResolver>());
+		var service = Service(context.Clock, context.Queue, capabilities);
+		await service.InitializeAsync();
+		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		if (unlink) accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([]));
+		else account.Status = AccountStatus.Disabled;
+		await context.Callbacks.Single()();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
+	}
+
+}

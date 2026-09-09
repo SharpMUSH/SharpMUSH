@@ -530,6 +530,7 @@ public class Startup(
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
+		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, FreshPermissionClaimsTransformation>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
@@ -775,6 +776,7 @@ public class Startup(
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
+		services.AddHostedService<Services.RecurringJobRunner>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
