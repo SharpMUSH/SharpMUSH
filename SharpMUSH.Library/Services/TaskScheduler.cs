@@ -111,6 +111,16 @@ public partial class TaskScheduler(
 		lock (_admissionLock) entry = RemoveEntry(pid);
 		entry?.Cts.Dispose();
 	}
+	private bool ReleasePending(long pid)
+	{
+		QueueEntry? entry;
+		lock (_admissionLock)
+			// Reservation disposal cannot reclaim a body already published to the consumer.
+			entry = _ready.Contains(pid) || _running.Contains(pid) ? null : RemoveEntry(pid);
+		entry?.Cts.Dispose();
+		return entry is not null;
+	}
+
 	private void CancelEntry(QueueEntry entry)
 	{
 		try { entry.Cts.Cancel(); }
