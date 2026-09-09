@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Plugins;
+using SharpMUSH.Library.Attributes;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using Microsoft.Extensions.Logging;
@@ -175,6 +177,38 @@ public class LocalFunctionTests
 		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known;
 		await Mediator.Send(new SetObjectOwnerCommand(obj, await obj.Object().Owner.WithCancellation(CancellationToken.None)));
 		await Assert.That(await Eval($"localfun({name})")).IsEqualTo("unchanged");
+	}
+
+	private sealed class LocalNamePlugin(string name) : PluginBase
+	{
+		public override string Id => name;
+		public override IEnumerable<CommandDefinition> GetCommands() => [];
+		public override IEnumerable<FunctionDefinition> GetFunctions() =>
+			[new(new SharpFunctionAttribute { Name = name, Flags = FunctionFlags.Regular }, _ => ValueTask.FromResult(new CallState("plugin")))];
+	}
+
+	[Test]
+	public async Task PluginClaimPreventsAnExistingLocalFromResolving()
+	{
+		var name = "pluginclaim" + Guid.NewGuid().ToString("N");
+		await Cmd($"&{name} me=local");
+		await Cmd($"@function/local {name}=me,{name}");
+		await Assert.That(await Eval($"localfun({name})")).IsEqualTo("local");
+		await Cmd($"@function/local/alias {name}alias={name}");
+		var manager = (SharpMUSH.Implementation.Services.PluginManager)Factory.Services.GetRequiredService<IPluginManager>();
+		manager.RegisterPlugin(new LocalNamePlugin(name));
+		try
+		{
+			await Assert.That(await Eval($"{name}()")).IsEqualTo("plugin");
+			await Assert.That(await Eval($"localfun({name})")).Contains("NOT FOUND");
+			await Assert.That(await Eval($"localfun({name}alias)")).Contains("NOT FOUND");
+			var actor = await Factory.FunctionParser.CurrentState.KnownExecutorObject(Mediator);
+			var owner = (await actor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+			var registry = Factory.Services.GetRequiredService<IUserDefinedFunctionService>();
+			await Assert.That(registry.Get(name, owner)).IsNull();
+			await Assert.That(registry.Get(name + "alias", owner)).IsNull();
+		}
+		finally { await manager.UnloadAsync(name); }
 	}
 
 }

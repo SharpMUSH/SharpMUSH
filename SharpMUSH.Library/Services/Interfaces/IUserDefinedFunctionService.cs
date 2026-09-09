@@ -55,6 +55,9 @@ public interface IUserDefinedFunctionService
 	/// <summary>Removes local definitions backed by, or scoped to, a deleted or re-owned object.</summary>
 	void InvalidateLocalDefinitions(DBRef target);
 
+	/// <summary>Remove local definitions and aliases displaced by a compiled system name.</summary>
+	void InvalidateLocalName(string name);
+
 	/// <summary>Registers (or overwrites) a user-defined function in its declared scope.</summary>
 	void Define(UserDefinedFunction function);
 

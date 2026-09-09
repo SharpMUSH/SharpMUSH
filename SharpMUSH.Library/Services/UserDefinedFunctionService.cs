@@ -167,6 +167,15 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
+	public void InvalidateLocalName(string name)
+	{
+		foreach (var entry in _functions)
+			if (entry.Value.Owner is not null &&
+				(string.Equals(entry.Value.Name, name, StringComparison.OrdinalIgnoreCase)
+				 || string.Equals(entry.Value.AliasOf, name, StringComparison.OrdinalIgnoreCase)))
+				_functions.TryRemove(entry);
+	}
+
 	public void SetBuiltinRestriction(string name, string? restriction)
 	{
 		var key = name.ToLowerInvariant();
