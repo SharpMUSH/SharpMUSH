@@ -54,9 +54,7 @@ public static class ChannelWhat
 
 			lines.Add(MarkupText.Plain($"Flags: {ChannelHelper.PrivilegeNames(channel.Privs)}"));
 
-			var storedLines = await mediator
-				.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-				.CountAsync();
+			var storedLines = await mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 			lines.Add(MarkupText.Plain(
 				string.Format(ErrorMessages.Notifications.ChatRecallBufferSummary, channel.Buffer, storedLines)));
 

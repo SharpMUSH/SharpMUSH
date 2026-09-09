@@ -47,6 +47,14 @@ public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
 public static class ChannelHelper
 {
 	/// <summary>
+	/// PennMUSH <c>CHAN_NAME_LEN</c> (<c>hdrs/extchat.h:105</c>), which is 31 counting the terminator.
+	/// It is a constant there rather than a configuration option, and <c>@channel/list</c>'s Name column
+	/// is this wide because of it — <see cref="ChannelList"/> reads the same constant so the two cannot
+	/// drift. <c>chan_title_len</c> bounds a member's TITLE and is a different setting.
+	/// </summary>
+	public const int MaxChannelNameLength = 30;
+
+	/// <summary>
 	/// Channel privilege names and their single-character abbreviations, matching PennMUSH's
 	/// <c>priv_table</c> (<c>src/extchat.c:118</c>). The characters are case-sensitive: 'O' is Object
 	/// and 'o' is Open.
@@ -236,7 +244,7 @@ public static class ChannelHelper
 	/// </summary>
 	public static bool IsValidChannelName(IOptionsWrapper<SharpMUSHOptions> Configuration, string channelName)
 		=> channelName.Length != 0
-			 && Configuration.CurrentValue.Chat.ChannelTitleLength >= channelName.Length
+			 && channelName.Length <= MaxChannelNameLength
 			 && !channelName.Contains(' ')
 			 && !channelName.Contains('|')
 			 && channelName.All(x => !char.IsControl(x));
@@ -385,12 +393,15 @@ public static class ChannelHelper
 
 		foreach (var channel in all)
 		{
-			if (!await InScope(permissionService, viewer, channel, scope))
+			var candidateName = channel.Name.ToPlainText();
+
+			// Name first: InScope reads the membership store, and there is no reason to pay for that on a
+			// channel whose name cannot match either way.
+			if (!candidateName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
+					|| !await InScope(permissionService, viewer, channel, scope))
 			{
 				continue;
 			}
-
-			var candidateName = channel.Name.ToPlainText();
 
 			if (candidateName.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
@@ -399,8 +410,7 @@ public static class ChannelHelper
 					: ChannelMatch.NoMatch;
 			}
 
-			if (candidateName.StartsWith(name, StringComparison.OrdinalIgnoreCase)
-					&& await VisibleInScope(permissionService, viewer, channel, scope))
+			if (await VisibleInScope(permissionService, viewer, channel, scope))
 			{
 				candidates.Add(channel);
 			}
@@ -655,14 +665,22 @@ public static class ChannelHelper
 		public bool Gagging => Status.Gagged ?? false;
 
 		/// <summary>
-		/// PennMUSH <c>do_channel_who</c> (<c>src/extchat.c:2963</c>) and <c>fun_cwho</c>'s "on" arm
-		/// (<c>:3068</c>): a THING is always listed, a player only while connected, and a member who has
-		/// hidden on the channel only to a viewer with <c>Priv_Who</c>.
+		/// PennMUSH <c>do_channel_who</c> (<c>src/extchat.c:2963</c>): a THING counts as present, a player
+		/// only while connected, and either is withheld from a viewer without <c>Priv_Who</c> while hidden.
+		///
+		/// <para>Penn's <c>fun_cwho</c> (<c>:3068</c>) exempts a THING from the hide test, so its two
+		/// listings disagree about a hidden object. This takes <c>do_channel_who</c>'s rule for both:
+		/// <c>@channel/hide</c> means the same thing whoever set it.</para>
 		/// </summary>
-		public bool ListedAsOn(bool privilegedWho) => IsThing || (Connected && (!Hidden || privilegedWho));
+		public bool ListedAsOn(bool privilegedWho)
+			=> (IsThing || Connected) && (!Hidden || privilegedWho);
 
-		/// <summary>PennMUSH <c>fun_cwho</c>'s "off" arm (<c>src/extchat.c:3066</c>).</summary>
-		public bool ListedAsOff(bool privilegedWho) => IsThing || !Connected || (Hidden && !privilegedWho);
+		/// <summary>
+		/// PennMUSH <c>fun_cwho</c>'s "off" arm (<c>src/extchat.c:3066</c>), which is the complement of the
+		/// "on" arm: every member is in exactly one of the two, or <c>cwho(&lt;chan&gt;,on)</c> and
+		/// <c>cwho(&lt;chan&gt;,off)</c> would both name a connected object.
+		/// </summary>
+		public bool ListedAsOff(bool privilegedWho) => !ListedAsOn(privilegedWho);
 	}
 
 	/// <summary>

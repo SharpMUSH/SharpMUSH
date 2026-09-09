@@ -75,7 +75,9 @@ public static class ChannelEmit
 			message,
 			membership?.Status.Title ?? MarkupText.Empty,
 			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
+			// An emit carries no speech verb — channel_send's CB_EMIT does not take one. The default
+			// format ignores it, but a mogrifier or @chatformat is handed it as %6.
+			MarkupText.Empty,
 			[]
 		));
 

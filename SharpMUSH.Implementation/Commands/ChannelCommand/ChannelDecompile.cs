@@ -45,17 +45,17 @@ public static class ChannelDecompile
 
 		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 
-		List<string> commands =
+		List<MString> commands =
 		[
-			$"@channel/add {name} = {ChannelHelper.PrivilegeNames(channel.Privs)}",
-			$"@channel/chown {name} = {owner.Object.Name}"
+			MarkupText.Plain($"@channel/add {name} = {ChannelHelper.PrivilegeNames(channel.Privs)}"),
+			MarkupText.Plain($"@channel/chown {name} = {owner.Object.Name}")
 		];
 
 		void AddIfSet(string command, string value)
 		{
 			if (!string.IsNullOrEmpty(value))
 			{
-				commands.Add($"{command} {name} = {value}");
+				commands.Add(MarkupText.Plain($"{command} {name} = {value}"));
 			}
 		}
 
@@ -65,11 +65,19 @@ public static class ChannelDecompile
 		AddIfSet("@clock/join", channel.JoinLock);
 		AddIfSet("@clock/speak", channel.SpeakLock);
 		AddIfSet("@clock/see", channel.SeeLock);
-		AddIfSet("@channel/desc", channel.Description.ToPlainText());
+
+		// The switch is DESCRIBE — this dispatcher matches switch names exactly, where PennMUSH abbreviates
+		// them, so Penn's "@channel/desc" would not replay here. The description keeps its markup, since
+		// replaying a decompile has to reproduce the colour too.
+		if (channel.Description.Length != 0)
+		{
+			commands.Add(MarkupText.Concat(
+				MarkupText.Plain($"@channel/describe {name} = "), channel.Description));
+		}
 
 		if (channel.Buffer != 0)
 		{
-			commands.Add($"@channel/buffer {name} = {channel.Buffer}");
+			commands.Add(MarkupText.Plain($"@channel/buffer {name} = {channel.Buffer}"));
 		}
 
 		// extchat.c:2867 — /brief stops before the membership, and a member hiding on the channel is left
@@ -85,13 +93,13 @@ public static class ChannelDecompile
 					continue;
 				}
 
-				commands.Add(member.Object.IsPlayer
+				commands.Add(MarkupText.Plain(member.Object.IsPlayer
 					? $"@channel/on {name} = *{member.Object.Object().Name}"
-					: $"@channel/on {name} = #{member.Object.Object().DBRef.Number}");
+					: $"@channel/on {name} = #{member.Object.Object().DBRef.Number}"));
 			}
 		}
 
-		var output = MarkupText.Join(MarkupText.NewLine, commands.Select(MarkupText.Plain));
+		var output = MarkupText.Join(MarkupText.NewLine, commands);
 		await NotifyService.Notify(executor, output, executor);
 		return new CallState(output);
 	}

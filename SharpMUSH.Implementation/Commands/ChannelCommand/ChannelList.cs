@@ -18,7 +18,7 @@ public static class ChannelList
 {
 	/// <summary>PennMUSH's header, <c>"%-30s %-5s %8s %-16s %-9s %-3s"</c> (<c>src/extchat.c:2622</c>).</summary>
 	private static readonly string Header =
-		$"{"Name",-30} {"Users",-5} {"Msgs",8} {"Chan Type",-16} {"Status",-9} {"Buf",-3}";
+		$"{"Name".PadRight(ChannelHelper.MaxChannelNameLength)} {"Users",-5} {"Msgs",8} {"Chan Type",-16} {"Status",-9} {"Buf",-3}";
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
 		IPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
@@ -74,9 +74,7 @@ public static class ChannelList
 			}
 
 			var members = await ChannelHelper.ChannelMembers(ConnectionService, channel);
-			var messageCount = await Mediator
-				.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-				.CountAsync();
+			var messageCount = await Mediator.Send(new CountChannelMessagesQuery(channel.Id ?? string.Empty));
 			// The owner is read only to decide one character, so an unresolvable one costs the '*' and not
 			// the listing — see ChannelHelper.TryResolveOwner.
 			var owner = await ChannelHelper.TryResolveOwner(channel);
@@ -85,7 +83,8 @@ public static class ChannelList
 
 			rows.Add(MarkupText.Concat([
 				channel.Name,
-				MarkupText.Plain(new string(' ', Math.Max(30 - channelName.Length, 0))),
+				MarkupText.Plain(new string(' ',
+					Math.Max(ChannelHelper.MaxChannelNameLength - channelName.Length, 0))),
 				MarkupText.Plain($" {members.Count,5} {messageCount,8}"
 												 + $" [{ChannelTypeColumn(channel)} {LockColumn(channel, owned)}]"
 												 + $" [{StatusColumn(status)}] {channel.Buffer,3}")

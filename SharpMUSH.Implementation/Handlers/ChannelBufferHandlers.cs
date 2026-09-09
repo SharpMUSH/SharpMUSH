@@ -19,6 +19,13 @@ public class AddChannelMessageCommandHandler(IChannelBufferService bufferService
 	}
 }
 
+public class CountChannelMessagesQueryHandler(IChannelBufferService bufferService)
+	: IQueryHandler<CountChannelMessagesQuery, int>
+{
+	public ValueTask<int> Handle(CountChannelMessagesQuery query, CancellationToken cancellationToken)
+		=> bufferService.CountMessagesAsync(query.ChannelId);
+}
+
 /// <summary>
 /// Handler for retrieving messages from channel recall buffers
 /// </summary>

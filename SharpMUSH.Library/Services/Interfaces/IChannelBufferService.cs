@@ -26,6 +26,13 @@ public interface IChannelBufferService
 	IAsyncEnumerable<SharpChannelMessage> GetMessagesAsync(string channelId, int count);
 
 	/// <summary>
+	/// How many messages the channel's buffer holds — PennMUSH keeps this as <c>ChanNumMsgs(c)</c> on the
+	/// channel itself. <c>@channel/list</c> wants it for every visible channel at once, so it must not
+	/// mean reading every message of every one of them back.
+	/// </summary>
+	ValueTask<int> CountMessagesAsync(string channelId);
+
+	/// <summary>
 	/// Clears all messages from a channel's buffer
 	/// </summary>
 	/// <param name="channelId">The channel ID</param>

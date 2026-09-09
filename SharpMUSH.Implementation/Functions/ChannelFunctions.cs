@@ -289,17 +289,19 @@ public partial class Functions
 		var channel = maybeChannel.AsChannel;
 
 		// extchat.c:3400-3419 — five lock types, and anything else is an error rather than a silent JOIN.
-		var lockValue = lockType.ToUpperInvariant() switch
+		// The type is resolved to a reader before it is read, so "unrecognised type" and "recognised type
+		// holding nothing" cannot answer the same way.
+		Func<SharpChannel, string>? readLock = lockType.ToUpperInvariant() switch
 		{
-			"JOIN" => channel.JoinLock,
-			"SPEAK" => channel.SpeakLock,
-			"MOD" => channel.ModLock,
-			"SEE" => channel.SeeLock,
-			"HIDE" => channel.HideLock,
+			"JOIN" => x => x.JoinLock,
+			"SPEAK" => x => x.SpeakLock,
+			"MOD" => x => x.ModLock,
+			"SEE" => x => x.SeeLock,
+			"HIDE" => x => x.HideLock,
 			_ => null
 		};
 
-		if (lockValue is null)
+		if (readLock is null)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchLockType);
 		}
@@ -311,7 +313,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		return new CallState(lockValue);
+		return new CallState(readLock(channel) ?? string.Empty);
 	}
 
 	[SharpFunction(Name = "cmogrifier", MinArgs = 1, MaxArgs = 1,

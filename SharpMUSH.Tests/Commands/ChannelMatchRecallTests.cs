@@ -563,7 +563,9 @@ public class ChannelMatchRecallTests
 		await Assert.That(decompiled).Contains($"@channel/add {name} = Player Open");
 		await Assert.That(decompiled).Contains($"@channel/chown {name} = ");
 		await Assert.That(decompiled).Contains($"@clock/speak {name} = ");
-		await Assert.That(decompiled).Contains($"@channel/desc {name} = a decompiled channel");
+		// The registered switch is DESCRIBE and this dispatcher matches switch names exactly, so a
+		// decompile that emitted Penn's abbreviated "@channel/desc" would not replay.
+		await Assert.That(decompiled).Contains($"@channel/describe {name} = a decompiled channel");
 		await Assert.That(decompiled).Contains($"@channel/on {name} = *");
 	}
 
@@ -712,9 +714,8 @@ public class ChannelMatchRecallTests
 	}
 
 	/// <summary>
-	/// The whole point of routing both spellings through one implementation: a gate cannot be stricter on
-	/// one than the other. A guest reaches <c>crecall()</c> and <c>@channel/recall</c> through the same
-	/// <c>ChannelRecall.SelectAsync</c>, so neither hands back history the other refuses.
+	/// <c>crecall()</c> and <c>@channel/recall</c> reach the same <c>ChannelRecall.SelectAsync</c>, so
+	/// neither hands back history the other refuses.
 	/// </summary>
 	[Test]
 	public async Task Recall_RefusesTheSameNonMembersInBothSpellings()
@@ -764,5 +765,64 @@ public class ChannelMatchRecallTests
 
 		var granted = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
 		await Assert.That(await permissions.CanNoSpoof(granted)).IsTrue();
+	}
+
+	/// <summary>
+	/// A THING hiding on a channel is withheld from <c>@channel/who</c> and <c>cwho()</c> just as a player
+	/// is (<c>do_channel_who</c>, <c>src/extchat.c:2963</c>). PennMUSH's <c>fun_cwho</c> exempts THINGs
+	/// from the hide test, so its two listings disagree; this takes the command's rule for both.
+	/// </summary>
+	[Test]
+	public async Task ChannelWho_HidesAHiddenThing()
+	{
+		var name = UniqueChannel("WhoThing");
+		var channel = await CreateChannel(name, "Player", "Object", "Open", "Hide_Ok");
+		var watcher = await CreateMortal("ChanWhoThingWatcher");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Known));
+
+		var thingName = TestIsolationHelpers.GenerateUniqueName("ChanThing").Replace("_", string.Empty);
+		var created = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
+		var thingRef = DBRef.TryParse(created.Message!.ToPlainText().Trim(), out var parsed)
+			? parsed!.Value
+			: throw new InvalidOperationException($"@create did not return a dbref: {created.Message}");
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingRef))).Known;
+		await Mediator.Send(new AddUserToChannelCommand(channel, thing));
+
+		var visible = string.Join("\n",
+			await MessagesWhile(watcher.DbRef, () => Run(watcher, $"@channel/who {name}")));
+		await Assert.That(visible).Contains(thingName)
+			.Because("the control: an unhidden THING is listed even though it is never connected");
+
+		await Mediator.Send(new UpdateChannelUserStatusCommand(
+			(await Mediator.Send(new GetChannelQuery(name)))!, thing,
+			new SharpChannelStatus(null, null, true, null, null)));
+
+		var hidden = string.Join("\n",
+			await MessagesWhile(watcher.DbRef, () => Run(watcher, $"@channel/who {name}")));
+		await Assert.That(hidden).DoesNotContain(thingName);
+
+		var funResult = (await WebAppFactoryArg.FunctionParserFor(watcher.DbRef)
+			.FunctionParse(MarkupText.Plain($"cwho({name})")))!.Message!.ToPlainText();
+		await Assert.That(funResult).DoesNotContain($"#{thingRef.Number}");
+	}
+
+	/// <summary>
+	/// A channel name is bounded by PennMUSH's <c>CHAN_NAME_LEN</c> (<c>hdrs/extchat.h:105</c>), which is
+	/// a constant rather than a setting, and is why <c>@channel/list</c>'s Name column is 30 wide.
+	/// <c>chan_title_len</c> bounds a member's title and is a different thing.
+	/// </summary>
+	[Test]
+	public async Task ChannelAdd_RefusesANameLongerThanPennsLimit()
+	{
+		var tooLong = new string('c', ChannelHelper.MaxChannelNameLength + 1);
+		var longest = new string('c', ChannelHelper.MaxChannelNameLength);
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {tooLong}=player"));
+		await Assert.That(await Mediator.Send(new GetChannelQuery(tooLong))).IsNull();
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/add {longest}=player"));
+		await Assert.That(await Mediator.Send(new GetChannelQuery(longest))).IsNotNull()
+			.Because("the limit is inclusive");
 	}
 }

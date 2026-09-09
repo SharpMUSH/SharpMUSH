@@ -36,6 +36,9 @@ public class InMemoryChannelBufferService : IChannelBufferService
 		await ValueTask.CompletedTask;
 	}
 
+	public ValueTask<int> CountMessagesAsync(string channelId)
+		=> ValueTask.FromResult(_buffers.TryGetValue(channelId, out var buffer) ? buffer.Count : 0);
+
 	public ValueTask ClearBufferAsync(string channelId)
 	{
 		_buffers.TryRemove(channelId, out _);
@@ -57,6 +60,17 @@ public class InMemoryChannelBufferService : IChannelBufferService
 			_buffer = new T[size];
 			_nextIndex = 0;
 			_count = 0;
+		}
+
+		public int Count
+		{
+			get
+			{
+				lock (_lock)
+				{
+					return _count;
+				}
+			}
 		}
 
 		public void Add(T item)
