@@ -60,6 +60,20 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task ManagedDrainCompletesTheDiagnosticObservation()
+	{
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(diagnostics: diagnostics, scheduler: Substitute.For<IScheduler>());
+		var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		await queue.WriteCommandList(MarkupText.Plain("think pending"), ParserState.Empty, semaphore, 0);
+		using (await queue.EnterSemaphoreMutationAsync())
+			await Assert.That(await queue.ApplySemaphoreCommandAsync(semaphore, null, true,
+				_ => ValueTask.CompletedTask, () => ValueTask.FromResult(false))).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
+	}
+
+	[Test]
 	public async Task CreditOnlyReconciliationUsesFreshBudgetAfterCommandCancellation()
 	{
 		await using var queue = Create(scheduler: Substitute.For<IScheduler>());
