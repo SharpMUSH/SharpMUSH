@@ -17,7 +17,7 @@ IMAGES = {
     "connectionserver": "SharpMUSH.ConnectionServer/Dockerfile",
     "socketserver": "SharpMUSH.SocketServer/Dockerfile",
 }
-POLICY = {".github/workflows/docker-dev.yml", ".github/scripts/image_impact.py",
+POLICY = {".github/workflows/docker-dev.yml", ".github/workflows/_docker-dev-publish.yml", ".github/scripts/image_impact.py",
           ".github/scripts/docker_dev.py"}
 
 

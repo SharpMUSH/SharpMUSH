@@ -8,33 +8,6 @@ from unittest.mock import patch
 import docker_dev
 
 
-class QuietPeriodTests(unittest.TestCase):
-    def test_new_push_during_wait_skips_old_run(self):
-        heads = iter(['old', 'new'])
-        waits = []
-        self.assertFalse(docker_dev.quiet_period('old', 100, lambda: next(heads),
-                                                now=lambda: 200, sleep=waits.append))
-        self.assertEqual(waits, [500])
-
-    def test_queue_time_counts_toward_quiet_period(self):
-        waits = []
-        self.assertTrue(docker_dev.quiet_period('new', 100, lambda: 'new',
-                                               now=lambda: 650, sleep=waits.append))
-        self.assertEqual(waits, [50])
-
-    def test_already_quiet_starts_immediately(self):
-        waits = []
-        self.assertTrue(docker_dev.quiet_period('new', 100, lambda: 'new',
-                                               now=lambda: 800, sleep=waits.append))
-        self.assertEqual(waits, [])
-
-    def test_superseded_run_does_not_wait(self):
-        waits = []
-        self.assertFalse(docker_dev.quiet_period('old', 100, lambda: 'new',
-                                                now=lambda: 200, sleep=waits.append))
-        self.assertEqual(waits, [])
-
-
 class PublishedRevisionTests(unittest.TestCase):
     def test_single_platform_and_attested_image_config(self):
         config = {'config': {'Labels': {'org.opencontainers.image.revision': 'a' * 40}}}

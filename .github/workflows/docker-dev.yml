@@ -16,143 +16,28 @@ on:
 
 permissions:
   contents: read
-  actions: read
-
-# Keep the active publisher intact and replace pending runs with the newest push.
-# The gate measures quiet time from run creation, including time spent queued.
-concurrency:
-  group: docker-dev-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
   quiet-period:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    outputs:
-      ready: ${{ github.event_name == 'workflow_dispatch' || steps.quiet.outputs.ready == 'true' }}
+    # Only replace the waiting job. Active validation/publication stays intact.
+    concurrency:
+      group: docker-dev-quiet-${{ github.ref }}-${{ github.event_name }}
+      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v6
       - name: Wait for ten minutes without a newer push
         if: github.event_name == 'push'
-        id: quiet
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 .github/scripts/docker_dev.py quiet
+        run: sleep 600
 
-  build-and-test:
+  publish:
     needs: [quiet-period]
-    if: needs.quiet-period.outputs.ready == 'true'
-    uses: ./.github/workflows/_dotnet-build-test.yml
-
-  build-and-push-dev:
-    needs: [build-and-test]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to DockerHub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Compare each published image's OCI revision with this validated commit.
-      # A skipped push or partially failed publication must not lose image changes.
-      - name: Detect changed image inputs since publication
-        if: github.event_name == 'push'
-        id: changes
-        run: python3 .github/scripts/docker_dev.py impact
-
-      - name: Build and push SharpMUSH Server (dev)
-        id: push_server
-        if: >-
-          steps.changes.outputs.server == 'true' ||
-          (github.event_name == 'workflow_dispatch' &&
-           (inputs.publish == 'all' || inputs.publish == 'server'))
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: sharpmush/sharpmush-server:dev
-          labels: |
-            org.opencontainers.image.title=SharpMUSH Server
-            org.opencontainers.image.description=Modern MUSH server implementation (dev build)
-            org.opencontainers.image.version=dev
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push ConnectionServer (dev)
-        id: push_conn
-        if: >-
-          steps.changes.outputs.connectionserver == 'true' ||
-          (github.event_name == 'workflow_dispatch' &&
-           (inputs.publish == 'all' || inputs.publish == 'connectionserver'))
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: ./SharpMUSH.ConnectionServer/Dockerfile
-          push: true
-          tags: sharpmush/sharpmush-connectionserver:dev
-          labels: |
-            org.opencontainers.image.title=SharpMUSH ConnectionServer
-            org.opencontainers.image.description=Rendering worker for SharpMUSH (dev build)
-            org.opencontainers.image.version=dev
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push SocketServer (dev)
-        id: push_socket
-        if: >-
-          steps.changes.outputs.socketserver == 'true' ||
-          (github.event_name == 'workflow_dispatch' &&
-           (inputs.publish == 'all' || inputs.publish == 'socketserver'))
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: ./SharpMUSH.SocketServer/Dockerfile
-          push: true
-          tags: sharpmush/sharpmush-socketserver:dev
-          labels: |
-            org.opencontainers.image.title=SharpMUSH SocketServer
-            org.opencontainers.image.description=Stable socket owner for SharpMUSH (dev build)
-            org.opencontainers.image.version=dev
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Summary
-        run: |
-          {
-            echo "## 🐳 Dev Docker Images"
-            echo ""
-            if [ "${{ steps.push_server.outcome }}" = "success" ]; then
-              echo "- \`sharpmush/sharpmush-server:dev\` — **pushed**"
-            else
-              echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
-            fi
-            if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
-              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed**"
-            else
-              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — not published (inputs unchanged, or not selected on a manual run); rendering worker unchanged"
-            fi
-            if [ "${{ steps.push_socket.outcome }}" = "success" ]; then
-              echo '- `sharpmush/sharpmush-socketserver:dev` — **pushed; replacing this image drops live sockets**'
-            else
-              echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
-            fi
-            echo ""
-            echo "**Commit:** ${{ github.sha }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+    # Serialize validation and publication as one unit, retaining only the latest
+    # pending call. This group is separate from the cancellable quiet-period job.
+    concurrency:
+      group: docker-dev-${{ github.ref }}
+      cancel-in-progress: false
+    uses: ./.github/workflows/_docker-dev-publish.yml
+    with:
+      publish: ${{ inputs.publish || 'all' }}
+    secrets: inherit
