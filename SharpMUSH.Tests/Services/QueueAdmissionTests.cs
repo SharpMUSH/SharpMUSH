@@ -86,6 +86,61 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ReservedCompletionCountsQuotaAndPublishesAtFifoTailExactlyOnce()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var completed = Signal(); var started = Signal(); var release = Signal();
+		var order = new List<string>();
+		parser.CommandListParse(Arg.Any<MString>()).Returns(_ => { order.Add("completion"); completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(global: 3, parser: parser);
+		var blocker = await queue.EnqueueWork(async () => { started.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+			await Assert.That(reserved.Admission.Accepted).IsTrue();
+			await Assert.That((await queue.EnqueueWork(() => { order.Add("row"); return ValueTask.FromResult<CallState?>(null); }, "row", "test")).Accepted).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(3);
+			await Assert.That((await queue.EnqueueWork(() => ValueTask.FromResult<CallState?>(null), "overflow", "test")).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
+			await Assert.That((await reserved.PublishAsync()).Accepted).IsTrue();
+			await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+			reserved.Dispose();
+			release.TrySetResult();
+			await completed.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(order.ToArray()).IsEquivalentTo(new[] { "row", "completion" });
+			await Assert.That(order[0]).IsEqualTo("row");
+		}
+		finally { release.TrySetResult(); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AbandonedOrHaltedReservationReleasesQuotaWithoutPublishing(bool halt)
+	{
+		await using var queue = Create(global: 1, scheduler: Substitute.For<IScheduler>());
+		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(reserved.Admission.Accepted).IsTrue();
+		if (halt) await queue.HaltByPid(reserved.Admission.Pid!.Value);
+		else reserved.Dispose();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		using var next = await queue.ReserveCommandList(MarkupText.Plain("next"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(next.Admission.Accepted).IsTrue();
+	}
+
+	[Test]
+	public async Task ShutdownReleasesUnpublishedCompletion()
+	{
+		var queue = Create(global: 1, scheduler: Substitute.For<IScheduler>());
+		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
+		await queue.DisposeAsync();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.ShuttingDown);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task BackgroundAdmissionCanSuppressRejectionPublication(bool notify)

@@ -401,6 +401,15 @@ public partial class TaskScheduler(
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor);
 	}
 
+	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+	{
+		state = await CaptureExecutor(state);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, ready: false);
+		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
+		var pid = admission.Pid!.Value;
+		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
+	}
+
 	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
 	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 

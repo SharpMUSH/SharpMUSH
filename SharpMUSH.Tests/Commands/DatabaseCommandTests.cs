@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Requests;
@@ -156,7 +157,7 @@ public class DatabaseCommandTests
 		parser.CommandParse(Arg.Any<MString>()).Returns(CallState.Empty);
 		var admission = Substitute.For<IMediator>();
 		admission.Send(Arg.Any<QueueAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
-		admission.Send(Arg.Any<QueueCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(null, reason));
+		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(QueueCommandReservation.Rejected(reason));
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
 		await parser.DidNotReceive().CommandParse(Arg.Any<MString>());
@@ -167,7 +168,7 @@ public class DatabaseCommandTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
-	public async Task MapSqlNotifyReleasesAnExistingWaiterWhenCompletionAdmissionIsRejected(bool saturated)
+	public async Task MapSqlNotifyReleasesAnExistingWaiterAtOwnerCapacity(bool saturated)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNotifyCapacity");
@@ -191,7 +192,7 @@ public class DatabaseCommandTests
 			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			if (saturated)
 			{
-				for (var i = 2; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+				for (var i = 3; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
 				{
 					var admission = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"),
 						ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
@@ -215,6 +216,81 @@ public class DatabaseCommandTests
 			await scheduler.Halt(player.DbRef);
 			await scheduler.HaltByPid(blocker.Pid!.Value);
 		}
+	}
+
+	[Test]
+	public async Task MapSqlNotifyDoesNotCreateACreditBeforeQueuedRowsRun()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlOrderedCompletion");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "ordered-map-" + Guid.NewGuid().ToString("N");
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPORDER me=think row-" + marker));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var blocker = await scheduler.EnqueueWork(async () => { started.TrySetResult(); await release.Task; return null; }, "mapsql-order-test", "test");
+		var reservations = new List<long>();
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			for (var i = 2; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+			{
+				var admission = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				await Assert.That(admission.Accepted).IsTrue();
+				reservations.Add(admission.Pid!.Value);
+			}
+			await parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain("@mapsql/notify me/MAPORDER=SELECT 1 AS col1 UNION ALL SELECT 2 AS col1"));
+			var counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
+			await Assert.That(counter?.Value.ToPlainText() ?? "0").IsEqualTo("0");
+			await scheduler.HaltByPid(reservations[0]);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
+			counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
+			await Assert.That(counter!.Value.ToPlainText()).IsEqualTo("1");
+			release.TrySetResult();
+			await WaitForNotificationAsync(NotifyService, text => text == marker, timeoutMs: 3000);
+			var messages = NotifyService.ReceivedCalls().Select(call => call.GetArguments())
+				.Where(args => args.Length > 1 && args[1] is OneOf<MString, string>)
+				.Select(args => ((OneOf<MString, string>)args[1]!).Match(text => text.ToString(), text => text))
+				.Where(text => text == marker || text == "row-" + marker).ToArray();
+			await Assert.That(messages[0]).IsEqualTo("row-" + marker);
+			await Assert.That(messages[^1]).IsEqualTo(marker);
+		}
+		finally
+		{
+			release.TrySetResult();
+			await scheduler.Halt(player.DbRef);
+			await scheduler.HaltByPid(blocker.Pid!.Value);
+		}
+	}
+
+	[Test]
+	public async Task MapSqlNotifyQueryErrorDoesNotLeakCompletionReservation()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCompletionError");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPERROR me=think unreachable"));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var before = scheduler.GetQueueUsage().Total;
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPERROR=SELECT missing_column FROM test_mapsql_data_cmd"));
+		await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(before);
+		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).AnyAsync()).IsFalse();
+	}
+
+	[Test]
+	public async Task MapSqlNotifyWithZeroRowsStillPublishesCompletion()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlEmptyCompletion");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "empty-map-" + Guid.NewGuid().ToString("N");
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPEMPTY me=think unexpected-row"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPEMPTY=SELECT 1 WHERE 0"));
+		await WaitForNotificationAsync(NotifyService, text => text == marker, timeoutMs: 3000);
 	}
 
 	[Test]
