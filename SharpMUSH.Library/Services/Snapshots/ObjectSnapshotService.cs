@@ -40,10 +40,11 @@ public sealed partial class ObjectSnapshotService(
 		var (executor, obj) = await Authorize(actor, target, scope, ct);
 		var history = await Read(obj, ct);
 		var visible = new List<ObjectSnapshot>();
+		var reads = new ReadContext(objects, attributes, obj.Object().DBRef);
 		foreach (var saved in history.Snapshots.Where(s => s.CreatorAccount == actor.AccountId))
 		{
 			Find(history, saved.Id, obj, actor.AccountId);
-			if (await CanRead(executor, obj, saved, ct)) visible.Add(saved);
+			if (await CanRead(executor, obj, saved, reads, ct)) visible.Add(saved);
 		}
 		return history with { Snapshots = visible.ToArray() };
 	}
@@ -67,8 +68,10 @@ public sealed partial class ObjectSnapshotService(
 	{
 		var (executor, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
 		var snapshot = Find(await Read(obj, ct), snapshotId, obj, actor.AccountId);
-		await ValidateSelection(executor, obj, snapshot, selection, ct);
-		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal));
+		selection = NormalizeSelection(selection);
+		var reads = new ReadContext(objects, attributes, obj.Object().DBRef);
+		await ValidateSelection(executor, obj, snapshot, selection, reads, ct);
+		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal), reads);
 		return Preview(snapshot, current, selection);
 	}
 
@@ -80,8 +83,10 @@ public sealed partial class ObjectSnapshotService(
 			var (executor, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
 			var history = await Read(obj, ct);
 			var snapshot = Find(history, snapshotId, obj, actor.AccountId);
-			await ValidateSelection(executor, obj, snapshot, selection, ct);
-			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal));
+			selection = NormalizeSelection(selection);
+			var reads = new ReadContext(objects, attributes, obj.Object().DBRef);
+			await ValidateSelection(executor, obj, snapshot, selection, reads, ct);
+			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal), reads);
 			if (Preview(snapshot, before, selection).Token != previewToken)
 				throw Error("stale-preview", "The object or selection changed. Preview again before restoring.");
 			if (history.PendingRecoveryId is not null && history.PendingRecoveryId != snapshot.Id)
@@ -151,15 +156,16 @@ public sealed partial class ObjectSnapshotService(
 		return (executor.Known, obj.Known);
 	}
 
-	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IReadOnlySet<string>? lockNames = null)
+	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IReadOnlySet<string>? lockNames = null, ReadContext? reads = null)
 	{
+		reads ??= new(objects, attributes, obj.Object().DBRef);
 		var selectedNames = selection?.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1)))).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
 		await foreach (var attribute in attributes.GetAttributesAsync(obj.Object().DBRef, "**", ct))
 		{
 			if (selectedNames is not null && !selectedNames.Contains(attribute.LongName)) continue;
-			var path = await attributes.GetAttributeAsync(obj.Object().DBRef, attribute.LongName.Split('`'), ct).ToArrayAsync(ct);
+			var path = await reads.Path(attribute.LongName, ct);
 			if (!await permissions.CanViewAttribute(executor, obj, path)) continue;
 			if (captured.Count == MaxAttributes) throw Error("limit", "Snapshot exceeds 1024 attributes.");
 			var markup = MarkupTextSerializer.Serialize(attribute.Value);
@@ -208,19 +214,19 @@ public sealed partial class ObjectSnapshotService(
 		return snapshot;
 	}
 
-	private async Task ValidateSelection(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, CancellationToken ct)
+	private async Task ValidateSelection(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, ReadContext reads, CancellationToken ct)
 	{
 		if (snapshot.RecoverySelection is { } required &&
 			(required.Attributes.Concat(snapshot.AbsentAttributes).Except(selection.Attributes ?? []).Any() ||
 				(selection.Attributes ?? []).Except(required.Attributes.Concat(snapshot.AbsentAttributes)).Any() ||
 				required.Locks != selection.Locks || required.Flags != selection.Flags || required.Name != selection.Name))
 			throw Error("invalid", "Recovery must select exactly the fields from the interrupted restore.");
-		if (!await CanRead(executor, obj, snapshot, ct)) throw Error("denied", "The snapshot contains fields the active player cannot currently read.");
+		if (!await CanRead(executor, obj, snapshot, reads, ct)) throw Error("denied", "The snapshot contains fields the active player cannot currently read.");
 		if (selection.Attributes is null || selection.Attributes.Distinct(StringComparer.Ordinal).Count() != selection.Attributes.Length ||
 			selection.Attributes.Any(name => !snapshot.Attributes.Any(a => a.Name == name) && !snapshot.AbsentAttributes.Contains(name))) throw Error("invalid", "Select unique attributes present in the snapshot.");
 		foreach (var name in selection.Attributes)
 		{
-			var chain = await attributes.GetAttributeAsync(obj.Object().DBRef, name.Split('`'), ct).ToArrayAsync(ct);
+			var chain = await reads.Path(name, ct);
 			if (!await permissions.CanSet(executor, obj, chain)) throw Error("denied", "An attribute is protected: " + name);
 			if (snapshot.Attributes.FirstOrDefault(a => a.Name == name) is { } savedAttribute)
 				_ = MarkupTextSerializer.Deserialize(savedAttribute.Markup);
@@ -247,6 +253,42 @@ public sealed partial class ObjectSnapshotService(
 			}
 	}
 
+	private static SnapshotSelection NormalizeSelection(SnapshotSelection? selection)
+	{
+		if (selection?.Attributes is not { } names || names.Any(name => name is null))
+			throw Error("invalid", "Select unique attributes present in the snapshot.");
+		return selection with { Attributes = names.Select(name => name.ToUpperInvariant()).ToArray() };
+	}
+
+	// One operation, one object: authorization is still fresh for each request and each write.
+	// Retain access metadata only, so large current attribute values do not fill the lookup cache.
+	private sealed class ReadContext(IObjectStore objects, IAttributeStore attributes, DBRef target)
+	{
+		private readonly Dictionary<DBRef, SharpPlayer> owners = [];
+		private readonly Dictionary<string, SharpAttributeFlag> flags = new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, SharpAttribute[]> paths = new(StringComparer.OrdinalIgnoreCase);
+		public async Task<SharpPlayer> Owner(DBRef identity, CancellationToken ct)
+		{
+			if (owners.TryGetValue(identity, out var cached)) return cached;
+			var found = await objects.GetObjectNodeAsync(identity, ct);
+			if (!found.IsPlayer || !found.AsPlayer.Object.DBRef.Equals(identity))
+				throw Error("missing", "An attribute creator no longer exists.");
+			return owners[identity] = found.AsPlayer;
+		}
+		public async Task<SharpAttributeFlag> Flag(string name, CancellationToken ct)
+		{
+			if (flags.TryGetValue(name, out var cached)) return cached;
+			return flags[name] = await attributes.GetAttributeFlagAsync(name, ct)
+				?? throw Error("missing", "An attribute flag no longer exists.");
+		}
+		public async Task<SharpAttribute[]> Path(string name, CancellationToken ct)
+		{
+			if (paths.TryGetValue(name, out var cached)) return cached;
+			var path = await attributes.GetAttributeAsync(target, name.Split('`'), ct).ToArrayAsync(ct);
+			return paths[name] = path.Select(attribute => attribute with { Value = MarkupText.Empty }).ToArray();
+		}
+	}
+
 	private static void ValidateLockWrite(AnySharpObject obj, string name, LockService.LockFlags savedFlags = 0)
 	{
 		var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
@@ -254,7 +296,7 @@ public sealed partial class ObjectSnapshotService(
 			throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
 	}
 
-	private async Task<bool> CanRead(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot saved, CancellationToken ct)
+	private async Task<bool> CanRead(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot saved, ReadContext reads, CancellationToken ct)
 	{
 		foreach (var attribute in saved.Attributes)
 		{
@@ -262,18 +304,17 @@ public sealed partial class ObjectSnapshotService(
 			foreach (var value in attribute.Ancestors.Append(new SnapshotAccess(attribute.Name, attribute.Flags, attribute.Owner)))
 			{
 				if (!DBRef.TryParse(value.Owner, out var ownerRef) || ownerRef is not { IsObjid: true } full) throw Error("corrupt", "Invalid attribute creator identity.");
-				var owner = await objects.GetObjectNodeAsync(full, ct);
-				if (!owner.IsPlayer || owner.AsPlayer.Object.DBRef != full) throw Error("missing", "An attribute creator no longer exists.");
+				var owner = await reads.Owner(full, ct);
 				var flags = new List<SharpAttributeFlag>();
 				foreach (var name in value.Flags)
-					flags.Add(await attributes.GetAttributeFlagAsync(name, ct) ?? throw Error("missing", "An attribute flag no longer exists."));
+					flags.Add(await reads.Flag(name, ct));
 				var historical = new SharpAttribute("", "", value.Name, flags, null, value.Name,
 					new(_ => Task.FromResult(Array.Empty<SharpAttribute>().ToAsyncEnumerable())),
-					new(_ => Task.FromResult<SharpPlayer?>(owner.AsPlayer)), new(_ => Task.FromResult<SharpAttributeEntry?>(null)));
+					new(_ => Task.FromResult<SharpPlayer?>(owner)), new(_ => Task.FromResult<SharpAttributeEntry?>(null)));
 				historicalPath.Add(historical);
 			}
 			if (!await permissions.CanViewAttribute(executor, obj, historicalPath.ToArray())) return false;
-			var current = await attributes.GetAttributeAsync(obj.Object().DBRef, attribute.Name.Split('`'), ct).ToArrayAsync(ct);
+			var current = await reads.Path(attribute.Name, ct);
 			if (current.Length > 0 && !await permissions.CanViewAttribute(executor, obj, current)) return false;
 		}
 		foreach (var (name, value) in saved.Locks)

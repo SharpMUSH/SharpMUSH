@@ -32,7 +32,9 @@ public class ObjectSnapshotTests
 	}
 
 	[Test, NotInParallel]
-	public async Task CapturePreviewRestorePreservesValuesAndClearsPendingMarker()
+	[Arguments("DESC")]
+	[Arguments("desc")]
+	public async Task CapturePreviewRestorePreservesValuesAndClearsPendingMarker(string selectedName)
 	{
 		var (actor, target, player) = await Setup();
 		var service = Get<IObjectSnapshotService>();
@@ -45,7 +47,7 @@ public class ObjectSnapshotTests
 		await Get<IManipulateSharpObjectService>().SetOrUnsetFlag(player, node, "!DARK", false);
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player));
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("changed"), player));
-		var selection = new SnapshotSelection(["DESC"], Locks: true, Flags: true);
+		var selection = new SnapshotSelection([selectedName], Locks: true, Flags: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
 		await Assert.That(result.Completed).IsTrue();
@@ -90,7 +92,8 @@ public class ObjectSnapshotTests
 		{
 			var image = altered with { Digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(altered with { Digest = "" }, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))))) };
 			await Get<IExpandedDataStore>().SetExpandedObjectData(obj.Id!, ObjectSnapshotService.StorageKey, new SnapshotStorageRecord(new([image])));
-			await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.PreviewAsync(actor, target, image.Id, new(["DESC"])));
+			var failure = await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.PreviewAsync(actor, target, image.Id, new(["DESC"])));
+			await Assert.That(failure!.Code).IsEqualTo("corrupt");
 		}
 	}
 
@@ -404,6 +407,58 @@ public class ObjectSnapshotTests
 		var finalPreview = await real.PreviewAsync(actor, target, second.RecoverySnapshotId, selection);
 		await Assert.That((await real.RestoreAsync(actor, target, second.RecoverySnapshotId, selection, finalPreview.Token)).Completed).IsTrue();
 		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
+	}
+
+	[Test, NotInParallel]
+	public async Task NestedAttributeRecoveryRemovesOnlyPreviouslyAbsentParents()
+	{
+		var (actor, target, player) = await Setup();
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["A", "B"], MarkupText.Plain("nested"), player));
+		var real = Get<IObjectSnapshotService>();
+		var saved = await real.CaptureAsync(actor, target, "nested before");
+		await Get<IMediator>().Send(new ClearAttributeCommand(target, ["A", "B"]));
+		await Get<IMediator>().Send(new ClearAttributeCommand(target, ["A"]));
+		var failing = Substitute.For<IManipulateSharpObjectService>();
+		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
+			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected after nested write")));
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection(["A`B"], Name: true);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var failed = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
+		await Assert.That(failed.Completed).IsFalse();
+		var recovery = (await real.ListAsync(actor, target)).Snapshots.Single(s => s.Id == failed.RecoverySnapshotId);
+		await Assert.That(recovery.AbsentAttributes).Contains("A");
+		var recoverySelection = new SnapshotSelection(recovery.DefaultAttributes(), Name: true);
+		var recoveryPreview = await real.PreviewAsync(actor, target, recovery.Id, recoverySelection);
+		await Assert.That((await real.RestoreAsync(actor, target, recovery.Id, recoverySelection, recoveryPreview.Token)).Completed).IsTrue();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["A"]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
+	public async Task HistoryReusesCurrentAttributeReadsWithinOneRequest()
+	{
+		var (actor, target, player) = await Setup();
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		await Get<IAttributeService>().SetAttributeFlagAsync(player, node, "DESC", "VISUAL");
+		for (var i = 0; i < 3; i++) await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "version " + i);
+		var reads = 0;
+		var ownerReads = 0;
+		var flagReads = 0;
+		var objects = Substitute.For<IObjectStore>();
+		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => { if (call.ArgAt<DBRef>(0).Equals(player.Object.DBRef)) ownerReads++; return Get<IObjectStore>().GetObjectNodeAsync(call.ArgAt<DBRef>(0), call.ArgAt<CancellationToken>(1)); });
+		var attributes = Substitute.For<IAttributeStore>();
+		attributes.GetAttributeAsync(Arg.Any<DBRef>(), Arg.Any<string[]>(), Arg.Any<CancellationToken>())
+			.Returns(call => { reads++; return Get<IAttributeStore>().GetAttributeAsync(call.ArgAt<DBRef>(0), call.ArgAt<string[]>(1), call.ArgAt<CancellationToken>(2)); });
+		attributes.GetAttributeFlagAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => { flagReads++; return Get<IAttributeStore>().GetAttributeFlagAsync(call.ArgAt<string>(0), call.ArgAt<CancellationToken>(1)); });
+		var service = new ObjectSnapshotService(objects, attributes, Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(3);
+		await Assert.That(reads).IsEqualTo(1);
+		await Assert.That(ownerReads).IsEqualTo(2); // Fresh actor authorization plus one historical owner lookup.
+		await Assert.That(flagReads).IsEqualTo(1);
 	}
 
 }

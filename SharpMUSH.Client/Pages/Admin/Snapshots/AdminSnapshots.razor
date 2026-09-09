@@ -76,6 +76,16 @@
     private bool RecoverySelected => _history?.Snapshots.Any(saved => saved.Id == _selected && saved.RecoverySelection is not null) == true;
     private SnapshotSelection Selection => new(_attributes.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), _locks, _flags, _name);
     private void ClearPreview() => _preview = null;
+    private void ReconcileSelection()
+    {
+        if (_selected is not null && _history?.Snapshots.Any(saved => saved.Id == _selected) != true)
+        {
+            _selected = null;
+            _attributes = "";
+            _locks = _flags = _name = false;
+            ClearPreview();
+        }
+    }
     private void ClearTarget() { _history = null; _selected = null; ClearPreview(); }
     private void Select(string id)
     {
@@ -83,18 +93,21 @@
         var saved = _history!.Snapshots.Single(s => s.Id == id);
         _attributes = string.Join('\n', saved.DefaultAttributes());
         if (saved.RecoverySelection is { } recovery) { _locks = recovery.Locks; _flags = recovery.Flags; _name = recovery.Name; }
+        else { _locks = _flags = _name = false; }
         ClearPreview();
     }
     private async Task Load() => await Run(async () =>
     {
         var response = await Api.GetAsync("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target));
         _history = await Read<SnapshotHistory>(response);
+        ReconcileSelection();
+        ClearPreview();
     });
     private async Task Capture() => await Run(async () =>
     {
         var response = await Api.PostAsJsonAsync("api/object-snapshots/capture", new { ObjectId = _target, Description = _description, Retain = _retain });
         var saved = await Read<ObjectSnapshot>(response);
-        if (saved is not null) { _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target)); _notice = Loc["SnapshotsCaptured"]; ClearPreview(); }
+        if (saved is not null) { _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target)); _notice = Loc["SnapshotsCaptured"]; ReconcileSelection(); ClearPreview(); }
     });
     private async Task Preview() => await Run(async () =>
     {
