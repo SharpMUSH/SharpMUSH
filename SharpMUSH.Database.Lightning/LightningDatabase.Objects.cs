@@ -988,7 +988,7 @@ public partial class LightningDatabase
 	/// names were canonical loads with one entry per lock under the spelling the gates read. See
 	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
 	/// </summary>
-	private static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
+	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
 		=> LockNames.FoldToImmutable(locks,
 			record => new SharpLockData(record.LockString,
 				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));

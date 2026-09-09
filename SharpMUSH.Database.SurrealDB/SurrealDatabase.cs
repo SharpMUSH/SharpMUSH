@@ -336,7 +336,7 @@ public partial class SurrealDatabase(
 	/// one lock, and deserialising straight into a case-insensitive map would throw on it. See
 	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives.
 	/// </summary>
-	private static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
+	internal static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
 			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
