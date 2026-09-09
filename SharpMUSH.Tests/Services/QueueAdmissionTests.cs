@@ -58,6 +58,63 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	[Arguments("read", true)]
+	[Arguments("write", true)]
+	[Arguments("read", false)]
+	[Arguments("write", false)]
+	public async Task DirectSemaphoreAdmissionHasShutdownLinkedFiniteTransaction(string stage, bool shutdown)
+	{
+		var entered = Signal();
+		using var release = new CancellationTokenSource();
+		var count = 0;
+		var mediator = CountingMediator(() => count, value => count = value);
+		async Task Block(CancellationToken token)
+		{
+			entered.TrySetResult();
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
+		}
+		async IAsyncEnumerable<SharpAttribute> Read([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
+		{
+			await Block(token);
+			yield break;
+		}
+		if (stage == "read")
+			mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => Read(call.Arg<CancellationToken>()));
+		else
+		{
+			var writes = 0;
+			mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+				.Returns(async ValueTask<bool> (call) =>
+				{
+					if (Interlocked.Increment(ref writes) == 1) await Block(call.Arg<CancellationToken>());
+					count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+					return true;
+				});
+		}
+		var queue = Create(mediator: mediator, milliseconds: 0);
+		var admission = queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1), true).AsTask();
+		Task? stopping = null;
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			if (shutdown) stopping = queue.DisposeAsync().AsTask();
+			await Assert.That(async () => await admission.WaitAsync(TimeSpan.FromSeconds(3))).Throws<OperationCanceledException>();
+			if (stopping is not null) await stopping.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(count).IsEqualTo(0);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally
+		{
+			release.Cancel();
+			try { await admission; } catch (OperationCanceledException) { }
+			if (stopping is not null) await stopping;
+			else await queue.DisposeAsync();
+		}
+	}
+
+	[Test]
 	[Arguments("executor", false)]
 	[Arguments("enactor", false)]
 	[Arguments("caller", false)]

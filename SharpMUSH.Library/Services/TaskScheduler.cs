@@ -454,6 +454,14 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
 	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
+		// Direct callers have no queue-entry budget; shutdown must still interrupt
+		// every provider operation while this transaction owns the semaphore gate.
+		using var transactionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
+		using var transactionBudget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining,
+			transactionCancellation.Token);
+		using var transactionScope = transactionBudget.Enter();
+		transactionBudget.ThrowIfExceeded();
 		if (!manageSemaphoreCount && oldValue < 0) return await AdmitCommandList(command, state);
 		state = await CaptureExecutor(state);
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
