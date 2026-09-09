@@ -77,6 +77,20 @@ Supporting changes:
 `MoveService` becomes a transcription of `move.c`'s three entry points, replacing the single
 `ExecuteMoveAsync`:
 
+**Environment arguments, taken from the call sites verbatim.** `did_it_with`'s signature is
+`(player, thing, what, def, owhat, odef, awhat, loc, env0, env1, flags, an_flags)`, so:
+
+| Triad | `loc` | `%0` | `%1` | Penn |
+|---|---|---|---|---|
+| `OXMOVE` | `old` | `where` | `old` | `move.c:106` |
+| `LEAVE`/`OLEAVE`/`ALEAVE` | `old` | `where` | — | `move.c:110` |
+| `ENTER`/`OENTER`/`AENTER` | `where` | `old` | — | `move.c:138` |
+| `MOVE`/`OMOVE`/`AMOVE` | `where` | `where` | `old` | `move.c:163` |
+
+`OXLEAVE`, `OXENTER`, the zone triads and every non-hearer action attribute go through
+`did_it_interact`/`did_it`, which pass `pe_regs = NULL` — they get **no** environment at all.
+These values are softcode-observable, so a test written against anything else is wrong.
+
 - **`MoveIt(what, where, nomovemsgs, enactor, cause)`** — `moveit` (`move.c:66`). Computes `old`,
   `absold`, `oldSeeswhat`, `whereSeeswhat` *before* the write; performs the write; then fires, in
   Penn's exact order:
