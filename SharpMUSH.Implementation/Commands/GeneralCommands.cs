@@ -2545,7 +2545,7 @@ public partial class Commands
 			{
 				await Mediator.Send(new QueueCommandListRequest(
 					action,
-					parser.CurrentState,
+					QueuedActionState(parser),
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 				return;
@@ -2722,6 +2722,29 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidFirstArgumentFormat), executor);
 				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "FIRST ARGUMENT"));
 		}
+	}
+
+	/// <summary>
+	/// The state a matched @switch/@select action is queued with. PennMUSH hands the new queue entry
+	/// a CLONE of the calling pe_info (<c>PE_INFO_CLONE</c> in do_switch, src/predicat.c:1121), so the
+	/// action sees the q-registers and %0-%9 as they stood when it was queued. Sharing the live stack
+	/// instead loses them: the calling action list pops its register frame long before the queue
+	/// consumer gets to the entry.
+	/// </summary>
+	private static ParserState QueuedActionState(IMUSHCodeParser parser)
+	{
+		var state = parser.CurrentState;
+
+		var registers = new ConcurrentStack<Dictionary<string, MString>>();
+		registers.Push(state.Registers.TryPeek(out var topRegisters)
+			? new Dictionary<string, MString>(topRegisters)
+			: []);
+
+		return state with
+		{
+			Registers = registers,
+			EnvironmentRegisters = new Dictionary<string, CallState>(state.EnvironmentRegisters)
+		};
 	}
 
 	private async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
@@ -4980,7 +5003,7 @@ public partial class Commands
 			{
 				await Mediator.Send(new QueueCommandListRequest(
 					action,
-					parser.CurrentState,
+					QueuedActionState(parser),
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 					-1));
 				return;
