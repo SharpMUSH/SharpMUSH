@@ -288,17 +288,22 @@ public class MoveService(
 		DBRef enactor,
 		string cause)
 	{
-		var depth = parser.CurrentState.MoveDepth;
-
 		// move.c:232-235. Penn's counter is a process-global `static int deep`, which is only safe
 		// under its single-threaded queue; SharpMUSH moves objects concurrently, so the counter rides
 		// the evaluation instead — one player's deep move must not abort another's shallow one.
-		if (depth is not null && depth.Count > MaxMoveDepth)
+		// A parser without the counter has no bound at all, so it fails here rather than quietly
+		// running unbounded.
+		var depth = parser.CurrentState.MoveDepth
+			?? throw new InvalidOperationException(
+				$"{nameof(EnterRoom)} requires {nameof(ParserState)}.{nameof(ParserState.MoveDepth)}; "
+				+ "a parser built without it would silently lose the move recursion bound.");
+
+		if (depth.Count > MaxMoveDepth)
 		{
 			return new Error<string>(ErrorMessages.Notifications.TooManyContainers);
 		}
 
-		depth?.Increment();
+		depth.Increment();
 
 		try
 		{
@@ -318,7 +323,10 @@ public class MoveService(
 				return new Error<string>(ErrorMessages.Notifications.CantGoThatWay);
 			}
 
-			// move.c:259, recursive_member: nothing enters something it is already carrying.
+			// move.c:259, recursive_member: nothing enters something it is already carrying. MoveIt
+			// checks this too (move.c:73), and Penn keeps both: enter_room reports the refusal to the
+			// mover, moveit only declines to write. A caller reaching MoveIt directly still needs the
+			// guard, so neither is redundant.
 			if (await WouldCreateLoop(what, where))
 			{
 				return new Error<string>(ErrorMessages.Notifications.CantGoThatWayContainmentLoop);
@@ -352,7 +360,7 @@ public class MoveService(
 		}
 		finally
 		{
-			depth?.Decrement();
+			depth.Decrement();
 		}
 	}
 

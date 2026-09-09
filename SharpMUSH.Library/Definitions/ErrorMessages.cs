@@ -410,6 +410,8 @@ public static class ErrorMessages
 		public const string MustBePlayer = "New owner must be a player.";
 		public const string InvalidDestinationExit = "Invalid destination for exit.";
 		public const string HomeMustBeRoom = "Home must be a room.";
+		public const string HomeIsAnExit = "That is an exit.";
+		public const string CannotLinkToItself = "You may not link something to itself.";
 		public const string DropToMustBeRoom = "Drop-to must be a room.";
 		public const string InvalidObjectTypeForLinking = "Invalid object type for linking.";
 		public const string InvalidObjectTypeGeneric = "Invalid object type.";

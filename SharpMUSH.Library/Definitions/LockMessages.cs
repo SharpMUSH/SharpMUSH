@@ -19,14 +19,14 @@ public static class LockMessages
 	};
 
 	/// <summary>
-	/// Lock types whose PennMUSH name (<c>src/lock.c:56-88</c>) is not the enum member name. The
-	/// derived attribute is built from the lock's name, not from SharpMUSH's <c>@lock</c> switch, so
-	/// <c>Tport_Lock = "Teleport"</c> (<c>src/lock.c:61</c>) gives <c>TELEPORT_LOCK`FAILURE</c>.
-	/// Every other member matches its PennMUSH name once upper-cased.
+	/// Overrides the derived name for a lock type whose PennMUSH name (<c>src/lock.c:56-88</c>) is
+	/// not the enum member name. The derived attribute is built from the lock's name, not from
+	/// SharpMUSH's <c>@lock</c> switch, so <c>Tport_Lock = "Teleport"</c> (<c>src/lock.c:61</c>)
+	/// gives <c>TELEPORT_LOCK`FAILURE</c>. Every member matches its PennMUSH name once upper-cased.
 	/// </summary>
 	private static readonly Dictionary<LockType, string> PennNames = new()
 	{
-		[LockType.TPort] = "TELEPORT"
+		[LockType.Teleport] = "TELEPORT"
 	};
 
 	public static (string What, string OWhat, string AWhat) FailureAttributes(LockType lockType)

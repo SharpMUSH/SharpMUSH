@@ -82,6 +82,12 @@
   <data name="HomeMustBeRoom" xml:space="preserve">
     <value>Home must be a room.</value>
   </data>
+  <data name="HomeIsAnExit" xml:space="preserve">
+    <value>That is an exit.</value>
+  </data>
+  <data name="CannotLinkToItself" xml:space="preserve">
+    <value>You may not link something to itself.</value>
+  </data>
   <data name="DropToMustBeRoom" xml:space="preserve">
     <value>Drop-to must be a room.</value>
   </data>

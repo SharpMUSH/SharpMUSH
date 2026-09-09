@@ -937,13 +937,14 @@ public partial class Functions
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							// create.c:395-401: a home is anything that is not an exit, and not the object itself.
+							if (!destObj.IsContainer || destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
 							{
 								return ErrorMessages.Returns.InvalidDestination;
 							}
 
 							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
 							return "1";
 						}
 					);

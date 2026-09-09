@@ -15,6 +15,19 @@ namespace SharpMUSH.Tests.Commands;
 /// Movement produces the messages PennMUSH produces, in PennMUSH's order.
 /// Reference: <c>src/move.c</c> <c>moveit</c> / <c>enter_room</c>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// TASK 12 MUST ADD: one command-level assertion that the recursion counters thread through
+/// <c>GOTO</c>. Every test here calls <see cref="IMoveService.EnterRoom"/> directly and hands it
+/// this class's own parser, so none of them can see whether <c>GOTO</c> passes the caller's parser
+/// or builds a fresh one. A fresh parser carries fresh counters, which would silently defeat both
+/// the <c>MoveDepth</c> cap and the function-recursion guard that
+/// <see cref="TheAutomaticLookRunsOnTheCallersRecursionCounters"/> pins — and every test below would
+/// still pass. The command-level shape is the one that protects it: walk an exit with
+/// <c>GOTO</c> from a parser whose counters are already spent, and assert the spend is still
+/// visible on the other side.
+/// </para>
+/// </remarks>
 [NotInParallel]
 public class MovementParityTests
 {
@@ -598,5 +611,153 @@ public class MovementParityTests
 
 		await Assert.That(await LocationOf(sticky.ToString()))
 			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
+	}
+
+	/// <summary>
+	/// <c>send_contents</c> (<c>move.c:187</c>): the drop-to is not where a STICKY object goes. It
+	/// goes home, and the room's own drop-to takes everything else.
+	/// </summary>
+	[Test]
+	public async ValueTask AVacatedStickyRoomSendsAStickyItemHomeRatherThanThroughItsDropTo()
+	{
+		var room = await Dig("StickyLuggageRoom");
+		var dropTo = await Dig("StickyLuggageTarget");
+		var itemHome = await Dig("StickyLuggageHome");
+		var leavingFor = await Dig("StickyLuggageExitRoom");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {room}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {room}={dropTo}"));
+
+		var sticky = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "StickyLuggage");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {sticky}={itemHome}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {sticky}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={room}"));
+
+		var plain = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "StickyLuggageCompanion");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {plain}={room}"));
+
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "StickyLuggageMover");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
+			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+
+		await Assert.That(await LocationOf(sticky.ToString())).IsEqualTo(BareDbref(itemHome));
+		await Assert.That(await LocationOf(plain.ToString())).IsEqualTo(BareDbref(dropTo));
+	}
+
+	/// <summary>
+	/// <c>maybe_dropto</c> (<c>move.c:212-215</c>): one Dropper still standing in the room and
+	/// nothing leaves, however STICKY the room is and wherever it drops to.
+	/// </summary>
+	[Test]
+	public async ValueTask AVacatedStickyRoomKeepsItsContentsWhileADropperRemains()
+	{
+		var room = await Dig("DropperStaysRoom");
+		var dropTo = await Dig("DropperStaysTarget");
+		var leavingFor = await Dig("DropperStaysExitRoom");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {room}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {room}={dropTo}"));
+
+		var luggage = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "DropperStaysLuggage");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {luggage}={room}"));
+
+		var stayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropperStayer");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {stayer.DbRef}={room}"));
+
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropperStaysMover");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+
+		await MoveService.EnterRoom(GodParser, (await Node(mover.DbRef)).AsContent,
+			(await Node(leavingFor)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+
+		await Assert.That(await LocationOf(luggage.ToString())).IsEqualTo(BareDbref(room));
+		await Assert.That(await LocationOf(stayer.DbRef.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>safe_tel</c>'s first condition (<c>move.c:311</c>, <c>!controls(player, tmp)</c>): a STICKY
+	/// object the mover controls travels with the mover even across owners.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportingAcrossOwnersKeepsStickyObjectsTheMoverControls()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ControlledStickyOwner");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ControlledStickyMover");
+
+		var home = await Dig("ControlledStickyHome");
+		var start = await Dig("ControlledStickyStart");
+		var elsewhere = await Dig("ControlledStickyElsewhere");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@chown/preserve {elsewhere}={owner.DbRef}"));
+
+		var sticky = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "ControlledStickyItem");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {sticky}={home}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {sticky}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@chown/preserve {sticky}={mover.DbRef}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
+
+		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
+			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+
+		await Assert.That(await LocationOf(sticky.ToString()))
+			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
+	}
+
+	/// <summary>
+	/// <c>safe_tel</c>'s last condition (<c>move.c:311</c>, <c>Home(tmp) != player</c>): a STICKY
+	/// object homed to the mover is not sent home, because home is where it already is.
+	/// </summary>
+	/// <remarks>
+	/// Sending it anyway would leave it in the same place, so the guard is invisible in the
+	/// object's location. It is visible in the triads: the skipped <c>enter_room</c> would fire the
+	/// object's own AMOVE (<c>move.c:96</c>), which is what this asserts did not happen. That needs
+	/// <c>nomovemsgs</c> off, since <c>moveit</c> gates the move triad on it.
+	/// </remarks>
+	[Test]
+	public async ValueTask TeleportingAcrossOwnersKeepsStickyObjectsHomedToTheMover()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HomedStickyOwner");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HomedStickyMover");
+
+		var start = await Dig("HomedStickyStart");
+		var elsewhere = await Dig("HomedStickyElsewhere");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@chown/preserve {elsewhere}={owner.DbRef}"));
+
+		// Owned by God, so the mover does not control it; homed to the mover, so it stays anyway.
+		var sticky = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "HomedStickyItem");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {sticky}={mover.DbRef}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {sticky}=STICKY"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AMOVE {sticky}=&MOVED me=yes"));
+
+		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
+			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await LocationOf(sticky.ToString()))
+			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
+
+		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
+		await Assert.That(moved!.Message!.ToPlainText().Trim()).IsEqualTo(string.Empty);
 	}
 }

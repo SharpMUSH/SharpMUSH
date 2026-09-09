@@ -1433,7 +1433,7 @@ public partial class Commands
 			if (!await executor.IsWizard())
 			{
 				var destObj = destinationContainer.WithExitOption();
-				if (!await LockService.Evaluate(LockType.TPort, destObj, executor))
+				if (!await LockService.Evaluate(LockType.Teleport, destObj, executor))
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;

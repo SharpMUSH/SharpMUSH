@@ -328,16 +328,17 @@ public partial class SurrealDatabase(
 	private static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return SharpObject.EmptyLocks;
 		try
 		{
 			var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOptions);
-			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty;
-			return dict.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value));
+			if (dict == null) return SharpObject.EmptyLocks;
+			return dict.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value),
+				SharpObject.LockNameComparer);
 		}
 		catch
 		{
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return SharpObject.EmptyLocks;
 		}
 	}
 

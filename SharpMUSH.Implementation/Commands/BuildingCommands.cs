@@ -738,18 +738,31 @@ public partial class Commands
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							// create.c:395: a home is any object that is not an exit — a room, a player or a
+							// thing. safe_tel's "homed to the mover" case (move.c:311) is only reachable
+							// because a player can be a home.
+							if (!destObj.IsContainer)
 							{
 								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.InvalidDestination,
-									notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
+									notifyMessage: ErrorMessages.Notifications.HomeIsAnExit,
+									shouldNotify: true);
+							}
+
+							// create.c:399.
+							if (destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
+							{
+								return await NotifyService.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: ErrorMessages.Notifications.CannotLinkToItself,
 									shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
 							return CallState.Empty;
 						}

@@ -35,7 +35,7 @@ public class LockMessagesTests
 	/// </summary>
 	[Test]
 	public async Task TPortDerivesFromPennsTeleportLockName()
-		=> await Assert.That(LockMessages.FailureAttributes(LockType.TPort))
+		=> await Assert.That(LockMessages.FailureAttributes(LockType.Teleport))
 			.IsEqualTo(("TELEPORT_LOCK`FAILURE", "TELEPORT_LOCK`OFAILURE", "TELEPORT_LOCK`AFAILURE"));
 
 	[Test]

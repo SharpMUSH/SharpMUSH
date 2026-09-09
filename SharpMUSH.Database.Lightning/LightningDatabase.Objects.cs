@@ -231,7 +231,7 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks)
+			var locks = new Dictionary<string, LockRecord>(found.Record.Locks, SharpObject.LockNameComparer)
 			{
 				[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() }
 			};
@@ -245,7 +245,7 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks);
+			var locks = new Dictionary<string, LockRecord>(found.Record.Locks, SharpObject.LockNameComparer);
 			locks.Remove(lockName);
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
@@ -984,7 +984,8 @@ public partial class LightningDatabase
 		=> locks.ToImmutableDictionary(
 			entry => entry.Key,
 			entry => new SharpLockData(entry.Value.LockString,
-				Enum.TryParse<LockService.LockFlags>(entry.Value.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
+				Enum.TryParse<LockService.LockFlags>(entry.Value.Flags, out var parsed) ? parsed : LockService.LockFlags.Default),
+			SharpObject.LockNameComparer);
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;
