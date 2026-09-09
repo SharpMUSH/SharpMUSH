@@ -442,8 +442,16 @@ public sealed partial class ObjectSnapshotService(
 		}
 		catch (JsonException) { throw Error("corrupt", "The stored snapshot document is corrupt."); }
 	}
+	/// <summary>
+	/// Through the Mediator, like every other write (engine data trunk §1). Serialized with the
+	/// default options rather than <see cref="Json"/>: <c>SetExpandedDataCommand</c> takes JSON
+	/// text, and the provider reads this document back with a null naming policy, so the property
+	/// names have to stay PascalCase. <see cref="Json"/> is web defaults (camelCase) and is for the
+	/// digest and the diff, not for storage.
+	/// </summary>
 	private async Task Save(AnySharpObject obj, SnapshotHistory history, CancellationToken ct)
-		=> await expanded.SetExpandedObjectData(obj.Object().Id!, StorageKey, new SnapshotStorageRecord(history), ct);
+		=> await mediator.Send(new SetExpandedDataCommand(
+			obj.Object(), StorageKey, JsonSerializer.Serialize(new SnapshotStorageRecord(history))), ct);
 	private static SnapshotHistory Append(SnapshotHistory history, ObjectSnapshot snapshot)
 		=> history with
 		{
