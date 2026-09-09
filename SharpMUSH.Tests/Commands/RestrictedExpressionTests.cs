@@ -1,3 +1,7 @@
+using Mediator;
+using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using NSubstitute;
@@ -461,6 +465,62 @@ public class RestrictedExpressionTests
 #pragma warning restore TUnit0055
 		await Assert.That(output.ToString()).IsEmpty();
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("restrictedexpr(add,add(1,2))", false, false)]
+	[Arguments("restricted_alias(add,add(1,2))", false, false)]
+	[Arguments("fn(restricted_alias,add,add(1,2))", false, false)]
+	[Arguments("add(1,2)", true, false)]
+	[Arguments("add(1,2)", false, true)]
+	[Arguments("restrictedexpr(add fn restrictedexpr,fn(add,1,restrictedexpr(add,add(1,1))))", false, false)]
+	public async Task RestrictedDispatchDoesNotResolveAnExecutor(string expression, bool ambient, bool stateCarried)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IMediator)
+			? mediator : original.ServiceProvider.GetService(call.Arg<Type>()));
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var parser = new MUSHCodeParser(original.Logger, library, original.CommandLibrary, original.Configuration, services)
+			.FromState(ParserState.RootFor(new DBRef(987654321, 1)) with
+			{ Restrictions = stateCarried ? new EvaluationRestrictions(["add"]) : null });
+		using var scope = ambient ? new EvaluationRestrictions(["add"]).Enter() : null;
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("3");
+		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
+	}
+
+	[Test]
+	[Arguments(FunctionFlags.Disabled, false)]
+	[Arguments(FunctionFlags.GodOnly, false)]
+	[Arguments(FunctionFlags.WizardOnly, false)]
+	[Arguments(FunctionFlags.Regular, true)]
+	public async Task RestrictedObjectlessDispatchRetainsPermissionGates(FunctionFlags flags, bool overlay)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		var registry = Substitute.For<IUserDefinedFunctionService>();
+		if (overlay) registry.GetBuiltinRestriction("add").Returns("wizard");
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IMediator) ? mediator
+			: call.Arg<Type>() == typeof(IUserDefinedFunctionService) ? registry : original.ServiceProvider.GetService(call.Arg<Type>()));
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var add = library["add"].LibraryInformation;
+		library["add"] = (add with { Attribute = new SharpFunctionAttribute { Name = "add", MinArgs = 2, MaxArgs = 2, Flags = flags } }, true);
+		var parser = new MUSHCodeParser(original.Logger, library, original.CommandLibrary, original.Configuration, services)
+			.FromState(ParserState.RootFor(new DBRef(987654321, 1)) with { Restrictions = new EvaluationRestrictions(["add"]) });
+		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(flags == FunctionFlags.Disabled
+			? ErrorMessages.Returns.FunctionDisabled : ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
 	}
 
 }

@@ -42,7 +42,9 @@ Object reads, attribute evaluation (`u()`), global and local user-defined
 functions, plugin functions, commands, SQL, HTTP, queueing, and other side effects
 are unavailable in this profile, even when the executor is God. Adding their
 names to the allowlist does not grant access. Operation permission and object
-access are separate: this profile grants no object-data access.
+access are separate: this profile grants no object-data access. Audited calls do
+not resolve the executor. Disabled functions remain disabled; functions requiring
+identity-based permissions or an explicit restriction are denied in this profile.
 
 Restrictions apply to this evaluation and its nested calls; they do not modify
 server-wide function permissions or other concurrent evaluations. The existing

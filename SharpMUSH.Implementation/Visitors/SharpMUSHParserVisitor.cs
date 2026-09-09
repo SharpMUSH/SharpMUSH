@@ -733,21 +733,25 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			// Every gate below is a permission check against the executor, so there is nothing to
-			// evaluate without one — the connect screen being the ordinary case. KnownExecutorObject
-			// threw here instead, which the catch below turned into an Error-level log with a full
-			// stack trace on every call while still returning the same empty result. Answer the
-			// question the gates are actually asking rather than raising an exception to say "no".
-			var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-			if (executorOption.IsNone)
+			var isolated = EvaluationRestrictions.Current is not null || currentState.Restrictions is not null
+				|| BeginsRestrictedEvaluation(context);
+			AnySharpObject? executor = null;
+			string? permissionError;
+			if (isolated)
 			{
-				success = false;
-				return CallState.Empty;
+				permissionError = SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionWithoutObjectData(attribute);
 			}
-
-			var executor = executorOption.Known();
-
-			var permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+			else
+			{
+				var executorOption = await currentState.ExecutorObject(Mediator);
+				if (executorOption.IsNone)
+				{
+					success = false;
+					return CallState.Empty;
+				}
+				executor = executorOption.Known();
+				permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+			}
 			if (permissionError is not null)
 			{
 				success = false;
@@ -764,8 +768,8 @@ public class SharpMUSHParserVisitor(
 			var builtinRestriction = (parser as MUSHCodeParser)?.ServiceProvider
 				.GetService<IUserDefinedFunctionService>()?.GetBuiltinRestriction(name);
 
-			if ((functionRestriction is not null && !await executor.SatisfiesFunctionRestriction(functionRestriction))
-					|| (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
+			if ((functionRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(functionRestriction)))
+					|| (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction))))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
