@@ -290,8 +290,9 @@ public partial class LightningDatabase
 
 	private static bool HasMembershipEdge(TableDef forward, ITx tx, long dbref, string name)
 	{
-		var upper = name.ToUpperInvariant();
-		return tx.Dups(forward, Keys.Dbref(dbref)).Any(value => Keys.ReadStr(value) == upper);
+		// The stored value is Keys.Upper(name) verbatim, so the bytes compare without decoding each one.
+		var upper = Keys.Upper(name);
+		return tx.Dups(forward, Keys.Dbref(dbref)).Any(value => value.AsSpan().SequenceEqual(upper));
 	}
 
 	private static void PutMembershipEdge((TableDef Forward, TableDef Reverse) edge, ITx tx, long dbref, string name)

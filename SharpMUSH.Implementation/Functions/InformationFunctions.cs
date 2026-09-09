@@ -1,4 +1,7 @@
+using System.Buffers;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -116,14 +119,9 @@ public partial class Functions
 			folderSpec = args["1"].Message!.ToPlainText();
 		}
 
-		var folderMail = Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX"));
-		var mailArray = await folderMail.ToArrayAsync();
+		var tally = await TallyMail(Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX")));
 
-		var read = mailArray.Count(m => m.Read);
-		var unread = mailArray.Count(m => !m.Read);
-		var cleared = mailArray.Count(m => m.Cleared);
-
-		return new CallState($"{read} {unread} {cleared}");
+		return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
 	}
 
 
@@ -165,14 +163,11 @@ public partial class Functions
 			? delimArg.Message!.ToPlainText()
 			: " ";
 
-		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).ToListAsync();
-		if (semaphoreTasks.Count > 0)
-		{
-			var task = semaphoreTasks[0];
-			return FormatTaskInfo(task, field, delimiter);
-		}
+		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).FirstOrDefaultAsync();
 
-		return new CallState(ErrorMessages.Returns.NoSuchPid);
+		return task is null
+			? new CallState(ErrorMessages.Returns.NoSuchPid)
+			: FormatTaskInfo(task, field, delimiter);
 	}
 
 	private CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)
@@ -318,26 +313,15 @@ public partial class Functions
 
 		var (db, attr) = split.AsT0;
 
-		if (attr is null)
-		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, db, LocateFlags.All,
-				async found =>
-				{
-					var queryResult = Mediator.CreateStream(new ScheduleSemaphoreQuery(found.Object().DBRef));
-					var pids = queryResult.Select(x => MarkupText.Plain(x.Pid.ToString()));
-					return MarkupText.Join(MarkupText.Plain(" "), await pids.ToArrayAsync());
-				});
-		}
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, db, LocateFlags.All,
 			async found =>
 			{
-				var dbAttr = new DbRefAttribute(found.Object().DBRef, attr.Split("`"));
-				var queryResult = Mediator.CreateStream(new ScheduleSemaphoreQuery(dbAttr));
-				var pids = queryResult.Select(x => MarkupText.Plain(x.Pid.ToString()));
-				return MarkupText.Join(MarkupText.Plain(" "), await pids.ToArrayAsync());
+				var query = attr is null
+					? new ScheduleSemaphoreQuery(found.Object().DBRef)
+					: new ScheduleSemaphoreQuery(new DbRefAttribute(found.Object().DBRef, attr.Split('`')));
+				var pids = Mediator.CreateStream(query).Select(x => x.Pid);
+				return string.Join(' ', await pids.ToArrayAsync());
 			});
 	}
 
@@ -351,18 +335,12 @@ public partial class Functions
 		switch (parser.CurrentState.Arguments.Count)
 		{
 			case 0:
-				{
-					var allPowers = (Mediator.CreateStream(new GetPowersQuery()))
-						.Select(x => MarkupText.Plain(x.Name));
-					return MarkupText.Join(MarkupText.Plain(" "), await allPowers.ToArrayAsync());
-				}
+				return string.Join(' ', await Mediator.CreateStream(new GetPowersQuery()).Select(x => x.Name).ToArrayAsync());
 
 			case 1:
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser, executor, executor, obj!.Message!.ToPlainText(), LocateFlags.All,
-					async found => MarkupText.Join(MarkupText.Space, await found.Object()
-							.Powers.Value
-							.Select(x => MarkupText.Plain(x.Name)).ToArrayAsync()));
+					async found => string.Join(' ', await found.Object().Powers.Value.Select(x => x.Name).ToArrayAsync()));
 
 			default:
 				{
@@ -462,7 +440,7 @@ public partial class Functions
 		var queueTypesStr = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "wait semaphore").ToPlainText()
 			.ToUpperInvariant();
 
-		var queueTypes = queueTypesStr.Split(" ", StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
+		var queueTypes = queueTypesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
 
 		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
 		{
@@ -492,24 +470,16 @@ public partial class Functions
 			includeSemaphore = true;
 		}
 
-		var allPids = new List<long>();
+		var allPids = AsyncEnumerable.Empty<long>();
 
 		if (includeWait)
 		{
-			var waitPids = Mediator.CreateStream(new ScheduleDelayQuery(locationDBRef));
-			await foreach (var pid in waitPids)
-			{
-				allPids.Add(pid);
-			}
+			allPids = allPids.Concat(Mediator.CreateStream(new ScheduleDelayQuery(locationDBRef)));
 		}
 
 		if (includeSemaphore)
 		{
-			var semaphorePids = Mediator.CreateStream(new ScheduleSemaphoreQuery(locationDBRef));
-			await foreach (var taskData in semaphorePids)
-			{
-				allPids.Add(taskData.Pid);
-			}
+			allPids = allPids.Concat(Mediator.CreateStream(new ScheduleSemaphoreQuery(locationDBRef)).Select(x => x.Pid));
 		}
 
 		// Note: INDEPENDENT filtering would require owner-based filtering
@@ -517,7 +487,7 @@ public partial class Functions
 		// In PennMUSH, INDEPENDENT filters out tasks from objects with same owner but different DBRef
 		// This would require extending the query to check task executor owner vs target owner
 
-		return new CallState(string.Join(' ', allPids.OrderBy(x => x)));
+		return new CallState(string.Join(' ', await allPids.OrderBy(x => x).ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["type"])]
@@ -528,29 +498,33 @@ public partial class Functions
 			? typeArg.Message!.ToPlainText().ToUpperInvariant()
 			: null;
 
-		var allObjects = await Mediator.CreateStream(new GetAllObjectsQuery())
-			.ToListAsync();
+		// One pass over the database, counting each type as it streams by.
+		var countByType = new Dictionary<string, int>();
+		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+		{
+			CollectionsMarshal.GetValueRefOrAddDefault(countByType, obj.Type, out _)++;
+		}
+
+		var players = countByType.GetValueOrDefault("PLAYER");
+		var things = countByType.GetValueOrDefault("THING");
+		var exits = countByType.GetValueOrDefault("EXIT");
+		var rooms = countByType.GetValueOrDefault("ROOM");
+		const int garbage = 0; // SharpMUSH doesn't track garbage separately
 
 		if (!string.IsNullOrEmpty(typeFilter))
 		{
 			var count = typeFilter switch
 			{
-				"PLAYER" or "PLAYERS" => allObjects.Count(o => o.Type == "PLAYER"),
-				"THING" or "THINGS" => allObjects.Count(o => o.Type == "THING"),
-				"EXIT" or "EXITS" => allObjects.Count(o => o.Type == "EXIT"),
-				"ROOM" or "ROOMS" => allObjects.Count(o => o.Type == "ROOM"),
-				"GARBAGE" => 0, // SharpMUSH doesn't track garbage separately
+				"PLAYER" or "PLAYERS" => players,
+				"THING" or "THINGS" => things,
+				"EXIT" or "EXITS" => exits,
+				"ROOM" or "ROOMS" => rooms,
+				"GARBAGE" => garbage,
 				_ => -1
 			};
 
 			return count >= 0 ? new CallState(count.ToString()) : new CallState(ErrorMessages.Returns.InvalidType);
 		}
-
-		var players = allObjects.Count(o => o.Type == "PLAYER");
-		var things = allObjects.Count(o => o.Type == "THING");
-		var exits = allObjects.Count(o => o.Type == "EXIT");
-		var rooms = allObjects.Count(o => o.Type == "ROOM");
-		var garbage = 0; // SharpMUSH doesn't track garbage separately
 
 		return new CallState($"{players} {things} {exits} {rooms} {garbage}");
 	}
@@ -732,9 +706,6 @@ public partial class Functions
 			? attrArg.Message!.ToPlainText()
 			: "*";
 
-		var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
-		var results = new List<string>();
-
 		AnySharpObject? classObj = null;
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
@@ -746,36 +717,15 @@ public partial class Functions
 			classObj = maybeClass.AsAnyObject;
 		}
 
-		await foreach (var obj in allObjects)
-		{
-			if (classObj != null)
-			{
-				var owner = await obj.Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef != classObj.Object().DBRef)
-				{
-					continue;
-				}
-			}
+		var results = Mediator.CreateStream(new GetAllObjectsQuery())
+			.Where(async (obj, _) => classObj is null
+				|| (await obj.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == classObj.Object().DBRef)
+			.Where(async (obj, _) => await obj.Attributes.Value.AnyAsync(attr =>
+				(attributePattern == "*" || attr.Name.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
+				&& attr.Value.ToPlainText().Contains(pattern, StringComparison.OrdinalIgnoreCase)))
+			.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
 
-			var attributes = obj.Attributes.Value;
-
-			await foreach (var attr in attributes)
-			{
-				if (attributePattern != "*" && !attr.Name.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
-				{
-					continue;
-				}
-
-				var value = attr.Value.ToPlainText();
-				if (value.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-				{
-					results.Add(new DBRef(obj.Key, obj.CreationTime).ToString());
-					break;
-				}
-			}
-		}
-
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(" ", await results.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "colors", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["ansi-string", "strip"])]
@@ -793,8 +743,7 @@ public partial class Functions
 		{
 			var allColors = colorsConfig.Colors
 				.Select(c => c.name)
-				.Distinct()
-				.ToList();
+				.Distinct();
 
 			return ValueTask.FromResult(new CallState(string.Join(" ", allColors)));
 		}
@@ -805,8 +754,7 @@ public partial class Functions
 			var matchingColors = colorsConfig.Colors
 				.Where(c => MushText.IsWildcardMatch(MarkupText.Plain(c.name), wildcardPattern))
 				.Select(c => c.name)
-				.Distinct()
-				.ToList();
+				.Distinct();
 
 			return ValueTask.FromResult(new CallState(string.Join(" ", matchingColors)));
 		}
@@ -841,11 +789,9 @@ public partial class Functions
 	{
 		string? foreground = null;
 		string? background = null;
-		var stylesBuilder = new System.Text.StringBuilder();
+		var styles = new List<char>();
 
-		var parts = spec.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-		foreach (var part in parts)
+		foreach (var part in spec.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
 			if (part.StartsWith('/'))
 			{
@@ -853,35 +799,33 @@ public partial class Functions
 				continue;
 			}
 
-			var i = 0;
-			var currentStyles = stylesBuilder.ToString();
-			while (i < part.Length && IsAnsiControlChar(part[i]) && part[i] != '+' && part[i] != '#')
+			// The code letters run ahead of any named colour; each is a style, kept once.
+			var codeLetters = part.AsSpan().IndexOfAnyExcept(AnsiCodeLetters) switch
 			{
-				var currentChar = part[i];
-				if (!currentStyles.Contains(currentChar))
+				-1 => part.Length,
+				var end => end
+			};
+
+			foreach (var style in part.AsSpan(0, codeLetters))
+			{
+				if (!styles.Contains(style))
 				{
-					stylesBuilder.Append(currentChar);
-					currentStyles = stylesBuilder.ToString();
+					styles.Add(style);
 				}
-				i++;
 			}
 
-			var colorPart = part[i..];
+			var colorPart = part[codeLetters..];
 			if (!string.IsNullOrWhiteSpace(colorPart))
 			{
 				foreground = colorPart;
 			}
 		}
 
-		return (foreground, background, stylesBuilder.ToString());
+		return (foreground, background, new string(CollectionsMarshal.AsSpan(styles)));
 	}
 
-	private bool IsAnsiControlChar(char ch)
-	{
-		return ch is 'f' or 'u' or 'i' or 'h' or
-					 'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or
-					 'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
-	}
+	/// <summary>The single letters an ansi() code spells its styles and colours with.</summary>
+	private static readonly SearchValues<char> AnsiCodeLetters = SearchValues.Create("fuihxrgybmcwXRGYBMCW");
 
 	private string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)
@@ -1069,26 +1013,23 @@ public partial class Functions
 			return "#" + color.rgb[2..];
 		}
 
-		if (int.TryParse(colorSpec, out var xtermNum))
+		if (int.TryParse(colorSpec, out var xtermNum) && XtermColor(config, xtermNum) is { } xtermColor)
 		{
-			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
-			if (xtermColors.Count > 0)
-			{
-				return "#" + xtermColors[0].rgb[2..];
-			}
+			return "#" + xtermColor.rgb[2..];
 		}
 
-		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2))
+		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2)
+			&& XtermColor(config, xtermNum2) is { } xtermColor2)
 		{
-			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum2).ToList();
-			if (xtermColors.Count > 0)
-			{
-				return "#" + xtermColors[0].rgb[2..];
-			}
+			return "#" + xtermColor2.rgb[2..];
 		}
 
 		return null;
 	}
+
+	/// <summary>The first configured colour at an xterm index, or null when the palette has none there.</summary>
+	private static ColorIdentity? XtermColor(SharpMUSH.Configuration.Options.ColorsOptions config, int xterm)
+		=> config.Colors.FirstOrDefault(c => c.xterm == xterm);
 
 	private string? ConvertColorToRgb(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
@@ -1165,13 +1106,11 @@ public partial class Functions
 
 	private string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
 	{
-		var colorMatch = config.Colors.Where(c => c.xterm == xterm).ToList();
-		if (colorMatch.Count == 0 || colorMatch[0].rgb == null)
+		if (XtermColor(config, xterm) is not { rgb: { } rgb })
 		{
 			return "w";
 		}
 
-		var rgb = colorMatch[0].rgb;
 		var rgbSpan = rgb.AsSpan();
 		var r = int.Parse(rgbSpan.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
 		var g = int.Parse(rgbSpan.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
@@ -1242,18 +1181,12 @@ public partial class Functions
 			return result;
 		}
 
-		if (int.TryParse(colorSpec, out var xtermNum) ||
-			(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
+		if ((int.TryParse(colorSpec, out var xtermNum) ||
+				(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
+			&& XtermColor(config, xtermNum) is { } xtermColor
+			&& config.ColorsByRgb.TryGetValue(xtermColor.rgb, out var xtermNames))
 		{
-			var xtermColors = config.Colors.Where(c => c.xterm == xtermNum).ToList();
-			if (xtermColors.Count > 0)
-			{
-				var rgb = xtermColors[0].rgb;
-				if (config.ColorsByRgb.TryGetValue(rgb, out var colors))
-				{
-					result.AddRange(colors.Select(c => c.name));
-				}
-			}
+			result.AddRange(xtermNames.Select(c => c.name));
 		}
 
 		return result;
@@ -1293,13 +1226,11 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 
-		var allOptionNames = ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys;
-
 		if (!args.TryGetValue("0", out var optionArg) || string.IsNullOrWhiteSpace(optionArg.Message?.ToPlainText()))
 		{
-			var optionNames = allOptionNames
-				.Select(prop => ConfigGenerated.ConfigMetadata.PropertyToAttributeName[prop].ToLowerInvariant())
-				.OrderBy(n => n);
+			var optionNames = ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Values
+				.Select(name => name.ToLowerInvariant())
+				.Order();
 			return ValueTask.FromResult<CallState>(string.Join(" ", optionNames));
 		}
 

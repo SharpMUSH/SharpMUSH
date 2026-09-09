@@ -115,10 +115,10 @@ internal sealed partial class WikiLinkInlineRenderer : HtmlObjectRenderer<LinkIn
 		if (attributes?.Classes is not { Count: > 0 } classes)
 			return ImageCssClass;
 
-		var extra = classes.Where(c => CssClassPattern().IsMatch(c)).ToList();
-		return extra.Count == 0
+		var extra = string.Join(' ', classes.Where(c => CssClassPattern().IsMatch(c)));
+		return extra.Length == 0
 			? ImageCssClass
-			: $"{ImageCssClass} {string.Join(' ', extra)}";
+			: $"{ImageCssClass} {extra}";
 	}
 
 	/// <summary>

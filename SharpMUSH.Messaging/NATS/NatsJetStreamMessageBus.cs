@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
@@ -20,6 +21,7 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	private readonly TimeSpan _publishTimeout;
 	private readonly ILogger<NatsJetStreamMessageBus> _logger;
 	private readonly string _subjectPrefix;
+	private readonly ConcurrentDictionary<Type, string> _subjects = new();
 
 	internal NatsJetStreamMessageBus(
 		NatsConnection nats,
@@ -112,19 +114,8 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 		}
 	}
 
-	private string GetSubjectForMessageType<T>()
-	{
-		var typeName = typeof(T).Name;
-		if (typeName.EndsWith("Message", StringComparison.Ordinal))
-			typeName = typeName[..^7];
-
-		// Convert PascalCase to kebab-case (same convention as Kafka topics)
-		var kebabCase = string.Concat(
-			typeName.Select((c, i) => i > 0 && char.IsUpper(c) ? "-" + c : c.ToString())
-		).ToLowerInvariant();
-
-		return $"{_subjectPrefix}.{kebabCase}";
-	}
+	private string GetSubjectForMessageType<T>() =>
+		_subjects.GetOrAdd(typeof(T), static (type, prefix) => NatsSubjects.For(type, prefix), _subjectPrefix);
 
 	public async ValueTask DisposeAsync()
 	{

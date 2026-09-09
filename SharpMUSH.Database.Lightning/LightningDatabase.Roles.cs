@@ -95,8 +95,9 @@ public partial class LightningDatabase
 
 	public Task<IReadOnlyList<string>> GetAccountIdsForRoleAsync(string roleSlug)
 	{
+		var slug = Keys.Str(roleSlug);
 		var accountIds = Store.Read(tx => tx.Range(Tables.AccountRole, [])
-			.Where(e => Keys.ReadStr(e.Value) == roleSlug)
+			.Where(e => e.Value.AsSpan().SequenceEqual(slug))
 			.Select(e => $"node_accounts/{Keys.ReadStr(e.Key)}")
 			.ToList());
 		return Task.FromResult<IReadOnlyList<string>>(accountIds);

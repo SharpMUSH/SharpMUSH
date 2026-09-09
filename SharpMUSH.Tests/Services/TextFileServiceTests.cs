@@ -113,4 +113,18 @@ public class TextFileServiceTests
 		var result = TextFileService.StripConsecutiveHeaders(content);
 		await Assert.That(result).IsEqualTo(content);
 	}
+
+	[Test]
+	public async Task StripConsecutiveHeaders_HeadersOnly_KeepsFirstAndTheLineBreak()
+	{
+		var result = TextFileService.StripConsecutiveHeaders("# TOPIC1\n# TOPIC2");
+		await Assert.That(result).IsEqualTo("# TOPIC1\n");
+	}
+
+	[Test]
+	public async Task StripConsecutiveHeaders_CarriageReturns_StayOnTheirLines()
+	{
+		var result = TextFileService.StripConsecutiveHeaders("# TOPIC1\r\n# TOPIC2\r\n  Body.\r\n");
+		await Assert.That(result).IsEqualTo("# TOPIC1\r\n  Body.\r\n");
+	}
 }

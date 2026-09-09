@@ -1311,7 +1311,7 @@ public class PackageInstallService(
 		var target = (snapshot.Structure ?? []).ToDictionary(s => s.Objid, StringComparer.Ordinal);
 		var current = DeserializeStructureBaselines(await registry.GetManagedStructuresAsync(packageId));
 
-		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal).ToList())
+		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal))
 		{
 			if (await GetKnownAsync(objid, cancellationToken) is null)
 			{
@@ -1489,13 +1489,15 @@ public class PackageInstallService(
 			return null;
 		}
 
-		var parts = objid[1..].Split(':', 2);
-		if (!int.TryParse(parts[0], out var number))
+		var body = objid.AsSpan(1);
+		Span<System.Range> fields = stackalloc System.Range[2];
+		var fieldCount = body.Split(fields, ':');
+		if (!int.TryParse(body[fields[0]], out var number))
 		{
 			return null;
 		}
 
-		return parts.Length == 2 && long.TryParse(parts[1], out var milliseconds)
+		return fieldCount == 2 && long.TryParse(body[fields[1]], out var milliseconds)
 			? new DBRef(number, milliseconds)
 			: new DBRef(number);
 	}
@@ -1503,8 +1505,12 @@ public class PackageInstallService(
 	private static string Hash(string value) =>
 		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-	private static string PrimaryName(string name) =>
-		name.Split(';', 2, StringSplitOptions.TrimEntries)[0];
+	private static string PrimaryName(string name)
+	{
+		Span<System.Range> aliases = stackalloc System.Range[2];
+		name.AsSpan().Split(aliases, ';', StringSplitOptions.TrimEntries);
+		return name[aliases[0]];
+	}
 
 	private static string DecisionKey(string targetRef, string attribute) =>
 		$"{targetRef}\0{attribute.ToUpperInvariant()}";

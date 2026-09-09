@@ -64,15 +64,6 @@ public abstract class PluginBase : IPlugin, ICommandSource, IFunctionSource
 			return [];
 		}
 
-		var results = new List<T>();
-		foreach (var value in dictionary.Values)
-		{
-			if (value is T typed)
-			{
-				results.Add(typed);
-			}
-		}
-
-		return results;
+		return dictionary.Values.OfType<T>();
 	}
 }

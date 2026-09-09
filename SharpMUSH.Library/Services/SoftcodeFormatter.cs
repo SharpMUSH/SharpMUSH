@@ -175,7 +175,7 @@ public static class SoftcodeFormatter
 				var length = error.OffendingToken?.Length ?? 1;
 				return (Start: start, End: start + length);
 			})
-			.ToList();
+			.ToArray();
 
 		return offset => spans.Any(span => offset >= span.Start && offset < span.End) ? ErrorStyle : null;
 	}

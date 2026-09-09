@@ -11,7 +11,7 @@ public static class ApplicationRegistryMapping
 {
 	/// <summary>Serializes the allowed zones to a comma-joined string of enum names (empty when none).</summary>
 	public static string ZonesToString(IReadOnlyList<WidgetZone>? zones)
-		=> zones is null || zones.Count == 0 ? "" : string.Join(",", zones.Select(z => z.ToString()));
+		=> zones is null || zones.Count == 0 ? string.Empty : string.Join(",", zones.Select(z => z.ToString()));
 
 	/// <summary>Parses a comma-joined zone list back to enum values; unknown/blank tokens are skipped.</summary>
 	public static IReadOnlyList<WidgetZone>? ZonesFromString(string? zones)
@@ -21,12 +21,14 @@ public static class ApplicationRegistryMapping
 			return null;
 		}
 
-		var parsed = zones
-			.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			.Select(token => Enum.TryParse<WidgetZone>(token, ignoreCase: true, out var zone) ? zone : (WidgetZone?)null)
-			.Where(z => z is not null)
-			.Select(z => z!.Value)
-			.ToList();
+		var parsed = new List<WidgetZone>();
+		foreach (var range in zones.AsSpan().Split(','))
+		{
+			if (Enum.TryParse<WidgetZone>(zones.AsSpan()[range].Trim(), ignoreCase: true, out var zone))
+			{
+				parsed.Add(zone);
+			}
+		}
 
 		return parsed.Count == 0 ? null : parsed;
 	}

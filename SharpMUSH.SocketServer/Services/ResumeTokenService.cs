@@ -67,8 +67,16 @@ public sealed class ResumeTokenService : IResumeTokenStore
 		return false;
 	}
 
-	internal static string TokenKey(string token) =>
-		Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+	internal static string TokenKey(string token)
+	{
+		var utf8 = System.Text.Encoding.UTF8;
+		var byteCount = utf8.GetByteCount(token);
+		Span<byte> bytes = byteCount <= 256 ? stackalloc byte[256] : new byte[byteCount];
+		bytes = bytes[..utf8.GetBytes(token, bytes)];
+		Span<byte> hash = stackalloc byte[SHA256.HashSizeInBytes];
+		SHA256.HashData(bytes, hash);
+		return Convert.ToHexString(hash);
+	}
 
 	public ValueTask InvalidateAsync(string token, CancellationToken ct = default)
 	{

@@ -120,10 +120,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 	}
 
 	public static string Get(LockType standardType, AnySharpObject lockee)
-	{
-		var defaultLockData = new Models.SharpLockData { LockString = "#TRUE", Flags = LockFlags.Default };
-		return lockee.Object().Locks.GetValueOrDefault(standardType.ToString(), defaultLockData).LockString;
-	}
+		=> GetIfSet(standardType, lockee) ?? "#TRUE";
 
 	/// <summary>
 	/// The lock exactly as stored, or <c>null</c> when the object has none — the distinction
@@ -196,18 +193,9 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)
 	/// </summary>
 	public string FormatLockFlags(LockFlags flags)
-	{
-		if (flags == LockFlags.Default)
-			return string.Empty;
-
-		var flagChars = new List<string>();
-		foreach (var (_, (symbol, flag)) in LockPrivileges)
-		{
-			if (flags.HasFlag(flag))
-			{
-				flagChars.Add(symbol);
-			}
-		}
-		return string.Join("", flagChars);
-	}
+		=> flags == LockFlags.Default
+			? string.Empty
+			: string.Concat(LockPrivileges.Values
+				.Where(privilege => flags.HasFlag(privilege.Item2))
+				.Select(privilege => privilege.Item1));
 }

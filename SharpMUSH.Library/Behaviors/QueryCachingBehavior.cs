@@ -102,7 +102,7 @@ public static class EmbeddedObjectTags
 	public static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, object? result)
 		=> Apply(ctx, message, EmbeddedObjects.TagsFor(result));
 
-	public static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, int[] numbers)
+	public static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, IEnumerable<int> numbers)
 		=> Apply(ctx, message, numbers.Select(CacheKeys.ObjectTag).ToArray());
 
 	private static void Apply<TValue>(FusionCacheFactoryExecutionContext<TValue> ctx, ICacheable message, string[] embedded)

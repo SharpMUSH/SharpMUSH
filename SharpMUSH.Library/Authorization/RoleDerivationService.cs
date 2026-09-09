@@ -18,29 +18,18 @@ public class RoleDerivationService : IRoleDerivationService
 		if (dbrefNumber == 1)
 			return PortalRole.God;
 
-		var flagList = flags.ToList();
-
-		if (flagList.Any(f => string.Equals(f.Name, WizardFlag, StringComparison.OrdinalIgnoreCase)))
-			return PortalRole.Wizard;
-
-		if (flagList.Any(f => string.Equals(f.Name, RoyaltyFlag, StringComparison.OrdinalIgnoreCase)))
-			return PortalRole.Royalty;
-
-		return PortalRole.Player;
+		return flags
+			.Select(f => string.Equals(f.Name, WizardFlag, StringComparison.OrdinalIgnoreCase) ? PortalRole.Wizard
+				: string.Equals(f.Name, RoyaltyFlag, StringComparison.OrdinalIgnoreCase) ? PortalRole.Royalty
+				: PortalRole.Player)
+			.Append(PortalRole.Player)
+			.Max();
 	}
 
 	/// <inheritdoc />
 	public PortalRole DeriveAccountRole(IEnumerable<(int DbrefNumber, IEnumerable<SharpObjectFlag> Flags)> characters)
-	{
-		var best = PortalRole.Guest;
-
-		foreach (var (number, flags) in characters)
-		{
-			var role = DeriveRole(number, flags);
-			if (role > best)
-				best = role;
-		}
-
-		return best;
-	}
+		=> characters
+			.Select(character => DeriveRole(character.DbrefNumber, character.Flags))
+			.Append(PortalRole.Guest)
+			.Max();
 }

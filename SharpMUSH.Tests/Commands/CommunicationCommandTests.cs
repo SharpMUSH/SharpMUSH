@@ -192,6 +192,37 @@ public class CommunicationCommandTests
 				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
+	/// <summary>
+	/// The excluded object must be resolved before the room is notified. The exclusion list was
+	/// built from un-awaited locate calls, so an object resolved asynchronously could be added to
+	/// it only after the emit had already gone out.
+	/// </summary>
+	[Test]
+	public async ValueTask OemitDoesNotNotifyTheExcludedObject()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+
+		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExcluded");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
+		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"drop {excludeDbRef}"));
+
+		var expectedMsg = TestIsolationHelpers.GenerateUniqueName("Test omit exclusion");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@oemit {excludeDbRef}={expectedMsg}"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(executor),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+
+		await NotifyService
+			.DidNotReceive()
+			.Notify(
+				TestHelpers.MatchingObject(excludeDbRef),
+				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, expectedMsg)), Arg.Any<AnySharpObject>(), Arg.Any<INotifyService.NotificationType>());
+	}
+
 	[Test, Skip("Failing")]
 	public async ValueTask ZemitBasic()
 	{

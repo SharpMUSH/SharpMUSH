@@ -274,8 +274,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		return await attribute.ToAsyncEnumerable()
-			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
+		foreach (var attr in attribute)
+		{
+			if (!await CanEvalAttr(viewer, target, attr))
+				return false;
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -288,8 +293,13 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (attribute.Length == 0)
 			return false;
 
-		return await attribute.ToAsyncEnumerable()
-			.AllAsync(async (attr, _) => await CanEvalAttr(viewer, target, attr));
+		foreach (var attr in attribute)
+		{
+			if (!await CanEvalAttr(viewer, target, attr))
+				return false;
+		}
+
+		return true;
 	}
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
@@ -315,10 +325,12 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 		if (await who.IsMistrust())
 			return false;
 
-		if (await who.Owns(target) && (!await target.Inheritable() || await who.Inheritable()))
+		var targetInheritable = await target.Inheritable();
+
+		if (await who.Owns(target) && (!targetInheritable || await who.Inheritable()))
 			return true;
 
-		if (await target.Inheritable() || target.IsPlayer)
+		if (targetInheritable || target.IsPlayer)
 			return false;
 
 		// Zone Master Object (ZMO) control
