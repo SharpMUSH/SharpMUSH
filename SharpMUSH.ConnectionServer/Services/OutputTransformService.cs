@@ -168,11 +168,13 @@ public partial class OutputTransformService : IOutputTransformService
 				parameters = "0";
 			}
 
-			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrParameters]);
+			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrChars + 1]);
 			var kept = new SgrSequence(parameters.Length <= StackSgrChars
 				? stackalloc char[parameters.Length]
 				: new char[parameters.Length]);
 
+			// Indexed rather than enumerated: an extended-colour introducer consumes the parameters that
+			// follow it, and how many depends on the selector after it.
 			for (var index = 0; index < ranges.Length; index++)
 			{
 				var code = Parameter(parameters, ranges, index);
@@ -221,20 +223,17 @@ public partial class OutputTransformService : IOutputTransformService
 		});
 	}
 
-	/// <summary>Parameter lists up to this many entries are split on the stack; longer ones go to the heap.</summary>
-	private const int StackSgrParameters = 32;
-
-	/// <summary>Rewritten sequences up to this many characters are assembled on the stack.</summary>
+	/// <summary>Parameter lists up to this many characters are split and rewritten on the stack.</summary>
 	private const int StackSgrChars = 256;
 
 	/// <summary>
 	/// The parameter list split on <c>;</c>, one range per parameter — including the empty ones a
-	/// doubled separator produces, which the callers decide about themselves.
+	/// doubled separator produces, which the callers decide about themselves. A list of n characters
+	/// holds at most n + 1 parameters, so the ranges never run short.
 	/// </summary>
 	private static Span<Range> SplitSgrParameters(ReadOnlySpan<char> parameters, Span<Range> scratch)
 	{
-		var count = parameters.Count(';') + 1;
-		var ranges = count <= scratch.Length ? scratch : new Range[count];
+		var ranges = parameters.Length < scratch.Length ? scratch : new Range[parameters.Length + 1];
 		return ranges[..parameters.Split(ranges, ';')];
 	}
 
@@ -250,7 +249,9 @@ public partial class OutputTransformService : IOutputTransformService
 
 	/// <summary>
 	/// Assembles the parameter list of one rewritten SGR sequence. Every rewrite keeps or shortens each
-	/// parameter, so a buffer the size of the original list always holds the result.
+	/// parameter, so a buffer the size of the original list always holds the result. It is written in
+	/// place rather than joined from a list because this runs for every SGR sequence on every output
+	/// line, and the parameters it keeps verbatim are spans with no string to hand to a join.
 	/// </summary>
 	private ref struct SgrSequence(Span<char> buffer)
 	{
@@ -320,11 +321,13 @@ public partial class OutputTransformService : IOutputTransformService
 				return match.Value;
 			}
 
-			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrParameters]);
+			var ranges = SplitSgrParameters(parameters, stackalloc Range[StackSgrChars + 1]);
 			var rewritten = new SgrSequence(parameters.Length <= StackSgrChars
 				? stackalloc char[parameters.Length]
 				: new char[parameters.Length]);
 
+			// Indexed rather than enumerated: a well-formed extended colour is read and skipped as a group,
+			// while a malformed one is kept as it was and its arguments are read as plain parameters.
 			for (var index = 0; index < ranges.Length; index++)
 			{
 				var code = Parameter(parameters, ranges, index);

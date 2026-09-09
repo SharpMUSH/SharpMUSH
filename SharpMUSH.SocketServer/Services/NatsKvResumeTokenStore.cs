@@ -88,18 +88,21 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 		throw entry.Error;
 	}
 
-	private static (bool Found, long Handle, string Session) Parse(string? value)
+	/// <summary>
+	/// The binding a stored value describes, or not found for anything else — a consumed marker, an
+	/// older format version, or a value missing one of its parts.
+	/// </summary>
+	internal static (bool Found, long Handle, string Session) Parse(string? value)
 	{
 		// "<version>:<handle>:<session>"; the session is everything after the second separator.
-		if (value is null) return (false, 0, string.Empty);
-		var rest = value.AsSpan();
-		var versionEnd = rest.IndexOf(':');
-		if (versionEnd < 0 || !rest[..versionEnd].SequenceEqual(TokenFormatVersion)) return (false, 0, string.Empty);
-		rest = rest[(versionEnd + 1)..];
-		var handleEnd = rest.IndexOf(':');
-		if (handleEnd < 0 || !long.TryParse(rest[..handleEnd], out var handle)) return (false, 0, string.Empty);
-		var session = rest[(handleEnd + 1)..];
-		return session.Length > 0 ? (true, handle, session.ToString()) : (false, 0, string.Empty);
+		var text = value.AsSpan();
+		Span<Range> parts = stackalloc Range[3];
+		return text.Split(parts, ':') == parts.Length
+			&& text[parts[0]].SequenceEqual(TokenFormatVersion)
+			&& long.TryParse(text[parts[1]], out var handle)
+			&& !text[parts[2]].IsEmpty
+			? (true, handle, text[parts[2]].ToString())
+			: (false, 0, string.Empty);
 	}
 
 	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default) =>

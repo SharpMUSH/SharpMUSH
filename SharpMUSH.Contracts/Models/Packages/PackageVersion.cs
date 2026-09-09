@@ -39,22 +39,16 @@ public sealed record PackageVersion(int Major, int Minor, int Patch, string? Pre
 			text = text[..dash];
 		}
 
-		// One range more than the three components allowed, so a fourth is seen rather than folded
-		// into the last range.
-		Span<Range> parts = stackalloc Range[4];
-		var count = text.Split(parts, '.');
-		if (count > 3)
-		{
-			return false;
-		}
-
 		Span<int> numbers = [0, 0, 0];
-		for (var i = 0; i < count; i++)
+		var filled = 0;
+		foreach (var part in text.Split('.'))
 		{
-			if (!int.TryParse(text[parts[i]], out numbers[i]) || numbers[i] < 0)
+			if (filled == numbers.Length || !int.TryParse(text[part], out numbers[filled]) || numbers[filled] < 0)
 			{
 				return false;
 			}
+
+			filled++;
 		}
 
 		version = new PackageVersion(numbers[0], numbers[1], numbers[2], prerelease);
@@ -91,32 +85,22 @@ public sealed record PackageVersion(int Major, int Minor, int Patch, string? Pre
 
 	private static int ComparePrerelease(string mine, string theirs)
 	{
-		var a = mine.AsSpan().Split('.');
-		var b = theirs.AsSpan().Split('.');
+		var a = mine.Split('.');
+		var b = theirs.Split('.');
+		return a.Zip(b, CompareIdentifier).FirstOrDefault(cmp => cmp != 0, a.Length.CompareTo(b.Length));
+	}
 
-		while (true)
+	private static int CompareIdentifier(string mine, string theirs)
+	{
+		var mineNumeric = long.TryParse(mine, out var mineNumber);
+		var theirsNumeric = long.TryParse(theirs, out var theirsNumber);
+		return (mineNumeric, theirsNumeric) switch
 		{
-			var aMore = a.MoveNext();
-			var bMore = b.MoveNext();
-			if (!aMore || !bMore)
-			{
-				return aMore.CompareTo(bMore);
-			}
-
-			var aPart = mine.AsSpan(a.Current);
-			var bPart = theirs.AsSpan(b.Current);
-			var aNumeric = long.TryParse(aPart, out var aNumber);
-			var bNumeric = long.TryParse(bPart, out var bNumber);
-			var cmp = (aNumeric, bNumeric) switch
-			{
-				(true, true) => aNumber.CompareTo(bNumber),
-				(true, false) => -1,
-				(false, true) => 1,
-				_ => aPart.CompareTo(bPart, StringComparison.Ordinal)
-			};
-
-			if (cmp != 0) return cmp;
-		}
+			(true, true) => mineNumber.CompareTo(theirsNumber),
+			(true, false) => -1,
+			(false, true) => 1,
+			_ => string.CompareOrdinal(mine, theirs)
+		};
 	}
 
 	public override string ToString() =>

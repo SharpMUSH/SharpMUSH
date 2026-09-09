@@ -209,6 +209,9 @@ public partial class MarkupOutputRendererTests
 	[Arguments("one\n\n", "one")]
 	[Arguments("one\r\n\r\n", "one")]
 	[Arguments("\n\none", "\r\n\r\none")]
+	[Arguments("one\n\ntwo", "one\r\n\r\ntwo")]
+	[Arguments("one\r\n\r\ntwo", "one\r\n\r\ntwo")]
+	[Arguments("\r\n", "")]
 	public async Task Terminal_NormalisesLineEndings(string input, string expected)
 	{
 		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(input));

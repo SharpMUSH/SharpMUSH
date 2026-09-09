@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -9,6 +8,7 @@ namespace SharpMUSH.Messaging.NATS;
 /// </summary>
 internal static class NatsSubjects
 {
+	private const string MessageSuffix = "Message";
 	private static readonly ConcurrentDictionary<Type, string> KebabNames = new();
 
 	/// <summary>The full subject for <paramref name="messageType"/> under <paramref name="subjectPrefix"/>.</summary>
@@ -22,18 +22,13 @@ internal static class NatsSubjects
 	public static string KebabName(Type messageType) =>
 		KebabNames.GetOrAdd(messageType, static type =>
 		{
-			var name = type.Name.AsSpan();
-			if (name.EndsWith("Message", StringComparison.Ordinal))
-				name = name[..^7];
+			var name = type.Name.EndsWith(MessageSuffix, StringComparison.Ordinal)
+				? type.Name[..^MessageSuffix.Length]
+				: type.Name;
 
-			var kebab = new StringBuilder(name.Length + 4);
-			for (var index = 0; index < name.Length; index++)
-			{
-				if (index > 0 && char.IsUpper(name[index]))
-					kebab.Append('-');
-				kebab.Append(char.ToLowerInvariant(name[index]));
-			}
+			var dashed = string.Concat(name.Select((character, index) =>
+				index > 0 && char.IsUpper(character) ? $"-{character}" : character.ToString()));
 
-			return kebab.ToString();
+			return dashed.ToLowerInvariant();
 		});
 }
