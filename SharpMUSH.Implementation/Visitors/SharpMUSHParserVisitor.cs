@@ -1714,7 +1714,8 @@ public class SharpMUSHParserVisitor(
 		CommandContext context, string rootCommand, string[] switches,
 		CommandDefinition libraryCommandDefinition)
 	{
-		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
+		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
+		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)
@@ -2141,6 +2142,22 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
+	/// The index of the first non-space character at or after <paramref name="from"/>, or the length of
+	/// <paramref name="text"/> when there is none.
+	/// </summary>
+	private static int SkipSpaces(MString text, int from)
+	{
+		var plain = text.ToPlainText();
+		var index = from;
+		while (index < plain.Length && plain[index] == ' ')
+		{
+			index++;
+		}
+
+		return index;
+	}
+
+	/// <summary>
 	/// The command a leading speech token stands for, or <see langword="null"/> when the line does not
 	/// begin with one. Mirrors the <c>switch (*p)</c> in PennMUSH's <c>command_parse</c>
 	/// (src/command.c), including its special case that <c>';'</c> followed by a space is POSE.
@@ -2204,10 +2221,19 @@ public class SharpMUSHParserVisitor(
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
-		string? rootCommand = null)
+		string? rootCommand = null,
+		bool noEvalSwitch = false)
 	{
 		var argCallState = CallState.EmptyArgument;
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
+
+		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
+		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
+		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". Restricted to non-EQSPLIT commands
+		// here: Penn's EQSPLIT branch has an extra rule (an `=` present means the LHS is evaluated
+		// after all) that SharpMUSH does not model yet, and guessing at it would be worse than
+		// leaving those commands as they are.
+		var noEval = noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
 
 		// Do not parse the argument splitting.
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
@@ -2220,12 +2246,24 @@ public class SharpMUSHParserVisitor(
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-												 || behavior.HasFlag(CommandBehavior.NoParse);
+												 || behavior.HasFlag(CommandBehavior.NoParse)
+												 || noEval;
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
 		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
 		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+
+		// PennMUSH's command_parse skips leading spaces (`while (*p == ' ') p++`) before it reads the
+		// command name, so `  say hi` says "hi". EvaluateCommands already TrimStart()s to find the
+		// command name; without the same trim here the first space would read as the name/argument
+		// boundary and the command name itself would land in the argument.
+		var leadingSpaces = SkipSpaces(realSubtext, 0);
+		if (leadingSpaces > 0)
+		{
+			realSubtext = realSubtext.Substring(leadingSpaces, realSubtext.Length - leadingSpaces);
+		}
+
 		var spaceInContext = realSubtext.IndexOf(" ");
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
@@ -2237,9 +2275,20 @@ public class SharpMUSHParserVisitor(
 		// command (space) argument(s)
 		if (spaceInContext != -1)
 		{
-			var remainder =
-				realSubtext.Substring(spaceInContext + 1, realSubtext.Length - spaceInContext);
+			// PennMUSH's command_argparse (src/command.c) opens each argument with
+			// `while (*f == ' ') f++`, so EVERY space between the command name and its argument is
+			// eaten, not just the one that ended the command word: `say   hi` says "hi", and so do
+			// `pose   waves` and `"  hi`. Skipping only one space left the rest inside the argument.
+			var argumentStart = SkipSpaces(realSubtext, spaceInContext);
+			var remainder = realSubtext.Substring(argumentStart, realSubtext.Length - argumentStart);
 			parsedArgumentText = remainder;
+
+			// Nothing but trailing spaces after the command name: the command has no arguments at all
+			// (`say ` is `say`), so leave the EmptyArgument sentinel in place rather than splitting "".
+			if (remainder.Length == 0)
+			{
+				return new List<CallState>();
+			}
 
 			// command arg0 = arg1,still arg 1
 			if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
@@ -2318,7 +2367,7 @@ public class SharpMUSHParserVisitor(
 		List<CallState> arguments = [];
 
 		var eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
-		var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.NoParse);
+		var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.NoParse) || noEval;
 		var noRsParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.RSNoParse);
 		var nArgs = argCallState?.Arguments?.Length;
 
