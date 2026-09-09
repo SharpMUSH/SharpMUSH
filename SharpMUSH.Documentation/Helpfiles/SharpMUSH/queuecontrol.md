@@ -45,6 +45,11 @@ A global queue capability grants this queue operation; it does not grant object
 editing rights. An explicit deny of an own scope remains effective even when
 its parent global scope is granted.
 
+On the first upgrade, existing built-in God and Wizard roles receive missing
+administrative capabilities for snapshots, jobs, queues, profiling and reality.
+Explicit permission settings and role assignments are preserved. This upgrade
+runs once; removing a grant afterwards remains effective across restarts.
+
 A direct PID operation needs the control scope. Bulk operations also need
 inspection, process eligible entries in ascending PID order, and recheck control
 for each entry. Listings and batches are limited to 200 entries. Narrow the
