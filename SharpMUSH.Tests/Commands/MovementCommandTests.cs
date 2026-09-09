@@ -36,17 +36,27 @@ public class MovementCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	/// <summary>
-	/// Whether <paramref name="receiver"/> was sent a message containing <paramref name="expected"/>,
-	/// whoever it was attributed to. A triad's messages are spoken by the object that holds the
-	/// attribute, so the sender is not the mover and must not be pinned here.
+	/// Whether <paramref name="receiver"/> was sent a message containing <paramref name="expected"/>
+	/// and attributed to <paramref name="speaker"/>.
 	/// </summary>
-	private bool ReceivedNotifyContaining(DBRef receiver, string expected) =>
+	/// <remarks>
+	/// A triad's messages are spoken by the object that HOLDS the attribute, not by the actor:
+	/// <c>notify_by(thing, player, buff)</c> (<c>src/predicat.c:255</c>). Walking a locked exit is
+	/// the exit talking. The speaker is asserted here rather than left open, because re-attributing a
+	/// <c>fail_lock</c> message back to the mover is exactly the regression this shape exists to
+	/// catch, and an open assertion would pass through it.
+	/// Compared by dbref number: the speaker is named here from an <c>@open</c> result, which carries
+	/// no creation stamp.
+	/// </remarks>
+	private bool ReceivedNotifyContaining(DBRef receiver, string expected, DBRef speaker) =>
 		NotifyService.ReceivedCalls()
 			.Any(c => c.GetMethodInfo().Name == "Notify"
-								&& c.GetArguments().Length >= 2
+								&& c.GetArguments().Length >= 3
 								&& c.GetArguments()[0] is AnySharpObject who && who.Object().DBRef == receiver
 								&& c.GetArguments()[1] is OneOf<MString, string> msg
-								&& TestHelpers.MessagePlainTextContains(msg, expected));
+								&& TestHelpers.MessagePlainTextContains(msg, expected)
+								&& c.GetArguments()[2] is AnySharpObject said
+								&& said.Object().DBRef.Number == speaker.Number);
 
 	/// <summary>
 	/// PennMUSH <c>do_move</c> (<c>move.c:435</c>): when nothing matches as an exit the answer is
@@ -85,11 +95,13 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("NoDestExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(ReceivedNotifyContaining(player.DbRef, ErrorMessages.Notifications.CantGoThatWay)).IsTrue();
+		await Assert.That(ReceivedNotifyContaining(
+			player.DbRef, ErrorMessages.Notifications.CantGoThatWay, exitDbRef)).IsTrue();
 	}
 
 	/// <summary>
@@ -107,13 +119,14 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("FailAttrExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&FAILURE {exitName}=The door is bricked up."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(ReceivedNotifyContaining(player.DbRef, "The door is bricked up.")).IsTrue();
+		await Assert.That(ReceivedNotifyContaining(player.DbRef, "The door is bricked up.", exitDbRef)).IsTrue();
 	}
 
 	/// <summary>
@@ -136,12 +149,15 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExitWalk");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}={destDbRef}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@open {exitName}={destDbRef}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(ReceivedNotifyContaining(player.DbRef, ErrorMessages.Notifications.CantGoThatWay)).IsTrue();
+		await Assert.That(ReceivedNotifyContaining(
+			player.DbRef, ErrorMessages.Notifications.CantGoThatWay, exitDbRef)).IsTrue();
 	}
 
 	/// <summary>

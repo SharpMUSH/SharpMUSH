@@ -1245,10 +1245,13 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// did_it_with(..., NOTHING, Location(player), NOTHING, …) (move.c:480-482): the success triad
+		// runs with the room being LEFT in %0. did_it's loc of NOTHING resolves to the mover's
+		// location, which is still that room (predicat.c:230).
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: exitObject,
 			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
-			Loc: currentLocation));
+			Loc: currentLocation, Env0: currentLocation.Object().DBRef));
 
 		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
 		// is var_dest, not the room being left (move.c:483).
@@ -1292,6 +1295,24 @@ public partial class Commands
 			MarkupText.Plain(ErrorMessages.Notifications.CantGoThatWay));
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>Puppet(victim) &amp;&amp; (Owner(victim) == Owner(player))</c> (<c>src/wiz.c:585</c>):
+	/// a puppet relays everything it is told to its owner, so an owner acting on their own puppet does
+	/// not need a second confirmation.
+	/// </summary>
+	private static async ValueTask<bool> IsOwnPuppet(AnySharpObject thing, AnySharpObject player)
+	{
+		if (!await thing.HasFlag("PUPPET"))
+		{
+			return false;
+		}
+
+		var thingOwner = (await thing.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		var playerOwner = (await player.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		return thingOwner.Equals(playerOwner);
 	}
 
 
@@ -1392,6 +1413,26 @@ public partial class Commands
 				destinationContainer = resolvedExit.AsT0;
 			}
 
+			// recursive_member(destination, victim, 0) || victim == destination (wiz.c:440). This is a
+			// refusal, so it has to be decided before anything announces the departure — safe_tel
+			// declining the move afterwards would leave the room told about a move that never happened.
+			if (targetContent.Object().DBRef.Equals(destinationContainer.Object().DBRef)
+					|| await MoveService.WouldCreateLoop(targetContent, destinationContainer))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
+				continue;
+			}
+
+			// wiz.c:483: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
+			// player rather than inside them. /INSIDE is what asks for the containment instead.
+			if (!parser.CurrentState.Switches.Contains("INSIDE")
+					&& target.IsPlayer
+					&& destinationContainer.IsPlayer
+					&& await executor.IsWizard())
+			{
+				destinationContainer = await destinationContainer.Location();
+			}
+
 			// Zone teleport restriction: check if the source room blocks teleporting out.
 			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
 			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
@@ -1482,6 +1523,15 @@ public partial class Commands
 					What: "TPORT", OWhat: "OTPORT", AWhat: "ATPORT",
 					Loc: destinationContainer,
 					Env0: executor.Object().DBRef, Env1: currentLocation.Object().DBRef));
+			}
+
+			// wiz.c:585-588: the teleporter is told the move happened, unless they were the one moved,
+			// unless the victim is their own puppet (which reports for itself), and unless AreQuiet.
+			if (!target.Object().DBRef.Equals(executor.Object().DBRef)
+					&& !await IsOwnPuppet(target, executor)
+					&& !await target.Object().AreQuietAsync(executor))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Teleported), executor);
 			}
 		}
 

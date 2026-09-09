@@ -11,7 +11,10 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="Player">The enactor. <c>%#</c> in every evaluation, and the recipient of <paramref name="What"/>.</param>
 /// <param name="Thing">Holds the attributes and is the executor that evaluates them.</param>
 /// <param name="What">Attribute whose evaluated value is shown to <paramref name="Player"/>.</param>
-/// <param name="Def">Shown to <paramref name="Player"/> when <paramref name="What"/> is unset.</param>
+/// <param name="Def">
+/// Shown to <paramref name="Player"/> when <paramref name="What"/> is unset. Literal text, not a
+/// resource key — see the note below.
+/// </param>
 /// <param name="OWhat">Attribute evaluated once and shown to everyone else in <paramref name="Loc"/>.</param>
 /// <param name="ODef">Fallback for <paramref name="OWhat"/>, rendered as "&lt;Name&gt; &lt;ODef&gt;".</param>
 /// <param name="AWhat">Action attribute queued on <paramref name="Thing"/> with <paramref name="Player"/> as enactor.</param>
@@ -19,6 +22,16 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="Env0"><c>%0</c> for every evaluation and for the queued action.</param>
 /// <param name="Env1"><c>%1</c> for every evaluation and for the queued action.</param>
 /// <param name="Interact">Interaction gate applied to the o-message audience.</param>
+/// <remarks>
+/// <b>Triad defaults are deliberately not localized.</b> PennMUSH wraps each of them in <c>T()</c>,
+/// which resolves once against the server's locale; SharpMUSH resolves per connection instead, and a
+/// triad has two audiences at once. <paramref name="ODef"/> is broadcast to a whole room through a
+/// single rendered <c>MString</c>, so it cannot be per-recipient without changing what
+/// <c>ICommunicationService.SendToRoomAsync</c> is handed — and localizing only
+/// <paramref name="Def"/> would make the two halves of one triad speak different languages to people
+/// standing next to each other. Both stay literal until the broadcast side can carry a key.
+/// Callers pass <c>ErrorMessages.Notifications.*</c> constants so the wording still has one home.
+/// </remarks>
 public record DidItRequest(
 	AnySharpObject Player,
 	AnySharpObject Thing,

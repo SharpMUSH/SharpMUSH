@@ -229,7 +229,13 @@ public partial class Commands
 		}
 
 		var line = toward is null ? command : $"{command} {toward}";
+
+		// Every follower that gets this far was standing in `from`, so Penn's Dark(Location(follower))
+		// is one read rather than one per follower.
 		var leaderIsHidden = await leader.IsDarkLegal();
+		var roomIsDark = await from.WithExitOption().HasFlag("DARK");
+		var leaderIsLight = await leader.HasFlag("LIGHT");
+		var leaderIsUnseen = leaderIsHidden || (roomIsDark && !leaderIsLight);
 
 		foreach (var token in followers)
 		{
@@ -259,7 +265,16 @@ public partial class Commands
 				continue;
 			}
 
-			if (leaderIsHidden && !await follower.HasPower("See_All"))
+			// Connected(follower) || IsThing(follower) (move.c:1481). A logged-out player stays where
+			// they left off rather than being walked around the game by whoever they last followed.
+			if (!follower.IsThing && !await ConnectionService.IsOnline(follower))
+			{
+				continue;
+			}
+
+			// !(DarkLegal(leader) || (Dark(Location(follower)) && !Light(leader))) || See_All(follower)
+			// (move.c:1482): a departure the follower could not have seen is not one they can follow.
+			if (leaderIsUnseen && !await follower.HasPower("See_All"))
 			{
 				continue;
 			}

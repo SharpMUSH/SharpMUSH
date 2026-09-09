@@ -2,12 +2,15 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -835,6 +838,13 @@ public class MovementParityTests
 	/// one falls back to the global <c>CacheTags.ObjectContents</c> tag, which drops every
 	/// container's cached contents on every step through an exit.
 	/// </summary>
+	/// <remarks>
+	/// This has to observe the INVALIDATION, not the value. <c>CacheTags.ObjectContents</c> is
+	/// over-invalidation, never wrong answers: an <c>lcon()</c> either side of the walk re-reads and
+	/// returns the identical list whether or not the entry survived, so an assertion on the text
+	/// cannot fail and does not guard anything. The bystander room's cache entry itself is the
+	/// observable — present afterwards under the per-container tags, gone under the global one.
+	/// </remarks>
 	[Test]
 	public async ValueTask WalkingThroughAnExitDoesNotWipeUnrelatedContentsCaches()
 	{
@@ -843,14 +853,23 @@ public class MovementParityTests
 			GodParser, ConnectionService, "CacheThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {bystander}={bystanderRoom}"));
 
-		// Warm the bystander room's contents entry.
-		var before = await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
-
+		// The corridor is built first: @dig/@open/@teleport are writes of their own, and warming
+		// after them means only the walk can have expired what the assertion reads.
 		var (mover, _, _, _) = await Corridor("CacheWalk");
+
+		var cache = WebAppFactoryArg.Services.GetRequiredService<IFusionCache>();
+		var contentsKey = CacheKeys.Contents(DBRef.Parse(bystanderRoom).Number);
+
+		await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
+		await Assert.That((await cache.TryGetAsync<CachedObjectRefs>(contentsKey)).HasValue)
+			.IsTrue()
+			.Because("the read must have cached the bystander room's contents for the walk to threaten");
+
 		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out"));
 
-		var after = await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
-		await Assert.That(after!.Message!.ToPlainText()).IsEqualTo(before!.Message!.ToPlainText());
+		await Assert.That((await cache.TryGetAsync<CachedObjectRefs>(contentsKey)).HasValue)
+			.IsTrue()
+			.Because("a step through an exit must expire only the two containers it names");
 	}
 
 	/// <summary>
@@ -957,5 +976,109 @@ public class MovementParityTests
 				MarkupText.Plain($"@teleport {mover.DbRef}={destination}")));
 
 		await Assert.That(seen.Any(m => m == "The world folds.")).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>did_it_with(player, exit, "SUCCESS", …, NOTHING, Location(player), NOTHING, …)</c>
+	/// (<c>src/move.c:480-482</c>): the exit's success triad runs with the room being LEFT in
+	/// <c>%0</c>, not with the destination and not with nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask AnExitsSuccessTriadSeesTheRoomBeingLeftInEnvZero()
+	{
+		var (mover, from, to, exit) = await Corridor("SuccessEnv");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SUCCESS {exit}=%0"));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
+
+		await Assert.That(seen.Any(m => BareDbref(m.Trim()) == BareDbref(from)))
+			.IsTrue()
+			.Because($"%0 must be the departure room {BareDbref(from)}, not {BareDbref(to)} or empty");
+	}
+
+	/// <summary>
+	/// <c>recursive_member(destination, victim, 0) || (victim == destination)</c> (<c>src/wiz.c:440</c>)
+	/// answers "Bad destination." and returns — before <c>OXTPORT</c>, so a refused teleport never
+	/// tells the room that someone left.
+	/// </summary>
+	[Test]
+	public async ValueTask ARefusedTeleportAnnouncesNoDeparture()
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var room = await Dig("BadDestRoom");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "BadDestBox");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BadDestWatcher");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {watcher.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OXTPORT {box}=folds out of the world."));
+
+		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
+
+		var godSaw = await MessagesWhile(god, async () =>
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {box}={box}")));
+
+		var watcherSaw = WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore).ToList();
+
+		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.BadDestination)).IsTrue();
+		await Assert.That(watcherSaw.Any(m => m.Contains("folds out of the world."))).IsFalse();
+		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>src/wiz.c:585-588</c>: the TELEPORTER is told "Teleported.", and only when the victim is
+	/// someone other than themselves.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportingSomeoneElseConfirmsToTheTeleporterAndNotToThemselves()
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var destination = await Dig("ConfirmDest");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ConfirmMover");
+
+		var godSaw = await MessagesWhile(god, async () =>
+			await GodParser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@teleport {mover.DbRef}={destination}")));
+
+		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.Teleported)).IsTrue();
+
+		var elsewhere = await Dig("ConfirmSelf");
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService,
+				MarkupText.Plain($"@teleport {elsewhere}")));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.Teleported))
+			.IsFalse()
+			.Because("victim == player is exactly the case wiz.c:585 excludes");
+	}
+
+	/// <summary>
+	/// <c>src/wiz.c:483</c>: sending a player TO a player lands them beside that player.
+	/// <c>@teleport/inside</c> is what asks for the containment instead.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportingAPlayerToAPlayerLandsBesideThemUnlessInside()
+	{
+		var room = await Dig("InsideRoom");
+		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InsideHost");
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InsideGuest");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {guest.DbRef}={host.DbRef}"));
+
+		await Assert.That(await LocationOf(guest.DbRef.ToString()))
+			.IsEqualTo(BareDbref(room))
+			.Because("without /inside the guest arrives in the host's room, not in the host");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@teleport/inside {guest.DbRef}={host.DbRef}"));
+
+		await Assert.That(await LocationOf(guest.DbRef.ToString()))
+			.IsEqualTo(BareDbref(host.DbRef.ToString()));
 	}
 }

@@ -342,6 +342,12 @@
   <data name="CantTeleportRooms" xml:space="preserve">
     <value>You can't teleport rooms.</value>
   </data>
+  <data name="BadDestination" xml:space="preserve">
+    <value>Bad destination.</value>
+  </data>
+  <data name="Teleported" xml:space="preserve">
+    <value>Teleported.</value>
+  </data>
   <data name="TeleportsNotAllowed" xml:space="preserve">
     <value>Teleports are not allowed in this room.</value>
   </data>

@@ -541,6 +541,15 @@ public static class ErrorMessages
 		// --- Admin / Wizard guardrails (PennMUSH src/wiz.c, src/flags.c) ---
 		public const string CantBootOtherPeople = "You can't boot other people!";
 		public const string CantTeleportRooms = "You can't teleport rooms.";
+
+		/// <summary>
+		/// PennMUSH <c>src/wiz.c:440</c>: the destination is inside the thing being moved, or is the
+		/// thing itself. Refused before the move is announced anywhere.
+		/// </summary>
+		public const string BadDestination = "Bad destination.";
+
+		/// <summary>PennMUSH <c>src/wiz.c:588</c>: told to the teleporter, not to the teleported.</summary>
+		public const string Teleported = "Teleported.";
 		public const string TeleportsNotAllowed = "Teleports are not allowed in this room.";
 		public const string NoZoneTeleport = "You may not teleport out of the zone from this room.";
 		public const string InTheVoid = "You're in the Void. This is not a good thing.";
