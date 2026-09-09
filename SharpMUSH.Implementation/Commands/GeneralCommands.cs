@@ -2110,6 +2110,12 @@ public partial class Commands
 
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
+		if (!await PermissionService.Controls(executor, objectToNotify) &&
+			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
@@ -2169,19 +2175,28 @@ public partial class Commands
 		}
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
+		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
+		if (validation.IsT1) return new CallState(validation.AsT1.Value);
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		async ValueTask SetCount(int value)
+		{
+			if (!await Mediator.Send(new SetAttributeCommand(dbRefAttribute.DbRef, dbRefAttribute.Attribute,
+				MarkupText.Plain(value.ToString()), god)))
+				throw new InvalidOperationException("Semaphore count update failed.");
+			if (attributeContents.IsNone)
+				await SemaphoreAttributes.InitializeAsync(Mediator, dbRefAttribute.DbRef, dbRefAttribute.Attribute);
+		}
 
 		switch (notifyType)
 		{
 			case "ANY":
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCount.ToString()));
+				await SetCount(newCount);
 				break;
 			case "ALL":
-				await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(0.ToString()));
+				var released = await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
+				await SetCount(Math.Max(0, oldSemaphoreCount - released.Count(x => x.Accepted)));
 				break;
 			case "SETQ":
 				var modified = await Mediator.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2192,8 +2207,7 @@ public partial class Commands
 				}
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCountSetQ.ToString()));
+				await SetCount(newCountSetQ);
 				return new None();
 		}
 
@@ -2983,6 +2997,12 @@ public partial class Commands
 		}
 
 		var objectToDrain = maybeObject.AsAnyObject;
+		if (!await PermissionService.Controls(executor, objectToDrain) &&
+			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
 		var hasAll = switches.Contains("ALL");
 		var hasAny = switches.Contains("ANY");
