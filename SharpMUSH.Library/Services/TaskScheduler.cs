@@ -59,7 +59,8 @@ public partial class TaskScheduler(
 		string Owner,
 		DBRef? Executor,
 		DBRef? SemaphoreTarget = null,
-		bool ManagesSemaphoreCount = false
+		bool ManagesSemaphoreCount = false,
+		JobKey? NotificationJob = null
 	);
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -626,20 +627,51 @@ public partial class TaskScheduler(
 				&& !_semaphoreRepairs.ContainsKey(pid) && !_semaphoreCommandReservations.Contains(pid);
 	}
 
+	// This lease never acquires the semaphore mutation lease: compatibility callers may
+	// already own that lease. The ready claim fences other release paths during cleanup.
+	private readonly SemaphoreSlim _notifications = new(1, 1);
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"), ExecutionBudget.CurrentToken);
-		var outcomes = new List<QueueAdmissionResult>();
-		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
-			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(Math.Max(0, count)))
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
+		using var scope = budget.Enter();
+		await _notifications.WaitAsync(ExecutionBudget.CurrentToken);
+		try
 		{
-			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
-			if (trigger is null) continue;
-			await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
-			await _scheduler.DeleteJob(trigger.JobKey, ExecutionBudget.CurrentToken);
-			outcomes.Add(await Activate(long.Parse(key.Name.Split('-').Last())));
+			var group = $"{SemaphoreGroup}:{dbAttribute}";
+			var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(group), ExecutionBudget.CurrentToken);
+			TriggerKey[] candidates;
+			lock (_admissionLock)
+				candidates = keys.Concat(_pendingEntries.Values.Where(e => e.Group == group && e.NotificationJob is not null)
+					.Select(e => new TriggerKey(e.TriggerName, e.Group))).Distinct().OrderBy(k => long.Parse(k.Name.Split('-').Last())).ToArray();
+			var outcomes = new List<QueueAdmissionResult>();
+			foreach (var key in candidates)
+			{
+				if (outcomes.Count >= Math.Max(0, count)) break;
+				var pid = long.Parse(key.Name.Split('-').Last());
+				QueueEntry? entry;
+				lock (_admissionLock)
+				{
+					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+				}
+				var job = entry.NotificationJob ?? (await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken))?.JobKey;
+				if (job is null) continue;
+				lock (_admissionLock)
+				{
+					if (_stopping) throw new OperationCanceledException(_shutdownCts.Token);
+					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+					_pendingEntries[pid] = entry with { NotificationJob = job };
+					_ready.Add(pid);
+				}
+				await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+				await _scheduler.DeleteJob(job, ExecutionBudget.CurrentToken);
+				lock (_admissionLock)
+					if (_pendingEntries.TryGetValue(pid, out entry)) _pendingEntries[pid] = entry with { NotificationJob = null };
+				outcomes.Add(await Activate(pid, readyReserved: true));
+			}
+			return outcomes;
 		}
-		return outcomes;
+		finally { _notifications.Release(); }
 	}
 
 	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
@@ -979,6 +1011,8 @@ public partial class TaskScheduler(
 		// before shutdown disposes the reservation. Release callbacks run after this gate.
 		await _semaphoreMutations.WaitAsync();
 		_semaphoreMutations.Release();
+		await _notifications.WaitAsync();
+		_notifications.Release();
 		await _delayedChanges.WaitAsync();
 		_delayedChanges.Release();
 		lock (_admissionLock)
