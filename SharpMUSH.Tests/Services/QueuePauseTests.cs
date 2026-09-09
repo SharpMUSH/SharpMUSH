@@ -24,6 +24,43 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task StalledQuartzPauseHonorsBudgetAndReleasesTransitionLease()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, TimeSpan.FromHours(1));
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var release = new CancellationTokenSource();
+		scheduler.PauseTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(call.Arg<CancellationToken>(), release.Token);
+			entered.TrySetResult();
+			await Task.Delay(Timeout.Infinite, linked.Token);
+		});
+		Task<QueueControlResult>? pause = null;
+		try
+		{
+			using (var cancellation = new CancellationTokenSource())
+			using (var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token))
+			using (budget.Enter())
+			{
+				pause = queue.PausePending(job.Pid!.Value, "inspect").AsTask();
+				await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+				cancellation.Cancel();
+				await Assert.That(await pause.WaitAsync(TimeSpan.FromSeconds(1))).IsEqualTo(QueueControlResult.Applied);
+			}
+			await Assert.That(queue.GetQueueEntry(job.Pid!.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+			await Assert.That(await queue.PausePending(999, "lease released").AsTask().WaitAsync(TimeSpan.FromSeconds(1)))
+				.IsEqualTo(QueueControlResult.NotFound);
+		}
+		finally
+		{
+			release.Cancel();
+			if (pause is not null) await pause;
+		}
+	}
+
+	[Test]
 	[Arguments("pause")]
 	[Arguments("resume")]
 	[Arguments("retime")]

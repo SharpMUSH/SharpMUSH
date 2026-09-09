@@ -84,7 +84,7 @@ public partial class TaskScheduler
 			};
 			_pendingEntries[pid] = entry;
 		}
-		try { await _scheduler.PauseTrigger(new TriggerKey(entry.TriggerName, entry.Group)); }
+		try { await _scheduler.PauseTrigger(new TriggerKey(entry.TriggerName, entry.Group), ExecutionBudget.CurrentToken); }
 		catch (Exception ex)
 		{
 			// The ledger and generation already prevent execution, even if Quartz is unavailable.
