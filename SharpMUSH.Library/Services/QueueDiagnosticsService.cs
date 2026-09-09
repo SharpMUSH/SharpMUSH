@@ -1,0 +1,122 @@
+using Microsoft.Extensions.Logging;
+using OneOf;
+using OneOf.Types;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Diagnostics;
+
+namespace SharpMUSH.Library.Services;
+
+public interface IQueueDiagnosticsService
+{
+	Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
+		long? beforeSequence = null, CancellationToken ct = default);
+	Task<OneOf<Guid, DiagnosticsError>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default);
+	Task<OneOf<Success, DiagnosticsError>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default);
+	Task CollectProfilesAsync(CancellationToken ct = default);
+}
+
+/// <summary>One fresh authorization boundary for game and portal diagnostic views.</summary>
+public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, IQueueControlService queues,
+	ILogger<QueueDiagnosticsService> logger) : IQueueDiagnosticsService
+{
+	private readonly SemaphoreSlim _collector = new(1, 1);
+	private static bool CanInspect(QueueInspectionScope? scope) => scope is not null
+		&& (scope.Scopes.Contains(PortalPermission.QueueInspect) || scope.Scopes.Contains(PortalPermission.QueueInspectOwn));
+	private static bool CanProfile(QueueInspectionScope? scope) => CanInspect(scope)
+		&& scope!.Scopes.Contains(PortalPermission.DiagnosticsProfile);
+
+	public async Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
+		long? beforeSequence = null, CancellationToken ct = default)
+	{
+		if (limit is < 1 or > 100 || beforeSequence is <= 0) return DiagnosticsError.InvalidRequest;
+		var scope = await queues.GetInspectionScopeAsync(actor, ct);
+		if (!CanInspect(scope)) return DiagnosticsError.PermissionDenied;
+		var active = await queues.ListAsync(actor, ct);
+		var current = active.Take(100).Select(entry => new DiagnosticQueueRow(entry.Pid, null,
+			entry.Source?.ToString(), entry.Owner?.ToString(), entry.Kind, entry.State.ToString(), entry.SourceAttribute,
+			entry.EnqueuedAt, entry.StartedAt, null, entry.WaitDuration, entry.ExecutionDuration, entry.InvocationCount, null)).ToArray();
+		var history = new List<DiagnosticQueueRow>();
+		foreach (var row in recorder.Recent())
+		{
+			if (beforeSequence is { } before && row.Sequence >= before) continue;
+			if (!await queues.CanInspectAsync(scope!, row.Owner, row.Source, ct)) continue;
+			history.Add(new(row.Pid, row.Sequence, row.Source?.ToString(), row.Owner?.ToString(), row.Kind,
+				row.Outcome.ToString(), row.SourceAttribute, row.EnqueuedAt, row.StartedAt, row.EndedAt,
+				row.WaitDuration, row.ExecutionDuration, row.InvocationCount, row.FailedInvocations));
+			if (history.Count > limit) break;
+		}
+		var next = history.Count > limit ? history[limit - 1].Sequence : null;
+		DiagnosticProfileReport? profile = null;
+		var registration = recorder.ProfileRegistrations().SingleOrDefault(p => p.Actor == actor);
+		if (registration is not null)
+		{
+			if (!CanProfile(scope)) recorder.StopProfile(registration.Id, discard: true);
+			else if (recorder.Profile(registration.Id) is { } snapshot)
+			{
+				var rows = new List<DiagnosticProfileRow>();
+				foreach (var row in snapshot.Aggregates.OrderByDescending(row => row.InclusiveMilliseconds))
+				{
+					if (!await queues.CanInspectAsync(scope!, row.Owner, row.Source, ct)) continue;
+					rows.Add(new(row.Source?.ToString(), row.Owner?.ToString(), row.SourceAttribute, row.Kind.ToString(), row.Name,
+						row.Count, row.Failures, row.InclusiveMilliseconds, row.MaximumMilliseconds));
+				}
+				// Mailbox loss includes samples not yet authorized. Publishing that count would reveal
+				// otherwise invisible activity; capacity and sampling limitations are documented instead.
+				profile = new(registration.StartedAt, registration.ExpiresAt, snapshot.Recording, rows);
+			}
+		}
+		return new QueueDiagnosticsReport(current, history.Take(limit).ToArray(), profile, CanProfile(scope), next, active.Count > 100);
+	}
+
+	public async Task<OneOf<Guid, DiagnosticsError>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default)
+	{
+		if (seconds is < 1 or > 300) return DiagnosticsError.InvalidDuration;
+		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
+		var profile = recorder.StartProfile(actor, TimeSpan.FromSeconds(seconds));
+		return profile is null ? DiagnosticsError.CapacityExceeded : profile.Id;
+	}
+	public async Task<OneOf<Success, DiagnosticsError>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default)
+	{
+		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
+		var profile = recorder.ProfileRegistrations().SingleOrDefault(p => p.Actor == actor);
+		if (profile is null) return DiagnosticsError.NotFound;
+		recorder.StopProfile(profile.Id);
+		return new Success();
+	}
+	public async Task CollectProfilesAsync(CancellationToken ct = default)
+	{
+		await _collector.WaitAsync(ct);
+		try
+		{
+			var samples = recorder.DrainProfileSamples().GroupBy(s => s.ProfileId).ToDictionary(g => g.Key, g => g.ToArray());
+			foreach (var profile in recorder.ProfileRegistrations())
+			{
+				if (!samples.ContainsKey(profile.Id) && !recorder.IsProfileRecording(profile.Id)) continue;
+				try
+				{
+					var scope = await queues.GetInspectionScopeAsync(profile.Actor, ct);
+					if (!CanProfile(scope)) { recorder.StopProfile(profile.Id, discard: true); continue; }
+					if (!samples.TryGetValue(profile.Id, out var batch)) continue;
+					var allowed = new List<QueueProfileSample>();
+					var visibility = new Dictionary<(DBRef? Owner, DBRef? Source), bool>();
+					foreach (var sample in batch)
+					{
+						var key = (sample.Owner, sample.Source);
+						if (!visibility.TryGetValue(key, out var visible))
+							visibility[key] = visible = await queues.CanInspectAsync(scope!, sample.Owner, sample.Source, ct);
+						if (visible) allowed.Add(sample);
+					}
+					recorder.ApplyProfileSamples(profile.Id, allowed);
+				}
+				catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+				catch
+				{
+					recorder.StopProfile(profile.Id, discard: true);
+					logger.LogWarning("Profiling session ended because authorization could not be refreshed");
+				}
+			}
+		}
+		finally { _collector.Release(); }
+	}
+}

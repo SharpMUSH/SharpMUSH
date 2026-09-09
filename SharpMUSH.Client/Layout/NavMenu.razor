@@ -93,6 +93,9 @@
 
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionManage"]</div>
+            <AuthorizeView>
+                <Authorized>@NavItem("/admin/diagnostics", Icons.Material.Filled.QueryStats, Loc["DiagTitle"])</Authorized>
+            </AuthorizeView>
             <AuthorizeView Policy="players.view">
                 <Authorized>@NavItem("/admin", Icons.Material.Filled.Dashboard, Loc["AdmBreadcrumb"], NavLinkMatch.All)</Authorized>
             </AuthorizeView>

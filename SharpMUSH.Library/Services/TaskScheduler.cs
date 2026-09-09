@@ -14,6 +14,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Models.Diagnostics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -42,7 +43,8 @@ public partial class TaskScheduler(
 	IMediator mediator,
 	ILogger<TaskScheduler> logger,
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
-	INotifyService? notifyService = null) : ITaskScheduler, IAsyncDisposable
+	INotifyService? notifyService = null,
+	IQueueDiagnosticsRecorder? diagnostics = null) : ITaskScheduler, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -63,6 +65,7 @@ public partial class TaskScheduler(
 	)
 	{
 		public DeferredSchedule? Deferred { get; init; }
+		public QueueObservation? Observation { get; init; }
 	}
 
 	// The reservation ledger bounds this channel, including cancelled entries until consumed.
@@ -90,11 +93,16 @@ public partial class TaskScheduler(
 		_running.Remove(pid);
 		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
 	}
-	private void Release(long pid)
+	private void Release(long pid, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
 		QueueEntry? entry;
 		lock (_admissionLock) entry = RemoveEntry(pid);
-		entry?.Cts.Dispose();
+		if (entry is not null) DisposeEntry(entry, outcome);
+	}
+	private static void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
+	{
+		entry.Observation?.Complete(outcome);
+		entry.Cts.Dispose();
 	}
 	private void CancelEntry(QueueEntry entry)
 	{
@@ -104,14 +112,19 @@ public partial class TaskScheduler(
 	}
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
-	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
+	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
+	 string? sourceAttribute = null)
 	{
 		string owner = $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{
 			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value));
-			if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
+			if (target.IsNone)
+			{
+				diagnostics?.Rejected(executor, null, DiagnosticKind(group), QueueOutcome.InvalidTarget);
+				return Reject(QueueRejectionReason.InvalidTarget);
+			}
 			executor = target.Known().Object().DBRef;
 			if (await target.Known().IsWizard() || await target.Known().HasPower("Queue"))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery()));
@@ -126,13 +139,28 @@ public partial class TaskScheduler(
 			else
 			{
 				var pid = NextPid();
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget);
+				DBRef.TryParse(owner, out var diagnosticOwner);
+				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget)
+				{
+					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, DiagnosticKind(group), sourceAttribute)
+				};
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
 			}
 		}
 		if (result.Accepted && ready) EnsureConsumerStarted();
+		if (!result.Accepted)
+		{
+			DBRef.TryParse(owner, out var diagnosticOwner);
+			diagnostics?.Rejected(executor, diagnosticOwner, DiagnosticKind(group), result.Reason switch
+			{
+				QueueRejectionReason.GlobalLimit => QueueOutcome.GlobalLimit,
+				QueueRejectionReason.OwnerLimit => QueueOutcome.OwnerLimit,
+				QueueRejectionReason.ShuttingDown => QueueOutcome.ShuttingDown,
+				_ => QueueOutcome.InvalidTarget
+			});
+		}
 		if (!result.Accepted && notifyService is not null)
 		{
 			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
@@ -142,6 +170,11 @@ public partial class TaskScheduler(
 		}
 		return result;
 	}
+	private static string? SourceAttribute(ParserState state) => state.CurrentEvaluation is { } current
+		&& current.DB == state.Executor ? current.Name : null;
+	private static string DiagnosticKind(string group) => group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
+		? "semaphore" : group.StartsWith(DelayGroup + ":", StringComparison.Ordinal) ? "delay"
+		: group == DirectInputGroup ? "direct-input" : group == EnqueueGroup ? "enqueue" : "other";
 	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
 
 	/// <summary>Serialize semaphore counter transactions. Acquire before any deferred queue lease.</summary>
@@ -224,24 +257,34 @@ public partial class TaskScheduler(
 			{
 				try
 				{
-					lock (_admissionLock) _running.Add(entry.Pid);
+					lock (_admissionLock)
+					{
+						_running.Add(entry.Pid);
+					}
 					if (entry.BeforeExecution is not null)
 					{
 						try { await entry.BeforeExecution(); }
 						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}; continuing admitted work", entry.Pid); }
 					}
-					if (entry.Cts.IsCancellationRequested) continue;
+					// Timeout bookkeeping must finish even when the user body has been cancelled.
+					lock (_admissionLock)
+					{
+						if (_stopping || entry.Cts.IsCancellationRequested) continue;
+					}
 					using var budget = ExecutionBudget.FromMilliseconds(configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000, entry.Cts.Token);
 					using var scope = budget.Enter();
+					using var observation = entry.Observation?.Enter();
 					try
 					{
 						await entry.Action();
 						if (budget.IsExpired) await NotifyExpired(entry);
+						entry.Observation?.Complete(budget.IsExpired ? QueueOutcome.ExecutionLimit
+							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed);
 					}
-					catch (OperationCanceledException) when (budget.IsExpired) { await NotifyExpired(entry); }
-					catch (OperationCanceledException) when (budget.IsCancelled) { logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
+					catch (OperationCanceledException) when (budget.IsExpired) { entry.Observation?.Complete(QueueOutcome.ExecutionLimit); await NotifyExpired(entry); }
+					catch (OperationCanceledException) when (budget.IsCancelled) { entry.Observation?.Complete(QueueOutcome.Cancelled); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
 				}
-				catch (Exception ex) { logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
+				catch (Exception ex) { entry.Observation?.Complete(QueueOutcome.Failed); logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
 				finally { Release(entry.Pid); }
 			}
 		}
@@ -325,7 +368,7 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
-		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor);
+		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state));
 	}
 
 	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
@@ -348,7 +391,7 @@ public partial class TaskScheduler(
 			var attr = await attributeService.GetAttributeAsync(actor, obj.Known, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
 			if (!attr.IsAttribute) return new CallState("#-1");
 			return await ExecuteList(attr.AsAttribute.Last().Value, parserState);
-		}, $"async:{dbAttribute}", EnqueueGroup, executor);
+		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
 	}
 
 	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state,
@@ -362,7 +405,7 @@ public partial class TaskScheduler(
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef));
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, sourceAttribute: SourceAttribute(state));
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		async ValueTask Schedule(TimeSpan delay, long generation)
@@ -418,7 +461,7 @@ public partial class TaskScheduler(
 					await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
 						MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
 			}
-			finally { Release(admission.Pid!.Value); }
+			finally { Release(admission.Pid!.Value, QueueOutcome.ScheduleFailed); }
 			throw;
 		}
 	}
@@ -481,7 +524,7 @@ public partial class TaskScheduler(
 				catch (Exception ex) { logger.LogWarning(ex, "Could not remove drained trigger for PID {Pid}", entry.Pid); }
 			}
 		}
-		foreach (var entry in removed) entry.Cts.Dispose();
+		foreach (var entry in removed) DisposeEntry(entry);
 	}
 
 	public async ValueTask Halt(DBRef dbRef)
@@ -524,7 +567,7 @@ public partial class TaskScheduler(
 			}
 
 		}
-		entry.Cts.Dispose();
+		DisposeEntry(entry);
 		return true;
 	}
 
@@ -533,7 +576,7 @@ public partial class TaskScheduler(
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var group = $"{DelayGroup}:{state.Executor}";
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		async ValueTask Schedule(TimeSpan nextDelay, long generation)
@@ -546,7 +589,7 @@ public partial class TaskScheduler(
 		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
 		{ Deferred = new(DateTimeOffset.UtcNow + delay, Schedule, null, command, state) };
 		try { await Schedule(delay, 0); return admission; }
-		catch { Release(pid); throw; }
+		catch { Release(pid, QueueOutcome.ScheduleFailed); throw; }
 	}
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()

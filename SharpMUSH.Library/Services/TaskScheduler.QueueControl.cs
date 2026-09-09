@@ -54,7 +54,9 @@ public partial class TaskScheduler
 		return new(entry.Pid, entry.Executor, owner,
 			entry.Deferred?.Semaphore is not null ? "semaphore" : entry.Deferred is not null ? "delay"
 				: entry.Group is DirectInputGroup or EnqueueGroup ? entry.Group : "other",
-			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false);
+			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false,
+			entry.Observation?.EnqueuedAt, entry.Observation?.StartedAt, entry.Observation?.WaitDuration,
+			entry.Observation?.ExecutionDuration, entry.Observation?.InvocationCount, entry.Observation?.SourceAttribute);
 	}
 
 	public async ValueTask<QueueControlResult> PausePending(long pid, string reason)

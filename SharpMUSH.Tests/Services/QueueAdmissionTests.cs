@@ -83,6 +83,31 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task HaltedReadyTimeoutStillCompletesSemaphoreBookkeeping()
+	{
+		var count = 1;
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		await using var queue = Create(global: 3, parser: parser,
+			mediator: CountingMediator(() => count, value => count = value));
+		var blocked = Signal(); var release = Signal(); var drained = Signal();
+		await queue.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+			var pending = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think timeout"), ParserState.Empty, semaphore, 0);
+			await queue.ReleaseScheduledWork(pending.Pid!.Value, semaphoreTimeout: true);
+			await queue.HaltByPid(pending.Pid.Value);
+			await queue.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drained", "test");
+		}
+		finally { release.SetResult(); }
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(count).IsEqualTo(0);
+		await parser.DidNotReceive().CommandListParse(Arg.Any<MarkupString.MarkupText>());
+	}
+
+	[Test]
 	public async Task ManagedWaitDoesNotExposeReservationBeforeCounterLease()
 	{
 		var count = 2;

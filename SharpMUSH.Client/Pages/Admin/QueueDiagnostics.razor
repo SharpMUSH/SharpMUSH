@@ -1,0 +1,139 @@
+@page "/admin/diagnostics"
+@attribute [Authorize]
+@using SharpMUSH.Library.Models.Diagnostics
+@inject IHttpClientFactory HttpFactory
+@inject AccountAuthService Account
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["DiagTitle"]</PageTitle>
+<div style="padding:var(--cpad);">
+    <div class="ph-header">
+        <h1 class="ph-title">@Loc["DiagTitle"]</h1>
+        <p class="ph-subtitle">@Loc["DiagDescription"]</p>
+    </div>
+    <div class="diag-controls">
+        <label>@Loc["DiagCharacter"]
+            <select value="@_character" @onchange="SelectCharacter" disabled="@_busy">
+                <option value="">@Loc["DiagSelectCharacter"]</option>
+                @foreach (var character in Account.Characters)
+                {
+                    <option value="@Identity(character)">@character.Name (@Identity(character))</option>
+                }
+            </select>
+        </label>
+        <button @onclick="Refresh" disabled="@(_busy || _character.Length == 0)">@Loc["Refresh"]</button>
+    </div>
+    @if (_error is not null) { <p role="alert">@Loc[_error]</p> }
+    @if (_busy) { <p role="status">@Loc["DiagLoading"]</p> }
+    @if (_report is { } report)
+    {
+        <section class="ph-card">
+            <h2>@Loc["DiagActive"]</h2>
+            <DiagnosticsQueueTable Rows="report.Active" />
+            @if (report.ActiveTruncated) { <p>@Loc["DiagActiveTruncated"]</p> }
+        </section>
+        <section class="ph-card">
+            <h2>@Loc["DiagHistory"]</h2>
+            <DiagnosticsQueueTable Rows="report.Recent" />
+            @if (report.NextHistoryCursor is not null)
+            {
+                <button @onclick="Older" disabled="@_busy">@Loc["DiagOlder"]</button>
+            }
+        </section>
+        <section class="ph-card">
+            <h2>@Loc["DiagProfile"]</h2>
+            <p>@Loc["DiagInclusiveHelp"]</p>
+            @if (report.CanProfile)
+            {
+                <div class="diag-controls">
+                    <label>@Loc["DiagSeconds"] <input type="number" min="1" max="300" @bind="_seconds" disabled="@_busy" /></label>
+                    <button @onclick="StartProfile" disabled="@_busy">@Loc["DiagStart"]</button>
+                    @if (report.Profile?.Recording == true)
+                    {
+                        <button @onclick="StopProfile" disabled="@_busy">@Loc["DiagStop"]</button>
+                    }
+                </div>
+            }
+            @if (report.Profile is { } profile)
+            {
+                <p>@Loc[profile.Recording ? "DiagRecording" : "DiagStopped"] · @Loc["DiagExpires"] @profile.ExpiresAt.ToString("u")</p>
+                <div class="diagnostics-table"><table>
+                    <thead><tr><th>@Loc["DiagSource"]</th><th>@Loc["DiagKind"]</th><th>@Loc["DiagName"]</th>
+                        <th>@Loc["DiagInvocations"]</th><th>@Loc["DiagFailures"]</th><th>@Loc["DiagInclusive"]</th><th>@Loc["DiagMaximum"]</th></tr></thead>
+                    <tbody>@foreach (var row in profile.Rows)
+                    {
+                        <tr><td>@(row.Source ?? "—")@if (row.SourceAttribute is not null) { <span>/@row.SourceAttribute</span> }</td>
+                            <td>@Loc[$"DiagKind_{row.Kind}"]</td><td>@row.Name</td><td>@row.Count</td><td>@row.Failures</td>
+                            <td>@row.InclusiveMilliseconds.ToString("N2")</td><td>@row.MaximumMilliseconds.ToString("N2")</td></tr>
+                    }</tbody>
+                </table></div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private string _character = "";
+    private int _seconds = 60;
+    private bool _busy;
+    private string? _error;
+    private QueueDiagnosticsReport? _report;
+    private static string Identity(AccountAuthService.CharacterSummary character) => $"#{character.DbrefNumber}:{character.CreationTime}";
+    private string Query => $"character={Uri.EscapeDataString(_character)}";
+    protected override async Task OnInitializedAsync()
+    {
+        if ((await Account.GetCharactersAsync()).IsT1) _error = "DiagError";
+    }
+    private async Task SelectCharacter(ChangeEventArgs args)
+    {
+        _character = args.Value?.ToString() ?? "";
+        _report = null;
+        _error = null;
+        if (_character.Length > 0) await Refresh();
+    }
+    private Task Refresh() => Load(null);
+    private Task Older() => Load(_report?.NextHistoryCursor);
+    private async Task Load(long? cursor)
+    {
+        _busy = true;
+        _error = null;
+        _report = null;
+        try
+        {
+            using var response = await HttpFactory.CreateClient("api").GetAsync($"api/diagnostics?{Query}&limit=50" +
+                (cursor is null ? "" : $"&beforeSequence={cursor}"));
+            if (response.IsSuccessStatusCode) _report = await response.Content.ReadFromJsonAsync<QueueDiagnosticsReport>();
+            else _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied" : "DiagError";
+        }
+        catch (HttpRequestException) { _error = "DiagError"; }
+        catch (System.Text.Json.JsonException) { _error = "DiagError"; }
+        finally { _busy = false; }
+    }
+    private async Task StartProfile()
+    {
+        if (_seconds is < 1 or > 300) { _error = "DiagDurationError"; return; }
+        await ChangeProfile(true);
+    }
+    private Task StopProfile() => ChangeProfile(false);
+    private async Task ChangeProfile(bool start)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var http = HttpFactory.CreateClient("api");
+            using var response = start
+                ? await http.PostAsJsonAsync("api/diagnostics/profile", new { Character = _character, Seconds = _seconds })
+                : await http.DeleteAsync($"api/diagnostics/profile?{Query}");
+            if (!response.IsSuccessStatusCode)
+            {
+                _report = null;
+                _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied" : "DiagError";
+                return;
+            }
+            await Refresh();
+        }
+        catch (HttpRequestException) { _report = null; _error = "DiagError"; }
+        finally { _busy = false; }
+    }
+}
