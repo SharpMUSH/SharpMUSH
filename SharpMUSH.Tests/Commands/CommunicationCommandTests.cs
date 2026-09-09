@@ -777,6 +777,89 @@ public class CommunicationCommandTests
 	}
 
 	/// <summary>
+	/// Digs a fresh room and moves a fresh player into it, so a remit test can assert who heard the
+	/// message and who did not without depending on any shared object.
+	/// </summary>
+	private async Task<(string RoomDbRef, DBRef Listener)> DigRoomWithListenerAsync(string prefix)
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName(prefix);
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Listener");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {listener.DbRef}={roomDbRef}"));
+
+		return (roomDbRef, listener.DbRef);
+	}
+
+	private bool Heard(DBRef listener, string message)
+		=> WebAppFactoryArg.Notifications.For(listener).Any(said => said.Contains(message, StringComparison.Ordinal));
+
+	/// <summary>
+	/// PennMUSH <c>do_remit</c> (<c>speech.c:1303-1307</c>): <c>/list</c> splits the target argument on
+	/// spaces and remits into every room named, not only the first.
+	/// </summary>
+	[Test]
+	public async ValueTask NsremitListReachesEveryRoomInTheList()
+	{
+		var (firstRoom, firstListener) = await DigRoomWithListenerAsync("NsremitListA");
+		var (secondRoom, secondListener) = await DigRoomWithListenerAsync("NsremitListB");
+		var message = TestIsolationHelpers.GenerateUniqueName("NsremitListSaid");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@nsremit/list {firstRoom} {secondRoom}={message}"));
+
+		await Assert.That(Heard(firstListener, message)).IsTrue()
+			.Because("the first room in the list must hear the emit");
+		await Assert.That(Heard(secondListener, message)).IsTrue()
+			.Because("every later room in the list must hear it too");
+	}
+
+	[Test]
+	public async ValueTask NsremitToASingleRoomStillDelivers()
+	{
+		var (room, listener) = await DigRoomWithListenerAsync("NsremitSingle");
+		var message = TestIsolationHelpers.GenerateUniqueName("NsremitSingleSaid");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nsremit {room}={message}"));
+
+		await Assert.That(Heard(listener, message)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask RemitListReachesEveryRoomInTheList()
+	{
+		var (firstRoom, firstListener) = await DigRoomWithListenerAsync("RemitListA");
+		var (secondRoom, secondListener) = await DigRoomWithListenerAsync("RemitListB");
+		var message = TestIsolationHelpers.GenerateUniqueName("RemitListSaid");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@remit/list {firstRoom} {secondRoom}={message}"));
+
+		await Assert.That(Heard(firstListener, message)).IsTrue();
+		await Assert.That(Heard(secondListener, message)).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_remit</c> (<c>speech.c:1308-1309</c>): without <c>/list</c> the whole argument is a
+	/// single room name, so a space-separated pair of dbrefs names nothing and nobody hears it.
+	/// </summary>
+	[Test]
+	public async ValueTask RemitWithoutListTreatsTheWholeArgumentAsOneRoomName()
+	{
+		var (firstRoom, firstListener) = await DigRoomWithListenerAsync("RemitNoListA");
+		var (secondRoom, secondListener) = await DigRoomWithListenerAsync("RemitNoListB");
+		var message = TestIsolationHelpers.GenerateUniqueName("RemitNoListSaid");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@remit {firstRoom} {secondRoom}={message}"));
+
+		await Assert.That(Heard(firstListener, message)).IsFalse();
+		await Assert.That(Heard(secondListener, message)).IsFalse();
+	}
+
+	/// <summary>
 	/// PennMUSH <c>do_lemit</c> (<c>speech.c:1343</c>): echoed only when the sender is not directly in the
 	/// outermost room, i.e. when they are inside a container.
 	/// </summary>
