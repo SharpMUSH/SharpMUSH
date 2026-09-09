@@ -52,7 +52,8 @@ public partial class TaskScheduler
 			: entry.Deferred.Paused ? entry.Deferred.Remaining : Nonnegative(entry.Deferred.Due - now);
 		DBRef.TryParse(entry.Owner, out var owner);
 		return new(entry.Pid, entry.Executor, owner,
-			entry.Deferred?.Semaphore is not null ? "semaphore" : entry.Deferred is not null ? "delay" : entry.Group,
+			entry.Deferred?.Semaphore is not null ? "semaphore" : entry.Deferred is not null ? "delay"
+				: entry.Group is DirectInputGroup or EnqueueGroup ? entry.Group : "other",
 			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false);
 	}
 

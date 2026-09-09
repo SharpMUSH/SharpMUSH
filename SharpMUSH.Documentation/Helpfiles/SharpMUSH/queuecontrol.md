@@ -29,6 +29,13 @@ replacement schedule. Every execution gets a fresh execution budget. Resume
 rejects changed owner identities, recycled executors and missing or recycled
 semaphore targets.
 
+Existing `@wait/pid pid=seconds` also retimes delayed jobs and semaphore waits.
+A leading `+` or `-` adjusts the remaining duration; `/until` takes absolute Unix
+seconds. Retiming a paused job changes its frozen duration without resuming it.
+Past deadlines become zero remaining time. Invalid or unrepresentable times are
+rejected without changing the timer. These legacy operations retain their Penn
+control and HALT-power permission rules.
+
 The actual executing player must belong to an active account. Account roles do
 not transfer to an owned thing, a caller or an enactor. Inspecting your queue
 requires queue.inspect.own; changing it requires queue.control.own and normal
