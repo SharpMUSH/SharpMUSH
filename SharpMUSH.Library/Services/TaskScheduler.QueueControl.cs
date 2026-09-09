@@ -68,6 +68,11 @@ public partial class TaskScheduler
 			entry.Observation?.ExecutionDuration, entry.Observation?.InvocationCount, entry.Observation?.SourceAttribute);
 	}
 
+	// Caller owns the admission lock. Every timer control uses the same repair exclusions.
+	private bool HasPendingCleanup(long pid)
+		=> _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid)
+			|| _semaphoreCommandReservations.Contains(pid);
+
 	public async ValueTask<QueueControlResult> PausePending(long pid, string reason)
 	{
 		if (reason is null || reason.Length > 160 || reason.Any(char.IsControl)) return QueueControlResult.InvalidReason;
@@ -76,7 +81,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (_ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
+			if (_ready.Contains(pid) || HasPendingCleanup(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
 			if (entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 			entry = entry with
 			{
@@ -106,7 +111,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (entry.Deferred is null || _ready.Contains(pid) || _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return QueueControlResult.NotPending;
+			if (entry.Deferred is null || _ready.Contains(pid) || HasPendingCleanup(pid)) return QueueControlResult.NotPending;
 			if (!entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 		}
 		if (!await ValidQueuedIdentity(entry)) return QueueControlResult.InvalidIdentity;

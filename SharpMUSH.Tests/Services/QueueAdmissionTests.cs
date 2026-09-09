@@ -87,6 +87,55 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	[Arguments("executor", false)]
+	[Arguments("enactor", false)]
+	[Arguments("caller", false)]
+	[Arguments("executor", true)]
+	[Arguments("enactor", true)]
+	[Arguments("caller", true)]
+	public async Task ParserIdentityReadsReceiveConsumerCancellation(string identity, bool known)
+	{
+		var mediator = Substitute.For<IMediator>();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async ValueTask<AnyOptionalSharpObject> Block(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			return new None();
+		}
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Block(call.Arg<CancellationToken>()));
+		await using var queue = Create(global: 10, milliseconds: 200);
+		var following = Signal();
+		await queue.AdmitWork(async () =>
+		{
+			var state = ParserState.RootFor(new DBRef(10));
+			switch (identity, known)
+			{
+				case ("executor", false): await state.ExecutorObject(mediator); break;
+				case ("enactor", false): await state.EnactorObject(mediator); break;
+				case ("caller", false): await state.CallerObject(mediator); break;
+				case ("executor", true): await state.KnownExecutorObject(mediator); break;
+				case ("enactor", true): await state.KnownEnactorObject(mediator); break;
+				case ("caller", true): await state.KnownCallerObject(mediator); break;
+			}
+			return null;
+		}, "identity", "test");
+		await queue.AdmitWork(() => { following.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		try
+		{
+			await Assert.That((await entered.Task.WaitAsync(TimeSpan.FromSeconds(3))).CanBeCanceled).IsTrue();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+		finally
+		{
+			cleanup.Cancel();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task AdmissionPrivilegeStreamsReceiveTheConsumerExecutionToken(bool powers)
