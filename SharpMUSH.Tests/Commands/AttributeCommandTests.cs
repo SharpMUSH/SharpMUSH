@@ -64,6 +64,36 @@ public class AttributeCommandTests
 				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// <c>command_atrset</c> matches with <c>match_controlled(executor, arg_left)</c>
+	/// (<c>src/cmds.c:1784</c>), and <c>match_result_internal</c> uses that one object as both the
+	/// looker and the search origin — so <c>me</c> in a forced or queued <c>&amp;ATTR me=value</c>
+	/// names the object running the command, not whoever set it going.
+	/// </summary>
+	[Test]
+	public async ValueTask SetAttribute_MeResolvesToTheExecutorWhenForced()
+	{
+		var forcer = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrForcedMe");
+		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var forcerObj = await Mediator.Send(new GetObjectNodeQuery(forcer));
+		var attrName = TestIsolationHelpers.GenerateUniqueName("FORCED_ME").ToUpperInvariant();
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@force {objDbRef}=&{attrName} me=yes"));
+
+		var onThing = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(onThing.IsAttribute).IsTrue()
+			.Because("me in a forced & names the forced object, which is the executor");
+		await Assert.That(onThing.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("yes");
+
+		var onForcer = await AttributeService.GetAttributeAsync(forcerObj.Known, forcerObj.Known, attrName,
+			IAttributeService.AttributeMode.Read, false);
+		await Assert.That(onForcer.IsAttribute).IsFalse()
+			.Because("the forcing player is the enactor, not the looker & resolves me against");
+	}
+
 	[Test]
 	public async ValueTask SetAttributeComplexValue()
 	{

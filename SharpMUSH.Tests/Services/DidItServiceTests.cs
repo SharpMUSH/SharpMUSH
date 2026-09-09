@@ -209,6 +209,47 @@ public class DidItServiceTests
 		await Assert.That(messages.Any(m => m == $"{actor.Name} waves.")).IsTrue();
 	}
 
+	/// <summary>
+	/// <c>real_did_it</c> hangs the <c>odef</c> branch off an <c>else</c> on the attribute FETCH, not
+	/// on the evaluated result: an o-attribute that exists and produces nothing stays silent, while an
+	/// absent one falls back to the default.
+	/// </summary>
+	[Test]
+	public async ValueTask AnOWhatThatExistsAndEvaluatesToNothingSuppressesTheODef()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItMuteActor");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItMuteWatcher");
+		var roomDbRef = await DigAndGather(actor, watcher);
+		var thing = await Thing("MuteHolder");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&OMUTE {thing}=[null(nothing at all)]"));
+
+		var silent = await MessagesWhile(watcher.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(actor.DbRef),
+				Thing: await Node(thing),
+				OWhat: "OMUTE",
+				ODef: "waves.",
+				Loc: roomDbRef)));
+
+		await Assert.That(silent.Any(m => m.Contains("waves."))).IsFalse()
+			.Because("an o-attribute that exists and evaluates to nothing does not fall back to the default");
+
+		var fallback = await MessagesWhile(watcher.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(actor.DbRef),
+				Thing: await Node(thing),
+				OWhat: "OABSENT",
+				ODef: "waves.",
+				Loc: roomDbRef)));
+
+		await Assert.That(fallback.Any(m => m == $"{actor.Name} waves.")).IsTrue()
+			.Because("an absent o-attribute is what the default is for");
+	}
+
 	[Test]
 	public async ValueTask OWhatIsEvaluatedOncePerCallNotOncePerListener()
 	{

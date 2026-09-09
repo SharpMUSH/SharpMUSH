@@ -189,10 +189,17 @@ public class DidItService(
 		var attr = await attributeService.GetAttributeAsync(
 			thing, thing, request.AWhat!, IAttributeService.AttributeMode.Execute, parent: true);
 
-		if (!attr.IsAttribute || attr.AsAttribute.Length == 0
-				|| string.IsNullOrEmpty(attr.AsAttribute.Last().Value.ToPlainText()))
+		if (!attr.IsAttribute || attr.AsAttribute.Length == 0)
 		{
 			return false;
+		}
+
+		// queue_attribute_base (src/cque.c:786-795) returns 1 as soon as the attribute is found, so a
+		// present-but-empty action attribute still counts as used for fail_lock's return value even
+		// though there is nothing to run.
+		if (string.IsNullOrEmpty(attr.AsAttribute.Last().Value.ToPlainText()))
+		{
+			return true;
 		}
 
 		var executor = thing.Object().DBRef;
@@ -201,6 +208,12 @@ public class DidItService(
 		var attributePath = attr.AsAttribute.Last().LongName!.Split("`");
 		var baseState = parser.CurrentState;
 
+		// queue_attribute_useatr queues with PE_INFO_DEFAULT (src/cque.c:867), which gives the action
+		// its own pe_info: fresh q-registers, fresh recursion depths and fresh invocation counts. The
+		// collections and counters on ParserState are reference types, and the queue entry runs on the
+		// scheduler's own thread while the command that queued it is still running, so sharing the
+		// caller's would be both a data race and a semantic leak — setq() in the action would write the
+		// caller's register frame, and an already-tripped LimitExceeded would silence the action.
 		await mediator.Send(new QueueAttributeRequest(
 			() => ValueTask.FromResult(baseState with
 			{
@@ -208,7 +221,16 @@ public class DidItService(
 				Enactor = enactor,
 				Caller = enactor,
 				Arguments = args,
-				EnvironmentRegisters = args
+				EnvironmentRegisters = args,
+				Registers = new([[]]),
+				IterationRegisters = [],
+				RegexRegisters = [],
+				SwitchStack = [],
+				ExecutionStack = [],
+				CallDepth = new InvocationCounter(),
+				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+				TotalInvocations = new InvocationCounter(),
+				LimitExceeded = new LimitExceededFlag()
 			}),
 			new DbRefAttribute(executor, attributePath)));
 

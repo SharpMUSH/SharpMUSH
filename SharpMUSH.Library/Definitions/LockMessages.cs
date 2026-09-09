@@ -18,10 +18,28 @@ public static class LockMessages
 		[LockType.Leave] = "LFAIL"
 	};
 
+	/// <summary>
+	/// Lock types whose PennMUSH name (<c>src/lock.c:56-88</c>) is not the enum member name. The
+	/// derived attribute is built from the lock's name, not from SharpMUSH's <c>@lock</c> switch, so
+	/// <c>Tport_Lock = "Teleport"</c> (<c>src/lock.c:61</c>) gives <c>TELEPORT_LOCK`FAILURE</c>.
+	/// Every other member matches its PennMUSH name once upper-cased.
+	/// </summary>
+	private static readonly Dictionary<LockType, string> PennNames = new()
+	{
+		[LockType.TPort] = "TELEPORT"
+	};
+
 	public static (string What, string OWhat, string AWhat) FailureAttributes(LockType lockType)
-		=> Named.TryGetValue(lockType, out var failBase)
-			? (failBase, $"O{failBase}", $"A{failBase}")
-			: ($"{lockType.ToString().ToUpperInvariant()}_LOCK`FAILURE",
-				 $"{lockType.ToString().ToUpperInvariant()}_LOCK`OFAILURE",
-				 $"{lockType.ToString().ToUpperInvariant()}_LOCK`AFAILURE");
+	{
+		if (Named.TryGetValue(lockType, out var failBase))
+		{
+			return (failBase, $"O{failBase}", $"A{failBase}");
+		}
+
+		var name = PennNames.TryGetValue(lockType, out var pennName)
+			? pennName
+			: lockType.ToString().ToUpperInvariant();
+
+		return ($"{name}_LOCK`FAILURE", $"{name}_LOCK`OFAILURE", $"{name}_LOCK`AFAILURE");
+	}
 }
