@@ -348,11 +348,21 @@ public static partial class HelperFunctions
 		return await obj.IsOrphan() ? null : typeAncestor;
 	}
 
+	/// <summary>
+	/// PennMUSH <c>dbdefs.h:219</c>:
+	/// <code>#define Inheritable(x) (IsPlayer(x) || Inherit(x) || Inherit(Owner(x)) || Wizard(x))</code>
+	/// where <c>Inherit(x)</c> is <c>has_flag_by_name(x, "TRUST", NOTYPE)</c> (<c>dbdefs.h:143</c>).
+	/// Both TRUST tests go through <see cref="HasFlag(SharpObject,string)"/> so they ask the same
+	/// question the same way: <c>has_flag_by_name</c> resolves via <c>match_flag</c> →
+	/// <c>ptab_find</c>, which compares with <c>strcasecmp</c>/<c>string_prefix</c>, so the match is
+	/// case-insensitive and alias-aware. An ordinal comparison here could never match the seeded
+	/// flag, which is spelled <c>TRUST</c> with the alias <c>INHERIT</c> (<c>FlagSeed.cs:22</c>).
+	/// </summary>
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await obj.HasFlag("Trust")
 			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
+				 .Object.HasFlag("Trust")
 			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
