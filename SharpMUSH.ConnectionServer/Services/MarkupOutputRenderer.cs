@@ -50,9 +50,27 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// </summary>
 	private static string ApplyMxpLinePrefix(string text)
 	{
-		var lines = text.Split('\n');
-		return string.Join('\n', lines.Select(line =>
-			line.Length == 0 || line == "\r" ? line : ProtocolConstants.MxpLineSecure + line));
+		var source = text.AsSpan();
+		var prefixed = new StringBuilder(text.Length + (source.Count('\n') + 1) * ProtocolConstants.MxpLineSecure.Length);
+
+		foreach (var range in source.Split('\n'))
+		{
+			var line = source[range];
+
+			if (range.Start.Value > 0)
+			{
+				prefixed.Append('\n');
+			}
+
+			if (!(line.IsEmpty || line is "\r"))
+			{
+				prefixed.Append(ProtocolConstants.MxpLineSecure);
+			}
+
+			prefixed.Append(line);
+		}
+
+		return prefixed.ToString();
 	}
 
 	/// <summary>
@@ -61,8 +79,30 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// </summary>
 	private static string NormalizeLineEnding(string text)
 	{
-		text = text.Replace("\r\n", "\n");
-		text = text.Replace("\n", "\r\n");
-		return text.TrimEnd('\r', '\n');
+		var source = text.AsSpan().TrimEnd("\r\n");
+		var newlines = source.Count('\n');
+
+		if (newlines == 0)
+		{
+			return source.Length == text.Length ? text : source.ToString();
+		}
+
+		// A bare \n grows to \r\n; one already preceded by \r is left as it is, so the pair is never
+		// doubled. A \r that precedes anything else is ordinary text.
+		var normalized = new StringBuilder(source.Length + newlines);
+
+		for (var index = 0; index < source.Length; index++)
+		{
+			var character = source[index];
+
+			if (character == '\n' && (index == 0 || source[index - 1] != '\r'))
+			{
+				normalized.Append('\r');
+			}
+
+			normalized.Append(character);
+		}
+
+		return normalized.ToString();
 	}
 }

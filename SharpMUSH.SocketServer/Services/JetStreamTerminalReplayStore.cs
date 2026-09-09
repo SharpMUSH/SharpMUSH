@@ -54,8 +54,11 @@ public sealed class JetStreamTerminalReplayStore : ITerminalReplayStore, IAsyncD
 	private static string Subject(string session)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(session);
-		if (session.Any(c => c is '.' or '*' or '>' || char.IsWhiteSpace(c) || char.IsControl(c)))
-			throw new ArgumentException("A replay session must be a single literal NATS subject token.", nameof(session));
+		foreach (var c in session.AsSpan())
+		{
+			if (c is '.' or '*' or '>' || char.IsWhiteSpace(c) || char.IsControl(c))
+				throw new ArgumentException("A replay session must be a single literal NATS subject token.", nameof(session));
+		}
 		return $"{SubjectPrefix}.{session}";
 	}
 

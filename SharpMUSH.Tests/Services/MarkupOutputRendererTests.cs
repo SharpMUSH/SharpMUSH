@@ -195,4 +195,40 @@ public partial class MarkupOutputRendererTests
 		var data = root.GetProperty("data").GetString()!;
 		await Assert.That(MarkupTextSerializer.Deserialize(data).ToPlainText()).IsEqualTo(Raw);
 	}
+
+	/// <summary>
+	/// Every line break goes out as CRLF exactly once: a bare LF grows a CR, an existing CRLF is not
+	/// doubled, a CR that precedes anything but LF is text, and trailing breaks are trimmed away.
+	/// </summary>
+	[Test]
+	[Arguments("one\ntwo", "one\r\ntwo")]
+	[Arguments("one\r\ntwo", "one\r\ntwo")]
+	[Arguments("one\r\r\ntwo", "one\r\r\ntwo")]
+	[Arguments("one\n\rtwo", "one\r\n\rtwo")]
+	[Arguments("one\rtwo", "one\rtwo")]
+	[Arguments("one\n\n", "one")]
+	[Arguments("one\r\n\r\n", "one")]
+	[Arguments("\n\none", "\r\n\r\none")]
+	public async Task Terminal_NormalisesLineEndings(string input, string expected)
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain(input));
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Ansi));
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// MXP secure mode opens every line that has content, and only those: a blank line, or one that is
+	/// nothing but the CR of a CRLF pair, gets no prefix, and the line breaks themselves are untouched.
+	/// </summary>
+	[Test]
+	public async Task Mxp_PrefixesOnlyLinesWithContent()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("one\n\ntwo\r\nthree"));
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp));
+
+		var prefix = ProtocolConstants.MxpLineSecure;
+		await Assert.That(Encoding.UTF8.GetString(result.Data))
+			.IsEqualTo($"{prefix}one\r\n\r\n{prefix}two\r\n{prefix}three");
+	}
 }

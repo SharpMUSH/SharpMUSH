@@ -21,12 +21,15 @@ public static class ApplicationRegistryMapping
 			return null;
 		}
 
-		var parsed = zones
-			.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			.Select(token => Enum.TryParse<WidgetZone>(token, ignoreCase: true, out var zone) ? zone : (WidgetZone?)null)
-			.Where(z => z is not null)
-			.Select(z => z!.Value)
-			.ToList();
+		var source = zones.AsSpan();
+		var parsed = new List<WidgetZone>();
+		foreach (var range in source.Split(','))
+		{
+			if (Enum.TryParse<WidgetZone>(source[range].Trim(), ignoreCase: true, out var zone))
+			{
+				parsed.Add(zone);
+			}
+		}
 
 		return parsed.Count == 0 ? null : parsed;
 	}

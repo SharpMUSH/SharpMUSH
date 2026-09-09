@@ -27,6 +27,13 @@ public static class LogSanitizer
 		if (string.IsNullOrWhiteSpace(input))
 			return "[empty]";
 
+		// Most values are short and carry nothing to strip; those go back as they came. The two ranges
+		// are the C0 and C1 controls, which is what char.IsControl answers to.
+		if (input.Length <= MaxLogLength
+				&& !input.AsSpan().ContainsAnyInRange('\0', '\x1f')
+				&& !input.AsSpan().ContainsAnyInRange('\x7f', '\x9f'))
+			return input;
+
 		var sanitized = new StringBuilder(input.Length);
 		foreach (var c in input)
 		{

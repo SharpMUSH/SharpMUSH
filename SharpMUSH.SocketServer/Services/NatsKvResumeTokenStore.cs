@@ -90,10 +90,16 @@ public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable
 
 	private static (bool Found, long Handle, string Session) Parse(string? value)
 	{
-		var parts = value?.Split(':', 3);
-		return parts is { Length: 3 } && parts[0] == TokenFormatVersion
-			&& long.TryParse(parts[1], out var handle) && parts[2].Length > 0
-			? (true, handle, parts[2]) : (false, 0, string.Empty);
+		// "<version>:<handle>:<session>"; the session is everything after the second separator.
+		if (value is null) return (false, 0, string.Empty);
+		var rest = value.AsSpan();
+		var versionEnd = rest.IndexOf(':');
+		if (versionEnd < 0 || !rest[..versionEnd].SequenceEqual(TokenFormatVersion)) return (false, 0, string.Empty);
+		rest = rest[(versionEnd + 1)..];
+		var handleEnd = rest.IndexOf(':');
+		if (handleEnd < 0 || !long.TryParse(rest[..handleEnd], out var handle)) return (false, 0, string.Empty);
+		var session = rest[(handleEnd + 1)..];
+		return session.Length > 0 ? (true, handle, session.ToString()) : (false, 0, string.Empty);
 	}
 
 	public async ValueTask InvalidateAsync(string token, CancellationToken ct = default) =>

@@ -25,29 +25,33 @@ public sealed record PackageVersion(int Major, int Minor, int Patch, string? Pre
 			return false;
 		}
 
-		var text = input.Trim();
+		var text = input.AsSpan().Trim();
 		string? prerelease = null;
 		var dash = text.IndexOf('-');
 		if (dash >= 0)
 		{
-			prerelease = text[(dash + 1)..];
-			text = text[..dash];
-			if (prerelease.Length == 0)
+			if (dash == text.Length - 1)
 			{
 				return false;
 			}
+
+			prerelease = text[(dash + 1)..].ToString();
+			text = text[..dash];
 		}
 
-		var parts = text.Split('.');
-		if (parts.Length is < 1 or > 3)
+		// One range more than the three components allowed, so a fourth is seen rather than folded
+		// into the last range.
+		Span<Range> parts = stackalloc Range[4];
+		var count = text.Split(parts, '.');
+		if (count > 3)
 		{
 			return false;
 		}
 
-		var numbers = new int[3];
-		for (var i = 0; i < parts.Length; i++)
+		Span<int> numbers = [0, 0, 0];
+		for (var i = 0; i < count; i++)
 		{
-			if (!int.TryParse(parts[i], out numbers[i]) || numbers[i] < 0)
+			if (!int.TryParse(text[parts[i]], out numbers[i]) || numbers[i] < 0)
 			{
 				return false;
 			}
@@ -87,24 +91,32 @@ public sealed record PackageVersion(int Major, int Minor, int Patch, string? Pre
 
 	private static int ComparePrerelease(string mine, string theirs)
 	{
-		var a = mine.Split('.');
-		var b = theirs.Split('.');
-		for (var i = 0; i < Math.Min(a.Length, b.Length); i++)
+		var a = mine.AsSpan().Split('.');
+		var b = theirs.AsSpan().Split('.');
+
+		while (true)
 		{
-			var aNumeric = long.TryParse(a[i], out var aNumber);
-			var bNumeric = long.TryParse(b[i], out var bNumber);
+			var aMore = a.MoveNext();
+			var bMore = b.MoveNext();
+			if (!aMore || !bMore)
+			{
+				return aMore.CompareTo(bMore);
+			}
+
+			var aPart = mine.AsSpan(a.Current);
+			var bPart = theirs.AsSpan(b.Current);
+			var aNumeric = long.TryParse(aPart, out var aNumber);
+			var bNumeric = long.TryParse(bPart, out var bNumber);
 			var cmp = (aNumeric, bNumeric) switch
 			{
 				(true, true) => aNumber.CompareTo(bNumber),
 				(true, false) => -1,
 				(false, true) => 1,
-				_ => string.CompareOrdinal(a[i], b[i])
+				_ => aPart.CompareTo(bPart, StringComparison.Ordinal)
 			};
 
 			if (cmp != 0) return cmp;
 		}
-
-		return a.Length.CompareTo(b.Length);
 	}
 
 	public override string ToString() =>

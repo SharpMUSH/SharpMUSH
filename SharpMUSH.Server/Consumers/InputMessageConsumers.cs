@@ -134,8 +134,11 @@ public class MSDPUpdateConsumer(ILogger<MSDPUpdateConsumer> logger, IConnectionS
 {
 	public Task HandleAsync(MSDPUpdateMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogDebug("[NATS-RECV] MSDPUpdateMessage received - Handle: {Handle}, Variables: {Variables}",
-			message.Handle, string.Join(", ", message.Variables.Select(kv => $"{kv.Key}={kv.Value}")));
+		if (logger.IsEnabled(LogLevel.Debug))
+		{
+			logger.LogDebug("[NATS-RECV] MSDPUpdateMessage received - Handle: {Handle}, Variables: {Variables}",
+				message.Handle, string.Join(", ", message.Variables.Select(kv => $"{kv.Key}={kv.Value}")));
+		}
 
 		foreach (var variable in message.Variables)
 		{
@@ -355,8 +358,11 @@ public class TerminalTypeNegotiatedConsumer(
 {
 	public async Task HandleAsync(TerminalTypeNegotiatedMessage message, CancellationToken cancellationToken = default)
 	{
-		logger.LogTrace("[NATS-RECV] TerminalTypeNegotiatedMessage - Handle: {Handle}, Types: {TerminalTypes}",
-			message.Handle, string.Join(", ", message.TerminalTypes));
+		if (logger.IsEnabled(LogLevel.Trace))
+		{
+			logger.LogTrace("[NATS-RECV] TerminalTypeNegotiatedMessage - Handle: {Handle}, Types: {TerminalTypes}",
+				message.Handle, string.Join(", ", message.TerminalTypes));
+		}
 
 		if (message.TerminalTypes.Count == 0)
 		{

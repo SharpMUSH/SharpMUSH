@@ -554,4 +554,93 @@ public class OutputTransformServiceTests
 		await Assert.That(resultText).IsEqualTo("\x1b[1mtopic text\x1b[0m");
 		await Assert.That(resultText).DoesNotContain("]8;;");
 	}
+
+	/// <summary>
+	/// Text with no escape in it, bound for UTF-8, has nothing to transform and goes out byte for byte —
+	/// including a valid multi-byte sequence, which a decode/re-encode round trip must never touch.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_PassesEscapeFreeUtf8Through_Unchanged()
+	{
+		var input = "Plain text with a snowman ☃ and no colour."u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Plain);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(result).IsEquivalentTo(input);
+	}
+
+	/// <summary>A charset other than UTF-8 still transcodes, escape or no escape.</summary>
+	[Test]
+	public async Task TransformAsync_TranscodesEscapeFreeText_ForAnAsciiCharset()
+	{
+		var input = "café"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, Charset: "ascii");
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(result).IsEquivalentTo(Encoding.ASCII.GetBytes("café"));
+	}
+
+	/// <summary>
+	/// A doubled separator is an empty parameter. Downgrading keeps it exactly where it was, because
+	/// the sequence is not the transform's to tidy; hilite drops it along with everything else that is
+	/// not an attribute.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_LeavesEmptyParametersInPlace_WhenDowngrading()
+	{
+		var input = "\x1b[1;;38;5;196mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;;31mText\x1b[0m");
+	}
+
+	[Test]
+	public async Task TransformAsync_DropsEmptyParameters_WhenPinnedHilite()
+	{
+		var input = "\x1b[1;;31mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1mText\x1b[0m");
+	}
+
+	/// <summary>
+	/// The hilite rung re-emits attribute codes as numbers, so a zero-padded parameter comes out in
+	/// its canonical form; the downgrade rung copies the parameters it does not rewrite verbatim.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_NormalisesKeptCodes_OnlyWhenPinnedHilite()
+	{
+		var input = "\x1b[01;031mText\x1b[0m"u8.ToArray();
+
+		var hilite = await _service.TransformAsync(input,
+			new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite), null);
+		var sixteen = await _service.TransformAsync(input,
+			new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false), null);
+
+		await Assert.That(Encoding.UTF8.GetString(hilite)).IsEqualTo("\x1b[1mText\x1b[0m");
+		await Assert.That(Encoding.UTF8.GetString(sixteen)).IsEqualTo("\x1b[01;031mText\x1b[0m");
+	}
+
+	/// <summary>
+	/// A parameter list far longer than anything a renderer emits is handled the same as a short one:
+	/// every colour in it is mapped, and nothing else moves.
+	/// </summary>
+	[Test]
+	public async Task TransformAsync_DowngradesEveryColour_InAVeryLongParameterList()
+	{
+		var colours = string.Join(';', Enumerable.Repeat("38;5;196", 40));
+		var input = Encoding.UTF8.GetBytes($"\x1b[1;{colours};4mText\x1b[0m");
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		var expected = $"\x1b[1;{string.Join(';', Enumerable.Repeat("31", 40))};4mText\x1b[0m";
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
 }

@@ -41,7 +41,9 @@ public sealed class PermissionResolver : IPermissionResolver
 	{
 		if (!PortalPermission.IsKnown(scope))
 			return new(false, null, [], "unknown-scope");
-		var materialized = roles.ToArray();
+		// Walked once per scope and again per implying parent, so a lazy sequence is pinned here — but
+		// a caller that already holds a collection (including this method recursing) is not re-copied.
+		var materialized = roles as IReadOnlyCollection<SharpRole> ?? roles.ToArray();
 		var top = materialized.Where(r => r.Permissions.Any(p =>
 			string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit))
 			.GroupBy(r => r.Priority).OrderByDescending(g => g.Key).FirstOrDefault();
