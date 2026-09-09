@@ -118,7 +118,7 @@ public class QueuePauseTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
-	public async Task UncertainDeferredCleanupCannotBePausedOrResumed(bool semaphore)
+	public async Task UncertainDeferredCleanupCannotBePausedResumedOrRetimed(bool semaphore)
 	{
 		var unavailable = true;
 		var scheduler = Substitute.For<IScheduler>();
@@ -141,6 +141,10 @@ public class QueuePauseTests
 		await Assert.That(await queue.PausePending(1, "hold")).IsEqualTo(QueueControlResult.NotPending);
 		await Assert.That(await queue.ResumePending(1)).IsEqualTo(QueueControlResult.NotPending);
 		unavailable = false;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(DateTimeOffset.UtcNow);
+		scheduler.ClearReceivedCalls();
+		await queue.RescheduleSemaphoreTask(1, TimeSpan.FromHours(2));
+		await Assert.That(scheduler.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "ScheduleJob")).IsFalse();
 		await queue.HaltByPid(1);
 		await Assert.That(queue.GetQueueEntry(1)).IsNull();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);

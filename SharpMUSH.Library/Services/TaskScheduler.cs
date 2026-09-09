@@ -840,7 +840,7 @@ public partial class TaskScheduler(
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
-				|| entry.Deferred is null || entry.Deferred.ReleasePending || _semaphoreCommandReservations.Contains(pid)) return;
+				|| entry.Deferred is null || entry.Deferred.ReleasePending || HasPendingCleanup(pid)) return;
 			delay = Nonnegative(delay);
 			if (entry.Deferred.Paused)
 			{
