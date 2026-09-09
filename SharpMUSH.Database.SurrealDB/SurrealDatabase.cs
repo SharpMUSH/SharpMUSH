@@ -316,6 +316,10 @@ public partial class SurrealDatabase(
 	}
 
 
+	/// <summary>
+	/// Serialises the loaded lock map. Its keys are already canonical and unique under
+	/// <see cref="LockNames.Comparer"/>, so the plain <c>ToDictionary</c> here cannot collide.
+	/// </summary>
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";
@@ -325,19 +329,26 @@ public partial class SurrealDatabase(
 		return JsonSerializer.Serialize(dict, JsonOptions);
 	}
 
+	/// <summary>
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. The
+	/// intermediate dictionary is deliberately ordinal: the stored JSON may hold two spellings of
+	/// one lock, and deserialising straight into a case-insensitive map would throw on it. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives.
+	/// </summary>
 	private static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		try
 		{
 			var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOptions);
-			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty;
-			return dict.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value));
+			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
+			return LockNames.FoldToImmutable(dict, DeserializeLock);
 		}
 		catch
 		{
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		}
 	}
 

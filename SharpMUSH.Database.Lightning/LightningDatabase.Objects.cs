@@ -231,10 +231,12 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks)
-			{
-				[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() }
-			};
+			// Fold rather than copy: the row may predate canonical lock names, and a plain
+			// case-insensitive copy constructor would throw on the two spellings of one lock it can
+			// still hold. Writing the folded map back is what retires the old spelling on disk.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks[LockNames.Canonical(lockName)] =
+				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -245,8 +247,9 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks);
-			locks.Remove(lockName);
+			// Folding first is what makes @unlock able to clear a lock stored under an old spelling.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks.Remove(LockNames.Canonical(lockName));
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -980,11 +983,15 @@ public partial class LightningDatabase
 		}
 	}
 
+	/// <summary>
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
+	/// </summary>
 	private static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
-		=> locks.ToImmutableDictionary(
-			entry => entry.Key,
-			entry => new SharpLockData(entry.Value.LockString,
-				Enum.TryParse<LockService.LockFlags>(entry.Value.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
+		=> LockNames.FoldToImmutable(locks,
+			record => new SharpLockData(record.LockString,
+				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;

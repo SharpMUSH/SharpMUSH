@@ -336,7 +336,7 @@ public partial class Functions
 			return new CallState(string.Join(" ", flags));
 		}
 
-		var lockType = args["0"].Message!.ToPlainText();
+		var lockType = LockNames.Canonical(args["0"].Message!.ToPlainText());
 		if (LockService.SystemLocks.TryGetValue(lockType, out var lockFlags))
 		{
 			return new CallState(string.Join(" ",
@@ -384,10 +384,7 @@ public partial class Functions
 			parser, executor, executor, objectRef, LocateFlags.All,
 			async found =>
 			{
-				// Get the lock data (case-insensitive per PennMUSH)
-				var lockKey = found.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockType, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
+				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockType), out var lockData))
 				{
 					return new CallState("#-1 NO SUCH LOCK");
 				}
@@ -429,10 +426,9 @@ public partial class Functions
 				}
 				var victim = victimResult.AsAnyObject;
 
-				// Get the lock string from the object (case-insensitive per PennMUSH)
-				var lockKey = found.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
+				// Lock names match case-insensitively per PennMUSH, and "teleport" has to find the
+				// lock LockType spells TPort — both of which LockNames owns.
+				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 				{
 					// No lock set = passes (TRUE_BOOLEXP)
 					return new CallState("1");
@@ -687,10 +683,9 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Get the lock string from the object (case-insensitive per PennMUSH)
-				var lockKey = found.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
+				// Lock names match case-insensitively per PennMUSH, and "teleport" has to find the
+				// lock LockType spells TPort — both of which LockNames owns.
+				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 				{
 					// PennMUSH returns *UNLOCKED* for unset locks
 					return new CallState("*UNLOCKED*");
@@ -731,10 +726,7 @@ public partial class Functions
 
 			var found = maybeObj.AsAnyObject;
 
-			// Check if object has the lock (case-insensitive per PennMUSH)
-			var lockKey = found.Object().Locks.Keys
-				.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
-			if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out var lockData))
+			if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 			{
 				// No lock means it passes if we're looking for passes
 				if (!shouldPass)
@@ -775,9 +767,7 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var lockKey = found.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockName, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !found.Object().Locks.TryGetValue(lockKey, out _))
+				if (!found.Object().Locks.ContainsKey(LockNames.Canonical(lockName)))
 				{
 					// PennMUSH: lockowner on nonexistent lock returns the object itself
 					return new CallState($"#{found.Object().DBRef.Number}");

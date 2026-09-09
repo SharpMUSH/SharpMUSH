@@ -916,9 +916,10 @@ public partial class Commands
 						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
 
 						// Default ChZone lock is the zone object itself (allows controlled objects)
-						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
+						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
 						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
+								zoneObj.Object().DBRef.ToString()));
 						}
 
 						// Clear privileged flags and powers unless /preserve is used
@@ -1052,11 +1053,9 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			// Resolve to canonical lock name (e.g. "USE" -> "Use") if it's a known system lock
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "teleport" ->
+			// "TPort"); a switch naming no standard lock is a user lock and passes through as typed.
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1091,10 +1090,7 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
