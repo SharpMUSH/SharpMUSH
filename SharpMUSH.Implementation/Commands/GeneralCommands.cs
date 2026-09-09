@@ -2436,26 +2436,12 @@ public partial class Commands
 		var isInline = switches.Contains("INLINE") || isInplace;
 		var noBreak = switches.Contains("NOBREAK") || isInplace;
 
-		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
-		// the caller's Q-registers. /CLEARREGS: start each action with empty Q-registers.
-		// NOTE: Save must happen before Clear. new Dictionary<> creates an independent copy,
-		// so the subsequent Clear() of the original does not affect savedRegisters.
+		// /LOCALIZE and /CLEARREGS are register switches on the INLINE action, not on the @switch:
+		// cmds.c:1513-1521 only ORs QUEUE_PRESERVE_QREG / QUEUE_CLEAR_QREG in when queue_type is
+		// already QUEUE_INPLACE, and do_entry applies them once per inplace entry (cque.c:1183-1195).
+		// 'help @switch2' says the same: q-registers are saved/cleared "before each <action> is run".
 		var hasLocalize = switches.Contains("LOCALIZE") || isInplace;
 		var hasClearRegs = switches.Contains("CLEARREGS");
-
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((hasLocalize || hasClearRegs) && parser.CurrentState.Registers.TryPeek(out var switchTopRegs))
-		{
-			if (hasLocalize)
-			{
-				savedRegisters = new Dictionary<string, MString>(switchTopRegs);
-			}
-
-			if (hasClearRegs)
-			{
-				switchTopRegs.Clear();
-			}
-		}
 
 		parser.CurrentState.SwitchStack.Push(strArg.Message!);
 
@@ -2497,7 +2483,8 @@ public partial class Commands
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
 					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
-					await RunAction(MarkupText.Plain(actionText));
+					await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
+						isInline, noBreak, hasLocalize, hasClearRegs);
 
 					if (isFirst) break;
 				}
@@ -2506,7 +2493,8 @@ public partial class Commands
 			if (defaultArg.IsSome() && !matched)
 			{
 				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
-				await RunAction(MarkupText.Plain(defaultText));
+				await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
+					isInline, noBreak, hasLocalize, hasClearRegs);
 			}
 
 			// PennMUSH gates the notify on the queue type: `if (!(queue_type & QUEUE_INPLACE) && notifyme)`
@@ -2525,41 +2513,6 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
-
-			if (hasLocalize && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
-		}
-
-		// Default is a NEW queue entry, exactly as PennMUSH's do_switch does with QUEUE_DEFAULT;
-		// /inline (and /inplace) run the action in the calling action list instead. An @break inside an
-		// inline action stops the caller too unless /nobreak was given ('help @switch2').
-		async ValueTask RunAction(MString action)
-		{
-			if (!isInline)
-			{
-				await Mediator.Send(new QueueCommandListRequest(
-					action,
-					QueuedActionState(parser),
-					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
-				return;
-			}
-
-			var propagation = new BreakPropagation { PreserveNext = true };
-			await parser.With(
-				state => state with { BreakPropagation = propagation },
-				p => p.CommandListParse(action));
-
-			if (propagation.Broke && !noBreak)
-			{
-				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
-			}
 		}
 	}
 
@@ -2725,11 +2678,84 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// The state a matched @switch/@select action is queued with. PennMUSH hands the new queue entry
-	/// a CLONE of the calling pe_info (<c>PE_INFO_CLONE</c> in do_switch, src/predicat.c:1121), so the
-	/// action sees the q-registers and %0-%9 as they stood when it was queued. Sharing the live stack
-	/// instead loses them: the calling action list pops its register frame long before the queue
-	/// consumer gets to the entry.
+	/// Runs one matched <c>@switch</c>/<c>@select</c> action. Default is a NEW queue entry, exactly as
+	/// PennMUSH's <c>do_switch</c> does with <c>QUEUE_DEFAULT</c>; <c>/inline</c> (and <c>/inplace</c>)
+	/// run the action in the calling action list instead. An <c>@break</c> inside an inline action stops
+	/// the caller too unless <c>/nobreak</c> was given ('help @switch2').
+	///
+	/// <para><c>/localize</c> and <c>/clearregs</c> wrap the INLINE action only, one save/clear per
+	/// action: <c>cmd_switch</c> folds <c>QUEUE_PRESERVE_QREG</c>/<c>QUEUE_CLEAR_QREG</c> into
+	/// <c>queue_type</c> only once it is already <c>QUEUE_INPLACE</c> (src/cmds.c:1513-1521), and
+	/// <c>do_entry</c> localizes around each inplace entry it drains (src/cque.c:1183-1195). A queued
+	/// action instead gets its own copy of the registers from <see cref="QueuedActionState"/>, matching
+	/// <c>PE_INFO_CLONE</c>, so neither switch has anything to do there.</para>
+	/// </summary>
+	private async ValueTask RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
+		bool isInline, bool noBreak, bool localizeRegisters, bool clearRegisters)
+	{
+		if (!isInline)
+		{
+			await Mediator.Send(new QueueCommandListRequest(
+				action,
+				QueuedActionState(parser),
+				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+				-1));
+			return;
+		}
+
+		// Save before Clear: the new Dictionary<> is an independent copy, so clearing the original
+		// afterwards does not touch it. /clearregs without /localize deliberately does not restore --
+		// that is do_entry's bare QUEUE_CLEAR_QREG case, which calls clear_allq and keeps no snapshot.
+		Dictionary<string, MString>? savedRegisters = null;
+		if ((localizeRegisters || clearRegisters) && parser.CurrentState.Registers.TryPeek(out var topRegisters))
+		{
+			if (localizeRegisters)
+			{
+				savedRegisters = new Dictionary<string, MString>(topRegisters);
+			}
+
+			if (clearRegisters)
+			{
+				topRegisters.Clear();
+			}
+		}
+
+		try
+		{
+			var propagation = new BreakPropagation { PreserveNext = true };
+			await parser.With(
+				state => state with { BreakPropagation = propagation },
+				p => p.CommandListParse(action));
+
+			if (propagation.Broke && !noBreak)
+			{
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
+			}
+		}
+		finally
+		{
+			if (savedRegisters is not null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
+			{
+				regsToRestore.Clear();
+				foreach (var (key, value) in savedRegisters)
+				{
+					regsToRestore[key] = value;
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// The state a queued <c>@switch</c>/<c>@select</c> action carries. PennMUSH builds one with
+	/// <c>PE_INFO_CLONE</c> (do_switch, src/predicat.c:1121), which "copies the Q-registers, @switch,
+	/// @dol and env over to the new pe_info" (src/parse.c:1938) — a copy, not a view of the parent's.
+	/// So every mutable piece this engine keeps in a stack has to be cloned rather than aliased. The
+	/// calling action list pops its register frame long before the queue consumer gets to the entry,
+	/// which would lose the q-registers and %0-%9 the action was queued with; the caller pops its
+	/// <see cref="ParserState.SwitchStack"/> entry in a <c>finally</c> that normally runs before the
+	/// queue consumer touches the action, which would leave <c>stext()</c>/<c>slev()</c> reading an
+	/// empty or unrelated switch, and a shared <see cref="ParserState.ExecutionStack"/> would let the
+	/// action's <c>@break</c> stop the caller's list — the very thing a new queue entry must not do.
 	/// </summary>
 	private static ParserState QueuedActionState(IMUSHCodeParser parser)
 	{
@@ -2740,9 +2766,15 @@ public partial class Commands
 			? new Dictionary<string, MString>(topRegisters)
 			: []);
 
+		// ConcurrentStack enumerates top-first and its collection constructor pushes in order, so a
+		// straight copy would come out upside down. Reverse() to keep stext(0) on top.
+		var switchStack = new ConcurrentStack<MString>(state.SwitchStack.Reverse());
+
 		return state with
 		{
 			Registers = registers,
+			SwitchStack = switchStack,
+			ExecutionStack = new ConcurrentStack<Execution>(),
 			EnvironmentRegisters = new Dictionary<string, CallState>(state.EnvironmentRegisters)
 		};
 	}
@@ -4882,23 +4914,8 @@ public partial class Commands
 		var localizeRegs = switches.Contains("LOCALIZE") || isInplace;
 		var clearRegs = switches.Contains("CLEARREGS");
 
-		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
-		// the caller's Q-registers. /CLEARREGS: start the action with empty Q-registers.
-		// NOTE: Save must happen before Clear (both use a single TryPeek for safety).
-		Dictionary<string, MString>? savedRegisters = null;
-		if ((localizeRegs || clearRegs) && parser.CurrentState.Registers.TryPeek(out var selectTopRegs))
-		{
-			if (localizeRegs)
-			{
-				savedRegisters = new Dictionary<string, MString>(selectTopRegs);
-			}
-
-			if (clearRegs)
-			{
-				selectTopRegs.Clear();
-			}
-		}
-
+		// cmd_select builds the same queue_type as cmd_switch (src/cmds.c:1390-1403), so /LOCALIZE and
+		// /CLEARREGS only bite on an INLINE action; RunControlFlowAction applies them around it.
 		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
 
 		try
@@ -4947,7 +4964,8 @@ public partial class Commands
 					var actionText = action.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunAction(actionMString);
+					await RunControlFlowAction(parser, executor, actionMString,
+						isInline, noBreak, localizeRegs, clearRegs);
 
 					break;
 				}
@@ -4963,7 +4981,8 @@ public partial class Commands
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunAction(actionMString);
+					await RunControlFlowAction(parser, executor, actionMString,
+						isInline, noBreak, localizeRegs, clearRegs);
 				}
 			}
 
@@ -4983,41 +5002,6 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
-
-			if (localizeRegs && savedRegisters != null && parser.CurrentState.Registers.TryPeek(out var regsToRestore))
-			{
-				regsToRestore.Clear();
-				foreach (var (key, value) in savedRegisters)
-				{
-					regsToRestore[key] = value;
-				}
-			}
-		}
-
-		// Default is a NEW queue entry, exactly as PennMUSH's do_switch does with QUEUE_DEFAULT;
-		// /inline (and /inplace) run the action in the calling action list instead. An @break inside an
-		// inline action stops the caller too unless /nobreak was given ('help @switch2').
-		async ValueTask RunAction(MString action)
-		{
-			if (!isInline)
-			{
-				await Mediator.Send(new QueueCommandListRequest(
-					action,
-					QueuedActionState(parser),
-					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
-				return;
-			}
-
-			var propagation = new BreakPropagation { PreserveNext = true };
-			await parser.With(
-				state => state with { BreakPropagation = propagation },
-				p => p.CommandListParse(action));
-
-			if (propagation.Broke && !noBreak)
-			{
-				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
-			}
 		}
 	}
 

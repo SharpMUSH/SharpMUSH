@@ -745,4 +745,110 @@ public class ControlFlowCommandTests
 		await Assert.That(messages).Contains($"SwInplace_After__{id}")
 			.Because("/inplace implies /nobreak (the caller keeps running) and /localize (q-registers are restored)");
 	}
+
+	[Test]
+	public async ValueTask Switch_QueuedAction_SeesTheSwitchContext()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// do_switch hands every new queue entry a PE_REGS_SWITCH pe_regs holding the test string
+		// (src/predicat.c:1105) and PE_INFO_CLONE copies "the Q-registers, @switch, @dol and env"
+		// into it (src/parse.c:1938), so a QUEUED action can still read stext(). Sharing the
+		// caller's live SwitchStack cannot do that: @switch pops it in a finally that runs long
+		// before the queue consumer reaches the action.
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch ctx{id}=ctx*,@pemit #1=SwCtx_[stext(0)]_end"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwCtx_ctx{id}_end")).IsTrue()
+			.Because("a queued action gets a copy of the switch context, not a view of the caller's popped stack");
+
+		await Assert.That(MessagesFor(executor)).DoesNotContain("SwCtx__end")
+			.Because("an empty stext() is exactly the symptom of aliasing the caller's SwitchStack");
+	}
+
+	[Test]
+	public async ValueTask Switch_QueuedAction_KeepsTheSwitchContextInOrder()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// The inner @switch is queued from inside an /inline outer one, so it snapshots a two-deep
+		// switch stack: stext(0) is the inner test string, stext(1) the outer. Copying a
+		// ConcurrentStack the obvious way inverts it, and depth 1 alone cannot see that.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@switch/inline outer{id}=outer*,{{@switch inner{id}=inner*,@pemit #1=SwNest_[stext(0)]_[stext(1)]_end}}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwNest_inner{id}_outer{id}_end")).IsTrue()
+			.Because("the queued action's switch stack keeps the caller's nesting order");
+	}
+
+	[Test]
+	public async ValueTask Switch_ClearRegs_WithoutInline_KeepsTheCallersRegisters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// cmd_switch only ORs QUEUE_CLEAR_QREG in once queue_type is already QUEUE_INPLACE
+		// (src/cmds.c:1513-1521), so /clearregs on its own is inert -- and certainly must not wipe
+		// the registers of the action list that ran the @switch.
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(cr,KEPT{id});@switch/clearregs 1=1,@pemit #1=SwCr_Action_{id};@pemit #1=SwCr_After_%q<cr>_{id}"));
+
+		await Assert.That(MessagesFor(executor)).Contains($"SwCr_After_KEPT{id}_{id}")
+			.Because("/clearregs without /inline may not clear the caller's q-registers");
+	}
+
+	[Test]
+	public async ValueTask Select_ClearRegs_WithoutInline_KeepsTheCallersRegisters()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// cmd_select builds queue_type the same way cmd_switch does (src/cmds.c:1390-1403).
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"think setq(cr,KEPT{id});@select/clearregs 1=1,@pemit #1=SelCr_Action_{id};@pemit #1=SelCr_After_%q<cr>_{id}"));
+
+		await Assert.That(MessagesFor(executor)).Contains($"SelCr_After_KEPT{id}_{id}")
+			.Because("/clearregs without /inline may not clear the caller's q-registers");
+	}
+
+	[Test]
+	public async ValueTask Switch_Inplace_LocalizesAroundEachAction()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch2' on /localize: "q-registers are saved before each <action> is run, and
+		// restored after it completes". do_entry localizes around each inplace entry it drains
+		// (src/cque.c:1183-1195), so the first action's setq cannot reach the second one.
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"@switch/inplace 1=1,{{think setq(ip,LEAK{id})}},1,@pemit #1=SwIp_Second_%q<ip>_{id};@pemit #1=SwIp_After_%q<ip>_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SwIp_Second__{id}")
+			.Because("/localize restores registers after EACH action, so the second action starts clean");
+		await Assert.That(messages).Contains($"SwIp_After__{id}")
+			.Because("neither action's setq survives the switch");
+	}
+
+	[Test]
+	public async ValueTask Switch_Inline_BreakStopsLaterMatchingActions()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch2': with /inline an @break in an action stops the calling action list
+		// "(and any further <action>s) from running" -- do_entry leaves its inplace-drain loop on
+		// inplace_break_called (src/cque.c:1236-1239).
+		await Parser.CommandListParse(MarkupText.Plain(
+			$"@switch/inline 1=1,{{@pemit #1=SwBrk_First_{id};@break 1}},1,@pemit #1=SwBrk_Second_{id};@pemit #1=SwBrk_After_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SwBrk_First_{id}");
+		await Assert.That(messages).DoesNotContain($"SwBrk_Second_{id}")
+			.Because("the break stops any further matching action");
+		await Assert.That(messages).DoesNotContain($"SwBrk_After_{id}")
+			.Because("the break also stops the calling action list");
+	}
 }
