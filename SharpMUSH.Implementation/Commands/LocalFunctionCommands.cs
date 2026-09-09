@@ -13,6 +13,12 @@ public partial class Commands
 		Functions.Builtins.Keys.Any(key => string.Equals(key, name, StringComparison.OrdinalIgnoreCase))
 		|| FunctionLibrary.IsSystemNameReserved(name);
 
+	private static bool TryLocalRegistry<T>(Func<T> operation, out T result)
+	{
+		try { result = operation(); return true; }
+		catch (NotSupportedException) { result = default!; return false; }
+	}
+
 	private async ValueTask<Option<CallState>> LocalFunctionCommand(IMUSHCodeParser parser, AnySharpObject executor, string[] switches)
 	{
 		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
@@ -29,14 +35,17 @@ public partial class Commands
 			return await Report(ErrorMessages.Returns.InvalidArgument);
 		if (operation == "RESTORE" && (name.Length == 0 || name == "*"))
 		{
-			var removed = registry.ResetUnpreserved(owner);
+			if (!TryLocalRegistry(() => registry.ResetUnpreserved(owner), out var removed))
+				return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, "LOCAL"));
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionReset", executor, removed);
 			return CallState.Empty;
 		}
 		if (name.Length == 0)
 		{
+			if (!TryLocalRegistry(() => registry.All(owner).OrderBy(f => f.Name).ToArray(), out var entries))
+				return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, "LOCAL"));
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionHeader", executor);
-			foreach (var entry in registry.All(owner).OrderBy(f => f.Name))
+			foreach (var entry in entries)
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
 					entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
 			return CallState.Empty;
@@ -45,7 +54,7 @@ public partial class Commands
 			return await Report(ErrorMessages.Returns.InvalidArgument);
 		if (operation is not null)
 		{
-			var found = operation switch
+			var supported = TryLocalRegistry(() => operation switch
 			{
 				"DELETE" => registry.Delete(name, owner),
 				"ENABLE" => registry.SetEnabled(name, true, owner),
@@ -55,15 +64,14 @@ public partial class Commands
 				"ALIAS" => !IsReservedLocalFunctionName(name)
 					&& registry.Alias(name, args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "", owner),
 				_ => false
-			};
-			if (!found) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
+			}, out var found);
+			if (!supported || !found) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionChanged", executor, name, operation);
 			return CallState.Empty;
 		}
 		if (args.Count == 1)
 		{
-			var entry = registry.Get(name, owner);
-			if (entry is null) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
+			if (!TryLocalRegistry(() => registry.Get(name, owner), out var entry) || entry is null) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
 				entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
 			return CallState.Empty;
