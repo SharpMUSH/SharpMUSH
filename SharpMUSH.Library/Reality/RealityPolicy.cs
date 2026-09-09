@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Reality;
 
@@ -28,6 +29,7 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		var receiving = config.Enabled ? await ReadObjectCoreAsync(receiver, false, ct) : null;
 		return async (target, token) =>
 		{
+			token = ReadToken(token);
 			token.ThrowIfCancellationRequested();
 			if (!config.Enabled) return true;
 			if (receiving is null) return false;
@@ -57,6 +59,7 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 
 	public async ValueTask<RealityConfiguration> ConfigurationAsync(CancellationToken ct = default)
 	{
+		ct = ReadToken(ct);
 		await configurationGate.WaitAsync(ct);
 		try
 		{
@@ -84,6 +87,7 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 
 	private async ValueTask<ObjectReality?> ReadObjectCoreAsync(DBRef reference, bool rejectMalformed, CancellationToken ct)
 	{
+		ct = ReadToken(ct);
 		var found = await objects.GetObjectNodeAsync(reference, ct);
 		if (found is null || found.IsNone) return null;
 		var obj = found.Known.Object();
@@ -106,6 +110,11 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 
 	internal async ValueTask SaveObjectAsync(string id, ObjectReality value, CancellationToken ct)
 		=> await store.SetExpandedObjectData(id, ObjectKey, value, ct);
+
+	// Engine callers inherit the queue deadline; web/admin callers retain their
+	// explicit request token. Resolve scan tokens at invocation, not capture time.
+	private static CancellationToken ReadToken(CancellationToken token)
+		=> token.CanBeCanceled ? token : ExecutionBudget.CurrentToken;
 
 	private static RealityConfiguration Validate(RealityConfiguration value)
 	{
