@@ -178,7 +178,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		{
 			budget.ThrowIfExceeded();
 			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
-				Math.Max(1, (int)Math.Ceiling(budget.Remaining.TotalSeconds)));
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
 		}
 		command.CommandText = query;
 		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
@@ -215,7 +215,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		{
 			budget.ThrowIfExceeded();
 			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
-				Math.Max(1, (int)Math.Ceiling(budget.Remaining.TotalSeconds)));
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
 		}
 		command.CommandText = query;
 
@@ -274,7 +274,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		{
 			budget.ThrowIfExceeded();
 			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
-				Math.Max(1, (int)Math.Ceiling(budget.Remaining.TotalSeconds)));
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
 		}
 		command.CommandText = query;
 		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
@@ -306,7 +306,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 		{
 			budget.ThrowIfExceeded();
 			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
-				Math.Max(1, (int)Math.Ceiling(budget.Remaining.TotalSeconds)));
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
 		}
 		command.CommandText = query;
 

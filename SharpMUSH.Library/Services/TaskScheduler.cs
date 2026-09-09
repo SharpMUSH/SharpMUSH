@@ -79,21 +79,35 @@ public class TaskScheduler(
 		logger.LogWarning("Queue admission rejected: {Reason}", reason);
 		return new(null, reason);
 	}
+	private QueueEntry? RemoveEntry(long pid)
+	{
+		_ready.Remove(pid);
+		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
+	}
 	private void Release(long pid)
 	{
-		lock (_admissionLock)
-		{
-			_ready.Remove(pid);
-			if (_pendingEntries.TryRemove(pid, out var entry)) entry.Cts.Dispose();
-		}
+		QueueEntry? entry;
+		lock (_admissionLock) entry = RemoveEntry(pid);
+		entry?.Cts.Dispose();
+	}
+	private void CancelEntry(QueueEntry entry)
+	{
+		try { entry.Cts.Cancel(); }
+		catch (ObjectDisposedException) { /* The consumer already completed and released this entry. */ }
+		catch (AggregateException ex) { logger.LogWarning(ex, "Cancellation callback failed for PID {Pid}", entry.Pid); }
 	}
 	private void CancelOrRelease(long pid)
 	{
+		QueueEntry? entry;
+		bool ready;
 		lock (_admissionLock)
 		{
-			if (_ready.Contains(pid) && _pendingEntries.TryGetValue(pid, out var entry)) entry.Cts.Cancel();
-			else Release(pid);
+			ready = _ready.Contains(pid);
+			entry = ready ? _pendingEntries.GetValueOrDefault(pid) : RemoveEntry(pid);
 		}
+		if (entry is null) return;
+		if (ready) CancelEntry(entry);
+		else entry.Cts.Dispose();
 	}
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true)
@@ -138,14 +152,14 @@ public class TaskScheduler(
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 		if (!god.IsPlayer) return;
 		await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count - 1).ToString()), god.AsPlayer));
+		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer));
 	}
 	private ValueTask<QueueAdmissionResult> Activate(long pid, bool semaphoreTimeout = false)
 	{
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
-			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(Reject(QueueRejectionReason.InvalidTarget));
+			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			var group = entry.Group;
 			entry = entry with
@@ -183,16 +197,21 @@ public class TaskScheduler(
 			{
 				try
 				{
-					if (entry.BeforeExecution is not null) await entry.BeforeExecution();
+					if (entry.BeforeExecution is not null)
+					{
+						try { await entry.BeforeExecution(); }
+						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}; continuing admitted work", entry.Pid); }
+					}
 					if (entry.Cts.IsCancellationRequested) continue;
-					using var budget = new ExecutionBudget(TimeSpan.FromSeconds(configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000), entry.Cts.Token);
+					using var budget = ExecutionBudget.FromMilliseconds(configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000, entry.Cts.Token);
 					using var scope = budget.Enter();
 					try
 					{
 						await entry.Action();
-						if (budget.IsExceeded) await NotifyExpired(entry);
+						if (budget.IsExpired) await NotifyExpired(entry);
 					}
-					catch (OperationCanceledException) when (budget.IsExceeded) { await NotifyExpired(entry); }
+					catch (OperationCanceledException) when (budget.IsExpired) { await NotifyExpired(entry); }
+					catch (OperationCanceledException) when (budget.IsCancelled) { logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
 				}
 				catch (Exception ex) { logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
 				finally { Release(entry.Pid); }
@@ -203,7 +222,7 @@ public class TaskScheduler(
 
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
-		logger.LogWarning("Execution budget exhausted or job cancelled (PID {Pid})", entry.Pid);
+		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
 		if (notifyService is null || entry.Cts.IsCancellationRequested) return;
 		try
 		{
@@ -414,39 +433,34 @@ public class TaskScheduler(
 		foreach (var key in delayed) CancelOrRelease(long.Parse(key.Name.Split('-').Last()));
 
 		var dbRefPrefix = $"dbref:{dbRef}-";
-		lock (_admissionLock)
-			foreach (var kvp in _pendingEntries)
-			{
-				if (kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
-				{
-					kvp.Value.Cts.Cancel();
-
-				}
-			}
+		QueueEntry[] entries;
+		lock (_admissionLock) entries = _pendingEntries.Values
+			.Where(entry => entry.TriggerName.StartsWith(dbRefPrefix) && entry.Group == EnqueueGroup).ToArray();
+		foreach (var entry in entries) CancelEntry(entry);
 	}
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		TriggerKey trigger;
+		QueueEntry? entry;
+		bool ready;
 		lock (_admissionLock)
 		{
-			if (!_pendingEntries.TryGetValue(pid, out var entry)) return false;
-			entry.Cts.Cancel();
-			if (_ready.Contains(pid)) return true;
-			trigger = new TriggerKey(entry.TriggerName, entry.Group);
+			if (!_pendingEntries.TryGetValue(pid, out entry)) return false;
+			ready = _ready.Contains(pid);
 		}
-
-		await _scheduler.UnscheduleJob(trigger);
-		string? semaphoreGroup = null;
+		CancelEntry(entry);
+		if (ready) return true;
+		await _scheduler.UnscheduleJob(new TriggerKey(entry.TriggerName, entry.Group));
+		QueueEntry? removed;
 		lock (_admissionLock)
 		{
 			// A timeout may have published the entry while Quartz was being awaited.
 			// Its consumer retains the reservation and owns timeout accounting.
-			if (_ready.Contains(pid) || !_pendingEntries.TryGetValue(pid, out var entry)) return true;
-			if (entry.Group.StartsWith(SemaphoreGroup + ":")) semaphoreGroup = entry.Group;
-			Release(pid);
+			if (_ready.Contains(pid)) return true;
+			removed = RemoveEntry(pid);
 		}
-		if (semaphoreGroup is not null) await AdjustSemaphoreCount(semaphoreGroup);
+		removed?.Cts.Dispose();
+		if (removed?.Group.StartsWith(SemaphoreGroup + ":") == true) await AdjustSemaphoreCount(removed.Group);
 		return true;
 	}
 
@@ -595,7 +609,9 @@ public class TaskScheduler(
 
 	public async ValueTask DisposeAsync()
 	{
-		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); foreach (var entry in _pendingEntries.Values) entry.Cts.Cancel(); }
+		QueueEntry[] entries;
+		lock (_admissionLock) { _stopping = true; _immediateQueue.Writer.TryComplete(); entries = _pendingEntries.Values.ToArray(); }
+		foreach (var entry in entries) CancelEntry(entry);
 		await _shutdownCts.CancelAsync();
 		if (_consumerTask is not null)
 		{

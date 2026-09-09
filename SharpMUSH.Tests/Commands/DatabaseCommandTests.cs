@@ -103,6 +103,33 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MapSqlDoesNotReportRejectedRowsOrSkipARejectedHeader(bool columnNames)
+	{
+		var player = await CreateWizardTestPlayerAsync("MapSqlCapacity");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think callback"));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var pids = new List<long>();
+		try
+		{
+			for (var i = 0; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+			{
+				var admitted = await scheduler.WriteCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				await Assert.That(admitted.Accepted).IsTrue();
+				pids.Add(admitted.Pid!.Value);
+			}
+			await testParser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain($"@mapsql{(columnNames ? "/colnames" : "")} me/MAPCAPACITY=SELECT col1 FROM test_mapsql_data_cmd"));
+			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+				TestHelpers.MatchingMessage("0 rows queued for execution."), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		}
+		finally { foreach (var pid in pids) await scheduler.HaltByPid(pid); }
+	}
+
+	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
 	public async ValueTask ListCommand()

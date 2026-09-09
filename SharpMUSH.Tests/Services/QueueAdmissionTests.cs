@@ -23,7 +23,7 @@ public class QueueAdmissionTests
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = 1 } });
+		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = 1000 } });
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
@@ -31,6 +31,79 @@ public class QueueAdmissionTests
 		 NullLogger<Scheduler>.Instance, options);
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	[Test]
+	public async Task HaltCancellationCallbacksCanReadQueueWithoutBlockingAdmissionLock()
+	{
+		await using var queue = Create();
+		var entered = Signal(); var release = Signal(); var callbackRead = false;
+		var job = await queue.EnqueueWork(async () =>
+		{
+			using var registration = ExecutionBudget.CurrentToken.Register(() =>
+			{
+				callbackRead = Task.Run(() => queue.GetQueueUsage()).Wait(TimeSpan.FromSeconds(2));
+			});
+			entered.SetResult();
+			await release.Task;
+			return null;
+		}, "callback", "test");
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await queue.HaltByPid(job.Pid!.Value);
+			await Assert.That(callbackRead).IsTrue();
+		}
+		finally { release.TrySetResult(); }
+	}
+
+	[Test]
+	public async Task SemaphoreAccountingFailureDoesNotDiscardAdmittedAction()
+	{
+		var mediator = Substitute.For<IMediator>();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => throw new InvalidOperationException("Transient bookkeeping failure"));
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var executed = Signal();
+		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(_ =>
+		{
+			executed.SetResult();
+			return ValueTask.FromResult<CallState?>(null);
+		});
+		await using var queue = Create(mediator: mediator, parser: parser);
+		var job = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think survives"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
+		await queue.ReleaseScheduledWork(job.Pid!.Value, semaphoreTimeout: true);
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task ReleasingAHaltedDeferredPidDoesNotCountAsAdmissionRejection()
+	{
+		await using var queue = Create();
+		var job = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ignored"), ParserState.Empty, TimeSpan.FromHours(1));
+		await queue.HaltByPid(job.Pid!.Value);
+		var result = await queue.ReleaseScheduledWork(job.Pid.Value);
+		await Assert.That(result.Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(queue.GetQueueUsage().Rejections.Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task MillisecondConfigurationPreservesUnlimitedAndCancellationSemantics()
+	{
+		using var bounded = ExecutionBudget.FromMilliseconds(1500);
+		await Assert.That(bounded.Remaining).IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(1500));
+		using var cancellation = new CancellationTokenSource();
+		using var unlimited = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
+		await Assert.That(unlimited.Remaining).IsEqualTo(TimeSpan.MaxValue);
+		cancellation.Cancel();
+		await Assert.That(unlimited.IsCancelled).IsTrue();
+		await Assert.That(unlimited.IsExpired).IsFalse();
+		var oversizedRejected = false;
+		try { using var invalid = new ExecutionBudget(TimeSpan.MaxValue); }
+		catch (ArgumentOutOfRangeException) { oversizedRejected = true; }
+		await Assert.That(oversizedRejected).IsTrue();
+	}
 
 	[Test]
 	public async Task SaturationRejectsWithoutPidAndConsumerCannotDeadlock()
@@ -290,6 +363,7 @@ public class QueueAdmissionTests
 	[Test]
 	[Arguments("#50/SEMAPHORE")]
 	[Arguments("#50:123456/SEMAPHORE")]
+	[Arguments("#50/ATTR_#1")]
 	public async Task SemaphoreIdentityRoundTrips(string identity)
 	{
 		await Assert.That(DbRefAttribute.TryParse(identity, out var parsed)).IsTrue();
