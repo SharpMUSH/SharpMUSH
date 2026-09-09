@@ -11,6 +11,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Diagnostics;
@@ -819,18 +820,25 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
+	public IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
+		=> ReadAllTasks(ExecutionBudget.CurrentToken);
+
+	private async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> ReadAllTasks(
+		[EnumeratorCancellation] CancellationToken cancellationToken)
 	{
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
+		var token = cancellation.Token;
+		token.ThrowIfCancellationRequested();
 		var translate = new Func<string, string>(x =>
 			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
 				.TakeWhile(c => c != '-').ToArray()));
 
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
 			.Where(trigger => trigger is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
-		await foreach (var key in keyTriggers)
+		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
 			yield return (key.Key, key.Select(x => (
 				x.Value,
@@ -842,6 +850,7 @@ public partial class TaskScheduler(
 
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
 		{
+			token.ThrowIfCancellationRequested();
 			yield return (group.Key, group.Select(e => (
 				DateTimeOffset.UtcNow,
 				DBRef.TryParse(translate(e.TriggerName), out var dbref)
@@ -872,13 +881,20 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<long> GetDelayTasks(DBRef obj)
+	public IAsyncEnumerable<long> GetDelayTasks(DBRef obj)
+		=> ReadDelayTasks(obj, ExecutionBudget.CurrentToken);
+
+	private async IAsyncEnumerable<long> ReadDelayTasks(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken)
 	{
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
+		var token = cancellation.Token;
+		token.ThrowIfCancellationRequested();
 		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"));
+			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"), token);
 
 		foreach (var key in keys)
 		{
+			token.ThrowIfCancellationRequested();
 			// Extract PID from identity: "dbref:{executor}-{pid}"
 			var parts = key.Name.Split('-');
 			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
