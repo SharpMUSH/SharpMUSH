@@ -57,6 +57,56 @@ public class QueueAdmissionTests
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+	[Test]
+	public async Task DrainDoesNotCancelWorkWhoseTimeoutAlreadyPublishedIt()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var executed = Signal();
+		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(_ => { executed.SetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(global: 3, scheduler: scheduler, parser: parser);
+		var blocked = Signal(); var release = Signal();
+		await queue.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+			var pending = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think timeout"), ParserState.Empty, semaphore, 0);
+			var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
+			scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
+			await queue.ReleaseScheduledWork(pending.Pid!.Value, semaphoreTimeout: true);
+			using (await queue.EnterSemaphoreMutationAsync()) await queue.Drain(semaphore);
+		}
+		finally { release.SetResult(); }
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task ManagedWaitDoesNotExposeReservationBeforeCounterLease()
+	{
+		var count = 2;
+		await using var queue = Create(mediator: CountingMediator(() => count, value => count = value));
+		var lease = await queue.EnterSemaphoreMutationAsync();
+		Task<QueueAdmissionResult>? pending = null;
+		try
+		{
+			pending = queue.WriteCommandList(MarkupString.MarkupText.Plain("think pending"), ParserState.Empty,
+				new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 2, TimeSpan.FromHours(1), manageSemaphoreCount: true).AsTask();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally
+		{
+			lease.Dispose();
+			if (pending is not null)
+			{
+				var admitted = await pending;
+				await queue.HaltByPid(admitted.Pid!.Value);
+			}
+		}
+		await Assert.That(count).IsEqualTo(2);
+	}
+
 	private static IMediator CountingMediator(Func<int> read, Action<int> write)
 	{
 		var mediator = TargetMediator();
@@ -147,7 +197,9 @@ public class QueueAdmissionTests
 		var nextMutation = queue.EnterSemaphoreMutationAsync().AsTask();
 		await Assert.That(nextMutation.IsCompleted).IsFalse();
 		fail.SetResult();
-		try { await admission; } catch (InvalidOperationException) { }
+		var rejected = false;
+		try { await admission; } catch (InvalidOperationException ex) { rejected = ex.Message == "Schedule failed"; }
+		await Assert.That(rejected).IsTrue();
 		using var lease = await nextMutation.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(count).IsEqualTo(4);
 		count++;
