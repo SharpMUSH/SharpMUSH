@@ -1,3 +1,4 @@
+using System.Reflection;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -5,6 +6,8 @@ using OneOf;
 using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -221,6 +224,93 @@ public class ObjectSnapshotTests
 			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(1);
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.CaptureAsync(actor, target, "denied"));
+	}
+
+	[Test, NotInParallel]
+	[Arguments("CAPTURE")]
+	[Arguments("LIST")]
+	[Arguments("PREVIEW")]
+	[Arguments("RESTORE")]
+	[Arguments("RESOLVE")]
+	public async Task GameSnapshotOperationsReceiveTheExecutionToken(string operation)
+	{
+		var (actor, target, player) = await Setup();
+		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "before");
+		var snapshots = Substitute.For<IObjectSnapshotService>();
+		snapshots.CaptureAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(saved);
+		snapshots.ListAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new SnapshotHistory([saved]));
+		snapshots.PreviewAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<SnapshotSelection>(), Arg.Any<CancellationToken>())
+			.Returns(new SnapshotPreview(saved.Id, target.ToString(), "token", new(["DESC"]), []));
+		snapshots.RestoreAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<SnapshotSelection>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(new SnapshotRestoreResult(true, "recovery", null));
+		snapshots.ResolveRecoveryAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IObjectSnapshotService)
+			? snapshots : Factory.Services.GetService(call.Arg<Type>()));
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(services);
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with
+		{
+			Switches = [operation],
+			Arguments = new() { ["0"] = new(target.ToString()), ["1"] = new(saved.Id + ",token") }
+		});
+		var commands = (SharpMUSH.Implementation.Commands.Commands)Get<ILibraryProvider<CommandDefinition>>();
+		var metadata = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Snapshot")!.GetCustomAttribute<SharpCommandAttribute>()!;
+		snapshots.ClearReceivedCalls();
+		using var budget = ExecutionBudget.FromMilliseconds(30000);
+		using var scope = budget.Enter();
+		await commands.Snapshot(parser, metadata);
+		var tokens = snapshots.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<CancellationToken>()).ToArray();
+		await Assert.That(tokens.Length).IsGreaterThan(0);
+		await Assert.That(tokens.All(token => token == budget.Token)).IsTrue();
+	}
+
+	[Test, NotInParallel]
+	public async Task CancelledRestoreStopsMutationsAndRetainsUsableRecovery()
+	{
+		var (actor, target, player) = await Setup();
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["OTHER"], MarkupText.Plain("original-other"), player));
+		var real = Get<IObjectSnapshotService>();
+		var saved = await real.CaptureAsync(actor, target, "before");
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("changed-desc"), player));
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["OTHER"], MarkupText.Plain("changed-other"), player));
+		using var cancellation = new CancellationTokenSource();
+		var writes = 0;
+		var diagnosticWritesAfterCancellation = 0;
+		var attributes = Substitute.For<IAttributeService>();
+		async ValueTask<OneOf<Success, Error<string>>> WriteThenCancel(NSubstitute.Core.CallInfo call)
+		{
+			var result = await Get<IAttributeService>().SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0),
+				call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
+			writes++;
+			cancellation.Cancel();
+			return result;
+		}
+		attributes.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>())
+			.Returns(WriteThenCancel);
+		var expanded = Substitute.For<IExpandedDataStore>();
+		expanded.GetExpandedObjectData<SnapshotStorageRecord>(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => Get<IExpandedDataStore>().GetExpandedObjectData<SnapshotStorageRecord>(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<CancellationToken>(2)));
+		expanded.SetExpandedObjectData(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				if (cancellation.IsCancellationRequested) diagnosticWritesAfterCancellation++;
+				return Get<IExpandedDataStore>().SetExpandedObjectData(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<object>(2), call.ArgAt<CancellationToken>(3));
+			});
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), expanded,
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), attributes, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection(["DESC", "OTHER"]);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token, cancellation.Token);
+		await Assert.That(result.Completed).IsFalse();
+		await Assert.That(writes).IsEqualTo(1);
+		await Assert.That(diagnosticWritesAfterCancellation).IsEqualTo(0);
+		var history = await real.ListAsync(actor, target);
+		await Assert.That(history.PendingRecoveryId).IsEqualTo(result.RecoverySnapshotId);
+		var recovery = await real.PreviewAsync(actor, target, result.RecoverySnapshotId, selection);
+		await Assert.That((await real.RestoreAsync(actor, target, result.RecoverySnapshotId, selection, recovery.Token)).Completed).IsTrue();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync()).Value.ToPlainText()).IsEqualTo("changed-desc");
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, ["OTHER"]).LastAsync()).Value.ToPlainText()).IsEqualTo("changed-other");
 	}
 
 	[Test, NotInParallel]
