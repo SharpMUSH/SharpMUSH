@@ -77,6 +77,26 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
+	[Arguments(1024)]
+	[Arguments(512 * 1024)]
+	public async Task RestrictedWrapperChainsBoundRetainedSource(int size)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var wrapper = library["restrictedexpr"].LibraryInformation;
+		var calls = 0;
+		library["restrictedexpr"] = (wrapper with { Function = async parser => { calls++; return await wrapper.Function(parser); } }, true);
+		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
+		var expression = $"strlen({new string('x', size)})";
+		for (var i = 0; i < 12; i++) expression = $"restrictedexpr(restrictedexpr strlen,{expression})";
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(size == 1024 ? size.ToString() : ErrorMessages.Returns.OutputTooLarge);
+		if (size == 1024) await Assert.That(calls).IsEqualTo(12);
+		else await Assert.That(calls).IsLessThan(12);
+	}
+
+	[Test]
 	public async Task RestrictedRetentionReleasesCompletedNestedArguments()
 	{
 		var size = FunctionLimits.MaxOutputCodeUnits * 3 / 4;
