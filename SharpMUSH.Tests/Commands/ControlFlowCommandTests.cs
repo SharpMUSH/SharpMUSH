@@ -19,6 +19,7 @@ public class ControlFlowCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 
 	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
 	{
@@ -524,5 +525,180 @@ public class ControlFlowCommandTests
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecWhole_S1_43307")),
 			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+	}
+
+	// ---- @select / @switch: PennMUSH parity (issue #958, sweep item #7) ----
+
+	/// <summary>
+	/// The eleven resource keys @SELECT used to emit on every invocation. PennMUSH's do_switch
+	/// (src/predicat.c:1081) prints nothing at all, so none of these may reach a player again.
+	/// Spelled out as literals: the constants they name are deleted.
+	/// </summary>
+	private static readonly string[] SelectDebugInstrumentationKeys =
+	[
+		"SelectTestingStringFormat", "SelectExpressionActionPairsFormat", "SelectHasDefaultAction",
+		"SelectModeRegexp", "SelectModeWildcard", "SelectExecutionInline", "SelectNoBreakWontPropagate",
+		"SelectQregistersLocalized", "SelectQregistersCleared", "SelectExecutionQueued", "SelectWillQueueNotify"
+	];
+
+	private List<string> MessagesFor(DBRef executor) =>
+		NotifyService.ReceivedCalls()
+			.ToList()
+			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
+			.Select(call => ExtractMessageForExecutor(call.GetArguments(), executor))
+			.Where(message => message is not null)
+			.Select(message => message!)
+			.ToList();
+
+	/// <summary>Polls the notify mock until <paramref name="expected"/> has been delivered to the executor.</summary>
+	private async Task<bool> WaitForMessage(DBRef executor, string expected, int timeoutMs = 10000)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		while (DateTime.UtcNow < deadline)
+		{
+			if (MessagesFor(executor).Contains(expected)) return true;
+			await Task.Delay(50);
+		}
+
+		return MessagesFor(executor).Contains(expected);
+	}
+
+	[Test]
+	public async ValueTask Select_EmitsNoDebugInstrumentation()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+		var baseline = NotifyService.ReceivedCalls().Count();
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@select/inline test=t*,@pemit #1=SelNoDebug_Match_{id},@pemit #1=SelNoDebug_Default_{id}"));
+
+		var localizedKeys = NotifyService.ReceivedCalls()
+			.ToList()
+			.Skip(baseline)
+			.Where(call => call.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup")
+			.Select(call => call.GetArguments().Length >= 2 ? call.GetArguments()[1] as string : null)
+			.Where(key => key is not null)
+			.Select(key => key!)
+			.ToList();
+
+		// The action itself still runs ...
+		await Assert.That(MessagesFor(executor)).Contains($"SelNoDebug_Match_{id}");
+		// ... but none of the development instrumentation is shipped to the player.
+		await Assert.That(localizedKeys.Intersect(SelectDebugInstrumentationKeys).ToList()).IsEmpty();
+	}
+
+	[Test]
+	public async ValueTask Select_Default_QueuesActionInsteadOfRunningInline()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// PennMUSH: @select with no /inline queues the matched action as a new queue entry
+		// (do_switch -> new_queue_actionlist with QUEUE_DEFAULT), so the rest of the calling
+		// action list runs FIRST. 'help @switch4' shows exactly this ordering.
+		await Parser.CommandListParse(
+			MarkupText.Plain($"@select 1=1,@pemit #1=SelQueued_Action_{id};@pemit #1=SelQueued_After_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SelQueued_Action_{id}")).IsTrue()
+			.Because("the queued action must actually run, not park on a semaphore that is never notified");
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.IndexOf($"SelQueued_After_{id}"))
+			.IsLessThan(messages.IndexOf($"SelQueued_Action_{id}"))
+			.Because("a queued action runs after the calling action list finishes");
+	}
+
+	[Test]
+	public async ValueTask Select_Inline_RunsActionInPlace()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandListParse(
+			MarkupText.Plain($"@select/inline 1=1,@pemit #1=SelInline_Action_{id};@pemit #1=SelInline_After_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SelInline_Action_{id}");
+		await Assert.That(messages.IndexOf($"SelInline_Action_{id}"))
+			.IsLessThan(messages.IndexOf($"SelInline_After_{id}"))
+			.Because("/inline runs the action in place, before the rest of the calling action list");
+	}
+
+	[Test]
+	public async ValueTask Select_NotifySwitch_ActuallyQueuesTheNotify()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// Clear any semaphore task another test parked on the executor, so the single
+		// '@notify me' this queues can only release the task parked below.
+		await Scheduler.Drain(new DbRefAttribute(executor, ["SEMAPHORE"]));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit #1=SelNotify_Released_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SelNotify_Released_{id}", 500)).IsFalse()
+			.Because("the parked task must still be waiting before @select/notify runs");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@select/notify 1=1,@pemit #1=SelNotify_Match_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SelNotify_Released_{id}")).IsTrue()
+			.Because("@select/notify queues '@notify me', which releases the waiting semaphore task");
+	}
+
+	[Test]
+	public async ValueTask Switch_Default_QueuesActionInsteadOfRunningInline()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch4': "@switch %0=1,think one ; think after" prints before / after / one.
+		await Parser.CommandListParse(
+			MarkupText.Plain($"@switch 1=1,@pemit #1=SwQueued_Action_{id};@pemit #1=SwQueued_After_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwQueued_Action_{id}")).IsTrue();
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages.IndexOf($"SwQueued_After_{id}"))
+			.IsLessThan(messages.IndexOf($"SwQueued_Action_{id}"))
+			.Because("@switch without /inline queues its actions as new queue entries");
+	}
+
+	[Test]
+	public async ValueTask Switch_Inline_RunsActionInPlace()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch4': "@switch/inline %0=1,think one ; think after" prints before / one / after.
+		await Parser.CommandListParse(
+			MarkupText.Plain($"@switch/inline 1=1,@pemit #1=SwInline_Action_{id};@pemit #1=SwInline_After_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SwInline_Action_{id}");
+		await Assert.That(messages.IndexOf($"SwInline_Action_{id}"))
+			.IsLessThan(messages.IndexOf($"SwInline_After_{id}"))
+			.Because("/inline runs the action in place");
+	}
+
+	[Test]
+	public async ValueTask Switch_Inplace_IsInlineNobreakLocalize()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch2': "@switch/inplace is an alias for @switch/inline/nobreak/localize."
+		// The @break inside the action must NOT stop the calling action list, and the setq
+		// inside it must not survive the switch.
+		await Parser.CommandListParse(
+			MarkupText.Plain(
+				$"@switch/inplace 1=1,{{@pemit #1=SwInplace_Action_{id};think setq(sw,{id});@break 1}};@pemit #1=SwInplace_After_%q<sw>_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SwInplace_Action_{id}");
+		await Assert.That(messages).Contains($"SwInplace_After__{id}")
+			.Because("/inplace implies /nobreak (the caller keeps running) and /localize (q-registers are restored)");
 	}
 }

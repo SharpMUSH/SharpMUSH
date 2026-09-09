@@ -2428,11 +2428,19 @@ public partial class Commands
 		var isFirst = switches.Contains("FIRST") && !switches.Contains("ALL");
 		var isRegexp = switches.Contains("REGEXP");
 
+		// PennMUSH folds the execution switches into one queue_type (src/cmds.c:1510-1521), where
+		// QUEUE_RECURSE == QUEUE_INPLACE | QUEUE_NO_BREAKS | QUEUE_PRESERVE_QREG (hdrs/externs.h:150).
+		// So /inplace is /inline/nobreak/localize ('help @switch2'), and with neither switch the
+		// actions become NEW queue entries -- 'help @switch4' contrasts the two orderings directly.
+		var isInplace = switches.Contains("INPLACE");
+		var isInline = switches.Contains("INLINE") || isInplace;
+		var noBreak = switches.Contains("NOBREAK") || isInplace;
+
 		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
 		// the caller's Q-registers. /CLEARREGS: start each action with empty Q-registers.
 		// NOTE: Save must happen before Clear. new Dictionary<> creates an independent copy,
 		// so the subsequent Clear() of the original does not affect savedRegisters.
-		var hasLocalize = switches.Contains("LOCALIZE");
+		var hasLocalize = switches.Contains("LOCALIZE") || isInplace;
 		var hasClearRegs = switches.Contains("CLEARREGS");
 
 		Dictionary<string, MString>? savedRegisters = null;
@@ -2489,7 +2497,7 @@ public partial class Commands
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
 					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
-					await parser.CommandListParseVisitor(MarkupText.Plain(actionText))();
+					await RunAction(MarkupText.Plain(actionText));
 
 					if (isFirst) break;
 				}
@@ -2498,10 +2506,12 @@ public partial class Commands
 			if (defaultArg.IsSome() && !matched)
 			{
 				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
-				await parser.CommandListParseVisitor(MarkupText.Plain(defaultText))();
+				await RunAction(MarkupText.Plain(defaultText));
 			}
 
-			if (switches.Contains("NOTIFY"))
+			// PennMUSH gates the notify on the queue type: `if (!(queue_type & QUEUE_INPLACE) && notifyme)`
+			// (src/predicat.c:1145), so /notify has no effect alongside /inline or /inplace.
+			if (switches.Contains("NOTIFY") && !isInline)
 			{
 				await Mediator.Send(new QueueCommandListRequest(
 					MarkupText.Plain("@notify me"),
@@ -2523,6 +2533,32 @@ public partial class Commands
 				{
 					regsToRestore[key] = value;
 				}
+			}
+		}
+
+		// Default is a NEW queue entry, exactly as PennMUSH's do_switch does with QUEUE_DEFAULT;
+		// /inline (and /inplace) run the action in the calling action list instead. An @break inside an
+		// inline action stops the caller too unless /nobreak was given ('help @switch2').
+		async ValueTask RunAction(MString action)
+		{
+			if (!isInline)
+			{
+				await Mediator.Send(new QueueCommandListRequest(
+					action,
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+				return;
+			}
+
+			var propagation = new BreakPropagation { PreserveNext = true };
+			await parser.With(
+				state => state with { BreakPropagation = propagation },
+				p => p.CommandListParse(action));
+
+			if (propagation.Broke && !noBreak)
+			{
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 			}
 		}
 	}
@@ -4812,11 +4848,16 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoTestString);
 		}
 
-		// Pattern matching flags (declared outside try/finally for /localize restore access)
-		bool isRegexp = switches.Contains("REGEXP");
-		bool isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
-		bool localizeRegs = switches.Contains("LOCALIZE");
-		bool clearRegs = switches.Contains("CLEARREGS");
+		// Pattern matching flags (declared outside try/finally for /localize restore access).
+		// PennMUSH builds one queue_type out of these (src/cmds.c:1390-1403) and
+		// QUEUE_RECURSE == QUEUE_INPLACE | QUEUE_NO_BREAKS | QUEUE_PRESERVE_QREG (hdrs/externs.h:150),
+		// so /inplace is exactly /inline/nobreak/localize ('help @switch2').
+		var isRegexp = switches.Contains("REGEXP");
+		var isInplace = switches.Contains("INPLACE");
+		var isInline = switches.Contains("INLINE") || isInplace;
+		var noBreak = switches.Contains("NOBREAK") || isInplace;
+		var localizeRegs = switches.Contains("LOCALIZE") || isInplace;
+		var clearRegs = switches.Contains("CLEARREGS");
 
 		// Implement /LOCALIZE: save Q-registers so matched actions cannot permanently change
 		// the caller's Q-registers. /CLEARREGS: start the action with empty Q-registers.
@@ -4839,56 +4880,10 @@ public partial class Commands
 
 		try
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, testString);
+			var pairCount = (args.Count - 1) / 2;
+			var hasDefault = (args.Count - 1) % 2 == 1;
 
-			int pairCount = (args.Count - 1) / 2;
-			bool hasDefault = (args.Count - 1) % 2 == 1;
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExpressionActionPairsFormat), executor, pairCount);
-			if (hasDefault)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectHasDefaultAction), executor);
-			}
-
-			if (switches.Contains("REGEXP"))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeRegexp), executor);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectModeWildcard), executor);
-			}
-
-			if (switches.Contains("INLINE") || switches.Contains("INPLACE"))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionInline), executor);
-
-				if (switches.Contains("NOBREAK"))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectNoBreakWontPropagate), executor);
-				}
-
-				if (switches.Contains("LOCALIZE"))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersLocalized), executor);
-				}
-
-				if (switches.Contains("CLEARREGS"))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectQregistersCleared), executor);
-				}
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectExecutionQueued), executor);
-			}
-
-			if (switches.Contains("NOTIFY"))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectWillQueueNotify), executor);
-			}
-
-			bool matchFound = false;
+			var matchFound = false;
 			for (int i = 0; i < pairCount; i++)
 			{
 				var exprIndex = (i * 2) + 1;
@@ -4929,18 +4924,7 @@ public partial class Commands
 					var actionText = action.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					if (isInline)
-					{
-						await parser.CommandListParse(actionMString);
-					}
-					else
-					{
-						await Mediator.Send(new QueueCommandListRequest(
-							actionMString,
-							parser.CurrentState,
-							new DbRefAttribute(executor.Object().DBRef, []),
-							0));
-					}
+					await RunAction(actionMString);
 
 					break;
 				}
@@ -4956,22 +4940,22 @@ public partial class Commands
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					if (isInline)
-					{
-						await parser.CommandListParse(actionMString);
-					}
-					else
-					{
-						await Mediator.Send(new QueueCommandListRequest(
-							actionMString,
-							parser.CurrentState,
-							new DbRefAttribute(executor.Object().DBRef, []),
-							0));
-					}
+					await RunAction(actionMString);
 				}
 			}
 
-			return CallState.Empty;
+			// PennMUSH gates the notify on the queue type: `if (!(queue_type & QUEUE_INPLACE) && notifyme)`
+			// (src/predicat.c:1145), so /notify has no effect alongside /inline or /inplace.
+			if (switches.Contains("NOTIFY") && !isInline)
+			{
+				await Mediator.Send(new QueueCommandListRequest(
+					MarkupText.Plain("@notify me"),
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+			}
+
+			return new CallState(matchFound);
 		}
 		finally
 		{
@@ -4984,6 +4968,32 @@ public partial class Commands
 				{
 					regsToRestore[key] = value;
 				}
+			}
+		}
+
+		// Default is a NEW queue entry, exactly as PennMUSH's do_switch does with QUEUE_DEFAULT;
+		// /inline (and /inplace) run the action in the calling action list instead. An @break inside an
+		// inline action stops the caller too unless /nobreak was given ('help @switch2').
+		async ValueTask RunAction(MString action)
+		{
+			if (!isInline)
+			{
+				await Mediator.Send(new QueueCommandListRequest(
+					action,
+					parser.CurrentState,
+					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
+					-1));
+				return;
+			}
+
+			var propagation = new BreakPropagation { PreserveNext = true };
+			await parser.With(
+				state => state with { BreakPropagation = propagation },
+				p => p.CommandListParse(action));
+
+			if (propagation.Broke && !noBreak)
+			{
+				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 			}
 		}
 	}
