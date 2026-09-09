@@ -71,7 +71,7 @@ public sealed partial class ObjectSnapshotService(
 		selection = NormalizeSelection(selection);
 		var reads = new ReadContext(objects, attributes, obj.Object().DBRef);
 		await ValidateSelection(executor, obj, snapshot, selection, reads, ct);
-		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal), reads);
+		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks), reads);
 		return Preview(snapshot, current, selection);
 	}
 
@@ -86,7 +86,7 @@ public sealed partial class ObjectSnapshotService(
 			selection = NormalizeSelection(selection);
 			var reads = new ReadContext(objects, attributes, obj.Object().DBRef);
 			await ValidateSelection(executor, obj, snapshot, selection, reads, ct);
-			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal), reads);
+			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks), reads);
 			if (Preview(snapshot, before, selection).Token != previewToken)
 				throw Error("stale-preview", "The object or selection changed. Preview again before restoring.");
 			if (history.PendingRecoveryId is not null && history.PendingRecoveryId != snapshot.Id)
@@ -95,9 +95,14 @@ public sealed partial class ObjectSnapshotService(
 			{
 				AbsentAttributes = selection.Attributes.SelectMany(AttributePathPrefixes)
 					.Except(before.Attributes.Select(a => a.Name)).ToArray(),
-				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).Except(before.Locks.Keys).ToArray() : [],
+				// Lock names are compared the way lock dictionaries are keyed. An ordinal comparison
+				// here writes a live lock into the before-image as absent, and recovery then removes
+				// the lock rather than restoring it.
+				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).Except(before.Locks.Keys, LockNames.Comparer).ToArray() : [],
 				RecoverySelection = selection,
-				Locks = before.Locks.Where(p => selection.Locks && (snapshot.Locks.ContainsKey(p.Key) || snapshot.AbsentLocks.Contains(p.Key))).ToDictionary(p => p.Key, p => p.Value)
+				Locks = before.Locks
+					.Where(p => selection.Locks && (snapshot.Locks.ContainsKey(p.Key) || snapshot.AbsentLocks.Contains(p.Key, LockNames.Comparer)))
+					.ToDictionary(p => p.Key, p => p.Value, LockNames.Comparer)
 			};
 			before = FinalizeImage(before);
 			history = Append(history, before) with { PendingRecoveryId = before.Id, LastRestoreError = null };
@@ -156,9 +161,12 @@ public sealed partial class ObjectSnapshotService(
 		return (executor.Known, obj.Known);
 	}
 
-	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IReadOnlySet<string>? lockNames = null, ReadContext? reads = null)
+	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IEnumerable<string>? lockNames = null, ReadContext? reads = null)
 	{
 		reads ??= new(objects, attributes, obj.Object().DBRef);
+		// Built here rather than by the caller so the selection matches the object's live keys the
+		// way every other lock lookup does: a name is a lock name, not an ordinal string.
+		var selectedLocks = lockNames?.ToHashSet(LockNames.Comparer);
 		var selectedNames = selection?.Attributes.SelectMany(AttributePathPrefixes).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
 		var capturedBytes = 0;
@@ -181,9 +189,9 @@ public sealed partial class ObjectSnapshotService(
 			}
 			captured.Add(new(attribute.LongName, markup, attribute.Flags.Select(f => f.Name).Order().ToArray(), owner.Object.DBRef.ToString()) { Ancestors = ancestors.ToArray() });
 		}
-		var lockData = new Dictionary<string, SnapshotLock>(StringComparer.Ordinal);
+		var lockData = new Dictionary<string, SnapshotLock>(LockNames.Comparer);
 		foreach (var (name, value) in obj.Object().Locks.OrderBy(p => p.Key))
-			if ((selection is null || selection.Locks && lockNames?.Contains(name) == true) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
+			if ((selection is null || selection.Locks && selectedLocks?.Contains(name) == true) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
 		var snapshot = new ObjectSnapshot(Guid.NewGuid().ToString("N"), 1, obj.Object().DBRef.ToString(), obj.Object().Type,
 			actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), description, retain,
 			selection is null || selection.Name ? obj.Object().Name : "", captured.OrderBy(a => a.Name).ToArray(), lockData,
@@ -226,7 +234,34 @@ public sealed partial class ObjectSnapshotService(
 			snapshot.SchemaVersion != 1 || snapshot.ObjectId != obj.Object().DBRef.ToString() || snapshot.ObjectType != obj.Object().Type ||
 			snapshot.Digest != Hash(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)))
 			throw Error("corrupt", "Snapshot schema, digest, type or stable object identity is invalid.");
-		return snapshot;
+		return CanonicalLocks(snapshot);
+	}
+
+	/// <summary>
+	/// The one place a stored snapshot's lock names become the spelling the live object is keyed by.
+	/// </summary>
+	/// <remarks>
+	/// An image written before lock names were canonical spells its locks the way that world did —
+	/// <c>Teleport</c> for <see cref="LockType.TPort"/>, <c>Chzone</c> for <see cref="LockType.ChZone"/>.
+	/// Every comparison downstream is against a live key, so leaving the raw name in place omits the
+	/// live lock from the before-image, records it as absent, and lets recovery delete it — the same
+	/// fail-open hole in a different path. Applied after the digest check and never written back:
+	/// the stored bytes and the digest that binds them are left exactly as they are.
+	/// </remarks>
+	private static ObjectSnapshot CanonicalLocks(ObjectSnapshot snapshot)
+	{
+		var locks = LockNames.Fold(snapshot.Locks);
+		return snapshot with
+		{
+			Locks = locks,
+			AbsentLocks = snapshot.AbsentLocks
+				.Select(LockNames.Canonical)
+				// A restored value outranks an absence marker for the same lock: two spellings can
+				// only fold onto one name, and the answer that keeps a lock is the safe one.
+				.Where(name => !locks.ContainsKey(name))
+				.Distinct(LockNames.Comparer)
+				.ToArray()
+		};
 	}
 
 	private async Task ValidateSelection(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, ReadContext reads, CancellationToken ct)
@@ -307,7 +342,9 @@ public sealed partial class ObjectSnapshotService(
 	private static void ValidateLockWrite(AnySharpObject obj, string name, LockService.LockFlags savedFlags = 0)
 	{
 		var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
-		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(name, new()).Flags) & protectedFlags) != 0)
+		// A snapshot taken before lock names were canonical can name a lock the way the old world
+		// spelled it; the live object's keys are LockType's spelling.
+		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags) & protectedFlags) != 0)
 			throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
 	}
 
@@ -334,7 +371,7 @@ public sealed partial class ObjectSnapshotService(
 		}
 		foreach (var (name, value) in saved.Locks)
 			if (!await permissions.CanReadLock(executor, obj, (LockService.LockFlags)value.Flags) ||
-				!await permissions.CanReadLock(executor, obj, obj.Object().Locks.GetValueOrDefault(name, new()).Flags)) return false;
+				!await permissions.CanReadLock(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags)) return false;
 		return true;
 	}
 
@@ -419,7 +456,7 @@ public sealed partial class ObjectSnapshotService(
 		if (selection.Flags) changes.Add(new("flags", string.Join(' ', current.Flags), string.Join(' ', saved.Flags)));
 		if (selection.Locks)
 		{
-			var merged = new Dictionary<string, SnapshotLock>(current.Locks);
+			var merged = new Dictionary<string, SnapshotLock>(current.Locks, LockNames.Comparer);
 			foreach (var name in saved.AbsentLocks) merged.Remove(name);
 			foreach (var (name, value) in saved.Locks) merged[name] = value;
 			changes.Add(new("locks", JsonSerializer.Serialize(current.Locks, Json), JsonSerializer.Serialize(merged, Json)));

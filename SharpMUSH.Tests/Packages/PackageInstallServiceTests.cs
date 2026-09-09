@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -298,6 +299,57 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetManagedAttributesAsync(package)).Any(a => a.Attribute == removedRef)).IsFalse();
 		await Assert.That((await Installer.UninstallAsync(package)).IsT0).IsTrue();
 		await Assert.That((await Installer.UninstallAsync(other)).IsT0).IsTrue();
+	}
+
+	/// <summary>
+	/// A revision written before lock names were canonical names <see cref="LockType.TPort"/> the way
+	/// that world spelled it. Rolling back to it must leave the lock in place: the raw
+	/// <c>Teleport</c> add and the folded baseline's <c>TPort</c> removal both canonicalise in the
+	/// provider, and the removal is applied last, so the rollback used to delete the very lock the
+	/// revision asked it to keep — and an absent lock reads as "no lock", which passes everybody.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task LegacyRollback_KeepsALockTheOldWorldSpelledDifferently()
+	{
+		const string package = "legacy-lock-rollback";
+		var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+		var store = WebAppFactoryArg.Services.GetRequiredService<IObjectStore>();
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var player = (await store.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var target = await mediator.Send(new CreateRoomCommand("legacy-lock-rollback-" + Guid.NewGuid().ToString("N"), player));
+		var node = (await store.GetObjectNodeAsync(target)).Known;
+		var objid = node.Object().DBRef.ToString();
+		await store.SetLockAsync(node.Object(), nameof(LockType.TPort), new SharpLockData("=#1"));
+
+		await Registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(package, "1.1.0",
+			Source().Repo, Source().Path, "current", "main", DateTimeOffset.UtcNow, 2));
+		// What the package holds now: canonical, because every baseline is folded when it is read.
+		await Registry.UpsertManagedStructureAsync(new ManagedStructureRecord(package, objid,
+			JsonSerializer.Serialize(new PackageStructureBaseline([], [],
+				new Dictionary<string, string> { [nameof(LockType.TPort)] = "=#1" },
+				new Dictionary<string, IReadOnlyList<string>>()), json), "1.1.0"));
+		// What the revision holds: the pre-canonicalisation spelling of the same lock.
+		var snapshot = new PackageRevisionSnapshot("1.0.0", [], [],
+		[
+			new PackageRevisionSnapshotStructure(objid, [], [],
+				new Dictionary<string, string> { ["Teleport"] = "=#1" },
+				new Dictionary<string, IReadOnlyList<string>>())
+		]);
+		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(package, 1, PackageRevisionKind.Install,
+			"1.0.0", "old", JsonSerializer.Serialize(snapshot, json), "{}", "[]", DateTimeOffset.UtcNow));
+
+		var rolledBack = await Installer.RollbackAsync(package, 1);
+
+		await Assert.That(rolledBack.IsT0).IsTrue();
+		var locks = (await store.GetObjectNodeAsync(target)).Known.Object().Locks;
+		await Assert.That(locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+			.Because("rolling back to a revision that carries the lock must not remove it");
+		await Assert.That(locks[nameof(LockType.TPort)].LockString).IsEqualTo("=#1");
+		// And the baseline it persists is canonical, so the next rollback does not repeat the round trip.
+		var persisted = JsonSerializer.Deserialize<PackageStructureBaseline>(
+			(await Registry.GetManagedStructuresAsync(package)).Single(s => s.Objid == objid).StructureJson, json);
+		await Assert.That(persisted!.Locks.Keys.Single()).IsEqualTo(nameof(LockType.TPort));
+		await Assert.That((await Installer.UninstallAsync(package)).IsT0).IsTrue();
 	}
 
 	[Test, NotInParallel]

@@ -103,7 +103,9 @@ public class PackageInstallService(
 				? PackageStructureBaseline.Empty
 				: parsed with
 				{
-					Locks = new Dictionary<string, string>(parsed.Locks, StringComparer.OrdinalIgnoreCase),
+					// Fold rather than copy: a baseline written before lock names were canonical can
+					// hold two spellings of one lock, which a case-insensitive copy would throw on.
+					Locks = LockNames.Fold(parsed.Locks),
 					AttributeFlags = parsed.AttributeFlags.ToDictionary(
 						kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase)
 				};
@@ -464,7 +466,7 @@ public class PackageInstallService(
 			if (change.Kind == PackageStructureKind.Lock
 				&& change.Action is PackageStructureAction.Add or PackageStructureAction.Conflict
 				&& manifestByRef.TryGetValue(change.TargetRef, out var lockSpec)
-				&& lockSpec.Locks.TryGetValue(change.Element, out var rawLock))
+				&& LockNames.Fold(lockSpec.Locks).TryGetValue(change.Element, out var rawLock))
 			{
 				var resolvedLock = PackageRefSubstitution.Substitute(rawLock, Resolve, out var unresolved);
 				if (unresolved.Count > 0)
@@ -928,8 +930,9 @@ public class PackageInstallService(
 	/// <summary>The resolved structure a package declares on one object — the baseline it writes on apply.</summary>
 	private static PackageStructureBaseline? BuildResolvedStructure(PackageObjectSpec spec, Func<PackageRef, string?> resolve)
 	{
+		// Canonical keys, matching the plan and the live object — see PackagePlanService.
 		var locks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var (lockType, raw) in spec.Locks)
+		foreach (var (lockType, raw) in LockNames.Fold(spec.Locks))
 		{
 			locks[lockType] = PackageRefSubstitution.Substitute(raw, resolve, out _);
 		}
@@ -1323,7 +1326,12 @@ public class PackageInstallService(
 		string packageId, PackageRevisionSnapshot snapshot, List<string> notes, CancellationToken cancellationToken)
 	{
 		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
-		var target = (snapshot.Structure ?? []).ToDictionary(s => s.Objid, StringComparer.Ordinal);
+		// Fold once, here, so the whole rollback speaks canonical: a revision written before lock
+		// names were canonical spells a lock the way that world did. Left raw, its `Teleport` add and
+		// the folded baseline's `TPort` removal both canonicalise to TPort in the provider, the
+		// removal is applied last, and the rollback deletes the lock the revision asked it to keep.
+		var target = (snapshot.Structure ?? [])
+			.ToDictionary(s => s.Objid, s => s with { Locks = LockNames.Fold(s.Locks) }, StringComparer.Ordinal);
 		var current = DeserializeStructureBaselines(await registry.GetManagedStructuresAsync(packageId));
 
 		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal))

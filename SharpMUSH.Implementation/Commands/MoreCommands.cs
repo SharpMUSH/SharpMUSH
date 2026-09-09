@@ -510,9 +510,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				var lockKey = obj.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockType, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !obj.Object().Locks.TryGetValue(lockKey, out var lockData))
+				if (!obj.Object().Locks.TryGetValue(LockNames.Canonical(lockType), out var lockData))
 				{
 					await NotifyService.Notify(executor, $"No such lock: {lockType}", executor);
 					return new CallState(ErrorMessages.Returns.NoSuchLock);
