@@ -166,6 +166,7 @@ public partial class TaskScheduler(
 	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
 	private readonly SemaphoreSlim _delayedChanges = new(1, 1);
 	private readonly HashSet<long> _delayedRepairs = [];
+	private readonly HashSet<long> _semaphorePublications = [];
 
 	private async ValueTask<IDisposable> EnterDelayedTransitionAsync()
 	{
@@ -336,13 +337,19 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 	{
 		QueueEntry? entry;
-		lock (_admissionLock) _pendingEntries.TryGetValue(pid, out entry);
+		lock (_admissionLock)
+		{
+			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
+			if (!_pendingEntries.TryGetValue(pid, out entry) || _ready.Contains(pid)
+				|| _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid))
+				return new(null, QueueRejectionReason.AlreadyReleased);
+		}
 		using var delayedTransition = entry?.Group.StartsWith(DelayGroup + ":", StringComparison.Ordinal) is true
 			? await EnterDelayedTransitionAsync() : null;
+		using var mutation = entry?.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal) is true
+			? await EnterSemaphoreMutationAsync() : null;
 		if (!semaphoreTimeout || entry?.ManagesSemaphoreCount is not true)
 			return await Activate(pid, semaphoreTimeout);
-
-		using var mutation = await EnterSemaphoreMutationAsync();
 		lock (_admissionLock)
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
@@ -452,9 +459,12 @@ public partial class TaskScheduler(
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
 		// Do not expose a reservation to halt until its counter transaction owns the lease.
-		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
+		using var mutation = await EnterSemaphoreMutationAsync();
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
+		lock (_admissionLock) _semaphorePublications.Add(admission.Pid!.Value);
+		var scheduleWriteAttempted = false;
+		var triggerKey = new TriggerKey($"dbref:{state.Executor}-{admission.Pid}", group);
 		var counterWriteAttempted = false;
 		var counterCreated = false;
 		var currentCount = oldValue;
@@ -496,10 +506,16 @@ public partial class TaskScheduler(
 					throw new OperationCanceledException("Semaphore reservation was released before activation.");
 				}
 			}
+			QueueEntry publicationEntry;
+			lock (_admissionLock) publicationEntry = _pendingEntries[admission.Pid!.Value];
+			using var publication = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, publicationEntry.Cts.Token);
+			scheduleWriteAttempted = true;
 			await _scheduler.ScheduleJob(JobBuilder.Create<SemaphoreTask>()
 			 .SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object> { { "Command", command }, { "State", state } })).Build(),
 			 TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + timeout)
-				.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", group).Build(), ExecutionBudget.CurrentToken);
+				.WithIdentity(triggerKey).Build(), publication.Token);
+			publication.Token.ThrowIfCancellationRequested();
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			return admission;
 		}
 		catch (Exception admissionFailure)
@@ -507,6 +523,14 @@ public partial class TaskScheduler(
 			SemaphoreRepairIdentity? createdIdentity = null;
 			async ValueTask Restore(bool retry)
 			{
+				// A failed acknowledgement may hide a committed trigger. Remove it before
+				// restoring the counter or making its PID available for another admission.
+				if (scheduleWriteAttempted)
+				{
+					await _scheduler.UnscheduleJob(triggerKey, ExecutionBudget.CurrentToken);
+					scheduleWriteAttempted = false;
+				}
+				if (!counterWriteAttempted) return;
 				if (retry || counterCreated)
 				{
 					var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
@@ -541,12 +565,9 @@ public partial class TaskScheduler(
 			}
 			try
 			{
-				if (counterWriteAttempted)
-				{
-					using var cleanup = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
-					using var cleanupScope = cleanup.Enter();
-					await Restore(retry: false);
-				}
+				using var cleanup = ExecutionBudget.FromMilliseconds(1000);
+				using var cleanupScope = cleanup.Enter();
+				await Restore(retry: false);
 			}
 			catch (Exception cleanupFailure)
 			{
@@ -559,12 +580,16 @@ public partial class TaskScheduler(
 			Release(admission.Pid!.Value);
 			throw;
 		}
+		finally
+		{
+			lock (_admissionLock) _semaphorePublications.Remove(admission.Pid!.Value);
+		}
 	}
 
 	private bool CanReleasePendingSemaphore(long pid)
 	{
 		lock (_admissionLock)
-			return _pendingEntries.ContainsKey(pid) && !_ready.Contains(pid)
+			return _pendingEntries.ContainsKey(pid) && !_ready.Contains(pid) && !_semaphorePublications.Contains(pid)
 				&& !_semaphoreRepairs.ContainsKey(pid) && !_semaphoreCommandReservations.Contains(pid);
 	}
 
@@ -912,6 +937,8 @@ public partial class TaskScheduler(
 		}
 		// Publication observes the cancelled entry token and settles its provider write
 		// before shutdown disposes the reservation. Release callbacks run after this gate.
+		await _semaphoreMutations.WaitAsync();
+		_semaphoreMutations.Release();
 		await _delayedChanges.WaitAsync();
 		_delayedChanges.Release();
 		lock (_admissionLock)
