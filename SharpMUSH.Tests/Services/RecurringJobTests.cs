@@ -310,6 +310,50 @@ public class RecurringJobTests
 	}
 
 	[Test, NotInParallel]
+	public async Task QueuedAuthorizationCancelsBuiltInRoleLookup()
+	{
+		var context = await Setup();
+		var account = new SharpAccount { Id = context.Actor.AccountId, Username = "job-owner", PasswordHash = "", Status = AccountStatus.Active };
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var accounts = Substitute.For<IAccountService>();
+		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
+		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
+		var registry = Substitute.For<IRoleRegistryService>();
+		var backing = Get<IRoleRegistryService>();
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var armed = false;
+		registry.GetRoleAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			if (armed) await release.Task.WaitAsync(call.Arg<CancellationToken>());
+			return await backing.GetRoleAsync(call.Arg<string>(), call.Arg<CancellationToken>());
+		});
+		registry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => backing.GetRolesForAccountAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
+		var capabilities = new AdministrativeCapabilityService(accounts, registry, Get<IRoleDerivationService>(), Get<IPermissionResolver>());
+		var service = Service(context.Clock, context.Queue, capabilities);
+		await service.InitializeAsync();
+		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		armed = true;
+		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100));
+		using var scope = budget.Enter();
+		var firing = context.Callbacks.Single()().AsTask();
+		try
+		{
+			await firing.WaitAsync(TimeSpan.FromSeconds(2));
+		}
+		finally
+		{
+			release.TrySetResult();
+			await firing;
+		}
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
+	}
+
+	[Test, NotInParallel]
 	[Arguments("read")]
 	[Arguments("running-save")]
 	[Arguments("authorize")]
