@@ -24,7 +24,7 @@ public class QueueDiagnosticsAuthorizationTests
 		{
 			Scope = new(Actor, new HashSet<string> { PortalPermission.QueueInspectOwn, PortalPermission.DiagnosticsProfile });
 			Queues.GetInspectionScopeAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<QueueInspectionScope?>(Scope));
-			Queues.ListAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<QueueEntrySnapshot>>([]));
+			Queues.ListAsync(Arg.Any<CapabilityActor>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<QueueEntrySnapshot>>([]));
 			Queues.CanInspectAsync(Arg.Any<QueueInspectionScope>(), Arg.Any<DBRef?>(), Arg.Any<DBRef?>(), Arg.Any<CancellationToken>())
 				.Returns(call => Task.FromResult(call.ArgAt<DBRef?>(1) == Actor.ActiveCharacter
 					? Controls && call.Arg<QueueInspectionScope>().Scopes.Contains(PortalPermission.QueueInspectOwn)
@@ -112,4 +112,34 @@ public class QueueDiagnosticsAuthorizationTests
 		await Assert.That((await h.Service.InspectAsync(other)).AsT0.Profile).IsNull();
 		await Assert.That((await h.Service.StopProfileAsync(other)).AsT1).IsEqualTo(DiagnosticsError.NotFound);
 	}
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task StopFlushesPendingSamplesWithFreshSourceAuthorization(bool controls)
+	{
+		var h = new Harness();
+		await h.Service.StartProfileAsync(h.Actor);
+		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
+		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
+		h.Controls = controls;
+		await Assert.That((await h.Service.StopProfileAsync(h.Actor)).IsT0).IsTrue();
+		var report = (await h.Service.InspectAsync(h.Actor)).AsT0.Profile!;
+		await Assert.That(report.Recording).IsFalse();
+		await Assert.That(report.Rows.Sum(row => row.Count)).IsEqualTo(controls ? 1L : 0L);
+		await Assert.That(h.Recorder.DrainProfileSamples().Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ActiveInspectionRequestsOnlyOneExtraVisibleRowForTruncation()
+	{
+		var h = new Harness();
+		var entries = Enumerable.Range(1, 101).Select(pid => new QueueEntrySnapshot(pid, new DBRef(2, 100),
+			h.Actor.ActiveCharacter, "enqueue", QueueEntryState.Ready, null, "")).ToArray();
+		h.Queues.ListAsync(h.Actor, 101, Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<QueueEntrySnapshot>>(entries));
+		var report = (await h.Service.InspectAsync(h.Actor)).AsT0;
+		await Assert.That(report.Active.Count).IsEqualTo(100);
+		await Assert.That(report.ActiveTruncated).IsTrue();
+		await h.Queues.DidNotReceive().ListAsync(h.Actor, Arg.Any<CancellationToken>());
+	}
+
 }

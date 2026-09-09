@@ -11,6 +11,7 @@ public interface ITaskScheduler
 	ValueTask<IDisposable> EnterSemaphoreMutationAsync();
 	QueueUsage GetQueueUsage();
 	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries();
+	IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries();
 	QueueEntrySnapshot? GetQueueEntry(long pid);
 	ValueTask<QueueControlResult> PausePending(long pid, string reason);
 	ValueTask<QueueControlResult> ResumePending(long pid);

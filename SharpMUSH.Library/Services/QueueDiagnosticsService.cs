@@ -32,7 +32,7 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		if (limit is < 1 or > 100 || beforeSequence is <= 0) return DiagnosticsError.InvalidRequest;
 		var scope = await queues.GetInspectionScopeAsync(actor, ct);
 		if (!CanInspect(scope)) return DiagnosticsError.PermissionDenied;
-		var active = await queues.ListAsync(actor, ct);
+		var active = await queues.ListAsync(actor, 101, ct);
 		var current = active.Take(100).Select(entry => new DiagnosticQueueRow(entry.Pid, null,
 			entry.Source?.ToString(), entry.Owner?.ToString(), entry.Kind, entry.State.ToString(), entry.SourceAttribute,
 			entry.EnqueuedAt, entry.StartedAt, null, entry.WaitDuration, entry.ExecutionDuration, entry.InvocationCount, null)).ToArray();
@@ -82,6 +82,9 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		var profile = recorder.ProfileRegistrations().SingleOrDefault(p => p.Actor == actor);
 		if (profile is null) return DiagnosticsError.NotFound;
 		recorder.StopProfile(profile.Id);
+		// Stop fences writers before draining. Await the same collector gate so an in-flight
+		// background batch also finishes authorization and publication before success returns.
+		await CollectProfilesAsync(ct);
 		return new Success();
 	}
 	public async Task CollectProfilesAsync(CancellationToken ct = default)

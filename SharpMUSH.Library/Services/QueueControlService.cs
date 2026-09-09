@@ -17,6 +17,7 @@ public interface IQueueControlService
 	Task<QueueInspectionScope?> GetInspectionScopeAsync(CapabilityActor actor, CancellationToken ct = default);
 	Task<bool> CanInspectAsync(QueueInspectionScope scope, DBRef? owner, DBRef? source, CancellationToken ct = default);
 	Task<IReadOnlyList<QueueEntrySnapshot>> ListAsync(CapabilityActor actor, CancellationToken ct = default);
+	Task<IReadOnlyList<QueueEntrySnapshot>> ListAsync(CapabilityActor actor, int limit, CancellationToken ct = default);
 	Task<QueueControlResult> ChangeAsync(CapabilityActor actor, long pid, bool resume, string reason = "", CancellationToken ct = default);
 }
 
@@ -34,6 +35,24 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		if (entry.Source is not { IsObjid: true } source) return false;
 		var target = await mediator.Send(new GetObjectNodeQuery(source), ct);
 		return !target.IsNone && target.Known().Object().DBRef == source && await permissions.Controls(actor, target.Known());
+	}
+
+	/// <summary>Stops after the requested number of visible entries, without materializing the full ledger.</summary>
+	public async Task<IReadOnlyList<QueueEntrySnapshot>> ListAsync(CapabilityActor actor, int limit, CancellationToken ct = default)
+	{
+		ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+		ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 101);
+		var scope = await GetInspectionScopeAsync(actor, ct);
+		if (scope is null) return [];
+		var visible = new List<QueueEntrySnapshot>(limit);
+		foreach (var entry in scheduler.EnumerateQueueEntries())
+		{
+			ct.ThrowIfCancellationRequested();
+			if (!await CanInspectAsync(scope, entry.Owner, entry.Source, ct)) continue;
+			visible.Add(entry);
+			if (visible.Count == limit) break;
+		}
+		return visible;
 	}
 
 	public async Task<IReadOnlyList<QueueEntrySnapshot>> ListAsync(CapabilityActor actor, CancellationToken ct = default)

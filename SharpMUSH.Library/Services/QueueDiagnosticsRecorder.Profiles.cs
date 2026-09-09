@@ -85,8 +85,11 @@ public sealed partial class QueueDiagnosticsRecorder
 		lock (_profileGate)
 		{
 			if (!_profiles.TryGetValue(id, out var capture)) return;
-			Volatile.Write(ref capture.Recording, 0);
-			capture.StopStamp ??= _clock.GetTimestamp();
+			lock (capture)
+			{
+				Volatile.Write(ref capture.Recording, 0);
+				capture.StopStamp ??= _clock.GetTimestamp();
+			}
 			if (discard) _profiles.Remove(id);
 			RefreshRecording();
 		}
@@ -117,9 +120,14 @@ public sealed partial class QueueDiagnosticsRecorder
 		var now = _clock.GetTimestamp();
 		foreach (var capture in captures)
 		{
-			if (Volatile.Read(ref capture.Recording) == 0 || _clock.GetElapsedTime(capture.StartStamp, now) >= capture.Duration) continue;
-			if (!_samples.Writer.TryWrite(new(capture.Registration.Id, observation?.Source, observation?.Owner,
-				observation?.SourceAttribute, invocation))) Interlocked.Increment(ref capture.Dropped);
+			// A stop response must include every write accepted before its stop boundary.
+			// This per-capture gate covers only the nonblocking mailbox write, never authorization.
+			lock (capture)
+			{
+				if (Volatile.Read(ref capture.Recording) == 0 || _clock.GetElapsedTime(capture.StartStamp, now) >= capture.Duration) continue;
+				if (!_samples.Writer.TryWrite(new(capture.Registration.Id, observation?.Source, observation?.Owner,
+					observation?.SourceAttribute, invocation))) Interlocked.Increment(ref capture.Dropped);
+			}
 		}
 	}
 	public IReadOnlyList<QueueProfileSample> DrainProfileSamples()

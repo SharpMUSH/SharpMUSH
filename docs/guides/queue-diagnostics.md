@@ -5,7 +5,9 @@
 **Queue diagnostics** page provides active entries, paged recent outcomes and the
 same profile. Select a linked character explicitly before loading portal data.
 The default history page has 50 entries (maximum 100); the default profile lasts
-60 seconds (range 1–300).
+60 seconds (range 1–300). Active inspection traverses live metadata until it has
+101 visible entries, returns at most 100, and reports truncation. It does not
+materialize the entire queue before applying the visible-row limit.
 
 ## Authority and privacy
 
@@ -42,13 +44,14 @@ all profiles share a 4,096-sample mailbox. Extra samples or keys are omitted.
 There is one profile per account and at most eight per process. Starting a new
 profile replaces that account's previous profile. Recording stops automatically
 at its deadline; stopped results expire after 15 minutes and may be evicted sooner
-to admit another profile. These bounds also apply under sustained input.
+to admit another profile. Stopping waits for pending samples to be authorized and
+included in the final report. These bounds also apply under sustained input.
 
 Instrumentation stays in `TelemetryService`; the observer does not add a second
 parser visitor. The scheduler owns each live observation, avoiding a separate
 unbounded registry. Its execution path records metadata and attempts bounded
 mailbox writes. Permission/database work happens in the asynchronous collector,
-which checks at most one source/owner pair per profile batch. Collector work and
+which checks each distinct source/owner pair once per profile batch. Collector work and
 HTTP/game reads honor cancellation.
 
 ## Validation and overhead measurement
@@ -90,13 +93,13 @@ rounds produced the following results for 5,000 entries per mode:
 
 | Mode | Median elapsed | Elapsed range | Median process allocation |
 | --- | ---: | ---: | ---: |
-| disabled | 140.19 ms | 76.58–189.15 ms | 28.25 MB |
-| history | 135.43 ms | 125.52–205.18 ms | 35.50 MB |
-| profile | 238.64 ms | 163.67–267.91 ms | 78.10 MB |
+| disabled | 141.90 ms | 101.26–188.95 ms | 28.95 MB |
+| history | 194.70 ms | 102.31–317.94 ms | 48.65 MB |
+| profile | 220.52 ms | 191.50–290.72 ms | 82.08 MB |
 
 All four rounds preserved every FIFO side effect; history/profile rounds also
 verified three invocations and a completed outcome for every retained entry.
-The shared host was running other validation work. The overlapping elapsed ranges
-(and history median below the disabled median) mean this run does not establish a
+The shared host was running other validation work. The wide and overlapping elapsed ranges
+mean this run does not establish a
 reliable latency percentage. Allocation figures cover the whole test process, not
 retained diagnostic memory. The separate capacity tests establish retention bounds.

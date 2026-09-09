@@ -31,6 +31,15 @@ public partial class TaskScheduler
 		return new(_deferredChanges);
 	}
 
+	/// <summary>Live metadata traversal with no full-ledger copy and no lock held across caller work.</summary>
+	public IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries()
+	{
+		// ConcurrentDictionary's enumerator tolerates release/admission during inspection.
+		// Re-read each current entry under the ledger gate so state fields agree at snapshot time.
+		foreach (var entry in _pendingEntries)
+			if (GetQueueEntry(entry.Key) is { } snapshot) yield return snapshot;
+	}
+
 	public IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
 	{
 		lock (_admissionLock)
