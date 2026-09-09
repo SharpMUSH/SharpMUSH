@@ -75,6 +75,10 @@ public class TaskScheduler(
 		 _pendingEntries.Values.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
 		 new Dictionary<QueueRejectionReason, long>(_rejections));
 	}
+	public bool HasPendingWork(string triggerName, string group)
+	{
+		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == $"{triggerName}-{entry.Pid}" && entry.Group == group);
+	}
 	private QueueAdmissionResult Reject(QueueRejectionReason reason)
 	{
 		lock (_admissionLock) _rejections[reason] = _rejections.GetValueOrDefault(reason) + 1;

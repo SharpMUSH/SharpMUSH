@@ -44,8 +44,17 @@ public class RecurringJobTests
 		var clock = new Clock();
 		var callbacks = new List<Func<ValueTask<CallState?>>>();
 		var queue = Substitute.For<QueueScheduler>();
+		var pending = new HashSet<(string Trigger, string Group)>();
+		queue.HasPendingWork(Arg.Any<string>(), Arg.Any<string>()).Returns(call => pending.Contains((call.ArgAt<string>(0), call.ArgAt<string>(1))));
 		queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
-			.Returns(call => { callbacks.Add(call.ArgAt<Func<ValueTask<CallState?>>>(0)); return new QueueAdmissionResult(callbacks.Count, QueueRejectionReason.None); });
+			.Returns(call =>
+			{
+				var action = call.ArgAt<Func<ValueTask<CallState?>>>(0);
+				var key = (call.ArgAt<string>(1), call.ArgAt<string>(2));
+				pending.Add(key);
+				callbacks.Add(async () => { try { return await action(); } finally { pending.Remove(key); } });
+				return new QueueAdmissionResult(callbacks.Count, QueueRejectionReason.None);
+			});
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 		var service = Service(clock, queue, capabilities);
@@ -53,6 +62,82 @@ public class RecurringJobTests
 		return new(service, actor!, target, clock, queue, callbacks, capabilities);
 	}
 	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+
+	[Test, NotInParallel]
+	public async Task DelayedFiringDoesNotAccumulateQueueReservations()
+	{
+		var context = await Setup();
+		await Create(context);
+		for (var minute = 0; minute < 5; minute++)
+		{
+			context.Clock.Now = context.Clock.Now.AddMinutes(1);
+			await context.Service.RunDueAsync();
+		}
+		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
+		await context.Callbacks.Single()();
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		await Assert.That(context.Callbacks.Count).IsEqualTo(2);
+	}
+
+	[Test, NotInParallel]
+	public async Task RealQueueKeepsOneFiringAndRecoversAfterExternalHalt()
+	{
+		var context = await Setup();
+		var queue = Get<QueueScheduler>();
+		var service = Service(context.Clock, queue, context.Capabilities);
+		await service.InitializeAsync();
+		var job = await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var actor = context.Actor.ActiveCharacter!.Value;
+		var blocker = await queue.EnqueueWork(async () => { started.TrySetResult(); await release.Task; return CallState.Empty; },
+			"recurring-test-blocker", "tests", actor);
+		await Assert.That(blocker.Accepted).IsTrue();
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+			var baseline = queue.GetQueueUsage().Total;
+			for (var minute = 0; minute < 5; minute++)
+			{
+				context.Clock.Now = context.Clock.Now.AddMinutes(1);
+				await service.RunDueAsync();
+			}
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(baseline + 1);
+			await queue.Halt(actor);
+			await Assert.That(queue.HasPendingWork("recurring:" + job.Id, "recurring")).IsTrue();
+		}
+		finally { release.TrySetResult(); }
+		async Task Drain()
+		{
+			var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+			var admitted = await queue.EnqueueWork(() => { done.TrySetResult(); return ValueTask.FromResult<CallState?>(CallState.Empty); },
+				"recurring-test-barrier", "tests", actor);
+			await Assert.That(admitted.Accepted).IsTrue();
+			await done.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		}
+		await Drain();
+		await Assert.That(queue.HasPendingWork("recurring:" + job.Id, "recurring")).IsFalse();
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		await Drain();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).LastAsync()).Value.ToPlainText()).IsEqualTo("yes");
+	}
+
+	[Test, NotInParallel]
+	public async Task ScheduledAttributeHasRootQRegisters()
+	{
+		var context = await Setup();
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		await Get<IMediator>().Send(new SetAttributeCommand(context.Target, ["RUN"],
+			MarkupText.Plain($"@set {context.Target}=FIRED:[setq(0,stored)][r(0)]"), player));
+		await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		await context.Callbacks.Single()();
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).LastAsync()).Value.ToPlainText())
+			.IsEqualTo("stored");
+	}
 
 	[Test, NotInParallel]
 	public async Task DurableClaimsPreventDuplicateTicksAndRestartReplay()

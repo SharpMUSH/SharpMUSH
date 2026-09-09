@@ -39,8 +39,9 @@ Invalid schedules, unknown zones and schedules with no future date are rejected.
 
 The engine records each firing claim before normal queue admission. Admission rejection
 is recorded, with no retry of that firing. A delayed poll admits at most one current firing
-per job and advances directly to a future occurrence. An older unstarted callback is
-superseded; it cannot replay a backlog. Restart retains definitions, clears interrupted
+per job and advances directly to a future occurrence. A firing is skipped while an earlier
+firing owns a queue reservation, including canceled work waiting to drain. This prevents
+a backlog of superseded callbacks. Restart retains definitions, clears interrupted
 claims and skips past firings. Repeated startup initialization does not register duplicates.
 There are at most 32 definitions per account and 256 per world.
 

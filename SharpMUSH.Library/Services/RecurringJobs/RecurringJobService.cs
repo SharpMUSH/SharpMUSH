@@ -120,6 +120,18 @@ public sealed class RecurringJobService(
 			var now = _clock.GetUtcNow();
 			foreach (var original in jobs.Where(j => j.Enabled && j.NextRun <= now.ToUnixTimeMilliseconds()).ToArray())
 			{
+				// A canceled ready callback still owns its reservation until the consumer drains it.
+				// Consult that ledger rather than a persisted token, which can outlive an external halt.
+				if (queue.HasPendingWork("recurring:" + original.Id, "recurring"))
+				{
+					jobs = Replace(jobs, original with
+					{
+						NextRun = Schedule(original.Schedule, original.TimeZone).Next(now)?.ToUnixTimeMilliseconds(),
+						LastError = "Firing skipped while earlier queue work remains pending."
+					});
+					await Save(jobs, ct);
+					continue;
+				}
 				var token = Guid.NewGuid().ToString("N");
 				var job = original with
 				{
@@ -127,7 +139,7 @@ public sealed class RecurringJobService(
 					LastRun = now.ToUnixTimeMilliseconds(),
 					RunToken = token,
 					Status = "queued",
-					LastError = original.RunToken is null ? null : "Previous unfinished firing superseded."
+					LastError = null
 				};
 				jobs = Replace(jobs, job);
 				await Save(jobs, ct); // At-most-once claim, even if admission or the process fails next.
@@ -171,11 +183,8 @@ public sealed class RecurringJobService(
 				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Starting evaluation is the dispatch boundary. Do not hold the gate while awaiting
 				// softcode, which may itself disable or delete this job through normal commands.
-				evaluation = parser.FromState(ParserState.Empty with
+				evaluation = parser.FromState(ParserState.RootFor(active) with
 				{
-					Executor = active,
-					Enactor = active,
-					Caller = active,
 					CurrentEvaluation = new DBAttribute(target, job.Attribute),
 					ExecutionBudget = ExecutionBudget.Current
 				}).CommandListParse(code);
