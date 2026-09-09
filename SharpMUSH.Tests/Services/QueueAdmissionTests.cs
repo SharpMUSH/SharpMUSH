@@ -750,11 +750,12 @@ public class QueueAdmissionTests
 		var queue = Create(mediator: mediator, milliseconds: 0);
 		var entry = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think timeout"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
-		await queue.ReleaseScheduledWork(entry.Pid!.Value, semaphoreTimeout: true);
+		var firing = queue.ReleaseScheduledWork(entry.Pid!.Value, semaphoreTimeout: true).AsTask();
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		var shutdown = queue.DisposeAsync().AsTask();
 		try { await shutdown.WaitAsync(TimeSpan.FromSeconds(1)); }
 		finally { release.Cancel(); await shutdown; }
+		await Assert.That(async () => await firing).Throws<OperationCanceledException>();
 	}
 
 	[Test]
@@ -764,7 +765,7 @@ public class QueueAdmissionTests
 		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
 		var ran = false;
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran = true; return ValueTask.FromResult<CallState?>(null); });
-		await using var queue = Create(global: 3, parser: parser, mediator: CountingMediator(() => 1, _ => { }));
+		await using var queue = Create(global: 4, parser: parser, mediator: CountingMediator(() => 1, _ => { }));
 		var entered = Signal(); var release = Signal(); var drained = Signal();
 		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -772,8 +773,8 @@ public class QueueAdmissionTests
 		{
 			var waiting = await queue.AdmitCommandList(MarkupText.Plain("think expired"), ParserState.Empty,
 				new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
-			await queue.ReleaseScheduledWork(waiting.Pid!.Value, semaphoreTimeout: true);
 			using var held = await queue.EnterSemaphoreMutationAsync();
+			await queue.AdmitWork(async () => { await queue.ReleaseScheduledWork(waiting.Pid!.Value, semaphoreTimeout: true); return null; }, "timeout", "test");
 			await queue.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
 			release.TrySetResult();
 			await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -1447,6 +1448,107 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ConcurrentQuartzTimeoutCannotDeleteAnUnacknowledgedRelease(bool managed)
+	{
+		var count = managed ? 0 : 1;
+		var armed = false;
+		var entered = Signal(); var release = Signal(); var executed = Signal();
+		var mediator = CountingMediator(() => count, value => count = value);
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<bool> (call) =>
+			{
+				if (armed) { entered.TrySetResult(); await release.Task; }
+				count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				return true;
+			});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = 0;
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { Interlocked.Increment(ref ran); executed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(mediator: mediator, parser: parser, scheduler: scheduler);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think timeout"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), managed ? 0 : 1, TimeSpan.FromHours(1), managed);
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Scheduler.Returns(scheduler);
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
+		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		var job = new SemaphoreTask(queue);
+		armed = true;
+		var first = job.Execute(context);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		Task? second = null;
+		try
+		{
+			second = job.Execute(context);
+			await Assert.That(second.IsCompleted).IsFalse();
+			await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
+		}
+		finally { release.TrySetResult(); await first; if (second is not null) await second; }
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(ran).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false, false, false)]
+	[Arguments(true, false, false)]
+	[Arguments(false, true, false)]
+	[Arguments(true, true, false)]
+	[Arguments(false, false, true)]
+	[Arguments(true, false, true)]
+	[Arguments(false, true, true)]
+	[Arguments(true, true, true)]
+	public async Task FailedTimeoutCounterWriteRetainsTheQuartzJobAndQuota(bool managed, bool lostAcknowledgement, bool mutationRepairs)
+	{
+		var count = managed ? 0 : 2;
+		var fail = false;
+		var ran = 0;
+		var completed = Signal();
+		var mediator = CountingMediator(() => count, value => count = value);
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				if (fail && !lostAcknowledgement) return ValueTask.FromResult(false);
+				count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				if (fail) throw new InvalidOperationException("lost timeout write acknowledgement");
+				return ValueTask.FromResult(true);
+			});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { Interlocked.Increment(ref ran); completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(global: 2, mediator: mediator, parser: parser, scheduler: scheduler);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think timeout"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), managed ? 0 : 1, TimeSpan.FromHours(1), managed);
+		await queue.AdmitCommandList(MarkupText.Plain("think remaining"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1), managed);
+
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Scheduler.Returns(scheduler);
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
+		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		var job = new SemaphoreTask(queue);
+		fail = true;
+		await Assert.That(async () => await job.Execute(context)).Throws<JobExecutionException>();
+		await Assert.That(ran).IsEqualTo(0);
+		await Assert.That(count).IsEqualTo(lostAcknowledgement ? 1 : 2);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
+		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
+		fail = false;
+		if (mutationRepairs) { using var lease = await queue.EnterSemaphoreMutationAsync(); }
+		await job.Execute(context);
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		for (var attempt = 0; attempt < 100 && queue.GetQueueUsage().Total != 1; attempt++) await Task.Delay(10);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(ran).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(1);
+		await scheduler.Received(1).DeleteJob(context.JobDetail.Key, Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task FailedQuartzSemaphoreReleaseRequestsRetryBeforeDeletingSchedule()
 	{
 		var scheduler = Substitute.For<IScheduler>();
@@ -1573,7 +1675,7 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
-	public async Task SemaphoreAccountingFailureDoesNotDiscardAdmittedAction()
+	public async Task SemaphoreAccountingFailureRetainsActionUntilRetry()
 	{
 		var mediator = TargetMediator();
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
@@ -1589,6 +1691,10 @@ public class QueueAdmissionTests
 		await using var queue = Create(mediator: mediator, parser: parser);
 		var job = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think survives"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
+		await Assert.That(async () => await queue.ReleaseScheduledWork(job.Pid!.Value, semaphoreTimeout: true)).Throws<InvalidOperationException>();
+		await Assert.That(executed.Task.IsCompleted).IsFalse();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<SharpAttribute>());
 		await queue.ReleaseScheduledWork(job.Pid!.Value, semaphoreTimeout: true);
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 	}
