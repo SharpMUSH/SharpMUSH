@@ -2120,6 +2120,7 @@ public partial class Commands
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
 		var attributeContents = await AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
 
@@ -2695,72 +2696,23 @@ public partial class Commands
 		}
 	}
 
-	private async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
+	private ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1, ParserState? callbackState = null)
-	{
-		var stateForCallback = callbackState ?? parser.CurrentState;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = await attrValues.LastOrDefaultAsync();
-
-		if (attrValue is null)
-		{
-
-			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-			var admission = await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-				dbRefAttr, 0));
-			if (admission.Accepted)
-				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain("1"),
-					one.AsPlayer));
-
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
-		{
-			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
-			return;
-		}
-
-		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
-		var queued = await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-			dbRefAttr2, last));
-		if (queued.Accepted)
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-				one.AsPlayer));
-
-	}
+		=> QueueSemaphoreWithDelay(parser, located, attribute, TimeSpan.FromDays(36500), arg1, callbackState);
 
 	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
-		var stateForCallback = callbackState ?? parser.CurrentState;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = await attrValues.LastOrDefaultAsync();
-
-		if (attrValue is null)
+		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute)).LastOrDefaultAsync();
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out _))
 		{
-			var admission = await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
-			if (admission.Accepted)
-				await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain("1"),
-					one.AsPlayer));
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
-		{
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
 		}
-		var queued = await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
-		if (queued.Accepted)
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-				one.AsPlayer));
+		// Admission owns the counter transaction, including negative credits and schedule rollback.
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, callbackState ?? parser.CurrentState,
+			new DbRefAttribute(located.Object().DBRef, attribute), 0, delay, ManageSemaphoreCount: true));
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
@@ -3072,6 +3024,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidCombination);
 		}
 
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
 		if (hasAny)
 		{
 			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));

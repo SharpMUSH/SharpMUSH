@@ -119,11 +119,14 @@ public partial class TaskScheduler(
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
 	{
 		string owner = $"handle:{handle}";
+		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{
 			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value));
 			if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 			executor = target.Known().Object().DBRef;
+			if (await target.Known().IsWizard() || await target.Known().HasPower("Queue"))
+				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery()));
 			owner = (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString();
 		}
 		QueueAdmissionResult result;
@@ -131,7 +134,7 @@ public partial class TaskScheduler(
 		{
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
-			else if (_pendingEntries.Values.Count(e => e.Owner == owner) >= (configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100)) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (_pendingEntries.Values.Count(e => e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
 			else
 			{
 				var pid = NextPid();
@@ -151,7 +154,29 @@ public partial class TaskScheduler(
 		}
 		return result;
 	}
+	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
+
+	/// <summary>Serialize semaphore counter transactions. Acquire before any deferred queue lease.</summary>
+	public async ValueTask<IDisposable> EnterSemaphoreMutationAsync()
+	{
+		await _semaphoreMutations.WaitAsync();
+		return new SemaphoreMutationLease(_semaphoreMutations);
+	}
+
+	private sealed class SemaphoreMutationLease(SemaphoreSlim gate) : IDisposable
+	{
+		private SemaphoreSlim? _gate = gate;
+		public void Dispose() => Interlocked.Exchange(ref _gate, null)?.Release();
+	}
+
 	private async ValueTask AdjustSemaphoreCount(string group, DBRef? target = null)
+	{
+		using var lease = await EnterSemaphoreMutationAsync();
+		await AdjustSemaphoreCountCore(group, target);
+	}
+
+	// Caller holds the mutation lease; shared with pending halt bookkeeping.
+	private async ValueTask AdjustSemaphoreCountCore(string group, DBRef? target = null)
 	{
 		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
 		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
@@ -315,8 +340,8 @@ public partial class TaskScheduler(
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor);
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue)
-	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500));
+	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
+	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
 	public async ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
@@ -339,9 +364,10 @@ public partial class TaskScheduler(
 	}
 
 	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state,
-	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout)
+	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
-		if (oldValue < 0) return await WriteCommandList(command, state);
+		if (!manageSemaphoreCount && oldValue < 0) return await WriteCommandList(command, state);
+		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef));
@@ -358,11 +384,54 @@ public partial class TaskScheduler(
 				TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + delay)
 					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build());
 		}
-		timeout = Nonnegative(timeout);
-		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-		{ Deferred = new(DateTimeOffset.UtcNow + timeout, Schedule, dbRefAttribute, command, state) };
-		try { await Schedule(timeout, 0); return admission; }
-		catch { Release(pid); throw; }
+		var counterWritten = false;
+		var currentCount = oldValue;
+		SharpPlayer? god = null;
+		var fullTarget = target.Known().Object().DBRef;
+		try
+		{
+			if (manageSemaphoreCount)
+			{
+				bool cancelled;
+				lock (_admissionLock)
+					cancelled = !_pendingEntries.TryGetValue(admission.Pid!.Value, out var entry) || entry.Cts.IsCancellationRequested;
+				if (cancelled)
+				{
+					Release(admission.Pid!.Value);
+					return new(null, QueueRejectionReason.AlreadyReleased);
+				}
+				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
+				currentCount = attribute is null ? 0 : int.Parse(attribute.Value.ToPlainText());
+				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
+					MarkupString.MarkupText.Plain(checked(currentCount + 1).ToString()), god)))
+					throw new InvalidOperationException("Semaphore count update failed.");
+				counterWritten = true;
+				if (currentCount < 0)
+				{
+					var activated = await Activate(admission.Pid!.Value);
+					if (activated.Accepted) return activated;
+					throw new OperationCanceledException("Semaphore reservation was released before activation.");
+				}
+			}
+			timeout = Nonnegative(timeout);
+			lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
+			{ Deferred = new(DateTimeOffset.UtcNow + timeout, Schedule, dbRefAttribute, command, state) };
+			await Schedule(timeout, 0);
+			return admission;
+		}
+		catch
+		{
+			try
+			{
+				// The mutation lease excludes notify, drain and timeout bookkeeping until rollback completes.
+				if (counterWritten)
+					await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
+						MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+			}
+			finally { Release(admission.Pid!.Value); }
+			throw;
+		}
 	}
 
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
@@ -448,6 +517,7 @@ public partial class TaskScheduler(
 		// User cancellation callbacks must never run while either scheduler lock is held.
 		CancelEntry(entry);
 		if (ready) return true;
+		using (await EnterSemaphoreMutationAsync())
 		using (await LockDeferred())
 		{
 			lock (_admissionLock)
@@ -460,7 +530,7 @@ public partial class TaskScheduler(
 			catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
 			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
 			{
-				try { await AdjustSemaphoreCount(entry.Group, entry.SemaphoreTarget); }
+				try { await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget); }
 				catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed after halting PID {Pid}", pid); }
 			}
 

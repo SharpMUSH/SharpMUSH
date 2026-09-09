@@ -7,6 +7,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface ITaskScheduler
 {
+	/// <summary>Serialize semaphore counter updates; acquire before deferred queue locks.</summary>
+	ValueTask<IDisposable> EnterSemaphoreMutationAsync();
 	QueueUsage GetQueueUsage();
 	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries();
 	QueueEntrySnapshot? GetQueueEntry(long pid);
@@ -33,8 +35,9 @@ public interface ITaskScheduler
 	/// <param name="command">The command to run.</param>
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="dbAttribute">Attribute to register under.</param>
-	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue);
+	/// <param name="oldValue">Count supplied by callers managing the attribute themselves.</param>
+	/// <param name="manageSemaphoreCount">Atomically read and update the count before publishing work; ignore oldValue.</param>
+	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, bool manageSemaphoreCount = false);
 
 	/// <summary>
 	/// Write an async function to the scheduler, to be immediately executed when the scheduler runs.
@@ -51,8 +54,9 @@ public interface ITaskScheduler
 	/// <param name="state">A ParserState to ensure valid parsing.</param>
 	/// <param name="timeout">Timeout after which the command is re-queued as a regular command to be immediately run.</param>
 	/// <param name="dbAttribute">Attribute to register under.</param>
-	/// <param name="oldValue">Check the old value, in case we don't need to wait at all.</param>
-	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout);
+	/// <param name="oldValue">Count supplied by callers managing the attribute themselves.</param>
+	/// <param name="manageSemaphoreCount">Atomically read and update the count before publishing work; ignore oldValue.</param>
+	ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false);
 
 	/// <summary>
 	/// Write a commandlist to the scheduler on semaphore with a timeout, to be immediately executed when the scheduler runs.
