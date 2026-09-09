@@ -68,6 +68,9 @@ public class ParseDepthGuardTests
 	[Arguments(12000)]
 	public async Task AllowsDeeplyNestedBareParentheses(int depth)
 	{
+		// This probes grammar depth, independently of the execution deadline.
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan);
+		using var scope = budget.Enter();
 		var input = new string('(', depth) + "x" + new string(')', depth);
 
 		await Assert.That(await EvalPlain(input)).IsEqualTo(input);

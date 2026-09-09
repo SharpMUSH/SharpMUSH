@@ -99,14 +99,14 @@ public partial class Commands
 							RequestUri = requestUri
 						};
 
-						var response = await client.SendAsync(message);
+						using var response = await client.SendAsync(message, ExecutionBudget.CurrentToken);
 
 						parser.CurrentState.AddRegister("STATUS",
 							MarkupText.Plain(((int)response.StatusCode).ToString()));
 						parser.CurrentState.AddRegister("CONTENT-TYPE",
 							MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
 
-						var content = await response.Content.ReadAsStringAsync();
+						var content = await response.Content.ReadAsStringAsync(ExecutionBudget.CurrentToken);
 						var contentState = new CallState(MarkupText.Plain(content));
 						var contentDict = new Dictionary<string, CallState> { { "0", contentState } };
 
@@ -116,7 +116,7 @@ public partial class Commands
 							EnvironmentRegisters = contentDict
 						};
 					},
-					dbRefAttribute));
+					dbRefAttribute, parser.CurrentState.Executor));
 
 				return CallState.Empty;
 			});

@@ -301,12 +301,12 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "queue_entry_cpu_time",
 		Category = "Limit",
-		Description = "CPU time limit per queued command (seconds)",
+		Description = "Elapsed execution limit per queued command (milliseconds including I/O; 0 means unlimited)",
 		ValidationPattern = @"^\d+$",
 		Group = "Performance",
 		Order = 8,
-		Min = 1,
-		Max = 300)]
+		Min = 0,
+		Max = 3600000)]
 	uint QueueEntryCpuTime,
 
 	[property: SharpConfig(
@@ -337,5 +337,7 @@ public record LimitOptions(
 		Order = 3,
 		Min = 100,
 		Max = 1000000)]
-	uint MaxAttributeValueLength
+	uint MaxAttributeValueLength,
+	[property: SharpConfig(Name = "global_queue_limit", Category = "Limit", Description = "Maximum admitted jobs across all queues, including running jobs", Group = "Performance", Min = 1, Max = 1000000)]
+	uint GlobalQueueLimit = 10000
 );

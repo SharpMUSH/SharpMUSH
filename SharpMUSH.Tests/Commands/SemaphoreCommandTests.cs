@@ -337,4 +337,67 @@ public class SemaphoreCommandTests
 		await Assert.That(attrValue).DoesNotContain("-1")
 			.Because($"num(%0) should find the created object, not return #-1. Got: {attrValue}");
 	}
+	[Test]
+	public async Task FirstWaiterAndTimeoutKeepSemaphoreCountConsistent()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemBudgetCount");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wait {semObj}/{name}=think timeout"));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
+		var initial = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(initial.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("1");
+		var tasks = await Scheduler.GetSemaphoreTasks(new SharpMUSH.Library.Models.DbRefAttribute(semObj, [name])).ToArrayAsync();
+		await Scheduler.RescheduleSemaphoreTask(tasks.Single().Pid, TimeSpan.Zero);
+		var count = "1";
+		for (var attempt = 0; attempt < 50 && count != "0"; attempt++)
+		{
+			await Task.Delay(100);
+			var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+			count = current.AsAttribute.Last().Value.ToPlainText();
+		}
+		await Assert.That(count).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task TimeoutAfterSemaphoreResetCannotCreateNotifyCredit()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemResetCount");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wait {semObj}/{name}=think timeout"));
+		var tasks = await Scheduler.GetSemaphoreTasks(new SharpMUSH.Library.Models.DbRefAttribute(semObj, [name])).ToArrayAsync();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semObj}=0"));
+		await Scheduler.ReleaseScheduledWork(tasks.Single().Pid, semaphoreTimeout: true);
+		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "reset-drained", "test");
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
+		var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HaltingExecutorOrSemaphoreTargetReleasesPendingReservation(bool haltTarget)
+	{
+		var executor = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltExecutor");
+		var semaphore = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltTarget");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semaphore}=1"));
+		var attribute = new SharpMUSH.Library.Models.DbRefAttribute(semaphore, [name]);
+		var before = Scheduler.GetQueueUsage().Total;
+		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
+		await Assert.That(admitted.Accepted).IsTrue();
+		var haltedObject = haltTarget ? semaphore : executor;
+		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(haltedObject))).AsThing.Object.DBRef;
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number, incarnation.CreationMilliseconds + 1));
+		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before + 1);
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number));
+		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before);
+		await Assert.That((await Scheduler.GetSemaphoreTasks(attribute).ToArrayAsync()).Length).IsEqualTo(0);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(semaphore))).Known;
+		var current = await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+	}
+
 }

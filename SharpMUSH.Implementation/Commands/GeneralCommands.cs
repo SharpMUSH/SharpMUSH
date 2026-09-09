@@ -1951,6 +1951,13 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
+			if (scheduler.GetQueueEntry(pid) is not null && !await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var halted = await Mediator.Send(new HaltByPidRequest(pid));
 			if (halted)
 			{
@@ -2113,6 +2120,7 @@ public partial class Commands
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
 
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
 		var attributeContents = await AttributeService.GetAttributeAsync(executor, objectToNotify, attribute,
 			IAttributeService.AttributeMode.Execute, false);
 
@@ -2688,73 +2696,23 @@ public partial class Commands
 		}
 	}
 
-	private async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
+	private ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1, ParserState? callbackState = null)
-	{
-		var stateForCallback = callbackState ?? parser.CurrentState;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = await attrValues.LastOrDefaultAsync();
-
-		if (attrValue is null)
-		{
-
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-
-			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-
-			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-				dbRefAttr, 0));
-
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
-		{
-			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
-			return;
-		}
-
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-			one.AsPlayer));
-
-		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
-
-		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-			dbRefAttr2, last));
-
-	}
+		=> QueueSemaphoreWithDelay(parser, located, attribute, TimeSpan.FromDays(36500), arg1, callbackState);
 
 	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
-		var stateForCallback = callbackState ?? parser.CurrentState;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
-		var attrValue = await attrValues.LastOrDefaultAsync();
-
-		if (attrValue is null)
+		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute)).LastOrDefaultAsync();
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out _))
 		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
-		{
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
 		}
-
-		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
-			one.AsPlayer));
-		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+		// Admission owns the counter transaction, including negative credits and schedule rollback.
+		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, callbackState ?? parser.CurrentState,
+			new DbRefAttribute(located.Object().DBRef, attribute), 0, delay, ManageSemaphoreCount: true));
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
@@ -2782,6 +2740,13 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
+		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var timeArg = arg1;
 
 		if (switches.Contains("UNTIL"))
@@ -2800,7 +2765,7 @@ public partial class Commands
 
 		if (arg1.StartsWith('+') || arg1.StartsWith('-'))
 		{
-			timeArg = arg1.Skip(1).ToString();
+			timeArg = arg1[1..];
 		}
 
 		if (!long.TryParse(timeArg, out var secs))
@@ -3059,6 +3024,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidCombination);
 		}
 
+		using var semaphoreMutation = await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().EnterSemaphoreMutationAsync();
 		if (hasAny)
 		{
 			var pids = Mediator.CreateStream(new ScheduleSemaphoreQuery(objectToDrain.Object().DBRef));
@@ -4667,6 +4633,19 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
+			var queued = scheduler.GetQueueEntry(pid);
+			if (queued is null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
+				return new CallState(ErrorMessages.Returns.NotFound);
+			}
+			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var tasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
 			if (tasks.Length == 0)
 			{
@@ -4676,7 +4655,7 @@ public partial class Commands
 
 			var task = tasks[0];
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), executor, pid);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, task.Owner);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, queued.Owner?.ToString() ?? "?");
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), executor, task.SemaphoreSource);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugCommandFormat), executor, task.Command.ToPlainText());
 			if (task.RunDelay.HasValue)
@@ -4711,9 +4690,17 @@ public partial class Commands
 			target = executor;
 		}
 
+		if (!await PermissionService.Controls(executor, target) && !await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var targetDbRef = target.Object().DBRef;
 
-		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
+		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef))
+			.Where(async (task, ct) => await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, task.Pid, mutate: false, ct)).ToArrayAsync();
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
 		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 
@@ -4738,13 +4725,17 @@ public partial class Commands
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
+			var usage = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueUsage();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
+			foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
 			foreach (var (group, tasks) in allTasks)
@@ -4793,7 +4784,9 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
 			}
 		}
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueManagementNotImplemented), executor);
+		var paused = scheduler.GetQueueEntries().Count(e => e.State == SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Paused
+			&& (e.Source == targetDbRef || e.Owner == targetDbRef));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueuePausedHint), executor, paused);
 
 		return CallState.Empty;
 	}
