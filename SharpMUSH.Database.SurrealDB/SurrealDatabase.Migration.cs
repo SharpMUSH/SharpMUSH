@@ -563,12 +563,17 @@ public partial class SurrealDatabase
 		// move, and ExecuteAsync only logs SurrealQL errors, so an UPDATE here fails silently and
 		// strands the grant. Holders that somehow already hold the new power are excluded so the
 		// has_powers_in_out unique index is not violated by the RELATE.
+		// One transaction, as DeletePowerAsync does for the same shape of destructive pair: without
+		// it each statement commits on its own, so a RELATE that failed after the DELETE would leave
+		// the legacy holders with neither grant while the old record was already gone.
 		var response = await ExecuteAsync(
-			$"LET $holders = (SELECT VALUE in FROM has_powers WHERE out = {oldId} "
+			"BEGIN TRANSACTION;"
+			+ $"LET $holders = (SELECT VALUE in FROM has_powers WHERE out = {oldId} "
 			+ $"AND in NOT IN (SELECT VALUE in FROM has_powers WHERE out = {newId}));"
 			+ $"DELETE has_powers WHERE out = {oldId};"
 			+ $"FOR $holder IN $holders {{ RELATE $holder->has_powers->{newId}; }};"
-			+ $"DELETE {oldId};", ct);
+			+ $"DELETE {oldId};"
+			+ "COMMIT TRANSACTION", ct);
 
 		if (response.HasErrors)
 		{

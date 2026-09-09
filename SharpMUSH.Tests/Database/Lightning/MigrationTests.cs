@@ -115,6 +115,8 @@ public class MigrationTests
 				{
 					Directory.Delete(path, recursive: true);
 				}
+				// Best-effort cleanup of a temp directory, as the sibling fixtures do: a file still
+				// mapped by LMDB on a slow unmount must not fail an otherwise green test.
 				catch (IOException)
 				{
 				}
