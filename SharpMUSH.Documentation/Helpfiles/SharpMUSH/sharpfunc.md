@@ -6040,6 +6040,7 @@ My name
 - [render()]
 
 # STRDISTANCE()
+
 `strdistance(<source>, <target>)`
 
   Returns the minimum number of grapheme insertions, deletions, or substitutions needed to change source into target. Each edit costs one; transposing two graphemes costs two. Comparison is ordinal and case-sensitive. Markup is ignored, and Unicode normalization is not applied: composed `é` and decomposed `é` each contain one grapheme but differ from each other. No optional flags are supported.
@@ -6049,11 +6050,13 @@ My name
   Use the result to offer a spelling suggestion for a help topic or keyword and let the player choose it. Do not use approximate matches to select targets for destructive commands. Existing `suggest()` keeps its case-folded, UTF-16-based ranking; this function does not change that behavior.
 
   Examples:
+
 ```sharp
 strdistance(kitten,sitting)
 strdistance(ansi(r,界😀),界😺)
 strdistance(,é😀)
 ```
+
   These return `3`, `1`, and `2`, respectively.
 
 **See Also:**
