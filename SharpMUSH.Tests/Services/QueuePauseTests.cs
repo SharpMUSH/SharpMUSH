@@ -24,6 +24,58 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ResumeIdentityReadsHonorCancellation(bool semaphore)
+	{
+		var mediator = QueueAdmissionTests.TargetMediator();
+		await using var queue = Create(mediator: mediator);
+		var state = ParserState.Empty with { Executor = new DBRef(7, 1) };
+		var job = semaphore
+			? await queue.WriteCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
+			: await queue.WriteCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
+		await queue.PausePending(job.Pid!.Value, "hold");
+		var read = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var release = new CancellationTokenSource();
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == new DBRef(semaphore ? 8 : 7, 1)), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
+			{
+				read.TrySetResult();
+				using var linked = CancellationTokenSource.CreateLinkedTokenSource(call.Arg<CancellationToken>(), release.Token);
+				await Task.Delay(Timeout.Infinite, linked.Token);
+				return (AnyOptionalSharpObject)new None();
+			});
+		try
+		{
+			using var cancellation = new CancellationTokenSource();
+			using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+			using var scope = budget.Enter();
+			var resume = queue.ResumePending(job.Pid.Value).AsTask();
+			await read.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			cancellation.Cancel();
+			await Assert.That(async () => await resume.WaitAsync(TimeSpan.FromSeconds(1))).Throws<OperationCanceledException>();
+		}
+		finally { release.Cancel(); }
+		await Assert.That(await queue.PausePending(999, "lease released")).IsEqualTo(QueueControlResult.NotFound);
+	}
+
+	[Test]
+	public async Task ReplacementTriggerAndLedgerShareOneDeadline()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		ITrigger? latest = null;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(call => { latest = call.Arg<ITrigger>(); return Task.FromResult(latest.StartTimeUtc); });
+		await using var queue = Create(scheduler: scheduler);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think later"), ParserState.Empty, TimeSpan.FromHours(1));
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(async _ => { await Task.Delay(150); return true; });
+		await queue.RescheduleSemaphoreTask(job.Pid!.Value, TimeSpan.FromSeconds(10));
+		await queue.PausePending(job.Pid.Value, "compare deadlines");
+		var remaining = queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay!.Value;
+		await Assert.That(Math.Abs((latest!.StartTimeUtc - DateTimeOffset.UtcNow - remaining).TotalMilliseconds) < 75).IsTrue();
+	}
+
+	[Test]
 	public async Task QuartzDelayedJobPreservesItsScheduleGeneration()
 	{
 		var queue = Substitute.For<ITaskScheduler>();

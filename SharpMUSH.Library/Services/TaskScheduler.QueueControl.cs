@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Services;
 
 public partial class TaskScheduler
 {
-	private sealed record DeferredSchedule(DateTimeOffset Due, Func<TimeSpan, long, ValueTask> Schedule, DbRefAttribute? Semaphore, MString Command, ParserState State)
+	private sealed record DeferredSchedule(DateTimeOffset Due, Func<DateTimeOffset, long, ValueTask> Schedule, DbRefAttribute? Semaphore, MString Command, ParserState State)
 	{
 		public bool Paused { get; init; }
 		public TimeSpan Remaining { get; init; }
@@ -124,13 +124,13 @@ public partial class TaskScheduler
 	{
 		if (entry.SemaphoreTarget is { } semaphoreTarget)
 		{
-			var semaphore = await mediator.Send(new GetObjectNodeQuery(semaphoreTarget));
+			var semaphore = await mediator.Send(new GetObjectNodeQuery(semaphoreTarget), ExecutionBudget.CurrentToken);
 			if (semaphore.IsNone || semaphore.Known().Object().DBRef != semaphoreTarget) return false;
 		}
 		if (entry.Executor is not { } executor) return true;
-		var target = await mediator.Send(new GetObjectNodeQuery(executor));
+		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
 		if (target.IsNone || target.Known().Object().DBRef != executor) return false;
-		return (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString() == entry.Owner;
+		return (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString() == entry.Owner;
 	}
 
 	// Caller owns the deferred mutation lease. Each replacement invalidates callbacks already
@@ -145,7 +145,7 @@ public partial class TaskScheduler
 			_pendingEntries[entry.Pid] = entry with { Deferred = deferred };
 		}
 		await RemoveDeferredTrigger(entry);
-		await deferred.Schedule(delay, deferred.Generation);
+		await deferred.Schedule(deferred.Due, deferred.Generation);
 	}
 	private async ValueTask RemoveDeferredTrigger(QueueEntry entry)
 	{
