@@ -533,7 +533,7 @@ public partial class Functions
 	public ValueTask<CallState> AlphaMax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
-		return ValueTask.FromResult(new CallState(list.Max()!));
+		return ValueTask.FromResult(new CallState(list.Max() ?? string.Empty));
 	}
 
 	[SharpFunction(Name = "alphamin", MinArgs = 1, MaxArgs = int.MaxValue,
@@ -541,7 +541,7 @@ public partial class Functions
 	public ValueTask<CallState> AlphaMin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var list = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message!.ToPlainText());
-		return ValueTask.FromResult(new CallState(list.Min()!));
+		return ValueTask.FromResult(new CallState(list.Min() ?? string.Empty));
 	}
 
 	/// <summary>
@@ -914,7 +914,8 @@ public partial class Functions
 
 	/// <summary>
 	/// <paramref name="text"/> with a backslash before every <see cref="SoftcodeSpecial"/> character;
-	/// the text comes back unchanged when it holds none of them.
+	/// the text comes back unchanged when it holds none of them. This is for decompose(), which has
+	/// flattened its markup into ansi() calls before it gets here; escape() edits the marked-up text.
 	/// </summary>
 	private static string EscapeSoftcode(string text) => SoftcodeSpecial().Replace(text, @"\$0");
 
@@ -925,13 +926,23 @@ public partial class Functions
 	[SharpFunction(Name = "escape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Escape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var arg0 = parser.CurrentState.Arguments["0"].Message!;
+		var text = arg0.ToPlainText();
 		if (text.Length == 0)
 		{
 			return ValueTask.FromResult(CallState.Empty);
 		}
 
-		return ValueTask.FromResult<CallState>("\\" + text[0] + EscapeSoftcode(text[1..]));
+		// Each backslash is an insertion into the argument, so the markup around every special stays.
+		var backslash = MarkupText.Plain("\\");
+		var edits = new List<MarkupString.Edit>();
+		foreach (var special in SoftcodeSpecial().EnumerateMatches(text, 1))
+		{
+			edits.Add(new MarkupString.Edit(special.Index, 0, backslash));
+		}
+
+		var escaped = edits.Count == 0 ? arg0 : arg0.Splice(CollectionsMarshal.AsSpan(edits));
+		return ValueTask.FromResult<CallState>(MarkupText.Concat(backslash, escaped));
 	}
 
 	/// <summary>
@@ -1682,18 +1693,10 @@ public partial class Functions
 		if (string.IsNullOrWhiteSpace(text))
 			return text;
 
-		var decomposed = text.Normalize(NormalizationForm.FormD);
-		Span<char> kept = decomposed.Length <= 256 ? stackalloc char[decomposed.Length] : new char[decomposed.Length];
-		var length = 0;
-		foreach (var c in decomposed)
-		{
-			if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-			{
-				kept[length++] = c;
-			}
-		}
-
-		return new string(kept[..length]).Normalize(NormalizationForm.FormC);
+		return string.Concat(text
+				.Normalize(NormalizationForm.FormD)
+				.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark))
+			.Normalize(NormalizationForm.FormC);
 	}
 
 	[SharpFunction(Name = "stripaccents", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]

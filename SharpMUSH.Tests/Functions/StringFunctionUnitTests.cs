@@ -286,6 +286,23 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
+	// Both edit the text around its markup: a styled argument comes back styled, with the
+	// specials escaped or blanked inside the run.
+	[Test]
+	[Arguments("escape(ansi(hr,a$b))", @"\a\$b")]
+	[Arguments("secure(ansi(hr,a$b))", "a b")]
+	public async Task EscapeAndSecureKeepMarkup(string str, string expectedText)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		var styled = MarkupText.Wrap(
+			AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, true)), MarkupText.Plain("x"))
+			.Render(MarkupFormat.Ansi);
+		var ansiStart = styled[..styled.IndexOf('x')];
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+		await Assert.That(result.Render(MarkupFormat.Ansi)).Contains(ansiStart);
+	}
+
 	[Test]
 	// fun_squish: the ends are trimmed, and every inner run collapses to one delimiter.
 	[Arguments("squish(a   b    c)", "a b c")]

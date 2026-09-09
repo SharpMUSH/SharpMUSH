@@ -93,7 +93,8 @@ public static partial class ArgHelpers
 
 	/// <summary>
 	/// Aggregates arguments as 64-bit unsigned integers, matching PennMUSH's UIVAL. The result is
-	/// rendered signed, because PennMUSH renders it that way too: bnot(0) is -1, not 18446744073709551615.
+	/// rendered signed, because PennMUSH renders it that way too: safe_uinteger (src/strutil.c) hands
+	/// the value to unparse_integer, which takes an intmax_t, so bnot(0) is -1, not 18446744073709551615.
 	/// </summary>
 	public static ValueTask<CallState> AggregateUnsignedIntegers(IMUSHCodeParser parser,
 		Func<ulong, ulong, ulong> aggregateFunction)
@@ -113,7 +114,7 @@ public static partial class ArgHelpers
 			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		return ValueTask.FromResult<CallState>(unchecked((long)(result ?? 0)).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(long.CreateTruncating(result ?? 0).ToString(CultureInfo.InvariantCulture));
 	}
 
 	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
@@ -128,7 +129,7 @@ public static partial class ArgHelpers
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(unchecked((long)func(value)).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(long.CreateTruncating(func(value)).ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimal(IMUSHCodeParser parser,
@@ -282,18 +283,15 @@ public static partial class ArgHelpers
 			return null;
 		}
 
-		bool ansi = false, color = false, xterm256 = false, truecolor = false;
-		await foreach (var flag in found.Known.Object().Flags.Value)
-		{
-			ansi |= Is(flag, "ANSI");
-			color |= Is(flag, "COLOR");
-			xterm256 |= Is(flag, "XTERM256");
-			truecolor |= Is(flag, "TRUECOLOR");
-		}
+		var names = await found.Known.Object().Flags.Value
+			.Select(flag => flag.Name)
+			.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-		return new PlayerColorFlags(Ansi: ansi, Color: color, Xterm256: xterm256, Truecolor: truecolor);
-
-		static bool Is(SharpObjectFlag flag, string name) => string.Equals(flag.Name, name, StringComparison.OrdinalIgnoreCase);
+		return new PlayerColorFlags(
+			Ansi: names.Contains("ANSI"),
+			Color: names.Contains("COLOR"),
+			Xterm256: names.Contains("XTERM256"),
+			Truecolor: names.Contains("TRUECOLOR"));
 	}
 
 	/// <summary>

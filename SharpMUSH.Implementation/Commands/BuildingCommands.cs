@@ -1546,9 +1546,9 @@ public partial class Commands
 					.Select(flag => flag.Name)
 					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-				// Materialized: the loop unsets flags on the very object whose flag stream this is.
-				var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
-				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
+				// Every provider reads the flags in full when enumeration starts, and an unset swaps the
+				// object's Flags for a new list rather than editing the one being walked.
+				await foreach (var flag in clonedObj.Object().Flags.Value.Where(flag => !copyable.Contains(flag.Name)))
 				{
 					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
 				}
