@@ -14,10 +14,10 @@ public class CreateExitCommandHandler(
 {
 	public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
 	{
-		var created = await database.CreateExitAsync(request.Name, request.Aliases, request.Location, request.Creator, cancellationToken);
+		var created = await database.CreateExitAsync(request.Name, request.Aliases, request.Location, request.Creator, cancellationToken: cancellationToken);
 
 		await DefaultObjectFlags.ApplyAsync(flags, database, created,
-			configuration.CurrentValue.Flag.ExitFlags, cancellationToken);
+			configuration.CurrentValue.Flag.ExitFlags, cancellationToken: cancellationToken);
 
 		return created;
 	}

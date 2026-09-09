@@ -14,10 +14,10 @@ public class CreateRoomCommandHandler(
 {
 	public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
 	{
-		var created = await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken);
+		var created = await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken: cancellationToken);
 
 		await DefaultObjectFlags.ApplyAsync(flags, database, created,
-			configuration.CurrentValue.Flag.RoomFlags, cancellationToken);
+			configuration.CurrentValue.Flag.RoomFlags, cancellationToken: cancellationToken);
 
 		return created;
 	}
