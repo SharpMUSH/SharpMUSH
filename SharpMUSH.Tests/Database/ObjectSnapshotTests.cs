@@ -184,14 +184,14 @@ public class ObjectSnapshotTests
 		var (actor, target, player) = await Setup();
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["BRANCH", "LEAF"], MarkupText.Plain("private"), player));
 		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
-		await Get<IAttributeService>().SetAttributeFlagsAsync(player, node, "BRANCH", ["WIZARD"]);
+		await Get<IAttributeService>().SetAttributeFlagsAsync(player, node, "BRANCH", ["MORTAL_DARK"]);
 		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "restricted branch");
-		await Assert.That(saved.Attributes.Single(a => a.Name == "BRANCH`LEAF").Ancestors.Any(a => a.Flags.Contains("wizard", StringComparer.OrdinalIgnoreCase))).IsTrue();
-		await Get<IAttributeService>().SetAttributeFlagsAsync(player, node, "BRANCH", ["!WIZARD"]);
+		await Assert.That(saved.Attributes.Single(a => a.Name == "BRANCH`LEAF").Ancestors.Any(a => a.Flags.Contains("mortal_dark", StringComparer.OrdinalIgnoreCase))).IsTrue();
+		await Get<IAttributeService>().SetAttributeFlagsAsync(player, node, "BRANCH", ["!MORTAL_DARK"]);
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>()).Returns(true);
 		permissions.CanViewAttribute(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<SharpAttribute[]>())
-			.Returns(call => !call.ArgAt<SharpAttribute[]>(2).Any(a => a.Flags.Any(f => f.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase))));
+			.Returns(call => !call.ArgAt<SharpAttribute[]>(2).Any(a => a.Flags.Any(f => f.Name.Equals("mortal_dark", StringComparison.OrdinalIgnoreCase))));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
 			Get<IAdministrativeCapabilityService>(), permissions, Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(0);
@@ -208,5 +208,15 @@ public class ObjectSnapshotTests
 			capabilities, Get<IPermissionService>(), Get<IAttributeService>(), Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
 		await Assert.That((await service.ListAsync(actor, target)).Snapshots.Length).IsEqualTo(1);
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await service.CaptureAsync(actor, target, "denied"));
+	}
+
+	[Test, NotInParallel]
+	public async Task GameCommandCapturesThroughTheSharedService()
+	{
+		var (actor, target, _) = await Setup();
+		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@snapshot/capture {target}=game capture"));
+		var history = await Get<IObjectSnapshotService>().ListAsync(actor, target);
+		await Assert.That(history.Snapshots.Length).IsEqualTo(1);
+		await Assert.That(history.Snapshots[0].Description).IsEqualTo("game capture");
 	}
 }

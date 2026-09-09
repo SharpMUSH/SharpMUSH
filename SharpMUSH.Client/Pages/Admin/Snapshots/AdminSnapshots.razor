@@ -7,7 +7,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
-<MudStack Spacing="3" Class="pa-4">
+<section class="snapshots">
+<MudStack Spacing="3">
     <MudText Typo="Typo.h4">@Loc["SnapshotsTitle"]</MudText>
     <MudText>@Loc["SnapshotsIntro"]</MudText>
     <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
@@ -48,7 +49,7 @@
                         <tbody>
                             @foreach (var change in _preview.Changes)
                             {
-                                <tr><td>@change.Field @if (change.FormattingChanged) { <small>@Loc["SnapshotsFormattingChanged"]</small> }</td><td><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@change.Before</pre></td><td><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@change.After</pre></td></tr>
+                                <tr><td>@change.Field @if (change.FormattingChanged) { <small>@Loc["SnapshotsFormattingChanged"]</small> }</td><td><pre>@change.Before</pre></td><td><pre>@change.After</pre></td></tr>
                             }
                         </tbody>
                     </MudSimpleTable>
@@ -58,6 +59,7 @@
         </AuthorizeView>
     }
 </MudStack>
+</section>
 
 @code {
     private string _target = "", _description = "", _attributes = "";
