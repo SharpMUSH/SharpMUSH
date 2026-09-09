@@ -832,46 +832,32 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
+		=> ReadSemaphoreTasks(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"),
+			key => DbRefAttribute.TryParse(key.Group[(SemaphoreGroup.Length + 1)..], out var attribute)
+				&& attribute!.Value.DbRef.Matches(obj), ExecutionBudget.CurrentToken);
+
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
+		=> ReadSemaphoreTasks(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"),
+			key => key.Name.EndsWith($"-{pid}"), ExecutionBudget.CurrentToken);
+
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
+		=> ReadSemaphoreTasks(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"),
+			_ => true, ExecutionBudget.CurrentToken);
+
+	private async IAsyncEnumerable<SemaphoreTaskData> ReadSemaphoreTasks(GroupMatcher<TriggerKey> groups,
+		Func<TriggerKey, bool> predicate, [EnumeratorCancellation] CancellationToken cancellationToken)
 	{
-		var candidates = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"));
-		var keys = candidates.Where(key => DbRefAttribute.TryParse(key.Group[(SemaphoreGroup.Length + 1)..], out var attribute)
-		 && attribute!.Value.DbRef.Matches(obj));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
+		var token = cancellation.Token;
+		token.ThrowIfCancellationRequested();
+		var keys = await _scheduler.GetTriggerKeys(groups, token);
+		foreach (var key in keys)
 		{
-			if (key is not null) yield return key;
-		}
-	}
-
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
-	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
-		{
-			if (key is not null) yield return key;
-		}
-	}
-
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
-	{
-		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
-		{
-			if (key is not null) yield return key;
+			token.ThrowIfCancellationRequested();
+			if (!predicate(key)) continue;
+			var task = await MapSemaphoreTaskData(_scheduler, key, token);
+			if (task is not null) yield return task;
 		}
 	}
 
@@ -907,11 +893,11 @@ public partial class TaskScheduler(
 			.ToAsyncEnumerable();
 	}
 
-	private static async ValueTask<SemaphoreTaskData?> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
+	private static async ValueTask<SemaphoreTaskData?> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey, CancellationToken token)
 	{
-		var trigger = await scheduler.GetTrigger(triggerKey);
+		var trigger = await scheduler.GetTrigger(triggerKey, token);
 		if (trigger is null) return null;
-		var job = await scheduler.GetJobDetail(trigger.JobKey);
+		var job = await scheduler.GetJobDetail(trigger.JobKey, token);
 		if (job is null) return null;
 		var data = job.JobDataMap;
 		var command = (MString)data["Command"];
