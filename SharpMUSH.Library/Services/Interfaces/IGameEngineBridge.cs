@@ -30,12 +30,23 @@ public sealed record EngineStateRequest(
 /// <summary>
 /// A snapshot of the game-world state visible to the requesting character.
 /// </summary>
+[method: System.Text.Json.Serialization.JsonConstructor]
 public sealed record EngineStateResponse(
 		string CharacterDbref,
 		string RoomDbref,
 		string RoomName,
-		IReadOnlyList<string> VisibleObjectDbrefs,
-		bool Truncated = false);
+		IReadOnlyList<string> VisibleObjectDbrefs)
+{
+	/// <summary>More visible objects exist beyond this bounded response.</summary>
+	public bool Truncated { get; init; }
+
+	public EngineStateResponse(string CharacterDbref, string RoomDbref, string RoomName,
+		IReadOnlyList<string> VisibleObjectDbrefs, bool Truncated)
+		: this(CharacterDbref, RoomDbref, RoomName, VisibleObjectDbrefs)
+	{
+		this.Truncated = Truncated;
+	}
+}
 
 /// <summary>
 /// Abstraction over the transport layer between the web portal and the SharpMUSH game engine.

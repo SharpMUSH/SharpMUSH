@@ -9,6 +9,26 @@ namespace SharpMUSH.Tests.Services;
 public class RealityPluginCompatibilityTests
 {
 	[Test]
+	public async Task PublishedEngineStateConstructorAndDeconstructorRemainCallable()
+	{
+		var type = typeof(EngineStateResponse);
+		var signature = new[] { typeof(string), typeof(string), typeof(string), typeof(IReadOnlyList<string>) };
+		var constructor = type.GetConstructor(signature);
+		await Assert.That(constructor).IsNotNull();
+		var message = (EngineStateResponse)constructor!.Invoke(["#1", "#2", "Room", new[] { "#3" }]);
+		await Assert.That(message.Truncated).IsFalse();
+		var deconstruct = type.GetMethod("Deconstruct", signature.Select(t => t.MakeByRefType()).ToArray());
+		await Assert.That(deconstruct).IsNotNull();
+		object?[] values = [null, null, null, null];
+		deconstruct!.Invoke(message, values);
+		await Assert.That(values[2]).IsEqualTo("Room");
+		var truncated = message with { Truncated = true };
+		var restored = JsonSerializer.Deserialize<EngineStateResponse>(JsonSerializer.Serialize(truncated));
+		await Assert.That(restored!.Truncated).IsTrue();
+		await Assert.That(restored.VisibleObjectDbrefs).IsEquivalentTo(new[] { "#3" });
+	}
+
+	[Test]
 	public async Task PublishedRoomEventConstructorAndDeconstructorRemainCallable()
 	{
 		var type = typeof(RoomEventMessage);
