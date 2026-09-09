@@ -123,9 +123,11 @@ public class AttributeService(
 			: new Error<string>(permissionFailureType);
 	}
 
-	private static async ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
+	private static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
+		=> CheckReadAsync(read, ExecutionBudget.CurrentToken);
+
+	private static async ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read, CancellationToken token)
 	{
-		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
 		// Permission/validation APIs include legacy lazy reads without a token parameter.
 		// Bound only this read-only decision; attribute mutations are never detached.
@@ -777,7 +779,10 @@ public class AttributeService(
 	/// build; only legacy or hand-edited data could. The fix belongs in the three providers (bound
 	/// their traversals to <c>MaxParents</c>), not here.
 	/// </remarks>
-	private async ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
+	private ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
+		=> ParentChainAsync(obj, ExecutionBudget.CurrentToken);
+
+	private async ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj, CancellationToken token)
 	{
 		var chain = new List<DBRef> { obj.Object().DBRef };
 		var current = obj.Object();
@@ -785,8 +790,8 @@ public class AttributeService(
 
 		for (var depth = 0; depth < maxDepth; depth++)
 		{
-			var parent = await current.Parent.WithCancellation(ExecutionBudget.CurrentToken);
-			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			var parent = await current.Parent.WithCancellation(token);
+			token.ThrowIfCancellationRequested();
 			if (parent.IsNone) break;
 
 			var parentObj = parent.Known.Object();
@@ -901,8 +906,12 @@ public class AttributeService(
 	private static readonly Dictionary<DBRef, Dictionary<string, LazySharpAttribute>> NoKnownLazyAttributes = [];
 
 	/// <inheritdoc cref="FetchAncestorAsync"/>
-	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef target, string[] path,
+	private ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef target, string[] path,
 		IReadOnlyDictionary<DBRef, Dictionary<string, LazySharpAttribute>> knownBySource)
+		=> FetchLazyAncestorAsync(target, path, knownBySource, ExecutionBudget.CurrentToken);
+
+	private async ValueTask<LazySharpAttribute?> FetchLazyAncestorAsync(DBRef target, string[] path,
+		IReadOnlyDictionary<DBRef, Dictionary<string, LazySharpAttribute>> knownBySource, CancellationToken token)
 	{
 		if (knownBySource.TryGetValue(target, out var known)
 				&& known.TryGetValue(string.Join('`', path), out var attribute))
@@ -911,8 +920,8 @@ public class AttributeService(
 		}
 
 		return await mediator
-			.CreateStream(new GetLazyAttributeQuery(target, path), ExecutionBudget.CurrentToken)
-			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+			.CreateStream(new GetLazyAttributeQuery(target, path), token)
+			.LastOrDefaultAsync(token);
 	}
 
 	/// <summary>
@@ -982,17 +991,19 @@ public class AttributeService(
 	{
 		// Enumeration may happen after the API call returns or with a caller token of its own.
 		// Keep the original deadline and carry both lifetimes through the read-walk helpers.
-		using var linked = CancellationTokenSource.CreateLinkedTokenSource(executionToken, cancellationToken);
+		var consumerBudget = ExecutionBudget.Current;
+		using var linked = CancellationTokenSource.CreateLinkedTokenSource(executionToken, cancellationToken, ExecutionBudget.CurrentToken);
 		var remaining = originatingBudget?.Remaining ?? TimeSpan.MaxValue;
+		var consumerRemaining = consumerBudget?.Remaining ?? TimeSpan.MaxValue;
+		if (consumerRemaining < remaining) remaining = consumerRemaining;
 		using var budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, linked.Token);
-		using var scope = budget.Enter();
 		budget.ThrowIfExceeded();
 		var attributes = mediator.CreateStream(
 			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode), budget.Token);
 		// Privilege skips the ancestor walk but never the leaf's own internal flag.
 		var permitted = isPrivileged
 			? attributes.Where(x => !x.Attribute.IsInternal()).Select(x => x.Attribute).OrderBy(x => x.LongName, _attributeSort)
-			: FilterLazyAttributes(executor, obj, attributes);
+			: FilterLazyAttributes(executor, obj, attributes, budget);
 		await foreach (var attribute in permitted.WithCancellation(budget.Token))
 		{
 			budget.ThrowIfExceeded();
@@ -1001,7 +1012,7 @@ public class AttributeService(
 	}
 
 	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
-		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes,
+		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes, ExecutionBudget budget,
 		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		// See GetAttributePatternAsync: permission follows the real root..leaf path, re-walked
@@ -1019,17 +1030,22 @@ public class AttributeService(
 		foreach (var (attr, source) in ordered)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			var chain = source.SameObjectAs(origin)
-				? [origin]
-				: parentChain ??= await ParentChainAsync(obj);
-
-			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
-					(target, parts) => FetchLazyAncestorAsync(target, parts, knownBySource),
-					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path))))
+			bool canRead;
+			// Async iterators do not retain an ambient scope across yield boundaries.
+			// Enter it only around this item's legacy permission reads, and pass the
+			// iterator token explicitly to every token-aware read-walk helper.
+			using (budget.Enter())
 			{
-				yield return attr;
+				var chain = source.SameObjectAs(origin)
+					? [origin]
+					: parentChain ??= await ParentChainAsync(obj, cancellationToken);
+				canRead = await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
+					(target, parts) => FetchLazyAncestorAsync(target, parts, knownBySource, cancellationToken),
+					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path), cancellationToken));
 			}
+			if (canRead) yield return attr;
 		}
+
 	}
 
 	public ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
