@@ -1300,89 +1300,12 @@ public partial class Functions
 	[SharpFunction(Name = "set", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute", "flag or attribute:value"])]
 	public async ValueTask<CallState> Set(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await ValueTask.CompletedTask;
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message!;
-		// set() runs as the executor: it locates the target as the executor and sets the attribute/flag
-		// with the executor's permission (it must control the target). This was KnownEnactorObject — a
-		// misnamed/misassigned local that made set() locate AND permission-check as the enactor, so a
-		// forced/remote mortal enactor's set() ran with the wrong principal. PennMUSH set() uses the executor.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return (arg0, arg1) switch
-		{
-			(_, _) when HelperFunctions.SplitObjectAndAttr(arg0) is { IsT0: true } split =>
-				await SetAttributeFlag(split),
-
-			(_, _) when arg1.IndexOf(":") > 1
-				=> await SetAttributeValue(),
-
-			_ => await SetObjectFlag()
-		};
-
-		async ValueTask<CallState> SetAttributeFlag(OneOf<(string db, string Attribute), None> split)
-		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor,
-				split.AsT0.db, LocateFlags.All,
-				async found =>
-				{
-					// set(obj/attr, flaglist) accepts a space-separated list of !-prefixable
-					// flag tokens, same as @set's own flag argument (PennMUSH's fun_set routes
-					// through do_set -> do_attrib_flags, which parses the whole list) - so this
-					// must batch through SetAttributeFlagsAsync, not treat the whole string as
-					// one flag name (Task 6 fix round 2, M3).
-					var flagTokens = MushText.SplitList(MarkupText.Space, arg1)
-						.Select(x => x.ToPlainText())
-						.ToList();
-
-					var result =
-						await AttributeService.SetAttributeFlagsAsync(executor, found, split.AsT0.Attribute, flagTokens);
-					return result switch
-					{
-						{ IsT1: true } => result.AsT1,
-						_ => new CallState(string.Empty)
-					};
-				});
-		}
-
-		async ValueTask<CallState> SetAttributeValue()
-		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor,
-				arg0, LocateFlags.All,
-				async found =>
-				{
-					var splitIndex = arg1.IndexOf(":");
-					var attribute = arg1.Substring(0, splitIndex);
-					var value = arg1.Substring(splitIndex + 1, arg1.Length - (splitIndex + 1));
-
-					var result = await AttributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), value);
-
-					return result switch
-					{
-						{ IsT1: true } => result.AsT1,
-						_ => new CallState(string.Empty)
-					};
-				});
-		}
-
-		async ValueTask<CallState> SetObjectFlag()
-		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor,
-				arg0, LocateFlags.All,
-				async found =>
-				{
-					var result = await ManipulateSharpObjectService.SetOrUnsetFlag(executor, found, arg1.ToPlainText(), false);
-
-					return result.Message switch
-					{
-						{ } when result.Message!.ToPlainText() == "True" => string.Empty,
-						_ => result
-					};
-				});
-		}
+		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+			NotifyService, executor,
+			parser.CurrentState.Arguments["0"].Message!,
+			parser.CurrentState.Arguments["1"].Message!);
 	}
 
 	[SharpFunction(Name = "subj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
