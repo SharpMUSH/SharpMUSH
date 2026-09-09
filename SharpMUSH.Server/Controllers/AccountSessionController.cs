@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.Interfaces;
@@ -9,7 +10,7 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/account/session")]
 public class AccountSessionController(IAccountSessionStore sessions, IAccountService accounts,
-	AccountClaimsService claims, IAdministrativeCapabilityService capabilities) : ControllerBase
+	AccountClaimsService claims, IAdministrativeCapabilityService capabilities, SitelockGuard sitelockGuard) : ControllerBase
 {
 	public record SessionStateResponse(string Username, bool MustChangePassword, string Role, IReadOnlyList<string> Permissions);
 
@@ -17,6 +18,9 @@ public class AccountSessionController(IAccountSessionStore sessions, IAccountSer
 	[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 	public async Task<IActionResult> GetSession(CancellationToken ct)
 	{
+		var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+		if (sitelockGuard.IsBlocked(clientIp, host: string.Empty, SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, "Access from your location is restricted.");
 		var header = Request.Headers.Authorization.FirstOrDefault();
 		if (header is null || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) return Unauthorized();
 		var session = await sessions.ValidateAsync(header["Bearer ".Length..].Trim(), ct);

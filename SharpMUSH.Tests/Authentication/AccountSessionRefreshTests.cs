@@ -1,3 +1,6 @@
+using System.Net;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +23,7 @@ public class AccountSessionRefreshTests
 	[Arguments("missing")]
 	[Arguments("expired")]
 	[Arguments("disabled")]
+	[Arguments("blocked")]
 	public async Task SessionRefreshUsesValidatedIdentityAndCurrentScopes(string state)
 	{
 		var sessions = Substitute.For<IAccountSessionStore>();
@@ -37,13 +41,27 @@ public class AccountSessionRefreshTests
 		using var cache = new FusionCache(new OptionsWrapper<FusionCacheOptions>(new()));
 		var claims = new AccountClaimsService(accounts, Substitute.For<IRoleDerivationService>(), Substitute.For<IRoleRegistryService>(),
 			Substitute.For<IPermissionResolver>(), cache, new AccountClaimsInvalidator(cache), NullLogger<AccountClaimsService>.Instance);
-		var controller = new AccountSessionController(sessions, accounts, claims, capabilities)
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst") with
+		{
+			SitelockRules = new SitelockRulesOptions(state == "blocked"
+				? new Dictionary<string, string[]> { ["192.0.2.42"] = ["!connect"] } : [])
+		});
+		var controller = new AccountSessionController(sessions, accounts, claims, capabilities, new SitelockGuard(options))
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
 		};
+		controller.HttpContext.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.42");
 		if (state != "missing") controller.Request.Headers.Authorization = "Bearer opaque";
 		using var cancel = new CancellationTokenSource();
 		var result = await controller.GetSession(cancel.Token);
+		if (state == "blocked")
+		{
+			await Assert.That(((ObjectResult)result).StatusCode).IsEqualTo(StatusCodes.Status403Forbidden);
+			await sessions.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+			await capabilities.DidNotReceive().GetGrantedScopesAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>());
+			return;
+		}
 		if (state != "valid")
 		{
 			await Assert.That(result).IsTypeOf<UnauthorizedResult>();
