@@ -1160,7 +1160,10 @@ public partial class Functions
 			? exact
 			: named.Where(x => x.Name.Contains(name, StringComparison.OrdinalIgnoreCase)).ToList();
 
-		return string.Join(" ", matches.Select(x => x.Token));
+		// PennMUSH's fun_namegraball separates with the INPUT delimiter, not a space:
+		// `if (!first) safe_chr(sep, buff, bp);` (src/funlist.c:1371-1373). With a non-space
+		// delimiter the result was not a list in the delimiter the caller asked for.
+		return string.Join(delimiter, matches.Select(x => x.Token));
 	}
 
 	[SharpFunction(Name = "randextract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "count", "delim", "type", "osep"])]
