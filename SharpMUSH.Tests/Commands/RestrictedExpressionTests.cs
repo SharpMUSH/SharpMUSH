@@ -27,6 +27,16 @@ public class RestrictedExpressionTests
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
 	[Test]
+	[Arguments("first", "first(%0)")]
+	[Arguments("rest", "rest(%0)")]
+	[Arguments("extract", "extract(%0,1,1)")]
+	[Arguments("words", "words(%0)")]
+	public async Task AllocationHeavyListOperationsCannotEnterTheRestrictedProfile(string name, string expression)
+	{
+		await Assert.That(await Eval($"restrictedexpr({name},{expression},a b c)")).IsEqualTo(EvaluationRestrictions.Error);
+	}
+
+	[Test]
 	[Arguments("#apply2/restrictedexpr,")]
 	[Arguments("#apply2/restricted_alias,")]
 	[Arguments("#apply3/fn,restrictedexpr,")]
@@ -48,7 +58,7 @@ public class RestrictedExpressionTests
 	public async Task ExplicitInputsAndPureOperationsWork()
 	{
 		await Assert.That(await Eval("restrictedexpr(add,add(%0,%1),2,3)")).IsEqualTo("5");
-		await Assert.That(await Eval("restrictedexpr(ucstr first,ucstr(first(%0)),hello world)")).IsEqualTo("HELLO");
+		await Assert.That(await Eval("restrictedexpr(ucstr trim,ucstr(trim(%0)),hello world)")).IsEqualTo("HELLO WORLD");
 		await Assert.That(await Eval("restrictedexpr(,%0%b%1,a,b)")).IsEqualTo("a b");
 	}
 
@@ -347,7 +357,7 @@ public class RestrictedExpressionTests
 	public async Task ExtractHandlesMinimumSignedPositionsWithoutAnException(string start, string length, string expected)
 	{
 		await Assert.That(await Eval($"extract(a b,{start},{length})")).IsEqualTo(expected);
-		await Assert.That(await Eval($"restrictedexpr(extract,extract(a b,{start},{length}))")).IsEqualTo(expected);
+		await Assert.That(await Eval($"restrictedexpr(extract,extract(a b,{start},{length}))")).IsEqualTo(EvaluationRestrictions.Error);
 	}
 
 	[Test]

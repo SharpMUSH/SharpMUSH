@@ -12,7 +12,7 @@ public partial class Functions
 	private static readonly FrozenSet<string> RestrictedOperations = new[]
 	{
 		"add", "sub", "mul", "div", "cat", "strcat", "strlen", "ucstr", "lcstr", "trim",
-		"space", "words", "first", "rest", "extract", "fn", "restrictedexpr"
+		"space", "fn", "restrictedexpr"
 	}.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
 	[SharpFunction(Name = "restrictedexpr", MinArgs = 2, MaxArgs = 12, Flags = FunctionFlags.NoParse,

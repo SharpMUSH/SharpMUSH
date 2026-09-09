@@ -12,14 +12,14 @@ Examples:
     restrictedexpr(add,add(%0,%1),2,3)
     5
 
-    restrictedexpr(first ucstr,ucstr(first(%0)),hello world)
-    HELLO
+    restrictedexpr(trim ucstr,ucstr(trim(%0)),hello world)
+    HELLO WORLD
 
     restrictedexpr(,%0%b%1,hello,world)
     hello world
 
 The initial profile supports `add`, `sub`, `mul`, `div`, `cat`, `strcat`, `strlen`,
-`ucstr`, `lcstr`, `trim`, `space`, `words`, `first`, `rest`, `extract`, `fn`, and
+`ucstr`, `lcstr`, `trim`, `space`, `fn`, and
 `restrictedexpr`. Each must be explicitly allowed. Function aliases and builtin
 clones resolve to the original operation before the allowlist is checked. A
 nested `restrictedexpr()` intersects its requested operations with the caller's
@@ -59,3 +59,7 @@ Native plugins and server code remain trusted code and are not isolated by it.
 Call this wrapper with direct function syntax. `#apply` entry, including aliases
 and `fn` indirection, is rejected because those arguments have already been
 evaluated by the caller and cannot supply the required raw expression and inputs.
+
+List tokenization functions (`first`, `rest`, `extract`, and `words`) are excluded
+until their scanning is allocation-bounded and interruptible. Progress and readmission
+criteria are tracked in [issue #977](https://github.com/SharpMUSH/SharpMUSH/issues/977).
