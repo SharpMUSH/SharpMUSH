@@ -1,6 +1,8 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -23,6 +25,15 @@ public class HideCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	// Fixture privilege must not depend on the shared God connection remaining logged in.
+	private async Task GrantWizardAsync(DBRef reference)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(reference))).Known;
+		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
+		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
+		await Assert.That(await (await Mediator.Send(new GetObjectNodeQuery(reference))).Known.CanHide()).IsTrue();
+	}
+
 	[Test]
 	public async ValueTask Hide_TogglesConnectionHiddenState_ForAPrivilegedExecutor()
 	{
@@ -30,7 +41,7 @@ public class HideCommandTests
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideToggleConn");
 		// @hide is permission-gated (CanHide: wizard/royalty or the Hide power) - grant WIZARD.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await GrantWizardAsync(testPlayer.DbRef);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
 
@@ -61,7 +72,7 @@ public class HideCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideExplicit");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await GrantWizardAsync(testPlayer.DbRef);
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 		await Assert.That(ConnectionService.Get(testPlayer.Handle)?.IsHidden).IsTrue();
@@ -85,7 +96,7 @@ public class HideCommandTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideMultiConn");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		await GrantWizardAsync(testPlayer.DbRef);
 
 		// A second connection for the same player, already hidden; the first (testPlayer.Handle)
 		// starts visible.
@@ -126,7 +137,7 @@ public class HideCommandTests
 		// cd/ch only hide the connection when the connecting player has Hide permission (CanHide:
 		// wizard/royalty or the Hide power) - grant WIZARD so the hidden-state assertions are meaningful
 		// for every alias under test, including cv (which never hides regardless of permission).
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {playerDbRef}=WIZARD"));
+		await GrantWizardAsync(playerDbRef);
 
 		var handle = Random.Shared.NextInt64(800_000, 899_999);
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
@@ -182,7 +193,7 @@ public class HideCommandTests
 	{
 		var firstPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HideLogoutFirst");
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {firstPlayer.DbRef}=WIZARD"));
+		await GrantWizardAsync(firstPlayer.DbRef);
 		await Parser.CommandParse(firstPlayer.Handle, ConnectionService, MarkupText.Plain("@hide/on"));
 		await Assert.That(ConnectionService.Get(firstPlayer.Handle)?.IsHidden).IsTrue();
 

@@ -1,0 +1,36 @@
+.snapshots {
+    padding: var(--cpad);
+    min-width: 0;
+}
+
+.snapshots pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: var(--font-mono);
+}
+
+.snapshots ::deep table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.snapshots ::deep td {
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+@container page (max-width: 48rem) {
+    .snapshots ::deep .mud-button-root {
+        width: 100%;
+    }
+
+    .snapshots ::deep .mud-table-container {
+        overflow-x: auto;
+    }
+
+    .snapshots ::deep table {
+        min-width: 30rem;
+        font-size: 0.8125rem;
+    }
+}
