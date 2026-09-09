@@ -262,7 +262,12 @@ public partial class Commands
 								},
 								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
-							if (!headerAdmission.Accepted) break;
+							if (!headerAdmission.Accepted)
+							{
+								if (headerAdmission.Reason == QueueRejectionReason.InvalidTarget)
+									await NotifyService.Notify(executor, headerAdmission.Error, executor);
+								break;
+							}
 							firstRow = false;
 						}
 
@@ -288,7 +293,12 @@ public partial class Commands
 							},
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
-						if (!rowAdmission.Accepted) break;
+						if (!rowAdmission.Accepted)
+						{
+							if (rowAdmission.Reason == QueueRejectionReason.InvalidTarget)
+								await NotifyService.Notify(executor, rowAdmission.Error, executor);
+							break;
+						}
 						admittedRows++;
 						rowNumber++;
 					}
