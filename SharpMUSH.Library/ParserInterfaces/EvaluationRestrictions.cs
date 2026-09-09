@@ -25,6 +25,20 @@ public sealed class EvaluationRestrictions
 		return new Scope(previous);
 	}
 
+	/// <summary>Recognizes the audited wrapper through aliases and literal fn indirection.</summary>
+	public static bool BeginsRestrictedEvaluation(FunctionDefinition definition, IEnumerable<string> arguments,
+		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
+	{
+		if (definition.RestrictedOperation != "fn") return definition.RestrictedOperation == "restrictedexpr";
+		using var names = arguments.GetEnumerator();
+		while (definition.RestrictedOperation == "fn")
+		{
+			if (!names.MoveNext() || !functions.TryGetValue(names.Current, out var target)) return false;
+			definition = target.LibraryInformation;
+		}
+		return definition.RestrictedOperation == "restrictedexpr";
+	}
+
 	/// <summary>Checks the resolved core operation, never its mutable alias or display name.</summary>
 	public static void Demand(FunctionDefinition definition, EvaluationRestrictions? state = null)
 	{

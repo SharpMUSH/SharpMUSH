@@ -63,7 +63,8 @@ public class SharpMUSHParserVisitor(
 {
 	private int _debugNestDepth;
 	private bool _didEmitFunctionDebug;
-	internal bool DidEmitFunctionDebug => _didEmitFunctionDebug;
+	private bool _containsRestrictedWrapper;
+	internal bool SuppressSubstitutionOnlyDebugTrace => _didEmitFunctionDebug || _containsRestrictedWrapper;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -506,6 +507,28 @@ public class SharpMUSHParserVisitor(
 		return stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message;
 	};
 
+	private bool BeginsRestrictedEvaluation(FunctionContext context)
+	{
+		var name = context.FUNCHAR().GetText().TrimEnd()[..^1];
+		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
+		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
+			|| definition.LibraryInformation.RestrictedOperation == "fn"
+			&& EvaluationRestrictions.BeginsRestrictedEvaluation(definition.LibraryInformation,
+				context.evaluationString().Select(argument => GetContextText(argument).ToPlainText()), parser.FunctionLibrary);
+	}
+
+	private bool ContainsRestrictedEvaluation(IParseTree context)
+	{
+		var pending = new Stack<IParseTree>();
+		pending.Push(context);
+		while (pending.TryPop(out var node))
+		{
+			if (node is FunctionContext function && BeginsRestrictedEvaluation(function)) return true;
+			for (var child = 0; child < node.ChildCount; child++) pending.Push(node.GetChild(child));
+		}
+		return false;
+	}
+
 	public override async ValueTask<CallState?> VisitFunction([NotNull] FunctionContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
@@ -549,8 +572,11 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
+		// Recognize the wrapper before its implementation enters the operation scope.
+		var restrictedWrapper = BeginsRestrictedEvaluation(context);
+		_containsRestrictedWrapper |= restrictedWrapper;
 		// Restricted evaluation must not read DEBUG flags or forwarding attributes.
-		var executor = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
+		var executor = restrictedWrapper || EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
 			? new AnyOptionalSharpObject(new None())
 			: await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
@@ -584,6 +610,14 @@ public class SharpMUSHParserVisitor(
 				indent = new string(' ', _debugNestDepth);
 				dbrefNumber = executorObj.Object().DBRef.Number;
 			}
+		}
+
+		// An ancestor trace also contains the wrapper's literal inputs. This extra traversal
+		// is needed only while debug output is enabled; ordinary evaluation stays a single walk.
+		if (shouldDebug && ContainsRestrictedEvaluation(context))
+		{
+			_containsRestrictedWrapper = true;
+			shouldDebug = false;
 		}
 
 		if (shouldDebug && executorObj != null && indent != null)
@@ -895,7 +929,17 @@ public class SharpMUSHParserVisitor(
 
 			return result with { Depth = contextDepth };
 		}
-		catch (RestrictedExpressionException) { throw; }
+		catch (RestrictedExpressionException) { success = false; throw; }
+		catch (OperationCanceledException) when (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		{
+			success = false;
+			throw;
+		}
+		catch (Exception) when (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		{
+			success = false;
+			throw new RestrictedExpressionException();
+		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
@@ -2451,7 +2495,7 @@ public class SharpMUSHParserVisitor(
 		var evalParser = mushParser.ResolveTrackingParser();
 
 		// A fresh visitor per call mirrors ParseInternalCore's "new SharpMUSHParserVisitor(...)
-		// per parse": its DidEmitFunctionDebug flag must start false for THIS argument alone, not
+		// per parse": its diagnostic-suppression flag must start false for THIS argument alone, not
 		// be shared/polluted by the outer command's own visitor (`this`), which is handling the
 		// whole command line and whose flag may already be set from a sibling argument or an
 		// enclosing function call.
@@ -2464,7 +2508,7 @@ public class SharpMUSHParserVisitor(
 		{
 			var rawText = argument.ToPlainText();
 			await MUSHCodeParser.EmitSubstitutionOnlyDebugTraceAsync(
-				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.DidEmitFunctionDebug);
+				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.SuppressSubstitutionOnlyDebugTrace);
 		}
 
 		return result;

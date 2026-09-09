@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using NSubstitute;
 using SharpMUSH.Implementation;
@@ -39,9 +40,11 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task RestrictedDebugExecutorDoesNotForwardExpressionOrResults(bool denied)
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task RestrictedDebugExecutorDoesNotForwardExpressionOrResults(bool denied, bool substitutionTrace)
 	{
 		var connection = Factory.Services.GetRequiredService<IConnectionService>();
 		DBRef target;
@@ -53,12 +56,12 @@ public class RestrictedExpressionTests
 			await Cmd($"@set {target}=DEBUG");
 			await Assert.That(await Eval($"hasflag({target},DEBUG)")).IsEqualTo("1");
 		}
-		var state = ParserState.RootFor(target) with { Flags = ParserStateFlags.NoDebug };
+		var state = ParserState.RootFor(target);
 		var parser = Factory.FunctionParser.FromState(state);
 		var notify = Factory.Services.GetRequiredService<INotifyService>();
 		notify.ClearReceivedCalls();
 		var expression = denied ? "restrictedexpr(ucstr,get(%0),private-input)" : "restrictedexpr(ucstr,ucstr(%0),private-input)";
-		var result = (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		var result = (await parser.FunctionParse(MarkupText.Plain(expression), substitutionTrace))!.Message!.ToPlainText();
 		if (denied) await Assert.That(result).Contains("RESTRICTED EXPRESSION");
 		else await Assert.That(result).IsEqualTo("PRIVATE-INPUT");
 		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
@@ -265,6 +268,143 @@ public class RestrictedExpressionTests
 		await Assert.That(await Eval("space(2147483647)")).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 		await Assert.That(await Eval("repeat(x,2147483647)")).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 		await Assert.That(await Eval("repeat(,2147483647)")).IsEqualTo("");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task UnexpectedRestrictedFailuresDoNotLogOrNotify(bool ambient)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library["add"] = (library["add"].LibraryInformation with
+		{
+			Function = _ => throw new InvalidOperationException("private-failure")
+		}, true);
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var restrictions = new EvaluationRestrictions(["add"]);
+		var state = ParserState.RootFor(original.CurrentState.Executor!.Value) with
+		{
+			Restrictions = ambient ? null : restrictions
+		};
+		var parser = (original with { FunctionLibrary = library, Logger = logger }).FromState(state);
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		using var scope = ambient ? restrictions.Enter() : null;
+		var result = await parser.FunctionParse(MarkupText.Plain("add(1,2)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input)")]
+	[Arguments("cat(restricted_alias(ucstr,ucstr(%0),private-input))")]
+	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input)")]
+	public async Task RestrictedWrapperAliasesSuppressSubstitutionFallbackDebug(string expression)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value)
+			with
+		{ Flags = ParserStateFlags.Debug });
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		var result = await parser.FunctionParse(MarkupText.Plain(expression), true);
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("PRIVATE-INPUT");
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("-2147483648", "1", "a")]
+	[Arguments("1", "-2147483648", "a b")]
+	[Arguments("-2147483648", "-2147483648", "a b")]
+	public async Task ExtractHandlesMinimumSignedPositionsWithoutAnException(string start, string length, string expected)
+	{
+		await Assert.That(await Eval($"extract(a b,{start},{length})")).IsEqualTo(expected);
+		await Assert.That(await Eval($"restrictedexpr(extract,extract(a b,{start},{length}))")).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments(false, FunctionFlags.LogArgs)]
+	[Arguments(false, FunctionFlags.LogName)]
+	[Arguments(false, FunctionFlags.Deprecated)]
+	[Arguments(true, FunctionFlags.LogArgs)]
+	[Arguments(true, FunctionFlags.LogName)]
+	[Arguments(true, FunctionFlags.Deprecated)]
+	public async Task RestrictedCallsSuppressFunctionMetadataOutput(bool wrapper, FunctionFlags outputFlag)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var name = wrapper ? "restrictedexpr" : "add";
+		var definition = library[name].LibraryInformation;
+		library[name] = (definition with
+		{
+			Attribute = new SharpFunctionAttribute
+			{
+				Name = name, MinArgs = definition.Attribute.MinArgs, MaxArgs = definition.Attribute.MaxArgs,
+				Flags = definition.Attribute.Flags | outputFlag
+			}
+		}, true);
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var parser = (original with { FunctionLibrary = library, Logger = logger }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		var result = await parser.FunctionParse(MarkupText.Plain("restrictedexpr(add,add(%0,2),3)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("5");
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestrictedCancellationPropagatesWithoutDiagnosticOutput(bool ambient)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library["add"] = (library["add"].LibraryInformation with { Function = _ => throw new OperationCanceledException() }, true);
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var restrictions = new EvaluationRestrictions(["add"]);
+		var parser = (original with { FunctionLibrary = library, Logger = logger }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value)
+			with
+		{ Restrictions = ambient ? null : restrictions });
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		using var scope = ambient ? restrictions.Enter() : null;
+		await Assert.That(async () => await parser.FunctionParse(MarkupText.Plain("add(1,2)"))).Throws<OperationCanceledException>();
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestrictedSyntaxDiagnosticsRemainSilent(bool ambient)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var restrictions = new EvaluationRestrictions(["add"]);
+		var configured = original with
+		{
+			Logger = logger,
+			Configuration = new Options(original.Configuration.CurrentValue with
+			{
+				Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true, ParserPredictionMode = ParserPredictionMode.TwoStage }
+			})
+		};
+		var parser = configured.FromState(ParserState.RootFor(original.CurrentState.Executor!.Value)
+			with
+		{ Restrictions = ambient ? null : restrictions });
+		using var scope = ambient ? restrictions.Enter() : null;
+		var result = await parser.FunctionParse(MarkupText.Plain("add(1,"));
+		await Assert.That(result!.HadErrors).IsTrue();
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 	}
 
 }

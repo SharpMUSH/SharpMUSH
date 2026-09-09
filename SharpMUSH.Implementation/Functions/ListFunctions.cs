@@ -86,10 +86,10 @@ public partial class Functions
 		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
 		var range = firstNumber > 0
 			? list.Skip(firstNumber - 1)
-			: Enumerable.TakeLast(list, Math.Abs(firstNumber));
+			: Enumerable.TakeLast(list, (int)Math.Min(int.MaxValue, Math.Abs((long)firstNumber)));
 		var result = lengthNumber > 0
 			? range.Take(lengthNumber)
-			: Enumerable.TakeLast(range, Math.Abs(lengthNumber));
+			: Enumerable.TakeLast(range, (int)Math.Min(int.MaxValue, Math.Abs((long)lengthNumber)));
 
 		return new CallState(MarkupText.Join(delimiter, result));
 	}

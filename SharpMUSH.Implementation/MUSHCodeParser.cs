@@ -232,7 +232,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		bool lenient)
 		where TContext : ParserRuleContext
 	{
-		var debug = Configuration.CurrentValue.Debug.DebugSharpParser;
+		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null;
 
 		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
@@ -315,7 +315,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// Core parse implementation that returns both the result and visitor metadata.
 	/// </summary>
-	private async ValueTask<(CallState? Result, bool DidEmitFunctionDebug)> ParseInternalCore<TContext>(
+	private async ValueTask<(CallState? Result, bool SuppressSubstitutionOnlyDebugTrace)> ParseInternalCore<TContext>(
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
@@ -380,10 +380,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		CallState? result;
 		try { result = await visitor.Visit(context); }
 		catch (RestrictedExpressionException ex)
-		{ return (new CallState(ex.Message) { HadErrors = true }, false); }
+		{ return (new CallState(ex.Message) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace); }
 		catch (OperationCanceledException) when (budget.IsExpired)
-		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false); }
-		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace); }
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace);
 		budget.ThrowIfExceeded();
 
 		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
@@ -398,7 +398,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			result = result with { HadErrors = true };
 		}
 
-		return (result, visitor.DidEmitFunctionDebug);
+		return (result, visitor.SuppressSubstitutionOnlyDebugTrace);
 	}
 
 	/// <summary>
@@ -463,8 +463,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// PennMUSH substitution-only debug: when a function-position argument contains only
 	/// substitutions (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated".
-	/// Only fires when function-level debug did NOT already emit for this same parse (<paramref
-	/// name="didEmitFunctionDebug"/>), and when the raw and evaluated text actually differ.
+	/// Only fires when the parse neither emitted function traces nor contains a restricted wrapper
+	/// (<paramref name="suppressSubstitutionDebug"/>), and raw and evaluated text differ.
 	/// <para>
 	/// Extracted from <see cref="FunctionParse(MString, bool)"/> so
 	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c> can reuse the identical trace logic
@@ -484,10 +484,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		ParserState callerState,
 		string rawText,
 		MString? resultMessage,
-		bool didEmitFunctionDebug)
+		bool suppressSubstitutionDebug)
 	{
 		if (EvaluationRestrictions.Current is not null || callerState.Restrictions is not null
-			|| didEmitFunctionDebug || resultMessage is null)
+			|| suppressSubstitutionDebug || resultMessage is null)
 		{
 			return;
 		}
@@ -548,10 +548,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		// Capture raw text BEFORE evaluation for substitution-only debug
 		var rawText = text.ToPlainText();
-		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+		var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
 
 		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
-			didEmitFunctionDebug);
+			suppressSubstitutionDebug);
 
 		return result;
 	}

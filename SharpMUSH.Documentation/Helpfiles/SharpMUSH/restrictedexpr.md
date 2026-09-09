@@ -31,7 +31,10 @@ available as substitutions. Ordinary quoting and literal text still work. Parent
 Q-registers, regex captures, iteration registers, attribute values, and identity
 substitutions are not inputs. The expression receives fresh register frames.
 Debug and verbose forwarding are suppressed inside restricted evaluation, including
-for executors with DEBUG set; expression text and results are not forwarded.
+for executors with DEBUG set. Wrapper calls, their aliases, and enclosing debug
+traces are also suppressed so literal inputs are not forwarded before the
+restricted scope starts. Function-metadata logging and error notifications are
+suppressed during restricted calls.
 
 An unsupported operation or substitution returns `#-1 RESTRICTED EXPRESSION`.
 Object reads, attribute evaluation (`u()`), global and local user-defined

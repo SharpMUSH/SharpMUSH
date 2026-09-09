@@ -39,15 +39,19 @@ public static class FunctionDispatcher
 		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser);
 		if (error is not null) return new CallState(error);
 
-		if (flags.HasFlag(FunctionFlags.Deprecated))
+		var suppressDiagnostics = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
+			|| definition.RestrictedOperation == "restrictedexpr"
+			|| definition.RestrictedOperation == "fn" && EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
+				parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message?.ToPlainText() ?? ""), parser.FunctionLibrary);
+		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.Deprecated))
 		{
 			var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 			await notify.Notify(owner.Object.DBRef, $"Deprecated function {name} being used on object {executor.Object().DBRef}.");
 		}
-		if (flags.HasFlag(FunctionFlags.LogArgs))
+		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogArgs))
 			logger.LogInformation("Function {Function}({Arguments}) executed by {Executor}", name,
 				string.Join(",", parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText())), executor.Object().DBRef);
-		else if (flags.HasFlag(FunctionFlags.LogName))
+		else if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogName))
 			logger.LogInformation("Function {Function} executed by {Executor}", name, executor.Object().DBRef);
 
 		if (!flags.HasFlag(FunctionFlags.Localize)) return await definition.Function(parser);
