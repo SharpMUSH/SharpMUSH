@@ -46,7 +46,7 @@ Semantics, each one a divergence being corrected:
 | `What` evaluated as ufun on `Thing`, executor `Thing`, enactor `Player`; result notified to `Player`; falls back to `Def` | `real_did_it` | mixed; several sites read the raw attribute without evaluating |
 | `OWhat` evaluated **once**, executor `Thing`, mover's name prepended (`UFUN_NAME`), broadcast to `Loc` excluding `Player` and `Thing` | `notify_except2` | evaluated once per listener, with the *listener* as executor |
 | `ODef` fallback rendered as `"<Name> <odef>"` | `safe_format` | ad hoc string concatenation |
-| Whole message block skipped when `Player` is `DarkLegal` | `if (!DarkLegal(player))` | absent |
+| **Neighbour** message block skipped when `Player` is `DarkLegal`; the actor's own `What`/`Def` still reaches them | `if (!DarkLegal(player))` wraps only the `owhat`/`odef` block (`predicat.c:246`) | absent |
 | Messages suppressed when `Loc` is not a good object; `AWhat` still runs | `GoodObject(loc)` guard placement | absent |
 | `AWhat` **queued** on `Thing` with enactor `Player` | `queue_attribute_base` | run inline via `parser.With(...).CommandParse(...)` |
 
@@ -58,8 +58,17 @@ the rule `MoreCommands.cs:2504` already open-codes for `PAGE_LOCK\`AFAILURE`.
 Supporting changes:
 
 - `ICommunicationService.SendToRoomAsync` gains an `InteractType` parameter defaulting to `Hear`,
-  so existing call sites are unchanged. Penn's movement triads use `NA_INTER_HEAR`,
-  `NA_INTER_PRESENCE` and `NA_INTER_SEE` in different places; today everything is `Hear`.
+  so existing call sites are unchanged. Penn's movement triads use three different filters
+  (`src/move.c:105-146`), and the API default is only right for one of them:
+
+  | Triad | Filter | Penn |
+  |---|---|---|
+  | `OXMOVE` | `Hear` | `NA_INTER_HEAR` |
+  | `LEAVE`/`OLEAVE`, `ENTER`/`OENTER` | `Presence` | `NA_INTER_PRESENCE` |
+  | `OXLEAVE`, `OXENTER`, the zone triads | `See` | `NA_INTER_SEE` |
+  | `MOVE`/`OMOVE` | `See` | `NA_INTER_SEE` |
+
+  Only `Hear` consults the Interact lock, per `can_interact`; the other two pass it unconditionally.
 - `IPermissionService.IsHearer(obj)` ports `Hearer` (`src/game.c:1564`): connected, or `Puppet`,
   or (`Audible` and has `FORWARDLIST`), or has `LISTEN`.
 
@@ -226,6 +235,16 @@ documented in `sharptop.md:1313` — and is read by nothing but configuration pl
 commands from unrelated players — is silently discarded behind a `LogWarning` that misattributes
 the cause to the queue being completed.
 
+One thing the quota does **not** do, in PennMUSH either: `queue_limit` counts an owner's *pending*
+entries — `add_to(player, 1)` on admission (`cque.c:230`) and `add_to(player, -1)` on dequeue
+(`cque.c:310`, `:1133`, `:1417`, `:2475`). A cycle that enqueues exactly one successor per dequeue
+therefore sits at roughly one pending entry forever and never approaches the limit, on either
+server. That case spins without growing, and the queue stays responsive; it is a livelock, not a
+hang. What the quota does catch is the fan-out case, where each dequeue enqueues more than one and
+the backlog grows without bound — which on SharpMUSH is what fills the channel and starts silently
+discarding unrelated players' commands. Bounding cumulative work rather than pending depth would
+catch the one-deep case too, but it is a departure from PennMUSH and belongs in its own decision.
+
 Moving action attributes onto the queue (§2) makes this reachable from more places than before, so
 it is fixed as part of this work:
 
@@ -261,6 +280,15 @@ runaway rather than dropping subsequent work.
   `"<Name> goes home."` broadcast, gated on the mover and location both being non-Dark.
 - **Full sweep:** `GET`, `DROP`, `GIVE`, `USE`, `BUY`, `PAGE`, `LOOK`, `@name` and the
   connect/disconnect announcements adopt `DidIt`/`FailLock` in place of their hand-rolled triads.
+  `GET`'s take-lock failure fires on the **source container**, not the item — PennMUSH evaluates
+  and fails `Take_Lock` against `oldloc` (`src/move.c:670-671`).
+- **`PennMUSHDatabaseConverter` stays off the pipeline.** It has no parser — it passes `null!`
+  today and survives only because `silent: true` skips every hook — and it is building a world from
+  a dump rather than moving anyone. It sends `MoveObjectCommand` directly, with `OldContainer`.
+- **`FOLLOW` gains the leader-side list.** PennMUSH keeps `FOLLOWERS` on the leader and `FOLLOWING`
+  on the follower, written together (`src/move.c:1214`, `:1236`) and removed together (`:1276`,
+  `:1292`). SharpMUSH writes only `FOLLOWING`, so `follower_command` would read an attribute that is
+  never set. `FOLLOW`, `UNFOLLOW`, `DESERT` and `DISMISS` maintain both.
 
 ## 8. Removed inventions
 

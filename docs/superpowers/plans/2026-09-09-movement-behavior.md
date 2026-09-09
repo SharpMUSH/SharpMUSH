@@ -1785,9 +1785,13 @@ Add `IOptionsMonitor<SharpMUSHOptions> configuration` to the `MoveService` const
 - [ ] **Step 4: Point `WouldCreateLoop` at the same bound**
 
 Replace `WouldCreateLoop`'s unbounded `while (true)` with a `for` capped at
-`configuration.CurrentValue.Limit.MaxDepth`, returning `false` when the cap is reached — an object
-chain deeper than the configured maximum is already broken, and a loop check that never terminates
-is worse than one that gives up.
+`configuration.CurrentValue.Limit.MaxDepth`, returning **`true`** when the cap is reached.
+
+Fail closed, not open. Returning `false` at the cap means "no loop found", which permits the move —
+but the walk gave up precisely because it could not see far enough to know. If the destination is a
+descendant beyond the bound, allowing the move creates a real containment cycle that the truncated
+walk never saw. Refusing an over-deep chain is the safe answer, and matches Penn treating "too many
+containers" as an error condition rather than a pass.
 
 - [ ] **Step 5: Run the tests**
 
@@ -1954,11 +1958,34 @@ public class MovementParityTests
 		var arrival = await MessagesWhile(watcher.DbRef, async () =>
 			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}")));
 
+		// The non-hearer branch suppresses the enter and leave messages specifically. The MOVE
+		// triad is gated on nomovemsgs, not on hearing, so assert the two separately rather than
+		// letting one absent string stand for both.
 		await Assert.That(arrival.Any(m => m.Contains("has arrived."))).IsFalse();
+		await Assert.That(arrival.Any(m => m.Contains("has left."))).IsFalse();
 
 		await Scheduler.DrainImmediateQueueForTests();
 		var arrived = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ARRIVED)]"));
 		await Assert.That(arrived!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+	}
+
+	[Test]
+	public async ValueTask ANonHearingThingStillRunsItsOwnMoveTriad()
+	{
+		var room = await Dig("MoveTriadRoom");
+		var destination = await Dig("MoveTriadDest");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(
+			WebAppFactoryArg.Services, Mediator, TestIsolationHelpers.GenerateUniqueName("MoveTriadThing"));
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AMOVE {thing}=&MOVED me=yes"));
+
+		// `moveit` gates MOVE/OMOVE/AMOVE on nomovemsgs alone, outside the Hearer branch.
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVED)]"));
+		await Assert.That(moved!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
 	}
 
 	[Test]
@@ -2153,9 +2180,20 @@ Point each at the new surface now, so the branch builds at every task boundary:
 
 - `SharpMUSH.Library/Services/ObjectDestructionService.cs:262` →
   `EnterRoom(parser, content, destination, noMoveMsgs: false, enactor, "container destroyed")`
-- `SharpMUSH.Library/Services/DatabaseConversion/PennMUSHDatabaseConverter.cs:574` →
-  `EnterRoom(parser, ..., noMoveMsgs: true, ...)`. An import must not narrate itself, and it runs
-  before the world is coherent enough for a look.
+- `SharpMUSH.Library/Services/DatabaseConversion/PennMUSHDatabaseConverter.cs:574` → **not** the
+  movement pipeline at all. It sends `MoveObjectCommand` directly, passing `OldContainer`:
+
+  ```csharp
+  await mediator.Send(new MoveObjectCommand(
+    content, container, Enactor: null, IsSilent: true, Cause: "conversion",
+    OldContainer: <the object's previous container, or null for a first placement>));
+  ```
+
+  The converter passes `null!` for the parser today and gets away with it only because
+  `silent: true` skips every hook. `MoveIt` fires triads unconditionally and `EnterRoom` always
+  looks, so either would dereference that null. It is also the wrong shape: a converter is building
+  a world from a dump, not moving anyone — there is no actor, no parser and nobody to notify.
+  Delete the `null!` while you are there; this codebase does not null-forgive services.
 - `SharpMUSH.Tests/Services/CachingBehaviorTests.cs:569` →
   `EnterRoom(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true, ...)`
 
@@ -2695,7 +2733,23 @@ with
 	}
 ```
 
-- [ ] **Step 5: Port `follower_command`**
+- [ ] **Step 5: Make `FOLLOW` maintain the leader-side list**
+
+PennMUSH keeps two attributes: `add_follower` writes `FOLLOWERS` on the leader (`src/move.c:1214`)
+and `add_following` writes `FOLLOWING` on the follower (`src/move.c:1236`); `del_follower` and
+`del_following` remove from each (`src/move.c:1276`, `:1292`). SharpMUSH writes only `FOLLOWING` —
+`FOLLOWERS` exists in `AttributeEntrySeed.cs:68` as a definition and nothing ever sets it — so
+`follower_command` would read an attribute that is always empty and no follower would ever move.
+
+Add the leader-side write and removal to `FOLLOW`, `UNFOLLOW`, `DESERT` and `DISMISS`, alongside
+their existing `FOLLOWING` writes and using the same GOD-authority helper (`FOLLOWERS` carries the
+`wizard` attribute flag, so no mortal can write it under their own authority). Keep both lists in
+step: every place that adds or removes one must do the other.
+
+Penn keeps both deliberately — `follower_command` runs on every successful move and wants the
+leader's list directly, rather than scanning every object's `FOLLOWING` to find who follows.
+
+- [ ] **Step 6: Port `follower_command`**
 
 In `MoreCommands.cs`, beside the existing `FOLLOWING` helpers:
 
@@ -2783,13 +2837,35 @@ Add to `ErrorMessages.Notifications` and `Notifications.resx`:
 		public const string YouFollowFormat = "You follow {0}.";
 ```
 
-- [ ] **Step 6: Run the tests**
+- [ ] **Step 7: Run the tests**
+
+Add a test that a follower actually trails its leader through an exit, since nothing exercised the
+follow path before:
+
+```csharp
+	[Test]
+	public async ValueTask AFollowerTrailsItsLeaderThroughAnExit()
+	{
+		var (leader, from, to, _) = await Corridor("Follow");
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowTrail");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {follower.DbRef}={from}"));
+		await GodParser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain($"follow {leader.Name}"));
+		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var where = await GodParser.FunctionParse(MarkupText.Plain($"[loc({follower.DbRef})]"));
+		await Assert.That(where!.Message!.ToPlainText().Trim()).IsEqualTo(to);
+	}
+```
 
 ```bash
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MovementParityTests/*" > /tmp/t12.log 2>&1; grep -E "Passed|Failed" /tmp/t12.log | tail -3
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/*Follow*/*" > /tmp/t12b.log 2>&1; grep -E "Passed|Failed" /tmp/t12b.log | tail -3
 ```
 
-- [ ] **Step 7: Format and commit**
+- [ ] **Step 8: Format and commit**
 
 ```bash
 for d in SharpMUSH.Library SharpMUSH.Implementation SharpMUSH.Tests; do
@@ -3211,7 +3287,17 @@ and the drop-lock failure becomes `FailLock(parser, executor, objectToDrop, Lock
 			Loc: await executor.Where()));
 ```
 
-with the take-lock failure as `FailLock(parser, executor, objectToGet, LockType.Take)`.
+with the take-lock failure on the **source container**, not the item:
+
+```csharp
+		await DidItService.FailLock(parser, executor, sourceLocation, LockType.Take);
+```
+
+PennMUSH evaluates and fails the Take lock against the object's old location — `eval_lock_with(player,
+oldloc, Take_Lock, pe_info)` and `fail_lock(player, oldloc, Take_Lock, ...)` (`src/move.c:670-671`),
+and the possessive-get path likewise uses `box` (`src/move.c:620`). Aiming `FailLock` at the item
+would search the item for `TAKE_LOCK` failure attributes, so a container's configured take-failure
+message and action would never run.
 
 - [ ] **Step 4: Replace `GIVE`'s two triads**
 
