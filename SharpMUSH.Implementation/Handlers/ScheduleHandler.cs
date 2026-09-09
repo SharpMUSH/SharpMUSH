@@ -12,7 +12,7 @@ public class ScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<QueueCo
 {
 	public async ValueTask<QueueAdmissionResult> Handle(QueueCommandListRequest request, CancellationToken cancellationToken)
 	{
-		return await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue);
+		return await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue, request.ManageSemaphoreCount);
 	}
 }
 
@@ -53,7 +53,7 @@ public class ScheduleTimeoutHandler(ITaskScheduler scheduler) : IRequestHandler<
 	public async ValueTask<QueueAdmissionResult> Handle(QueueCommandListWithTimeoutRequest request, CancellationToken cancellationToken)
 	{
 		return await scheduler.WriteCommandList(request.Command, request.State, request.DbRefAttribute, request.OldValue,
-			request.Timeout);
+			request.Timeout, request.ManageSemaphoreCount);
 	}
 }
 
