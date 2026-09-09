@@ -34,7 +34,8 @@ public sealed record EngineStateResponse(
 		string CharacterDbref,
 		string RoomDbref,
 		string RoomName,
-		IReadOnlyList<string> VisibleObjectDbrefs);
+		IReadOnlyList<string> VisibleObjectDbrefs,
+		bool Truncated = false);
 
 /// <summary>
 /// Abstraction over the transport layer between the web portal and the SharpMUSH game engine.

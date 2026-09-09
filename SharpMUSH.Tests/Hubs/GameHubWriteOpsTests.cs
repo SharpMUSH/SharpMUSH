@@ -3,6 +3,7 @@ using NSubstitute;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Hubs;
 
@@ -72,25 +73,21 @@ public class GameHubWriteOpsTests
 	}
 
 	[Test]
-	public async Task SendToRoomAsync_CallsCorrectGroup()
+	public async Task SendToRoomAsyncUsesSharedRecipientDispatcher()
 	{
-		var (ctx, _, clients) = BuildHubContext();
-		var msg = new RoomEventMessage("#1", RoomEventType.Arrive, "Gandalf", "Gandalf arrives.");
-
-		await GameHub.SendToRoomAsync(ctx, new DBRef(1), msg);
-
-		clients.Received(1).Group("room:#1");
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var message = new RoomEventMessage("#5:1", RoomEventType.Say, "Actor", "Hello", "#7:1");
+		await GameHub.SendToRoomAsync(dispatcher, new DBRef(5, 1), message);
+		await dispatcher.Received(1).DispatchAsync(message, Arg.Any<CancellationToken>());
 	}
 
 	[Test]
-	public async Task SendToRoomAsync_InvokesReceiveRoomEvent()
+	public async Task SendToRoomAsyncRejectsMismatchedRoom()
 	{
-		var (ctx, groupClient, _) = BuildHubContext();
-		var msg = new RoomEventMessage("#5", RoomEventType.Say, "Aragorn", "Well met.");
-
-		await GameHub.SendToRoomAsync(ctx, new DBRef(5), msg);
-
-		await groupClient.Received(1).ReceiveRoomEvent(msg);
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var message = new RoomEventMessage("#5:1", RoomEventType.Say, "Actor", "Hello", "#7:1");
+		await GameHub.SendToRoomAsync(dispatcher, new DBRef(6, 1), message);
+		await dispatcher.DidNotReceive().DispatchAsync(Arg.Any<RoomEventMessage>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

@@ -1,6 +1,10 @@
 using System.Collections.Concurrent;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Server.Hubs;
+
+public sealed record RoomSubscription(string ConnectionId, CapabilityActor Actor, DBRef Room, Guid Version);
 
 /// <summary>
 /// In-process singleton tracking live SignalR connections on <see cref="GameHub"/>, keyed by
@@ -19,7 +23,33 @@ namespace SharpMUSH.Server.Hubs;
 /// </remarks>
 public sealed class HubConnectionRegistry
 {
-	private readonly record struct Entry(string AccountId, string OriginIp, Action Abort);
+	public bool JoinRoom(string connectionId, CapabilityActor actor, DBRef room)
+	{
+		if (!room.IsObjid || actor.ActiveCharacter is not { IsObjid: true } character || actor.Executor != character) return false;
+		while (_connections.TryGetValue(connectionId, out var entry) && entry.AccountId == actor.AccountId)
+		{
+			var next = entry with { Subscription = new(connectionId, actor, room, Guid.NewGuid()) };
+			if (_connections.TryUpdate(connectionId, next, entry)) return true;
+		}
+		return false;
+	}
+
+	public RoomSubscription? SubscriptionFor(string connectionId)
+		=> _connections.TryGetValue(connectionId, out var entry) ? entry.Subscription : null;
+
+	public void LeaveRoom(string connectionId, DBRef room)
+	{
+		while (_connections.TryGetValue(connectionId, out var entry) && entry.Subscription?.Room == room)
+			if (_connections.TryUpdate(connectionId, entry with { Subscription = null }, entry)) return;
+	}
+
+	public IReadOnlyList<RoomSubscription> Subscribers(DBRef room) => _connections.Values
+		.Where(entry => entry.Subscription?.Room == room).Select(entry => entry.Subscription!).ToArray();
+
+	public bool IsCurrent(RoomSubscription subscription) => _connections.TryGetValue(subscription.ConnectionId, out var entry)
+		&& entry.Subscription == subscription;
+
+	private readonly record struct Entry(string AccountId, string OriginIp, Action Abort, RoomSubscription? Subscription = null);
 
 	private readonly ConcurrentDictionary<string, Entry> _connections = new(StringComparer.Ordinal);
 

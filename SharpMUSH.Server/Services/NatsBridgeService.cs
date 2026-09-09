@@ -41,19 +41,22 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly NatsOptions _natsOptions;
 	private readonly ILogger<NatsBridgeService> _logger;
 	private readonly PluginCatalog _pluginCatalog;
+	private readonly IRoomEventDispatcher _roomDispatcher;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
 		IHubContext<GameHub> pluginHubContext,
 		NatsOptions natsOptions,
 		PluginCatalog pluginCatalog,
-		ILogger<NatsBridgeService> logger)
+		ILogger<NatsBridgeService> logger,
+		IRoomEventDispatcher roomDispatcher)
 	{
 		_hubContext = hubContext;
 		_pluginHubContext = pluginHubContext;
 		_natsOptions = natsOptions;
 		_pluginCatalog = pluginCatalog;
 		_logger = logger;
+		_roomDispatcher = roomDispatcher;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -179,6 +182,9 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		}
 	}
 
+	public Task ForwardRoomEventAsync(RoomEventMessage message, CancellationToken ct = default)
+		=> _roomDispatcher.DispatchAsync(message, ct);
+
 	private async Task SubscribeRoomAsync(NatsConnection nats, CancellationToken ct)
 	{
 		// Subject wildcard: "game.room.*" — the last token is the room dbref.
@@ -206,7 +212,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 
 			try
 			{
-				await _hubContext.Clients.Group(group).ReceiveRoomEvent(msg.Data);
+				await ForwardRoomEventAsync(msg.Data, ct);
 			}
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{

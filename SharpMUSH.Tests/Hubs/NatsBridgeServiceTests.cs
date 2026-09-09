@@ -32,7 +32,7 @@ public class NatsBridgeServiceTests
 		var options = new NatsOptions { Url = natsUrl };
 		var service = new NatsBridgeService(
 			hubContext, pluginHubContext, options, SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
-			NullLogger<NatsBridgeService>.Instance);
+			NullLogger<NatsBridgeService>.Instance, Substitute.For<IRoomEventDispatcher>());
 
 		return (service, hubContext);
 	}
@@ -65,20 +65,18 @@ public class NatsBridgeServiceTests
 	}
 
 	[Test]
-	public async Task ForwardRoomEventMessage_RoutesToCorrectRoomGroup()
+	public async Task ForwardRoomEventUsesSharedRecipientDispatcher()
 	{
-		var (_, hubContext) = BuildService();
-		var clients = hubContext.Clients;
-		var room = new DBRef(42, 1700000000);
-		var roomDbref = room.ToString();
-		var expectedGroup = GameHub.RoomGroupName(room);
-		var message = new RoomEventMessage(roomDbref, RoomEventType.Say, "Wizard", "Hello all!");
-
-		var proxy = hubContext.Clients.Group(expectedGroup);
-		await proxy.ReceiveRoomEvent(message);
-
-		clients.Received(1).Group(expectedGroup);
-		await proxy.Received(1).ReceiveRoomEvent(message);
+		var hub = Substitute.For<IHubContext<GameHub, IGameHubClient>>();
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var clients = Substitute.For<IHubClients<IGameHubClient>>();
+		hub.Clients.Returns(clients);
+		var service = new NatsBridgeService(hub, Substitute.For<IHubContext<GameHub>>(), new NatsOptions { Url = "nats://localhost:4222" },
+			SharpMUSH.Implementation.Services.PluginCatalog.Empty(), NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var message = new RoomEventMessage("#42:1", RoomEventType.Say, "Actor", "Hello", "#7:1");
+		await service.ForwardRoomEventAsync(message);
+		await dispatcher.Received(1).DispatchAsync(message, Arg.Any<CancellationToken>());
+		clients.DidNotReceive().Group(Arg.Any<string>());
 	}
 
 	[Test]
