@@ -1278,27 +1278,44 @@ git commit -m "Enforce the per-owner queue quota and halt runaway objects"
 
 **Files:**
 - Move: `SharpMUSH.Implementation/Common/AttributeHelpers.cs` → `SharpMUSH.Library/Common/AttributeHelpers.cs`
-- Move: `SharpMUSH.Implementation/Common/MessageHelpers.cs` → `SharpMUSH.Library/Common/MessageHelpers.cs`
-- Modify: `SharpMUSH.Implementation/Commands/MoreCommands.cs`, `Commands/GeneralCommands.cs`,
-  `Functions/AttributeFunctions.cs`, `Handlers/ChannelMessageRequestHandler.cs`,
-  `Substitutions/Substitutions.cs` — namespace on the `using`
+- Create: `SharpMUSH.Library/Common/MessageFormatting.cs`
+- Modify: `SharpMUSH.Implementation/Common/MessageHelpers.cs` — the pure formatting members leave
+- Modify: every consumer the build names — the brief's list is not authoritative
 
 **Interfaces:**
-- Produces: `SharpMUSH.Library.Common.AttributeHelpers`, `SharpMUSH.Library.Common.MessageHelpers`
+- Produces: `SharpMUSH.Library.Common.AttributeHelpers`, `SharpMUSH.Library.Common.MessageFormatting`
 
 `ILookService` lives in `SharpMUSH.Library` and the look body calls
-`AttributeHelpers.EvaluateFormatAttribute` and `MessageHelpers.FormatMStringsWithOxfordComma`.
-Both classes already import nothing above `SharpMUSH.Library`, so this is a namespace move.
+`AttributeHelpers.EvaluateFormatAttribute`, `MessageHelpers.FormatMStringsWithOxfordComma` and
+`MessageHelpers.FormatObjectWithDbrefMString`.
 
-- [ ] **Step 1: Move both files and change their namespace**
+`AttributeHelpers` is Library-clean and moves whole. `MessageHelpers` is **not**:
+`ProcessMessageAsync` calls `ArgHelpers.NameList` with no `using`, relying on the shared
+`SharpMUSH.Implementation.Common` namespace. `ArgHelpers` cannot follow it — it calls `Pairwise`
+from `SharpMUSH.Implementation.Tools.LinqExtensions`, which is `internal` to that assembly, and it
+has 20+ consumers across Implementation.
+
+So `MessageHelpers` stays put and only its pure formatting members move, into a new
+`MessageFormatting`. The member that drags in `ArgHelpers` serves a speech path
+(`GeneralCommands.cs:7660`), not look. No forwarding wrappers: one definition, one name.
+
+- [ ] **Step 1: Move `AttributeHelpers` and split the formatting members out of `MessageHelpers`**
 
 ```bash
 mkdir -p SharpMUSH.Library/Common
 git mv SharpMUSH.Implementation/Common/AttributeHelpers.cs SharpMUSH.Library/Common/AttributeHelpers.cs
-git mv SharpMUSH.Implementation/Common/MessageHelpers.cs SharpMUSH.Library/Common/MessageHelpers.cs
 sed -i 's/^namespace SharpMUSH\.Implementation\.Common;/namespace SharpMUSH.Library.Common;/' \
-  SharpMUSH.Library/Common/AttributeHelpers.cs SharpMUSH.Library/Common/MessageHelpers.cs
+  SharpMUSH.Library/Common/AttributeHelpers.cs
 ```
+
+Then create `SharpMUSH.Library/Common/MessageFormatting.cs` as `public static class MessageFormatting`
+in namespace `SharpMUSH.Library.Common`, and move into it the pure formatting members —
+`FormatWithOxfordComma`, `FormatMStringsWithOxfordComma` and `FormatObjectWithDbrefMString` —
+deleting them from `MessageHelpers`. Check each candidate's dependencies first: anything touching
+`ArgHelpers` or another Implementation-bound type stays behind. Decide `DetermineMessageType` and
+`StripMessageTypePrefix` on their merits and record which way you went.
+
+Do not leave forwarding wrappers. One definition, one name.
 
 - [ ] **Step 2: Build to find every broken reference**
 
