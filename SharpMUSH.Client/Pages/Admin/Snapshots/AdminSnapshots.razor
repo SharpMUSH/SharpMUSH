@@ -1,0 +1,122 @@
+@page "/admin/snapshots"
+@using System.Net.Http.Json
+@using System.Text.Json
+@using SharpMUSH.Library.Models.Snapshots
+@attribute [Authorize]
+@inject IHttpClientFactory HttpClients
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
+<MudStack Spacing="3" Class="pa-4">
+    <MudText Typo="Typo.h4">@Loc["SnapshotsTitle"]</MudText>
+    <MudText>@Loc["SnapshotsIntro"]</MudText>
+    <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
+    <MudButton OnClick="Load" Disabled="_busy">@Loc["SnapshotsLoad"]</MudButton>
+    @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+    @if (_notice is not null) { <MudAlert Severity="Severity.Success">@_notice</MudAlert> }
+    @if (_history?.PendingRecoveryId is { } recovery)
+    {
+        <MudAlert Severity="Severity.Warning">@Loc["SnapshotsRecovery", recovery]</MudAlert>
+    }
+    <AuthorizeView Policy="snapshots.capture"><Authorized>
+    <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
+    <MudNumericField T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
+    <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="_busy">@Loc["SnapshotsCapture"]</MudButton>
+    </Authorized></AuthorizeView>
+    @if (_history is not null)
+    {
+        <MudSelect T="string" Value="_selected" ValueChanged="Select" Label="@Loc["SnapshotsChoose"]">
+            @foreach (var saved in _history.Snapshots)
+            {
+                <MudSelectItem T="string" Value="@saved.Id">@saved.Description — @DateTimeOffset.FromUnixTimeMilliseconds(saved.CreatedAt).ToLocalTime() (@saved.Id[..8])</MudSelectItem>
+            }
+        </MudSelect>
+    }
+    @if (_selected is not null)
+    {
+        <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
+        <MudCheckBox @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
+        <MudCheckBox @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
+        <MudCheckBox @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />
+        <AuthorizeView Policy="snapshots.restore">
+            <Authorized>
+                <MudButton OnClick="Preview" Disabled="_busy">@Loc["SnapshotsPreview"]</MudButton>
+                @if (_preview is not null)
+                {
+                    <MudSimpleTable>
+                        <thead><tr><th>@Loc["SnapshotsField"]</th><th>@Loc["SnapshotsBefore"]</th><th>@Loc["SnapshotsAfter"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var change in _preview.Changes)
+                            {
+                                <tr><td>@change.Field @if (change.FormattingChanged) { <small>@Loc["SnapshotsFormattingChanged"]</small> }</td><td><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@change.Before</pre></td><td><pre style="white-space:pre-wrap;overflow-wrap:anywhere">@change.After</pre></td></tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                    <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="Restore" Disabled="_busy">@Loc["SnapshotsRestore"]</MudButton>
+                }
+            </Authorized>
+        </AuthorizeView>
+    }
+</MudStack>
+
+@code {
+    private string _target = "", _description = "", _attributes = "";
+    private string? _selected, _error, _notice;
+    private int _retain = 10;
+    private bool _busy, _locks, _flags, _name;
+    private SnapshotHistory? _history;
+    private SnapshotPreview? _preview;
+    private HttpClient Api => HttpClients.CreateClient("api");
+    private SnapshotSelection Selection => new(_attributes.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), _locks, _flags, _name);
+    private void ClearPreview() => _preview = null;
+    private void ClearTarget() { _history = null; _selected = null; ClearPreview(); }
+    private void Select(string id)
+    {
+        _selected = id;
+        var saved = _history!.Snapshots.Single(s => s.Id == id);
+        _attributes = string.Join('\n', saved.Attributes.Select(a => a.Name).Concat(saved.AbsentAttributes));
+        if (saved.RecoverySelection is { } recovery) { _locks = recovery.Locks; _flags = recovery.Flags; _name = recovery.Name; }
+        ClearPreview();
+    }
+    private async Task Load() => await Run(async () =>
+    {
+        var response = await Api.GetAsync("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target));
+        _history = await Read<SnapshotHistory>(response);
+    });
+    private async Task Capture() => await Run(async () =>
+    {
+        var response = await Api.PostAsJsonAsync("api/object-snapshots/capture", new { ObjectId = _target, Description = _description, Retain = _retain });
+        var saved = await Read<ObjectSnapshot>(response);
+        if (saved is not null) { _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target)); _notice = Loc["SnapshotsCaptured"]; ClearPreview(); }
+    });
+    private async Task Preview() => await Run(async () =>
+    {
+        ClearPreview();
+        _preview = await Read<SnapshotPreview>(await Api.PostAsJsonAsync("api/object-snapshots/preview", new { ObjectId = _target, SnapshotId = _selected, Selection }));
+    });
+    private async Task Restore() => await Run(async () =>
+    {
+        var result = await Read<SnapshotRestoreResult>(await Api.PostAsJsonAsync("api/object-snapshots/restore", new { ObjectId = _target, SnapshotId = _selected, Selection, PreviewToken = _preview!.Token }));
+        ClearPreview();
+        if (result is not null)
+        {
+            if (result.Completed) _notice = Loc["SnapshotsRestored", result.RecoverySnapshotId]; else _error = result.Error;
+            _history = await Api.GetFromJsonAsync<SnapshotHistory>("api/object-snapshots?objectId=" + Uri.EscapeDataString(_target));
+        }
+    });
+    private async Task<T?> Read<T>(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<T>();
+        var body = await response.Content.ReadAsStringAsync();
+        try { using var document = JsonDocument.Parse(body); _error = document.RootElement.TryGetProperty("error", out var error) ? error.GetString() : Loc["SnapshotsFailed"]; }
+        catch (JsonException) { _error = Loc["SnapshotsFailed"]; }
+        return default;
+    }
+    private async Task Run(Func<Task> action)
+    {
+        _busy = true; _error = null; _notice = null;
+        try { await action(); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException) { _error = Loc["SnapshotsFailed"]; }
+        finally { _busy = false; }
+    }
+}

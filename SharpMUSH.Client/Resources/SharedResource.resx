@@ -3706,4 +3706,27 @@
   <data name="EnumPermRealityAdminDesc" xml:space="preserve"><value>Administer reality definitions and assignments.</value></data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>Highest priority explicit Allow or Deny decides each scope; Deny wins ties. Inherit uses a granted parent scope only when no role explicitly decides the child. A child denial blocks even a higher priority parent grant. No grant means denied. Delegated managers can edit only lower priority grants they possess, and cannot change their own roles or restrictions.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Your current access: {0}; priority {1}; roles {2}; resolution {3}.</value></data>
+<data name="SnapshotsTitle" xml:space="preserve"><value>Object snapshots</value></data>
+<data name="SnapshotsIntro" xml:space="preserve"><value>Select an active character that controls the object. Capture a recovery point, select the fields to restore, then review the changes. Credentials and structural links are excluded.</value></data>
+<data name="SnapshotsObject" xml:space="preserve"><value>Object identity (#number:creation)</value></data>
+<data name="SnapshotsLoad" xml:space="preserve"><value>Load snapshots</value></data>
+<data name="SnapshotsRecovery" xml:space="preserve"><value>A restore stopped. Preview and restore recovery snapshot {0} before another restore.</value></data>
+<data name="SnapshotsDescription" xml:space="preserve"><value>Description</value></data>
+<data name="SnapshotsRetention" xml:space="preserve"><value>Snapshots to retain (1–20)</value></data>
+<data name="SnapshotsCapture" xml:space="preserve"><value>Capture snapshot</value></data>
+<data name="SnapshotsChoose" xml:space="preserve"><value>Choose snapshot</value></data>
+<data name="SnapshotsAttributes" xml:space="preserve"><value>Attribute names to restore</value></data>
+<data name="SnapshotsAttributesHelp" xml:space="preserve"><value>One exact name per line. Remove names to restore only part of the snapshot. Attributes created later are retained.</value></data>
+<data name="SnapshotsLocks" xml:space="preserve"><value>Restore captured locks</value></data>
+<data name="SnapshotsFlags" xml:space="preserve"><value>Restore object flags</value></data>
+<data name="SnapshotsName" xml:space="preserve"><value>Restore object name</value></data>
+<data name="SnapshotsPreview" xml:space="preserve"><value>Preview selected changes</value></data>
+<data name="SnapshotsField" xml:space="preserve"><value>Field</value></data>
+<data name="SnapshotsBefore" xml:space="preserve"><value>Current value</value></data>
+<data name="SnapshotsAfter" xml:space="preserve"><value>Restored value</value></data>
+<data name="SnapshotsRestore" xml:space="preserve"><value>Restore these changes</value></data>
+<data name="SnapshotsCaptured" xml:space="preserve"><value>Snapshot captured.</value></data>
+<data name="SnapshotsRestored" xml:space="preserve"><value>Restore completed. Recovery snapshot: {0}</value></data>
+<data name="SnapshotsFailed" xml:space="preserve"><value>The snapshot request failed. Reload and try again.</value></data>
+<data name="SnapshotsFormattingChanged" xml:space="preserve"><value>Formatting will change.</value></data>
 </root>

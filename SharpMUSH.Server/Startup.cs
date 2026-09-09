@@ -530,6 +530,7 @@ public class Startup(
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
+		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
 
 		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by
