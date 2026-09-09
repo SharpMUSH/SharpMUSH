@@ -875,7 +875,9 @@ public class SharpMUSHParserVisitor(
 			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
-			using var retainedArguments = RestrictedTextRetention.Enter(parser.CurrentState);
+			// Start at the already recognized wrapper boundary, including fn chains
+			// that serialize before the operation allowlist becomes ambient.
+			using var retainedArguments = RestrictedTextRetention.Enter(parser.CurrentState, isolated);
 
 			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
 			{

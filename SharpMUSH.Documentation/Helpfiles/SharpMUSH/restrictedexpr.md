@@ -53,7 +53,8 @@ nested restricted calls share the active execution budget. Inputs and expression
 text together, and each combined result, must fit the shared 5 MiB character
 ceiling. Arguments, expression fragments, and serialized `fn()` source retained across
 active nested calls also share that ceiling. Each expansion is checked before it
-is retained, and `fn()` reserves space before serializing its next call. Expansion
+is retained, and `fn()` reserves space before serializing its next call. This also
+covers chains of `fn()` calls leading into the wrapper. Expansion
 and concatenation are checked before allocation. Restricted
 calls accept at most 33 arguments, including the target name supplied to `fn()`,
 and retain each target function's smaller argument limit. Excess arguments are

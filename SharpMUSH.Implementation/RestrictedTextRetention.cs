@@ -9,9 +9,10 @@ internal static class RestrictedTextRetention
 {
 	private static readonly AsyncLocal<Budget?> Active = new();
 
-	internal static Lease? Enter(ParserState state)
+	internal static Lease? Enter(ParserState state, bool recognizedEntry = false)
 	{
-		if (EvaluationRestrictions.Current is null && state.Restrictions is null) return null;
+		if (!recognizedEntry && Active.Value is null
+			&& EvaluationRestrictions.Current is null && state.Restrictions is null) return null;
 		var previous = Active.Value;
 		var budget = previous ?? new Budget();
 		Active.Value = budget;

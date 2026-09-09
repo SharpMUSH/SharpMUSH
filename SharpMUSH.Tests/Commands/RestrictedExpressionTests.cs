@@ -55,9 +55,10 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task RestrictedFnChainsBoundRetainedSource(bool restricted)
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task RestrictedFnChainsBoundRetainedSource(bool restricted, bool indirectEntry)
 	{
 		var original = (MUSHCodeParser)Factory.FunctionParser;
 		var library = new FunctionLibraryService();
@@ -67,8 +68,9 @@ public class RestrictedExpressionTests
 		library["fn"] = (fn with { Function = async parser => { calls++; return await fn.Function(parser); } }, true);
 		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
 		var payload = new string('x', 512 * 1024);
-		var expression = $"fn({string.Concat(Enumerable.Repeat("fn,", 11))}strlen,{payload})";
-		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(fn strlen,{expression})" : expression));
+		var target = indirectEntry ? $"restrictedexpr,strlen,strlen({payload})" : $"strlen,{payload}";
+		var expression = $"fn({string.Concat(Enumerable.Repeat("fn,", 11))}{target})";
+		var result = await parser.FunctionParse(MarkupText.Plain(restricted && !indirectEntry ? $"restrictedexpr(fn strlen,{expression})" : expression));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(restricted ? ErrorMessages.Returns.OutputTooLarge : payload.Length.ToString());
 		if (restricted) await Assert.That(calls).IsLessThan(12);
 		else await Assert.That(calls).IsEqualTo(12);
