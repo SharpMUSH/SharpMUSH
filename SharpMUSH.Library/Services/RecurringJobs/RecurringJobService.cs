@@ -150,7 +150,7 @@ public sealed class RecurringJobService(
 					using var admissionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
 					using var admissionBudget = new ExecutionBudget(Timeout.InfiniteTimeSpan, admissionCancellation.Token);
 					using var admissionScope = admissionBudget.Enter();
-					var admission = await queue.EnqueueWork(() => Execute(job.Id, token), "recurring:" + job.Id, "recurring", Identity(job.Character));
+					var admission = await queue.EnqueueWork(() => Execute(job.Id, token), "recurring:" + job.Id, "recurring", Identity(job.Character), notifyOnRejection: false);
 					if (!admission.Accepted)
 					{
 						job = job with { RunToken = null, Status = "rejected", LastError = "Queue rejected firing: " + admission.Reason };

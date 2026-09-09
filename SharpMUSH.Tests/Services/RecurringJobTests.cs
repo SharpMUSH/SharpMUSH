@@ -47,7 +47,7 @@ public class RecurringJobTests
 		var queue = Substitute.For<QueueScheduler>();
 		var pending = new HashSet<(string Trigger, string Group)>();
 		queue.HasPendingWork(Arg.Any<string>(), Arg.Any<string>()).Returns(call => pending.Contains((call.ArgAt<string>(0), call.ArgAt<string>(1))));
-		queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+		queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>(), notifyOnRejection: Arg.Any<bool>())
 			.Returns(call =>
 			{
 				var action = call.ArgAt<Func<ValueTask<CallState?>>>(0);
@@ -132,7 +132,7 @@ public class RecurringJobTests
 			await release.Task.WaitAsync(observed);
 			return new QueueAdmissionResult(1, QueueRejectionReason.None);
 		}
-		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>(), notifyOnRejection: Arg.Any<bool>())
 			.Returns(_ => Admit());
 		using var cancellation = new CancellationTokenSource();
 		var polling = context.Service.RunDueAsync(cancellation.Token);
@@ -298,7 +298,7 @@ public class RecurringJobTests
 	public async Task QueueRejectionIsDurableAndDoesNotRetryTheSameFiring()
 	{
 		var context = await Setup();
-		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>(), notifyOnRejection: Arg.Any<bool>())
 			.Returns(new QueueAdmissionResult(null, QueueRejectionReason.OwnerLimit));
 		await Create(context);
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
@@ -308,7 +308,7 @@ public class RecurringJobTests
 		await Assert.That(job.Status).IsEqualTo("rejected");
 		await Assert.That(job.LastError).Contains("OwnerLimit");
 		await Assert.That(job.RunToken).IsNull();
-		await context.Queue.Received(1).EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), "recurring", context.Actor.ActiveCharacter!.Value);
+		await context.Queue.Received(1).EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), "recurring", context.Actor.ActiveCharacter!.Value, notifyOnRejection: false);
 	}
 
 	[Test, NotInParallel]
