@@ -11,7 +11,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Services;
 
@@ -240,27 +239,25 @@ public class AttributeService(
 	/// which subsumes Penn's <c>if (target == ancestor) ancestor = NOTHING</c> (<c>attrib.c:322</c>)
 	/// and keeps a shared object from being flag-tested twice.
 	/// </remarks>
-	private async ValueTask<DBRef[]> AncestorTargetChainAsync(AnySharpObject obj, DBRef ancestorRef)
+	private async ValueTask<List<DBRef>> AncestorTargetChainAsync(AnySharpObject obj, DBRef ancestorRef)
 	{
-		var chain = new List<DBRef>(await ParentChainAsync(obj));
+		var chain = await ParentChainAsync(obj);
 
 		var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef));
 		if (ancestorNode.IsNone)
 		{
-			return chain.ToArray();
+			return chain;
 		}
 
 		foreach (var target in await ParentChainAsync(ancestorNode.Known))
 		{
-			if (chain.Any(seen => seen.SameObjectAs(target)))
+			if (!chain.Any(seen => seen.SameObjectAs(target)))
 			{
-				continue;
+				chain.Add(target);
 			}
-
-			chain.Add(target);
 		}
 
-		return chain.ToArray();
+		return chain;
 	}
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
@@ -481,8 +478,7 @@ public class AttributeService(
 			? await attributes
 				.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x))
 				.ToArrayAsync(CancellationToken.None)
-			: (await GetVisibleAttributesAsync(attributes, executor, obj, depth))
-			.ToArray();
+			: await GetVisibleAttributesAsync(attributes, executor, obj, depth).ToArrayAsync();
 	}
 
 	public async ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor,
@@ -615,53 +611,55 @@ public class AttributeService(
 		};
 	}
 
-	private async ValueTask<ImmutableList<SharpAttribute>> GetVisibleAttributesAsync(
-		IAsyncEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth = 1)
+	/// <summary>
+	/// Every visible attribute at this level, then each one's visible subtree in turn, down to
+	/// <paramref name="depth"/> levels. The level is held in a list because it is walked twice:
+	/// once to yield it, once to descend.
+	/// </summary>
+	private async IAsyncEnumerable<SharpAttribute> GetVisibleAttributesAsync(
+		IAsyncEnumerable<SharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth)
 	{
-		if (depth == 0) return [];
+		if (depth == 0) yield break;
 
-		var visibleList = (await attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x))
-				.ToListAsync())
-			.ToImmutableList();
+		var visible = await attributes.Where((x, _) => ps.CanViewAttribute(executor, obj, x)).ToListAsync();
 
-		foreach (var attribute in visibleList)
+		foreach (var attribute in visible)
 		{
-			var subAttributes =
-				await GetVisibleAttributesAsync(await attribute.Leaves.WithCancellation(CancellationToken.None), executor, obj,
-					depth - 1);
-			visibleList = visibleList.AddRange(subAttributes);
+			yield return attribute;
 		}
 
-		return visibleList;
+		foreach (var attribute in visible)
+		{
+			var leaves = await attribute.Leaves.WithCancellation(CancellationToken.None);
+			await foreach (var descendant in GetVisibleAttributesAsync(leaves, executor, obj, depth - 1))
+			{
+				yield return descendant;
+			}
+		}
 	}
 
+	/// <summary>
+	/// Breadth-first: each level is yielded as it is filtered, and its leaves are gathered on the way
+	/// so the next level never re-runs the permission test on its parents.
+	/// </summary>
 	private async IAsyncEnumerable<LazySharpAttribute> GetVisibleLazyAttributesAsync(
-		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int currentDepth = 1)
+		IAsyncEnumerable<LazySharpAttribute> attributes, AnySharpObject executor, AnySharpObject obj, int depth)
 	{
-		var attrs = attributes;
-		var stagingAttrs = new List<IAsyncEnumerable<LazySharpAttribute>>();
+		var level = attributes;
 
-		const int maxDepth = 0;
-
-		while (currentDepth > maxDepth)
+		for (var remaining = depth; remaining > 0; remaining--)
 		{
-			var visibleAttributes = attrs
-				.Where(async (x, _)
-					=> await ps.CanViewAttribute(executor, obj, x));
+			var nextLevel = new List<IAsyncEnumerable<LazySharpAttribute>>();
 
-			// Multiple Iteration that may be able to be optimized away.
-			await foreach (var attr in visibleAttributes)
+			await foreach (var attribute in level.Where(async (x, _) => await ps.CanViewAttribute(executor, obj, x)))
 			{
-				yield return attr;
-				stagingAttrs.AddRange(await attr.Leaves.WithCancellation(CancellationToken.None));
+				yield return attribute;
+				nextLevel.Add(await attribute.Leaves.WithCancellation(CancellationToken.None));
 			}
 
-			attrs = visibleAttributes
-				.Select<LazySharpAttribute, IAsyncEnumerable<LazySharpAttribute>>(async (x, _) =>
-					await x.Leaves.WithCancellation(CancellationToken.None))
-				.SelectMany(x => x);
+			if (nextLevel.Count == 0) yield break;
 
-			currentDepth++;
+			level = nextLevel.ToAsyncEnumerable().SelectMany(x => x);
 		}
 	}
 
@@ -716,7 +714,7 @@ public class AttributeService(
 			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
 
 		var origin = obj.Object().DBRef;
-		DBRef[]? parentChain = null;
+		List<DBRef>? parentChain = null;
 
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
@@ -757,7 +755,7 @@ public class AttributeService(
 	/// build; only legacy or hand-edited data could. The fix belongs in the three providers (bound
 	/// their traversals to <c>MaxParents</c>), not here.
 	/// </remarks>
-	private async ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
+	private async ValueTask<List<DBRef>> ParentChainAsync(AnySharpObject obj)
 	{
 		var chain = new List<DBRef> { obj.Object().DBRef };
 		var current = obj.Object();
@@ -777,7 +775,7 @@ public class AttributeService(
 			current = parentObj;
 		}
 
-		return chain.ToArray();
+		return chain;
 	}
 
 	/// <inheritdoc/>
@@ -864,9 +862,41 @@ public class AttributeService(
 		}
 
 		var candidate = resolved[path.Length - 1];
-		return longNameOf(candidate).Equals(string.Join('`', path), StringComparison.OrdinalIgnoreCase)
+		return AttributePathEquals(longNameOf(candidate), path)
 			? candidate
 			: null;
+	}
+
+	/// <summary>
+	/// Whether <paramref name="longName"/> is exactly <paramref name="path"/> joined with <c>`</c>,
+	/// case-insensitively, without building the joined string - this runs on every tree read.
+	/// </summary>
+	private static bool AttributePathEquals(ReadOnlySpan<char> longName, string[] path)
+	{
+		for (var i = 0; i < path.Length; i++)
+		{
+			var segment = path[i];
+			if (!longName.StartsWith(segment, StringComparison.OrdinalIgnoreCase))
+			{
+				return false;
+			}
+
+			longName = longName[segment.Length..];
+
+			if (i == path.Length - 1)
+			{
+				return longName.IsEmpty;
+			}
+
+			if (longName.IsEmpty || longName[0] != '`')
+			{
+				return false;
+			}
+
+			longName = longName[1..];
+		}
+
+		return false;
 	}
 
 	/// <summary>
@@ -980,7 +1010,7 @@ public class AttributeService(
 
 		var ordered = results.OrderBy(x => x.Attribute.LongName, _attributeSort);
 		var origin = obj.Object().DBRef;
-		DBRef[]? parentChain = null;
+		List<DBRef>? parentChain = null;
 
 		foreach (var (attr, source) in ordered)
 		{
@@ -1265,39 +1295,36 @@ public class AttributeService(
 		// Check both attribute permissions AND object permissions
 		// Attribute permissions: executor must be able to set each attribute in the path
 		// Object permissions: executor must control the object
-		var permission = true;
 		foreach (var x in existing)
 		{
 			if (!await ps.CanSet(executor, obj, x))
 			{
-				permission = false;
-				break;
+				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 			}
-		}
-
-		if (!permission)
-		{
-			return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
 		}
 
 		// If the target attribute doesn't exist yet (creating new), we still need to check
 		// permissions on the existing ancestor path. The stream above yields nothing when
 		// the full path doesn't exist (count != attribute.Length check in GetAttributeAsync).
-		// Check each existing prefix of the path.
-		if (attrPath.Length > 1)
+		// Check each existing prefix of the path, longest first, stopping at the first one that
+		// resolves: its own path covers every shorter prefix. When `existing` resolved, it IS the
+		// whole path and every prefix was already checked above.
+		if (attrPath.Length > 1 && existing.Count == 0)
 		{
 			for (var i = attrPath.Length - 1; i >= 1; i--)
 			{
-				var prefix = attrPath[..i];
-				var prefixAttr = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
-				var prefixPermission = await prefixAttr.AllAsync(async (x, _) => await ps.CanSet(executor, obj, x));
-				if (!prefixPermission)
+				var prefix = await mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, attrPath[..i]))
+					.ToListAsync();
+
+				foreach (var x in prefix)
 				{
-					return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+					if (!await ps.CanSet(executor, obj, x))
+					{
+						return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+					}
 				}
-				// If prefix stream returned results, we found existing ancestors — done checking
-				var prefixCheck = mediator.CreateStream(new GetAttributeQuery(obj.Object().DBRef, prefix));
-				if (await prefixCheck.AnyAsync())
+
+				if (prefix.Count > 0)
 				{
 					break;
 				}
@@ -1364,7 +1391,7 @@ public class AttributeService(
 
 		// checkParents is false above, so every match is sourced from obj itself - the whole
 		// write path only ever touches the object's own attributes (Penn's atr_iter_get).
-		var attrArr = (await attr.ToArrayAsync()).Select(x => x.Attribute).ToArray();
+		var attrArr = await attr.Select(x => x.Attribute).ToArrayAsync();
 		var isWipe = patternMode == IAttributeService.AttributePatternMode.Wildcard;
 
 		// PennMUSH's wipe_helper (src/set.c:1503-1504):
@@ -1526,9 +1553,13 @@ public class AttributeService(
 		var segments = longName.Split('`');
 		var result = new SharpAttribute[segments.Length];
 
+		// Each prefix's name is a leading slice of longName ending at the next backtick, so it is
+		// cut from the name rather than re-joined from the segments.
+		var prefixEnd = -1;
 		for (var i = 0; i < segments.Length; i++)
 		{
-			var prefixName = string.Join('`', segments[..(i + 1)]);
+			prefixEnd += segments[i].Length + 1;
+			var prefixName = longName[..prefixEnd];
 
 			if (known.TryGetValue(prefixName, out var attribute))
 			{
@@ -1588,13 +1619,6 @@ public class AttributeService(
 		// nothing else - root itself is never matched by this pattern.
 		// checkParents: false - a wipe only ever touches the object's own subtree, so every
 		// match here is sourced from dbref and the source can be dropped.
-		var rawDescendants = (await mediator
-				.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
-					IAttributeService.AttributePatternMode.Wildcard))
-				.ToArrayAsync())
-			.Select(x => x.Attribute)
-			.ToArray();
-
 		// "?" is a legal attribute-name character (ValidateService.cs), and the wildcard
 		// translation maps a literal "?" in the pattern to a single-char regex wildcard - so
 		// an attribute literally named e.g. "WHAT?" turns "WHAT?`**" into a pattern that can
@@ -1602,9 +1626,13 @@ public class AttributeService(
 		// already be sitting in attrArr under its own gate, so this was never an actual
 		// over-delete - but a delete path has no business trusting an unescaped
 		// string-interpolated wildcard. Guard in memory instead.
-		var descendants = rawDescendants
-			.Where(d => d.LongName!.StartsWith(rootName + "`", StringComparison.OrdinalIgnoreCase))
-			.ToArray();
+		var subtreePrefix = rootName + "`";
+		var descendants = await mediator
+			.CreateStream(new GetAttributesQuery(dbref, $"{rootName}`**".ToUpper(), false,
+				IAttributeService.AttributePatternMode.Wildcard))
+			.Select(x => x.Attribute)
+			.Where(d => d.LongName!.StartsWith(subtreePrefix, StringComparison.OrdinalIgnoreCase))
+			.ToArrayAsync();
 
 		if (descendants.Length == 0)
 		{

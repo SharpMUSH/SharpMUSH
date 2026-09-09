@@ -227,7 +227,8 @@ public sealed class InMemoryWikiService : IWikiService
 		_slugIndex.TryRemove(slugKey, out _);
 		_revisions.TryRemove(id, out _);
 
-		foreach (var key in _translations.Keys.Where(k => k.PageId == id).ToList())
+		// Keys is a snapshot, so removing while walking it is safe.
+		foreach (var key in _translations.Keys.Where(k => k.PageId == id))
 			_translations.TryRemove(key, out _);
 
 		return Task.FromResult<OneOf<None, NotFound>>(new None());

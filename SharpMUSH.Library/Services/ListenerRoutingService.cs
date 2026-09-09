@@ -234,25 +234,19 @@ public class ListenerRoutingService(
 
 		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
 
-		var connections = connectionService.Get(owner.Object.DBRef);
-		var isConnected = await connections.AnyAsync();
-		if (!isConnected)
+		// Held rather than streamed: the same list gates the relay here and receives it below.
+		var connections = await connectionService.Get(owner.Object.DBRef).ToListAsync();
+		if (connections.Count == 0)
 			return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
 		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
 		if (!hasVerbose)
 		{
-			var puppetLocation = await puppet.Match<ValueTask<AnySharpContainer?>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer?>(room),
-				async exit => await exit.Location.WithCancellation(CancellationToken.None),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None)
-			);
-
+			var puppetLocation = await LocateService.FriendlyWhereIs(puppet);
 			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
 
-			if (puppetLocation?.Object().DBRef == ownerLocation.Object().DBRef)
+			if (puppetLocation.Object().DBRef == ownerLocation.Object().DBRef)
 				return;
 		}
 
@@ -276,10 +270,10 @@ public class ListenerRoutingService(
 			MarkupText.Plain(prefix),
 			message.Match(markupString => markupString, MarkupText.Plain));
 
-		await foreach (var conn in connectionService.Get(owner.Object.DBRef))
+		var serialized = MarkupTextSerializer.Serialize(relayed);
+		foreach (var conn in connections)
 		{
-			await publishEndpoint.HandlePublish(
-				new MarkupOutputMessage(conn.Handle, MarkupTextSerializer.Serialize(relayed)));
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(conn.Handle, serialized));
 		}
 	}
 
