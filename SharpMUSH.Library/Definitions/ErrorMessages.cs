@@ -1338,19 +1338,6 @@ public static class ErrorMessages
 
 		public const string SelectMustSpecifyTestString = "You must specify a test string.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SelectTestingStringFormat = "@select: Testing string '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SelectExpressionActionPairsFormat = "  Expression/action pairs: {0}";
-		public const string SelectHasDefaultAction = "  Has default action";
-		public const string SelectModeRegexp = "  Mode: Regular expression matching";
-		public const string SelectModeWildcard = "  Mode: Wildcard pattern matching";
-		public const string SelectExecutionInline = "  Execution: Inline (immediate)";
-		public const string SelectNoBreakWontPropagate = "  @break won't propagate to caller";
-		public const string SelectQregistersLocalized = "  Q-registers will be localized";
-		public const string SelectQregistersCleared = "  Q-registers will be cleared";
-		public const string SelectExecutionQueued = "  Execution: Queued";
-		public const string SelectWillQueueNotify = "  Will queue @notify after completion";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SelectInvalidRegexPatternFormat = "Invalid regex pattern: {0}";
 
 		public const string TriggerMustSpecifyAttributePath = "You must specify an object/attribute to trigger.";
