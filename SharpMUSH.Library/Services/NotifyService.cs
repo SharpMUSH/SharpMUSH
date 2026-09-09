@@ -108,10 +108,10 @@ public class NotifyService(
 			try
 			{
 				var location = await sender.Match<ValueTask<DBRef>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					async player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
 					room => ValueTask.FromResult(room.Object.DBRef),
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+					async exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					async thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
 				);
 
 				var notificationContext = new NotificationContext(

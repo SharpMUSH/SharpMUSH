@@ -25,6 +25,70 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	[Arguments("preflight")]
+	[Arguments("admission")]
+	[Arguments("delay")]
+	public async Task WaitCancellationReachesBlockedPreflightAndQueueRequest(string phase)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("wait-cancel-" + Guid.NewGuid().ToString("N"), player));
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var admissions = 0;
+		async Task Block(CancellationToken token)
+		{
+			entered.TrySetResult();
+			await release.Task.WaitAsync(token);
+		}
+		async IAsyncEnumerable<SharpMUSH.Library.Models.SharpAttribute> Read(
+			[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			if (phase == "preflight") await Block(token);
+			yield break;
+		}
+		async ValueTask<SharpMUSH.Library.Models.SchedulerModels.QueueAdmissionResult> Admit(CancellationToken token)
+		{
+			admissions++;
+			await Block(token);
+			return new(1, SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.None);
+		}
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.Send(call.ArgAt<GetObjectNodeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Read(call.ArgAt<CancellationToken>(1)));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.QueueCommandListWithTimeoutRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => Admit(call.ArgAt<CancellationToken>(1)));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Requests.QueueDelayedCommandListRequest>(), Arg.Any<CancellationToken>())
+			.Returns(call => Admit(call.ArgAt<CancellationToken>(1)));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with
+		{
+			Arguments = new() { ["0"] = new(phase == "delay" ? "3600" : target + "/3600"), ["1"] = new("think cancelled") }
+		});
+		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Wait")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+		using var cancellation = new CancellationTokenSource();
+		using var budget = ExecutionBudget.FromMilliseconds(30000, cancellation.Token);
+		using var scope = budget.Enter();
+		var operation = commands.Wait(parser, metadata).AsTask();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			cancellation.Cancel();
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await operation.WaitAsync(TimeSpan.FromSeconds(2)));
+			await Assert.That(admissions).IsEqualTo(phase == "preflight" ? 0 : 1);
+		}
+		finally
+		{
+			release.TrySetResult();
+			try { await operation; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
 	[Arguments(0, "none")]
 	[Arguments(0, "flag")]
 	[Arguments(0, "child")]
