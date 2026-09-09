@@ -74,7 +74,7 @@ public partial class Functions
 					parser, executor, rawAttrArg,
 					new Dictionary<string, CallState> { { "0", new CallState(item) } });
 
-				if (result.Truthy())
+				if (result.Truthy(parser))
 				{
 					sawPass = true;
 
@@ -139,7 +139,7 @@ public partial class Functions
 					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
 				});
 
-				if ((await newParser.FunctionParse(attrValue))!.Message!.Truthy())
+				if ((await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser))
 				{
 					sawPass = true;
 
