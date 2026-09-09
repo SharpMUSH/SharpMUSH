@@ -153,6 +153,24 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	public async Task AdmissionEscapeCannotCancelReplacementAfterSnapshot()
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "FIRST", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var snapshot = h.Sessions.CapturePendingInput(1);
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "SECOND", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var sessions = Substitute.For<IInputSessionService>();
+		sessions.CapturePendingInput(1).Returns(snapshot);
+		sessions.TryEscapeAsync(1, "transport", Arg.Any<MarkupText>(), Arg.Any<Guid?>())
+			.Returns(call => h.Sessions.TryEscapeAsync(1, "transport", call.Arg<MarkupText>(), call.Arg<Guid?>()));
+		await using var queue = Queue(h, sessions);
+		await Assert.That((await queue.WriteUserCommand(1, MarkupText.Plain("@input/cancel"),
+			ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" })).Accepted).IsTrue();
+		await Assert.That(h.Sessions.GetCapturing(1)?.CallbackAttribute).IsEqualTo("SECOND");
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task GenerationBoundEscapeCannotCancelAConcurrentReplacement()
 	{
 		var h = new Harness(); var caller = await h.Connect();

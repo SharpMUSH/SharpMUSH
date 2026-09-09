@@ -388,7 +388,7 @@ public partial class TaskScheduler(
 	{
 		var snapshot = inputSessions?.CapturePendingInput(handle) ?? default;
 		var generation = snapshot.Ticket?.InitialGeneration ?? inputSessions?.GetCaptureGeneration(handle);
-		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command))
+		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command, snapshot.Session?.Id))
 			return new QueueAdmissionResult(0, QueueRejectionReason.None);
 		var capture = snapshot.Session;
 		return await Admit(async () =>
