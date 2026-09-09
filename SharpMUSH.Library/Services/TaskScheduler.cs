@@ -202,12 +202,12 @@ public partial class TaskScheduler(
 	{
 		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
 		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
-		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute)).LastOrDefaultAsync();
+		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
 		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
 		if (!god.IsPlayer) return;
 		if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer)))
+		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
 			throw new InvalidOperationException("Semaphore count update failed.");
 	}
 	private ValueTask<QueueAdmissionResult> Activate(long pid, bool semaphoreTimeout = false)
@@ -261,25 +261,35 @@ public partial class TaskScheduler(
 			{
 				try
 				{
-					lock (_admissionLock)
-					{
-						_running.Add(entry.Pid);
-					}
+					lock (_admissionLock) _running.Add(entry.Pid);
+					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+					// Released semaphore accounting still runs for halted entries, but shares the
+					// entry's elapsed-time limit. Link halt cancellation only for the user body.
+					using var accountingBudget = entry.BeforeExecution is null ? null : ExecutionBudget.FromMilliseconds(milliseconds);
+					using var accountingScope = accountingBudget?.Enter();
 					if (entry.BeforeExecution is not null)
 					{
 						try { await entry.BeforeExecution(); }
-						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}; continuing admitted work", entry.Pid); }
+						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}", entry.Pid); }
 					}
-					// Timeout bookkeeping must finish even when the user body has been cancelled.
 					lock (_admissionLock)
 					{
 						if (_stopping || entry.Cts.IsCancellationRequested) continue;
 					}
-					using var budget = ExecutionBudget.FromMilliseconds(configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000, entry.Cts.Token);
+					if (accountingBudget?.IsExceeded == true)
+					{
+						entry.Observation?.Complete(QueueOutcome.ExecutionLimit);
+						await NotifyExpired(entry);
+						continue;
+					}
+					using var budget = accountingBudget is null
+						? ExecutionBudget.FromMilliseconds(milliseconds, entry.Cts.Token)
+						: new ExecutionBudget(accountingBudget.Remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : accountingBudget.Remaining, entry.Cts.Token);
 					using var scope = budget.Enter();
 					using var observation = entry.Observation?.Enter();
 					try
 					{
+						budget.ThrowIfExceeded();
 						await entry.Action();
 						if (budget.IsExpired) await NotifyExpired(entry);
 						entry.Observation?.Complete(budget.IsExpired ? QueueOutcome.ExecutionLimit
