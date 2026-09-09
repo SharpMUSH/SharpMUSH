@@ -122,4 +122,155 @@ public class DidItServiceTests
 			await Node(mover.DbRef), await Node(locked.DbRef), IPermissionService.InteractType.See))
 			.IsTrue();
 	}
+
+	private IDidItService DidItService => WebAppFactoryArg.Services.GetRequiredService<IDidItService>();
+
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
+
+	/// <summary>Digs a fresh room and teleports every player into it, silently.</summary>
+	private async Task<AnySharpContainer> DigAndGather(params TestIsolationHelpers.TestPlayer[] players)
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName("DidItRoom");
+		var dig = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomRef = dig.Message!.ToPlainText().Trim();
+
+		foreach (var player in players)
+		{
+			await GodParser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@teleport/silent {player.DbRef}={roomRef}"));
+		}
+
+		var parsed = DBRef.TryParse(roomRef, out var dbref)
+			? dbref!.Value
+			: throw new InvalidOperationException($"@dig did not return a dbref: {roomRef}");
+
+		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Known.AsContainer;
+	}
+
+	[Test]
+	public async ValueTask WhatGoesToThePlayerAndIsEvaluated()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItWhat");
+		var thing = await Thing("WhatHolder");
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&GREET {thing}=Hello [name(%#)]."));
+
+		var messages = await MessagesWhile(actor.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(actor.DbRef),
+				Thing: await Node(thing),
+				What: "GREET")));
+
+		await Assert.That(messages.Any(m => m.Contains("Hello") && m.Contains(actor.Name))).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask DefIsUsedWhenTheAttributeIsAbsent()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItDef");
+		var thing = await Thing("NoGreet");
+
+		var messages = await MessagesWhile(actor.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(actor.DbRef),
+				Thing: await Node(thing),
+				What: "GREET",
+				Def: MarkupText.Plain("Nothing happens."))));
+
+		await Assert.That(messages.Any(m => m.Contains("Nothing happens."))).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask ODefIsPrefixedWithTheActorsName()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItActor");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItWatcher");
+		var roomDbRef = await DigAndGather(actor, watcher);
+		var thing = await Thing("ODefHolder");
+
+		var messages = await MessagesWhile(watcher.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(actor.DbRef),
+				Thing: await Node(thing),
+				OWhat: "OGREET",
+				ODef: "waves.",
+				Loc: roomDbRef)));
+
+		await Assert.That(messages.Any(m => m == $"{actor.Name} waves.")).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask OWhatIsEvaluatedOncePerCallNotOncePerListener()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItOnceActor");
+		var watcherA = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItOnceA");
+		var watcherB = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItOnceB");
+		var roomDbRef = await DigAndGather(actor, watcherA, watcherB);
+		var thing = await Thing("CounterHolder");
+
+		// The o-message increments a counter on the holder as a side effect. If the primitive
+		// evaluated per listener the counter would reach 2, and both watchers would see the
+		// message the OTHER listener's evaluation produced.
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&COUNT {thing}=0"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&OTICK {thing}=[set({thing},COUNT:[add(get({thing}/COUNT),1)])]ticks."));
+
+		await DidItService.DidIt(GodParser, new DidItRequest(
+			Player: await Node(actor.DbRef),
+			Thing: await Node(thing),
+			OWhat: "OTICK",
+			Loc: roomDbRef));
+
+		var count = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/COUNT)]"));
+		await Assert.That(count!.Message!.ToPlainText().Trim()).IsEqualTo("1");
+	}
+
+	[Test]
+	public async ValueTask ADarkLegalActorProducesNoOMessageButStillActs()
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItDark");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DidItDarkWatch");
+		var roomDbRef = await DigAndGather(wizard, watcher);
+		var thing = await Thing("DarkHolder");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set {wizard.DbRef}=DARK"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&AMARK {thing}=&MARKED me=yes"));
+
+		var messages = await MessagesWhile(watcher.DbRef, async () =>
+			await DidItService.DidIt(GodParser, new DidItRequest(
+				Player: await Node(wizard.DbRef),
+				Thing: await Node(thing),
+				OWhat: "OMARK",
+				ODef: "sneaks.",
+				AWhat: "AMARK",
+				Loc: roomDbRef)));
+
+		await Assert.That(messages.Any(m => m.Contains("sneaks."))).IsFalse();
+
+		await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>()
+			.DrainImmediateQueueForTests();
+
+		var marked = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MARKED)]"));
+		await Assert.That(marked!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+	}
 }

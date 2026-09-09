@@ -39,17 +39,27 @@ public static class TestIsolationHelpers
 	/// (e.g. <c>"ZT_ZMRCmd"</c> or <c>"PDT_SelfOwnership"</c>).
 	/// </param>
 	/// <returns>The <see cref="DBRef"/> of the newly created player.</returns>
-	public static async Task<DBRef> CreateTestPlayerAsync(
+	public static Task<DBRef> CreateTestPlayerAsync(
 		IServiceProvider services,
 		IMediator mediator,
 		string namePrefix)
+		=> CreateNamedTestPlayerAsync(services, mediator, GenerateUniqueName(namePrefix));
+
+	/// <summary>
+	/// As <see cref="CreateTestPlayerAsync"/>, but takes the finished name rather than a prefix, so a
+	/// caller that needs to know the player's name does not have to read it back out of the database.
+	/// </summary>
+	private static async Task<DBRef> CreateNamedTestPlayerAsync(
+		IServiceProvider services,
+		IMediator mediator,
+		string name)
 	{
 		var options = services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 		var defaultHome = new DBRef((int)options.CurrentValue.Database.DefaultHome);
 		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
 
 		return await mediator.Send(new CreatePlayerCommand(
-			GenerateUniqueName(namePrefix),
+			name,
 			"TestPassword123",
 			defaultHome,
 			defaultHome,
@@ -59,9 +69,10 @@ public static class TestIsolationHelpers
 	/// <summary>
 	/// Result returned by <see cref="CreateTestPlayerWithHandleAsync"/>: the player's
 	/// <see cref="DBRef"/> together with the connection handle that was registered and
-	/// bound so that <c>CommandParse(handle, …)</c> executes as that player.
+	/// bound so that <c>CommandParse(handle, …)</c> executes as that player, and the unique
+	/// name it was created under — which a test asserting on name-prefixed output needs.
 	/// </summary>
-	public record TestPlayer(DBRef DbRef, long Handle);
+	public record TestPlayer(DBRef DbRef, long Handle, string Name);
 
 	/// <summary>
 	/// Creates a fresh, isolated player <b>and</b> registers + binds a unique connection
@@ -75,14 +86,15 @@ public static class TestIsolationHelpers
 	/// A short, human-readable prefix included in the player name
 	/// (e.g. <c>"MvtTelSelf"</c> or <c>"MvtHome"</c>).
 	/// </param>
-	/// <returns>A <see cref="TestPlayer"/> with the DBRef and handle.</returns>
+	/// <returns>A <see cref="TestPlayer"/> with the DBRef, handle and name.</returns>
 	public static async Task<TestPlayer> CreateTestPlayerWithHandleAsync(
 		IServiceProvider services,
 		IMediator mediator,
 		IConnectionService connectionService,
 		string namePrefix)
 	{
-		var playerDbRef = await CreateTestPlayerAsync(services, mediator, namePrefix);
+		var name = GenerateUniqueName(namePrefix);
+		var playerDbRef = await CreateNamedTestPlayerAsync(services, mediator, name);
 		var handle = Interlocked.Increment(ref _nextHandle);
 
 		await connectionService.Register(
@@ -92,7 +104,7 @@ public static class TestIsolationHelpers
 			() => Encoding.UTF8);
 		await connectionService.Bind(handle, playerDbRef);
 
-		return new TestPlayer(playerDbRef, handle);
+		return new TestPlayer(playerDbRef, handle, name);
 	}
 
 	/// <summary>

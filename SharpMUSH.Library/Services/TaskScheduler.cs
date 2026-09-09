@@ -103,6 +103,27 @@ public class TaskScheduler(
 		}
 	}
 
+	public async ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
+	{
+		EnsureConsumerStarted();
+
+		// An entry leaves _pendingEntries only after its action has finished, and anything that action
+		// queued is in the dictionary before that removal, so an empty dictionary means the queue is
+		// quiet — including work the drained entries themselves produced.
+		var deadline = DateTimeOffset.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
+
+		while (!_pendingEntries.IsEmpty)
+		{
+			if (DateTimeOffset.UtcNow >= deadline)
+			{
+				throw new TimeoutException(
+					$"The immediate queue still held {_pendingEntries.Count} entries after the drain timeout.");
+			}
+
+			await Task.Delay(TimeSpan.FromMilliseconds(5));
+		}
+	}
+
 	public ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	{
 		EnsureConsumerStarted();
