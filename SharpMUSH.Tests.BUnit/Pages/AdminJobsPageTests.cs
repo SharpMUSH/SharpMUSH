@@ -28,10 +28,15 @@ public class AdminJobsPageTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task JobsPageUsesConfiguredApiClientAndSessionBearer()
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	[Arguments(false, true)]
+	public async Task JobsPageUsesConfiguredApiClientAndSessionBearer(bool own, bool manage)
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
-		this.AddAuthorization().SetAuthorized("staff");
+		var authorization = this.AddAuthorization();
+		authorization.SetAuthorized("staff");
+		authorization.SetPolicies((own ? new[] { "jobs.manage.own" } : Array.Empty<string>()).Concat(manage ? new[] { "jobs.manage" } : []).ToArray());
 		Services.AddMudServices();
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		var auth = Substitute.For<IAccountAuthState>();
@@ -46,7 +51,7 @@ public class AdminJobsPageTests : TrackingBunitContext
 		{
 			if (handler.Uri is null) throw new InvalidOperationException("Jobs request did not use the API client.");
 		});
-		await Assert.That(handler.Uri!.AbsoluteUri).IsEqualTo("https://game.example/api/recurring-jobs?all=false");
+		await Assert.That(handler.Uri!.AbsoluteUri).IsEqualTo("https://game.example/api/recurring-jobs?all=" + (!own && manage).ToString().ToLowerInvariant());
 		await Assert.That(handler.Bearer).IsEqualTo("current-session");
 		await Assert.That(page.Markup).Contains("JobsEmpty");
 	}

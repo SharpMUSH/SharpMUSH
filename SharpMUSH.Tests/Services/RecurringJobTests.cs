@@ -406,6 +406,20 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 	[Test, NotInParallel]
+	public async Task GlobalListingHonorsAnExplicitOwnScopeDenial()
+	{
+		var context = await Setup();
+		var own = await Create(context);
+		var other = context.Actor with { AccountId = "other-account" };
+		var foreign = await context.Service.CreateAsync(other, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Capabilities.AuthorizeAsync(context.Actor, PortalPermission.JobsManageOwn, Arg.Any<CancellationToken>()).Returns(false);
+		var listed = await context.Service.ListAsync(context.Actor, true);
+		await Assert.That(listed.Select(job => job.Id)).IsEquivalentTo(new[] { foreign.Id });
+		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.ListAsync(context.Actor));
+		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.ConfigureAsync(context.Actor, own.Id, own.Schedule, own.TimeZone, false));
+	}
+
+	[Test, NotInParallel]
 	public async Task OwnCapabilityCannotMutateAnotherAccountsJob()
 	{
 		var context = await Setup();

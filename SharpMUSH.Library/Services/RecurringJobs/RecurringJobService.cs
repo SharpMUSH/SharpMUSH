@@ -24,8 +24,9 @@ public sealed class RecurringJobService(
 	public async Task<RecurringJob[]> ListAsync(CapabilityActor actor, bool all = false, CancellationToken ct = default)
 	{
 		await Authorize(actor, all ? PortalPermission.JobsManage : PortalPermission.JobsManageOwn, ct);
+		var includeOwn = !all || await capabilities.AuthorizeAsync(actor, PortalPermission.JobsManageOwn, ct);
 		var jobs = await Read(ct);
-		return jobs.Where(j => all || j.OwnerAccount == actor.AccountId).OrderBy(j => j.Id).ToArray();
+		return jobs.Where(j => j.OwnerAccount == actor.AccountId ? includeOwn : all).OrderBy(j => j.Id).ToArray();
 	}
 
 	public async Task<RecurringJob> CreateAsync(CapabilityActor actor, RecurringJobRequest request, CancellationToken ct = default)

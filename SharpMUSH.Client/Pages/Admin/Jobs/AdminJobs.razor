@@ -5,6 +5,8 @@
 @attribute [Authorize]
 @implements IDisposable
 @inject IHttpClientFactory ClientFactory
+@inject AuthenticationStateProvider Authentication
+@inject IAuthorizationService Authorization
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["JobsTitle"]</PageTitle>
@@ -61,7 +63,13 @@
     private string _editSchedule = "", _editZone = "";
     private string? _error, _selected;
     private bool _all, _busy;
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await Authentication.GetAuthenticationStateAsync()).User;
+        _all = !(await Authorization.AuthorizeAsync(user, "jobs.manage.own")).Succeeded
+            && (await Authorization.AuthorizeAsync(user, "jobs.manage")).Succeeded;
+        await Load();
+    }
     private static string Time(long? value) => value is { } time ? DateTimeOffset.FromUnixTimeMilliseconds(time).ToString("u") : "—";
     private async Task Refresh() => _jobs = await Read<RecurringJob[]>(await Api.GetAsync("api/recurring-jobs?all=" + _all.ToString().ToLowerInvariant())) ?? [];
     private Task Load() => Run(Refresh);
