@@ -1,3 +1,5 @@
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -12,13 +14,18 @@ public partial class Commands
 {
 	private sealed record CreatedCommandSemaphore(string Id, string Key, string Name, string LongName, int? CommandListIndex, DBRef Owner);
 
-	private async ValueTask<(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile)> SemaphoreCommandAccounting(
+	private sealed record SemaphoreAccounting(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile);
+
+	private async ValueTask<OneOf<SemaphoreAccounting, Error<string>>> SemaphoreCommandAccounting(
 		AnySharpObject target, string[] path, Func<int, int, long> nextCount, bool clearZero)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		var fullTarget = target.Object().DBRef;
 		var original = await Mediator.CreateStream(new GetAttributeQuery(fullTarget, path), token).LastOrDefaultAsync(token);
-		var oldCount = original is null || original.Value.Length == 0 ? 0 : int.Parse(original.Value.ToPlainText());
+		var oldCount = 0;
+		var originalValue = original?.Value.ToPlainText();
+		if (!string.IsNullOrEmpty(originalValue) && !int.TryParse(originalValue, out oldCount))
+			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {originalValue}");
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)), token)).AsPlayer;
 		int? expected = null;
 		CreatedCommandSemaphore? createdIdentity = null;
@@ -78,6 +85,6 @@ public partial class Commands
 			if (value == oldCount && original is not null) return false;
 			throw new InvalidOperationException("Semaphore count is neither its original nor committed value; manual reconciliation is required.");
 		}
-		return (Persist, Reconcile);
+		return new SemaphoreAccounting(Persist, Reconcile);
 	}
 }

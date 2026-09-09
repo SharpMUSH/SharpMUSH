@@ -182,6 +182,40 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	[Arguments(false, "invalid")]
+	[Arguments(true, "invalid")]
+	[Arguments(false, "2147483648")]
+	[Arguments(true, "2147483648")]
+	public async Task InvalidDefaultCounterReturnsACommandErrorWithoutChangingQueue(bool drain, string value)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("invalid-counter-" + Guid.NewGuid().ToString("N"), player));
+		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
+		var state = ParserState.RootFor(player.Object.DBRef);
+		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think must-remain-pending"), state, semaphore, 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		await Assert.That(admitted.Accepted).IsTrue();
+		try
+		{
+			await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["SEMAPHORE"], MarkupText.Plain(value), player));
+			var usage = Scheduler.GetQueueUsage().Total;
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services);
+			var parser = Substitute.For<IMUSHCodeParser>();
+			parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+			parser.CurrentState.Returns(state with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+			var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+				typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+			var result = drain ? await commands.Drain(parser, metadata) : await commands.Notify(parser, metadata);
+			await Assert.That(result.IsSome()).IsTrue();
+			await Assert.That(result.AsValue().Message!.ToPlainText()).Contains("Semaphore attribute must have a numeric or empty value");
+			await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(usage);
+			await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo(value);
+			using var lease = await Scheduler.EnterSemaphoreMutationAsync();
+			await Assert.That(await Scheduler.DrainCounted(semaphore)).IsEqualTo(1);
+		}
+		finally { await Scheduler.HaltByPid(admitted.Pid!.Value); }
+	}
+
+	[Test]
 	public async Task DrainOfAnAbsentSemaphoreIsANoOp()
 	{
 		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
