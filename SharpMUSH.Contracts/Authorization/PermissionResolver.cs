@@ -37,14 +37,11 @@ public sealed class PermissionResolver : IPermissionResolver
 	/// unopinionated child inherits a granted umbrella. Thus even a higher umbrella cannot
 	/// bypass a resolved child denial; an explicit higher child Allow can replace that denial.
 	/// </summary>
-	public PermissionExplanation Explain(IEnumerable<SharpRole> roles, string scope)
+	public PermissionExplanation Explain(IReadOnlyCollection<SharpRole> roles, string scope)
 	{
 		if (!PortalPermission.IsKnown(scope))
 			return new(false, null, [], "unknown-scope");
-		// Walked once per scope and again per implying parent, so a lazy sequence is pinned here — but
-		// a caller that already holds a collection (including this method recursing) is not re-copied.
-		var materialized = roles as IReadOnlyCollection<SharpRole> ?? roles.ToArray();
-		var top = materialized.Where(r => r.Permissions.Any(p =>
+		var top = roles.Where(r => r.Permissions.Any(p =>
 			string.Equals(p.Key, scope, StringComparison.OrdinalIgnoreCase) && p.Value != PermissionState.Inherit))
 			.GroupBy(r => r.Priority).OrderByDescending(g => g.Key).FirstOrDefault();
 		if (top is not null)
@@ -56,7 +53,7 @@ public sealed class PermissionResolver : IPermissionResolver
 			.Contains(scope, StringComparer.OrdinalIgnoreCase));
 		foreach (var parent in parents)
 		{
-			var decision = Explain(materialized, parent);
+			var decision = Explain(roles, parent);
 			if (decision.Allowed)
 				return decision with { Reason = $"implied:{parent}" };
 		}

@@ -239,15 +239,15 @@ public partial class SurrealDatabase(
 		// Every segment after the first begins right after a `$`.
 		foreach (var range in text.Split('$'))
 		{
-			var segment = text[range];
+			var segment = query[range];
 			if (range.Start.Value == 0)
 			{
-				pieces.Add(query[range]);
+				pieces.Add(segment);
 			}
 			else if (ParameterNameAtStart(segment, names) is { } name)
 			{
 				pieces.Add(inRecordId ? SerializeValueRaw(parameters[name]) : SerializeValue(parameters[name]));
-				pieces.Add(segment[name.Length..].ToString());
+				pieces.Add(segment[name.Length..]);
 			}
 			else
 			{
@@ -255,7 +255,7 @@ public partial class SurrealDatabase(
 			}
 
 			// Only the query's own text opens or closes a record id, never a substituted value.
-			var bracket = segment.LastIndexOfAny('⟨', '⟩');
+			var bracket = segment.AsSpan().LastIndexOfAny('⟨', '⟩');
 			if (bracket >= 0)
 			{
 				inRecordId = segment[bracket] == '⟨';
@@ -266,18 +266,8 @@ public partial class SurrealDatabase(
 	}
 
 	/// <summary>The longest parameter name <paramref name="segment"/> starts with, or null.</summary>
-	private static string? ParameterNameAtStart(ReadOnlySpan<char> segment, string[] namesLongestFirst)
-	{
-		foreach (var name in namesLongestFirst)
-		{
-			if (segment.StartsWith(name, StringComparison.Ordinal))
-			{
-				return name;
-			}
-		}
-
-		return null;
-	}
+	private static string? ParameterNameAtStart(string segment, string[] namesLongestFirst) =>
+		namesLongestFirst.FirstOrDefault(name => segment.StartsWith(name, StringComparison.Ordinal));
 
 	/// <summary>
 	/// Serializes a value to a SurrealQL literal string (with quotes for strings).
@@ -351,9 +341,10 @@ public partial class SurrealDatabase(
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static SharpLockData DeserializeLock(JsonElement element)
 	{
-		var lockString = element.GetProperty("LockString").GetString() ?? "";
+		var lockString = element.GetProperty("LockString").GetString() ?? string.Empty;
 		var flagsStr = element.TryGetProperty("Flags", out var flagsProp) ? flagsProp.GetString() : null;
 		var flags = !string.IsNullOrEmpty(flagsStr) && Enum.TryParse<Library.Services.LockService.LockFlags>(flagsStr, out var parsed)
 			? parsed

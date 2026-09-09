@@ -598,6 +598,34 @@ public class OutputTransformServiceTests
 		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1;;31mText\x1b[0m");
 	}
 
+	/// <summary>
+	/// A leading empty parameter is a reset — <c>ESC[;31m</c> is <c>ESC[0;31m</c> — and the downgrade keeps
+	/// it in place like any other parameter it does not rewrite, whether the colour after it is copied
+	/// verbatim or mapped down. Hilite drops it like every other empty parameter.
+	/// </summary>
+	[Test]
+	[Arguments("\x1b[;38;2;255;0;0mText\x1b[0m", "\x1b[;31mText\x1b[0m")]
+	[Arguments("\x1b[;1mText\x1b[0m", "\x1b[;1mText\x1b[0m")]
+	public async Task TransformAsync_KeepsALeadingEmptyParameter_WhenDowngrading(string input, string expected)
+	{
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, SupportsXterm256: false);
+
+		var result = await _service.TransformAsync(Encoding.UTF8.GetBytes(input), capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task TransformAsync_DropsALeadingEmptyParameter_WhenPinnedHilite()
+	{
+		var input = "\x1b[;38;2;255;0;0;1mText\x1b[0m"u8.ToArray();
+		var capabilities = new ProtocolCapabilities(SupportsAnsi: true, ColorStylePin: ColorStyles.Hilite);
+
+		var result = await _service.TransformAsync(input, capabilities, null);
+
+		await Assert.That(Encoding.UTF8.GetString(result)).IsEqualTo("\x1b[1mText\x1b[0m");
+	}
+
 	[Test]
 	public async Task TransformAsync_DropsEmptyParameters_WhenPinnedHilite()
 	{

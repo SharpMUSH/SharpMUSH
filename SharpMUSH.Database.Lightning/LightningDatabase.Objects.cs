@@ -273,8 +273,10 @@ public partial class LightningDatabase
 
 	public ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken cancellationToken = default)
 	{
-		var count = Store.Read(tx => tx.CountDups(Tables.Owner.Reverse, Keys.Dbref(player.Object.Key, stackalloc byte[8])));
-		return ValueTask.FromResult((int)count);
+		var count = Store.Read(tx => tx.CountDups(Tables.Owner.Reverse, Keys.Dbref(player.Object.Key)));
+		return ValueTask.FromResult(count.Match(
+			owned => (int)owned,
+			error => throw new InvalidOperationException($"Owned-object count for #{player.Object.Key} failed: {error.Value}")));
 	}
 
 	public ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)

@@ -254,7 +254,7 @@ public partial class LightningDatabase
 				return false;
 			}
 
-			var longName = "";
+			var longName = string.Empty;
 			for (var level = 0; level < path.Length; level++)
 			{
 				longName = level == 0 ? path[0] : $"{longName}`{path[level]}";
@@ -547,7 +547,7 @@ public partial class LightningDatabase
 	internal IReadOnlyList<(string LongName, AttrMetaRecord Meta)> ReadPathPrefixes(ITx tx, long dbref, string[] path)
 	{
 		var resolved = new List<(string, AttrMetaRecord)>(path.Length);
-		var longName = "";
+		var longName = string.Empty;
 		for (var level = 0; level < path.Length; level++)
 		{
 			var segment = path[level].ToUpperInvariant();

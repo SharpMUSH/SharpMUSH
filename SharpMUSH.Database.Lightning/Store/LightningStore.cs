@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using LightningDB;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
 
@@ -561,14 +563,14 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
 		}
 
-		public long CountDups(TableDef table, ReadOnlySpan<byte> key)
+		public OneOf<long, Error<string>> CountDups(TableDef table, ReadOnlySpan<byte> key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
-			if (cursor.Set(key) != MDBResultCode.Success) return 0;
+			if (cursor.Set(key) != MDBResultCode.Success) return 0L;
 			// mdb_cursor_count is only defined for a DUPSORT database; a plain one holds one value per key.
-			if (!table.Duplicates) return 1;
+			if (!table.Duplicates) return 1L;
 			var code = cursor.Count(out var count);
-			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"count {table}");
+			if (code != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(code, $"count {table}"));
 			return count;
 		}
 

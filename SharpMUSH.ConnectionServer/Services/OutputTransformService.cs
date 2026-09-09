@@ -257,6 +257,7 @@ public partial class OutputTransformService : IOutputTransformService
 	{
 		private readonly Span<char> _buffer = buffer;
 		private int _length;
+		private bool _hasParameter;
 
 		public void Append(ReadOnlySpan<char> parameter)
 		{
@@ -272,17 +273,23 @@ public partial class OutputTransformService : IOutputTransformService
 			_length += written;
 		}
 
+		/// <summary>
+		/// Counted by parameter rather than by character written, because an empty parameter — the
+		/// reset a leading <c>;</c> spells — adds nothing to the buffer yet still needs its separator.
+		/// </summary>
 		private void Separate()
 		{
-			if (_length > 0)
+			if (_hasParameter)
 			{
 				_buffer[_length++] = ';';
 			}
+
+			_hasParameter = true;
 		}
 
 		/// <summary>The sequence, or nothing at all when every parameter was dropped.</summary>
 		public override string ToString() =>
-			_length == 0 ? string.Empty : $"\x1b[{_buffer[.._length]}m";
+			_hasParameter ? $"\x1b[{_buffer[.._length]}m" : string.Empty;
 	}
 
 	/// <summary>Foreground, background, their defaults, and the bright aixterm ranges.</summary>

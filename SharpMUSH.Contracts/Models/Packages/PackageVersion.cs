@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace SharpMUSH.Library.Models.Packages;
 
 /// <summary>
@@ -10,7 +13,7 @@ namespace SharpMUSH.Library.Models.Packages;
 /// <param name="Minor">Minor version component (0 when omitted).</param>
 /// <param name="Patch">Patch version component (0 when omitted).</param>
 /// <param name="Prerelease">Prerelease suffix without the leading dash, or null for a release version.</param>
-public sealed record PackageVersion(int Major, int Minor, int Patch, string? Prerelease = null)
+public sealed partial record PackageVersion(int Major, int Minor, int Patch, string? Prerelease = null)
 	: IComparable<PackageVersion>
 {
 	/// <summary>
@@ -20,40 +23,37 @@ public sealed record PackageVersion(int Major, int Minor, int Patch, string? Pre
 	public static bool TryParse(string? input, out PackageVersion version)
 	{
 		version = new PackageVersion(0, 0, 0);
-		if (string.IsNullOrWhiteSpace(input))
+		if (input is null)
 		{
 			return false;
 		}
 
-		var text = input.AsSpan().Trim();
-		string? prerelease = null;
-		var dash = text.IndexOf('-');
-		if (dash >= 0)
+		var match = VersionRegex().Match(input.Trim());
+		if (!match.Success
+			|| !int.TryParse(match.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var major)
+			|| !Component(match.Groups[2], out var minor)
+			|| !Component(match.Groups[3], out var patch))
 		{
-			if (dash == text.Length - 1)
-			{
-				return false;
-			}
-
-			prerelease = text[(dash + 1)..].ToString();
-			text = text[..dash];
+			return false;
 		}
 
-		Span<int> numbers = [0, 0, 0];
-		var filled = 0;
-		foreach (var part in text.Split('.'))
-		{
-			if (filled == numbers.Length || !int.TryParse(text[part], out numbers[filled]) || numbers[filled] < 0)
-			{
-				return false;
-			}
-
-			filled++;
-		}
-
-		version = new PackageVersion(numbers[0], numbers[1], numbers[2], prerelease);
+		version = new PackageVersion(major, minor, patch, match.Groups[4].Success ? match.Groups[4].Value : null);
 		return true;
+
+		// An absent component is zero; a present one that overflows int is a rejection, not a wrap.
+		static bool Component(Group group, out int value)
+		{
+			value = 0;
+			return !group.Success || int.TryParse(group.ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out value);
+		}
 	}
+
+	/// <summary>
+	/// One to three dot-separated runs of ASCII digits, then an optional non-empty <c>-prerelease</c>
+	/// suffix; anything else — a sign, an empty component, a fourth one, build metadata — is rejected.
+	/// </summary>
+	[GeneratedRegex(@"^([0-9]+)(?:\.([0-9]+))?(?:\.([0-9]+))?(?:-(.+))?$")]
+	private static partial Regex VersionRegex();
 
 	/// <summary>
 	/// Compares by numeric components; a prerelease version sorts before the

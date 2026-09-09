@@ -67,7 +67,8 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 		}
 		finally
 		{
-			messageBuffer?.Dispose();
+			// Not a disposal: the receive buffer is rented, and this hands it back to the pool. The
+			// MemoryStream owns nothing but a managed array and needs no disposal.
 			ArrayPool<byte>.Shared.Return(buffer);
 		}
 	}
