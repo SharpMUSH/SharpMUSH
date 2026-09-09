@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.Json;
@@ -16,12 +17,14 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		var guid = Guid.NewGuid();
 		var results = new List<Dictionary<string, object?>>();
 
-		await using var connection = await source.OpenConnectionAsync();
+		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
 		await using var command = new MySqlCommand(query, connection);
-		await using var reader = await command.ExecuteReaderAsync();
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
 
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -31,16 +34,19 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
 		}
 
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		return results;
 	}
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamQueryAsync(string query)
 	{
-		await using var connection = await source.OpenConnectionAsync();
+		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
 		await using var command = new MySqlCommand(query, connection);
-		await using var reader = await command.ExecuteReaderAsync();
-		while (await reader.ReadAsync(CancellationToken.None))
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -67,7 +73,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 		var guid = Guid.NewGuid();
 		var results = new List<Dictionary<string, object?>>();
 
-		await using var connection = await source.OpenConnectionAsync();
+		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
 		await using var command = new MySqlCommand(query, connection);
 
 		for (var i = 0; i < parameters.Length; i++)
@@ -75,10 +81,12 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);
 		}
 
-		await using var reader = await command.ExecuteReaderAsync();
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
 
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -88,12 +96,13 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
 		}
 
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		return results;
 	}
 
 	public async IAsyncEnumerable<Dictionary<string, object?>> ExecuteStreamPreparedQueryAsync(string query, params object?[] parameters)
 	{
-		await using var connection = await source.OpenConnectionAsync();
+		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
 		await using var command = new MySqlCommand(query, connection);
 
 		for (var i = 0; i < parameters.Length; i++)
@@ -101,9 +110,11 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 			command.Parameters.AddWithValue($"@p{i}", parameters[i] ?? DBNull.Value);
 		}
 
-		await using var reader = await command.ExecuteReaderAsync();
-		while (await reader.ReadAsync(CancellationToken.None))
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{

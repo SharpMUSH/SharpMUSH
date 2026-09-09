@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Data.Sqlite;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
@@ -25,7 +26,7 @@ public class SqliteProvider : ISqlProvider
 	public async ValueTask<DbConnection> CreateConnectionAsync()
 	{
 		var connection = new SqliteConnection(_connectionString);
-		await connection.OpenAsync();
+		await connection.OpenAsync(ExecutionBudget.CurrentToken);
 		return connection;
 	}
 

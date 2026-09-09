@@ -1,31 +1,33 @@
+using SharpMUSH.Library.Models.SchedulerModels;
 using Mediator;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Requests;
 
-// TODO: Return the new PID for output/tracking
-// Currently IRequest doesn't support return values
 public record QueueCommandListRequest(
 	MString Command,
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
-	int OldValue) : IRequest;
+	int OldValue,
+	bool ManageSemaphoreCount = false) : IRequest<QueueAdmissionResult>;
 
 public record QueueAttributeRequest(
 	Func<ValueTask<ParserState>> Input,
-	DbRefAttribute DbRefAttribute) : IRequest;
+	DbRefAttribute DbRefAttribute,
+	DBRef? Executor = null) : IRequest<QueueAdmissionResult>;
 
 public record QueueDelayedCommandListRequest(
 	MString Command,
 	ParserState State,
-	TimeSpan Delay) : IRequest;
+	TimeSpan Delay) : IRequest<QueueAdmissionResult>;
 
-// TODO: Return the new PID for output/tracking
-// Currently IRequest doesn't support return values
 public record QueueCommandListWithTimeoutRequest(
 	MString Command,
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
 	int OldValue,
-	TimeSpan Timeout) : IRequest;
+	TimeSpan Timeout,
+	bool ManageSemaphoreCount = false) : IRequest<QueueAdmissionResult>;
+
+public record ReserveCommandListRequest(MString Command, ParserState State) : IRequest<QueueCommandReservation>;

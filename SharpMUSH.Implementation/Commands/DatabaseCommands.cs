@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
@@ -174,9 +175,22 @@ public partial class Commands
 
 				try
 				{
+					// Hold one counted completion slot before streaming any row callbacks. Publication
+					// happens at the FIFO tail only after those callbacks have been admitted.
+					using var completion = notifySwitch
+						? await Mediator.Send(new ReserveCommandListRequest(MarkupText.Plain("@notify me"), parser.CurrentState), ExecutionBudget.CurrentToken)
+						: null;
+					if (completion is not null && !completion.Admission.Accepted)
+					{
+						await NotifyService.Notify(executor, completion.Admission.Error, executor);
+						return new CallState(completion.Admission.Error);
+					}
+
 					var columnNames = new List<string>();
 					var firstRow = true;
 					var rowNumber = 1;
+					var admittedRows = 0;
+					var sourceRows = 0;
 
 					IAsyncEnumerable<Dictionary<string, object?>> queryResults;
 
@@ -224,11 +238,12 @@ public partial class Commands
 
 					await foreach (var row in queryResults)
 					{
+						sourceRows++;
 						if (colnamesSwitch && firstRow)
 						{
 							columnNames = row.Keys.ToList();
 
-							await Mediator.Send(new QueueAttributeRequest(
+							var headerAdmission = await Mediator.Send(new QueueAttributeRequest(
 								() =>
 								{
 									var remainder = columnNames
@@ -245,13 +260,14 @@ public partial class Commands
 									};
 									return ValueTask.FromResult(newState);
 								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
+							if (!headerAdmission.Accepted) break;
 							firstRow = false;
 						}
 
 						var currentRow = rowNumber;
-						await Mediator.Send(new QueueAttributeRequest(
+						var rowAdmission = await Mediator.Send(new QueueAttributeRequest(
 							() =>
 							{
 								var values = row.Values.ToList();
@@ -270,27 +286,30 @@ public partial class Commands
 									EnvironmentRegisters = dict
 								});
 							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`"))));
+							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
 
+						if (!rowAdmission.Accepted) break;
+						admittedRows++;
 						rowNumber++;
 					}
 
-					if (notifySwitch)
+					if (completion is not null)
 					{
-						await Mediator.Send(new QueueCommandListRequest(
-							MarkupText.Plain("@notify me"),
-							parser.CurrentState,
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
-							-1));
+						var published = await completion.PublishAsync();
+						if (!published.Accepted)
+						{
+							await NotifyService.Notify(executor, published.Error, executor);
+							return new CallState(published.Error);
+						}
 					}
 
 					// Note: SPOOF switch affects who the queued attributes execute as
 					// This is handled at the parser/execution level, not here
 					// The attribute will execute with the permissions of the enactor rather than executor
 
-					var message = rowNumber == 1
+					var message = sourceRows == 0
 						? "No rows returned."
-						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
+						: $"{admittedRows} row{(admittedRows != 1 ? "s" : "")} queued for execution.";
 					await NotifyService.Notify(executor, message, executor);
 					return new CallState(MarkupText.Plain(message));
 				}

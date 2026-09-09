@@ -2569,4 +2569,7 @@
   <data name="SocksetInvalidDescriptor" xml:space="preserve">
     <value>Invalid descriptor.</value>
   </data>
+  <data name="QueueRejected" xml:space="preserve"><value>Queue admission rejected: {0}.</value></data>
+  <data name="QueueUsage" xml:space="preserve"><value>Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.</value></data>
+  <data name="QueueRejections" xml:space="preserve"><value>Queue rejections ({0}): {1}.</value></data>
 </root>

@@ -341,6 +341,7 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		if (node is null) return null;
 
 		var childCount = node.ChildCount;
@@ -359,6 +360,7 @@ public class SharpMUSHParserVisitor(
 
 		for (var i = 0; i < childCount; i++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = node.GetChild(i);
 			var childResult = child is null ? null : await child.Accept(this);
 			if (childResult is not null) results.Add(childResult);
@@ -382,6 +384,7 @@ public class SharpMUSHParserVisitor(
 		for (var i = 0; i < childCount; i++)
 		{
 			if (haltPredicate()) break;
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = node.GetChild(i);
 			if (child is not null)
 			{
@@ -606,6 +609,7 @@ public class SharpMUSHParserVisitor(
 	public async ValueTask<CallState> CallFunction(string name, MString src,
 		FunctionContext context, EvaluationStringContext?[] args, SharpMUSHParserVisitor visitor)
 	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		var startTime = System.Diagnostics.Stopwatch.GetTimestamp();
 		var success = true;
 		var didPushFunction = false;
@@ -865,6 +869,11 @@ public class SharpMUSHParserVisitor(
 			}
 
 			return result with { Depth = contextDepth };
+		}
+		catch (OperationCanceledException)
+		{
+			success = false;
+			throw;
 		}
 		catch (Exception ex)
 		{
@@ -2454,6 +2463,7 @@ public class SharpMUSHParserVisitor(
 
 		for (var i = 0; i < node.ChildCount; i++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = node.GetChild(i);
 			if (child is not null && ContainsEscapedText(child))
 			{
