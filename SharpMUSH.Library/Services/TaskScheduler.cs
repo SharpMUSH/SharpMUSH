@@ -719,6 +719,7 @@ public partial class TaskScheduler(
 			try { await _scheduler.UnscheduleJob(trigger, cleanup.Token); }
 			catch (Exception cleanupFailure)
 			{
+				// Uncertain publication retains quota until halt confirms trigger cleanup.
 				lock (_admissionLock) _delayedRepairs.Add(pid);
 				logger.LogError(cleanupFailure, "Delayed schedule cleanup failed for PID {Pid}; retry halt to release its reservation", pid);
 				throw;

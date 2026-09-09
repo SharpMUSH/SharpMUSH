@@ -24,6 +24,30 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task UncertainDelayedCleanupCannotBePausedOrResumed()
+	{
+		var unavailable = true;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(_ => Task.FromException<DateTimeOffset>(new InvalidOperationException("Lost schedule acknowledgement")));
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			if (unavailable) throw new InvalidOperationException("Cleanup unavailable");
+			return true;
+		});
+		await using var queue = Create(scheduler: scheduler);
+		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+			await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromHours(1)));
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(await queue.PausePending(1, "hold")).IsEqualTo(QueueControlResult.NotPending);
+		await Assert.That(await queue.ResumePending(1)).IsEqualTo(QueueControlResult.NotPending);
+		unavailable = false;
+		await queue.HaltByPid(1);
+		await Assert.That(queue.GetQueueEntry(1)).IsNull();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ResumeIdentityReadsHonorCancellation(bool semaphore)

@@ -30,7 +30,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 				return;
 			}
 
-			await scheduler.AdmitUserCommand(
+			await scheduler.WriteUserCommand(
 				handle: message.Handle,
 				command: MarkupText.Plain(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
@@ -65,7 +65,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 				return;
 			}
 
-			await scheduler.AdmitUserCommand(
+			await scheduler.WriteUserCommand(
 				handle: message.Handle,
 				command: MarkupText.Plain(message.Input),
 				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
