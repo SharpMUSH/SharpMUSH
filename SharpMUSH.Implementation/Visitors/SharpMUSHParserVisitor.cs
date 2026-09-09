@@ -870,6 +870,11 @@ public class SharpMUSHParserVisitor(
 
 			return result with { Depth = contextDepth };
 		}
+		catch (OperationCanceledException)
+		{
+			success = false;
+			throw;
+		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, nameof(CallFunction));
