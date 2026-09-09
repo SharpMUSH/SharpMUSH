@@ -153,6 +153,17 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	public async Task GenerationBoundEscapeCannotCancelAConcurrentReplacement()
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "FIRST", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var first = h.Sessions.GetCapturing(1)!;
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "SECOND", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"), first.Id)).IsTrue();
+		await Assert.That(h.Sessions.GetCapturing(1)!.CallbackAttribute).IsEqualTo("SECOND");
+	}
+
+	[Test]
 	[Arguments("read")]
 	[Arguments("execute")]
 	[Arguments("control")]
@@ -464,6 +475,42 @@ public class InputSessionServiceTests
 		await Drained(queue);
 		await h.Parser.Received(1).CommandParse(1, h.Connections,
 			Arg.Is<MarkupText>(text => text.Text == "think ordinary"));
+	}
+
+	[Test]
+	[Arguments("second")]
+	[Arguments("@input/cancel")]
+	public async Task RepliesQueuedBeforeStartRemainBoundToFirstCapture(string second)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await using var queue = Queue(h);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.EnqueueWork(async () =>
+		{
+			entered.SetResult(); await release.Task;
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			return null;
+		}, "queued-start", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		async ValueTask<CallState?> ReplaceCapture()
+		{
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			return CallState.Empty;
+		}
+		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => ReplaceCapture());
+		try
+		{
+			var state = ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" };
+			await queue.WriteUserCommand(1, MarkupText.Plain("first"), state);
+			await queue.WriteUserCommand(1, MarkupText.Plain(second), state);
+		}
+		finally { release.TrySetResult(); }
+		await Drained(queue);
+		await Assert.That(h.Deliveries.Count).IsEqualTo(1);
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["0"].Message!.Text).IsEqualTo("first");
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
+		await Assert.That(h.Sessions.GetCapturing(1)!.CallbackAttribute).IsEqualTo("REPLACEMENT");
 	}
 
 	[Test]

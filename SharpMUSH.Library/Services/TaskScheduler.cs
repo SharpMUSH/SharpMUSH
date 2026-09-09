@@ -347,18 +347,22 @@ public class TaskScheduler(
 
 	public async ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
 	{
-		var generation = inputSessions?.GetCaptureGeneration(handle);
+		var snapshot = inputSessions?.CapturePendingInput(handle) ?? default;
+		var generation = snapshot.Ticket?.InitialGeneration ?? inputSessions?.GetCaptureGeneration(handle);
 		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command))
 			return new QueueAdmissionResult(0, QueueRejectionReason.None);
-		var capture = inputSessions?.GetCapturing(handle);
+		var capture = snapshot.Session;
 		return await Admit(async () =>
 		{
 			if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
-			// A queued start may have opened capture after transport admission.
-			if (capture is null && inputSessions is not null &&
-				await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command)) return null;
-			// A captured generation never becomes ordinary command text, even if cancelled while queued.
+			// Replies admitted before startup belong to the first capture that follows admission.
 			var session = capture ?? inputSessions?.GetCapturing(handle);
+			if (capture is null && session is not null)
+			{
+				if (snapshot.Ticket?.ExpectedGeneration != session.Id) return null;
+				if (await inputSessions!.TryEscapeAsync(handle, state.ConnectionSessionId, command, session.Id)) return null;
+			}
+			// A captured generation never becomes ordinary command text, even if cancelled while queued.
 			if (session is not null)
 			{
 				if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;

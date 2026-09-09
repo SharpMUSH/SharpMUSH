@@ -29,7 +29,7 @@ public sealed class InputSessionService : IInputSessionService
 		public bool TimeoutPending { get; set; }
 	}
 
-	private sealed class Generation { public Guid Id { get; set; } = Guid.NewGuid(); }
+	private sealed class Generation { public InputCaptureTicket Ticket { get; set; } = new(Guid.NewGuid()); }
 	// Metadata survives bind/unbind but belongs to one transport incarnation. Weak keys do not
 	// retain disconnected handles, while their last capture still fences previously queued replies.
 	private readonly ConditionalWeakTable<ConcurrentDictionary<string, string>, Generation> _generations = new();
@@ -67,7 +67,16 @@ public sealed class InputSessionService : IInputSessionService
 
 	public Guid GetCaptureGeneration(long handle)
 	{
-		lock (_gate) return _connections.Get(handle) is { } connection ? GenerationFor(connection).Id : Guid.Empty;
+		lock (_gate) return _connections.Get(handle) is { } connection ? GenerationFor(connection).Ticket.InitialGeneration : Guid.Empty;
+	}
+
+	public InputCaptureSnapshot CapturePendingInput(long handle)
+	{
+		lock (_gate)
+		{
+			return _connections.Get(handle) is { } connection
+				? new(GetCapturing(handle), GenerationFor(connection).Ticket) : default;
+		}
 	}
 
 	public InputSession? GetCapturing(long handle)
@@ -111,7 +120,9 @@ public sealed class InputSessionService : IInputSessionService
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
 			if (_sessions.Count(pair => pair.Key != handle && pair.Value.Session.Owner == owner) >= MaxOwnerSessions) return SessionLimit;
 			_sessions[handle] = new Entry(session);
-			GenerationFor(connection).Id = session.Id;
+			var generation = GenerationFor(connection);
+			generation.Ticket.ObserveStart(session.Id);
+			generation.Ticket = new InputCaptureTicket(session.Id);
 		}
 		try { await _notify.Prompt(handle, prompt); }
 		catch { Discard(session); throw; }
@@ -147,7 +158,7 @@ public sealed class InputSessionService : IInputSessionService
 		return null;
 	}
 
-	public async ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input)
+	public async ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input, Guid? expectedCapture = null)
 	{
 		if (!input.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)) return false;
 		lock (_gate)
@@ -155,6 +166,7 @@ public sealed class InputSessionService : IInputSessionService
 			if (!_sessions.TryGetValue(handle, out var entry) || entry.TimeoutPending
 				|| entry.Session.ExpiresAt <= _time.GetUtcNow() || !BindingMatches(entry.Session)
 				|| !TransportMatches(entry.Session.Connection, transportSessionId)) return false;
+			if (expectedCapture is { } expected && entry.Session.Id != expected) return true;
 			_sessions.Remove(handle);
 		}
 		await _notify.NotifyLocalized(handle, "InputSessionCancelled");
