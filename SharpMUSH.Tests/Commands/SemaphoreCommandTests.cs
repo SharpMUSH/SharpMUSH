@@ -421,4 +421,35 @@ public class SemaphoreCommandTests
 			TestHelpers.MatchingMessage(token), TestHelpers.MatchingObject(executor),
 			INotifyService.NotificationType.Announce);
 	}
+
+	/// <summary>
+	/// The semaphore attribute is stamped LOCKED and owned by God, so a write to it through the
+	/// permission-checked service is refused for an ordinary player. @NOTIFY updates the count that
+	/// way and discards the result, which would leave the count stuck while the task was released —
+	/// every later @wait then inflating a stale count. Exercised as a non-wizard, because the rest of
+	/// this suite runs as #1 and cannot see it.
+	/// </summary>
+	[Test]
+	public async ValueTask NonWizardNotify_ActuallyDecrementsTheStoredCount()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SemMortalOwner");
+		var attr = $"SEM_{Guid.NewGuid():N}";
+
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@wait me/{attr}=think ignored"));
+		await Task.Delay(400);
+
+		await Assert.That(await MortalSemaphoreCountAsync(owner, attr)).IsEqualTo("1")
+			.Because("the mortal's own first @wait counts itself, exactly as God's does");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@notify me/{attr}"));
+		await Task.Delay(800);
+
+		await Assert.That(await MortalSemaphoreCountAsync(owner, attr)).IsEqualTo("0")
+			.Because("@notify must write the decremented count back, not silently fail the permission check");
+	}
+
+	private async Task<string> MortalSemaphoreCountAsync(TestIsolationHelpers.TestPlayer who, string attr)
+		=> (await Parser.FunctionParse(MarkupText.Plain($"get({who.DbRef}/{attr})")))?.Message?.ToPlainText() ?? string.Empty;
 }

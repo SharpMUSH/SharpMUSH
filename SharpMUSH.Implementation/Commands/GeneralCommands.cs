@@ -2169,18 +2169,28 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 
+		// The semaphore attribute is owned by God and stamped LOCKED, as PennMUSH's add_to_sem
+		// maintains it (atr_add(..., GOD, SEMAPHORE_FLAGS), src/cque.c:216). Writing the count back
+		// through the permission-checked service therefore fails CanSet for an ordinary player, and
+		// the result is discarded — releasing the task while leaving the count stale. Maintain it on
+		// the same system path that QueueSemaphore creates it on.
+		var systemOwner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var semaphorePath = attribute.Split("`");
+
+		async ValueTask WriteSemaphoreCount(int value) =>
+			await Mediator.Send(new SetAttributeCommand(objectToNotify.Object().DBRef, semaphorePath,
+				MarkupText.Plain(value.ToString()), systemOwner));
+
 		switch (notifyType)
 		{
 			case "ANY":
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCount.ToString()));
+				await WriteSemaphoreCount(newCount);
 				break;
 			case "ALL":
 				await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(0.ToString()));
+				await WriteSemaphoreCount(0);
 				break;
 			case "SETQ":
 				var modified = await Mediator.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2191,8 +2201,7 @@ public partial class Commands
 				}
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCountSetQ.ToString()));
+				await WriteSemaphoreCount(newCountSetQ);
 				return new None();
 		}
 
@@ -2722,7 +2731,7 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
-			await StampSemaphoreFlags(one.Known, located, attribute);
+			await StampSemaphoreFlags(located, attribute);
 		}
 
 		var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
@@ -2754,7 +2763,7 @@ public partial class Commands
 
 		if (attrValue is null)
 		{
-			await StampSemaphoreFlags(one.Known, located, attribute);
+			await StampSemaphoreFlags(located, attribute);
 		}
 
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
@@ -2767,9 +2776,31 @@ public partial class Commands
 	/// so without this the FIRST @wait works and every later one on the same attribute is refused.
 	/// Stamped as God, matching Penn's <c>atr_add(player, name, buff, GOD, flags)</c>.
 	/// </summary>
-	private async ValueTask StampSemaphoreFlags(AnySharpObject god, AnySharpObject located, string[] attribute)
-		=> await AttributeService.SetAttributeFlagsAsync(god, located, string.Join("`", attribute),
-			SemaphoreAttributeFlags);
+	private async ValueTask StampSemaphoreFlags(AnySharpObject located, string[] attribute)
+	{
+		// Not AttributeService.SetAttributeFlagsAsync: that is the @set/attribute-flag path and reports
+		// "flags set" to the executor it is handed, so every fresh semaphore would tell a connected #1
+		// about bookkeeping it did not ask for. This is internal, so it goes straight to the command.
+		var stamped = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute))
+			.LastOrDefaultAsync();
+
+		if (stamped is null)
+		{
+			return;
+		}
+
+		var known = await Mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+
+		foreach (var name in SemaphoreAttributeFlags)
+		{
+			var flag = known.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+			if (flag is not null)
+			{
+				await Mediator.Send(new SetAttributeFlagCommand(located.Object().DBRef, stamped, flag));
+			}
+		}
+	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
 		AnySharpObject executor, string? arg1,
