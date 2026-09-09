@@ -350,4 +350,33 @@ public class ObjectSnapshotTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, [names[0]]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
+	[Test, NotInParallel]
+	public async Task NestedRecoveryPreservesInheritedAbsentLockMarkers()
+	{
+		var (actor, target, player) = await Setup();
+		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		await Get<IMediator>().Send(new SetLockCommand(obj, "Basic", "#TRUE", player));
+		var real = Get<IObjectSnapshotService>();
+		var saved = await real.CaptureAsync(actor, target, "before");
+		await Get<IMediator>().Send(new UnsetLockCommand(obj, "Basic"));
+		var failing = Substitute.For<IManipulateSharpObjectService>();
+		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
+			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection([], Locks: true, Name: true);
+		var firstPreview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var first = await service.RestoreAsync(actor, target, saved.Id, selection, firstPreview.Token);
+		await Assert.That(first.Completed).IsFalse();
+		await Get<IMediator>().Send(new UnsetLockCommand(obj, "Basic"));
+		var secondPreview = await service.PreviewAsync(actor, target, first.RecoverySnapshotId, selection);
+		var second = await service.RestoreAsync(actor, target, first.RecoverySnapshotId, selection, secondPreview.Token);
+		await Assert.That(second.Completed).IsFalse();
+		await Assert.That((await real.ListAsync(actor, target)).Snapshots.Single(s => s.Id == second.RecoverySnapshotId).AbsentLocks).Contains("Basic");
+		await Get<IMediator>().Send(new SetLockCommand(obj, "Basic", "#TRUE", player));
+		var finalPreview = await real.PreviewAsync(actor, target, second.RecoverySnapshotId, selection);
+		await Assert.That((await real.RestoreAsync(actor, target, second.RecoverySnapshotId, selection, finalPreview.Token)).Completed).IsTrue();
+		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
+	}
+
 }

@@ -90,7 +90,7 @@ public sealed partial class ObjectSnapshotService(
 			{
 				AbsentAttributes = selection.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1))))
 					.Except(before.Attributes.Select(a => a.Name)).ToArray(),
-				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Except(before.Locks.Keys).ToArray() : [],
+				AbsentLocks = selection.Locks ? snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).Except(before.Locks.Keys).ToArray() : [],
 				RecoverySelection = selection,
 				Locks = before.Locks.Where(p => selection.Locks && (snapshot.Locks.ContainsKey(p.Key) || snapshot.AbsentLocks.Contains(p.Key))).ToDictionary(p => p.Key, p => p.Value)
 			};
