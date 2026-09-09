@@ -18,19 +18,18 @@ public sealed class RoomEventDispatcher(IHubContext<GameHub, IGameHubClient> hub
 	public async Task DispatchAsync(RoomEventMessage message, CancellationToken ct = default)
 	{
 		if (!DBRef.TryParse(message.RoomDbref, out var room) || room is not { IsObjid: true }) return;
-		if (!await reality.IsEnabledAsync(ct))
-		{
-			await hub.Clients.Group(GameHub.RoomGroupName(room.Value)).ReceiveRoomEvent(message);
-			return;
-		}
-		if (!DBRef.TryParse(message.ActorDbref, out var source) || source is not { IsObjid: true }) return;
+		var enabled = await reality.IsEnabledAsync(ct);
+		var hasSource = DBRef.TryParse(message.ActorDbref, out var source) && source is { IsObjid: true };
+		if (enabled && !hasSource) return;
 		foreach (var subscription in registry.Subscribers(room.Value))
 		{
 			ct.ThrowIfCancellationRequested();
 			try
 			{
 				if (!registry.IsCurrent(subscription)
-					|| !await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source.Value, message.EventType, ct)
+					|| !(hasSource
+						? await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source!.Value, message.EventType, ct)
+						: await projection.CanSubscribeRoomAsync(subscription.Actor, room.Value, ct))
 					|| !registry.IsCurrent(subscription)) continue;
 				await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message);
 			}

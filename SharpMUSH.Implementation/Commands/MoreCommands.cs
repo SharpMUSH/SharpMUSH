@@ -1960,7 +1960,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
+		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage);
 
 		if (!recipientResult.IsValid() || recipientResult.IsRoom || recipientResult.IsExit)
 		{
@@ -2486,7 +2486,7 @@ public partial class Commands
 		foreach (var recipientName in recipientNames)
 		{
 			var recipientResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(
-				parser, executor, executor, recipientName, LocateFlags.All);
+				parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage);
 
 			if (!recipientResult.IsAnySharpObject)
 			{

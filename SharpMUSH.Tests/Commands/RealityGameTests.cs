@@ -17,6 +17,64 @@ public class RealityGameTests
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
 	[Test, NotInParallel]
+	public async Task TelCannotMoveAnObjectIntoAnUnperceivedDestination()
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var originalProfile = (await policy.ReadObjectAsync(player.Object.DBRef))!;
+		var home = await player.Location.WithCancellation(default);
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("tel ghost room", player)))).AsRoom;
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("tel normal item", home, player, home)))).AsThing;
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			await policy.SaveObjectAsync(player.Object.Id!, originalProfile with { Receive = ["normal", "ghost"] }, default);
+			await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
+			await Factory.FunctionParser.FromState(ParserState.RootFor(player.Object.DBRef)).FunctionParse(
+				MarkupText.Plain($"tel({item.Object.DBRef},{destination.Object.DBRef})"));
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(home.Object().DBRef);
+		}
+		finally
+		{
+			await policy.SaveObjectAsync(player.Object.Id!, originalProfile, default);
+			await policy.SaveConfigurationAsync(original, default);
+		}
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task PageTargetResolutionUsesTheRecipientsReceivingDirection(bool byName, bool overrideLock)
+	{
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var home = await player.Location.WithCancellation(default);
+		var name = "RealityPager" + Guid.NewGuid().ToString("N")[..12];
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand(name, "TestPassword123!", home.Object().DBRef, home.Object().DBRef, 10)))).AsPlayer;
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
+			await policy.SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Transmit = ["ghost"] }, default);
+			if (overrideLock) await mediator.Send(new SetLockCommand(target.Object, "Interact", "#FALSE", player));
+			var output = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(target.Object.Key, output))
+				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(
+					MarkupText.Plain($"page{(overrideLock ? "/override" : "")} {(byName ? "*" + name : target.Object.DBRef.ToString())}=directional-page-message"));
+			await Assert.That(output.Body.ToString()).Contains("directional-page-message");
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
 	public async Task HiddenCandidatesDoNotMatchOrMakeVisibleNamesAmbiguous()
 	{
 		var objects = Get<IObjectStore>();

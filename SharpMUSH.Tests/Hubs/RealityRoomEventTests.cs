@@ -37,9 +37,11 @@ public class RealityRoomEventTests
 	}
 
 	[Test]
-	public async Task EnabledEventsUseRecipientChecksAndNeverTheRoomGroup()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AllModesUseRecipientChecksAndNeverTheRoomGroup(bool enabled)
 	{
-		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
+		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(enabled);
 		var allowed = Subscribe("allowed", 30);
 		Subscribe("hidden", 31);
 		_projection.CanReceiveRoomEventAsync(allowed, _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
@@ -68,8 +70,15 @@ public class RealityRoomEventTests
 	public async Task DisabledModePreservesLegacyRoomEvents()
 	{
 		var message = new RoomEventMessage(_room.ToString(), RoomEventType.Arrive, "Actor", "arrived");
+		var actor = Subscribe("current", 30);
+		Subscribe("stale", 31);
+		_projection.CanSubscribeRoomAsync(actor, _room, Arg.Any<CancellationToken>()).Returns(true);
+		var client = Substitute.For<IGameHubClient>();
+		_hub.Clients.Client("current").Returns(client);
 		await _dispatcher.DispatchAsync(message);
-		await _hub.Clients.Group(GameHub.RoomGroupName(_room)).Received(1).ReceiveRoomEvent(message);
+		await client.Received(1).ReceiveRoomEvent(message);
+		_hub.Clients.DidNotReceive().Client("stale");
+		_hub.Clients.DidNotReceive().Group(Arg.Any<string>());
 	}
 
 	[Test]

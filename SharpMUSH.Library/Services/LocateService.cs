@@ -319,7 +319,7 @@ public partial class LocateService(
 				&& flags.HasFlag(LocateFlags.MatchMeForLooker)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
 				&& name.Equals("me", StringComparison.OrdinalIgnoreCase)
-				&& await permissionService.CanInteract(executor, looker, IPermissionService.InteractType.Match))
+				&& await permissionService.CanInteract(executor, looker, MatchInteraction(flags)))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, looker))
@@ -337,7 +337,7 @@ public partial class LocateService(
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
 				&& name.Equals("here", StringComparison.OrdinalIgnoreCase)
 				&& TypeAllows(preferred, flags, TypeOf(location.WithExitOption()))
-				&& await permissionService.CanInteract(executor, location.WithExitOption(), IPermissionService.InteractType.Match))
+				&& await permissionService.CanInteract(executor, location.WithExitOption(), MatchInteraction(flags)))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, location.WithExitOption()))
@@ -361,7 +361,7 @@ public partial class LocateService(
 			if (player is not null)
 			{
 				AnySharpObject found = player;
-				if (await permissionService.CanInteract(executor, found, IPermissionService.InteractType.Match)
+				if (await permissionService.CanInteract(executor, found, MatchInteraction(flags))
 						&& await InLookerContents(found)
 						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 								|| await executor.HasLongFingers()
@@ -386,7 +386,7 @@ public partial class LocateService(
 			if (!found.IsNone)
 			{
 				var known = found.WithoutError().WithoutNone();
-				if (await permissionService.CanInteract(executor, known, IPermissionService.InteractType.Match)
+				if (await permissionService.CanInteract(executor, known, MatchInteraction(flags))
 						&& TypeAllows(preferred, flags, TypeOf(known))
 						&& await InLookerContents(known)
 						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
@@ -588,7 +588,7 @@ public partial class LocateService(
 			// match.c asks can_interact before comparing names. A candidate whose name does not match is
 			// skipped either way, so asking only about the ones that matched is the same answer for
 			// fewer questions — and this is a per-candidate permission call.
-			if (!await permissionService.CanInteract(executor, cur, IPermissionService.InteractType.Match))
+			if (!await permissionService.CanInteract(executor, cur, MatchInteraction(state.Flags)))
 			{
 				continue;
 			}
@@ -597,6 +597,11 @@ public partial class LocateService(
 			if (state.Done) return;
 		}
 	}
+
+	private static IPermissionService.InteractType MatchInteraction(LocateFlags flags)
+		=> flags.HasFlag(LocateFlags.MatchForPage)
+			? IPermissionService.InteractType.Page
+			: IPermissionService.InteractType.Match;
 
 	private enum MatchKind
 	{

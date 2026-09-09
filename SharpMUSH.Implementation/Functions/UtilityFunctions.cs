@@ -1939,6 +1939,9 @@ public partial class Functions
 						var destinationContainer = destObj.AsContainer;
 						var targetContent = targetObj.AsContent;
 
+						if (!await MoveService.CanMoveAsync(executor, targetContent, destinationContainer))
+							return ErrorMessages.Returns.CannotTeleport;
+
 						if (await MoveService.WouldCreateLoop(targetContent, destinationContainer))
 						{
 							return ErrorMessages.Returns.WouldCreateLoop;
