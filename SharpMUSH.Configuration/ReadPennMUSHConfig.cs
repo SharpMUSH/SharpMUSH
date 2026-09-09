@@ -259,7 +259,6 @@ public static partial class ReadPennMushConfig
 					{ "atrlock", ["attrlock"] },
 					{ "iter", ["parse"] },
 					{ "lsearch", ["search"] },
-					{ "linsert", ["insert"] },
 					{ "lstats", ["stats"] },
 					{ "lthings", ["lobjects"] },
 					{ "lvthings", ["lvobjects"] },
