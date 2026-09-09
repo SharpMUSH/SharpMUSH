@@ -1,0 +1,239 @@
+{
+  "reference": "https://github.com/pennmush/pennmush",
+  "commit": "95ad3511d0410b9e132f140fabc4ca7afec433da",
+  "captured": "2026-09-09T00:10:16.249411+00:00",
+  "platform": "Linux x86_64, system ICU, default numeric types",
+  "cases": [
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(0x10,2)",
+      "expected": "18",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(-0x1.8p2,0)",
+      "expected": "-6",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(0x10000000000001,0)",
+      "expected": "4503599627370497",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "lmath(neq,1 1 2)",
+      "expected": "1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "inc(foo)",
+      "expected": "foo1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "dec(foo)",
+      "expected": "foo-1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "inc(9223372036854775807)",
+      "expected": "#-1 OUT OF RANGE",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "dec(-9223372036854775808)",
+      "expected": "#-1 OUT OF RANGE",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "inc(12%b)",
+      "expected": "12 1",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "inc()",
+      "expected": "#-1 ARGUMENT MUST END IN AN INTEGER",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "inc(foo)",
+      "expected": "#-1 ARGUMENT MUST END IN AN INTEGER",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "round(e(),2)",
+      "expected": "2.72",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "round(pi(),2)",
+      "expected": "3.14",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(,2)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": false,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "eq(,0)",
+      "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(foo,2)",
+      "expected": "2",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(12foo,2)",
+      "expected": "14",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "add(1.5foo,2)",
+      "expected": "3.5",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "div(12foo,2)",
+      "expected": "6",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "iter(a b,[ibreak()]%iL)",
+      "expected": "a",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_math": true,
+        "null_eq_zero": false,
+        "tiny_trim_fun": true,
+        "tiny_booleans": false
+      },
+      "expression": "iter(a b,[ibreak(1foo)]%iL)",
+      "expected": "#-1 ARGUMENT MUST BE INTEGERa #-1 ARGUMENT MUST BE INTEGERb",
+      "intent": "parity"
+    }
+  ]
+}
