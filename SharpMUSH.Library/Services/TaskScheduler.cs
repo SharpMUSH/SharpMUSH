@@ -745,14 +745,13 @@ public partial class TaskScheduler(
 		}
 		catch
 		{
-			CancelEntry(entry);
 			using var cleanup = ExecutionBudget.FromMilliseconds(1000);
 			using var cleanupScope = cleanup.Enter();
 			try { await _scheduler.UnscheduleJob(trigger, cleanup.Token); }
 			catch (Exception cleanupFailure)
 			{
 				// The lost acknowledgement may hide a committed long-lived trigger. Its
-				// cancelled reservation remains bounded and can be retried through halt.
+				// unpublished reservation remains bounded and can be retried through halt.
 				lock (_admissionLock) _delayedRepairs.Add(entry.Pid);
 				logger.LogError(cleanupFailure, "Delayed schedule cleanup failed for PID {Pid}; retry halt to release its reservation", entry.Pid);
 				throw;

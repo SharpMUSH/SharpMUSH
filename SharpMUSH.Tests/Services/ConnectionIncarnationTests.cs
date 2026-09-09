@@ -97,6 +97,22 @@ public class ConnectionIncarnationTests
 	}
 
 	[Test]
+	public async Task CurrentInputUsesThePublishedSchedulerEntryPoint()
+	{
+		var service = new ConnectionService(Substitute.For<IPublisher>());
+		await Register(service, "current", 200);
+		var scheduler = Substitute.For<ITaskScheduler>();
+		await new TelnetInputConsumer(NullLogger<TelnetInputConsumer>.Instance, scheduler, service)
+			.HandleAsync(new TelnetInputMessage(Handle, "look", "current"));
+		await new WebSocketInputConsumer(NullLogger<WebSocketInputConsumer>.Instance, scheduler, service)
+			.HandleAsync(new WebSocketInputMessage(Handle, "look", "current"));
+
+		await scheduler.Received(2).WriteUserCommand(Handle, Arg.Any<MarkupText>(),
+			Arg.Is<ParserState>(state => state.ConnectionSessionId == "current"));
+		await scheduler.DidNotReceive().AdmitUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
+	}
+
+	[Test]
 	public async Task DelayedEstablishedEventCannotReplaceAuthoritativeKvIncarnation()
 	{
 		var service = Substitute.For<IConnectionService>();
@@ -155,7 +171,7 @@ public class ConnectionIncarnationTests
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		try
 		{
-			await scheduler.AdmitUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
+			await scheduler.WriteUserCommand(Handle, MarkupString.MarkupText.Plain("look"),
 				ParserState.Empty with { Handle = Handle, ConnectionSessionId = "old" });
 			await Register(service, "replacement", 200);
 			await scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain", "test");

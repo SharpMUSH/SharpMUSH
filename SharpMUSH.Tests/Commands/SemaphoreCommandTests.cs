@@ -191,10 +191,10 @@ public class SemaphoreCommandTests
 		var value = "invalid-" + Guid.NewGuid().ToString("N");
 		await Assert.That(await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["SEMAPHORE"], MarkupText.Plain(value), player))).IsTrue();
 		var command = (drain ? "@drain " : "@notify ") + target + "/SEMAPHORE";
-		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain(command), ParserState.RootFor(player.Object.DBRef));
+		var admitted = await Scheduler.AdmitCommandList(MarkupText.Plain(command), ParserState.RootFor(player.Object.DBRef));
 		await Assert.That(admitted.Accepted).IsTrue();
 		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var sentinel = await Scheduler.EnqueueWork(() => { completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "notice-sentinel", "test");
+		var sentinel = await Scheduler.AdmitWork(() => { completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "notice-sentinel", "test");
 		await Assert.That(sentinel.Accepted).IsTrue();
 		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.Object.DBRef),
