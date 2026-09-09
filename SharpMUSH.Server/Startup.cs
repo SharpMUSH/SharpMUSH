@@ -445,6 +445,7 @@ public class Startup(
 		services.AddSingleton<ILocateService, LocateService>();
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IDidItService, DidItService>();
+		services.AddSingleton<ILookService, LookService>();
 		services.AddSingleton<IObjectDestructionService, ObjectDestructionService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();

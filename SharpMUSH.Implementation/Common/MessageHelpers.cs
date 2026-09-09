@@ -32,22 +32,6 @@ public static class MessageHelpers
 		};
 	}
 
-	/// <summary>
-	/// Strips the message type prefix from the message if present.
-	/// </summary>
-	/// <param name="message">The message to strip</param>
-	/// <returns>The message without the prefix</returns>
-	public static string StripMessageTypePrefix(string message)
-	{
-		return message switch
-		{
-			[':', .. var rest] => new string(rest.ToArray()),
-			[';', .. var rest] => new string(rest.ToArray()),
-			['|', .. var rest] => new string(rest.ToArray()),
-			_ => message
-		};
-	}
-
 	public static async ValueTask<CallState> ProcessMessageAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,

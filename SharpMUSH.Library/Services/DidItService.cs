@@ -179,9 +179,12 @@ public class DidItService(
 	/// <c>Player</c> as enactor. PennMUSH <c>queue_attribute_base</c>.
 	/// </summary>
 	/// <remarks>
-	/// The closure is evaluated when the queue drains, which may be many commands later, so it
-	/// captures DBRefs and lets the parser resolve them then. Capturing a loaded object here would
-	/// hand the action a snapshot taken before whatever write triggered it.
+	/// The state captures DBRefs rather than loaded objects, so the parser resolves them when the
+	/// queue drains — which may be many commands later, and a loaded object would be a snapshot taken
+	/// before whatever write triggered the action. The action <i>text</i>, by contrast, is snapshotted
+	/// here: <c>queue_attribute_useatr</c> copies <c>atr_value(a)</c> into its own buffer at queue
+	/// time (<c>src/cque.c:840</c>), so an attribute rewritten before the entry runs still runs the
+	/// value that was read when the triad fired.
 	/// </remarks>
 	private async ValueTask<bool> QueueAction(IMUSHCodeParser parser, DidItRequest request)
 	{
@@ -220,8 +223,9 @@ public class DidItService(
 		// such frame: @retry in the action would replay the triggering command, an @break would be
 		// re-raised by an @include the action never ran under, and @respond would edit an HTTP
 		// response that was assembled and sent long before the queue drained.
-		await mediator.Send(new QueueAttributeRequest(
-			() => ValueTask.FromResult(baseState with
+		await mediator.Send(new QueueCommandListRequest(
+			attr.AsAttribute.Last().Value,
+			baseState with
 			{
 				Executor = executor,
 				Enactor = enactor,
@@ -241,8 +245,9 @@ public class DidItService(
 				CommandHistory = null,
 				BreakPropagation = null,
 				HttpResponse = null
-			}),
-			new DbRefAttribute(executor, attributePath)));
+			},
+			new DbRefAttribute(executor, attributePath),
+			-1));
 
 		return true;
 	}

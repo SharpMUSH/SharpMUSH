@@ -1,0 +1,439 @@
+using System.Net;
+using Mediator;
+using MarkupString;
+using MarkupString.Html;
+using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
+using static MarkupString.MStringInterpolation;
+
+namespace SharpMUSH.Library.Services;
+
+public class LookService(
+	IMediator mediator,
+	IAttributeService attributeService,
+	INotifyService notifyService,
+	IPermissionService permissionService,
+	IDidItService didItService,
+	IConnectionService connectionService,
+	ILocalizationService localizationService) : ILookService
+{
+	public async ValueTask<CallState> LookRoom(
+		IMUSHCodeParser parser,
+		AnySharpObject looker,
+		AnyOptionalSharpObject viewing,
+		LookKey key,
+		bool lookOutside = false,
+		bool forceOpaque = false)
+	{
+		// look_room (look.c:461): NOTHING is shown nothing.
+		if (viewing.IsNone())
+		{
+			return CallState.Empty;
+		}
+
+		var realViewing = viewing.Known;
+		var viewingObject = realViewing.Object();
+
+		// LOOK_CLOUDYTRANS (externs.h:248) is the mask of both transparent-exit bits, and look.c:458
+		// derives "am I looking through an exit" from either of them being set.
+		var lookThroughExit = key.HasFlag(LookKey.Trans) || key.HasFlag(LookKey.CloudyTrans);
+
+		// look.c:492 and look.c:503: an automatic look — the one a mover gets on arrival — shows a
+		// TERSE player no description at all.
+		var terse = key.HasFlag(LookKey.Auto) && await looker.HasFlag("TERSE");
+
+		// look.c:492 for a container viewed from inside, look.c:503-504 for a room: LOOK_TRANS puts
+		// the description back even when the look is coming through an exit.
+		var showDescription = realViewing.IsRoom
+			? (!lookThroughExit && !terse) || key.HasFlag(LookKey.Trans)
+			: !terse;
+
+		var lookerLocation = looker.IsContent
+			? await looker.AsContent.Location()
+			: null;
+		var viewingFromInside = lookerLocation != null
+			&& lookerLocation.Object().DBRef == viewingObject.DBRef;
+
+		var baseName = viewingObject.Name;
+		var baseDesc = MarkupText.Empty;
+		string? descriptionAttributeName = null;
+		var god = await HelperFunctions.GetGod(mediator);
+		var lookerEnactor = looker.Object().DBRef;
+
+		// @idescribe is only used for players and things; rooms and exits always use @describe
+		// (help @idescribe). Inside formats are discovered independently of @idescribe, however:
+		// a present @idescformat formats the fallback @describe too.
+		var tryIdesc = viewingFromInside && !lookOutside
+			&& (realViewing.IsPlayer || realViewing.IsThing);
+		var usedIdesc = false;
+
+		if (showDescription)
+		{
+			if (tryIdesc)
+			{
+				var idescResult = await attributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
+					IAttributeService.AttributeMode.Read, true);
+				if (idescResult.IsAttribute)
+				{
+					// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
+					// @aidescribe without text), so an empty value stays empty here.
+					usedIdesc = true;
+					descriptionAttributeName = "IDESCRIBE";
+					baseDesc = idescResult.AsAttribute.Last().Value;
+				}
+			}
+
+			if (!usedIdesc)
+			{
+				var descResult = await attributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
+					IAttributeService.AttributeMode.Read, true);
+				if (descResult.IsAttribute)
+				{
+					descriptionAttributeName = "DESCRIBE";
+					baseDesc = descResult.AsAttribute.Last().Value;
+				}
+				else
+				{
+					baseDesc = MarkupText.Plain("You see nothing special.");
+				}
+			}
+
+			if (descriptionAttributeName is not null)
+			{
+				baseDesc = await parser.With(
+					state => state with { Enactor = lookerEnactor },
+					lookParser => attributeService.EvaluateAttributeFunctionAsync(
+						lookParser, looker, realViewing, descriptionAttributeName,
+						new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true));
+			}
+		}
+
+		var formattedName = MarkupText.Empty;
+
+		// look.c:469-489: unparse_room, and so @nameformat with it, is skipped entirely when the look
+		// arrives through a transparent exit.
+		if (!lookThroughExit)
+		{
+			var flags = await viewingObject.Flags.Value.ToArrayAsync();
+			var flagStr = string.Join(string.Empty, flags.Select(x => x.Symbol));
+			var defaultFormattedName = Format($"{baseName.Hilight()}(#{viewingObject.DBRef.Number}{flagStr})");
+
+			formattedName = defaultFormattedName;
+			if (realViewing.IsRoom && viewingFromInside)
+			{
+				var nameFormatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(viewingObject.DBRef.ToString()),
+					["1"] = new CallState(defaultFormattedName)
+				};
+
+				formattedName = await AttributeHelpers.EvaluateFormatAttribute(
+					attributeService, parser, looker, realViewing, "NAMEFORMAT",
+					nameFormatArgs, defaultFormattedName, checkParents: false);
+			}
+		}
+
+		var formattedDesc = baseDesc;
+
+		if (showDescription)
+		{
+			var formatAttrName = tryIdesc ? "IDESCFORMAT" : "DESCFORMAT";
+			var formatAttribute = await attributeService.GetAttributeAsync(
+				god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
+
+			if (tryIdesc && !usedIdesc && formatAttribute.IsNone)
+			{
+				formatAttrName = "DESCFORMAT";
+				formatAttribute = await attributeService.GetAttributeAsync(
+					god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
+			}
+
+			if (formatAttribute.IsAttribute)
+			{
+				var descFormatArgs = new Dictionary<string, CallState>();
+				if (descriptionAttributeName is not null)
+				{
+					descFormatArgs["0"] = new CallState(baseDesc);
+				}
+
+				formattedDesc = await parser.With(
+					state => state with { Enactor = lookerEnactor },
+					lookParser => attributeService.EvaluateAttributeFunctionAsync(
+						lookParser, looker, realViewing, formatAttrName,
+						descFormatArgs, evalParent: true, ignorePermissions: true));
+			}
+		}
+
+		if (!lookThroughExit)
+		{
+			await notifyService.Notify(looker, formattedName, looker);
+		}
+
+		if (showDescription && formattedDesc.Length > 0)
+		{
+			await notifyService.Notify(looker, formattedDesc, looker);
+		}
+
+		// look.c:496 and look.c:507: the describe triad carries an o-message and an action, never a
+		// message back to the looker — look_description has already shown that. The @idescformat and
+		// @descformat fallbacks of the inside view run no triad at all.
+		var oDescribeAttribute = tryIdesc ? usedIdesc ? "OIDESCRIBE" : null : "ODESCRIBE";
+		var aDescribeAttribute = tryIdesc ? usedIdesc ? "AIDESCRIBE" : null : "ADESCRIBE";
+
+		if (showDescription && oDescribeAttribute is not null)
+		{
+			// A HALTED object runs none of its softcode (AttributeService.cs:417), so its action
+			// attribute is not queued; the o-message is plain text and still goes out.
+			var halted = await realViewing.HasFlag("HALT");
+
+			await didItService.DidIt(parser, new DidItRequest(
+				Player: looker,
+				Thing: realViewing,
+				OWhat: oDescribeAttribute,
+				AWhat: halted ? null : aDescribeAttribute));
+		}
+
+		// look.c:510-526: a terse automatic look gets only the o-message and the action of whichever
+		// side of the basic lock it landed on; anyone else gets the whole triad, or fail_lock.
+		if (realViewing.IsRoom && !lookThroughExit)
+		{
+			var passes = await permissionService.PassesLock(looker, realViewing, LockType.Basic);
+
+			if (terse)
+			{
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: looker,
+					Thing: realViewing,
+					OWhat: passes ? "OSUCCESS" : "OFAILURE",
+					AWhat: passes ? "ASUCCESS" : "AFAILURE"));
+			}
+			else if (passes)
+			{
+				await didItService.DidIt(parser, new DidItRequest(
+					Player: looker,
+					Thing: realViewing,
+					What: "SUCCESS",
+					OWhat: "OSUCCESS",
+					AWhat: "ASUCCESS"));
+			}
+			else
+			{
+				await didItService.FailLock(parser, looker, realViewing, LockType.Basic);
+			}
+		}
+
+		// look.c:528-529: look/opaque drops the contents, and so does a look through an exit that is
+		// both cloudy and transparent.
+		var showContents = !key.HasFlag(LookKey.NoContents)
+			&& !(key.HasFlag(LookKey.Trans) && key.HasFlag(LookKey.CloudyTrans));
+
+		var showInventory = showContents
+			&& realViewing.IsContainer
+			&& !forceOpaque
+			&& !(await realViewing.IsOpaque());
+
+		if (showInventory)
+		{
+			var allContents = await mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
+
+			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
+			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
+			var canSeeAll = await looker.IsSee_All();
+
+			var visibleContents = new List<AnySharpContent>();
+			var visibleExits = new List<AnySharpContent>();
+
+			foreach (var item in allContents)
+			{
+				var itemObj = item.WithRoomOption();
+				var isDark = await itemObj.IsDarkLegal();
+				var isLight = await itemObj.IsLight();
+
+				bool visible;
+				if (isRoomLight)
+				{
+					visible = true;
+				}
+				else if (isRoomDark)
+				{
+					visible = canSeeAll || isLight;
+				}
+				else
+				{
+					visible = !isDark || canSeeAll;
+				}
+
+				if (visible)
+				{
+					if (item.IsExit)
+					{
+						if (!isDark || canSeeAll)
+						{
+							visibleExits.Add(item);
+						}
+					}
+					else
+					{
+						// Disconnected / portal-only players are "asleep" — omitted from contents (PennMUSH).
+						// Objects always show.
+						if (!item.IsPlayer || await connectionService.IsOnline(itemObj))
+						{
+							visibleContents.Add(item);
+						}
+					}
+				}
+			}
+
+			if (visibleContents.Count > 0)
+			{
+				var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
+				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
+				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
+
+				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
+				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
+				{
+					if (canSeeAll)
+					{
+						return await MessageFormatting.FormatObjectWithDbrefMString(item.Object());
+					}
+					return MarkupText.Plain(item.Object().Name);
+				}));
+				var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
+
+				var conFormatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
+
+				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
+					attributeService, parser, looker, realViewing, "CONFORMAT",
+					conFormatArgs, defaultContents, checkParents: false);
+
+				await notifyService.Notify(looker, formattedContents, looker);
+			}
+
+			// look.c:531-533: the exits are listed only for a look that is not coming through an exit.
+			if (visibleExits.Count > 0 && realViewing.IsRoom && !lookThroughExit)
+			{
+				var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
+				var exitFormatArgs = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(exitDbrefs)
+				};
+
+				var isTransparent = await realViewing.IsTransparent();
+				string? lookerLocale = null;
+				await foreach (var connection in connectionService.Get(looker.Object().DBRef))
+				{
+					connection.Metadata.TryGetValue("Locale", out lookerLocale);
+					break;
+				}
+
+				MString defaultExits;
+				if (isTransparent)
+				{
+					var exitParts = new List<MString>();
+					foreach (var exit in visibleExits)
+					{
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit
+							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
+							: new AnyOptionalSharpContainer(new OneOf.Types.None());
+						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
+
+						var exitMString = WrapExitInSendTag(exitObj.Name);
+
+						if (await exit.WithRoomOption().IsOpaque())
+						{
+							exitParts.Add(exitMString);
+						}
+						else
+						{
+							exitParts.Add(FormatExitNameToDestination(exitMString, destName, lookerLocale));
+						}
+					}
+					defaultExits = MarkupText.Concat(exitParts.SelectMany<MString, MString>((part, i) =>
+						i > 0 ? [MarkupText.NewLine, part] : [part]).ToArray());
+				}
+				else
+				{
+					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
+					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageFormatting.FormatMStringsWithOxfordComma(exitMStrings));
+				}
+
+				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
+					attributeService, parser, looker, realViewing, "EXITFORMAT",
+					exitFormatArgs, defaultExits, checkParents: false);
+
+				if (formattedExits == defaultExits && isTransparent)
+				{
+					foreach (var exit in visibleExits)
+					{
+						var exitObj = exit.WithRoomOption().Object();
+						var destination = exit.IsExit
+							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
+							: new AnyOptionalSharpContainer(new OneOf.Types.None());
+						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
+
+						var exitMString = WrapExitInSendTag(exitObj.Name);
+
+						if (await exit.WithRoomOption().IsOpaque())
+						{
+							await notifyService.Notify(looker, exitMString, looker);
+						}
+						else
+						{
+							await notifyService.NotifyLocalizedMarkup(
+								looker,
+								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
+								looker,
+								exitMString,
+								MarkupText.Plain(destName));
+						}
+					}
+				}
+				else
+				{
+					await notifyService.Notify(looker, formattedExits, looker);
+				}
+			}
+		}
+
+		return new CallState(viewingObject.DBRef.ToString());
+	}
+
+	/// <summary>
+	/// Wraps an exit name in a &lt;send&gt; HtmlMarkup tag for Pueblo/MXP clients.
+	/// The first alias (before ';') is used as the href command.
+	/// All aliases are pipe-delimited in the hint for right-click menus (BeipMU pattern).
+	/// For ANSI clients, HtmlMarkup passes through as plain text (only the display name).
+	/// </summary>
+	private static MString WrapExitInSendTag(string exitName)
+	{
+		var aliases = exitName.Split(';');
+		var displayName = aliases[0];
+		var command = WebUtility.HtmlEncode(aliases[0]);
+		var hint = aliases.Length > 1
+			? WebUtility.HtmlEncode(string.Join("|", aliases))
+			: $"Go {command}";
+		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
+		return MarkupText.Wrap(sendMarkup, MarkupText.Plain(displayName));
+	}
+
+	private MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
+	{
+		var template = localizationService.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
+			?? ErrorMessages.Notifications.ExitNameToDestFormat;
+		return MarkupTemplateFormatter.Format(template, exitName, MarkupText.Plain(destName));
+	}
+}
