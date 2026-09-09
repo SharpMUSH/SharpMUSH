@@ -301,19 +301,145 @@ public class CommunicationCommandTests
 	}
 
 	[Test]
-	[Arguments("@nsoemit #1=Test nospoof omit")]
-	public async ValueTask NsoemitBasic(string command)
+	public async ValueTask NsoemitBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		Console.WriteLine("Testing: @nsoemit");
+
+		// The first argument is the exclusion list, so omit a freshly-created thing to leave the
+		// executor (player #1) among the recipients.
+		var excludeName = TestIsolationHelpers.GenerateUniqueName("NsoemitExclude");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {excludeName}"));
+		var excludeDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		var expectedMsg = "Test nospoof omit";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nsoemit {excludeDbRef}={expectedMsg}"));
 
 		await NotifyService
-			.Received()
+			.Received(1)
 			.Notify(
-				Arg.Any<AnySharpObject>(),
+				TestHelpers.MatchingObject(executor),
 				Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof omit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+					TestHelpers.MessageEquals(msg, expectedMsg)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_oemit_list</c> (<c>speech.c</c>): the first argument of <c>@oemit</c> and
+	/// <c>@nsoemit</c> is the list of objects to LEAVE OUT. Everyone else in the room — the sender
+	/// included — hears the message, and the listed object hears nothing. <c>@nsoemit</c> was a copy
+	/// of <c>@nsemit</c> that read argument 1 as the message and never looked at argument 0, so the
+	/// exclusion list was silently discarded and the emit reached the object it had to skip.
+	/// </summary>
+	[Test]
+	public async ValueTask NsoemitExcludesTheListedObject()
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitSpeaker");
+		var excluded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitExcluded");
+		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListener");
+
+		foreach (var player in new[] { speaker, excluded, listener })
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
+		}
+
+		var message = TestIsolationHelpers.GenerateUniqueName("NsoemitSaid");
+		await Parser.CommandParse(speaker.Handle, ConnectionService,
+			MarkupText.Plain($"@nsoemit {excluded.DbRef}={message}"));
+
+		var notifications = WebAppFactoryArg.Notifications;
+
+		await Assert.That(notifications.For(listener.DbRef).Any(m => m.Contains(message))).IsTrue()
+			.Because("everyone in the room who is not on the exclusion list hears an @nsoemit");
+		await Assert.That(notifications.For(speaker.DbRef).Any(m => m.Contains(message))).IsTrue()
+			.Because("@oemit omits the listed objects, not the sender");
+		await Assert.That(notifications.For(excluded.DbRef).Any(m => m.Contains(message))).IsFalse()
+			.Because("the object named in argument 0 is the one @nsoemit has to leave out");
+
+		// The no-spoof delivery is a privilege, not a property of the command name:
+		// CanNoSpoof is IsWizard || HasPower("Can_Spoof"), and @NSEMIT, @NSREMIT, @NSPEMIT and
+		// @NSZEMIT all fall back to Emit without it. This speaker is a plain player, so it gets
+		// Emit; NsoemitDeliversAsNoSpoof covers the privileged case with a wizard executor.
+		await Assert.That(notifications.DeliveriesFor(listener.DbRef)
+				.Any(d => d.Message.Contains(message) && d.Type == INotifyService.NotificationType.Emit)).IsTrue()
+			.Because("an executor without Can_Spoof gets the ordinary emit type, as it does from every other @ns* command");
+	}
+
+	/// <summary>
+	/// The exclusion list is a list: <c>@nsoemit &lt;obj&gt; &lt;obj&gt;=&lt;message&gt;</c> leaves
+	/// out every object named in it.
+	/// </summary>
+	[Test]
+	public async ValueTask NsoemitExcludesEveryObjectInTheList()
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitListRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListSpeaker");
+		var firstExcluded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListFirst");
+		var secondExcluded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListSecond");
+		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitListListener");
+
+		foreach (var player in new[] { speaker, firstExcluded, secondExcluded, listener })
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
+		}
+
+		var message = TestIsolationHelpers.GenerateUniqueName("NsoemitListSaid");
+		await Parser.CommandParse(speaker.Handle, ConnectionService,
+			MarkupText.Plain($"@nsoemit {firstExcluded.DbRef} {secondExcluded.DbRef}={message}"));
+
+		var notifications = WebAppFactoryArg.Notifications;
+
+		await Assert.That(notifications.For(listener.DbRef).Any(m => m.Contains(message))).IsTrue();
+		await Assert.That(notifications.For(firstExcluded.DbRef).Any(m => m.Contains(message))).IsFalse()
+			.Because("every object in the exclusion list is left out, not just the first");
+		await Assert.That(notifications.For(secondExcluded.DbRef).Any(m => m.Contains(message))).IsFalse()
+			.Because("every object in the exclusion list is left out, not just the first");
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_oemit_list</c> accepts <c>&lt;room&gt;/&lt;object list&gt;</c>, emitting into
+	/// that room instead of the sender's own — the same syntax <c>@oemit</c> already supports here.
+	/// </summary>
+	[Test]
+	public async ValueTask NsoemitRoomSlashObjectEmitsIntoThatRoom()
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName("NsoemitRemoteRoom");
+		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+
+		var excluded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitRemoteExcluded");
+		var listener = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NsoemitRemoteListener");
+
+		foreach (var player in new[] { excluded, listener })
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
+		}
+
+		var message = TestIsolationHelpers.GenerateUniqueName("NsoemitRemoteSaid");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@nsoemit {roomDbRef}/{excluded.DbRef}={message}"));
+
+		var notifications = WebAppFactoryArg.Notifications;
+
+		await Assert.That(notifications.For(listener.DbRef).Any(m => m.Contains(message))).IsTrue()
+			.Because("<room>/<object> emits into the named room");
+		await Assert.That(notifications.For(excluded.DbRef).Any(m => m.Contains(message))).IsFalse()
+			.Because("the objects after the slash are still the exclusion list");
 	}
 
 	[Test]

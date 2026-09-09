@@ -5731,49 +5731,20 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// The no-spoof form of <see cref="OmitEmit"/>: PennMUSH <c>do_oemit_list</c> (<c>speech.c</c>)
+	/// emits to everyone in the room EXCEPT the objects listed in argument 0, and accepts the same
+	/// <c>&lt;room&gt;/&lt;object list&gt;</c> target syntax. It differs from <c>@OEMIT</c> only in
+	/// the <see cref="IPermissionService.CanSpoofAs"/> gate and the no-spoof notification type.
+	/// </summary>
 	[SharpCommand(Name = "@NSOEMIT", Switches = ["NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSNoParse, MinArgs = 0,
-		MaxArgs = 0, ParameterNames = ["message"])]
+		MaxArgs = 0, ParameterNames = ["objects", "message"])]
 	public async ValueTask<Option<CallState>> NoSpoofOmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		var executorLocation = await executor.OutermostWhere();
-		var contents = executorLocation.Content(Mediator);
-		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
-		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Empty)
-			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
-
-		var interactableContents = contents
-			.Where(async (obj, _) =>
-				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
-
-		if (!await PermissionService.CanSpoofAs(executor, enactor))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		await foreach (var obj in interactableContents)
-		{
-			await NotifyService.Notify(
-				obj.WithRoomOption(),
-				message,
-				enactor,
-				INotifyService.NotificationType.Emit);
-		}
-
-		return new CallState(message);
-	}
-
-	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (args.Count < 2)
 		{
@@ -5781,14 +5752,61 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var objects = args["0"].Message!.ToPlainText();
-		var message = args["1"].Message!;
+		if (!await PermissionService.CanSpoofAs(executor, enactor))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
-		// Support room/obj format like PennMUSH (e.g., @remit #123/obj1 obj2=message)
-		// This allows emitting to a specific room while excluding specific objects.
+		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
+		var message = isNoEvaluation
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, MarkupText.Empty);
+
+		var (targetRoom, excludeObjects) = await ResolveOmitEmitTarget(parser, executor, args["0"].Message!.ToPlainText());
+
+		if (targetRoom is null)
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
+		}
+
+		// Same selection @NSEMIT, @NSREMIT, @NSPEMIT and @NSZEMIT make: the no-spoof type is
+		// what the executor is permitted to send, not what the command is named.
+		var notificationType = await PermissionService.CanNoSpoof(executor)
+			? INotifyService.NotificationType.NSEmit
+			: INotifyService.NotificationType.Emit;
+
+		await CommunicationService.SendToRoomAsync(
+			executor,
+			targetRoom,
+			_ => message,
+			notificationType,
+			sender: enactor,
+			excludeObjects: excludeObjects);
+
+		return new CallState(message);
+	}
+
+	/// <summary>
+	/// Resolves the <c>@oemit</c> target list — <c>[&lt;room&gt;/]&lt;object list&gt;</c>, per PennMUSH
+	/// <c>do_oemit_list</c> (<c>speech.c</c>) — into the room that hears the emit and the objects
+	/// inside it that must not.
+	/// </summary>
+	/// <returns>
+	/// The room to emit into and the objects to leave out, or a null room when a
+	/// <c>&lt;room&gt;/</c> prefix named something that cannot hold anything (the caller has already
+	/// been told).
+	/// </returns>
+	private async ValueTask<(AnySharpContainer? Room, List<AnySharpObject> Excluded)> ResolveOmitEmitTarget(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		string objects)
+	{
 		AnySharpContainer targetRoom;
 		string objectsToExclude;
 
+		// Support room/obj format like PennMUSH (e.g., @oemit #123/obj1 obj2=message)
+		// This allows emitting to a specific room while excluding specific objects.
 		if (objects.Contains('/'))
 		{
 			var parts = objects.Split('/', 2);
@@ -5805,7 +5823,7 @@ public partial class Commands
 			if (!roomResult.IsValid() || (!roomResult.IsRoom && !roomResult.IsThing))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
-				return new CallState(ErrorMessages.Returns.InvalidRoom);
+				return (null, []);
 			}
 
 			targetRoom = roomResult.IsRoom
@@ -5834,6 +5852,31 @@ public partial class Commands
 					excludeObjects.Add(target);
 					return CallState.Empty;
 				});
+		}
+
+		return (targetRoom, excludeObjects);
+	}
+
+	[SharpCommand(Name = "@OEMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+		MinArgs = 0, MaxArgs = 0, ParameterNames = ["objects", "message"])]
+	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (args.Count < 2)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
+			return new CallState(ErrorMessages.Returns.NothingToDo);
+		}
+
+		var message = args["1"].Message!;
+
+		var (targetRoom, excludeObjects) = await ResolveOmitEmitTarget(parser, executor, args["0"].Message!.ToPlainText());
+
+		if (targetRoom is null)
+		{
+			return new CallState(ErrorMessages.Returns.InvalidRoom);
 		}
 
 		await CommunicationService.SendToRoomAsync(
