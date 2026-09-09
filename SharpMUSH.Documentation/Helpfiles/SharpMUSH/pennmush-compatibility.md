@@ -21,6 +21,27 @@ equal. `condall()` returns every result with a true condition; `ncond()` and
 `ncondall()` select false conditions. A condition is a single value, not a list
 of separate booleans. A selected empty result does not cause the default to run.
 
+## Numeric compatibility
+
+Arithmetic and numeric comparisons read `tiny_math` and `null_eq_zero` at call
+time, including indirect `#apply` calls. With `tiny_math` off, the complete
+argument must be a number; an empty argument is zero only when `null_eq_zero`
+is on. Scientific notation is accepted. Real-valued arguments also accept
+hexadecimal notation, such as `0x10` and `-0x1.8p2` (16 and -6).
+
+With `tiny_math` on, the leading numeric prefix is used, and text without one
+becomes zero: `add(12foo,2)` returns 14 and `add(foo,2)` returns 2. Integer
+arithmetic takes an integer prefix, so `div(1.5,1)` returns 1. Each function
+retains its existing signed, unsigned, decimal or floating-point range; this
+setting does not remove range checks or give decimal arithmetic support for
+infinity. Numeric input and output use a decimal point regardless of the
+server's language settings.
+
+`inc()` and `dec()` adjust a signed integer suffix. Without a suffix, they
+append 1 or -1 only when `null_eq_zero` is on; otherwise they report an integer
+suffix error. Overflow reports `#-1 OUT OF RANGE`. `tiny_math` does not change
+these string-counter rules.
+
 ## Intentional divergences
 
 These are deliberate. SharpMUSH does not intend to change them to match PennMUSH.

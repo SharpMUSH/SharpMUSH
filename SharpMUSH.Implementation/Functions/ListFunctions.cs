@@ -615,7 +615,7 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["levels"])]
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["levels"])]
 	public ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;

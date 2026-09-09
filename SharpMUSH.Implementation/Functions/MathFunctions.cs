@@ -1,4 +1,5 @@
-﻿using MoreLinq;
+using SharpMUSH.Library.Utilities;
+using MoreLinq;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -17,32 +18,32 @@ public partial class Functions
 {
 	[SharpFunction(Name = "add", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public ValueTask<CallState> Add(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc + sub);
+		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc + sub);
 
 	[SharpFunction(Name = "sub", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public ValueTask<CallState> Sub(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc - sub);
+		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc - sub);
 
 	[SharpFunction(Name = "mul", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number1", "number2"])]
 	public ValueTask<CallState> Mul(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc * sub);
+		ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc * sub);
 
 	[SharpFunction(Name = "div", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
 	public ValueTask<CallState> Div(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult(AggregateIntegerDivision(
+		ValueTask.FromResult(AggregateIntegerDivision(parser,
 			Operands(parser.CurrentState.ArgumentsOrdered), (acc, sub) => acc / sub, DivisionOverflows));
 
 	[SharpFunction(Name = "fdiv", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["dividend", "divisor"])]
 	public ValueTask<CallState> FDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		parser.CurrentState.ArgumentsOrdered.Skip(1).Any(x
-				=> decimal.TryParse(ArgHelpers.EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText()), out var num) && num == 0)
+				=> NumericEvaluation.For(parser).TryDecimal((x.Value.Message ?? MarkupText.Empty).ToPlainText(), out var num) && num == 0)
 			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero))
-			: ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, (acc, sub) => acc / sub);
+			: ArgHelpers.AggregateDecimals(parser, (acc, sub) => acc / sub);
 
 	[SharpFunction(Name = "floordiv", MinArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor"])]
 	public ValueTask<CallState> FloorDiv(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ValueTask.FromResult(AggregateIntegerDivision(
+		ValueTask.FromResult(AggregateIntegerDivision(parser,
 			Operands(parser.CurrentState.ArgumentsOrdered), FloorDivide, DivisionOverflows));
 
 	/// <summary>
@@ -77,16 +78,17 @@ public partial class Functions
 	/// #-1 DOMAIN ERROR. The checks are pairwise, so an intermediate result that is representable
 	/// keeps folding even when the first operand alone would overflow the final divisor.
 	/// </summary>
-	private CallState AggregateIntegerDivision(
+	private CallState AggregateIntegerDivision(IMUSHCodeParser parser,
 		IEnumerable<string> operands,
 		Func<long, long, long> operation,
 		Func<long, long, bool>? overflows = null)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var values = new List<long>();
 
 		foreach (var operand in operands)
 		{
-			if (!long.TryParse(ArgHelpers.EmptyStringToZero(operand), out var value))
+			if (!numbers.TryInt64(operand, out var value))
 			{
 				return ErrorMessages.Returns.Integers;
 			}
@@ -157,24 +159,25 @@ public partial class Functions
 
 	[SharpFunction(Name = "max", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, Math.Max);
+		ArgHelpers.AggregateDecimals(parser, Math.Max);
 
 	[SharpFunction(Name = "min", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.AggregateDecimals(parser.CurrentState.ArgumentsOrdered, Math.Min);
+		ArgHelpers.AggregateDecimals(parser, Math.Min);
 
 	[SharpFunction(Name = "abs", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Abs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimal(parser.CurrentState.ArgumentsOrdered, Math.Abs);
+		=> ArgHelpers.EvaluateDecimal(parser, Math.Abs);
 
 	[SharpFunction(Name = "bound", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["value", "min", "max"])]
 	public ValueTask<CallState> Bound(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
-				!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var min))
+		if (!numbers.TryDecimal((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value) ||
+				!numbers.TryDecimal((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var min))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -184,7 +187,7 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(Math.Max(value, min));
 		}
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var max))
+		if (!numbers.TryDecimal((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out var max))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -194,46 +197,7 @@ public partial class Functions
 
 	[SharpFunction(Name = "dec", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Dec(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
-
-		if (long.TryParse(text, out var parsed))
-		{
-			return ValueTask.FromResult<CallState>((parsed - 1).ToString(CultureInfo.InvariantCulture));
-		}
-
-		if (string.IsNullOrEmpty(text))
-		{
-			return ValueTask.FromResult<CallState>("-1");
-		}
-
-		var lastIdx = text.Length - 1;
-		if (!char.IsDigit(text[lastIdx]))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
-		}
-
-		var numStart = lastIdx;
-		while (numStart > 0 && (char.IsDigit(text[numStart - 1]) || text[numStart - 1] == '-'))
-		{
-			if (text[numStart - 1] == '-')
-			{
-				numStart--;
-				break;
-			}
-			numStart--;
-		}
-
-		var prefix = text[..numStart];
-		var numPart = text[numStart..];
-
-		if (!long.TryParse(numPart, out var num))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
-		}
-
-		return ValueTask.FromResult<CallState>($"{prefix}{num - 1}");
-	}
+		=> AdjustCounter(parser, -1);
 
 	[SharpFunction(Name = "decode64", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["encoded-string"])]
 	public ValueTask<CallState> Decode64(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -291,12 +255,13 @@ public partial class Functions
 	[SharpFunction(Name = "dist2d", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["x1", "y1", "x2", "y2"])]
 	public ValueTask<CallState> Distance2d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var x1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var y1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var x2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["3"].Message ?? MarkupText.Empty).ToPlainText()), out var y2))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var x1) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var y1) ||
+				!numbers.TryDouble((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out var x2) ||
+				!numbers.TryDouble((args["3"].Message ?? MarkupText.Empty).ToPlainText(), out var y2))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -308,14 +273,15 @@ public partial class Functions
 	[SharpFunction(Name = "dist3d", MinArgs = 6, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["x1", "y1", "z1", "x2", "y2", "z2"])]
 	public ValueTask<CallState> Distance3d(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var x1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var y1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var z1) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["3"].Message ?? MarkupText.Empty).ToPlainText()), out var x2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["4"].Message ?? MarkupText.Empty).ToPlainText()), out var y2) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["5"].Message ?? MarkupText.Empty).ToPlainText()), out var z2))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var x1) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var y1) ||
+				!numbers.TryDouble((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out var z1) ||
+				!numbers.TryDouble((args["3"].Message ?? MarkupText.Empty).ToPlainText(), out var x2) ||
+				!numbers.TryDouble((args["4"].Message ?? MarkupText.Empty).ToPlainText(), out var y2) ||
+				!numbers.TryDouble((args["5"].Message ?? MarkupText.Empty).ToPlainText(), out var z2))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -366,9 +332,10 @@ public partial class Functions
 	[SharpFunction(Name = "fraction", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "whole"])]
 	public ValueTask<CallState> Fraction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!decimal.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value))
+		if (!numbers.TryDecimal((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -376,7 +343,7 @@ public partial class Functions
 		var showWhole = false;
 		if (args.Count == 2)
 		{
-			if (!int.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var wholeFlag))
+			if (!numbers.TryInt32((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var wholeFlag))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -422,50 +389,34 @@ public partial class Functions
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["integer"])]
 	public ValueTask<CallState> Inc(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> AdjustCounter(parser, 1);
+
+	private static ValueTask<CallState> AdjustCounter(IMUSHCodeParser parser, int delta)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
-
-		if (long.TryParse(text, out var parsed))
+		const NumberStyles integer = NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign;
+		if (!long.TryParse(text, integer, CultureInfo.InvariantCulture, out var value))
 		{
-			return ValueTask.FromResult<CallState>((parsed + 1).ToString(CultureInfo.InvariantCulture));
+			if (text.Length == 0 || !char.IsAsciiDigit(text[^1]))
+				return ValueTask.FromResult<CallState>(numbers.NullEqualsZero
+					? text + delta.ToString(CultureInfo.InvariantCulture) : ErrorMessages.Returns.ArgMustEndInInteger);
+			var start = text.Length - 1;
+			while (start > 0 && char.IsAsciiDigit(text[start - 1])) start--;
+			if (start > 0 && text[start - 1] == '-') start--;
+			if (!long.TryParse(text.AsSpan(start), integer, CultureInfo.InvariantCulture, out value))
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange);
+			text = text[..start];
 		}
-
-		if (string.IsNullOrEmpty(text))
-		{
-			return ValueTask.FromResult<CallState>("1");
-		}
-
-		var lastIdx = text.Length - 1;
-		if (!char.IsDigit(text[lastIdx]))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
-		}
-
-		var numStart = lastIdx;
-		while (numStart > 0 && (char.IsDigit(text[numStart - 1]) || text[numStart - 1] == '-'))
-		{
-			if (text[numStart - 1] == '-')
-			{
-				numStart--;
-				break;
-			}
-			numStart--;
-		}
-
-		var prefix = text[..numStart];
-		var numPart = text[numStart..];
-
-		if (!long.TryParse(numPart, out var num))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgMustEndInInteger));
-		}
-
-		return ValueTask.FromResult<CallState>($"{prefix}{num + 1}");
+		else text = "";
+		try { return ValueTask.FromResult<CallState>(text + checked(value + delta).ToString(CultureInfo.InvariantCulture)); }
+		catch (OverflowException) { return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange); }
 	}
 
 	[SharpFunction(Name = "lmath", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["op", "list", "delim"])]
 	public async ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -480,7 +431,7 @@ public partial class Functions
 			var unsigned = new List<ulong>();
 			foreach (var item in list)
 			{
-				if (!ulong.TryParse(ArgHelpers.EmptyStringToZero(item.ToPlainText()), out var parsed))
+				if (!numbers.TryUInt64(item.ToPlainText(), out var parsed))
 				{
 					return ErrorMessages.Returns.UIntegers;
 				}
@@ -508,16 +459,16 @@ public partial class Functions
 
 			return operation switch
 			{
-				"div" => AggregateIntegerDivision(operands, (acc, val) => acc / val, DivisionOverflows),
-				"modulo" => AggregateIntegerDivision(operands, FloorMod),
-				_ => AggregateIntegerDivision(operands, TruncatedRemainder)
+				"div" => AggregateIntegerDivision(parser, operands, (acc, val) => acc / val, DivisionOverflows),
+				"modulo" => AggregateIntegerDivision(parser, operands, FloorMod),
+				_ => AggregateIntegerDivision(parser, operands, TruncatedRemainder)
 			};
 		}
 
 		var values = new List<decimal>();
 		foreach (var item in list)
 		{
-			if (!decimal.TryParse(ArgHelpers.EmptyStringToZero(item.ToPlainText()), out var parsedValue))
+			if (!numbers.TryDecimal(item.ToPlainText(), out var parsedValue))
 			{
 				return ErrorMessages.Returns.Numbers;
 			}
@@ -544,7 +495,7 @@ public partial class Functions
 			"max" => values.Max().ToString(CultureInfo.InvariantCulture),
 			"min" => values.Min().ToString(CultureInfo.InvariantCulture),
 			"eq" => (values.All(v => v == values[0]) ? 1 : 0).ToString(),
-			"neq" => (values.Zip(values.Skip(1), (a, b) => a != b).All(x => x) ? 1 : 0).ToString(),
+			"neq" => (values.Zip(values.Skip(1), (a, b) => a != b).Any(x => x) ? 1 : 0).ToString(),
 			"gt" => (values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0).ToString(),
 			"gte" => (values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0).ToString(),
 			"lt" => (values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0).ToString(),
@@ -605,6 +556,7 @@ public partial class Functions
 	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
 	public async ValueTask<CallState> LNum(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await Task.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
@@ -613,7 +565,7 @@ public partial class Functions
 		// Single arg: lnum(count) -> 0..count-1, count must be integer-like
 		if (args.Count == 1)
 		{
-			if (!double.TryParse(arg0Text, out var count) || double.IsNaN(count) || double.IsInfinity(count))
+			if (!numbers.TryDouble(arg0Text, out var count) || double.IsNaN(count) || double.IsInfinity(count))
 			{
 				return new CallState(ErrorMessages.Returns.Integer);
 			}
@@ -623,13 +575,13 @@ public partial class Functions
 		}
 
 		// Multi-arg: lnum(start, end[, sep[, step]])
-		if (!double.TryParse(arg0Text, out var start) || double.IsNaN(start) || double.IsInfinity(start))
+		if (!numbers.TryDouble(arg0Text, out var start) || double.IsNaN(start) || double.IsInfinity(start))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		var arg1Text = (args["1"].Message ?? MarkupText.Empty).ToPlainText();
-		if (!double.TryParse(arg1Text, out var end) || double.IsNaN(end) || double.IsInfinity(end))
+		if (!numbers.TryDouble(arg1Text, out var end) || double.IsNaN(end) || double.IsInfinity(end))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
@@ -637,7 +589,7 @@ public partial class Functions
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, " ").ToPlainText();
 
 		var stepText = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "1").ToPlainText();
-		if (!double.TryParse(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || Math.Abs(step) < 1e-12)
+		if (!numbers.TryDouble(stepText, out var step) || double.IsNaN(step) || double.IsInfinity(step) || Math.Abs(step) < 1e-12)
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
@@ -652,7 +604,7 @@ public partial class Functions
 			for (var i = start; i <= end + step * 0.0001; i += step)
 			{
 				if (i > end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString() : FormatDouble(i));
+				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : FormatDouble(i));
 			}
 		}
 		else
@@ -660,7 +612,7 @@ public partial class Functions
 			for (var i = start; i >= end + step * 0.0001; i += step)
 			{
 				if (i < end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString() : FormatDouble(i));
+				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : FormatDouble(i));
 			}
 		}
 
@@ -670,20 +622,21 @@ public partial class Functions
 	private string FormatDouble(double value)
 	{
 		if (Math.Abs(value - Math.Floor(value)) < 1e-10)
-			return ((long)value).ToString();
-		return value.ToString($"G{Library.Definitions.Configurable.FloatPrecision}");
+			return ((long)value).ToString(CultureInfo.InvariantCulture);
+		return value.ToString($"G{Library.Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture);
 	}
 
 	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Mean(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
+			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -698,12 +651,13 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Median(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
+			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -732,22 +686,23 @@ public partial class Functions
 	[SharpFunction(Name = "modulo", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
 	public ValueTask<CallState> Modulo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(AggregateIntegerDivision(
+		=> ValueTask.FromResult(AggregateIntegerDivision(parser,
 			Operands(parser.CurrentState.ArgumentsOrdered), FloorMod));
 
 	[SharpFunction(Name = "remainder", MinArgs = 2, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.IntegersOnly, ParameterNames = ["dividend", "divisor..."])]
 	public ValueTask<CallState> Remainder(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(AggregateIntegerDivision(
+		=> ValueTask.FromResult(AggregateIntegerDivision(parser,
 			Operands(parser.CurrentState.ArgumentsOrdered), TruncatedRemainder));
 
 	[SharpFunction(Name = "root", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "n"])]
 	public ValueTask<CallState> Root(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var root))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var root))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -775,22 +730,23 @@ public partial class Functions
 
 	[SharpFunction(Name = "sign", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, x => Math.Sign(x));
+		=> ArgHelpers.EvaluateDecimalToInteger(parser, x => Math.Sign(x));
 
 	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimalToInteger(parser.CurrentState.ArgumentsOrdered, TruncateToInt64);
+		=> ArgHelpers.EvaluateDecimalToInteger(parser, TruncateToInt64);
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["cosine", "angle-type"])]
 	public async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -801,13 +757,14 @@ public partial class Functions
 	[SharpFunction(Name = "asin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["sine", "angle-type"])]
 	public async ValueTask<CallState> ASin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -818,13 +775,14 @@ public partial class Functions
 	[SharpFunction(Name = "atan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["tangent", "angle-type"])]
 	public async ValueTask<CallState> ATan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -835,11 +793,12 @@ public partial class Functions
 	[SharpFunction(Name = "atan2", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number1", "number2", "angle-type"])]
 	public async ValueTask<CallState> ATan2(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var y) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var x))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var y) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var x))
 		{
 			return ErrorMessages.Returns.Numbers;
 		}
@@ -851,18 +810,19 @@ public partial class Functions
 
 	[SharpFunction(Name = "ceil", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ceil(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Ceiling);
+		=> ArgHelpers.EvaluateDouble(parser, Math.Ceiling);
 
 	[SharpFunction(Name = "cos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
 	public async ValueTask<CallState> Cos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -873,9 +833,10 @@ public partial class Functions
 	[SharpFunction(Name = "ctu", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "from", "to"])]
 	public ValueTask<CallState> CTU(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var angle))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var angle))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -902,24 +863,26 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
+	[SharpFunction(Name = "e", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> E(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var arguments = parser.CurrentState.Arguments;
 		var arg1 = arguments.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
 
-		return ValueTask.FromResult<CallState>(new(double.TryParse(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
-			? Math.Exp(dec).ToString()
+		return ValueTask.FromResult<CallState>(new(numbers.TryDouble(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
+			? Math.Exp(dec).ToString(CultureInfo.InvariantCulture)
 			: ErrorMessages.Returns.Number));
 	}
 
 	[SharpFunction(Name = "fmod", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "divisor"])]
 	public ValueTask<CallState> FMod(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var arg0) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var arg1))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var arg0) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var arg1))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -934,14 +897,15 @@ public partial class Functions
 
 	[SharpFunction(Name = "floor", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Floor(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
-		ArgHelpers.EvaluateDouble(parser.CurrentState.ArgumentsOrdered, Math.Floor);
+		ArgHelpers.EvaluateDouble(parser, Math.Floor);
 
 	[SharpFunction(Name = "log", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "base"])]
 	public ValueTask<CallState> Log(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -965,7 +929,7 @@ public partial class Functions
 		{
 			baseNum = Math.E;
 		}
-		else if (!double.TryParse(ArgHelpers.EmptyStringToZero(baseStr), out baseNum))
+		else if (!numbers.TryDouble(baseStr, out baseNum))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -980,9 +944,10 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ln(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!double.TryParse(text, out var value))
+		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryDouble(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -1003,10 +968,11 @@ public partial class Functions
 	[SharpFunction(Name = "power", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "exponent"])]
 	public ValueTask<CallState> Power(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var baseNum) ||
-				!double.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var exponent))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var baseNum) ||
+				!numbers.TryDouble((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var exponent))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -1017,10 +983,11 @@ public partial class Functions
 	[SharpFunction(Name = "round", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "places", "pad"])]
 	public ValueTask<CallState> Round(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		if (!double.TryParse(ArgHelpers.EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText()), out var value) ||
-				!int.TryParse(ArgHelpers.EmptyStringToZero((args["1"].Message ?? MarkupText.Empty).ToPlainText()), out var decimals))
+		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value) ||
+				!numbers.TryInt32((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var decimals))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
@@ -1029,14 +996,14 @@ public partial class Functions
 
 		if (args.Count == 3)
 		{
-			if (!int.TryParse(ArgHelpers.EmptyStringToZero((args["2"].Message ?? MarkupText.Empty).ToPlainText()), out var padZeros))
+			if (!numbers.TryInt32((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out var padZeros))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
 
 			if (padZeros != 0)
 			{
-				return ValueTask.FromResult<CallState>(rounded.ToString($"F{decimals}"));
+				return ValueTask.FromResult<CallState>(rounded.ToString($"F{decimals}", CultureInfo.InvariantCulture));
 			}
 		}
 
@@ -1046,13 +1013,14 @@ public partial class Functions
 	[SharpFunction(Name = "sin", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
 	public async ValueTask<CallState> Sin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -1063,8 +1031,9 @@ public partial class Functions
 	[SharpFunction(Name = "sqrt", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.NumbersOnly, ParameterNames = ["number"])]
 	public ValueTask<CallState> Sqrt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var text = ArgHelpers.EmptyStringToZero((parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!double.TryParse(text, out var value))
+		var numbers = NumericEvaluation.For(parser);
+		var text = (parser.CurrentState.ArgumentsOrdered["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryDouble(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -1081,12 +1050,13 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> StdDev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<double>();
 
 		foreach (var arg in args)
 		{
-			if (!double.TryParse(ArgHelpers.EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText()), out var value))
+			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -1110,13 +1080,14 @@ public partial class Functions
 	[SharpFunction(Name = "tan", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["angle", "angle-type"])]
 	public async ValueTask<CallState> Tan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		await ValueTask.CompletedTask;
 		var angleArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var angleType = parser.CurrentState.Arguments.TryGetValue("1", out var value)
 			? value.Message!.ToPlainText()
 			: null;
 
-		if (!double.TryParse(angleArg, out var angle))
+		if (!numbers.TryDouble(angleArg, out var angle))
 		{
 			return ErrorMessages.Returns.Number;
 		}
@@ -1127,14 +1098,15 @@ public partial class Functions
 	private ValueTask<CallState> VectorOperation(IMUSHCodeParser parser,
 		Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
 			? tmpDelimiter.Message ?? MarkupText.Empty
 			: MarkupText.Space;
 		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
 		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1148,20 +1120,21 @@ public partial class Functions
 		var result = new decimal[Math.Max(list1.Length, list2.Length)];
 		vectorResult.CopyTo(result);
 
-		var output = result.Select(x => MarkupText.Plain(x.ToString()));
+		var output = result.Select(x => MarkupText.Plain(x.ToString(CultureInfo.InvariantCulture)));
 		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
 	}
 
 	private ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
 		Func<Vector<decimal>, Vector<decimal>, decimal> func)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
 			? tmpDelimiter.Message ?? MarkupText.Empty
 			: MarkupText.Space;
 		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1184,6 +1157,7 @@ public partial class Functions
 	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("2", out var tmpDelimiter)
 			? tmpDelimiter.Message ?? MarkupText.Empty
@@ -1191,9 +1165,9 @@ public partial class Functions
 		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
 
 		var list1 = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 		var list2 = MushText.SplitList(delimiter, (args["1"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
 		{
@@ -1236,13 +1210,14 @@ public partial class Functions
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
 			? tmpDelimiter.Message ?? MarkupText.Empty
 			: MarkupText.Space;
 
 		var list = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
 		{
@@ -1258,13 +1233,14 @@ public partial class Functions
 	[SharpFunction(Name = "vunit", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public ValueTask<CallState> vunit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delimiter = args.TryGetValue("1", out var tmpDelimiter)
 			? tmpDelimiter.Message ?? MarkupText.Empty
 			: MarkupText.Space;
 
 		var list = MushText.SplitList(delimiter, (args["0"].Message ?? MarkupText.Empty))
-			.Select(x => (decimal.TryParse(x.ToPlainText(), out var result), result)).ToArray();
+			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
 
 		if (list.Any(x => !x.Item1))
 		{

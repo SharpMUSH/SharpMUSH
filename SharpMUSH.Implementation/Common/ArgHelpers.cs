@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using OneOf;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
@@ -62,15 +62,17 @@ public static partial class ArgHelpers
 		return parsedValue;
 	}
 
-	public static ValueTask<CallState> AggregateDecimals(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> AggregateDecimals(IMUSHCodeParser parser,
 		Func<decimal, decimal, decimal> aggregateFunction)
 	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
 		var decimals = new List<decimal>();
 
 		foreach (var arg in args)
 		{
-			var text = EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText());
-			if (!decimal.TryParse(text, out var value))
+			var text = (arg.Value.Message ?? MarkupText.Empty).ToPlainText();
+			if (!numbers.TryDecimal(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
@@ -95,15 +97,17 @@ public static partial class ArgHelpers
 	/// Aggregates arguments as 64-bit unsigned integers, matching PennMUSH's UIVAL. The result is
 	/// rendered signed, because PennMUSH renders it that way too: bnot(0) is -1, not 18446744073709551615.
 	/// </summary>
-	public static ValueTask<CallState> AggregateUnsignedIntegers(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> AggregateUnsignedIntegers(IMUSHCodeParser parser,
 		Func<ulong, ulong, ulong> aggregateFunction)
 	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
 		var integers = new List<ulong>();
 
 		foreach (var arg in args)
 		{
-			var text = EmptyStringToZero((arg.Value.Message ?? MarkupText.Empty).ToPlainText());
-			if (!ulong.TryParse(text, out var value))
+			var text = (arg.Value.Message ?? MarkupText.Empty).ToPlainText();
+			if (!numbers.TryUInt64(text, out var value))
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
 			}
@@ -115,11 +119,13 @@ public static partial class ArgHelpers
 	}
 
 	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
-	public static ValueTask<CallState> EvaluateUnsignedInteger(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> EvaluateUnsignedInteger(IMUSHCodeParser parser,
 		Func<ulong, ulong> func)
 	{
-		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!ulong.TryParse(text, out var value))
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
+		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryUInt64(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
 		}
@@ -127,11 +133,13 @@ public static partial class ArgHelpers
 		return ValueTask.FromResult<CallState>(unchecked((long)func(value)).ToString(CultureInfo.InvariantCulture));
 	}
 
-	public static ValueTask<CallState> EvaluateDecimal(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> EvaluateDecimal(IMUSHCodeParser parser,
 		Func<decimal, decimal> func)
 	{
-		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!decimal.TryParse(text, out var value))
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
+		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryDecimal(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -140,11 +148,13 @@ public static partial class ArgHelpers
 		return ValueTask.FromResult<CallState>(FormatDecimal(result));
 	}
 
-	public static ValueTask<CallState> EvaluateDecimalToInteger(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> EvaluateDecimalToInteger(IMUSHCodeParser parser,
 		Func<decimal, long> func)
 	{
-		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!decimal.TryParse(text, out var value))
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
+		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryDecimal(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -152,11 +162,13 @@ public static partial class ArgHelpers
 		return ValueTask.FromResult<CallState>(func(value));
 	}
 
-	public static ValueTask<CallState> EvaluateDouble(ImmutableSortedDictionary<string, CallState> args,
+	public static ValueTask<CallState> EvaluateDouble(IMUSHCodeParser parser,
 		Func<double, double> func)
 	{
-		var text = EmptyStringToZero((args["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (!double.TryParse(text, out var value))
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
+		var text = (args["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (!numbers.TryDouble(text, out var value))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Number);
 		}
@@ -164,13 +176,13 @@ public static partial class ArgHelpers
 		return ValueTask.FromResult<CallState>(func(value));
 	}
 
-	public static string EmptyStringToZero(string input)
-		=> string.IsNullOrEmpty(input) ? "0" : input;
 
 	public static ValueTask<CallState> ValidateDecimalAndEvaluatePairwise(
-		ImmutableSortedDictionary<string, CallState> args,
+		IMUSHCodeParser parser,
 		Func<(decimal, decimal), bool> func, bool negate = false)
 	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var numbers = NumericEvaluation.For(parser);
 		if (args.Count < 2)
 		{
 			return ValueTask.FromResult(new CallState(Message: ErrorMessages.Returns.TooFewArguments));
@@ -178,7 +190,7 @@ public static partial class ArgHelpers
 
 		var doubles = args.Select(x =>
 		(
-			IsDouble: decimal.TryParse(string.Join("", EmptyStringToZero((x.Value.Message ?? MarkupText.Empty).ToPlainText())), out var b),
+			IsDouble: numbers.TryDecimal((x.Value.Message ?? MarkupText.Empty).ToPlainText(), out var b),
 			Double: b
 		)).ToList();
 
