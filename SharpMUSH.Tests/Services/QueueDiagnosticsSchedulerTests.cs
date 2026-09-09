@@ -129,15 +129,25 @@ public class QueueDiagnosticsSchedulerTests
 	}
 
 	[Test]
-	public async Task ExceptionsAndExecutionLimitsProduceClosedOutcomes()
+	public async Task ExceptionsProduceClosedOutcomesWithoutExceptionText()
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		// The exception contract must not race a 20ms scheduling deadline on a loaded runner.
+		await using var queue = Create(recorder, milliseconds: 30000);
+		await queue.EnqueueWork(() => throw new InvalidOperationException("sensitive exception"), "throw", "enqueue");
+		await HistoryCount(recorder, 1);
+		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Failed);
+		await Assert.That(System.Text.Json.JsonSerializer.Serialize(recorder.Recent()).Contains("sensitive", StringComparison.Ordinal)).IsFalse();
+	}
+
+	[Test]
+	public async Task ExecutionLimitsProduceClosedOutcomes()
 	{
 		var recorder = new QueueDiagnosticsRecorder();
 		await using var queue = Create(recorder, milliseconds: 20);
-		await queue.EnqueueWork(() => throw new InvalidOperationException("sensitive exception"), "throw", "enqueue");
 		await queue.EnqueueWork(async () => { await Task.Delay(Timeout.InfiniteTimeSpan, ExecutionBudget.CurrentToken); return null; }, "wait", "enqueue");
-		await HistoryCount(recorder, 2);
-		await Assert.That(recorder.Recent().Select(row => row.Outcome).ToHashSet().SetEquals([QueueOutcome.Failed, QueueOutcome.ExecutionLimit])).IsTrue();
-		await Assert.That(System.Text.Json.JsonSerializer.Serialize(recorder.Recent()).Contains("sensitive", StringComparison.Ordinal)).IsFalse();
+		await HistoryCount(recorder, 1);
+		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
 	}
 
 	[Test]
