@@ -438,7 +438,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			LimitExceeded: new LimitExceededFlag(),
+			MoveDepth: new InvocationCounter()));
 	}
 
 	/// <summary>
@@ -626,6 +627,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag(),
+			MoveDepth: new InvocationCounter(),
 			Flags: ParserStateFlags.DirectInput,
 			ConnectionSessionId: expectedSession));
 

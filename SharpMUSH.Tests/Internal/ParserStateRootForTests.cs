@@ -55,6 +55,7 @@ public class ParserStateRootForTests
 		await Assert.That(state.TotalInvocations).IsNotNull();
 		await Assert.That(state.LimitExceeded).IsNotNull();
 		await Assert.That(state.FunctionRecursionDepths).IsNotNull();
+		await Assert.That(state.MoveDepth).IsNotNull();
 	}
 
 	[Test]

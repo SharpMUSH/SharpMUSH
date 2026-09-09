@@ -134,6 +134,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag(),
+				MoveDepth: new InvocationCounter(),
 				Flags: ParserStateFlags.DirectInput
 			));
 	}

@@ -570,7 +570,8 @@ public class AttributeService(
 						CallDepth = s.CallDepth,
 						FunctionRecursionDepths = s.FunctionRecursionDepths,
 						TotalInvocations = s.TotalInvocations,
-						LimitExceeded = s.LimitExceeded
+						LimitExceeded = s.LimitExceeded,
+						MoveDepth = s.MoveDepth
 					},
 					async np => await FunctionDispatcher.InvokeAsync(np, applyFunction.LibraryInformation, realExecutor,
 						configuration.CurrentValue.Function.FunctionSideEffects, notifyService,
@@ -597,7 +598,8 @@ public class AttributeService(
 				CallDepth = s.CallDepth,
 				FunctionRecursionDepths = s.FunctionRecursionDepths,
 				TotalInvocations = s.TotalInvocations,
-				LimitExceeded = s.LimitExceeded
+				LimitExceeded = s.LimitExceeded,
+				MoveDepth = s.MoveDepth
 			},
 				async np => await np.FunctionParse(attribute));
 			return result!.Message!;

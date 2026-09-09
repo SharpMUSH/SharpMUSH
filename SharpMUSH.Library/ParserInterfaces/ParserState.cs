@@ -239,6 +239,12 @@ public class BreakPropagation
 /// <param name="FunctionRecursionDepths">Shared dictionary tracking per-function recursion depths. Mutable and shared across all states in an evaluation.</param>
 /// <param name="TotalInvocations">Shared counter for total function invocations. Mutable and shared across all states in an evaluation.</param>
 /// <param name="LimitExceeded">Shared flag indicating a limit has been exceeded. Mutable and shared across all states in an evaluation.</param>
+/// <param name="MoveDepth">
+/// Shared counter bounding recursive movement — <c>enter_room</c> reached through
+/// <c>safe_tel</c>'s HOME case or through a container's drop-to. PennMUSH caps the equivalent at 15
+/// (<c>src/move.c:232</c>) with a process-global counter, which is only safe under its
+/// single-threaded queue; here it is per evaluation, like <see cref="CallDepth"/>.
+/// </param>
 /// <param name="CommandHistory">Shared mutable stack tracking command invocations (invoker + args) for @retry support. Null outside CommandListParse context.</param>
 /// <param name="Flags">
 /// Bitfield of <see cref="ParserStateFlags"/> values controlling parser behavior.
@@ -279,6 +285,7 @@ public partial record ParserState(
 	Dictionary<string, int>? FunctionRecursionDepths = null,
 	InvocationCounter? TotalInvocations = null,
 	LimitExceededFlag? LimitExceeded = null,
+	InvocationCounter? MoveDepth = null,
 	ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>? CommandHistory = null,
 	ParserStateFlags Flags = ParserStateFlags.None,
 	Dictionary<string, CallState>? CallerArguments = null,
@@ -338,7 +345,8 @@ public partial record ParserState(
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter(),
-		new LimitExceededFlag());
+		new LimitExceededFlag(),
+		new InvocationCounter());
 
 	/// <summary>
 	/// A fresh root state for code that runs as <paramref name="actor"/> with no ambient parser:
@@ -375,7 +383,8 @@ public partial record ParserState(
 		CallDepth: new InvocationCounter(),
 		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		TotalInvocations: new InvocationCounter(),
-		LimitExceeded: new LimitExceededFlag());
+		LimitExceeded: new LimitExceededFlag(),
+		MoveDepth: new InvocationCounter());
 
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!

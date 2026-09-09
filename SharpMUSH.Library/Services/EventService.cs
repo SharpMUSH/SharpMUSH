@@ -141,7 +141,8 @@ public class EventService(
 					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
 					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag(),
+				MoveDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter()));
 
 			// Run the attribute body as a command list (same as @include, HTTP handler, @startup).
 			// This allows commands such as & (attribute set), @emit, @switch, etc.

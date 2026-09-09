@@ -230,7 +230,8 @@ public class DidItService(
 				CallDepth = new InvocationCounter(),
 				FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations = new InvocationCounter(),
-				LimitExceeded = new LimitExceededFlag()
+				LimitExceeded = new LimitExceededFlag(),
+				MoveDepth = new InvocationCounter()
 			}),
 			new DbRefAttribute(executor, attributePath)));
 
