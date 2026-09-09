@@ -306,7 +306,10 @@ public partial class TaskScheduler(
 	private async ValueTask NotifyExpired(QueueEntry entry)
 	{
 		logger.LogWarning("Execution budget exhausted (PID {Pid})", entry.Pid);
-		if (notifyService is null || entry.Cts.IsCancellationRequested) return;
+		if (notifyService is null || entry.Cts.IsCancellationRequested || _shutdownCts.IsCancellationRequested) return;
+		// Reporting has its own bounded I/O lifetime after the user execution deadline.
+		using var reportBudget = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
+		using var reportScope = reportBudget.Enter();
 		try
 		{
 			if (DBRef.TryParse(entry.Owner, out var owner))
@@ -390,6 +393,15 @@ public partial class TaskScheduler(
 	{
 		state = await CaptureExecutor(state);
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor);
+	}
+
+	public async ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+	{
+		state = await CaptureExecutor(state);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, ready: false);
+		if (!admission.Accepted) return QueueCommandReservation.Rejected(admission.Reason);
+		var pid = admission.Pid!.Value;
+		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
 	}
 
 	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)

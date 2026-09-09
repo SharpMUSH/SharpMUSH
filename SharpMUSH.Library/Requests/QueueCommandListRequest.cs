@@ -29,3 +29,5 @@ public record QueueCommandListWithTimeoutRequest(
 	int OldValue,
 	TimeSpan Timeout,
 	bool ManageSemaphoreCount = false) : IRequest<QueueAdmissionResult>;
+
+public record ReserveCommandListRequest(MString Command, ParserState State) : IRequest<QueueCommandReservation>;

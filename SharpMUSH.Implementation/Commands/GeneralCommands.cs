@@ -2568,7 +2568,7 @@ public partial class Commands
 				convertedTime = TimeSpan.FromSeconds(time);
 			}
 
-			await Mediator.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime));
+			await Mediator.Send(new QueueDelayedCommandListRequest(arg1, callbackState, convertedTime), ExecutionBudget.CurrentToken);
 			return CallState.Empty;
 		}
 
@@ -2692,7 +2692,8 @@ public partial class Commands
 	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
-		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute)).LastOrDefaultAsync();
+		var token = ExecutionBudget.CurrentToken;
+		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute), token).LastOrDefaultAsync(token);
 		if (attrValue is not null && attrValue.Value.Length > 0 && !int.TryParse(attrValue.Value.ToPlainText(), out _))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -2701,7 +2702,7 @@ public partial class Commands
 		}
 		// Admission owns the counter transaction, including negative credits and schedule rollback.
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, callbackState ?? parser.CurrentState,
-			new DbRefAttribute(located.Object().DBRef, attribute), 0, delay, ManageSemaphoreCount: true));
+			new DbRefAttribute(located.Object().DBRef, attribute), 0, delay, ManageSemaphoreCount: true), token);
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
