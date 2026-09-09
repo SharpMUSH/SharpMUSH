@@ -50,35 +50,7 @@ public partial class Commands
 
 			if (prepareSwitch)
 			{
-				// For prepared statements, we need to split the input on commas
-				// The first part is the query, remaining parts are parameters
-				var parts = new List<string>();
-				var currentPart = new System.Text.StringBuilder();
-				var escaped = false;
-
-				for (var i = 0; i < rawInput.Length; i++)
-				{
-					var ch = rawInput[i];
-					if (escaped)
-					{
-						currentPart.Append(ch);
-						escaped = false;
-					}
-					else if (ch == '\\')
-					{
-						escaped = true;
-					}
-					else if (ch == ',')
-					{
-						parts.Add(currentPart.ToString().Trim());
-						currentPart.Clear();
-					}
-					else
-					{
-						currentPart.Append(ch);
-					}
-				}
-				parts.Add(currentPart.ToString().Trim());
+				var parts = SplitPreparedInput(rawInput);
 
 				if (parts.Count == 0)
 				{
@@ -182,36 +154,7 @@ public partial class Commands
 
 					if (prepareSwitch)
 					{
-						// For prepared statements, we need to split the query input on commas
-						// The first part is the query, remaining parts are parameters
-						var parts = new List<string>();
-						var currentPart = new System.Text.StringBuilder();
-						var escaped = false;
-
-						for (var i = 0; i < rawQueryInput.Length; i++)
-						{
-							var ch = rawQueryInput[i];
-							if (escaped)
-							{
-								currentPart.Append(ch);
-								escaped = false;
-							}
-							else if (ch == '\\')
-							{
-								escaped = true;
-							}
-							else if (ch == ',')
-							{
-								parts.Add(currentPart.ToString().Trim());
-								currentPart.Clear();
-							}
-							else
-							{
-								currentPart.Append(ch);
-							}
-						}
-						parts.Add(currentPart.ToString().Trim());
-
+						var parts = SplitPreparedInput(rawQueryInput);
 						var query = parts.Count > 0 ? parts[0] : rawQueryInput;
 						var parameters = parts.Skip(1).Cast<object?>().ToArray();
 
@@ -254,11 +197,9 @@ public partial class Commands
 						await Mediator.Send(new QueueAttributeRequest(
 							() =>
 							{
-								var values = row.Values.ToList();
-
 								parser.CurrentState.AddRegister("0", MarkupText.Plain(currentRow.ToString()));
 
-								var dict = values.Select((x, i) =>
+								var dict = row.Values.Select((x, i) =>
 										new KeyValuePair<string, CallState>((i + 1).ToString(),
 											MarkupText.Plain(x?.ToString() ?? string.Empty)))
 									.ToDictionary();
@@ -307,5 +248,41 @@ public partial class Commands
 					return new CallState(errorMsg);
 				}
 			});
+	}
+
+	/// <summary>
+	/// Splits a prepared statement's <c>query,param,param...</c> input on unescaped commas; a
+	/// backslash escapes the character after it. Every part comes back trimmed.
+	/// </summary>
+	private static List<string> SplitPreparedInput(string rawInput)
+	{
+		var parts = new List<string>();
+		var currentPart = new System.Text.StringBuilder();
+		var escaped = false;
+
+		foreach (var ch in rawInput)
+		{
+			if (escaped)
+			{
+				currentPart.Append(ch);
+				escaped = false;
+			}
+			else if (ch == '\\')
+			{
+				escaped = true;
+			}
+			else if (ch == ',')
+			{
+				parts.Add(currentPart.ToString().Trim());
+				currentPart.Clear();
+			}
+			else
+			{
+				currentPart.Append(ch);
+			}
+		}
+
+		parts.Add(currentPart.ToString().Trim());
+		return parts;
 	}
 }

@@ -113,14 +113,14 @@ public static class ChannelList
 	/// </summary>
 	private static string ChannelTypeColumn(SharpChannel channel)
 	{
-		var privs = channel.Privs.ToHashSet(StringComparer.OrdinalIgnoreCase);
-		char On(string priv, char letter) => privs.Contains(priv) ? letter : '-';
+		bool Has(string priv) => channel.Privs.Contains(priv, StringComparer.OrdinalIgnoreCase);
+		char On(string priv, char letter) => Has(priv) ? letter : '-';
 
 		return string.Concat(
 			On("Disabled", 'D'),
 			On("Player", 'P'),
 			On("Object", 'T'),
-			privs.Contains("Admin") ? 'A' : privs.Contains("Wizard") ? 'W' : '-',
+			Has("Admin") ? 'A' : Has("Wizard") ? 'W' : '-',
 			On("Quiet", 'Q'),
 			On("Hide_Ok", 'H'),
 			On("Open", 'o'));

@@ -105,7 +105,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		await foreach (var exit in args.ToAsyncEnumerable())
+		foreach (var exit in args)
 		{
 			// NOTE: Should verify executor has CONTROL permission over the room containing the exit
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -193,10 +193,9 @@ public partial class Commands
 
 		if (!string.IsNullOrEmpty(maybeAttribute))
 		{
-			// Every token is applied as ONE batch (Task 6 fix round 1, M2): Penn's
-			// do_attrib_flags/af_helper checks permission once for the whole flag argument,
-			// not once per flag, so `@set obj/attr=!safe wizard` isn't order-dependent on
-			// whether "!safe" or "wizard" is processed first.
+			// Every token is applied as ONE batch: Penn's do_attrib_flags/af_helper checks permission
+			// once for the whole flag argument, not once per flag, so `@set obj/attr=!safe wizard`
+			// isn't order-dependent on whether "!safe" or "wizard" is processed first.
 			var flagTokens = MushText.SplitList(MarkupText.Space, args["1"].Message!)
 				.Select(x => x.ToPlainText())
 				.ToList();
@@ -216,7 +215,7 @@ public partial class Commands
 		{
 			var arg1 = args["1"].Message!;
 			var attribute = arg1.Substring(0, maybeColonLocation);
-			var content = arg1.Substring(maybeColonLocation + 1, arg1.Length);
+			var content = arg1.Substring(maybeColonLocation + 1);
 
 			var setResult =
 				await AttributeService.SetAttributeAsync(executor, realLocated, attribute.ToPlainText(), content);
@@ -1252,9 +1251,7 @@ public partial class Commands
 			return true;
 		}
 
-		var destinationFlags = await destination.Object().Flags.Value.ToArrayAsync();
-
-		return destinationFlags.Any(f => f.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase));
+		return await destination.HasFlag("LINK_OK");
 	}
 
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
@@ -1544,13 +1541,13 @@ public partial class Commands
 				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
 				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
 				// The attribute-flag sync above works the same way, for the same reason.
-				var sourceObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(obj.Object().Flags.Value);
-				var copyable = sourceObjectFlags
+				var copyable = await obj.Object().Flags.Value
 					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
 					.Select(flag => flag.Name)
-					.ToHashSet(StringComparer.OrdinalIgnoreCase);
+					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-				var clonedObjectFlags = await System.Linq.AsyncEnumerable.ToArrayAsync(clonedObj.Object().Flags.Value);
+				// Materialized: the loop unsets flags on the very object whose flag stream this is.
+				var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
 				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
 				{
 					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);

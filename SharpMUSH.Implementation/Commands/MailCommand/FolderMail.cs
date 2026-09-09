@@ -7,7 +7,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Collections.Immutable;
 using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
@@ -70,10 +69,7 @@ public static class FolderMail
 		await notifyService!.Notify(executor, $"MAIL: Moved {length} messages to {folder.ToPlainText()}.");
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
-				Folders: (folderInfo?.Folders ?? [])
-				.ToImmutableHashSet()
-				.Add(folder.ToPlainText())
-				.ToArray()),
+				Folders: [.. (folderInfo?.Folders ?? []).Append(folder.ToPlainText()).Distinct()]),
 			executor.Object(),
 			ignoreNull: true);
 
@@ -87,10 +83,7 @@ public static class FolderMail
 		await notifyService!.Notify(executor, $"MAIL: {folder.ToPlainText()} folder renamed to INBOX.");
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
-				Folders: (folderInfo?.Folders ?? [])
-				.ToImmutableArray()
-				.Remove(folder.ToPlainText())
-				.ToArray()),
+				Folders: [.. (folderInfo?.Folders ?? []).Where(name => name != folder.ToPlainText())]),
 			executor.Object(),
 			ignoreNull: true);
 		return MarkupText.Plain("");
@@ -110,10 +103,10 @@ public static class FolderMail
 			$"MAIL: {folder.ToPlainText()} folder renamed to {newName.ToPlainText()}.");
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
-				Folders: (folderInfo?.Folders ?? [])
-				.ToImmutableHashSet()
-				.Remove(folder.ToPlainText()).Add(newName.ToPlainText())
-				.ToArray()),
+				Folders: [.. (folderInfo?.Folders ?? [])
+					.Where(name => name != folder.ToPlainText())
+					.Append(newName.ToPlainText())
+					.Distinct()]),
 			executor.Object(),
 			ignoreNull: true);
 

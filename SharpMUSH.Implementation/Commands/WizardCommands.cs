@@ -55,17 +55,12 @@ public partial class Commands
 		IAsyncEnumerable<(string Name, string Symbol, string[] TypeRestrictions)> definitions,
 		string ownName, string letter, string[] ownTypes)
 	{
-		await foreach (var (name, symbol, types) in definitions)
-		{
-			if (!name.Equals(ownName, StringComparison.OrdinalIgnoreCase)
-					&& string.Equals(symbol, letter, StringComparison.Ordinal)
-					&& types.Intersect(ownTypes, StringComparer.OrdinalIgnoreCase).Any())
-			{
-				return name;
-			}
-		}
+		var conflict = await definitions.FirstOrDefaultAsync(definition =>
+			!definition.Name.Equals(ownName, StringComparison.OrdinalIgnoreCase)
+			&& string.Equals(definition.Symbol, letter, StringComparison.Ordinal)
+			&& definition.TypeRestrictions.Intersect(ownTypes, StringComparer.OrdinalIgnoreCase).Any());
 
-		return null;
+		return conflict.Name;
 	}
 
 	[SharpCommand(Name = "@FLAG",
@@ -590,13 +585,7 @@ public partial class Commands
 
 			count = Math.Max(1, Math.Min(count, 1000));
 
-			var logs = Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count));
-			var logList = new List<LogEventEntity>();
-
-			await foreach (var log in logs)
-			{
-				logList.Add(log);
-			}
+			var logList = await Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count)).ToListAsync();
 
 			if (logList.Count == 0)
 			{
@@ -1696,11 +1685,7 @@ public partial class Commands
 			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
 			var targetDbRef = playerObj.Object.DBRef;
 			// Boot only the last active connection to match PennMUSH behavior
-			IConnectionService.ConnectionData? lastConnection = null;
-			await foreach (var cd in ConnectionService.Get(targetDbRef))
-			{
-				lastConnection = cd;
-			}
+			var lastConnection = await ConnectionService.Get(targetDbRef).LastOrDefaultAsync();
 			if (lastConnection is not null)
 			{
 				targetHandles.Add(lastConnection.Handle);

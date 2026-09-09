@@ -664,19 +664,7 @@ public partial class Commands
 	}
 
 	private async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
-	{
-		IConnectionService.ConnectionData? best = null;
-
-		await foreach (var connection in ConnectionService.Get(who))
-		{
-			if (best is null || (connection.Idle ?? TimeSpan.MaxValue) < (best.Idle ?? TimeSpan.MaxValue))
-			{
-				best = connection;
-			}
-		}
-
-		return best;
-	}
+		=> await ConnectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["object"])]
@@ -961,8 +949,7 @@ public partial class Commands
 					var flagsStr = LockService.FormatLockFlags(lockData.Flags);
 					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
 					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
-				})
-				.ToList();
+				});
 
 			outputSections.Add(MarkupText.Plain($"Locks:"));
 			foreach (var lockLine in lockLines)
@@ -1367,10 +1354,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var objectFlags = await objectToEmpty.Object().Flags.Value.ToArrayAsync();
-		var hasEnterOk = objectFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
-
-		if (!hasEnterOk && !await PermissionService.Controls(executor, objectToEmpty))
+		if (!await objectToEmpty.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, objectToEmpty))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
@@ -1567,10 +1551,7 @@ public partial class Commands
 
 		if (!canEnter)
 		{
-			var objFlags = await objectToEnter.Object().Flags.Value.ToArrayAsync();
-			var hasEnterOk = objFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
-
-			if (!hasEnterOk)
+			if (!await objectToEnter.HasFlag("ENTER_OK"))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
@@ -1792,10 +1773,7 @@ public partial class Commands
 
 			var container = containerResult.WithoutError().WithoutNone();
 
-			var containerFlags = await container.Object().Flags.Value.ToArrayAsync();
-			var hasEnterOk = containerFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
-
-			if (!hasEnterOk && !await PermissionService.Controls(executor, container))
+			if (!await container.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, container))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return CallState.Empty;
@@ -1975,10 +1953,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var recipientFlags = await recipient.Object().Flags.Value.ToArrayAsync();
-		var hasEnterOk = recipientFlags.Any(f => f.Name.Equals("ENTER_OK", StringComparison.OrdinalIgnoreCase));
-
-		if (!hasEnterOk && !await PermissionService.Controls(executor, recipient))
+		if (!await recipient.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, recipient))
 		{
 			await NotifyService.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
 			return CallState.Empty;
@@ -2174,11 +2149,9 @@ public partial class Commands
 		var contents = container.Content(Mediator);
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
-		var items = new System.Collections.Generic.List<string>();
-		await foreach (var item in contents)
-		{
-			items.Add(await MessageHelpers.FormatObjectWithDbref(item.Object()));
-		}
+		var items = await contents
+			.Select((AnySharpContent item, CancellationToken _) => MessageHelpers.FormatObjectWithDbref(item.Object()))
+			.ToListAsync();
 
 		if (items.Count == 0)
 		{
@@ -2382,7 +2355,7 @@ public partial class Commands
 			}
 			else
 			{
-				var recipientList = MessageHelpers.FormatWithOxfordComma(lastPagedNames.ToArray());
+				var recipientList = MessageHelpers.FormatWithOxfordComma(lastPagedNames);
 				await NotifyService.Notify(executor, $"You last paged {recipientList}.", executor);
 			}
 
@@ -2436,7 +2409,7 @@ public partial class Commands
 		};
 		var message = pageType == PageMessageType.Speech
 			? messageArg
-			: messageArg.Substring(1, messageArg.Length - 1);
+			: messageArg.Substring(1);
 
 		var recipientNames = recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulRecipients = new List<AnySharpObject>();
@@ -2943,16 +2916,10 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
-			var contents = executorLocation.Content(Mediator);
-			var players = new List<string>();
-
-			await foreach (var obj in contents)
-			{
-				if (obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
-				{
-					players.Add(obj.Object().Name);
-				}
-			}
+			var players = await executorLocation.Content(Mediator)
+				.Where(obj => obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
+				.Select(obj => obj.Object().Name)
+				.ToListAsync();
 
 			if (players.Count == 0)
 			{
@@ -3040,9 +3007,10 @@ public partial class Commands
 			await NotifyService.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
 		}
 
+		var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
+
 		if (!isSilent)
 		{
-			var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
 			await NotifyService.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
 		}
 
@@ -3057,7 +3025,6 @@ public partial class Commands
 					continue;
 				}
 
-				var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
 				await NotifyService.Notify(obj.WithRoomOption(),
 					$"{executor.Object().Name} whispers something to {targetList}.");
 			}
@@ -3213,17 +3180,7 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var allConnections = ConnectionService.GetAll();
-		IConnectionService.ConnectionData? connection = null;
-
-		await foreach (var conn in allConnections)
-		{
-			if (conn.Ref.HasValue && conn.Ref.Value.Equals(executor.Object().DBRef))
-			{
-				connection = conn;
-				break;
-			}
-		}
+		var connection = await ConnectionService.Get(executor.Object().DBRef).FirstOrDefaultAsync();
 
 		if (connection == null)
 		{
@@ -3333,16 +3290,9 @@ public partial class Commands
 			else
 			{
 				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
-				var localeAttrs = Database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
-				await foreach (var attr in localeAttrs)
-				{
-					var saved = attr.Value.ToPlainText();
-					if (!string.IsNullOrEmpty(saved))
-					{
-						current = saved;
-						break;
-					}
-				}
+				current = await Database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None)
+					.Select(attr => attr.Value.ToPlainText())
+					.FirstOrDefaultAsync(saved => !string.IsNullOrEmpty(saved)) ?? current;
 			}
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LocaleCurrentFormat), executor, current);
 			return CallState.Empty;
