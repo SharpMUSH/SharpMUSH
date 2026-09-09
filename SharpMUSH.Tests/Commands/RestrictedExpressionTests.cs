@@ -407,4 +407,60 @@ public class RestrictedExpressionTests
 		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
 	}
 
+	[Test]
+	[Arguments("restrictedexpr(ucstr,ucstr(%0),private-input")]
+	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input")]
+	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input")]
+	public async Task MalformedRestrictedWrappersDoNotForwardRawInput(string expression)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value)
+			with
+		{ Flags = ParserStateFlags.Debug });
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		var result = await parser.FunctionParse(MarkupText.Plain(expression), true);
+		await Assert.That(result!.HadErrors).IsTrue();
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
+	}
+
+	[Test]
+	[Arguments("restrictedexpr(ucstr,ucstr(%0),private-input)")]
+	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input)")]
+	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input)")]
+	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input")]
+	public async Task InitialRestrictedWrapperParsingDoesNotTraceInputs(string expression)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var parser = original with
+		{
+			FunctionLibrary = library,
+			Logger = logger,
+			Configuration = new Options(original.Configuration.CurrentValue with
+			{
+				Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true, ParserPredictionMode = ParserPredictionMode.TwoStage }
+			})
+		};
+		// This nonparallel test captures ANTLR Trace output; restore TUnit's writer in finally.
+#pragma warning disable TUnit0055
+		var previous = Console.Out;
+		using var output = new StringWriter();
+		try
+		{
+			Console.SetOut(output);
+			await parser.FunctionParse(MarkupText.Plain(expression));
+		}
+		finally { Console.SetOut(previous); }
+#pragma warning restore TUnit0055
+		await Assert.That(output.ToString()).IsEmpty();
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+	}
+
 }

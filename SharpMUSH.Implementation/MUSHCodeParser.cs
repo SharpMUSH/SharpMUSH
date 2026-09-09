@@ -210,6 +210,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		};
 	}
 
+	private static bool ContainsRestrictedEntryPoint(BufferedTokenSpanStream tokens,
+		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
+	{
+		foreach (var token in tokens.tokens)
+		{
+			if (token.Type != SharpMUSHLexer.FUNCHAR) continue;
+			var name = token.Text.TrimEnd()[..^1];
+			if (functions.TryGetValue(name, out var definition)
+				&& definition.LibraryInformation.RestrictedOperation is "restrictedexpr" or "fn") return true;
+		}
+		return false;
+	}
+
 	/// <summary>
 	/// Parses <paramref name="entryPoint"/> over an already-lexed token stream, applying the
 	/// configured prediction strategy.
@@ -229,10 +242,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokens,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string inputText,
-		bool lenient)
+		bool lenient,
+		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)>? functions = null)
 		where TContext : ParserRuleContext
 	{
-		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null;
+		// Token inspection precedes ANTLR tracing, including malformed input with no visitor.
+		// Indirect calls may select the restricted wrapper, so suppress their parser diagnostics too.
+		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
+			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
 		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
@@ -326,12 +343,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		parser ??= this;
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
 		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
-			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, false);
+			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, true);
 		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
 		 ? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
 		var budget = ExecutionBudget.Current ?? (parser.State.IsEmpty ? null : parser.CurrentState.ExecutionBudget) ?? ownedBudget!;
 		using var budgetScope = budget.Enter();
-		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
 		budget.ThrowIfExceeded();
 		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
@@ -347,22 +364,23 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// call_limit, which is the same guard against the same crash.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
 		}
 
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
 		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, text.ToPlainText(), lenient);
+			bufferedTokenSpanStream, entryPoint, text.ToPlainText(), lenient, parser.FunctionLibrary);
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
+		// No visitor can classify private wrapper inputs on this path, so never forward raw failure text.
 		// In lenient mode (command argument parsing), proceed to visit ANTLR's
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, true);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,

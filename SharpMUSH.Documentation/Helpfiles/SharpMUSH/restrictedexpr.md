@@ -34,7 +34,8 @@ Debug and verbose forwarding are suppressed inside restricted evaluation, includ
 for executors with DEBUG set. Wrapper calls, their aliases, and enclosing debug
 traces are also suppressed so literal inputs are not forwarded before the
 restricted scope starts. Function-metadata logging and error notifications are
-suppressed during restricted calls.
+suppressed during restricted calls. Malformed wrapper input is not forwarded by
+debug output, and parser tracing is suppressed before the wrapper is parsed.
 
 An unsupported operation or substitution returns `#-1 RESTRICTED EXPRESSION`.
 Object reads, attribute evaluation (`u()`), global and local user-defined
