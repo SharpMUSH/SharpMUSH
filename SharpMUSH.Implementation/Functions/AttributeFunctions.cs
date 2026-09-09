@@ -487,10 +487,7 @@ public partial class Functions
 					parent: true);
 
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
-				return new CallState(
-					Configuration.CurrentValue.Compatibility.TinyBooleans
-						? (hasValue ? "1" : "0")
-						: (hasValue ? "1" : "0"));
+				return new CallState(hasValue ? "1" : "0");
 			});
 	}
 
@@ -517,10 +514,7 @@ public partial class Functions
 					parent: false);
 
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
-				return new CallState(
-					Configuration.CurrentValue.Compatibility.TinyBooleans
-						? (hasValue ? "1" : "0")
-						: (hasValue ? "1" : "0"));
+				return new CallState(hasValue ? "1" : "0");
 			});
 	}
 

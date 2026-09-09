@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -1753,9 +1754,7 @@ public class SharpMUSHParserVisitor(
 					var ignoreResult = await ExecuteHookCode(newParser, executor, ignoreHook.AsValue());
 					if (ignoreResult.IsSome())
 					{
-						// If hook returns false (empty, #-1, 0, etc.), skip command
-						var resultText = ignoreResult.AsValue().Message?.ToPlainText() ?? "";
-						if (string.IsNullOrWhiteSpace(resultText) || resultText == "0" || resultText == "#-1")
+						if (ignoreResult.AsValue().Message.Falsy(newParser))
 						{
 							return CallState.Empty;
 						}

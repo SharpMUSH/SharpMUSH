@@ -122,9 +122,8 @@ public class AccountClaimsService(
 		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId, ct))
 			effective[assigned.Slug] = assigned;
 
-		// Expand umbrella scopes (e.g. wiki.admin ⇒ wiki.read/create/edit/delete) so the finer
-		// gates authorize for holders of the coarser scope without per-gate "or admin" checks.
-		return PortalPermission.Expand(permissionResolver.Resolve(effective.Values));
+		// The resolver includes safe implications; never expand afterward, which would restore denied children.
+		return permissionResolver.Resolve(effective.Values);
 	}
 
 	/// <summary>

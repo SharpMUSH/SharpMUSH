@@ -3,6 +3,24 @@ SharpMUSH targets PennMUSH softcode compatibility, but a few behaviors differ on
 purpose, and a few are known limitations. This topic lists them so you are not
 surprised when code imported from PennMUSH behaves differently.
 
+## Boolean compatibility
+
+Boolean conditions use the same rules in functions, command guards, list filters,
+and indirect calls. With `tiny_booleans` off, numeric zero (including `-0`, `0.0`
+and hexadecimal zero), an empty string, space-only text, and values beginning
+`#-` are false. Other text is true, including the word `false`. A preserved tab
+is text, and a trailing space makes an otherwise numeric value text.
+
+With `tiny_booleans` on, a leading signed integer determines truth. Thus `text`
+and `0.1` are false, while `1.2text` is true. The compatibility conversion uses
+a signed 64-bit prefix, saturates overflow, then takes its low 32 bits. For
+example, `4294967296` is false. The setting is read at evaluation time.
+
+`neq()` is the numeric inverse of `eq()`: it is true when not all arguments are
+equal. `condall()` returns every result with a true condition; `ncond()` and
+`ncondall()` select false conditions. A condition is a single value, not a list
+of separate booleans. A selected empty result does not cause the default to run.
+
 ## Intentional divergences
 
 These are deliberate. SharpMUSH does not intend to change them to match PennMUSH.
@@ -22,7 +40,7 @@ produces output. SharpMUSH is stricter: an unbalanced expression returns
 such as a stray `]`, are still treated as literal text, as in PennMUSH.)
 
 **Function arguments are not evaluated before an argument-count error.** In
-PennMUSH `add(setq(0,x),1,2,3)` sets `%q0` and then reports the arity error;
+PennMUSH `not(setq(0,x),1)` sets `%q0` and then reports the arity error;
 its arguments run for their side effects first. SharpMUSH validates the
 argument count first, so those side effects do not happen. Do not rely on side
 effects in the arguments of a miscalled function.

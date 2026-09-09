@@ -79,7 +79,7 @@
             string.IsNullOrWhiteSpace(_color) ? "#6cde9a" : _color.Trim(),
             _priority,
             IsSystem: false,
-            Permissions: new Dictionary<string, string>(),
+            Permissions: Existing?.Permissions ?? new Dictionary<string, string>(),
             CreatedAt: Existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             UpdatedAt: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
