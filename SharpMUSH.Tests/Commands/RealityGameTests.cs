@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -276,6 +277,45 @@ public class RealityGameTests
 			await Assert.That(listed!.Message!.ToPlainText()).Contains(name);
 			var inspected = await parser.CommandListParse(MarkupText.Plain($"@reality/inspect {player.Object.DBRef}"));
 			await Assert.That(inspected!.Message!.ToPlainText()).Contains("RX: normal");
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LayerDescriptionFallsBackUnlessItCanExecute(bool executable)
+	{
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var roomRef = await mediator.Send(new CreateRoomCommand("layer execution permissions", owner));
+		var room = (await objects.GetObjectNodeAsync(roomRef)).Known;
+		await mediator.Send(new SetObjectFlagCommand(room, (await mediator.Send(new GetObjectFlagQuery("WIZARD")))!));
+		var viewerRef = await mediator.Send(new CreatePlayerCommand($"LayerViewer{Guid.NewGuid():N}", "testpass", roomRef, roomRef, 20));
+		var viewer = (await objects.GetObjectNodeAsync(viewerRef)).AsPlayer;
+		await mediator.Send(new SetAttributeCommand(roomRef, ["DESCRIBE"], MarkupText.Plain("ordinary-description"), owner));
+		await mediator.Send(new SetAttributeCommand(roomRef, ["LAYERDESC"], MarkupText.Plain("custom-description-[add(1,2)]"), owner));
+		var store = Get<IAttributeStore>();
+		var attribute = await store.GetAttributeAsync(roomRef, ["LAYERDESC"]).LastAsync();
+		await mediator.Send(new SetAttributeFlagCommand(roomRef, attribute, (await store.GetAttributeFlagAsync("VISUAL"))!));
+		if (executable)
+			await mediator.Send(new SetAttributeFlagCommand(roomRef, attribute, (await store.GetAttributeFlagAsync("PUBLIC"))!));
+		await policy.SaveObjectAsync(room.Object().Id!, ObjectReality.Default(roomRef) with
+		{ Descriptions = new() { ["normal"] = "LAYERDESC" } }, default);
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, true, ["normal"]), default);
+			var attributes = Get<IAttributeService>();
+			await Assert.That((await attributes.GetAttributeAsync(viewer, room, "LAYERDESC", IAttributeService.AttributeMode.Read, true)).IsAttribute).IsTrue();
+			await Assert.That((await attributes.GetAttributeAsync(viewer, room, "LAYERDESC", IAttributeService.AttributeMode.Execute, true)).IsAttribute).IsEqualTo(executable);
+			var response = new HttpResponseContext();
+			using (Get<IHttpOutputCapture>().BeginCapture(viewer.Object.Key, response))
+				await Factory.CommandParser.FromState(ParserState.RootFor(viewerRef)).CommandListParse(MarkupText.Plain("look"));
+			await Assert.That(response.Body.ToString()).Contains(executable ? "custom-description-3" : "ordinary-description");
+			await Assert.That(response.Body.ToString()).DoesNotContain(executable ? "ordinary-description" : "custom-description");
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}

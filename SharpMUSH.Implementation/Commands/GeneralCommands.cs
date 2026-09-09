@@ -673,7 +673,7 @@ public partial class Commands
 		{
 			var layerAttribute = await AttributeService.GetAttributeAsync(executor, realViewing, layerDescription,
 				IAttributeService.AttributeMode.Read, true);
-			if (layerAttribute.IsAttribute)
+			if (layerAttribute.IsAttribute && await PermissionService.CanExecuteAttribute(executor, realViewing, layerAttribute.AsAttribute))
 			{
 				customDescription = true;
 				descriptionAttributeName = layerDescription;

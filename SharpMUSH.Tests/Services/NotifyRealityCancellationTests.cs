@@ -1,37 +1,42 @@
 using NSubstitute;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
-using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Tests.Services;
 
-public class NotifyPublicationCancellationTests
+public class NotifyRealityCancellationTests
 {
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
-	public async Task PublicationReceivesAndObservesCurrentExecutionToken(bool prompt)
+	public async Task RealityReadObservesExecutionCancellation(bool unboundHandle)
 	{
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
 		using var scope = budget.Enter();
-		var bus = Substitute.For<IMessageBus>();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
-		async Task Publish(CancellationToken token)
+		async ValueTask<bool> Read(CancellationToken token)
 		{
 			entered.TrySetResult(token);
 			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			return true;
 		}
-		bus.HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>())
-			.Returns(call => Publish(call.Arg<CancellationToken>()));
-		bus.HandlePublish(Arg.Any<MarkupPromptMessage>(), Arg.Any<CancellationToken>())
-			.Returns(call => Publish(call.Arg<CancellationToken>()));
-		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(), Substitute.For<ILocalizationService>(), Substitute.For<IRealityPolicy>());
-		var operation = (prompt ? notify.Prompt(1L, "output", null) : notify.Notify(1L, "output", null)).AsTask();
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(call => Read(call.Arg<CancellationToken>()));
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => Read(call.Arg<CancellationToken>()));
+		var bus = Substitute.For<IMessageBus>();
+		var listeners = Substitute.For<IListenerRoutingService>();
+		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(),
+			Substitute.For<ILocalizationService>(), reality, listeners);
+		var sender = new TestObjectFactory().CreatePlayer(1, "sender");
+		var operation = (unboundHandle ? notify.Notify(1L, "output", sender)
+			: notify.Notify(new DBRef(2), "output", sender)).AsTask();
 		try
 		{
 			await Assert.That(await entered.Task.WaitAsync(TimeSpan.FromSeconds(2))).IsEqualTo(budget.Token);
@@ -41,6 +46,8 @@ public class NotifyPublicationCancellationTests
 			catch (OperationCanceledException ex) { cancellation = ex; }
 			await Assert.That(cancellation).IsNotNull();
 			await Assert.That(cancellation!.CancellationToken).IsEqualTo(budget.Token);
+			await Assert.That(listeners.ReceivedCalls().Any()).IsFalse();
+			await Assert.That(bus.ReceivedCalls().Any()).IsFalse();
 		}
 		finally
 		{

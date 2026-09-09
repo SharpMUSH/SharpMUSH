@@ -50,8 +50,8 @@ public class NotifyService(
 	private async ValueTask<bool> CanReceive(DBRef? receiver, AnySharpObject? sender)
 	{
 		if (sender is null) return true;
-		if (receiver is null) return !await reality.IsEnabledAsync();
-		return await reality.CanPerceiveAsync(receiver.Value, sender.Object().DBRef);
+		if (receiver is null) return !await reality.IsEnabledAsync(ExecutionBudget.CurrentToken);
+		return await reality.CanPerceiveAsync(receiver.Value, sender.Object().DBRef, ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
