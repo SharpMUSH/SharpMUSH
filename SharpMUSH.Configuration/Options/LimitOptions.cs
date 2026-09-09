@@ -301,12 +301,12 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "queue_entry_cpu_time",
 		Category = "Limit",
-		Description = "Elapsed execution limit per queued command (seconds, including external I/O)",
+		Description = "Elapsed execution limit per queued command (milliseconds including I/O; 0 means unlimited)",
 		ValidationPattern = @"^\d+$",
 		Group = "Performance",
 		Order = 8,
-		Min = 1,
-		Max = 3600)]
+		Min = 0,
+		Max = 3600000)]
 	uint QueueEntryCpuTime,
 
 	[property: SharpConfig(

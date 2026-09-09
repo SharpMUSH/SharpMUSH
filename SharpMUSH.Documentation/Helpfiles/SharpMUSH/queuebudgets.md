@@ -27,7 +27,8 @@ The configuration interface exposes both queue limits in the Limit category.
 # execution budget
 
 `queue_entry_cpu_time` is the legacy configuration name for an **elapsed-time**
-limit in seconds. Its default remains 1000 seconds. It is not a measurement of
+limit in milliseconds. Its default remains 1000 milliseconds (one second).
+Zero disables the deadline while keeping halt and shutdown cancellation active. It is not a measurement of
 CPU consumed by the process or by a thread. The clock starts when execution
 starts, so waiting on a delay or semaphore does not spend execution time.
 
@@ -37,6 +38,7 @@ Expiry returns `#-1 EXECUTION TIME LIMIT EXCEEDED`; it does not reset at an
 attribute call or nested command list. Function invocation, recursion, output
 size and regex ceilings remain independent limits.
 
+Cancellation from halt or shutdown is distinct from deadline expiry.
 Cancellation is cooperative: parser checkpoints stop further evaluation, and
 HTTP/SQL operations receive the cancellation token. A database provider must
 honor cancellation to interrupt an operation already inside that provider.

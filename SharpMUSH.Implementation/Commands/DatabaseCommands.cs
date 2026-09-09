@@ -177,6 +177,8 @@ public partial class Commands
 					var columnNames = new List<string>();
 					var firstRow = true;
 					var rowNumber = 1;
+					var admittedRows = 0;
+					var sourceRows = 0;
 
 					IAsyncEnumerable<Dictionary<string, object?>> queryResults;
 
@@ -224,11 +226,12 @@ public partial class Commands
 
 					await foreach (var row in queryResults)
 					{
+						sourceRows++;
 						if (colnamesSwitch && firstRow)
 						{
 							columnNames = row.Keys.ToList();
 
-							await Mediator.Send(new QueueAttributeRequest(
+							var headerAdmission = await Mediator.Send(new QueueAttributeRequest(
 								() =>
 								{
 									var remainder = columnNames
@@ -247,11 +250,12 @@ public partial class Commands
 								},
 								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
 
+							if (!headerAdmission.Accepted) break;
 							firstRow = false;
 						}
 
 						var currentRow = rowNumber;
-						await Mediator.Send(new QueueAttributeRequest(
+						var rowAdmission = await Mediator.Send(new QueueAttributeRequest(
 							() =>
 							{
 								var values = row.Values.ToList();
@@ -272,6 +276,8 @@ public partial class Commands
 							},
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor));
 
+						if (!rowAdmission.Accepted) break;
+						admittedRows++;
 						rowNumber++;
 					}
 
@@ -288,9 +294,9 @@ public partial class Commands
 					// This is handled at the parser/execution level, not here
 					// The attribute will execute with the permissions of the enactor rather than executor
 
-					var message = rowNumber == 1
+					var message = sourceRows == 0
 						? "No rows returned."
-						: $"{rowNumber - 1} row{(rowNumber > 2 ? "s" : "")} queued for execution.";
+						: $"{admittedRows} row{(admittedRows != 1 ? "s" : "")} queued for execution.";
 					await NotifyService.Notify(executor, message, executor);
 					return new CallState(MarkupText.Plain(message));
 				}

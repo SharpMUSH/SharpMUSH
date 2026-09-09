@@ -15,16 +15,23 @@ public sealed class ExecutionBudget : IDisposable
 	public static CancellationToken CurrentToken => Current?.Token ?? CancellationToken.None;
 	public ExecutionBudget(TimeSpan duration, CancellationToken cancellationToken = default)
 	{
+		if (duration != Timeout.InfiniteTimeSpan && (duration < TimeSpan.Zero || duration.TotalMilliseconds > uint.MaxValue - 1))
+			throw new ArgumentOutOfRangeException(nameof(duration));
 		_duration = duration;
 		_cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		_cancellation.CancelAfter(duration);
 	}
 	public CancellationToken Token => _cancellation.Token;
-	public TimeSpan Remaining => TimeSpan.FromTicks(Math.Max(0, (_duration - Stopwatch.GetElapsedTime(_started)).Ticks));
-	public bool IsExceeded => Remaining == TimeSpan.Zero || _cancellation.IsCancellationRequested;
+	public static ExecutionBudget FromMilliseconds(uint milliseconds, CancellationToken token = default)
+		=> new(milliseconds == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(milliseconds), token);
+	public TimeSpan Remaining => _duration == Timeout.InfiniteTimeSpan ? TimeSpan.MaxValue : TimeSpan.FromTicks(Math.Max(0, (_duration - Stopwatch.GetElapsedTime(_started)).Ticks));
+	public bool IsExpired => Remaining == TimeSpan.Zero;
+	public bool IsCancelled => _cancellation.IsCancellationRequested;
+	public bool IsExceeded => IsExpired || IsCancelled;
 	public void ThrowIfExceeded()
 	{
-		if (IsExceeded) throw new OperationCanceledException(Error, Token);
+		if (IsExpired) throw new OperationCanceledException(Error, Token);
+		Token.ThrowIfCancellationRequested();
 	}
 	public IDisposable Enter()
 	{

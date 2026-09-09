@@ -10,10 +10,23 @@ public class ExecutionBudgetTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
+	public async Task CancelledParserDoesNotReportDeadlineExpiry()
+	{
+		using var source = new CancellationTokenSource();
+		using var budget = ExecutionBudget.FromMilliseconds(0, source.Token);
+		source.Cancel();
+		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(Factory.ExecutorDBRef) with { ExecutionBudget = budget });
+		var cancelled = false;
+		try { await parser.FunctionParse(MarkupText.Plain("add(1,2)")); }
+		catch (OperationCanceledException) { cancelled = true; }
+		await Assert.That(cancelled).IsTrue();
+		await Assert.That(budget.IsExpired).IsFalse();
+	}
+
+	[Test]
 	public async Task NestedParserCannotResetAnExpiredDeadline()
 	{
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(20));
-		try { await Task.Delay(1000, budget.Token); } catch (OperationCanceledException) { }
+		using var budget = new ExecutionBudget(TimeSpan.Zero);
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(Factory.ExecutorDBRef) with { ExecutionBudget = budget });
 		var result = await parser.FunctionParse(MarkupText.Plain("add(1,add(2,3))"));
 		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);

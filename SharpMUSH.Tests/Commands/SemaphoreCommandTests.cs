@@ -358,4 +358,21 @@ public class SemaphoreCommandTests
 		await Assert.That(count).IsEqualTo("0");
 	}
 
+	[Test]
+	public async Task TimeoutAfterSemaphoreResetCannotCreateNotifyCredit()
+	{
+		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemResetCount");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wait {semObj}/{name}=think timeout"));
+		var tasks = await Scheduler.GetSemaphoreTasks(new SharpMUSH.Library.Models.DbRefAttribute(semObj, [name])).ToArrayAsync();
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semObj}=0"));
+		await Scheduler.ReleaseScheduledWork(tasks.Single().Pid, semaphoreTimeout: true);
+		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "reset-drained", "test");
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
+		var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+	}
+
 }

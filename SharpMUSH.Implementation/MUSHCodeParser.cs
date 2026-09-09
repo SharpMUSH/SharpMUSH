@@ -325,10 +325,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		parser ??= this;
 		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
-		 ? new ExecutionBudget(TimeSpan.FromSeconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime)) : null;
+		 ? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
 		var budget = ExecutionBudget.Current ?? (parser.State.IsEmpty ? null : parser.CurrentState.ExecutionBudget) ?? ownedBudget!;
 		using var budgetScope = budget.Enter();
-		if (budget.IsExceeded) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		budget.ThrowIfExceeded();
 		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		StringSpanInputStream inputStream = new(text.ToPlainText(), methodName);
@@ -375,9 +376,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		CallState? result;
 		try { result = await visitor.Visit(context); }
-		catch (OperationCanceledException) when (budget.IsExceeded)
+		catch (OperationCanceledException) when (budget.IsExpired)
 		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false); }
-		if (budget.IsExceeded) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		budget.ThrowIfExceeded();
 
 		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
 		// recovers and lets the visitor walk a best-effort tree instead of throwing, so
