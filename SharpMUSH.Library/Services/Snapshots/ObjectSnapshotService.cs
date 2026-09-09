@@ -1,6 +1,5 @@
 using DotNext.Threading;
 using System.Text.RegularExpressions;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Mediator;
@@ -12,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Snapshots;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services.Snapshots;
 
@@ -216,7 +216,7 @@ public sealed partial class ObjectSnapshotService(
 
 	private static ObjectSnapshot FinalizeImage(ObjectSnapshot snapshot)
 	{
-		var finalized = snapshot with { Digest = Hash(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)) };
+		var finalized = snapshot with { Digest = ContentHash.Sha256Hex(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)) };
 		if (Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(finalized, Json)) > MaxBytes) throw Error("limit", "Snapshot exceeds 2 MiB.");
 		return finalized;
 	}
@@ -232,7 +232,7 @@ public sealed partial class ObjectSnapshotService(
 			snapshot.Locks.Any(p => p.Value is null || p.Value.Expression is null) ||
 			Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(snapshot, Json)) > MaxBytes ||
 			snapshot.SchemaVersion != 1 || snapshot.ObjectId != obj.Object().DBRef.ToString() || snapshot.ObjectType != obj.Object().Type ||
-			snapshot.Digest != Hash(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)))
+			snapshot.Digest != ContentHash.Sha256Hex(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)))
 			throw Error("corrupt", "Snapshot schema, digest, type or stable object identity is invalid.");
 		return CanonicalLocks(snapshot);
 	}
@@ -463,7 +463,7 @@ public sealed partial class ObjectSnapshotService(
 		}
 		// Exclude capture identity/time: the token binds the affected current content, destination and selection.
 		var state = new { current.ObjectId, current.ObjectType, current.Name, current.Attributes, current.Locks, current.Flags, saved.Digest, selection };
-		return new(saved.Id, current.ObjectId, Hash(JsonSerializer.Serialize(state, Json)), selection, changes.ToArray());
+		return new(saved.Id, current.ObjectId, ContentHash.Sha256Hex(JsonSerializer.Serialize(state, Json)), selection, changes.ToArray());
 	}
 
 	private async Task<SnapshotHistory> Read(AnySharpObject obj, CancellationToken ct)
@@ -495,7 +495,6 @@ public sealed partial class ObjectSnapshotService(
 			Snapshots = history.Snapshots.Prepend(snapshot).OrderByDescending(s => s.CreatedAt)
 			.Where((s, index) => index < snapshot.Retain || s.Id == history.PendingRecoveryId).ToArray()
 		};
-	private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 	private static SnapshotOperationException Error(string code, string message) => new(code, message);
 }
 

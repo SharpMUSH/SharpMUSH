@@ -845,16 +845,18 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
-
-						// Default ChZone lock is the zone object itself (allows controlled objects)
-						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
-						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
-								zoneObj.Object().DBRef.ToString()));
-						}
-
-						// Clear privileged flags and powers unless /preserve is used
+						// Clear privileged flags and powers unless /preserve is used.
+						//
+						// Ahead of the zone change, and not after it as PennMUSH's do_chzone (src/set.c:373)
+						// writes it: PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(),
+						// which ask nobody's permission, so its one controls() check above is the whole
+						// authorization. These go through ManipulateSharpObjectService, which checks Controls
+						// itself — and Controls reads the object's *current* zone (PermissionService.Controls,
+						// Zone Master Object branch). Once the zone has moved, an executor who held the object
+						// only through the zone it is leaving no longer controls it, the strip is refused, and
+						// @CHZONE reports "Zone changed." over an object that kept every power. Running the
+						// strip first is what keeps the authorization checked at the top of this command the
+						// one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 						if (!preserve && !obj.IsPlayer)
 						{
 							if (await obj.HasFlag("WIZARD"))
@@ -870,11 +872,19 @@ public partial class Commands
 								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
 
-							var allPowers = obj.Object().Powers.Value;
-							await foreach (var power in allPowers)
-							{
-								await Mediator.Send(new UnsetObjectPowerCommand(obj, power));
-							}
+							// Same clearing @CHZONEALL uses: it materializes the collection before
+							// unsetting and publishes ObjectFlagChangedNotification per power, which
+							// the hand-rolled loop here did not.
+							await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
+						}
+
+						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+						// Default ChZone lock is the zone object itself (allows controlled objects)
+						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
+						{
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
+								zoneObj.Object().DBRef.ToString()));
 						}
 
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
