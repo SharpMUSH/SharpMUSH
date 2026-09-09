@@ -1371,6 +1371,10 @@ public class SharpMUSHParserVisitor(
 
 			return huhCommand;
 		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
 		catch (Exception ex)
 		{
 			// A command that throws used to be logged server-side and then swallowed to
