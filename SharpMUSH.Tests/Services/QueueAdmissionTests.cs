@@ -36,7 +36,7 @@ public class QueueAdmissionTests
 		ConfigureTargets(mediator);
 		return mediator;
 	}
-	private static void ConfigureTargets(IMediator mediator)
+	private static void ConfigureTargets(IMediator mediator, bool wizard = false, bool queuePower = false)
 	{
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
@@ -46,8 +46,8 @@ public class QueueAdmissionTests
 				Object = new SharpObject
 				{
 					Key = dbRef.Number, CreationTime = 1, Name = "Semaphore", Type = "PLAYER", Locks = null!, Owner = null!,
-					Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
-					Flags = null!, Parent = null!, Zone = null!, Children = null!
+					Powers = new(() => (queuePower ? new[] { new SharpPower { Name = "Queue", Alias = "", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+					Flags = new(() => (wizard ? new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } } : []).ToAsyncEnumerable()), Parent = null!, Zone = null!, Children = null!
 				},
 				Location = null!, Home = null!, PasswordHash = "", Quota = 0
 			};
@@ -56,6 +56,125 @@ public class QueueAdmissionTests
 		});
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	private static IMediator CountingMediator(Func<int> read, Action<int> write)
+	{
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			new[] { new SharpAttribute("", "", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = MarkupString.MarkupText.Plain(read().ToString()) } }.ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			write(int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText()));
+			return ValueTask.FromResult(true);
+		});
+		return mediator;
+	}
+
+	[Test]
+	public async Task ManagedSemaphorePublishesCountBeforeZeroTimeoutCanRelease()
+	{
+		var count = 0;
+		var mediator = CountingMediator(() => count, value => count = value);
+		var scheduler = Substitute.For<IScheduler>();
+		Scheduler? queue = null;
+		var observedAtPublication = -1;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			observedAtPublication = count;
+			var pid = long.Parse(call.Arg<ITrigger>().Key.Name.Split('-').Last());
+			await queue!.ReleaseScheduledWork(pid, semaphoreTimeout: true);
+			return DateTimeOffset.UtcNow;
+		});
+		var executed = Signal();
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(_ => { executed.SetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var ownedQueue = queue = Create(mediator: mediator, scheduler: scheduler, parser: parser);
+		var result = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ready"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 99, TimeSpan.Zero, manageSemaphoreCount: true);
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result.Accepted).IsTrue();
+		await Assert.That(observedAtPublication).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ManagedNegativeCreditIsRereadAndCommittedBeforeExecution()
+	{
+		var count = -1;
+		var observed = -99;
+		var mediator = CountingMediator(() => count, value => count = value);
+		var executed = Signal();
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(_ => { observed = count; executed.SetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(mediator: mediator, parser: parser);
+		await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ready"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 99, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(observed).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task RejectedManagedSemaphoreDoesNotWriteCounter()
+	{
+		var writes = 0;
+		await using var queue = Create(global: 0, mediator: CountingMediator(() => 0, _ => writes++));
+		var result = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, TimeSpan.Zero, manageSemaphoreCount: true);
+		await Assert.That(result.Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
+		await Assert.That(writes).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task FailedScheduleRollsBackBeforeTheNextCounterMutation()
+	{
+		var count = 4;
+		var publishing = Signal();
+		var fail = Signal();
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			publishing.SetResult();
+			await fail.Task;
+			return await Task.FromException<DateTimeOffset>(new InvalidOperationException("Schedule failed"));
+		});
+		await using var queue = Create(mediator: CountingMediator(() => count, value => count = value), scheduler: scheduler);
+		var admission = queue.WriteCommandList(MarkupString.MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 99, TimeSpan.Zero, manageSemaphoreCount: true).AsTask();
+		await publishing.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var nextMutation = queue.EnterSemaphoreMutationAsync().AsTask();
+		await Assert.That(nextMutation.IsCompleted).IsFalse();
+		fail.SetResult();
+		try { await admission; } catch (InvalidOperationException) { }
+		using var lease = await nextMutation.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(count).IsEqualTo(4);
+		count++;
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(count).IsEqualTo(5);
+	}
+
+	[Test]
+	[Arguments(false, false, 1)]
+	[Arguments(true, false, 3)]
+	[Arguments(false, true, 3)]
+	public async Task PrivilegedAllowanceAddsDatabaseCountButRetainsGlobalCeiling(bool wizard, bool power, int allowance)
+	{
+		var mediator = Substitute.For<IMediator>();
+		ConfigureTargets(mediator, wizard, power);
+		mediator.Send(Arg.Any<GetObjectCountQuery>(), Arg.Any<CancellationToken>()).Returns(2);
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
+		var state = ParserState.RootFor(new DBRef(10));
+		for (var i = 0; i < allowance; i++)
+			await Assert.That((await queue.WriteCommandList(MarkupString.MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.WriteCommandList(MarkupString.MarkupText.Plain("think rejected"), state, TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+		if (wizard || power)
+		{
+			await Assert.That((await queue.WriteCommandList(MarkupString.MarkupText.Plain("think other"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+			await Assert.That((await queue.WriteCommandList(MarkupString.MarkupText.Plain("think capped"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
+		}
+	}
 
 	[Test]
 	public async Task HaltCancellationCallbacksCanReadQueueWithoutBlockingAdmissionLock()
@@ -325,8 +444,8 @@ public class QueueAdmissionTests
 			Object = new SharpObject
 			{
 				Key = 50, CreationTime = 1, Name = "Owner", Type = "PLAYER", Locks = null!, Owner = null!,
-				Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
-				Flags = null!, Parent = null!, Zone = null!, Children = null!
+				Powers = new(() => AsyncEnumerable.Empty<SharpPower>()), Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
+				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()), Parent = null!, Zone = null!, Children = null!
 			},
 			Location = null!, Home = null!, PasswordHash = "", Quota = 0
 		};
