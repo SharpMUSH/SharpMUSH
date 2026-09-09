@@ -3,7 +3,8 @@
 @using System.Text.Json
 @using SharpMUSH.Library.Models.RecurringJobs
 @attribute [Authorize]
-@inject HttpClient Api
+@implements IDisposable
+@inject IHttpClientFactory ClientFactory
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["JobsTitle"]</PageTitle>
@@ -52,6 +53,9 @@
 </section>
 
 @code {
+    private HttpClient? _api;
+    private HttpClient Api => _api ??= ClientFactory.CreateClient("api");
+    public void Dispose() => _api?.Dispose();
     private RecurringJob[] _jobs = [];
     private string _target = "", _attribute = "", _description = "", _schedule = "0 9 * * *", _zone = "UTC";
     private string _editSchedule = "", _editZone = "";

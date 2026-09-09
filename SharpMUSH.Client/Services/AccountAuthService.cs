@@ -230,25 +230,34 @@ public class AccountAuthService(
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
-		var token = AccountSessionToken;
-		using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
-		// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
-		// recursively waiting on this same initialization task.
-		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-		using var response = await httpClientFactory.CreateClient("api").SendAsync(request);
-		if (AccountSessionToken != token || ExplicitlyLoggedOut) return;
-		if (response.StatusCode == HttpStatusCode.Unauthorized)
+		try
 		{
-			ClearSessionState();
-			return;
+			var token = AccountSessionToken;
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
+			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
+			// recursively waiting on this same initialization task.
+			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+			using var response = await httpClientFactory.CreateClient("api").SendAsync(request);
+			if (AccountSessionToken != token || ExplicitlyLoggedOut) return;
+			if (response.StatusCode == HttpStatusCode.Unauthorized)
+			{
+				ClearSessionState();
+				return;
+			}
+			if (!response.IsSuccessStatusCode) return;
+			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>();
+			if (current is null || AccountSessionToken != token || ExplicitlyLoggedOut) return;
+			Username = current.Username;
+			MustChangePassword = current.MustChangePassword;
+			Role = current.Role;
+			Permissions = current.Permissions ?? [];
 		}
-		if (!response.IsSuccessStatusCode) return;
-		var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>();
-		if (current is null || AccountSessionToken != token || ExplicitlyLoggedOut) return;
-		Username = current.Username;
-		MustChangePassword = current.MustChangePassword;
-		Role = current.Role;
-		Permissions = current.Permissions ?? [];
+		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+		{
+			// The credential remains usable even when current display authority could not be loaded.
+			// No stored role or grant has been restored, so permission-gated controls stay closed.
+			logger.LogWarning(ex, "Could not refresh account session permissions");
+		}
 	}
 
 	/// <summary>Everything a tab holding no usable session must look like. Does not raise

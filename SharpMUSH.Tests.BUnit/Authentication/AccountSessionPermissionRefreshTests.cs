@@ -67,4 +67,31 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		await Assert.That(service.Role).IsNull();
 		if (status == HttpStatusCode.Unauthorized) await Assert.That(service.IsLoggedIn).IsFalse();
 	}
+	private sealed class FailedTransportHandler(bool timeout) : HttpMessageHandler
+	{
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+			=> Task.FromException<HttpResponseMessage>(timeout ? new TaskCanceledException("timeout") : new HttpRequestException("offline"));
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task TransportFailureKeepsTheSessionWithoutCachedAuthority(bool timeout)
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("valid-token");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("God");
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
+		var factory = Substitute.For<IHttpClientFactory>();
+		using var http = new HttpClient(new FailedTransportHandler(timeout)) { BaseAddress = new Uri("https://localhost/") };
+		factory.CreateClient("api").Returns(http);
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
+			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		await service.InitAsync();
+		await service.InitAsync();
+		await Assert.That(service.AccountSessionToken).IsEqualTo("valid-token");
+		await Assert.That(service.Role).IsNull();
+		await Assert.That(service.Permissions).IsEmpty();
+	}
+
 }
