@@ -130,6 +130,24 @@ public class QueueDiagnosticsAuthorizationTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task StoppedProfileIsDiscardedWhenAuthorityIsRevoked(bool invalidActor)
+	{
+		var h = new Harness();
+		var originalScope = h.Scope;
+		await h.Service.StartProfileAsync(h.Actor);
+		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
+		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
+		await h.Service.StopProfileAsync(h.Actor);
+		await Assert.That((await h.Service.InspectAsync(h.Actor)).AsT0.Profile!.Rows.Sum(row => row.Count)).IsEqualTo(1L);
+		h.Scope = invalidActor ? null : new(h.Actor, new HashSet<string> { PortalPermission.QueueInspectOwn });
+		await h.Service.CollectProfilesAsync();
+		h.Scope = originalScope;
+		await Assert.That((await h.Service.InspectAsync(h.Actor)).AsT0.Profile).IsNull();
+	}
+
+	[Test]
 	[Arguments(1)]
 	[Arguments(2)]
 	public async Task CancelledCollectionPreservesSamplesForEveryProfile(int cancelAt)

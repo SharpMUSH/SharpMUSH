@@ -100,7 +100,6 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 				var samples = _pendingProfileSamples ??= recorder.DrainProfileSamples().GroupBy(s => s.ProfileId).ToDictionary(g => g.Key, g => g.ToArray());
 				foreach (var profile in recorder.ProfileRegistrations())
 				{
-					if (!samples.ContainsKey(profile.Id) && !recorder.IsProfileRecording(profile.Id)) continue;
 					try
 					{
 						var scope = await queues.GetInspectionScopeAsync(profile.Actor, ct);
