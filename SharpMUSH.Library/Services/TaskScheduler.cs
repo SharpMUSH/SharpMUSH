@@ -682,6 +682,11 @@ public partial class TaskScheduler(
 		// User cancellation callbacks must never run while either scheduler lock is held.
 		CancelEntry(entry);
 		if (ready) return true;
+		// Halt may be called outside an executing queue entry. Keep provider cleanup
+		// bounded and interruptible by shutdown while awaiting every write to settle.
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		using var haltBudget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
+		using var haltScope = haltBudget.Enter();
 		using (entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal) ? await EnterSemaphoreMutationAsync() : null)
 		using (await LockDeferred())
 		{

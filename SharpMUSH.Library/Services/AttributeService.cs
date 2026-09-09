@@ -126,7 +126,10 @@ public class AttributeService(
 	{
 		var token = ExecutionBudget.CurrentToken;
 		token.ThrowIfCancellationRequested();
-		var result = await read();
+		// Permission/validation APIs include legacy lazy reads without a token parameter.
+		// Bound only this read-only decision; attribute mutations are never detached.
+		var pending = read();
+		var result = pending.IsCompletedSuccessfully ? pending.Result : await pending.AsTask().WaitAsync(token);
 		token.ThrowIfCancellationRequested();
 		return result;
 	}

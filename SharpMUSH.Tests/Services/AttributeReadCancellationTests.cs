@@ -17,6 +17,44 @@ namespace SharpMUSH.Tests.Services;
 public class AttributeReadCancellationTests
 {
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task StalledPermissionReadsDoNotHoldTheExecutionAfterCancellation(bool execute)
+	{
+		var target = new TestObjectFactory().CreateThing(10, "target");
+		var mediator = Substitute.For<IMediator>();
+		var permissions = Substitute.For<IPermissionService>();
+		var validation = Substitute.For<IValidateService>();
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>()).Returns(true);
+		var attributes = new[] { TestAttributeFactory.Named("RUN") };
+		mediator.CreateStream(Arg.Any<GetAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new[] { new AttributeWithInheritance(attributes, target.Object().DBRef, AttributeSource.Self, []) }.ToAsyncEnumerable());
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		ValueTask<bool> Block() { entered.TrySetResult(); return new(release.Task); }
+		permissions.CanExecuteAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Block());
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Block());
+		var service = new AttributeService(mediator, permissions, Substitute.For<ILocateService>(), validation,
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+		using var cancel = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
+		using var scope = budget.Enter();
+		var operation = service.GetAttributeAsync(target, target, "RUN",
+			execute ? IAttributeService.AttributeMode.Execute : IAttributeService.AttributeMode.Read, false).AsTask();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			cancel.Cancel();
+			await Assert.That(async () => await operation.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+		}
+		finally
+		{
+			release.TrySetResult(true);
+			try { await operation; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
 	[Arguments("fallback")]
 	[Arguments("parent")]
 	[Arguments("ancestor-node")]
