@@ -27,6 +27,15 @@ already made a command runnable keeps its reservation until execution accounts
 for it. Partial drains subtract only removed waiters and preserve unused
 notification credits; a full drain also clears unused notification credits.
 
+If a failed semaphore submission cannot restore its counter, the cancelled PID
+keeps its queue slot as a repair record. The next semaphore operation (including
+`@halt/pid` of that PID) retries repair before changing any counters. A failed repair
+blocks further semaphore mutations, but does not block ordinary queued commands.
+Repair attempts have a one-second deadline and observe shutdown cancellation.
+A conflicting raw attribute edit is preserved and reported; restore the original
+counter, or remove the newly created attribute, before retrying. These repair
+records are in memory; an unrepaired counter is logged if the engine shuts down.
+
 Wizards can use `@ps/all` to inspect admitted totals, configured limits, and
 rejection counts by reason. Counts last for the lifetime of the engine process.
 The configuration interface exposes both queue limits in the Limit category.
@@ -52,3 +61,8 @@ honor cancellation to interrupt an operation already inside that provider.
 The scheduler never abandons an outstanding operation to run another command
 concurrently. Regex operations retain their existing finite timeout and use the
 remaining deadline when constructing a pattern near expiry.
+
+Quartz semaphore timeout bookkeeping has its own shutdown-linked deadline, using
+`queue_entry_cpu_time` when finite and one second when that setting is zero. A
+failed timeout update retains its reservation and retries after a one-second
+backoff, so an unavailable provider does not create a tight retry loop.
