@@ -141,6 +141,26 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	public async ValueTask DrainCommandSubtractsActualWaitersAndClearsCredits()
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CountedDrain");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		async ValueTask Command(string command) => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		async ValueTask<string> Count() => (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		await Command($"@wait {target}/{attribute}=think first");
+		await Command($"@wait {target}/{attribute}=think second");
+		await Assert.That(await Count()).IsEqualTo("2");
+		await Command($"@drain {target}/{attribute}=1");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+		await Command($"@notify {target}/{attribute}=2");
+		await Assert.That(await Count()).IsEqualTo("-2");
+		await Command($"@drain/all {target}/{attribute}");
+		await Assert.That(await Count()).IsEqualTo("");
+	}
+
+	[Test]
 	public async ValueTask WaitCommand_WithTime_CanExecute()
 	{
 		var uniqueId = Guid.NewGuid().ToString("N");

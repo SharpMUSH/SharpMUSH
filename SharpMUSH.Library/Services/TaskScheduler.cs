@@ -464,6 +464,9 @@ public partial class TaskScheduler(
 	}
 
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
+		=> _ = await DrainCounted(dbAttribute, count);
+
+	public async ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
 	{
 		QueueEntry[] removed;
 		using (await LockDeferred())
@@ -482,6 +485,7 @@ public partial class TaskScheduler(
 			}
 		}
 		foreach (var entry in removed) entry.Cts.Dispose();
+		return removed.Length;
 	}
 
 	public async ValueTask Halt(DBRef dbRef)
