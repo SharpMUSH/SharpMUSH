@@ -809,6 +809,8 @@ public static class ErrorMessages
 		public const string ChatMustBeOnChannelToSpeak = "You must be on that channel to speak on it.";
 		/// <summary>PennMUSH src/extchat.c:1560.</summary>
 		public const string ChatMustStopGaggingToSpeak = "You must stop gagging that channel to speak on it.";
+		/// <summary>PennMUSH src/extchat.c:1680.</summary>
+		public const string ChatWhatToEmit = "What do you want to emit?";
 
 		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

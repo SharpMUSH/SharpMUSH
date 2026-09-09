@@ -672,4 +672,69 @@ public class ChannelMatchRecallTests
 
 		await Assert.That(string.Join("\n", heard)).Contains("emitted from outside");
 	}
+
+	// --- The command and function spellings answer to one implementation ---------------------------
+
+	/// <summary>
+	/// <c>do_cemit</c> keeps the open-channel rule that <c>do_chat</c> has (<c>src/extchat.c:1667</c>):
+	/// on a channel WITHOUT the <c>open</c> privilege a non-member is refused, and the See_All + Pemit_All
+	/// bypass is the only way past it. The mortal here has neither, so all four spellings refuse — the
+	/// counterpart to <see cref="Cemit_DoesNotRequireMembership"/>, which uses an open channel.
+	/// </summary>
+	[Test]
+	[Arguments("@cemit")]
+	[Arguments("@nscemit")]
+	[Arguments("cemit")]
+	[Arguments("nscemit")]
+	public async Task Cemit_OnAClosedChannelRefusesANonMember(string spelling)
+	{
+		var name = UniqueChannel($"Closed{spelling.TrimStart('@')}");
+		var channel = await CreateChannel(name, "Player");
+		var listener = await CreateMortal($"ChanClosedEar{spelling.TrimStart('@')}");
+		var outsider = await CreateMortal($"ChanClosedOut{spelling.TrimStart('@')}");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+
+		var heard = await MessagesWhile(listener.DbRef, async () =>
+		{
+			if (spelling.StartsWith('@'))
+			{
+				await Run(outsider, $"{spelling} {name}=should not arrive");
+			}
+			else
+			{
+				await WebAppFactoryArg.FunctionParserFor(outsider.DbRef)
+					.FunctionParse(MarkupText.Plain($"{spelling}({name},should not arrive)"));
+			}
+		});
+
+		await Assert.That(string.Join("\n", heard)).DoesNotContain("should not arrive");
+	}
+
+	/// <summary>
+	/// The whole point of routing both spellings through one implementation: a gate cannot be stricter on
+	/// one than the other. A guest reaches <c>crecall()</c> and <c>@channel/recall</c> through the same
+	/// <c>ChannelRecall.SelectAsync</c>, so neither hands back history the other refuses.
+	/// </summary>
+	[Test]
+	public async Task Recall_RefusesTheSameNonMembersInBothSpellings()
+	{
+		var name = UniqueChannel("RecallParity");
+		var channel = await CreateChannel(name, "Player", "Wizard");
+		var member = await CreateMortal("ChanParityMember");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Known));
+		await Run(member, $"@chat {name}=wizard business");
+
+		// A mortal cannot join a Wizard channel, so neither spelling may recall from it.
+		var mortal = await CreateMortal("ChanParityMortal");
+
+		var commandOutput = string.Join("\n",
+			await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/recall {name}")));
+		var functionOutput = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
+			.FunctionParse(MarkupText.Plain($"crecall({name})")))!.Message!.ToPlainText();
+
+		await Assert.That(commandOutput).DoesNotContain("wizard business");
+		await Assert.That(functionOutput).DoesNotContain("wizard business");
+	}
 }

@@ -95,63 +95,32 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message"])]
-	public async ValueTask<CallState> ChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// PennMUSH <c>fun_cemit</c> (<c>src/extchat.c:3445</c>) calls <c>do_cemit</c> rather than
+	/// reimplementing it, and so does this: <see cref="ChannelEmit"/> is the one implementation behind
+	/// all four spellings, so softcode cannot be held to a different gate than the command.
+	/// </summary>
+	[SharpFunction(Name = "cemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX,
+		ParameterNames = ["channel", "message", "noisy"])]
+	public async ValueTask<CallState> ChannelEmitFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await EmitOnChannel(parser, spoof: false);
+
+	/// <summary>PennMUSH <c>fun_cemit</c> called as <c>NSCEMIT</c> (<c>src/extchat.c:3447</c>).</summary>
+	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message", "noisy"])]
+	public async ValueTask<CallState> NoSpoofChannelEmitFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await EmitOnChannel(parser, spoof: true);
+
+	private async ValueTask<CallState> EmitOnChannel(IMUSHCodeParser parser, bool spoof)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		// cemit() is @cemit with a different spelling, so it answers to the same gate and no more —
-		// Chan_Can_Cemit alone (extchat.c:1622-1655), membership not required. A gate softcode can walk
-		// around is not a gate, and one softcode alone answers to is a trap.
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is not null)
-		{
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
-								 ?? new SharpChannelStatus(null, null, null, null, null);
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-
-		using (Logger.BeginScope("<{DbRef} {Category}: {Channel}.",
-						 executor.Object().DBRef.ToString(),
-						 "Channel",
-						 channel.Name.ToPlainText()))
-		{
-			Logger.LogInformation("{ChatMessage}", message);
-		}
-
-		return CallState.Empty;
+		return await ChannelEmit.Handle(PermissionService, Mediator, NotifyService, executor,
+			parser.CurrentState.Arguments["0"].Message!,
+			parser.CurrentState.Arguments["1"].Message!,
+			spoof);
 	}
 
-	/// <summary>
-	/// PennMUSH <c>fun_cflags</c> (<c>src/extchat.c:2255-2307</c>), which serves both
-	/// <c>cflags()</c> and <c>clflags()</c>: with one argument the channel's privileges, with two a
-	/// member's own channel flags. <c>CL</c> spells them out; <c>C</c> abbreviates them to letters — that
-	/// is the ONLY difference between the two functions.
-	/// </summary>
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "object"])]
 	public async ValueTask<CallState> ChannelFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -388,84 +357,32 @@ public partial class Functions
 	/// <summary>
 	/// PennMUSH <c>fun_crecall</c> (<c>src/extchat.c:3461-3576</c>):
 	/// <c>crecall(&lt;channel&gt;[,&lt;lines&gt;[,&lt;start&gt;[,&lt;osep&gt;[,&lt;timestamps?&gt;]]]])</c>.
-	/// Lines come back oldest first, separated by the output separator (a space by default).
+	/// The window comes from <see cref="ChannelRecall.SelectAsync"/>, shared with
+	/// <c>@channel/recall</c>; only the rendering differs.
 	/// </summary>
 	[SharpFunction(Name = "crecall", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel", "lines", "start", "osep", "timestamps"])]
-	public async ValueTask<CallState> ChannelRecall(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> ChannelRecallFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var arguments = parser.CurrentState.Arguments;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
+		MString Argument(string key)
+			=> arguments.TryGetValue(key, out var value) ? value.Message! : MarkupText.Empty;
 
-		if (maybeChannel.IsError)
+		var selection = await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
+			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false);
+
+		if (selection.IsT1)
 		{
-			return maybeChannel.AsError.Value;
+			return selection.AsT1;
 		}
 
-		var channel = maybeChannel.AsChannel;
+		var separator = arguments.TryGetValue("3", out var osep) ? osep.Message! : MarkupText.Space;
+		var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
 
-		// extchat.c:3525 — membership OR the ability to reach the channel. The guest half comes from
-		// @channel/recall (extchat.c:4050) rather than fun_crecall, deliberately: crecall() is
-		// @channel/recall with a different spelling, and a gate softcode can walk around is not a gate.
-		if (await ChannelHelper.ChannelMemberStatus(executor, channel) is null
-				&& (await executor.IsGuest() || !await PermissionService.ChannelCanJoin(executor, channel)))
-		{
-			return new CallState(ErrorMessages.Returns.NotAMember);
-		}
-
-		var lines = 10;
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) && arg1.Message!.Length != 0)
-		{
-			if (!int.TryParse(arg1.Message!.ToPlainText(), out lines) || lines < 0)
-			{
-				return new CallState(ErrorMessages.Returns.Integer);
-			}
-
-			if (lines == 0)
-			{
-				lines = int.MaxValue;
-			}
-		}
-
-		var hasStart = parser.CurrentState.Arguments.TryGetValue("2", out var arg2) && arg2.Message!.Length != 0;
-		var startLine = 0;
-		if (hasStart)
-		{
-			if (!int.TryParse(arg2!.Message!.ToPlainText(), out var parsedStart))
-			{
-				return new CallState(ErrorMessages.Returns.Integer);
-			}
-
-			startLine = Math.Max(parsedStart - 1, 0);
-		}
-
-		var separator = parser.CurrentState.Arguments.TryGetValue("3", out var arg3)
-			? arg3.Message!
-			: MarkupText.Space;
-
-		var showStamp = parser.CurrentState.Arguments.TryGetValue("4", out var arg4)
-										&& arg4.Message!.Truthy();
-
-		var buffered = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-			.ToListAsync();
-
-		var effectiveStart = hasStart ? startLine : Math.Max(buffered.Count - lines, 0);
-
-		if (effectiveStart >= buffered.Count)
-		{
-			return new CallState(MarkupText.Empty);
-		}
-
-		var selected = await ChannelHelper.FilterRecallableAsync(
-			buffered.Skip(effectiveStart).Take(lines), executor);
-
-		var messages = selected
-			.Select(x => showStamp
-				? MarkupText.Concat(MarkupText.Plain($"[{TimeFormatting.ShowTime(x.Timestamp)}] "), x.Message)
-				: x.Message)
+		var messages = selection.AsT0.Lines
+			.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message)
 			.ToList();
 
 		return new CallState(MarkupText.Join(separator, messages));
@@ -575,49 +492,6 @@ public partial class Functions
 			.Select(x => x.Object.Object().DBRef.ToString());
 
 		return new CallState(string.Join(" ", listed));
-	}
-
-	[SharpFunction(Name = "nscemit", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["channel", "message"])]
-	public async ValueTask<CallState> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var channelName = parser.CurrentState.Arguments["0"].Message!;
-		var message = parser.CurrentState.Arguments["1"].Message!;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is not null)
-		{
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
-								 ?? new SharpChannelStatus(null, null, null, null, null);
-
-		var canNoSpoof = await PermissionService.CanNoSpoof(executor);
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			canNoSpoof
-				? INotifyService.NotificationType.NSEmit
-				: INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-		return CallState.Empty;
 	}
 
 	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]

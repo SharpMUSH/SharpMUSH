@@ -17,54 +17,35 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@CEMIT", Switches = ["NOEVAL", "NOISY", "SILENT", "SPOOF"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public async ValueTask<Option<CallState>> ChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+	public async ValueTask<Option<CallState>> ChannelEmitCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> await EmitOnChannel(parser, spoof: parser.CurrentState.Switches.Contains("SPOOF"));
 
-		if (!arg0Check || !arg1Check)
+	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
+		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
+	public async ValueTask<Option<CallState>> NoSpoofChannelEmitCommand(IMUSHCodeParser parser,
+		SharpCommandAttribute _2)
+		=> await EmitOnChannel(parser, spoof: true);
+
+	/// <summary>
+	/// The four spellings of PennMUSH's <c>do_cemit</c> differ only in whether they ask to spoof, so this
+	/// reads the arguments and <see cref="ChannelEmit"/> does the rest. <c>cmd_cemit</c>
+	/// (<c>src/extchat.c:3583</c>) sets <c>PEMIT_SPOOF</c> for <c>@NSCEMIT</c> and for <c>@CEMIT/SPOOF</c>;
+	/// whether the caller MAY spoof is decided inside.
+	/// </summary>
+	private async ValueTask<Option<CallState>> EmitOnChannel(IMUSHCodeParser parser, bool spoof)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var arg0 = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message;
+		var arg1 = parser.CurrentState.Arguments.GetValueOrDefault("1")?.Message;
+
+		if (arg0 is null || arg1 is null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		var channelName = arg0CallState!.Message!;
-		var message = arg1CallState!.Message!;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
-		{
-			await NotifyService.Notify(executor, refusal, executor);
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else, so a wizard or a
-		// channel-owning object can emit onto a channel it does not listen to.
-		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
-								 ?? new SharpChannelStatus(null, null, null, null, null);
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-		return new CallState(string.Empty);
+		return await ChannelEmit.Handle(PermissionService, Mediator, NotifyService, executor, arg0, arg1, spoof);
 	}
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
@@ -102,22 +83,11 @@ public partial class Commands
 
 		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
 
-		// extchat.c:1553-1562 — "If the channel isn't open, you must hear it in order to speak", which is
-		// the whole of what the Open privilege means.
-		if (!channel.Privs.Contains("Open", StringComparer.OrdinalIgnoreCase))
+		// extchat.c:1553 — the same rule @cemit answers to, from the same helper.
+		if (ChannelHelper.OpenChannelRefusal(channel, maybeMemberStatus) is { } refusalToSpeak)
 		{
-			var refusalToSpeak = maybeMemberStatus switch
-			{
-				null => ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak,
-				{ Status.Gagged: true } => ErrorMessages.Notifications.ChatMustStopGaggingToSpeak,
-				_ => null
-			};
-
-			if (refusalToSpeak is not null)
-			{
-				await NotifyService.Notify(executor, refusalToSpeak, executor);
-				return new CallState(refusalToSpeak);
-			}
+			await NotifyService.Notify(executor, refusalToSpeak, executor);
+			return new CallState(refusalToSpeak);
 		}
 
 		var status = maybeMemberStatus?.Status ?? new SharpChannelStatus(null, null, null, null, null);
@@ -152,62 +122,6 @@ public partial class Commands
 			[';', ..] => (INotifyService.NotificationType.SemiPose, rest),
 			_ => (INotifyService.NotificationType.Say, message)
 		};
-	}
-
-	[SharpCommand(Name = "@NSCEMIT", Switches = ["NOEVAL", "NOISY", "SILENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
-	public async ValueTask<Option<CallState>> NoSpoofChannelEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
-		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (!arg0Check || !arg1Check)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSay), executor);
-			return new CallState(ErrorMessages.Returns.NothingToDo);
-		}
-
-		var channelName = arg0CallState!.Message!;
-		var message = arg1CallState!.Message!;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is { } refusal)
-		{
-			await NotifyService.Notify(executor, refusal, executor);
-			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
-		}
-
-		// extchat.c:1622-1655 — do_cemit gates on Chan_Can_Cemit and nothing else, so a wizard or a
-		// channel-owning object can emit onto a channel it does not listen to.
-		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
-								 ?? new SharpChannelStatus(null, null, null, null, null);
-
-		var canNoSpoof = await executor.HasPower("CAN_SPOOF") || await executor.IsPriv();
-
-		await Mediator.Publish(new ChannelMessageNotification(
-			channel,
-			executor.WithNoneOption(),
-			canNoSpoof
-				? INotifyService.NotificationType.NSEmit
-				: INotifyService.NotificationType.Emit,
-			message,
-			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
-			MarkupText.Plain("says"),
-			[]
-		));
-
-		return new CallState(string.Empty);
 	}
 
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,

@@ -591,28 +591,56 @@ public static class ChannelHelper
 	}
 
 	/// <summary>
-	/// PennMUSH <c>do_cemit</c> (<c>src/extchat.c:1622-1640</c>): See_All + Pemit_All skips the checks
+	/// The outcome of <c>do_cemit</c>'s permission checks (<c>src/extchat.c:1649-1665</c>).
+	/// <paramref name="Overridden"/> reports the See_All + Pemit_All bypass, which the caller needs
+	/// because the same bypass also skips the open-channel rule further down.
+	/// </summary>
+	public readonly record struct CemitCheck(string? Refusal, bool Overridden)
+	{
+		public bool Refused => Refusal is not null;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_cemit</c>'s gates (<c>src/extchat.c:1649-1665</c>): See_All + Pemit_All skips them
 	/// entirely, since such a player could enumerate the channel's members and <c>@pemit</c> them anyway.
 	/// Otherwise the type gate and <c>Chan_Can_Cemit</c> apply. Note <c>LOUD</c> does NOT bypass this —
 	/// Penn only consults it in <c>do_chat</c>.
 	/// </summary>
-	public static async ValueTask<string?> CemitRefusal(IPermissionService permissionService, AnySharpObject who,
-		SharpChannel channel)
+	public static async ValueTask<CemitCheck> CemitRefusal(IPermissionService permissionService,
+		AnySharpObject who, SharpChannel channel)
 	{
 		if (await who.IsSee_All() && await who.HasPower("Pemit_All"))
 		{
-			return null;
+			return new CemitCheck(null, true);
 		}
 
 		if (WrongTypeRefusal(permissionService, who, channel) is { } wrongType)
 		{
-			return wrongType;
+			return new CemitCheck(wrongType, false);
 		}
 
-		return await permissionService.ChannelCanCemit(who, channel)
-			? null
-			: string.Format(ErrorMessages.Notifications.ChatNotAllowedToCemit, channel.Name.ToPlainText());
+		return new CemitCheck(
+			await permissionService.ChannelCanCemit(who, channel)
+				? null
+				: string.Format(ErrorMessages.Notifications.ChatNotAllowedToCemit, channel.Name.ToPlainText()),
+			false);
 	}
+
+	/// <summary>
+	/// PennMUSH's "if the channel isn't open, you must hear it in order to speak"
+	/// (<c>src/extchat.c:1553-1562</c> for <c>do_chat</c>, <c>:1667-1676</c> for <c>do_cemit</c>), which
+	/// is the whole of what the <c>Open</c> privilege means. Returns <see langword="null"/> when the
+	/// speaker may go ahead.
+	/// </summary>
+	public static string? OpenChannelRefusal(SharpChannel channel, SharpChannel.MemberAndStatus? membership)
+		=> channel.Privs.Contains("Open", StringComparer.OrdinalIgnoreCase)
+			? null
+			: membership switch
+			{
+				null => ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak,
+				{ Status.Gagged: true } => ErrorMessages.Notifications.ChatMustStopGaggingToSpeak,
+				_ => null
+			};
 
 	/// <summary>
 	/// One member of a channel as <c>@channel/who</c> and <c>cwho()</c> see them: PennMUSH's
