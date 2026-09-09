@@ -174,7 +174,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	public async Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
 	{
-		var keySegment = SceneKey(sceneId).Split(':')[1];
+		var keySegment = BareKey(SceneKey(sceneId));
 		var parameters = new Dictionary<string, object?> { ["k"] = keySegment };
 		var response = await _accessor.ExecuteAsync($"SELECT {SceneFields} FROM scene:⟨$k⟩", parameters);
 		var rows = response.GetValue<List<SceneDbRecord>>(0);
@@ -329,7 +329,6 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		var authorName = await ResolveObjectNameAsync(authorDbref) ?? "";
 		var originName = await ResolveObjectNameAsync(originDbref) ?? "";
-		var tagList = (tags ?? []).ToList();
 		var plain = StripMarkup(content);
 
 		await _accessor.ExecuteAsync("""
@@ -350,7 +349,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 				["showAs"] = showAs ?? "",
 				["originName"] = originName,
 				["source"] = source ?? "",
-				["tags"] = tagList,
+				["tags"] = tags ?? [],
 				["meta"] = JsonSerializer.Serialize(new Dictionary<string, string>(), JsonOptions),
 				["now"] = now
 			});
@@ -412,24 +411,18 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var sceneKey = SceneKey(sceneId);
 		var orderedKeys = await TraversePoseChainAsync(sceneKey);
 
-		var authorKey = DbRefToKey(authorDbref);
+		var author = DbRefToString(authorDbref);
 		var result = new List<ScenePose>();
 		foreach (var poseKey in orderedKeys)
 		{
 			var pose = await GetPoseAsync(poseKey);
-			if (!pose.IsT0)
-				continue;
-			var p = pose.AsT0;
-			if (authorKey is not null)
-			{
-				if (p.AuthorDbref != $"#{authorKey.Value}")
-					continue;
-			}
-			result.Add(p);
+			if (pose.IsT0 && (author is null || pose.AsT0.AuthorDbref == author))
+				result.Add(pose.AsT0);
 		}
 
-		if (count is not null && count.Value >= 0 && result.Count > count.Value)
-			result = result.Skip(result.Count - count.Value).ToList();
+		// The last `count` poses: drop the head in place rather than copying the tail out.
+		if (count is { } limit && limit >= 0 && result.Count > limit)
+			result.RemoveRange(0, result.Count - limit);
 
 		return OneOf<IReadOnlyList<ScenePose>, NotFound>.FromT0(result);
 	}
@@ -678,7 +671,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			new Dictionary<string, object?>
 			{
 				["pk"] = playerKey.Value,
-				["sid"] = sceneKey.Split(':')[1],
+				["sid"] = BareKey(sceneKey),
 				["role"] = role ?? "",
 				["now"] = now,
 				["name"] = memberName
@@ -700,7 +693,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var sceneKey = SceneKey(sceneId);
 		await _accessor.ExecuteAsync(
 			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
+			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = BareKey(sceneKey) });
 
 		return new OkNone();
 	}
@@ -713,7 +706,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		var sceneKey = SceneKey(sceneId);
 		var where = "out = scene:⟨$sid⟩";
-		var parameters = new Dictionary<string, object?> { ["sid"] = sceneKey.Split(':')[1] };
+		var parameters = new Dictionary<string, object?> { ["sid"] = BareKey(sceneKey) };
 		if (!string.IsNullOrWhiteSpace(role))
 		{
 			where += " AND role = $role";
@@ -742,7 +735,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		var response = await _accessor.ExecuteAsync(
 			"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member " +
 			"WHERE in = object:$pk AND out = scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
+			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = BareKey(sceneKey) });
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0);
 		if (rows is null or { Count: 0 })
 			return new NotFound();
@@ -780,7 +773,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			new Dictionary<string, object?>
 			{
 				["pk"] = playerKey.Value,
-				["sid"] = SceneKey(sceneId).Split(':')[1],
+				["sid"] = BareKey(SceneKey(sceneId)),
 				["now"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
 				["name"] = await ResolveObjectNameAsync(playerDbref) ?? ""
 			});
@@ -837,7 +830,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			{
 				["v"] = showAs ?? "",
 				["pk"] = playerKey!.Value,
-				["sid"] = sceneKey.Split(':')[1]
+				["sid"] = BareKey(sceneKey)
 			});
 
 		return await GetMemberAsync(sceneId, playerDbref);
@@ -882,7 +875,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 				["ownerName"] = ownerName,
 				["now"] = now
 			});
-		await ReplacePlotObjectEdgeAsync(plotKey.Split(':')[1], ownerDbref);
+		await ReplacePlotObjectEdgeAsync(BareKey(plotKey), ownerDbref);
 
 		var updated = await GetPlotAsync(plotId);
 		return updated.IsT0
@@ -913,8 +906,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (scene.IsT1)
 			return new NotFound();
 
-		var plotKey = PlotKey(plotId).Split(':')[1];
-		var sceneKey = SceneKey(sceneId).Split(':')[1];
+		var plotKey = BareKey(PlotKey(plotId));
+		var sceneKey = BareKey(SceneKey(sceneId));
 		// Idempotent: clear any existing edge first.
 		await _accessor.ExecuteAsync(
 			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
@@ -935,8 +928,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (scene.IsT1)
 			return new NotFound();
 
-		var plotKey = PlotKey(plotId).Split(':')[1];
-		var sceneKey = SceneKey(sceneId).Split(':')[1];
+		var plotKey = BareKey(PlotKey(plotId));
+		var sceneKey = BareKey(SceneKey(sceneId));
 		await _accessor.ExecuteAsync(
 			"DELETE scene_plot_includes WHERE in = scene_plot:⟨$pid⟩ AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pid"] = plotKey, ["sid"] = sceneKey });
@@ -1032,14 +1025,14 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	/// <summary>
 	/// Strips the SurrealDB table prefix from an internal record id, giving the bare key that every
-	/// other provider already returns.
+	/// other provider already returns — and the key segment the queries here bind into <c>table:⟨$k⟩</c>.
 	/// </summary>
 	/// <remarks>
 	/// Ids are not an internal detail here: a player types them (<c>+scene 1</c>, <c>+scene/join 1</c>),
 	/// they are a path segment in <c>/scenes/{id}/live</c>, and they are stored in player attributes.
 	/// Handing back <c>scene:1</c> made the id shape depend on which database the game runs on —
-	/// every scene URL. Internal queries keep the prefixed form, which they parse with
-	/// <c>Split(':')</c>; only what leaves this class as a model <c>Id</c> is stripped.
+	/// every scene URL. Internal queries keep the prefixed form and strip it here at the point of
+	/// binding; only what leaves this class as a model <c>Id</c> is stripped for good.
 	/// </remarks>
 	private static string BareKey(string prefixedId)
 	{
@@ -1103,7 +1096,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task ReplaceSceneObjectEdgeAsync(string edge, string sceneKey, string? objectDbref)
 	{
-		var sid = sceneKey.Split(':')[1];
+		var sid = BareKey(sceneKey);
 		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["sid"] = sid });
 		await RelateSceneToObjectAsync(edge, sid, objectDbref);
@@ -1112,7 +1105,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	/// <summary>Resolves the live dbref + name reached via a scene -&gt; object edge. Both null if the edge/object is gone.</summary>
 	private async Task<(string? Dbref, string? Name)> ResolveSceneObjectEdgeAsync(string edge, string sceneKey)
 	{
-		var sid = sceneKey.Split(':')[1];
+		var sid = BareKey(sceneKey);
 		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene:⟨$sid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["sid"] = sid });
@@ -1135,7 +1128,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task ReplacePoseObjectEdgeAsync(string edge, string poseKey, string? objectDbref)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		await RelatePoseToObjectAsync(edge, pid, objectDbref);
@@ -1143,7 +1136,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task<(string? Dbref, string? Name)> ResolvePoseObjectEdgeAsync(string edge, string poseKey)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1165,7 +1158,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task<(string? Dbref, string? Name)> ResolveEditObjectEdgeAsync(string edge, string editKey)
 	{
-		var eid = editKey.Split(':')[1];
+		var eid = BareKey(editKey);
 		var response = await _accessor.ExecuteAsync(
 			$"SELECT out.key AS key FROM {edge} WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
@@ -1189,7 +1182,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task<(string? Dbref, string? Name)> ResolvePlotOwnerEdgeAsync(string plotKey)
 	{
-		var pid = plotKey.Split(':')[1];
+		var pid = BareKey(plotKey);
 		var response = await _accessor.ExecuteAsync(
 			"SELECT out.key AS key FROM scene_plot_owner WHERE in = scene_plot:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1203,12 +1196,12 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	{
 		await _accessor.ExecuteAsync(
 			"RELATE scene_pose:⟨$pid⟩->scene_pose_in_scene->scene:⟨$sid⟩",
-			new Dictionary<string, object?> { ["pid"] = poseId, ["sid"] = sceneKey.Split(':')[1] });
+			new Dictionary<string, object?> { ["pid"] = poseId, ["sid"] = BareKey(sceneKey) });
 	}
 
 	private async Task<string?> ResolvePoseSceneKeyAsync(string poseKey)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_pose_in_scene WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1221,7 +1214,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	/// <summary>Appends a pose to the end of the scene's pose_next chain (off last_pose).</summary>
 	private async Task AppendPoseToChainAsync(string sceneKey, string poseId)
 	{
-		var sid = sceneKey.Split(':')[1];
+		var sid = BareKey(sceneKey);
 		var lastPoseKey = await ResolveStructuralPointerAsync("scene_last_pose", "scene", sid);
 
 		if (lastPoseKey is null)
@@ -1234,7 +1227,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		{
 			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$last⟩->scene_pose_next->scene_pose:⟨$pid⟩",
-				new Dictionary<string, object?> { ["last"] = lastPoseKey.Split(':')[1], ["pid"] = poseId });
+				new Dictionary<string, object?> { ["last"] = BareKey(lastPoseKey), ["pid"] = poseId });
 		}
 
 		await _accessor.ExecuteAsync("DELETE scene_last_pose WHERE in = scene:⟨$sid⟩",
@@ -1247,24 +1240,36 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	/// <summary>Walks the pose_next chain from first_pose, returning ordered "scene_pose:&lt;key&gt;" ids.</summary>
 	private async Task<List<string>> TraversePoseChainAsync(string sceneKey)
 	{
-		var sid = sceneKey.Split(':')[1];
-		var result = new List<string>();
+		var sid = BareKey(sceneKey);
 		var current = await ResolveStructuralPointerAsync("scene_first_pose", "scene", sid);
-		var guard = 0;
-		while (current is not null && guard++ < 100_000)
+		return await FollowChainAsync(current, ResolvePoseNextAsync);
+	}
+
+	/// <summary>
+	/// Walks a <c>next</c> pointer chain from <paramref name="first"/>, stopping at the end, at a repeat
+	/// (a corrupted cycle must not spin the connection) or at a hard cap. The visited set keeps the repeat
+	/// check O(1) per hop; a long scene would otherwise pay a list scan per pose.
+	/// </summary>
+	private static async Task<List<string>> FollowChainAsync(string? first, Func<string, Task<string?>> next)
+	{
+		var result = new List<string>();
+		var seen = new HashSet<string>(StringComparer.Ordinal);
+		var current = first;
+		while (current is not null && result.Count < 100_000)
 		{
 			result.Add(current);
-			var next = await ResolvePoseNextAsync(current);
-			if (next is null || result.Contains(next))
+			seen.Add(current);
+			var following = await next(current);
+			if (following is null || seen.Contains(following))
 				break;
-			current = next;
+			current = following;
 		}
 		return result;
 	}
 
 	private async Task<string?> ResolvePoseNextAsync(string poseKey)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_pose_next WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1277,7 +1282,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	private async Task<string?> ResolvePosePrevAsync(string sceneKey, string poseKey)
 	{
 		// The predecessor is whichever pose has pose_next -> poseKey, scoped to this scene's chain.
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(in) FROM scene_pose_next WHERE out = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1290,8 +1295,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	/// <summary>Removes a pose from the chain, stitching prev -&gt; next and fixing first/last pointers.</summary>
 	private async Task UnlinkPoseAsync(string sceneKey, string poseKey)
 	{
-		var sid = sceneKey.Split(':')[1];
-		var pid = poseKey.Split(':')[1];
+		var sid = BareKey(sceneKey);
+		var pid = BareKey(poseKey);
 		var prev = await ResolvePosePrevAsync(sceneKey, poseKey);
 		var next = await ResolvePoseNextAsync(poseKey);
 
@@ -1303,7 +1308,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (prev is not null && next is not null)
 			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
-				new Dictionary<string, object?> { ["a"] = prev.Split(':')[1], ["b"] = next.Split(':')[1] });
+				new Dictionary<string, object?> { ["a"] = BareKey(prev), ["b"] = BareKey(next) });
 
 		if (prev is null)
 		{
@@ -1312,7 +1317,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			if (next is not null)
 				await _accessor.ExecuteAsync(
 					"RELATE scene:⟨$sid⟩->scene_first_pose->scene_pose:⟨$b⟩",
-					new Dictionary<string, object?> { ["sid"] = sid, ["b"] = next.Split(':')[1] });
+					new Dictionary<string, object?> { ["sid"] = sid, ["b"] = BareKey(next) });
 		}
 
 		if (next is null)
@@ -1322,15 +1327,15 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			if (prev is not null)
 				await _accessor.ExecuteAsync(
 					"RELATE scene:⟨$sid⟩->scene_last_pose->scene_pose:⟨$a⟩",
-					new Dictionary<string, object?> { ["sid"] = sid, ["a"] = prev.Split(':')[1] });
+					new Dictionary<string, object?> { ["sid"] = sid, ["a"] = BareKey(prev) });
 		}
 	}
 
 	/// <summary>Inserts a (already-unlinked) pose after afterKey, or at the head when afterKey is null.</summary>
 	private async Task InsertPoseAfterAsync(string sceneKey, string poseKey, string? afterKey)
 	{
-		var sid = sceneKey.Split(':')[1];
-		var pid = poseKey.Split(':')[1];
+		var sid = BareKey(sceneKey);
+		var pid = BareKey(poseKey);
 
 		if (afterKey is null)
 		{
@@ -1344,14 +1349,14 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			if (oldHead is not null)
 				await _accessor.ExecuteAsync(
 					"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
-					new Dictionary<string, object?> { ["a"] = pid, ["b"] = oldHead.Split(':')[1] });
+					new Dictionary<string, object?> { ["a"] = pid, ["b"] = BareKey(oldHead) });
 			else
 				// Chain was empty: pose is also the tail.
 				await RepointLastPoseAsync(sid, pid);
 			return;
 		}
 
-		var afterId = afterKey.Split(':')[1];
+		var afterId = BareKey(afterKey);
 		var afterNext = await ResolvePoseNextAsync(afterKey);
 
 		// after -> pose
@@ -1365,7 +1370,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			// pose -> afterNext
 			await _accessor.ExecuteAsync(
 				"RELATE scene_pose:⟨$a⟩->scene_pose_next->scene_pose:⟨$b⟩",
-				new Dictionary<string, object?> { ["a"] = pid, ["b"] = afterNext.Split(':')[1] });
+				new Dictionary<string, object?> { ["a"] = pid, ["b"] = BareKey(afterNext) });
 		else
 			// after was the tail: pose becomes the new tail.
 			await RepointLastPoseAsync(sid, pid);
@@ -1403,13 +1408,13 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	{
 		await _accessor.ExecuteAsync(
 			$"RELATE scene_pose_edit:⟨$a⟩->{edge}->scene_pose_edit:⟨$b⟩",
-			new Dictionary<string, object?> { ["a"] = fromEditKey.Split(':')[1], ["b"] = toEditId });
+			new Dictionary<string, object?> { ["a"] = BareKey(fromEditKey), ["b"] = toEditId });
 	}
 
 	/// <summary>Resolves the edit a pose pointer edge (first_edit/current_edit) points at, as "scene_pose_edit:&lt;key&gt;".</summary>
 	private async Task<string?> ResolveEditPointerAsync(string edge, string poseKey)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		var response = await _accessor.ExecuteAsync(
 			$"SELECT VALUE meta::id(out) FROM {edge} WHERE in = scene_pose:⟨$pid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["pid"] = pid });
@@ -1421,7 +1426,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 	private async Task RepointEditPointerAsync(string edge, string poseKey, string editId)
 	{
-		var pid = poseKey.Split(':')[1];
+		var pid = BareKey(poseKey);
 		await _accessor.ExecuteAsync($"DELETE {edge} WHERE in = scene_pose:⟨$pid⟩",
 			new Dictionary<string, object?> { ["pid"] = pid });
 		await _accessor.ExecuteAsync(
@@ -1430,28 +1435,18 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 	}
 
 	private async Task RepointEditPointerByKeyAsync(string edge, string poseKey, string editKey)
-		=> await RepointEditPointerAsync(edge, poseKey, editKey.Split(':')[1]);
+		=> await RepointEditPointerAsync(edge, poseKey, BareKey(editKey));
 
 	/// <summary>Walks first_edit + next_edit, returning ordered "scene_pose_edit:&lt;key&gt;" ids (oldest first).</summary>
 	private async Task<List<string>> TraverseEditChainAsync(string poseKey)
 	{
-		var result = new List<string>();
 		var current = await ResolveEditPointerAsync("scene_first_edit", poseKey);
-		var guard = 0;
-		while (current is not null && guard++ < 100_000)
-		{
-			result.Add(current);
-			var next = await ResolveEditNextAsync(current);
-			if (next is null || result.Contains(next))
-				break;
-			current = next;
-		}
-		return result;
+		return await FollowChainAsync(current, ResolveEditNextAsync);
 	}
 
 	private async Task<string?> ResolveEditNextAsync(string editKey)
 	{
-		var eid = editKey.Split(':')[1];
+		var eid = BareKey(editKey);
 		var response = await _accessor.ExecuteAsync(
 			"SELECT VALUE meta::id(out) FROM scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩ LIMIT 1",
 			new Dictionary<string, object?> { ["eid"] = eid });
@@ -1475,7 +1470,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		foreach (var editKey in forward)
 		{
-			var eid = editKey.Split(':')[1];
+			var eid = BareKey(editKey);
 			await _accessor.ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
 				new Dictionary<string, object?> { ["eid"] = eid });
 			await _accessor.ExecuteAsync("DELETE scene_edit_editor WHERE in = scene_pose_edit:⟨$eid⟩",
@@ -1486,7 +1481,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		// Drop the now-dangling next edge off the surviving tail.
 		await _accessor.ExecuteAsync("DELETE scene_next_edit WHERE in = scene_pose_edit:⟨$eid⟩",
-			new Dictionary<string, object?> { ["eid"] = fromEditKey.Split(':')[1] });
+			new Dictionary<string, object?> { ["eid"] = BareKey(fromEditKey) });
 	}
 
 	private async Task<ScenePoseEdit?> ReadEditAsync(string editKey, string poseKey)
