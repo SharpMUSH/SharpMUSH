@@ -3020,7 +3020,8 @@ public partial class Commands
 				? parsed : 0;
 			// Published timeout work still owns its count until the consumer performs bookkeeping.
 			// Draining must neither consume that reservation nor grant notification credits.
-			var newCount = Math.Max(0, (long)currentCount - removed);
+			var newCount = drainCount.HasValue && currentCount < 0
+				? currentCount : Math.Max(0, (long)currentCount - removed);
 			if (newCount == 0)
 				await Mediator.Send(new ClearAttributeCommand(objectToDrain.Object().DBRef, target.Attribute));
 			else
