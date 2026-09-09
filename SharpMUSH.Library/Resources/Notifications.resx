@@ -323,6 +323,9 @@
   <data name="MayNotSpeakHere" xml:space="preserve">
     <value>You may not speak here!</value>
   </data>
+  <data name="MayNotSpeakThere" xml:space="preserve">
+    <value>You may not speak there!</value>
+  </data>
 
   <!-- @force guardrails -->
   <data name="CantForceGod" xml:space="preserve">

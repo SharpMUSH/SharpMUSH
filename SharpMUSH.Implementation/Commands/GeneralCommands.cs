@@ -5685,6 +5685,12 @@ public partial class Commands
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+		// PennMUSH's do_emit speaks into speech_loc(), the immediate location (src/speech.c:109,
+		// 1218), and emit() does the same here. This reads OutermostWhere() instead because
+		// SendToRoomAsync implements only half of PennMUSH's na_loc: na_loc yields the location
+		// object itself and then its contents, while SendToRoomAsync yields contents alone. An
+		// object in a player's inventory therefore emits to nobody under Where() — PennMUSH would
+		// notify the carrier. Unifying the two needs that seam fixed first; see #959.
 		var executorLocation = await executor.OutermostWhere();
 		var isSpoof = parser.CurrentState.Switches.Contains("SPOOF");
 		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
