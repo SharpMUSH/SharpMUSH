@@ -9,22 +9,39 @@ on:
       publish:
         description: >-
           Force-publish images regardless of detected changes (recovery for a failed
-          publish run — change detection compares commits, not what is on Docker Hub).
+          publish run or refresh independently updated base images).
         type: choice
         options: [all, server, connectionserver, socketserver]
         default: all
 
 permissions:
   contents: read
+  actions: read
 
-# Serialize validation and publication together so slower validation cannot reorder publishers.
+# Keep the active publisher intact and replace pending runs with the newest push.
+# The gate measures quiet time from run creation, including time spent queued.
 concurrency:
   group: docker-dev-${{ github.ref }}
   cancel-in-progress: false
-  queue: max
 
 jobs:
+  quiet-period:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      ready: ${{ github.event_name == 'workflow_dispatch' || steps.quiet.outputs.ready == 'true' }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Wait for ten minutes without a newer push
+        if: github.event_name == 'push'
+        id: quiet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/docker_dev.py quiet
+
   build-and-test:
+    needs: [quiet-period]
+    if: needs.quiet-period.outputs.ready == 'true'
     uses: ./.github/workflows/_dotnet-build-test.yml
 
   build-and-push-dev:
@@ -37,33 +54,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Use exactly the same source-closure policy as the PR deployment-impact check.
-      - name: Detect changed image inputs
-        if: github.event_name == 'push'
-        id: changes
-        env:
-          BASE_SHA: ${{ github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-        run: python3 .github/scripts/image_impact.py --base "$BASE_SHA" --head "$HEAD_SHA"
-
       - name: Set up Docker Buildx
-        if: >-
-          steps.changes.outputs.server == 'true' ||
-          steps.changes.outputs.connectionserver == 'true' ||
-          steps.changes.outputs.socketserver == 'true' ||
-          github.event_name == 'workflow_dispatch'
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to DockerHub
-        if: >-
-          steps.changes.outputs.server == 'true' ||
-          steps.changes.outputs.connectionserver == 'true' ||
-          steps.changes.outputs.socketserver == 'true' ||
-          github.event_name == 'workflow_dispatch'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Compare each published image's OCI revision with this validated commit.
+      # A skipped push or partially failed publication must not lose image changes.
+      - name: Detect changed image inputs since publication
+        if: github.event_name == 'push'
+        id: changes
+        run: python3 .github/scripts/docker_dev.py impact
 
       - name: Build and push SharpMUSH Server (dev)
         id: push_server

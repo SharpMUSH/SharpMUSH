@@ -17,7 +17,8 @@ IMAGES = {
     "connectionserver": "SharpMUSH.ConnectionServer/Dockerfile",
     "socketserver": "SharpMUSH.SocketServer/Dockerfile",
 }
-POLICY = {".github/workflows/docker-dev.yml", ".github/scripts/image_impact.py"}
+POLICY = {".github/workflows/docker-dev.yml", ".github/scripts/image_impact.py",
+          ".github/scripts/docker_dev.py"}
 
 
 def git(*args):
@@ -110,7 +111,7 @@ def report(result, removed=()):
     drops = bool(result["socketserver"])
     lines = ["## Deployment impact", "",
              "**SocketServer restart / live connection drops: " + ("YES" if drops else "NO") + "**", "",
-             ("On merge to main, changed image inputs are published after successful validation. "
+             ("On main, dev publication waits for ten minutes without a newer push and successful validation. "
              "Watchtower replaces the game-server and rendering-worker containers when their image "
              "digests change; the socket owner is labelled out of Watchtower and replaced by an "
              "operator."), "",
@@ -126,20 +127,15 @@ def report(result, removed=()):
     return "\n".join(lines) + "\n"
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--base", required=True)
-    parser.add_argument("--head", default="HEAD")
-    parser.add_argument("--merge-base", action="store_true", help="Compare PR changes since the common ancestor")
-    args = parser.parse_args()
+def compare(base, head="HEAD", merge_base=False):
     # Validate refs before passing them into revision/path expressions.
-    head = git("rev-parse", "--verify", args.head + "^{commit}").strip()
-    if set(args.base) == {"0"}:
+    head = git("rev-parse", "--verify", head + "^{commit}").strip()
+    if set(base) == {"0"}:
         base = None  # First push: all tracked inputs are new.
         changed = git("ls-tree", "-r", "--name-only", "-z", head).split("\0")
     else:
-        base = git("rev-parse", "--verify", args.base + "^{commit}").strip()
-        if args.merge_base:
+        base = git("rev-parse", "--verify", base + "^{commit}").strip()
+        if merge_base:
             base = git("merge-base", base, head).strip()
         changed = git("diff", "--name-only", "--no-renames", "-z", base, head).split("\0")
     def read_revision(ref, path):
@@ -150,6 +146,16 @@ def main():
     readers = [lambda path, ref=ref: read_revision(ref, path) for ref in (base, head) if ref]
     removed = []
     result = analyze(set(changed) - {""}, readers, removed)
+    return result, removed
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base", required=True)
+    parser.add_argument("--head", default="HEAD")
+    parser.add_argument("--merge-base", action="store_true", help="Compare PR changes since the common ancestor")
+    args = parser.parse_args()
+    result, removed = compare(args.base, args.head, args.merge_base)
     summary = report(result, removed)
     print(summary)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
