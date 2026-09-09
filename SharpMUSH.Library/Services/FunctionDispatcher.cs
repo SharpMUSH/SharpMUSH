@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -34,7 +35,7 @@ public static class FunctionDispatcher
 			return new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, name));
 		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs && !sideEffects)
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
-		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values);
+		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser);
 		if (error is not null) return new CallState(error);
 
 		if (flags.HasFlag(FunctionFlags.Deprecated))
@@ -97,22 +98,22 @@ public static class FunctionDispatcher
 		return null;
 	}
 
-	private static string? ValidateNumericArguments(SharpFunctionAttribute attribute, IEnumerable<CallState> arguments)
+	private static string? ValidateNumericArguments(SharpFunctionAttribute attribute, IEnumerable<CallState> arguments, IMUSHCodeParser parser)
 	{
 		const FunctionFlags numeric = FunctionFlags.IntegersOnly | FunctionFlags.PositiveIntegersOnly
 			| FunctionFlags.DecimalsOnly | FunctionFlags.NumbersOnly;
 		if ((attribute.Flags & numeric) == 0) return null;
+		var numbers = NumericEvaluation.For(parser);
 
 		foreach (var argument in arguments)
 		{
 			var text = argument.Message?.ToPlainText();
-			if (string.IsNullOrEmpty(text)) text = "0";
-			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && !long.TryParse(text, out _))
+			if (attribute.Flags.HasFlag(FunctionFlags.IntegersOnly) && !numbers.TryInt64(text, out _))
 				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Integer : ErrorMessages.Returns.Integers;
-			if (attribute.Flags.HasFlag(FunctionFlags.PositiveIntegersOnly) && !ulong.TryParse(text, out _))
+			if (attribute.Flags.HasFlag(FunctionFlags.PositiveIntegersOnly) && !numbers.TryUInt64(text, out _))
 				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.UInteger : ErrorMessages.Returns.UIntegers;
-			if ((attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && !decimal.TryParse(text, out _))
-				|| (attribute.Flags.HasFlag(FunctionFlags.NumbersOnly) && !double.TryParse(text, out _)))
+			if ((attribute.Flags.HasFlag(FunctionFlags.DecimalsOnly) && !numbers.TryDecimal(text, out _))
+				|| (attribute.Flags.HasFlag(FunctionFlags.NumbersOnly) && !numbers.TryDouble(text, out _)))
 				return attribute.MaxArgs == 1 ? ErrorMessages.Returns.Number : ErrorMessages.Returns.Numbers;
 		}
 		return null;
