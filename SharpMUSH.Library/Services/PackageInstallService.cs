@@ -1,7 +1,5 @@
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using OneOf;
 using OneOf.Types;
@@ -14,6 +12,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -826,7 +825,7 @@ public class PackageInstallService(
 		{
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				manifest.Name, objid, change.Attribute.ToUpperInvariant(),
-				packageValue, Hash(packageValue), manifest.Version.ToString()));
+				packageValue, ContentHash.Sha256Hex(packageValue), manifest.Version.ToString()));
 			if (effectiveValue is not null)
 			{
 				// Null = the attribute does not exist live (a preserved local
@@ -1257,7 +1256,7 @@ public class PackageInstallService(
 				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
-				attribute.Value, Hash(attribute.Value), snapshot.Version));
+				attribute.Value, ContentHash.Sha256Hex(attribute.Value), snapshot.Version));
 			restoredKeys.Add((attribute.Objid, attribute.Attribute.ToUpperInvariant()));
 		}
 
@@ -1500,8 +1499,6 @@ public class PackageInstallService(
 			: new DBRef(number);
 	}
 
-	private static string Hash(string value) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
 	private static string PrimaryName(string name) =>
 		name.Split(';', 2, StringSplitOptions.TrimEntries)[0];

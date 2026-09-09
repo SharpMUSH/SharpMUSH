@@ -938,11 +938,11 @@ public partial class Commands
 								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
 
-							var allPowers = obj.Object().Powers.Value;
-							await foreach (var power in allPowers)
-							{
-								await Mediator.Send(new UnsetObjectPowerCommand(obj, power));
-							}
+							// Same clearing @CHZONEALL uses: it materializes the collection before
+							// unsetting and publishes ObjectFlagChangedNotification per power, which
+							// the hand-rolled loop here did not. Control of obj is already checked
+							// above, so the service's own permission check is a no-op.
+							await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
 						}
 
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);

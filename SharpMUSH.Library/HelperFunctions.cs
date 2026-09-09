@@ -504,30 +504,11 @@ public static partial class HelperFunctions
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>
-	/// A regular expression for literal attribute names (no wildcards).
-	/// Allows alphanumeric, @, _, -, ., `, and # (PennMUSH permits # in attribute names,
-	/// e.g. bb_post_bdy_#1 produced by &amp; attr_%# obj=value patterns).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`#]+)$")]
-	private static partial Regex ObjectWithLiteralAttribute();
-
-	/// <summary>
-	/// A regular expression for wildcard attribute patterns.
-	/// Allows * and ? for pattern matching in addition to literal characters (including #).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?#]+)$")]
-	private static partial Regex ObjectWithWildcardAttribute();
-
-	/// <summary>
-	/// A regular expression for regex attribute patterns.
-	/// Allows full regex syntax for advanced pattern matching (including # as a literal).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
-	private static partial Regex ObjectWithRegexAttribute();
-
-	/// <summary>
-	/// A regular expression that takes the form of 'Object/attributeName'.
-	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
+	/// A regular expression that takes the form of 'Object/attributeName'. The attribute half
+	/// accepts wildcard and regex metacharacters as literals, so one pattern covers every caller;
+	/// which of those the characters actually mean is decided later, by the matching mode the
+	/// caller asks for. '#' is allowed because PennMUSH permits it in attribute names
+	/// (e.g. bb_post_bdy_#1, produced by &amp; attr_%# obj=value patterns).
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]

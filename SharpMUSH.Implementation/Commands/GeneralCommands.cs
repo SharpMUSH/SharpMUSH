@@ -6257,16 +6257,17 @@ public partial class Commands
 		var isPrint = switches.Contains("PRINT") || switches.Contains("IPRINT");
 		var checkParents = switches.Contains("PARENT");
 
-		var attributePatternMode = attributePattern == "**"
-			? IAttributeService.AttributePatternMode.Wildcard
-			: IAttributeService.AttributePatternMode.Wildcard;
-
+		// PennMUSH treats the obj/attr half of @grep as a single wildcard pattern
+		// (predicat.c:1610-1617 defaults it to "*", then hands it to atr_iter_get), and "**" is
+		// not a separate matching mode - it is the attribute-name wildcard that is allowed to
+		// cross "`" (wild.c:89-107, real_atr_wild). That distinction lives in the wildcard-to-regex
+		// translation in the database providers, so every pattern here is Wildcard.
 		var attributes = await AttributeService.GetAttributePatternAsync(
 			executor,
 			targetObject,
 			attributePattern,
 			checkParents,
-			attributePatternMode);
+			IAttributeService.AttributePatternMode.Wildcard);
 
 		if (attributes.IsError)
 		{
