@@ -285,32 +285,105 @@ PennMUSH's `notify_except2` takes interaction flags; the movement triads use `NA
 `NA_INTER_PRESENCE` and `NA_INTER_SEE` at different points (`src/move.c:105-146`). Every current
 caller hard-codes hearing, so the parameter is defaulted and no existing call site changes.
 
-- [ ] **Step 1: Write the failing test**
+This task also fixes the enum those flags live in. `IPermissionService.InteractType`
+(`IPermissionService.cs:9`) is marked `[Flags]` but its members take C#'s default sequential values
+— `See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4`. `CanInteract` tests
+`type.HasFlag(InteractType.Hear)`, so `Presence` (3) carries the `Hear` bit and enforces the
+Interact lock, while `See` (0) matches nothing. PennMUSH's `can_interact` (`src/game.c`) gates that
+lock on `INTERACT_HEAR` alone:
+
+```c
+  if ((type == INTERACT_HEAR) && !Pass_Interact_Lock(from, to, pe_info))
+    return 0;
+```
+
+so `CanInteract`'s intent is already right and only the values are wrong. Task 9 sends the
+`ENTER`/`LEAVE` triads with `Presence`, so leaving this would let an `@lock/interact` silently
+suppress arrival and departure messages that PennMUSH shows.
+
+- [ ] **Step 1: Write the failing tests**
 
 Append to `SharpMUSH.Tests/Services/DidItServiceTests.cs`:
 
 ```csharp
 	[Test]
-	public async ValueTask SendToRoomHonoursTheRequestedInteractType()
+	public async ValueTask HearingHonoursTheInteractLock()
 	{
-		var communication = WebAppFactoryArg.Services.GetRequiredService<ICommunicationService>();
-		var method = typeof(ICommunicationService).GetMethod(nameof(ICommunicationService.SendToRoomAsync))!;
-		var parameterNames = method.GetParameters().Select(p => p.Name).ToArray();
+		var speaker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractSpeaker");
+		var deaf = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractDeaf");
 
-		await Assert.That(communication).IsNotNull();
-		await Assert.That(parameterNames).Contains("interact");
+		// An interact lock nobody passes.
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@lock/interact {deaf.DbRef}=#0"));
+
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(speaker.DbRef), await Node(deaf.DbRef), IPermissionService.InteractType.Hear))
+			.IsFalse();
+	}
+
+	[Test]
+	public async ValueTask PresenceAndSightDoNotConsultTheInteractLock()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractMover");
+		var locked = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "InteractLocked");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@lock/interact {locked.DbRef}=#0"));
+
+		// PennMUSH can_interact gates the Interact lock on INTERACT_HEAR alone, so an arrival
+		// message (Presence) and an OXLEAVE (See) still reach a locked object.
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(mover.DbRef), await Node(locked.DbRef), IPermissionService.InteractType.Presence))
+			.IsTrue();
+
+		await Assert.That(await PermissionService.CanInteract(
+			await Node(mover.DbRef), await Node(locked.DbRef), IPermissionService.InteractType.See))
+			.IsTrue();
 	}
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [ ] **Step 2: Run them to verify `PresenceAndSightDoNotConsultTheInteractLock` fails**
 
 ```bash
-dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/DidItServiceTests/SendToRoomHonoursTheRequestedInteractType" > /tmp/t2.log 2>&1; grep -E "Failed|error" /tmp/t2.log | head
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/DidItServiceTests/*Interact*" > /tmp/t2.log 2>&1; grep -E "Failed|error" /tmp/t2.log | head
 ```
 
-Expected: FAIL — no `interact` parameter.
+Expected: `HearingHonoursTheInteractLock` passes; `PresenceAndSightDoNotConsultTheInteractLock`
+fails on the `Presence` assertion, because `Presence = 3` currently carries the `Hear` bit.
 
-- [ ] **Step 3: Add the parameter to the interface**
+- [ ] **Step 3: Give the enum real flag values**
+
+In `IPermissionService.cs`, matching PennMUSH's `hdrs/mushtype.h:46-49`:
+
+```csharp
+	/// <summary>
+	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). Real bit values, because
+	/// <see cref="PermissionService.CanInteract"/> tests them with <c>HasFlag</c>.
+	/// </summary>
+	[Flags]
+	enum InteractType
+	{
+		See = 0x1,
+		Hear = 0x2,
+		Match = 0x4,
+		Presence = 0x8,
+		Page = 0x10
+	}
+```
+
+`CanInteract`'s body needs no change — `type.HasFlag(InteractType.Hear)` becomes correct once the
+values are distinct bits. Check every other `InteractType` use for code that relied on the old
+ordinal values (a cast to `int`, a comparison, a switch on a number):
+
+```bash
+grep -rn "InteractType" --include="*.cs" . | grep -v obj/
+```
+
+- [ ] **Step 4: Add the parameter to the interface**
 
 In `ICommunicationService.cs`, replace the `SendToRoomAsync` declaration:
 
@@ -330,7 +403,7 @@ In `ICommunicationService.cs`, replace the `SendToRoomAsync` declaration:
 		IPermissionService.InteractType interact = IPermissionService.InteractType.Hear);
 ```
 
-- [ ] **Step 4: Thread it through the implementation**
+- [ ] **Step 5: Thread it through the implementation**
 
 In `CommunicationService.cs`, add the parameter to the signature and replace the hard-coded gate:
 
@@ -338,20 +411,29 @@ In `CommunicationService.cs`, add the parameter to the signature and replace the
 				return await permissionService.CanInteract(executor, objWithRoom, interact);
 ```
 
-- [ ] **Step 5: Run it to verify it passes, and confirm nothing else broke**
+- [ ] **Step 6: Run the tests and confirm nothing else broke**
+
+The interact gate is used well beyond movement, so run the speech and channel suites too — those
+are the callers most likely to have depended on the old ordinals.
 
 ```bash
 dotnet build SharpMUSH.sln > /tmp/t2b.log 2>&1; grep -E "error|Build succeeded" /tmp/t2b.log | head
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/DidItServiceTests/*" > /tmp/t2.log 2>&1; grep -E "Passed|Failed" /tmp/t2.log | tail -3
+for c in CommunicationCommandTests ChannelCommandTests ChannelPermissionTests; do
+  dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/$c/*" > /tmp/t2-$c.log 2>&1
+  echo "$c: $(grep -cE '^\s*Failed' /tmp/t2-$c.log) failed"
+done
 ```
 
-- [ ] **Step 6: Format and commit**
+- [ ] **Step 7: Format and commit**
 
 ```bash
-dotnet format whitespace --folder SharpMUSH.Library --exclude "**/bin/**" --exclude "**/obj/**"
-dotnet format whitespace --folder SharpMUSH.Library --exclude "**/bin/**" --exclude "**/obj/**"
-git add SharpMUSH.Library SharpMUSH.Tests
-git commit -m "Let room broadcasts choose their interaction gate"
+for d in SharpMUSH.Library SharpMUSH.Tests; do
+  dotnet format whitespace --folder $d --exclude "**/bin/**" --exclude "**/obj/**"
+  dotnet format whitespace --folder $d --exclude "**/bin/**" --exclude "**/obj/**"
+done
+git add -A
+git commit -m "Give InteractType real flag values and let broadcasts pick their gate"
 ```
 
 ---
