@@ -338,6 +338,6 @@ public record LimitOptions(
 		Min = 100,
 		Max = 1000000)]
 	uint MaxAttributeValueLength,
-	[property: SharpConfig(Name = "global_queue_limit", Category = "Limit", Description = "Maximum admitted jobs across all queues, including running jobs", Group = "Performance", Min = 1, Max = 1000000)]
+	[property: SharpConfig(Name = "global_queue_limit", Category = "Limit", Description = "Maximum admitted jobs across all queues, including running jobs", Group = "Performance", Order = 9, Min = 1, Max = 1000000)]
 	uint GlobalQueueLimit = 10000
 );

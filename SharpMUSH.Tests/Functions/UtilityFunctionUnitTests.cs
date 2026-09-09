@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,6 +17,14 @@ public class UtilityFunctionUnitTests
 	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+
+	[Test]
+	public async Task UnsetQWithoutArgumentsClearsAllRegisters()
+	{
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var result = await parser.FunctionParse(MarkupText.Plain("strcat(setq(LOCAL,value),unsetq(),listq())"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("");
+	}
 
 	[Test]
 	public async Task PCreate()
