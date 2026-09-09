@@ -3,6 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
@@ -38,7 +39,22 @@ public class GetAttributesQueryHandler(
 				.Select(attr => new AttributeWithSource(attr, request.DBRef));
 		}
 
-		return GetAttributesWithParentsAsync(request, cancellationToken);
+		// One walk, shared with the lazy handler below: the two queries are one documented
+		// contract, and keeping two copies of atr_iter_get_parent is how they came to disagree.
+		return AttributeAncestry.MatchesWithParentsAsync(
+				request.DBRef,
+				async () =>
+				{
+					var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
+					return obj.IsNone ? null : obj.Known.Object();
+				},
+				(int)configuration.CurrentValue.Limit.MaxParents,
+				dbref => GetAttributesForDbRef(dbref, request, cancellationToken),
+				(dbref, segments) => database.GetAttributeAsync(dbref, segments, cancellationToken),
+				static attr => attr.LongName!,
+				static attr => attr.IsNoInherit(),
+				cancellationToken)
+			.Select(match => new AttributeWithSource(match.Attribute, match.Source));
 	}
 
 	private IAsyncEnumerable<SharpAttribute> GetAttributesForDbRef(DBRef dbref, GetAttributesQuery request, CancellationToken cancellationToken)
@@ -52,111 +68,54 @@ public class GetAttributesQueryHandler(
 				database.GetAttributesByRegexAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
 			_ => database.GetAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken)
 		};
-
-	private async IAsyncEnumerable<AttributeWithSource> GetAttributesWithParentsAsync(
-		GetAttributesQuery request,
-		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-	{
-		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-		await foreach (var attr in GetAttributesForDbRef(request.DBRef, request, cancellationToken))
-		{
-			if (seen.Add(attr.LongName!))
-				yield return new AttributeWithSource(attr, request.DBRef);
-		}
-
-		var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
-		if (obj.IsNone) yield break;
-
-		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
-		var visited = new HashSet<int> { obj.Known.Object().DBRef.Number };
-		var current = obj.Known.Object();
-		for (var depth = 0; depth < maxDepth; depth++)
-		{
-			var parent = await current.Parent.WithCancellation(cancellationToken);
-			if (parent.IsNone) break;
-
-			var parentObj = parent.Known.Object();
-
-			// A @parent cycle would otherwise spin here forever - defence in depth, since the
-			// write-side guards (SafeToAddParent, ExceedsMaxParentDepthAsync) should already
-			// prevent one from existing at all. See AttributeService.ParentChainAsync, which this
-			// mirrors.
-			if (!visited.Add(parentObj.DBRef.Number)) break;
-			await foreach (var attr in GetAttributesForDbRef(parentObj.DBRef, request, cancellationToken))
-			{
-				// Penn's atr_iter_get_parent (attrib.c:1500-1622) has an early fast-path
-				// (attrib.c:1522-1529): any literal, non-wildcarded pattern is routed straight
-				// through atr_get_with_parent -- the same function backing get() -- and never
-				// reaches the seen/st_insert iteration loop at all. Every pattern this handler
-				// sees under AttributePatternMode.Exact is literal, so the operative reference
-				// for those is atr_get_with_parent (attrib.c:1232-1252), identical to the fix
-				// in GetAttributeWithInheritanceAsync: a private hit on a nearer ancestor
-				// blocks resolution outright and never falls through to a farther ancestor's
-				// unflagged copy. Recording membership before the flag check reproduces that
-				// outcome for exact-mode lookups.
-				//
-				// The iteration loop (attrib.c:1580-1622, entered only for a genuine wildcard
-				// or regex pattern) has its own st_insert-before-AF_Private ordering, which
-				// gives the same shadowing property there too -- but that loop's private test
-				// only continues the walk rather than aborting it, so a farther ancestor CAN
-				// still surface under a different branch than the one that shadowed it. See
-				// the task report for a known, narrow case where that leaves SharpMUSH
-				// stricter than live Penn for a genuine wildcard pattern.
-				if (!seen.Add(attr.LongName!))
-					continue;
-
-				// no_inherit on ANY level of the branch blocks the whole path when crossing
-				// this parent boundary (Penn: AF_Private test in atr_get_with_parent,
-				// attrib.c:1232-1252 -- checking attr.Flags alone only covers the leaf). Only
-				// pay for the full-path re-resolution when there's a branch to check at all --
-				// a flat (no backtick) attribute IS the whole path, so its own flags suffice
-				// and the common case costs nothing extra.
-				if (attr.LongName!.Contains('`'))
-				{
-					var segments = attr.LongName.Split('`');
-					var path = await database.GetAttributeAsync(parentObj.DBRef, segments, cancellationToken)
-						.ToArrayAsync(cancellationToken);
-					// Fail closed: if re-resolution doesn't return the full path (a race, or a
-					// name-normalisation mismatch), deny rather than yield the attribute.
-					if (path.Length != segments.Length || path.Any(a => a.IsNoInherit()))
-						continue;
-				}
-				else if (attr.IsNoInherit())
-				{
-					continue;
-				}
-
-				// The source object rides along with the match: it is what a downstream read
-				// gate has to re-walk the ancestor path against (AttributeWithSource).
-				yield return new AttributeWithSource(attr, parentObj.DBRef);
-			}
-
-			current = parentObj;
-		}
-	}
 }
 
-public class GetLazyAttributesQueryHandler(IAttributeStore database)
+/// <summary>
+/// The lazy twin of <see cref="GetAttributesQueryHandler"/>. Same walk, same
+/// <c>CheckParents</c> semantics — <c>GetLazyAttributesQuery</c> inherits the eager query's
+/// documentation, so a caller that switches to it purely to avoid materialising a large result
+/// must get the same attributes back.
+/// </summary>
+public class GetLazyAttributesQueryHandler(
+	IAttributeStore database,
+	IObjectStore objects,
+	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration)
 	: IStreamQueryHandler<GetLazyAttributesQuery, LazyAttributeWithSource>
 {
-	// This handler does not walk the parent chain at all (it ignores request.CheckParents), so
-	// every match is by construction sourced from request.DBRef itself. It still reports the
-	// source, so the read gate downstream is written once against provenance rather than
-	// assuming it - the assumption is exactly what leaked in the eager path.
 	public IAsyncEnumerable<LazyAttributeWithSource> Handle(GetLazyAttributesQuery request,
 		CancellationToken cancellationToken)
-		=> (request.Mode switch
+	{
+		if (!request.CheckParents)
+		{
+			return GetAttributesForDbRef(request.DBRef, request, cancellationToken)
+				.Select(attr => new LazyAttributeWithSource(attr, request.DBRef));
+		}
+
+		return AttributeAncestry.MatchesWithParentsAsync(
+				request.DBRef,
+				async () =>
+				{
+					var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
+					return obj.IsNone ? null : obj.Known.Object();
+				},
+				(int)configuration.CurrentValue.Limit.MaxParents,
+				dbref => GetAttributesForDbRef(dbref, request, cancellationToken),
+				(dbref, segments) => database.GetLazyAttributeAsync(dbref, segments, cancellationToken),
+				static attr => attr.LongName,
+				static attr => attr.IsNoInherit(),
+				cancellationToken)
+			.Select(match => new LazyAttributeWithSource(match.Attribute, match.Source));
+	}
+
+	private IAsyncEnumerable<LazySharpAttribute> GetAttributesForDbRef(DBRef dbref, GetLazyAttributesQuery request, CancellationToken cancellationToken)
+		=> request.Mode switch
 		{
 			IAttributeService.AttributePatternMode.Exact =>
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
+				database.GetLazyAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Wildcard =>
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken),
+				database.GetLazyAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
 			IAttributeService.AttributePatternMode.Regex =>
-				database.GetLazyAttributesByRegexAsync(
-					request.DBRef,
-					request.Pattern.ToUpper(), cancellationToken),
-			_ =>
-				database.GetLazyAttributesAsync(request.DBRef, request.Pattern.ToUpper(), cancellationToken)
-		}).Select(attr => new LazyAttributeWithSource(attr, request.DBRef));
+				database.GetLazyAttributesByRegexAsync(dbref, request.Pattern.ToUpper(), cancellationToken),
+			_ => database.GetLazyAttributesAsync(dbref, request.Pattern.ToUpper(), cancellationToken)
+		};
 }

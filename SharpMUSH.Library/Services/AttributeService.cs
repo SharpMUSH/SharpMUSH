@@ -755,28 +755,8 @@ public class AttributeService(
 	/// build; only legacy or hand-edited data could. The fix belongs in the three providers (bound
 	/// their traversals to <c>MaxParents</c>), not here.
 	/// </remarks>
-	private async ValueTask<List<DBRef>> ParentChainAsync(AnySharpObject obj)
-	{
-		var chain = new List<DBRef> { obj.Object().DBRef };
-		var current = obj.Object();
-		var maxDepth = (int)configuration.CurrentValue.Limit.MaxParents;
-
-		for (var depth = 0; depth < maxDepth; depth++)
-		{
-			var parent = await current.Parent.WithCancellation(CancellationToken.None);
-			if (parent.IsNone) break;
-
-			var parentObj = parent.Known.Object();
-
-			// A @parent cycle would otherwise re-walk to the depth cap for every single match.
-			if (chain.Any(d => d.Number == parentObj.DBRef.Number)) break;
-
-			chain.Add(parentObj.DBRef);
-			current = parentObj;
-		}
-
-		return chain;
-	}
+	private ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
+		=> AttributeAncestry.ChainAsync(obj.Object(), (int)configuration.CurrentValue.Limit.MaxParents);
 
 	/// <inheritdoc/>
 	public async ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default)
