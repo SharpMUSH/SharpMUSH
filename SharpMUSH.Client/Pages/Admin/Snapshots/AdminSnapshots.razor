@@ -39,10 +39,10 @@
     }
     @if (_selected is not null)
     {
-        <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
-        <MudCheckBox @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
-        <MudCheckBox @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
-        <MudCheckBox @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />
+        <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" ReadOnly="RecoverySelected" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
+        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
+        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
+        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />
         <AuthorizeView Policy="snapshots.restore">
             <Authorized>
                 <MudButton OnClick="Preview" Disabled="_busy">@Loc["SnapshotsPreview"]</MudButton>
@@ -73,6 +73,7 @@
     private SnapshotHistory? _history;
     private SnapshotPreview? _preview;
     private HttpClient Api => HttpClients.CreateClient("api");
+    private bool RecoverySelected => _history?.Snapshots.Any(saved => saved.Id == _selected && saved.RecoverySelection is not null) == true;
     private SnapshotSelection Selection => new(_attributes.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), _locks, _flags, _name);
     private void ClearPreview() => _preview = null;
     private void ClearTarget() { _history = null; _selected = null; ClearPreview(); }

@@ -119,6 +119,13 @@ public class ObjectSnapshotTests
 		await Assert.That(history.PendingRecoveryId).IsEqualTo(result.RecoverySnapshotId);
 		var recovery = history.Snapshots.Single(s => s.Id == result.RecoverySnapshotId);
 		await Assert.That(MarkupTextSerializer.Deserialize(recovery.Attributes.Single(a => a.Name == "DESC").Markup).ToPlainText()).IsEqualTo("changed-desc");
+		foreach (var extra in new[] { selection with { Flags = true }, selection with { Name = true }, selection with { Locks = true } })
+		{
+			SnapshotOperationException? rejected = null;
+			try { await Get<IObjectSnapshotService>().PreviewAsync(actor, target, recovery.Id, extra); }
+			catch (SnapshotOperationException exception) { rejected = exception; }
+			await Assert.That(rejected?.Code).IsEqualTo("invalid");
+		}
 		var recoveryPreview = await Get<IObjectSnapshotService>().PreviewAsync(actor, target, recovery.Id, selection);
 		var recovered = await Get<IObjectSnapshotService>().RestoreAsync(actor, target, recovery.Id, selection, recoveryPreview.Token);
 		await Assert.That(recovered.Completed).IsTrue();

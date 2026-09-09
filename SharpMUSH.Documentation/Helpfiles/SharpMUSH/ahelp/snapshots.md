@@ -37,10 +37,9 @@ Restore is a sequence of cache-invalidating Mediator mutations, not a cross-comm
 transaction. Before the first change, a durable before-image and pending recovery marker
 are stored. If a mutation, cancellation or process failure interrupts restoration, the
 marker identifies the recovery image. Preview and restore that image before another
-restore. Recovery includes every field selected by the interrupted operation and explicitly
+restore. Recovery uses exactly the fields selected by the interrupted operation and explicitly
 removes attributes or locks that operation created. Default recovery selections include only
-the interrupted operation’s attributes and locks, preserving unrelated later edits. The portal selects the required switches
-when choosing a recovery image; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
+the interrupted operation’s attributes and locks, preserving unrelated later edits. The portal fixes the fields and switches to the recorded recovery selection; game commands require the original switches. Correct any newly applied SAFE/privileged restrictions through their normal
 commands first. Storage failure while clearing the marker is also reported as requiring
 recovery. If the original account can no longer recover (for example after ownership or
 account changes), a current controller with snapshots.restore can explicitly acknowledge

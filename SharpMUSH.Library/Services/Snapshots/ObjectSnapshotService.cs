@@ -68,7 +68,7 @@ public sealed partial class ObjectSnapshotService(
 		var (executor, obj) = await Authorize(actor, target, PortalPermission.SnapshotRestore, ct);
 		var snapshot = Find(await Read(obj, ct), snapshotId, obj, actor.AccountId);
 		await ValidateSelection(executor, obj, snapshot, selection, ct);
-		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot);
+		var current = await Capture(actor, executor, obj, "preview", snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal));
 		return Preview(snapshot, current, selection);
 	}
 
@@ -81,7 +81,7 @@ public sealed partial class ObjectSnapshotService(
 			var history = await Read(obj, ct);
 			var snapshot = Find(history, snapshotId, obj, actor.AccountId);
 			await ValidateSelection(executor, obj, snapshot, selection, ct);
-			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot);
+			var before = await Capture(actor, executor, obj, "Before restore " + snapshot.Id, history.Snapshots.FirstOrDefault()?.Retain ?? snapshot.Retain, ct, selection, snapshot.Locks.Keys.Concat(snapshot.AbsentLocks).ToHashSet(StringComparer.Ordinal));
 			if (Preview(snapshot, before, selection).Token != previewToken)
 				throw Error("stale-preview", "The object or selection changed. Preview again before restoring.");
 			if (history.PendingRecoveryId is not null && history.PendingRecoveryId != snapshot.Id)
@@ -151,7 +151,7 @@ public sealed partial class ObjectSnapshotService(
 		return (executor.Known, obj.Known);
 	}
 
-	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, ObjectSnapshot? saved = null)
+	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IReadOnlySet<string>? lockNames = null)
 	{
 		var selectedNames = selection?.Attributes.SelectMany(name => name.Split('`').Select((_, index) => string.Join('`', name.Split('`').Take(index + 1)))).ToHashSet(StringComparer.Ordinal);
 		var captured = new List<SnapshotAttribute>();
@@ -177,7 +177,7 @@ public sealed partial class ObjectSnapshotService(
 		}
 		var lockData = new Dictionary<string, SnapshotLock>(StringComparer.Ordinal);
 		foreach (var (name, value) in obj.Object().Locks.OrderBy(p => p.Key))
-			if ((selection is null || selection.Locks && (saved!.Locks.ContainsKey(name) || saved.AbsentLocks.Contains(name))) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
+			if ((selection is null || selection.Locks && lockNames?.Contains(name) == true) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
 		var snapshot = new ObjectSnapshot(Guid.NewGuid().ToString("N"), 1, obj.Object().DBRef.ToString(), obj.Object().Type,
 			actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), description, retain,
 			selection is null || selection.Name ? obj.Object().Name : "", captured.OrderBy(a => a.Name).ToArray(), lockData,
@@ -196,7 +196,7 @@ public sealed partial class ObjectSnapshotService(
 	{
 		var snapshot = history.Snapshots.SingleOrDefault(s => s.Id == id && s.CreatorAccount == accountId) ?? throw Error("missing", "Snapshot not found.");
 		if (snapshot.Attributes is null || snapshot.Locks is null || snapshot.Flags is null || snapshot.Attributes.Length > MaxAttributes || snapshot.Retain is < 1 or > 20 ||
-			snapshot.AbsentAttributes is null || snapshot.AbsentLocks is null ||
+			snapshot.AbsentAttributes is null || snapshot.AbsentLocks is null || snapshot.RecoverySelection is { Attributes: null } ||
 			snapshot.Attributes.Any(a => a is null || a.Flags is null || a.Name is null || a.Markup is null || a.Ancestors is null || a.Ancestors.Any(v => v is null || v.Name is null || v.Flags is null || v.Owner is null)) ||
 			snapshot.Attributes.Select(a => a.Name).Distinct(StringComparer.Ordinal).Count() != snapshot.Attributes.Length ||
 			snapshot.AbsentAttributes.Intersect(snapshot.Attributes.Select(a => a.Name)).Any() || snapshot.AbsentLocks.Intersect(snapshot.Locks.Keys).Any() ||
@@ -211,8 +211,10 @@ public sealed partial class ObjectSnapshotService(
 	private async Task ValidateSelection(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, CancellationToken ct)
 	{
 		if (snapshot.RecoverySelection is { } required &&
-			(required.Attributes.Concat(snapshot.AbsentAttributes).Except(selection.Attributes ?? []).Any() || required.Locks && !selection.Locks || required.Flags && !selection.Flags || required.Name && !selection.Name))
-			throw Error("invalid", "Recovery must include every field from the interrupted restore.");
+			(required.Attributes.Concat(snapshot.AbsentAttributes).Except(selection.Attributes ?? []).Any() ||
+				(selection.Attributes ?? []).Except(required.Attributes.Concat(snapshot.AbsentAttributes)).Any() ||
+				required.Locks != selection.Locks || required.Flags != selection.Flags || required.Name != selection.Name))
+			throw Error("invalid", "Recovery must select exactly the fields from the interrupted restore.");
 		if (!await CanRead(executor, obj, snapshot, ct)) throw Error("denied", "The snapshot contains fields the active player cannot currently read.");
 		if (selection.Attributes is null || selection.Attributes.Distinct(StringComparer.Ordinal).Count() != selection.Attributes.Length ||
 			selection.Attributes.Any(name => !snapshot.Attributes.Any(a => a.Name == name) && !snapshot.AbsentAttributes.Contains(name))) throw Error("invalid", "Select unique attributes present in the snapshot.");
