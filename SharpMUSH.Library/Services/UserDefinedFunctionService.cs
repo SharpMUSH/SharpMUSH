@@ -33,10 +33,14 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public UserDefinedFunction? Get(string name, DBRef? owner = null)
+	public UserDefinedFunction? Get(string name) => Get(name, null);
+
+	public UserDefinedFunction? Get(string name, DBRef? owner)
 		=> _functions.TryGetValue(Key(name, owner), out var fn) ? fn : null;
 
-	public UserDefinedFunction? Resolve(string name, DBRef? owner = null)
+	public UserDefinedFunction? Resolve(string name) => Resolve(name, null);
+
+	public UserDefinedFunction? Resolve(string name, DBRef? owner)
 	{
 		if (!_functions.TryGetValue(Key(name, owner), out var entry))
 		{
@@ -58,7 +62,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		return entry.Enabled ? entry : null;
 	}
 
-	public bool Delete(string name, DBRef? owner = null)
+	public bool Delete(string name) => Delete(name, null);
+
+	public bool Delete(string name, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -71,7 +77,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public bool SetEnabled(string name, bool enabled, DBRef? owner = null)
+	public bool SetEnabled(string name, bool enabled) => SetEnabled(name, enabled, null);
+
+	public bool SetEnabled(string name, bool enabled, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -85,7 +93,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public bool Alias(string alias, string target, DBRef? owner = null)
+	public bool Alias(string alias, string target) => Alias(alias, target, null);
+
+	public bool Alias(string alias, string target, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -106,13 +116,15 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 				MinArgs: targetEntry.MinArgs,
 				MaxArgs: targetEntry.MaxArgs,
 				Enabled: true,
-				AliasOf: targetKey,
-				Owner: owner);
+				AliasOf: targetKey)
+			{ Owner = owner };
 			return true;
 		}
 	}
 
-	public bool SetRestriction(string name, string? restriction, DBRef? owner = null)
+	public bool SetRestriction(string name, string? restriction) => SetRestriction(name, restriction, null);
+
+	public bool SetRestriction(string name, string? restriction, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -127,7 +139,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public bool Clone(string newName, string existing, DBRef? owner = null)
+	public bool Clone(string newName, string existing) => Clone(newName, existing, null);
+
+	public bool Clone(string newName, string existing, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -151,7 +165,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public bool SetPreserved(string name, bool preserved, DBRef? owner = null)
+	public bool SetPreserved(string name, bool preserved) => SetPreserved(name, preserved, null);
+
+	public bool SetPreserved(string name, bool preserved, DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -165,7 +181,9 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 		}
 	}
 
-	public int ResetUnpreserved(DBRef? owner = null)
+	public int ResetUnpreserved() => ResetUnpreserved(null);
+
+	public int ResetUnpreserved(DBRef? owner)
 	{
 		lock (_mutations)
 		{
@@ -231,5 +249,7 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 	public string? GetBuiltinRestriction(string name)
 		=> _builtinRestrictions.TryGetValue(name, out var restriction) ? restriction : null;
 
-	public IReadOnlyCollection<UserDefinedFunction> All(DBRef? owner = null) => _functions.Values.Where(entry => entry.Owner == owner).ToArray();
+	public IReadOnlyCollection<UserDefinedFunction> All() => All(null);
+
+	public IReadOnlyCollection<UserDefinedFunction> All(DBRef? owner) => _functions.Values.Where(entry => entry.Owner == owner).ToArray();
 }
