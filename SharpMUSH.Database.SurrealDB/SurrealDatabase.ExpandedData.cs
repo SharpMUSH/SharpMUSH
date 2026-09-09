@@ -63,7 +63,7 @@ public partial class SurrealDatabase
 				["dataType"] = dataType,
 				["data"] = jsonData
 			};
-			await ExecuteAsync(
+			await ExecuteExpandedWriteAsync(
 				"UPDATE object_data SET data = $data WHERE objectKey = $key AND dataType = $dataType",
 				updateParams, cancellationToken);
 		}
@@ -77,7 +77,7 @@ public partial class SurrealDatabase
 				["dataType"] = dataType,
 				["data"] = jsonData
 			};
-			await ExecuteAsync(
+			await ExecuteExpandedWriteAsync(
 				"CREATE object_data SET objectKey = $key, sharpObjectId = $objId, dataType = $dataType, data = $data",
 				createParams, cancellationToken);
 		}
@@ -113,7 +113,7 @@ public partial class SurrealDatabase
 			["data"] = jsonData
 		};
 
-		await ExecuteAsync(
+		await ExecuteExpandedWriteAsync(
 			"UPSERT server_data:⟨$dataType⟩ SET dataType = $dataType, data = $data",
 			parameters, cancellationToken);
 	}
@@ -131,6 +131,14 @@ public partial class SurrealDatabase
 		var jsonData = results[0].data;
 		if (string.IsNullOrEmpty(jsonData)) return default;
 		return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
+	}
+
+	private async ValueTask ExecuteExpandedWriteAsync(string query, IReadOnlyDictionary<string, object?> parameters,
+		CancellationToken cancellationToken)
+	{
+		var response = await ExecuteAsync(query, parameters, cancellationToken);
+		if (response.HasErrors)
+			throw new InvalidOperationException("SurrealDB rejected the expanded-data write.");
 	}
 
 	#endregion
