@@ -186,7 +186,7 @@ public partial class TaskScheduler(
 				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true, ReleaseTimeout = semaphoreTimeout } };
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}
-			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
+			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			var group = entry.Group;
 			var semaphoreTarget = entry.SemaphoreTarget;
 			entry = entry with
@@ -396,19 +396,8 @@ public partial class TaskScheduler(
 					MarkupString.MarkupText.Plain(checked(currentCount + 1).ToString()), god)))
 					throw new InvalidOperationException("Semaphore count update failed.");
 				counterWritten = true;
-				if (attribute is null && !(dbRefAttribute.Attribute.Length == 1 &&
-					dbRefAttribute.Attribute[0].Equals("SEMAPHORE", StringComparison.OrdinalIgnoreCase)))
-				{
-					// A newly created custom semaphore must remain valid for subsequent waits.
-					var created = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastAsync();
-					var flags = await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
-					foreach (var name in new[] { "no_inherit", "no_clone", "locked" })
-					{
-						var flag = flags.Single(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-						if (!await mediator.Send(new SetAttributeFlagCommand(fullTarget, created, flag)))
-							throw new InvalidOperationException($"Semaphore flag update failed: {name}.");
-					}
-				}
+				if (attribute is null)
+					await SemaphoreAttributes.InitializeAsync(mediator, fullTarget, dbRefAttribute.Attribute);
 				if (currentCount < 0)
 				{
 					var activated = await Activate(admission.Pid!.Value);

@@ -76,6 +76,7 @@ public class QueueAdmissionTests
 			var key = new TriggerKey($"dbref:-{pending.Pid}", $"semaphore:{semaphore}");
 			scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { key });
 			await queue.ReleaseScheduledWork(pending.Pid!.Value, semaphoreTimeout: true);
+			await Assert.That((await queue.ReleaseScheduledWork(pending.Pid.Value)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
 			using (await queue.EnterSemaphoreMutationAsync())
 				await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(0);
 		}
