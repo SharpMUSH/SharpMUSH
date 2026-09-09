@@ -282,7 +282,10 @@ public class ConnectionAnnounceService(
 				MarkupText.Plain(player.Object().Name),
 				MarkupText.Empty,
 				[],
-				SeeAllOnly: hiddenOnChannel));
+				SeeAllOnly: hiddenOnChannel,
+				// CB_CHECKQUIET (src/extchat.c:3234): connect and disconnect lines are exactly what
+				// @channel/mute exists to suppress.
+				CheckQuiet: true));
 		}
 	}
 

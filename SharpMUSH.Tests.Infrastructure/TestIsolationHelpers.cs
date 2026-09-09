@@ -114,8 +114,10 @@ public static class TestIsolationHelpers
 		IConnectionService connectionService,
 		string namePrefix)
 	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var uniqueName = GenerateUniqueName(namePrefix);
-		var result = await parser.CommandParse(1, connectionService, MarkupText.Plain($"@create {uniqueName}"));
+		var result = await CreateObjectCommandAsync(parser, connectionService, uniqueName);
 		var message = result.Message
 			?? throw new InvalidOperationException($"@create {uniqueName} returned a null message. The command may have failed.");
 		var plainText = message.ToPlainText()
@@ -128,6 +130,18 @@ public static class TestIsolationHelpers
 		await ClearNoCommandAsync(parser, connectionService, created);
 
 		return created;
+	}
+
+	/// <summary>Creates named fixture data under a finite setup deadline, independent of behavior being tested.</summary>
+	public static async ValueTask<CallState> CreateObjectCommandAsync(IMUSHCodeParser parser,
+		IConnectionService connectionService, string name, long handle = 1)
+	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = await parser.CommandParse(handle, connectionService, MarkupText.Plain($"@create {name}"));
+		if (!DBRef.TryParse(result.Message?.ToPlainText() ?? "", out _))
+			throw new InvalidOperationException($"Fixture @create {name} failed: {result.Message?.ToPlainText()}");
+		return result;
 	}
 
 	/// <summary>
