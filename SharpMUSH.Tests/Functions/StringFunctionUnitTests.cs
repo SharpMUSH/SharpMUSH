@@ -423,9 +423,18 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
 	}
 
+	/// <summary>
+	/// PennMUSH's strmatch() calls wild_match_test with cs = 0 (src/wild.c), so it is
+	/// case-insensitive; verified against a live 1.8.8. It was case-sensitive here, which meant
+	/// any softcode that lowercased a user's query before matching — +help/search does — never
+	/// matched a body with a capital in it.
+	/// </summary>
 	[Test]
 	[Arguments("strmatch(test,t*)", "1")]
 	[Arguments("strmatch(test,x*)", "0")]
+	[Arguments("strmatch(Hello World,hello*)", "1")]
+	[Arguments("strmatch(Only one,*only*)", "1")]
+	[Arguments("strmatch(ABC,abc)", "1")]
 	public async Task Strmatch(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

@@ -1657,31 +1657,30 @@ public partial class Functions
 		return new CallState(MarkupText.Join(sep, attrResult));
 	}
 
+	/// <summary>
+	/// PennMUSH <c>strfirstof()</c>: the first argument that evaluates to a non-empty string, or the
+	/// last argument when none does. NoParse only defers evaluation — the value handed back is the
+	/// EVALUATED one, never the source text. Returning the raw text instead
+	/// (<c>strfirstof(add(1,1),7)</c> answering <c>add(1,1)</c>) is what
+	/// <c>fun_strfirstof</c> in <c>src/funmisc.c</c> never does, and it broke every caller that wrote
+	/// <c>strfirstof(r(page,args),1)</c> — the unevaluated text carries a comma, which then split the
+	/// argument list of whatever consumed it.
+	/// </summary>
 	[SharpFunction(Name = "strfirstof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...", "default"])]
 	public async ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
+		var argsArray = parser.CurrentState.ArgumentsOrdered.ToArray();
 
-		if (orderedArgs.Count == 1)
+		for (var i = 0; i < argsArray.Length - 1; i++)
 		{
-			var singleArg = await parser.FunctionParse(orderedArgs["0"].Message!);
-			var elements = singleArg!.Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-			return elements.Length > 0
-				? new CallState(MarkupText.Plain(elements[0]))
-				: CallState.Empty;
-		}
-
-		var argsArray = orderedArgs.ToArray();
-		for (int i = 0; i < argsArray.Length - 1; i++)
-		{
-			var parsedMessage = await argsArray[i].Value.ParsedMessage();
-			if (!string.IsNullOrEmpty(parsedMessage?.ToPlainText()))
+			var parsed = await argsArray[i].Value.ParsedMessage();
+			if (!string.IsNullOrEmpty(parsed?.ToPlainText()))
 			{
-				return new CallState(argsArray[i].Value.Message);
+				return new CallState(parsed);
 			}
 		}
 
-		return new CallState(argsArray[^1].Value.Message);
+		return new CallState(await argsArray[^1].Value.ParsedMessage() ?? MarkupText.Empty);
 	}
 
 	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]

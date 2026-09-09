@@ -694,16 +694,25 @@ public class PackageInstallService(
 	{
 		var pmContainer = ToContainer(pmWizard);
 		DBRef createdDbref;
+
+		// Through the Mediator, not straight at the store: the create commands are what carry the
+		// cache policy, and the one that matters here is the destination's ContentsTag. A package
+		// whose object lands in the master room and is created behind the cache's back is inert —
+		// command matching reads a contents list that predates it — until the entry expires or the
+		// game restarts, which is exactly the "+wiki does nothing after install" report.
+		//
+		// ApplyDefaultFlags stays off: the manifest is the whole truth about a package object's
+		// flags, and the stock thing_flags is no_command.
 		switch (spec.Type)
 		{
 			case PackageObjectType.Room:
-				createdDbref = await database.CreateRoomAsync(PrimaryName(spec.Name), pmWizard, cancellationToken: cancellationToken);
+				createdDbref = await mediator.Send(new CreateRoomCommand(PrimaryName(spec.Name), pmWizard, ApplyDefaultFlags: false), cancellationToken);
 				break;
 			case PackageObjectType.Thing:
 				{
 					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
-					createdDbref = await database.CreateThingAsync(
-						PrimaryName(spec.Name), location, pmWizard, location, cancellationToken: cancellationToken);
+					createdDbref = await mediator.Send(
+						new CreateThingCommand(PrimaryName(spec.Name), location, pmWizard, location, ApplyDefaultFlags: false), cancellationToken);
 					break;
 				}
 			case PackageObjectType.Exit:
@@ -715,8 +724,8 @@ public class PackageInstallService(
 					}
 
 					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-					createdDbref = await database.CreateExitAsync(
-						parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken: cancellationToken);
+					createdDbref = await mediator.Send(
+						new CreateExitCommand(parts[0], parts.Skip(1).ToArray(), location, pmWizard, ApplyDefaultFlags: false), cancellationToken);
 					break;
 				}
 			default:
@@ -752,8 +761,8 @@ public class PackageInstallService(
 				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
 			}
 
-			await database.LinkExitAsync(node.Match(_ => null!, _ => null!, exit => exit, _ => null!),
-				destination, cancellationToken);
+			await mediator.Send(new LinkExitCommand(
+				node.Match(_ => null!, _ => null!, exit => exit, _ => null!), destination), cancellationToken);
 		}
 
 		// Name updates for metadata drift.
