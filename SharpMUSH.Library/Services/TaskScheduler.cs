@@ -63,6 +63,16 @@ public class TaskScheduler(
 		bool ManagesSemaphoreCount = false
 	);
 
+	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
+		string LongName, int? CommandListIndex, DBRef? Owner, string Flags);
+
+	private static async ValueTask<SemaphoreRepairIdentity> CaptureRepairIdentity(SharpAttribute attribute)
+	{
+		var owner = attribute.Owner is null ? null : await attribute.Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		return new(attribute.Id, attribute.Key, attribute.Name, attribute.LongName, attribute.CommandListIndex,
+			owner?.Object.DBRef, string.Join('\0', attribute.Flags.Select(flag => flag.Name).Order(StringComparer.Ordinal)));
+	}
+
 	// The reservation ledger bounds this channel, including cancelled entries until consumed.
 	private readonly Channel<QueueEntry> _immediateQueue = Channel.CreateUnbounded<QueueEntry>(
 	 new UnboundedChannelOptions { SingleReader = true });
@@ -88,6 +98,7 @@ public class TaskScheduler(
 	}
 	private QueueEntry? RemoveEntry(long pid)
 	{
+		if (_semaphoreRepairs.ContainsKey(pid)) return null;
 		_ready.Remove(pid);
 		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
 	}
@@ -154,12 +165,31 @@ public class TaskScheduler(
 		return result;
 	}
 	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
+	// Failed admission repairs retain their PID/quota. No later semaphore transaction
+	// may pass this gate until the uncertain write has been restored.
+	private readonly ConcurrentDictionary<long, Func<ValueTask>> _semaphoreRepairs = new();
 
 	/// <summary>Serialize semaphore counter transactions. Acquire before any deferred queue lease.</summary>
 	public async ValueTask<IDisposable> EnterSemaphoreMutationAsync()
 	{
 		await _semaphoreMutations.WaitAsync(ExecutionBudget.CurrentToken);
-		return new SemaphoreMutationLease(_semaphoreMutations);
+		try
+		{
+			if (!_semaphoreRepairs.IsEmpty)
+			{
+				using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+				using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
+				using var scope = budget.Enter();
+				foreach (var (pid, repair) in _semaphoreRepairs)
+				{
+					await repair();
+					_semaphoreRepairs.TryRemove(pid, out _);
+					Release(pid);
+				}
+			}
+			return new SemaphoreMutationLease(_semaphoreMutations);
+		}
+		catch { _semaphoreMutations.Release(); throw; }
 	}
 
 	private sealed class SemaphoreMutationLease(SemaphoreSlim gate) : IDisposable
@@ -192,7 +222,7 @@ public class TaskScheduler(
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
-			if (!_pendingEntries.TryGetValue(pid, out var entry)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
+			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (readyReserved ? !_ready.Contains(pid) : !_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			var group = entry.Group;
 			var semaphoreTarget = entry.SemaphoreTarget;
@@ -444,28 +474,51 @@ public class TaskScheduler(
 		}
 		catch (Exception admissionFailure)
 		{
+			SemaphoreRepairIdentity? createdIdentity = null;
+			async ValueTask Restore(bool retry)
+			{
+				if (retry || counterCreated)
+				{
+					var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
+						.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+					if (counterCreated && attribute is null) return;
+					if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var persisted))
+						throw new InvalidOperationException("Semaphore changed before admission repair; restore its original counter or remove the newly created attribute before retrying.");
+					if (!counterCreated && persisted == currentCount) return;
+					if (persisted != checked(currentCount + 1))
+						throw new InvalidOperationException("Semaphore changed before admission repair; refusing to overwrite a later counter value.");
+					if (counterCreated)
+					{
+						var identity = await CaptureRepairIdentity(attribute);
+						if (!retry) createdIdentity = identity;
+						else if (createdIdentity != identity)
+							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
+					}
+				}
+				var restored = counterCreated
+					? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken)
+					: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
+						MarkupString.MarkupText.Plain(currentCount.ToString()), god!), ExecutionBudget.CurrentToken);
+				if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
+			}
 			try
 			{
-				// The mutation lease excludes notify, drain and timeout bookkeeping until rollback completes.
 				if (counterWriteAttempted)
 				{
-					// Cleanup must survive the expired entry budget, but remains bounded and
-					// shutdown-cancellable. Await provider settlement while still owning the lease.
 					using var cleanup = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
 					using var cleanupScope = cleanup.Enter();
-					// Restore absence as well as value: partial custom flags cannot pass validation.
-					var restored = counterCreated
-						? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute), cleanup.Token)
-						: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-							MarkupString.MarkupText.Plain(currentCount.ToString()), god!), cleanup.Token);
-					if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
+					await Restore(retry: false);
 				}
 			}
 			catch (Exception cleanupFailure)
 			{
-				throw new AggregateException("Semaphore admission and rollback failed.", admissionFailure, cleanupFailure);
+				_semaphoreRepairs[admission.Pid!.Value] = () => Restore(retry: true);
+				if (_pendingEntries.TryGetValue(admission.Pid.Value, out var retained)) CancelEntry(retained);
+				logger.LogError(cleanupFailure, "Semaphore admission repair retained for PID {Pid} at {Target}/{Attribute} (original counter: {Original}); further semaphore mutations require successful repair",
+					admission.Pid, fullTarget, string.Join('`', dbRefAttribute.Attribute), counterCreated ? "absent" : currentCount.ToString());
+				throw new AggregateException("Semaphore admission and rollback failed; accounting retained for retry.", admissionFailure, cleanupFailure);
 			}
-			finally { Release(admission.Pid!.Value); }
+			Release(admission.Pid!.Value);
 			throw;
 		}
 	}
@@ -773,6 +826,11 @@ public class TaskScheduler(
 			{
 				// Expected during shutdown
 			}
+		}
+		foreach (var pid in _semaphoreRepairs.Keys)
+		{
+			logger.LogError("Shutdown with unrepaired semaphore admission PID {Pid}; the in-memory repair cannot survive restart", pid);
+			_semaphoreRepairs.TryRemove(pid, out _);
 		}
 		foreach (var pid in _pendingEntries.Keys) Release(pid);
 		_shutdownCts.Dispose();
