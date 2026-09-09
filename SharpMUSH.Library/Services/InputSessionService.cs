@@ -79,7 +79,8 @@ public sealed class InputSessionService : IInputSessionService
 		var cause = await _mediator.Send(new GetObjectNodeQuery(enactor));
 		if (player.IsNone || actor.IsNone || source.IsNone || cause.IsNone
 			|| player.Known().Object().DBRef != cause.Known().Object().DBRef) return InvalidContext;
-		if (!await _permissions.Controls(actor.Known(), source.Known())) return ErrorMessages.Returns.PermissionDenied;
+		if (await actor.Known().HasFlag("HALT") || !await _permissions.Controls(actor.Known(), source.Known()))
+			return ErrorMessages.Returns.PermissionDenied;
 		if (!(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
 			|| !(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
 			return InvalidCallback;
@@ -136,7 +137,8 @@ public sealed class InputSessionService : IInputSessionService
 		if (!input.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)) return false;
 		lock (_gate)
 		{
-			if (!_sessions.TryGetValue(handle, out var entry) || !BindingMatches(entry.Session)
+			if (!_sessions.TryGetValue(handle, out var entry) || entry.TimeoutPending
+				|| entry.Session.ExpiresAt <= _time.GetUtcNow() || !BindingMatches(entry.Session)
 				|| !TransportMatches(entry.Session.Connection, transportSessionId)) return false;
 			_sessions.Remove(handle);
 		}
@@ -195,6 +197,7 @@ public sealed class InputSessionService : IInputSessionService
 		var target = await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget));
 		var character = await _mediator.Send(new GetObjectNodeQuery(session.Character));
 		if (actor.IsNone || target.IsNone || character.IsNone
+			|| await actor.Known().HasFlag("HALT")
 			|| (await actor.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef != session.Owner
 			|| (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef != session.CallbackOwner
 			|| !await _permissions.Controls(actor.Known(), target.Known())) return await Revoke(session);

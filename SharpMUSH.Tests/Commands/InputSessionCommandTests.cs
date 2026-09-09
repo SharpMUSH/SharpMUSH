@@ -112,6 +112,33 @@ public class InputSessionCommandTests
 	}
 
 	[Test]
+	public async Task HaltingAnObjectStopsItsFutureCapturedCallbacks()
+	{
+		var player = await Player();
+		try
+		{
+			var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain("@create GuidedInputCallback"));
+			var target = DBRef.Parse(created.Message!.Text);
+			await Command(player.Handle, $"&CALLBACK {target}=&ANSWER me=%0");
+			var callbackParser = Parser.FromState(ParserState.Empty with
+			{
+				Executor = target,
+				Enactor = player.DbRef,
+				Caller = player.DbRef,
+				Handle = player.Handle
+			});
+			await callbackParser.CommandListParse(MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
+			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
+			await Command(player.Handle, $"@halt {target}");
+			await Input(player.Handle, "must not run");
+			using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			while (Sessions.GetCapturing(player.Handle) is not null) await Task.Delay(10, deadline.Token);
+			await Assert.That(await Read(target, "ANSWER")).IsNull();
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
 	public async Task HelpAndCommandMetadataDescribeThePublicSurface()
 	{
 		var help = await Factory.Services.GetRequiredService<ITextFileService>().GetEntryAsync("help/sharpcmd", "@INPUT");

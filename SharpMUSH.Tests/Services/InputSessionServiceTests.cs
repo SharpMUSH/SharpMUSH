@@ -105,7 +105,7 @@ public class InputSessionServiceTests
 			{
 				Key = number, CreationTime = 1000, Name = "Session test", Type = "PLAYER", Locks = null!, Owner = null!,
 				Powers = null!, Attributes = null!, LazyAttributes = null!, AllAttributes = null!, LazyAllAttributes = null!,
-				Flags = null!, Parent = null!, Zone = null!, Children = null!
+				Flags = new(AsyncEnumerable.Empty<SharpObjectFlag>), Parent = null!, Zone = null!, Children = null!
 			},
 			Location = null!, Home = null!, PasswordHash = "", Quota = 0
 		};
@@ -174,6 +174,47 @@ public class InputSessionServiceTests
 		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("ignored"));
 		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	private static void Halt(SharpObject obj) => obj.Flags = new(() => new[]
+	{
+		new SharpObjectFlag { Name = "HALT", Symbol = "h", SetPermissions = [], UnsetPermissions = [], System = true, TypeRestrictions = [] }
+	}.ToAsyncEnumerable());
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HaltedExecutorCannotReceiveInputOrTimeoutCallbacks(bool timeout)
+	{
+		var h = new Harness(); var session = await h.Start();
+		Halt(h.Actor.Object);
+		if (timeout) { h.Time.Now += TimeSpan.FromMinutes(2); h.Sessions.TakeExpired(); }
+		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("ignored"), timeout);
+		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
+	public async Task HaltedExecutorCannotStartCapture()
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		Halt(h.Actor.Object);
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNotNull();
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LateEscapeCannotCancelExpiredTimeoutCallback(bool alreadyPending)
+	{
+		var h = new Harness(); var session = await h.Start();
+		h.Time.Now += TimeSpan.FromMinutes(2);
+		if (alreadyPending) h.Sessions.TakeExpired();
+		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsFalse();
+		if (!alreadyPending) h.Sessions.TakeExpired();
+		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Empty, timeout: true);
+		await Assert.That(h.Deliveries.Single().EnvironmentRegisters["1"].Message!.Text).IsEqualTo("timeout");
 	}
 
 	[Test]
