@@ -760,6 +760,18 @@ public partial class Commands
 									shouldNotify: true);
 							}
 
+							// create.c:404. Penn's following room == HOME guard (create.c:412) is
+							// unreachable: this branch matches with MAT_EVERYTHING, which has no
+							// home entry, and only parse_linkable_room ever yields HOME.
+							if (!await CanSetHomeTo(executor, destObj))
+							{
+								return await NotifyService.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.PermissionDenied,
+									notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+									shouldNotify: true);
+							}
+
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
 							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
@@ -1265,6 +1277,22 @@ public partial class Commands
 		}
 
 		return await destination.HasFlag("LINK_OK");
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_link</c>'s home gate (<c>src/create.c:404</c>): <c>!controls(player, room) &amp;&amp;
+	/// !Abode(room)</c>. Any non-exit can be a home, so without this a player could home an object
+	/// they control into someone else's inventory. <c>ABODE</c> is ROOM-only in the flag seed, as in
+	/// PennMUSH, so a player or thing destination is gated on control alone.
+	/// </summary>
+	private async ValueTask<bool> CanSetHomeTo(AnySharpObject executor, AnySharpObject destination)
+	{
+		if (await PermissionService.Controls(executor, destination))
+		{
+			return true;
+		}
+
+		return await destination.HasFlag("ABODE");
 	}
 
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,

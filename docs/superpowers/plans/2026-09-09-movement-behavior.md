@@ -2581,6 +2581,15 @@ at a bare `MoveObjectCommand`, so it fires no triads, no automatic look, and pas
 `OldContainer` — which drops `MoveObjectCommand` onto its global `CacheTags.ObjectContents` fallback
 and wipes every container's contents list on every step. PennMUSH `do_move` (`src/move.c:378`).
 
+**Required assertion (from Tasks 10–11):** add one command-level test that the recursion counters
+thread through `GOTO`. Every `MovementParityTests` case written in Tasks 10–11 calls
+`IMoveService.EnterRoom` directly and hands it the test class's own parser, so none of them can see
+whether `GOTO` passes the caller's parser or builds a fresh one. A fresh parser carries fresh
+counters, which would silently defeat both the `MoveDepth` cap and the function-recursion guard
+that `TheAutomaticLookRunsOnTheCallersRecursionCounters` pins — and every existing test would still
+pass. The shape that catches it: walk an exit with `GOTO` from a parser whose counters are already
+spent, and assert the spend is still visible on the other side.
+
 - [ ] **Step 1: Write the failing tests**
 
 ```csharp

@@ -231,10 +231,8 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks, SharpObject.LockNameComparer)
-			{
-				[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() }
-			};
+			var locks = FoldLocks(dbref, found.Record.Locks);
+			locks[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -245,7 +243,7 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks, SharpObject.LockNameComparer);
+			var locks = FoldLocks(dbref, found.Record.Locks);
 			locks.Remove(lockName);
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
@@ -785,7 +783,7 @@ public partial class LightningDatabase
 			CreationTime = record.CreationTime,
 			ModifiedTime = record.ModifiedTime,
 			Warnings = ParseWarnings(record.Warnings),
-			Locks = MapLocks(record.Locks),
+			Locks = MapLocks(dbref, record.Locks),
 			Flags = FlagsOf(dbref, type),
 			Powers = PowersOf(dbref),
 			// Attributes: the object's own top level, and the whole tree, both streamed from the
@@ -980,12 +978,23 @@ public partial class LightningDatabase
 		}
 	}
 
-	private static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
-		=> locks.ToImmutableDictionary(
+	private IImmutableDictionary<string, SharpLockData> MapLocks(long dbref, Dictionary<string, LockRecord> locks)
+		=> FoldLocks(dbref, locks).ToImmutableDictionary(
 			entry => entry.Key,
 			entry => new SharpLockData(entry.Value.LockString,
 				Enum.TryParse<LockService.LockFlags>(entry.Value.Flags, out var parsed) ? parsed : LockService.LockFlags.Default),
 			SharpObject.LockNameComparer);
+
+	/// <summary>
+	/// Lock names compare case-insensitively (<see cref="SharpObject.LockNameComparer"/>), but a
+	/// stored world can still hold two that differ only in case. Folding them keeps that world
+	/// loadable instead of throwing out of every read of the object.
+	/// </summary>
+	private Dictionary<string, LockRecord> FoldLocks(long dbref, Dictionary<string, LockRecord> locks)
+		=> SharpObject.FoldLockNames(locks, (kept, dropped) =>
+			_logger.LogWarning(
+				"Object #{Dbref} holds lock names {Kept} and {Dropped}, which differ only in case. Keeping {Kept} and dropping {Dropped}.",
+				dbref, kept, dropped, kept, dropped));
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;

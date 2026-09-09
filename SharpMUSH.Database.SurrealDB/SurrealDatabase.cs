@@ -325,7 +325,12 @@ public partial class SurrealDatabase(
 		return JsonSerializer.Serialize(dict, JsonOptions);
 	}
 
-	private static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
+	/// <summary>
+	/// Lock names compare case-insensitively (<see cref="SharpObject.LockNameComparer"/>), but a
+	/// stored world can still hold two that differ only in case. Folding them keeps that world
+	/// loadable instead of throwing out of every read of the object.
+	/// </summary>
+	private IImmutableDictionary<string, SharpLockData> DeserializeLocks(string id, string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
 			return SharpObject.EmptyLocks;
@@ -333,8 +338,12 @@ public partial class SurrealDatabase(
 		{
 			var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOptions);
 			if (dict == null) return SharpObject.EmptyLocks;
-			return dict.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value),
-				SharpObject.LockNameComparer);
+			return SharpObject.FoldLockNames(dict, (kept, dropped) =>
+					logger.LogWarning(
+						"Object {Id} holds lock names {Kept} and {Dropped}, which differ only in case. Keeping {Kept} and dropping {Dropped}.",
+						id, kept, dropped, kept, dropped))
+				.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value),
+					SharpObject.LockNameComparer);
 		}
 		catch
 		{
@@ -373,7 +382,7 @@ public partial class SurrealDatabase(
 			CreationTime = creationTime,
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
-			Locks = DeserializeLocks(locksJson),
+			Locks = DeserializeLocks(id, locksJson),
 			Flags = FlagsOf(id, type, record.flags),
 			Powers = PowersOf(id, record.powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),

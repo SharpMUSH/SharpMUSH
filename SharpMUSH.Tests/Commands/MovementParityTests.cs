@@ -759,5 +759,14 @@ public class MovementParityTests
 
 		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
 		await Assert.That(moved!.Message!.ToPlainText().Trim()).IsEqualTo(string.Empty);
+
+		// Positive control: an empty MOVED only means the skip fired if the AMOVE would otherwise
+		// have run. Move the item itself and the triad must set it.
+		await MoveService.EnterRoom(GodParser, (await Node(sticky.ToString())).AsContent,
+			(await Node(elsewhere)).AsContainer, noMoveMsgs: false, mover.DbRef, "test");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var movedNow = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
+		await Assert.That(movedNow!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
 	}
 }

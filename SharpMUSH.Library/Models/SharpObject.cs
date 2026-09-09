@@ -40,6 +40,38 @@ public class SharpObject : IObjectShaped<SharpObject>
 	public static IImmutableDictionary<string, SharpLockData> EmptyLocks { get; }
 		= ImmutableDictionary.Create<string, SharpLockData>(LockNameComparer);
 
+	/// <summary>
+	/// Folds lock names into a <see cref="LockNameComparer"/> dictionary. A stored world can hold two
+	/// names differing only in case, and the plain <see cref="Dictionary{TKey,TValue}"/> constructor
+	/// throws <see cref="ArgumentException"/> on that pair — a crash on every hydration of the object,
+	/// so every provider funnels its lock dictionaries through here instead. The first name in source
+	/// order wins, as <c>getlockstruct</c> returns the first <c>strcasecmp</c> hit walking the lock
+	/// list (<c>src/lock.c:364</c>); <paramref name="onCollision"/> is handed the winning and dropped
+	/// names so the caller can report that the world needs cleaning.
+	/// </summary>
+	public static Dictionary<string, TValue> FoldLockNames<TValue>(
+		IEnumerable<KeyValuePair<string, TValue>> source,
+		Action<string, string>? onCollision = null)
+	{
+		var folded = new Dictionary<string, TValue>(LockNameComparer);
+		// A Dictionary keeps the key it first stored, so the winning spellings are tracked alongside
+		// to name both halves of a collision.
+		var spellings = new Dictionary<string, string>(LockNameComparer);
+
+		foreach (var (name, value) in source)
+		{
+			if (!folded.TryAdd(name, value))
+			{
+				onCollision?.Invoke(spellings[name], name);
+				continue;
+			}
+
+			spellings[name] = name;
+		}
+
+		return folded;
+	}
+
 	public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
 	public long ModifiedTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();

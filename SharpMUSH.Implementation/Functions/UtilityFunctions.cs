@@ -937,10 +937,20 @@ public partial class Functions
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							// create.c:395-401: a home is anything that is not an exit, and not the object itself.
+							// create.c:395-399: a home is anything that is not an exit, and not the object itself.
 							if (!destObj.IsContainer || destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
 							{
 								return ErrorMessages.Returns.InvalidDestination;
+							}
+
+							// create.c:404. ABODE is ROOM-only in the flag seed, as in PennMUSH, so a
+							// player or thing destination is gated on control alone. Penn's following
+							// room == HOME guard (create.c:412) is unreachable: this branch matches
+							// with MAT_EVERYTHING, which has no home entry, and only
+							// parse_linkable_room ever yields HOME.
+							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("ABODE"))
+							{
+								return ErrorMessages.Returns.PermissionDenied;
 							}
 
 							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;

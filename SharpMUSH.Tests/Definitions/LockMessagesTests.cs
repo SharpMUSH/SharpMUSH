@@ -6,7 +6,10 @@ namespace SharpMUSH.Tests.Definitions;
 /// <summary>
 /// Pins <c>fail_lock</c>'s attribute names (<c>src/lock.c:832</c>): the four locks in
 /// <c>lock_msgs</c> (<c>src/lock.c:102</c>) use their historical bases, everything else derives
-/// <c>&lt;LOCKNAME&gt;_LOCK`&lt;type&gt;FAILURE</c> from the lock's PennMUSH name.
+/// <c>&lt;LOCKNAME&gt;_LOCK`&lt;type&gt;FAILURE</c> from the lock's PennMUSH name. Every derived member's
+/// enum name matches that PennMUSH name once upper-cased, <see cref="LockType.Teleport"/> included:
+/// <c>Tport_Lock = "Teleport"</c> (<c>src/lock.c:61</c>) gives <c>TELEPORT_LOCK`FAILURE</c>, though
+/// SharpMUSH's <c>@lock</c> switch spelling is <c>tport</c>.
 /// </summary>
 public class LockMessagesTests
 {
@@ -25,18 +28,10 @@ public class LockMessagesTests
 	[Arguments(LockType.Page, "PAGE")]
 	[Arguments(LockType.Drop, "DROP")]
 	[Arguments(LockType.MailForward, "MAILFORWARD")]
+	[Arguments(LockType.Teleport, "TELEPORT")]
 	public async Task UnnamedLocksDeriveFromTheEnumMemberName(LockType lockType, string expected)
 		=> await Assert.That(LockMessages.FailureAttributes(lockType))
 			.IsEqualTo(($"{expected}_LOCK`FAILURE", $"{expected}_LOCK`OFAILURE", $"{expected}_LOCK`AFAILURE"));
-
-	/// <summary>
-	/// <c>Tport_Lock = "Teleport"</c> (<c>src/lock.c:61</c>), so the derived attribute is
-	/// <c>TELEPORT_LOCK`FAILURE</c> even though SharpMUSH's <c>@lock</c> switch is <c>tport</c>.
-	/// </summary>
-	[Test]
-	public async Task TPortDerivesFromPennsTeleportLockName()
-		=> await Assert.That(LockMessages.FailureAttributes(LockType.Teleport))
-			.IsEqualTo(("TELEPORT_LOCK`FAILURE", "TELEPORT_LOCK`OFAILURE", "TELEPORT_LOCK`AFAILURE"));
 
 	[Test]
 	public async Task EveryLockTypeProducesAName()
