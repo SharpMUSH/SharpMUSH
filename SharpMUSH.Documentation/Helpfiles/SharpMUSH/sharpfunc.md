@@ -271,7 +271,7 @@ You say, "is"
 | [strinsert()]    | [stripaccents()] | [stripansi()]    | [strlen()]       |
 | [strmatch()]     | [strreplace()]   | [switch()]       | [tr()]           |
 | [trim()]         | [ucstr()]        | [urldecode()]    | [urlencode()]    |
-| [wrap()]         |                  |                  |                  |
+| [wrap()]         | [displaywidth()] | [graphemecount()] | [graphemes()]     |
 
 **See Also:**
 - [STRINGS]
@@ -6037,10 +6037,49 @@ My name
 - [ansi()]
 - [tag()]
 - [render()]
+# DISPLAYWIDTH()
+`displaywidth(<string>)`
+
+  Returns the terminal columns occupied by the text, ignoring its markup. A wide CJK character occupies two columns. Combining marks add no columns; joined emoji are measured as whole clusters by MarkupString. Empty text returns 0. This uses the same existing measurement as [strlen()].
+
+  A display column differs from a Unicode scalar (one code point), a grapheme cluster (a base plus its combining marks, or a joined emoji sequence), and a UTF-16 code unit (the indexing unit used by the .NET string API). Use [graphemecount()] and [graphemes()] for cluster operations. These functions do not normalize or repair text.
+
+  Examples: `displaywidth(界)` returns `2`; `graphemecount(界)` returns `1`.
+
+**See Also:**
+- [strlen()]
+- [graphemecount()]
+- [graphemes()]
+
+# GRAPHEMECOUNT()
+`graphemecount(<string>)`
+
+  Returns the number of extended grapheme clusters in the text, ignoring markup. Combining accents, emoji modifiers, joined emoji, and paired flag indicators remain with their cluster. Empty text returns 0. Segmentation follows the released MarkupString library and the runtime Unicode rules, so the original composed or decomposed spelling is retained.
+
+  Examples: `graphemecount(é)` returns `1`; `graphemecount(👩‍👩‍👧‍👦)` returns `1`.
+
+**See Also:**
+- [displaywidth()]
+- [graphemes()]
+
+# GRAPHEMES()
+`graphemes(<string>[, <output-separator>])`
+
+  Inserts the output separator between whole grapheme clusters, retaining ANSI, HTML, and custom markup. The default separator is one space. Any separator text is accepted, including multiple characters and markup; an explicitly empty separator returns the original text with its markup. Empty input returns empty output. No separator is inserted before the first or after the last cluster, and existing spaces in the input remain clusters. There is no escaping or quoting of clusters containing the separator; choose a separator suitable for your data.
+
+  Examples: `graphemes(é界,|)` returns `é|界`; `graphemes(é界,)` returns `é界`.
+
+  All three Unicode functions take normally evaluated arguments and use the usual function invocation and recursion limits. The evaluator permits at most 5,242,880 UTF-16 code units per function result. GRAPHEMES checks the expanded length before constructing its output and returns `#-1 OUTPUT EXCEEDED MAXIMUM SIZE` if it would exceed that ceiling. Cluster length itself has no separate fixed limit. Text is not normalized; malformed UTF-16 is retained under the library's segmentation policy.
+
+**See Also:**
+- [displaywidth()]
+- [graphemecount()]
+- [flip()]
+
 # STRLEN()
 `strlen(<string>)`
 
-  Returns the length of the string (the number of characters in it).
+  Returns terminal display columns, ignoring markup. Wide CJK characters count as two columns and combining marks add no columns. This existing behavior is unchanged; [displaywidth()] names the unit explicitly. Use [graphemecount()] to count whole grapheme clusters.
 
   Example:
 ```sharp

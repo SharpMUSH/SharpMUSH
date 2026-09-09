@@ -3684,4 +3684,26 @@
   <data name="HelpAdminSubtitle" xml:space="preserve">
     <value>The ahelp topics. Wizards and God only, in the portal as in the game.</value>
   </data>
+  <data name="EnumPermSnapshotCapture" xml:space="preserve"><value>snapshots.capture</value></data>
+  <data name="EnumPermSnapshotCaptureDesc" xml:space="preserve"><value>Capture a world snapshot.</value></data>
+  <data name="EnumPermSnapshotRestore" xml:space="preserve"><value>snapshots.restore</value></data>
+  <data name="EnumPermSnapshotRestoreDesc" xml:space="preserve"><value>Restore a world snapshot.</value></data>
+  <data name="EnumPermJobsManageOwn" xml:space="preserve"><value>jobs.manage.own</value></data>
+  <data name="EnumPermJobsManageOwnDesc" xml:space="preserve"><value>Manage jobs belonging to the authenticated actor; ownership is checked separately.</value></data>
+  <data name="EnumPermJobsManage" xml:space="preserve"><value>jobs.manage</value></data>
+  <data name="EnumPermJobsManageDesc" xml:space="preserve"><value>Manage jobs belonging to any actor.</value></data>
+  <data name="EnumPermQueueInspectOwn" xml:space="preserve"><value>queue.inspect.own</value></data>
+  <data name="EnumPermQueueInspectOwnDesc" xml:space="preserve"><value>Inspect the authenticated actor’s queued work.</value></data>
+  <data name="EnumPermQueueInspect" xml:space="preserve"><value>queue.inspect</value></data>
+  <data name="EnumPermQueueInspectDesc" xml:space="preserve"><value>Inspect queued work for any actor.</value></data>
+  <data name="EnumPermQueueControlOwn" xml:space="preserve"><value>queue.control.own</value></data>
+  <data name="EnumPermQueueControlOwnDesc" xml:space="preserve"><value>Control the authenticated actor’s queued work.</value></data>
+  <data name="EnumPermQueueControl" xml:space="preserve"><value>queue.control</value></data>
+  <data name="EnumPermQueueControlDesc" xml:space="preserve"><value>Control queued work for any actor.</value></data>
+  <data name="EnumPermDiagnosticsProfile" xml:space="preserve"><value>diagnostics.profile</value></data>
+  <data name="EnumPermDiagnosticsProfileDesc" xml:space="preserve"><value>Start and inspect server profiling sessions.</value></data>
+  <data name="EnumPermRealityAdmin" xml:space="preserve"><value>reality.admin</value></data>
+  <data name="EnumPermRealityAdminDesc" xml:space="preserve"><value>Administer reality definitions and assignments.</value></data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Highest priority explicit Allow or Deny decides each scope; Deny wins ties. Inherit uses a granted parent scope only when no role explicitly decides the child. A child denial blocks even a higher priority parent grant. No grant means denied. Delegated managers can edit only lower priority grants they possess, and cannot change their own roles or restrictions.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Your current access: {0}; priority {1}; roles {2}; resolution {3}.</value></data>
 </root>

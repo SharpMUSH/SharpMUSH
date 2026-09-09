@@ -1,4 +1,9 @@
-﻿using SharpMUSH.Library.ParserInterfaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -10,6 +15,26 @@ public class BooleanFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
+	public async Task RuntimeTinyBooleansAffectsParsedAndIndirectCalls()
+	{
+		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = false } });
+		var parser = (MUSHCodeParser)Parser;
+		parser = parser with { ServiceProvider = new OptionsProvider(parser.ServiceProvider, options) };
+		await Assert.That((await parser.FunctionParse(MarkupText.Plain("t(text)")))!.Message!.ToPlainText()).IsEqualTo("1");
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = true } });
+		foreach (var expression in new[] { "t(text)", "and(text,1)", "if(text,1,0)", "map(#apply/t,text)" })
+			await Assert.That((await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText()).IsEqualTo("0");
+	}
+
+	private sealed class OptionsProvider(IServiceProvider inner, IOptionsWrapper<SharpMUSHOptions> options) : IServiceProvider
+	{
+		public object? GetService(Type serviceType) => serviceType == typeof(IOptionsWrapper<SharpMUSHOptions>)
+			? options : inner.GetService(serviceType);
+	}
+
+	[Test]
 	[Arguments("t(1)", "1")]
 	[Arguments("t(0)", "0")]
 	[Arguments("t(true)", "1")]
@@ -17,7 +42,20 @@ public class BooleanFunctionUnitTests
 	[Arguments("t(#-1 Words)", "0")]
 	[Arguments("t()", "0")]
 	[Arguments("t( )", "0")]
-	[Arguments("t(%b)", "1")]
+	[Arguments("t(%b)", "0")]
+	[Arguments("t(-0)", "0")]
+	[Arguments("t(0.0)", "0")]
+	[Arguments("t(0e10)", "0")]
+	[Arguments("t(ansi(r,-0.0))", "0")]
+	[Arguments("t(%t)", "1")]
+	[Arguments("t(0text)", "1")]
+	[Arguments("t(-0.1)", "1")]
+	[Arguments("if(-0,yes,no)", "no")]
+	[Arguments("cand(0.0,setq(probe,changed))%q<probe>", "0")]
+	[Arguments("neq(1,2)", "1")]
+	[Arguments("neq(1,1.0)", "0")]
+	[Arguments("neq(1,2,1)", "1")]
+	[Arguments("neq(1,2,3)", "1")]
 	public async Task T(string str, string expected)
 	{
 		Console.WriteLine("Testing: {0}", str);
