@@ -5,6 +5,8 @@ using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Time;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -26,7 +28,24 @@ public partial class Functions
 	[GeneratedRegex(@"\$(?<code>.)", RegexOptions.Compiled)]
 	private static partial Regex TimeFmtPattern();
 
-	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
+	/// <summary>
+	/// Reads the trailing precision argument. Absent means <see cref="TimePrecision.Seconds"/>, so
+	/// every PennMUSH call site keeps PennMUSH's unit without saying so.
+	/// </summary>
+	private static bool TryPrecision(IReadOnlyDictionary<string, CallState> args, string key,
+		out TimePrecision precision)
+		=> TimePrecisions.TryParse(
+			args.TryGetValue(key, out var arg) ? arg.Message?.ToPlainText() : null,
+			out precision);
+
+	/// <summary>
+	/// PennMUSH's time-string format, shared by time(), ctime(), mtime(), convsecs(), starttime()
+	/// and restarttime() so they cannot drift apart.
+	/// </summary>
+	private const string PennTimeFormat = "ddd MMM dd HH:mm:ss yyyy";
+
+	[SharpFunction(Name = "ctime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "utc"])]
 	public async ValueTask<CallState> CreationTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -35,21 +54,23 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => utc
-				? found.Object().CreationTime.ToString()
-				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().CreationTime)
-					.ToLocalTime()
-					.ToString());
+			found => FormatInstant(found.Object().CreationTime, utc));
 	}
 
-	[SharpFunction(Name = "isdaylight", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["seconds"])]
+	// PennMUSH renders a time string from both branches of ctime()/mtime(); <utc> chooses the zone.
+	private static string FormatInstant(long milliseconds, bool utc)
+	{
+		var instant = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+		return (utc ? instant.UtcDateTime : instant.ToLocalTime().DateTime)
+			.ToString(PennTimeFormat, CultureInfo.InvariantCulture);
+	}
+
+	[SharpFunction(Name = "isdaylight", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular,
+		ParameterNames = ["seconds", "timezone"])]
 	public ValueTask<CallState> IsDaylight(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var secs = args.TryGetValue("0", out var value)
-			? value.Message!.ToPlainText()
-			: DateTimeOffset.Now.ToUnixTimeSeconds().ToString();
+		var secs = args.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
 		var timezone = args.TryGetValue("1", out var value1) ? value1.Message!.ToPlainText() : TimeZoneInfo.Utc.Id;
 
 		if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
@@ -57,15 +78,21 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.NoSuchTimezone);
 		}
 
-		if (!long.TryParse(secs, out var secsInt))
+		if (string.IsNullOrWhiteSpace(secs))
+		{
+			return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.UtcNow));
+		}
+
+		if (!TimePrecisions.TryParseInstant(secs, out var instant))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(DateTimeOffset.FromUnixTimeMilliseconds(secsInt)));
+		return ValueTask.FromResult<CallState>(tz.IsDaylightSavingTime(instant));
 	}
 
-	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "mtime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "utc"])]
 	public async ValueTask<CallState> ModifiedTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -74,17 +101,16 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => utc
-				? found.Object().CreationTime.ToString()
-				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().ModifiedTime)
-					.ToLocalTime()
-					.ToString());
+			found => FormatInstant(found.Object().ModifiedTime, utc));
 	}
 
-	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
+	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["precision"])]
 	public ValueTask<CallState> Secs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(DateTimeOffset.Now.ToLocalTime().ToUnixTimeSeconds().ToString());
+		=> ValueTask.FromResult<CallState>(
+			TryPrecision(parser.CurrentState.Arguments, "0", out var precision)
+				? TimePrecisions.Format(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), precision)
+				: ErrorMessages.Returns.InvalidPrecision);
 
 	[SharpFunction(Name = "secscalc", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]
@@ -100,12 +126,12 @@ public partial class Functions
 		{
 			baseTime = DateTimeOffset.UtcNow;
 		}
-		else if (long.TryParse(timeStr, out var julianOrEpoch))
+		else if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var julianOrEpoch))
 		{
 			baseTime = DateTimeOffset.FromUnixTimeSeconds(julianOrEpoch);
 			isUnixEpoch = true;
 		}
-		else if (DateTimeOffset.TryParse(timeStr, out var parsedTime))
+		else if (DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var parsedTime))
 		{
 			baseTime = parsedTime;
 		}
@@ -118,7 +144,7 @@ public partial class Functions
 				long totalSeconds = 0;
 				foreach (Match match in matches)
 				{
-					if (!double.TryParse(match.Groups["number"].Value, out var value))
+					if (!double.TryParse(match.Groups["number"].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
 					{
 						return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 					}
@@ -195,7 +221,7 @@ public partial class Functions
 			var parts = modifier.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length == 2)
 			{
-				if (double.TryParse(parts[0], out var value))
+				if (double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
 				{
 					var unit = parts[1];
 					baseTime = unit switch
@@ -219,46 +245,82 @@ public partial class Functions
 	public async ValueTask<CallState> StartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var data = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
-		return data!.StartTime.ToString();
+		return data!.StartTime.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 	}
 
-	[SharpFunction(Name = "stringsecs", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
+	[SharpFunction(Name = "stringsecs", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring", "precision"])]
 	public ValueTask<CallState> StringSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 
-		// Parse strings like "5m 1s", "1d 2h 3m 4s", "3y 2m 7d 5h 23m", etc.
-		var matches = DurationPattern().Matches(timeStr);
+		if (!TryParseDurationMilliseconds(timeStr, out var milliseconds, out var error))
+		{
+			return new ValueTask<CallState>(error!);
+		}
 
+		return ValueTask.FromResult<CallState>(TimePrecisions.Format(milliseconds, precision));
+	}
+
+	/// <summary>
+	/// Parses a duration such as "1d 2h 3m 4s" into milliseconds, accumulating in decimal so a
+	/// fractional component ("1.5s") survives to the millisecond rather than being truncated at
+	/// each term.
+	/// </summary>
+	private static bool TryParseDurationMilliseconds(string timeStr, out long milliseconds, out string? error)
+	{
+		milliseconds = 0;
+		error = null;
+
+		var matches = DurationPattern().Matches(timeStr);
 		if (matches.Count == 0)
 		{
-			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidTimestring);
+			error = ErrorMessages.Returns.InvalidTimestring;
+			return false;
 		}
 
-		long totalSeconds = 0;
-		foreach (Match match in matches)
+		// The whole accumulation sits inside the guard, not just the final cast: each term is a
+		// user-supplied decimal scaled by up to 31,536,000,000, so the multiplication and the running
+		// sum can both overflow, and softcode can reach either.
+		try
 		{
-			if (!double.TryParse(match.Groups["number"].Value, out var value))
+			decimal total = 0;
+			foreach (Match match in matches)
 			{
-				return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
+				if (!decimal.TryParse(match.Groups["number"].Value,
+							NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+							CultureInfo.InvariantCulture, out var value))
+				{
+					error = ErrorMessages.Returns.Integer;
+					return false;
+				}
+
+				total += match.Groups["unit"].Value.ToLowerInvariant() switch
+				{
+					['y', ..] => value * 365 * 24 * 3600 * 1000,
+					['w', ..] => value * 7 * 24 * 3600 * 1000,
+					['d', ..] => value * 24 * 3600 * 1000,
+					['h', ..] => value * 3600 * 1000,
+					['m', ..] => value * 60 * 1000,
+					['s', ..] => value * 1000,
+					"" => value * 1000, // Empty unit defaults to seconds
+					_ => 0 // Unknown unit returns 0 instead of throwing
+				};
 			}
 
-			var unit = match.Groups["unit"].Value.ToLower();
-			totalSeconds += unit switch
-			{
-				['y', ..] => (long)(value * 365 * 24 * 3600),
-				['w', ..] => (long)(value * 7 * 24 * 3600),
-				['d', ..] => (long)(value * 24 * 3600),
-				['h', ..] => (long)(value * 3600),
-				['m', ..] => (long)(value * 60),
-				['s', ..] => (long)value,
-				"" => (long)value, // Empty unit defaults to seconds
-				_ => 0 // Unknown unit returns 0 instead of throwing
-			};
+			milliseconds = (long)decimal.Round(total, MidpointRounding.AwayFromZero);
+			return true;
 		}
-
-		return ValueTask.FromResult<CallState>(totalSeconds.ToString());
+		catch (OverflowException)
+		{
+			error = ErrorMessages.Returns.InvalidTimestring;
+			return false;
+		}
 	}
 
 	[SharpFunction(Name = "time", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
@@ -271,12 +333,12 @@ public partial class Functions
 
 		if (string.IsNullOrEmpty(arg0))
 		{
-			return DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
+			return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
 
 		if (TimeZoneInfo.TryFindSystemTimeZoneById(arg0, out var timeZone))
 		{
-			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString("ddd MMM dd HH:mm:ss yyyy");
+			return DateTimeOffset.Now.ToOffset(timeZone.BaseUtcOffset).ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -287,14 +349,14 @@ public partial class Functions
 					IAttributeService.AttributeMode.Read, false);
 				if (!attr.IsAttribute)
 				{
-					return DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
+					return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 				}
 
 				var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
 
 				return TimeZoneInfo.TryFindSystemTimeZoneById(attrValue, out var dbTimeZone)
-					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString("ddd MMM dd HH:mm:ss yyyy")
-					: DateTimeOffset.Now.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy");
+					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString(PennTimeFormat, CultureInfo.InvariantCulture)
+					: DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 			});
 	}
 
@@ -312,11 +374,11 @@ public partial class Functions
 		{
 			dt = DateTimeOffset.UtcNow;
 		}
-		else if (long.TryParse(timeStr, out var secs))
+		else if (long.TryParse(timeStr, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var secs))
 		{
 			dt = DateTimeOffset.FromUnixTimeSeconds(secs);
 		}
-		else if (DateTime.TryParse(timeStr, out var parsed))
+		else if (DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var parsed))
 		{
 			dt = new DateTimeOffset(parsed);
 		}
@@ -368,7 +430,7 @@ public partial class Functions
 				{
 					// Try to parse as time offset like "+100 years", "-5 days", etc.
 					var parts = modifier.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-					if (parts.Length == 2 && double.TryParse(parts[0], out var amount))
+					if (parts.Length == 2 && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var amount))
 					{
 						var unit = parts[1].ToLower().TrimEnd('s');
 						return unit switch
@@ -387,10 +449,12 @@ public partial class Functions
 				}
 			});
 
-		return ValueTask.FromResult<CallState>(dt.ToString());
+		// PennMUSH: "timecalc() returns a time in the same format as time()".
+		return ValueTask.FromResult<CallState>(dt.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 	}
 
-	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["format", "seconds"])]
+	[SharpFunction(Name = "timefmt", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["format", "seconds", "timezone"])]
 	public ValueTask<CallState> TimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -400,11 +464,10 @@ public partial class Functions
 		if (args.TryGetValue("1", out var secsArg))
 		{
 			var secsStr = secsArg.Message!.ToPlainText();
-			if (!long.TryParse(secsStr, out var secs))
+			if (!TimePrecisions.TryParseInstant(secsStr, out dt))
 			{
-				return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
+				return new ValueTask<CallState>(ErrorMessages.Returns.TimeInteger);
 			}
-			dt = DateTimeOffset.FromUnixTimeSeconds(secs);
 		}
 		else
 		{
@@ -480,28 +543,35 @@ public partial class Functions
 		return weekNumber.ToString("D2");
 	}
 
-	[SharpFunction(Name = "timestring", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds"])]
+	[SharpFunction(Name = "timestring", MinArgs = 1, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["seconds", "pad", "precision"])]
 	public ValueTask<CallState> TimeString(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+
+		if (!TryPrecision(args, "2", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var secsStr = args["0"].Message!.ToPlainText();
 		var padFlag = args.TryGetValue("1", out var padArg)
 			? padArg.Message!.ToPlainText()
 			: "0";
 
-		if (!long.TryParse(secsStr, out var totalSecs))
+		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		// PennMUSH: negative seconds return error
-		if (totalSecs < 0)
+		// Both parts carry the sign, so a sub-second negative — where the whole part is 0 — is only
+		// visible in the remainder.
+		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
-		if (!int.TryParse(padFlag, out var pad))
+		if (!int.TryParse(padFlag, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var pad))
 		{
 			pad = 0;
 		}
@@ -517,118 +587,169 @@ public partial class Functions
 		var days = totalSecs / 86400;
 		var hours = totalSecs % 86400 / 3600;
 		var minutes = totalSecs % 3600 / 60;
-		var seconds = totalSecs % 60;
+		var secondsField = TimePrecisions.FormatSecondsField(totalSecs % 60, fractionMs, precision);
 
 		return pad switch
 		{
-			2 => ValueTask.FromResult<CallState>($"{days:D2}d {hours:D2}h {minutes:D2}m {seconds:D2}s"),
-			1 => ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {seconds}s"),
+			2 => ValueTask.FromResult<CallState>(
+				$"{days:D2}d {hours:D2}h {minutes:D2}m {PadSecondsField(secondsField, 2)}s"),
+			1 => ValueTask.FromResult<CallState>($"{days}d  {hours}h  {minutes}m  {secondsField}s"),
 			_ => ValueTask.FromResult<CallState>(" " + string.Join("  ",
 				new[] {
 					days > 0 ? $"{days}d" : null,
 					hours > 0 ? $"{hours}h" : null,
 					minutes > 0 ? $"{minutes}m" : null,
-					$"{seconds}s"
+					$"{secondsField}s"
 				}.Where(s => s != null)))
 		};
 	}
 
-	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.StripAnsi, ParameterNames = [])]
+	/// <summary>
+	/// Zero-pads the whole-seconds part of a rendered seconds field, leaving any fraction alone.
+	/// PennMUSH's pad flag widens the number to two digits, so 1.5s pads to "01.500s" — padding the
+	/// whole rendered field instead would give "1.500s" no padding at all, since it is already wide.
+	/// </summary>
+	private static string PadSecondsField(string text, int width)
+	{
+		var point = text.IndexOf('.');
+		return point < 0
+			? text.PadLeft(width, '0')
+			: text[..point].PadLeft(width, '0') + text[point..];
+	}
+
+	/// <remarks>
+	/// PennMUSH's uptime() is seconds for every type, and -1 for an event that has not happened or
+	/// is disabled. SharpMUSH has no save or dbck scheduler, so those report -1 rather than a
+	/// plausible "now" that softcode would treat as a real timestamp.
+	/// </remarks>
+	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.StripAnsi,
+		ParameterNames = ["type", "precision"])]
 	public async ValueTask<CallState> Uptime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		{
+			return ErrorMessages.Returns.InvalidPrecision;
+		}
+
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var arg0Value)
 			? arg0Value.Message!.ToPlainText()
 			: null;
 
 		var data = (await ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
 
-		if (arg0 is null)
+		long? milliseconds = arg0?.ToLowerInvariant() switch
 		{
-			return data.StartTime.ToUnixTimeSeconds().ToString();
-		}
-
-		return arg0.ToLower() switch
-		{
-			"reboot" => data.LastRebootTime.ToUnixTimeMilliseconds().ToString(),
-			"save" => DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString(),
-			"nextsave" => DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString(),
-			"dbck" => DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString(),
-			"purge" => data.NextPurgeTime.ToUnixTimeMilliseconds().ToString(),
-			"warnings" => data.NextWarningTime.ToUnixTimeMilliseconds().ToString(),
-			_ => data.StartTime.ToUnixTimeMilliseconds().ToString()
+			null or "" or "upsince" => data.StartTime.ToUnixTimeMilliseconds(),
+			"reboot" => data.LastRebootTime.ToUnixTimeMilliseconds(),
+			"purge" => data.NextPurgeTime.ToUnixTimeMilliseconds(),
+			"warnings" => data.NextWarningTime.ToUnixTimeMilliseconds(),
+			"save" or "nextsave" or "dbck" => null,
+			_ => data.StartTime.ToUnixTimeMilliseconds()
 		};
+
+		return milliseconds is null
+			? "-1"
+			: TimePrecisions.Format(milliseconds.Value, precision);
 	}
 
 	[SharpFunction(Name = "utctime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public ValueTask<CallState> CurrentCoordinatedUniversalTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(DateTimeOffset.UtcNow.ToString());
+		=> ValueTask.FromResult<CallState>(
+			DateTimeOffset.UtcNow.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 
-	[SharpFunction(Name = "csecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	/// <summary>
+	/// An object's creation time, in PennMUSH's unit — seconds since the epoch — unless a precision
+	/// argument asks otherwise.
+	/// </summary>
+	/// <remarks>
+	/// <para>PennMUSH has no &lt;utc&gt; argument here and none is possible: a Unix epoch value names
+	/// one instant, with no timezone to vary by. Slot 2 is the precision argument instead.</para>
+	/// <para>SharpMUSH's objid carries milliseconds, so unlike PennMUSH,
+	/// <c>[num(%0)]:[csecs(%0)]</c> does not reconstruct one. <c>csecs(&lt;object&gt;,ms)</c> is the
+	/// field objid actually holds.</para>
+	/// </remarks>
+	[SharpFunction(Name = "csecs", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> CSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		{
+			return ErrorMessages.Returns.InvalidPrecision;
+		}
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => utc
-				? found.Object().CreationTime.ToString()
-				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().CreationTime)
-					.ToLocalTime()
-					.ToUnixTimeMilliseconds()
-					.ToString());
+			found => TimePrecisions.Format(found.Object().CreationTime, precision));
 	}
 
-	[SharpFunction(Name = "msecs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	/// <remarks>See <see cref="CSecs"/> on why slot 2 is precision rather than &lt;utc&gt;.</remarks>
+	[SharpFunction(Name = "msecs", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "precision"])]
 	public async ValueTask<CallState> ModifiedSecs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		{
+			return ErrorMessages.Returns.InvalidPrecision;
+		}
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var targetArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var utc = parser.CurrentState.Arguments.TryGetValue("1", out var utcArgument) && utcArgument.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => utc
-				? found.Object().CreationTime.ToString()
-				: DateTimeOffset
-					.FromUnixTimeMilliseconds(found.Object().ModifiedTime)
-					.ToLocalTime()
-					.ToUnixTimeMilliseconds()
-					.ToString());
+			found => TimePrecisions.Format(found.Object().ModifiedTime, precision));
 	}
 
-	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["seconds"])]
+	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["seconds", "width", "precision"])]
 	public ValueTask<CallState> ETime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+
+		if (!TryPrecision(args, "2", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var secsStr = args["0"].Message!.ToPlainText();
 		var width = args.TryGetValue("1", out var widthArg)
 			? widthArg.Message!.ToPlainText()
 			: null;
 
-		if (!long.TryParse(secsStr, out var totalSecs))
+		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		var maxWidth = width != null && int.TryParse(width, out var w) ? w :
-			width != null ? -1 : int.MaxValue; // -1 signals invalid width
+		// PennMUSH's fun_etime rejects a negative (src/funtime.c: "secs < 0" -> e_range). Both parts
+		// carry the sign, so a sub-second negative shows up only in the remainder.
+		if (totalSecs < 0 || fractionMs < 0)
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
+		}
+
+		// An empty width argument is an omitted one. It is reachable whenever a caller skips the
+		// slot to reach precision — etime(<secs>,,ms) — and treating it as a malformed width would
+		// make the third argument unreachable without inventing a width.
+		var maxWidth = string.IsNullOrWhiteSpace(width)
+			? int.MaxValue
+			: int.TryParse(width, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var w) ? w : -1;
 
 		if (maxWidth < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.WidthMustBeANumber);
 		}
 
-		var timeSpan = TimeSpan.FromSeconds(totalSecs);
-		var years = (long)(timeSpan.TotalDays / 365);
-		var remainingDays = (long)timeSpan.TotalDays % 365;
+		var years = totalSecs / (365L * 86400L);
+		var remainingDays = totalSecs / 86400L % 365;
 		var weeks = remainingDays / 7;
 		var days = remainingDays % 7;
-		var hours = timeSpan.Hours;
-		var minutes = timeSpan.Minutes;
-		var seconds = timeSpan.Seconds;
+		var hours = totalSecs % 86400L / 3600L;
+		var minutes = totalSecs % 3600L / 60L;
+		var seconds = totalSecs % 60L;
 
 		var parts = new List<string>();
 
@@ -637,7 +758,8 @@ public partial class Functions
 		if (days > 0) parts.Add($"{days}d");
 		if (hours > 0) parts.Add($"{hours}h");
 		if (minutes > 0) parts.Add($"{minutes}m");
-		if (seconds > 0 || parts.Count == 0) parts.Add($"{seconds}s");
+		if (seconds > 0 || fractionMs > 0 || parts.Count == 0)
+			parts.Add($"{TimePrecisions.FormatSecondsField(seconds, fractionMs, precision)}s");
 
 		const string separator = "  ";
 		var result = string.Join(separator, parts);
@@ -654,53 +776,78 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
-	[SharpFunction(Name = "etimefmt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["format", "seconds"])]
+	[SharpFunction(Name = "etimefmt", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["format", "seconds", "precision"])]
 	public ValueTask<CallState> ETimeFmt(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+
+		if (!TryPrecision(args, "2", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var format = args["0"].Message!.ToPlainText();
 		var secsStr = args["1"].Message!.ToPlainText();
 
-		if (!long.TryParse(secsStr, out var totalSecs))
+		if (!TimePrecisions.TryParseSecondsParts(secsStr, out var totalSecs, out var fractionMs))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		// PennMUSH: negative seconds return error
-		if (totalSecs < 0)
+		// PennMUSH: negative seconds return error. Both parts carry the sign, so a sub-second
+		// negative shows up only in the remainder.
+		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
 		}
 
-		var timeSpan = TimeSpan.FromSeconds(totalSecs);
-		var years = (long)(timeSpan.TotalDays / 365);
-		var remainingDays = (long)timeSpan.TotalDays % 365;
+		var years = totalSecs / (365L * 86400L);
+		var remainingDays = totalSecs / 86400L % 365;
 		var weeks = remainingDays / 7;
 		var days = remainingDays % 7;
-		var hours = timeSpan.Hours;
-		var minutes = timeSpan.Minutes;
-		var seconds = timeSpan.Seconds;
+		var hours = totalSecs % 86400L / 3600L;
+		var minutes = totalSecs % 3600L / 60L;
+		var seconds = totalSecs % 60L;
 
 		// Total values (for $t codes)
-		var totalDays = (long)timeSpan.TotalDays;
-		var totalHours = (long)timeSpan.TotalHours;
-		var totalMinutes = (long)timeSpan.TotalMinutes;
+		var totalDays = totalSecs / 86400L;
+		var totalHours = totalSecs / 3600L;
+		var totalMinutes = totalSecs / 60L;
 
 		var result = ETimeFmtPattern().Replace(format, match =>
 		{
 			var widthStr = match.Groups["width"].Value;
-			var flags = match.Groups["flags"].Value.ToLower();
+			var flags = match.Groups["flags"].Value.ToLowerInvariant();
 			var codeChar = match.Groups["code"].Value;
 
-			var width = string.IsNullOrEmpty(widthStr) ? 0 : int.Parse(widthStr);
+			// The pattern's width group is \d* with no length bound, so "$99999999999s" overflows
+			// Int32. A width nobody could render falls back to no padding.
+			var width = int.TryParse(widthStr, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedWidth)
+				? parsedWidth
+				: 0;
 			var addSuffix = flags.Contains('x');
 			var skipZero = flags.Contains('z');
 			var useTotal = flags.Contains('t');
 			var isUpperCase = char.IsUpper(codeChar[0]);
-			var code = char.ToLower(codeChar[0]);
+			var code = char.ToLowerInvariant(codeChar[0]);
 			var padChar = isUpperCase && width > 0 ? '0' : ' ';
 
 			if (code == '$') return "$";
+
+			// The seconds field is the only one precision reaches: every larger unit is whole by
+			// construction, so rendering a fraction anywhere else would invent digits.
+			if (code == 's')
+			{
+				var wholeSeconds = useTotal ? totalSecs : seconds;
+				if (skipZero && wholeSeconds == 0 && fractionMs == 0) return "";
+
+				var secondsText = TimePrecisions.FormatSecondsField(wholeSeconds, fractionMs, precision);
+				var padded = width > 0
+					? (padChar == '0' ? PadSecondsField(secondsText, width) : secondsText.PadLeft(width, padChar))
+					: secondsText;
+				return addSuffix ? padded + "s" : padded;
+			}
 
 			var (value, suffix) = code switch
 			{
@@ -709,13 +856,14 @@ public partial class Functions
 				'd' => (useTotal ? totalDays : days, "d"),
 				'h' => (useTotal ? totalHours : hours, "h"),
 				'm' => (useTotal ? totalMinutes : minutes, "m"),
-				's' => (useTotal ? totalSecs : seconds, "s"),
 				_ => (0L, "")
 			};
 
 			if (skipZero && value == 0) return "";
 
-			var valueStr = width > 0 ? value.ToString().PadLeft(width, padChar) : value.ToString();
+			var valueStr = width > 0
+				? value.ToString(CultureInfo.InvariantCulture).PadLeft(width, padChar)
+				: value.ToString(CultureInfo.InvariantCulture);
 			return addSuffix ? valueStr + suffix : valueStr;
 		});
 
@@ -731,59 +879,55 @@ public partial class Functions
 			? tzArg.Message!.ToPlainText()
 			: null;
 
-		if (!long.TryParse(secsStr, out var seconds))
+		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
-
-		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
 
 		if (timezone != null)
 		{
 			if (timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
 			{
-				return ValueTask.FromResult<CallState>(dateTime.UtcDateTime.ToString("ddd MMM dd HH:mm:ss yyyy"));
+				return ValueTask.FromResult<CallState>(
+					dateTime.UtcDateTime.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 			}
-			else if (TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
+
+			if (TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out var tz))
 			{
 				var converted = TimeZoneInfo.ConvertTime(dateTime, tz);
-				return ValueTask.FromResult<CallState>(converted.ToString("ddd MMM dd HH:mm:ss yyyy"));
+				return ValueTask.FromResult<CallState>(converted.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 			}
-			else
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
-			}
+
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTimezone);
 		}
 
-		return ValueTask.FromResult<CallState>(dateTime.ToLocalTime().ToString("ddd MMM dd HH:mm:ss yyyy"));
+		return ValueTask.FromResult<CallState>(
+			dateTime.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 	}
 
-	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["time-string", "timezone"])]
+	[SharpFunction(Name = "CONVTIME", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["time-string", "timezone", "precision"])]
 	public ValueTask<CallState> ConvTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "2", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var timezone = parser.CurrentState.Arguments.TryGetValue("1", out var tzArg)
-			? tzArg.Message!.ToPlainText()
-			: null;
 
 		// Format: Ddd MMM DD HH:MM:SS YYYY
-		if (!DateTimeOffset.TryParse(timeStr, out var dateTime))
+		if (!DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture, out var dateTime))
 		{
-			if (!DateTime.TryParse(timeStr, out var dt))
+			if (!DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var dt))
 			{
 				return ValueTask.FromResult<CallState>("#-1");
 			}
 			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
 		}
 
-		if (timezone != null && timezone.Equals("utc", StringComparison.OrdinalIgnoreCase))
-		{
-			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
-		}
-
-		// Assume local time if no timezone specified
-		return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+		return ValueTask.FromResult<CallState>(
+			TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 	}
 
 	[SharpFunction(Name = "CONVUTCSECS", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
@@ -792,34 +936,40 @@ public partial class Functions
 	{
 		var secsStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (!long.TryParse(secsStr, out var seconds))
+		if (!TimePrecisions.TryParseInstant(secsStr, out var dateTime))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidSeconds);
 		}
 
-		var dateTime = DateTimeOffset.FromUnixTimeSeconds(seconds);
-		return ValueTask.FromResult<CallState>(dateTime.UtcDateTime.ToString("ddd MMM dd HH:mm:ss yyyy", System.Globalization.CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(
+			dateTime.UtcDateTime.ToString(PennTimeFormat, CultureInfo.InvariantCulture));
 	}
 
-	[SharpFunction(Name = "CONVUTCTIME", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular,
-		ParameterNames = ["time-string"])]
+	[SharpFunction(Name = "CONVUTCTIME", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
+		ParameterNames = ["time-string", "precision"])]
 	public ValueTask<CallState> ConvUtcTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (!TryPrecision(parser.CurrentState.Arguments, "1", out var precision))
+		{
+			return new ValueTask<CallState>(ErrorMessages.Returns.InvalidPrecision);
+		}
+
 		var timeStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		// Try standard format first: Ddd Mmm DD HH:MM:SS YYYY
-		if (DateTimeOffset.TryParseExact(timeStr, "ddd MMM dd HH:mm:ss yyyy",
-			System.Globalization.CultureInfo.InvariantCulture,
-			System.Globalization.DateTimeStyles.AssumeUniversal, out var dateTime))
+		if (DateTimeOffset.TryParseExact(timeStr, PennTimeFormat, CultureInfo.InvariantCulture,
+			DateTimeStyles.AssumeUniversal, out var dateTime))
 		{
-			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+			return ValueTask.FromResult<CallState>(
+				TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 		}
 
 		// Fallback: try generic UTC parse
-		if (DateTimeOffset.TryParse(timeStr, null,
-			System.Globalization.DateTimeStyles.AssumeUniversal, out dateTime))
+		if (DateTimeOffset.TryParse(timeStr, CultureInfo.InvariantCulture,
+			DateTimeStyles.AssumeUniversal, out dateTime))
 		{
-			return ValueTask.FromResult<CallState>(dateTime.ToUnixTimeSeconds().ToString());
+			return ValueTask.FromResult<CallState>(
+				TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 		}
 
 		return ValueTask.FromResult<CallState>("#-1");
