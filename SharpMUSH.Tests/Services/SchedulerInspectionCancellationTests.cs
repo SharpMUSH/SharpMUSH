@@ -12,6 +12,33 @@ namespace SharpMUSH.Tests.Services;
 public class SchedulerInspectionCancellationTests
 {
 	[Test]
+	public async Task TaskInspectionSkipsRecurringTriggersWithoutFinalFireTime()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var factory = Substitute.For<ISchedulerFactory>();
+		factory.GetScheduler().Returns(scheduler);
+		await using var queue = new Scheduler(Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+			factory, Substitute.For<IAttributeService>(), Substitute.For<Mediator.IMediator>(), NullLogger<Scheduler>.Instance);
+		var recurringKey = new TriggerKey("purge", "maintenance");
+		var finiteKey = new TriggerKey("dbref:#7-1", "delay:#7");
+		var recurring = Substitute.For<ITrigger>();
+		recurring.Key.Returns(recurringKey);
+		recurring.FinalFireTimeUtc.Returns((DateTimeOffset?)null);
+		var finite = Substitute.For<ITrigger>();
+		finite.Key.Returns(finiteKey);
+		var due = new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+		finite.FinalFireTimeUtc.Returns(due);
+		scheduler.GetTriggerKeys(Arg.Any<GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(new[] { recurringKey, finiteKey });
+		scheduler.GetTrigger(recurringKey, Arg.Any<CancellationToken>()).Returns(recurring);
+		scheduler.GetTrigger(finiteKey, Arg.Any<CancellationToken>()).Returns(finite);
+		var groups = await queue.GetAllTasks().ToArrayAsync();
+		await Assert.That(groups.Length).IsEqualTo(1);
+		await Assert.That(groups[0].Group).IsEqualTo(finiteKey.Group);
+		await Assert.That(groups[0].Item2.Length).IsEqualTo(1);
+		await Assert.That(groups[0].Item2[0].Item1).IsEqualTo(due);
+	}
+
+	[Test]
 	[Arguments("all", false)]
 	[Arguments("delay", false)]
 	[Arguments("trigger", false)]

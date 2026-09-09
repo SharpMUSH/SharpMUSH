@@ -839,7 +839,7 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
-			.Where(trigger => trigger is not null).Select(trigger => trigger!)
+			.Where(trigger => trigger?.FinalFireTimeUtc is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
