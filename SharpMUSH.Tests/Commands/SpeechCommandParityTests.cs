@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -49,11 +50,21 @@ public class SpeechCommandParityTests
 			.Known.Object().Name;
 	}
 
+	// Both fields are still null when PutTwoPlayersInOneRoom throws part-way through (a failed @dig or
+	// @tel), and an unguarded teardown would then report a NullReferenceException in place of the real
+	// setup failure.
 	[After(Test)]
 	public async Task DisconnectPlayers()
 	{
-		await ConnectionService.Disconnect(_speaker.Handle);
-		await ConnectionService.Disconnect(_listener.Handle);
+		if (_speaker is not null)
+		{
+			await ConnectionService.Disconnect(_speaker.Handle);
+		}
+
+		if (_listener is not null)
+		{
+			await ConnectionService.Disconnect(_listener.Handle);
+		}
 	}
 
 	// PennMUSH: `"hello` -> You say, "hello" / One says, "hello"
@@ -125,6 +136,23 @@ public class SpeechCommandParityTests
 	{
 		var (_, theirs) = await Speak(command);
 		await Assert.That(theirs).Contains($"{_speakerName} waves");
+	}
+
+	// PennMUSH's command_parse runs `while (*p == ' ') p++` BEFORE the `switch (*p)` that swaps a
+	// speech token for its command name, so spaces typed in front of the token do not stop it from
+	// dispatching: `  "hello` is a SAY there, not `Huh?`. `{0}` stands in for the speaker's name,
+	// which is not a constant and so cannot be written in an [Arguments] attribute.
+	[Test]
+	[Arguments("  \"hello", "{0} says, \"hello\"")]
+	[Arguments("  :waves", "{0} waves")]
+	[Arguments("  ; waves", "{0} waves")]
+	[Arguments("  ;'s thing", "{0}'s thing")]
+	[Arguments("  \\hello there", "hello there")]
+	public async ValueTask SpacesBeforeASpeechToken_StillDispatch(string command, string expected)
+	{
+		var (mine, theirs) = await Speak(command);
+		await Assert.That(theirs).Contains(string.Format(expected, _speakerName));
+		await Assert.That(mine).DoesNotContain(ErrorMessages.Notifications.HuhTypeHelp);
 	}
 
 	// PennMUSH do_say has no empty-message guard: a bare `say` says nothing, loudly.

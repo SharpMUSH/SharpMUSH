@@ -1130,11 +1130,20 @@ public class SharpMUSHParserVisitor(
 			//     than invoking SAY with a NOEVAL switch.
 			// Re-dispatching the rewritten line (rather than calling the command directly) keeps the
 			// token forms on exactly the same path as the spelled-out commands, including @hook.
-			var speechReplacer = SpeechTokenCommand(commandText);
+			// command_parse runs `while (*p == ' ') p++` BEFORE that switch, so the token still counts
+			// when the player typed spaces in front of it: `  "hello` is a SAY. commandText is the raw
+			// slice and still carries those spaces (`command` above was TrimStart()ed, commandText was
+			// not), so the token test and the re-dispatched remainder both work off tokenText — one
+			// value, so the slice can never be taken from a different offset than the test.
+			var tokenStart = SkipSpaces(commandText, 0);
+			var tokenText = tokenStart > 0
+				? commandText.Substring(tokenStart, commandText.Length - tokenStart)
+				: commandText;
+			var speechReplacer = SpeechTokenCommand(tokenText);
 			if (speechReplacer is not null)
 			{
 				await parser.CommandParse(MarkupText.Concat(
-					MarkupText.Plain(speechReplacer + " "), commandText.Substring(1)));
+					MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
 				return CallState.Empty;
 			}
 
