@@ -160,6 +160,9 @@ public class SemaphoreCommandTests
 		await Assert.That(await Count()).IsEqualTo("-2");
 		await Command($"@drain/all {target}/{attribute}");
 		await Assert.That(await Count()).IsEqualTo("");
+		await Command($"@wait {target}/{attribute}=think reused");
+		await Assert.That(await Count()).IsEqualTo("1");
+		await Command($"@drain {target}/{attribute}");
 	}
 
 	[Test]

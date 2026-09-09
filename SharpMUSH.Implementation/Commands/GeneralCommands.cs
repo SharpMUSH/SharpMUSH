@@ -2697,7 +2697,7 @@ public partial class Commands
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
 	{
 		var attrValue = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute)).LastOrDefaultAsync();
-		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out _))
+		if (attrValue is not null && attrValue.Value.Length > 0 && !int.TryParse(attrValue.Value.ToPlainText(), out _))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
