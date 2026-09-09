@@ -605,19 +605,34 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
 
-		// PennMUSH: @select with no /inline queues the matched action as a new queue entry
-		// (do_switch -> new_queue_actionlist with QUEUE_DEFAULT), so the rest of the calling
-		// action list runs FIRST. 'help @switch4' shows exactly this ordering.
+		// PennMUSH: @select with no /inline makes the matched action a NEW queue entry
+		// (do_switch -> new_queue_actionlist with QUEUE_DEFAULT). Its @break therefore cannot
+		// stop the list that ran the @select.
 		await Parser.CommandListParse(
-			MarkupText.Plain($"@select 1=1,@pemit #1=SelQueued_Action_{id};@pemit #1=SelQueued_After_{id}"));
+			MarkupText.Plain(
+				$"@select 1=1,{{@pemit #1=SelQueued_Action_{id};@break 1}};@pemit #1=SelQueued_After_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SelQueued_Action_{id}")).IsTrue()
 			.Because("the queued action must actually run, not park on a semaphore that is never notified");
 
+		await Assert.That(MessagesFor(executor)).Contains($"SelQueued_After_{id}")
+			.Because("a queued action is its own queue entry, so its @break cannot stop the calling list");
+	}
+
+	[Test]
+	public async ValueTask Select_Inline_BreakInActionStopsTheCaller()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch2': with /inline "an @break in an <action> will stop the calling action list".
+		await Parser.CommandListParse(
+			MarkupText.Plain(
+				$"@select/inline 1=1,{{@pemit #1=SelInlineBrk_Action_{id};@break 1}};@pemit #1=SelInlineBrk_After_{id}"));
+
 		var messages = MessagesFor(executor);
-		await Assert.That(messages.IndexOf($"SelQueued_After_{id}"))
-			.IsLessThan(messages.IndexOf($"SelQueued_Action_{id}"))
-			.Because("a queued action runs after the calling action list finishes");
+		await Assert.That(messages).Contains($"SelInlineBrk_Action_{id}");
+		await Assert.That(messages).DoesNotContain($"SelInlineBrk_After_{id}");
 	}
 
 	[Test]
@@ -665,16 +680,34 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
 
-		// 'help @switch4': "@switch %0=1,think one ; think after" prints before / after / one.
+		// 'help @switch4' contrasts "@switch %0=1,think one ; think after" (before / after / one)
+		// with the /inline form. The ordering itself races this engine's concurrent queue consumer,
+		// so assert the property that does not: a new queue entry's @break cannot reach the caller.
 		await Parser.CommandListParse(
-			MarkupText.Plain($"@switch 1=1,@pemit #1=SwQueued_Action_{id};@pemit #1=SwQueued_After_{id}"));
+			MarkupText.Plain(
+				$"@switch 1=1,{{@pemit #1=SwQueued_Action_{id};@break 1}};@pemit #1=SwQueued_After_{id}"));
 
 		await Assert.That(await WaitForMessage(executor, $"SwQueued_Action_{id}")).IsTrue();
 
-		var messages = MessagesFor(executor);
-		await Assert.That(messages.IndexOf($"SwQueued_After_{id}"))
-			.IsLessThan(messages.IndexOf($"SwQueued_Action_{id}"))
+		await Assert.That(MessagesFor(executor)).Contains($"SwQueued_After_{id}")
 			.Because("@switch without /inline queues its actions as new queue entries");
+	}
+
+	[Test]
+	public async ValueTask Switch_Inline_BreakInActionStopsTheCaller()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		// 'help @switch2': with /inline "an @break in an <action> will stop the calling action list
+		// (and any further <action>s) from running".
+		await Parser.CommandListParse(
+			MarkupText.Plain(
+				$"@switch/inline 1=1,{{@pemit #1=SwInlineBrk_Action_{id};@break 1}};@pemit #1=SwInlineBrk_After_{id}"));
+
+		var messages = MessagesFor(executor);
+		await Assert.That(messages).Contains($"SwInlineBrk_Action_{id}");
+		await Assert.That(messages).DoesNotContain($"SwInlineBrk_After_{id}");
 	}
 
 	[Test]
