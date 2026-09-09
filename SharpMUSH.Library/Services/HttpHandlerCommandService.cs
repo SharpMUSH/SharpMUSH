@@ -39,16 +39,6 @@ public class HttpHandlerCommandService(
 			return new NotFound();
 		}
 
-		var handlerResult = await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), ct);
-		if (handlerResult.IsNone)
-		{
-			logger.LogWarning("Configured http_handler #{HandlerDbRef} not found.", handlerDbRef.Value);
-			return new NotFound();
-		}
-
-		var handler = handlerResult.Known;
-		var handlerRef = handler.Object().DBRef;
-
 		ct.ThrowIfCancellationRequested();
 		var parentBudget = ExecutionBudget.Current;
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, parentBudget?.Token ?? default);
@@ -62,13 +52,24 @@ public class HttpHandlerCommandService(
 		// One response context, reachable two ways during execution (Penn's `struct http_request`):
 		// on the parser state for @respond, and in the output-capture frame for emitted output.
 		var context = new HttpResponseContext();
+		DBRef? handlerRef = null;
 
 		using (budget.Enter())
-		using (outputCapture.BeginCapture(handlerRef.Number, context))
 		{
 			try
 			{
 				budget.ThrowIfExceeded();
+				var handlerResult = await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), budget.Token);
+				if (handlerResult.IsNone)
+				{
+					logger.LogWarning("Configured http_handler #{HandlerDbRef} not found.", handlerDbRef.Value);
+					return new NotFound();
+				}
+
+				var handler = handlerResult.Known;
+				handlerRef = handler.Object().DBRef;
+				budget.ThrowIfExceeded();
+				using var capture = outputCapture.BeginCapture(handlerRef.Value.Number, context);
 				// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
 				// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
 				// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
@@ -82,7 +83,7 @@ public class HttpHandlerCommandService(
 
 				// Build a fresh parser state — there is no ambient parser on the HTTP request path.
 				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
-				var evalParser = parser.Push(ParserState.RootFor(handlerRef) with
+				var evalParser = parser.Push(ParserState.RootFor(handlerRef.Value) with
 				{
 					Registers = new([BuildHeaderRegisters(headers)]),
 					EnvironmentRegisters = new Dictionary<string, CallState>
@@ -113,8 +114,8 @@ public class HttpHandlerCommandService(
 
 		// HTTP`COMMAND sysevent, mirroring Penn: ip is unknown at this layer (proxied), method,
 		// path, code, ctype, request body length, response body length.
-		await eventService.TriggerEventAsync(
-			parser, "HTTP`COMMAND", handlerRef,
+		if (handlerRef is { } resolvedHandler) await eventService.TriggerEventAsync(
+			parser, "HTTP`COMMAND", resolvedHandler,
 			string.Empty, method, path, result.Status.ToString(), result.ContentType,
 			body.Length.ToString(), result.Body.Length.ToString());
 
