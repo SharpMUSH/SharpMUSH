@@ -586,6 +586,43 @@ public class UtilityFunctionUnitTests
 	/// a flag at all.
 	/// </summary>
 	[Test]
+	public async Task Wipe_WildcardLeavesInternalAttributesAlone()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("WipeInternal");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var dbref = createResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NORMAL {dbref}=keepme"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&_LINKTYPE {dbref}=HOME"));
+
+		await Parser.FunctionParse(MarkupText.Plain($"wipe({dbref})"));
+
+		var normal = await Parser.FunctionParse(MarkupText.Plain($"get({dbref}/NORMAL)"));
+		var internalAttr = await Parser.FunctionParse(MarkupText.Plain($"get({dbref}/_LINKTYPE)"));
+
+		await Assert.That(normal!.Message!.ToPlainText()).IsEmpty()
+			.Because("a wildcard wipe clears ordinary attributes, so the wipe really ran");
+		await Assert.That(internalAttr!.Message!.ToPlainText()).IsEqualTo("HOME")
+			.Because("_LINKTYPE is engine state that @link writes and loc() reads - a mass wipe must not unlink the exit");
+	}
+
+	[Test]
+	public async Task Wipe_NamedInternalAttribute_IsStillCleared()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("WipeNamedInternal");
+		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var dbref = createResult.Message!.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&_LINKTYPE {dbref}=HOME"));
+		await Parser.FunctionParse(MarkupText.Plain($"wipe({dbref}/_LINKTYPE)"));
+
+		var internalAttr = await Parser.FunctionParse(MarkupText.Plain($"get({dbref}/_LINKTYPE)"));
+
+		await Assert.That(internalAttr!.Message!.ToPlainText()).IsEmpty()
+			.Because("the guard protects against mass wipes, not against naming the attribute deliberately");
+	}
+
+	[Test]
 	public async Task Wipe_SafeObject_IsNotWiped()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();

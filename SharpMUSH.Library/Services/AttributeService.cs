@@ -1447,6 +1447,18 @@ public class AttributeService(
 				continue;
 			}
 
+			// SharpMUSH keeps engine state in underscore-prefixed attributes: _LINKTYPE is
+			// written by @link <exit>=home and @link <exit>=variable (BuildingCommands) and read
+			// back by loc() to resolve where the exit actually goes. A wildcarded wipe has to
+			// step over those the way it steps over wizard-flagged ones, or clearing a player's
+			// attributes silently unlinks their exits. Naming one explicitly still clears it,
+			// which is the same rule the wizard guard above follows - the protection is against
+			// mass wipes, not against deliberate ones.
+			if (patternIsWildcard && attrItem.LongName!.Split('`')[0].StartsWith('_'))
+			{
+				continue;
+			}
+
 			// AE_SAFE, not AE_ERROR: real_atr_clr (src/attrib.c:1100-1104) tests AF_Safe on the
 			// matched attribute BEFORE Can_Write_Attr and returns a distinct code, which
 			// wipe_helper reports with wording that names the remedy (set.c:1507-1509). Ancestor
