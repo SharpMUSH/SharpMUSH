@@ -140,18 +140,31 @@ public class TaskScheduler(
 	/// </remarks>
 	private void ReleaseEntry(QueueEntry entry)
 	{
-		if (!_pendingEntries.TryRemove(entry.Pid, out _))
+		if (_pendingEntries.TryRemove(entry.Pid, out _))
 		{
-			return;
+			ReleaseClaimed(entry);
 		}
+	}
 
+	/// <summary>
+	/// Gives back the slot and disposes the token of an entry the caller has already taken out of
+	/// <see cref="_pendingEntries"/>, and so owns exclusively.
+	/// </summary>
+	private void ReleaseClaimed(QueueEntry entry)
+	{
 		if (entry.OwnerNumber is { } owner)
 		{
-			_pendingByOwner.AddOrUpdate(owner, 0, (_, current) => Math.Max(0, current - 1));
+			Uncharge(owner);
 		}
 
 		entry.Cts.Dispose();
 	}
+
+	/// <summary>
+	/// Hands one queue slot back to an owner — <c>add_to(player, -1)</c> (<c>src/cque.c:308</c>).
+	/// </summary>
+	private void Uncharge(int ownerNumber)
+		=> _pendingByOwner.AddOrUpdate(ownerNumber, 0, (_, current) => Math.Max(0, current - 1));
 
 	/// <summary>
 	/// Builds a queue entry, charges it to its owner's quota, and writes it to the immediate queue.
@@ -198,18 +211,32 @@ public class TaskScheduler(
 	/// The count is incremented before the quota is read, so concurrent admissions cannot both slip
 	/// past the same free slot. Reading the quota costs a wizard-and-power lookup, so it is only read
 	/// once the cheap configured floor has been passed — every owner's quota is at least that floor.
+	/// A quota read that throws hands the slot back before the exception leaves, since an increment
+	/// nothing ever undoes would shrink this owner's allowance for the life of the process.
 	/// </remarks>
 	private async ValueTask<bool> Charge(AnySharpObject owner, DBRef offender)
 	{
 		var ownerNumber = owner.Object().DBRef.Number;
 		var pending = _pendingByOwner.AddOrUpdate(ownerNumber, 1, (_, current) => current + 1);
+		bool withinQuota;
 
-		if (pending <= (int)options.CurrentValue.Limit.PlayerQueueLimit || pending <= await QuotaFor(owner))
+		try
+		{
+			withinQuota = pending <= (int)options.CurrentValue.Limit.PlayerQueueLimit
+				|| pending <= await QuotaFor(owner);
+		}
+		catch
+		{
+			Uncharge(ownerNumber);
+			throw;
+		}
+
+		if (withinQuota)
 		{
 			return true;
 		}
 
-		_pendingByOwner.AddOrUpdate(ownerNumber, 0, (_, current) => Math.Max(0, current - 1));
+		Uncharge(ownerNumber);
 		await HaltRunaway(offender, owner);
 		return false;
 	}
@@ -253,6 +280,13 @@ public class TaskScheduler(
 	/// PennMUSH's "Runaway object" path (<c>src/cque.c:303-310</c>): tell the owner, log it, wipe the
 	/// offender's queue and set it HALT. The refused entry is simply not queued.
 	/// </summary>
+	/// <remarks>
+	/// The flag goes on objects only. PennMUSH exempts players from the halted gate at both ends —
+	/// <c>insert_que</c> (<c>src/cque.c:530</c>) and the dequeue re-check (<c>src/cque.c:1136</c>)
+	/// each test <c>!IsPlayer(executor)</c> first — so a HALT flag on a player buys nothing there and
+	/// here it would be actively harmful: <c>hasflag</c> would report a player as halted, and the
+	/// flag outlives the backlog that caused it.
+	/// </remarks>
 	private async ValueTask HaltRunaway(DBRef offender, AnySharpObject owner)
 	{
 		var node = await mediator.Send(new GetObjectNodeQuery(offender));
@@ -262,7 +296,7 @@ public class TaskScheduler(
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
 		await Halt(offender);
 
-		if (!node.IsNone)
+		if (!node.IsNone && !node.Known.IsPlayer)
 		{
 			// The @halt flag path (GeneralCommands.cs:2055): the flag is looked up by name, and a
 			// database missing it is a seeding problem rather than something to invent a flag for.
@@ -342,12 +376,19 @@ public class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
+	/// <summary>
+	/// A line typed at a connection. It is admitted without an executor, so it is charged to nobody:
+	/// PennMUSH's <c>run_user_input</c> (<c>src/cque.c:1076-1088</c>) builds a <c>QUEUE_SOCKET</c>
+	/// entry and calls <c>do_entry</c> directly, never going through <c>insert_que</c> or
+	/// <c>pay_queue</c>. Charging it would let a player's own objects fill the owner quota and then
+	/// make the player's next typed line the offender.
+	/// </summary>
 	public ValueTask WriteUserCommand(long handle, MString command, ParserState state)
 	{
 		EnsureConsumerStarted();
 		var pid = NextPid();
 
-		return Admit(pid, state.Executor, $"handle:{handle}-{pid}", DirectInputGroup,
+		return Admit(pid, executor: null, $"handle:{handle}-{pid}", DirectInputGroup,
 			async () =>
 			{
 				if (!string.IsNullOrEmpty(state.ConnectionSessionId) &&
@@ -624,10 +665,16 @@ int oldValue)
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{DelayGroup}:{dbRef}"));
 		await _scheduler.UnscheduleJobs(delayed);
 
-		foreach (var entry in _pendingEntries.Values.Where(e => IsQueuedFor(e, dbRef)))
+		// Claim before cancelling. An entry the consumer has already released has a disposed token,
+		// and CancellationTokenSource.Cancel() on one of those throws ObjectDisposedException — out of
+		// @halt, in this case. TryRemove makes exactly one caller the owner of the token.
+		foreach (var pending in _pendingEntries.Values.Where(e => IsQueuedFor(e, dbRef)).ToArray())
 		{
-			entry.Cts.Cancel();
-			ReleaseEntry(entry);
+			if (_pendingEntries.TryRemove(pending.Pid, out var entry))
+			{
+				entry.Cts.Cancel();
+				ReleaseClaimed(entry);
+			}
 		}
 	}
 
@@ -643,10 +690,12 @@ int oldValue)
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
-		if (_pendingEntries.TryGetValue(pid, out var entry))
+		// The removal is the claim: a look-up followed by a cancel would report success for an entry
+		// the consumer finished in between, and would cancel a token that entry had already disposed.
+		if (_pendingEntries.TryRemove(pid, out var entry))
 		{
 			entry.Cts.Cancel();
-			ReleaseEntry(entry);
+			ReleaseClaimed(entry);
 			return true;
 		}
 

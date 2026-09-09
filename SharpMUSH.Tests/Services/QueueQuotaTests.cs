@@ -1,8 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -27,7 +30,15 @@ namespace SharpMUSH.Tests.Services;
 /// non-wizard owner also fixes the quota at the configured limit, since wizards and holders of the
 /// <c>Queue</c> power get the database size on top of it.
 /// </para>
+/// <para>
+/// <c>[NotInParallel]</c>: these tests deliberately park a full quota's worth of entries on the
+/// immediate queue, and <see cref="ServerWebAppFactory"/> makes that queue — and
+/// <c>DrainImmediateQueueForTests</c>, which waits on the whole of it — session-wide. A test that
+/// drains with the default five-second timeout while this backlog is being worked through times out
+/// and throws, so this class is serialised against the other <c>[NotInParallel]</c> classes.
+/// </para>
 /// </remarks>
+[NotInParallel]
 public class QueueQuotaTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -53,9 +64,35 @@ public class QueueQuotaTests
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, prefix);
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thing}={owner}"));
+
+		// @chown without /preserve sets HALT on what it moves (BuildingCommands.cs:297, PennMUSH
+		// do_chown), and the look path refuses to queue an action attribute on a halted object
+		// (GeneralCommands.cs:759). Left on, the runaway never starts and the HALT the test asserts on
+		// is the one @chown set rather than the one the quota set.
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=!HALT"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ADESCRIBE {thing}=look me;look me"));
 
 		return thing;
+	}
+
+	/// <summary>
+	/// Parks the single queue consumer on one entry that belongs to nobody, so that entries admitted
+	/// after it stay pending and a test can look at the queue while it is loaded. The returned source
+	/// has to be completed, in a <c>finally</c>, or the session-shared queue stops for good.
+	/// </summary>
+	private async Task<TaskCompletionSource> ParkTheConsumer()
+	{
+		var gate = new TaskCompletionSource();
+
+		await Scheduler.EnqueueWork(
+			async () =>
+			{
+				await gate.Task;
+				return null;
+			},
+			"queue-quota-gate", TaskScheduler.EnqueueGroup);
+
+		return gate;
 	}
 
 	/// <summary>
@@ -109,5 +146,103 @@ public class QueueQuotaTests
 		var mark = await GodParser.FunctionParse(MarkupText.Plain($"[get({witness}/MARK)]"));
 
 		await Assert.That(mark!.Message!.ToPlainText().Trim()).IsEqualTo("set");
+	}
+
+	/// <summary>
+	/// A player's own typed line is charged to nobody, so their objects filling the owner quota
+	/// cannot make the player the offender. PennMUSH's <c>run_user_input</c>
+	/// (<c>src/cque.c:1076-1088</c>) builds its entry and calls <c>do_entry</c> directly, never
+	/// reaching <c>insert_que</c> or <c>pay_queue</c>. The HALT flag stays off for the same reason
+	/// Penn's two halted gates test <c>!IsPlayer(executor)</c> first (<c>src/cque.c:530</c>,
+	/// <c>:1136</c>): a player who cannot type is not a quota outcome anyone wants.
+	/// </summary>
+	[Test]
+	public async ValueTask APlayerCanStillTypeWhenTheirObjectsHaveFilledTheQuota()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "TypistOwner");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "Filler");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thing}={player}"));
+
+		var limit = (int)WebAppFactoryArg.Services
+			.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>().CurrentValue.Limit.PlayerQueueLimit;
+
+		var gate = await ParkTheConsumer();
+
+		try
+		{
+			// Exactly the limit: the last of these is still admitted, so nothing has been halted yet and
+			// the next admission charged to this owner is the one that would trip.
+			for (var i = 0; i < limit; i++)
+			{
+				await Scheduler.EnqueueWork(() => ValueTask.FromResult<CallState?>(null),
+					$"queue-quota-filler-{i}", TaskScheduler.EnqueueGroup, thing);
+			}
+
+			var typed = GodParser.CurrentState with
+			{
+				Executor = player,
+				Enactor = player,
+				Caller = player,
+				Handle = 1,
+				ConnectionSessionId = null
+			};
+
+			await Scheduler.WriteUserCommand(1, MarkupText.Plain($"&TYPED {thing}=ran"), typed);
+		}
+		finally
+		{
+			gate.SetResult();
+		}
+
+		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
+
+		var halted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({player},HALT)]"));
+		await Assert.That(halted!.Message!.ToPlainText().Trim()).IsEqualTo("0")
+			.Because("a player is never the runaway, and the flag would leave them unable to act");
+
+		var ran = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/TYPED)]"));
+		await Assert.That(ran!.Message!.ToPlainText().Trim()).IsEqualTo("ran")
+			.Because("direct input is admitted whatever the owner's pending count is");
+	}
+
+	/// <summary>
+	/// <c>@halt &lt;pid&gt;</c> takes the entry out of the pending set before it cancels it, so the
+	/// entry it reports having halted is one it actually owned. A second call finds nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltingByPidClaimsTheEntryAndStopsItRunning()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "PidHalt");
+		var ran = false;
+
+		var gate = await ParkTheConsumer();
+		long pid;
+
+		try
+		{
+			await Scheduler.EnqueueWork(
+				() =>
+				{
+					ran = true;
+					return ValueTask.FromResult<CallState?>(null);
+				},
+				$"dbref:{thing}-halted", TaskScheduler.EnqueueGroup, thing);
+
+			pid = await Scheduler.GetEnqueueTasks(thing).SingleAsync();
+
+			await Assert.That(await Scheduler.HaltByPid(pid)).IsTrue();
+			await Assert.That(await Scheduler.HaltByPid(pid)).IsFalse()
+				.Because("the first call removed the entry, so there is nothing left to claim");
+		}
+		finally
+		{
+			gate.SetResult();
+		}
+
+		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
+
+		await Assert.That(ran).IsFalse()
+			.Because("the consumer drops an entry whose token was cancelled before it was read");
 	}
 }

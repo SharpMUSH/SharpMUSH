@@ -9,6 +9,14 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
+/// <summary>
+/// <c>[NotInParallel]</c>: <c>DrainImmediateQueueForTests</c> waits on the whole of the immediate
+/// queue, which <see cref="ServerWebAppFactory"/> shares across the session, and the drain here uses
+/// the default five-second timeout that throws. It therefore has to be kept off the same slot as
+/// <see cref="QueueQuotaTests"/>, which parks a full quota's worth of entries on that queue — the
+/// attribute is only load-bearing when both ends carry it.
+/// </summary>
+[NotInParallel]
 public class DidItServiceTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

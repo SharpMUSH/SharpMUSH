@@ -21,6 +21,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	// Mapping from PennMUSH DBRef to SharpMUSH DBRef
 	private readonly Dictionary<int, DBRef> _dbrefMapping = [];
 
+	/// <summary>
+	/// One conversion at a time. The converter is a singleton (<c>Startup.cs:521</c>) and
+	/// <see cref="_dbrefMapping"/> is per-conversion state, so two overlapping imports clear each
+	/// other's mapping and write into the same non-concurrent dictionary, which throws
+	/// <see cref="InvalidOperationException"/> and leaves the import reporting success over nothing.
+	/// </summary>
+	private readonly SemaphoreSlim _conversionGate = new(1, 1);
+
 	public PennMUSHDatabaseConverter(
 		ISharpDatabase database,
 		PennMUSHDatabaseParser parser,
@@ -63,6 +71,23 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		PennMUSHDatabase pennDatabase,
 		IProgress<ConversionProgress>? progress,
 		CancellationToken cancellationToken = default)
+	{
+		await _conversionGate.WaitAsync(cancellationToken);
+
+		try
+		{
+			return await ConvertDatabaseCoreAsync(pennDatabase, progress, cancellationToken);
+		}
+		finally
+		{
+			_conversionGate.Release();
+		}
+	}
+
+	private async Task<ConversionResult> ConvertDatabaseCoreAsync(
+		PennMUSHDatabase pennDatabase,
+		IProgress<ConversionProgress>? progress,
+		CancellationToken cancellationToken)
 	{
 		// A singleton holding per-conversion state: uncleared, every dbref looks already-converted and
 		// a second import in the same process silently creates nothing.
