@@ -10,7 +10,7 @@ The account-to-character link and full character identity are checked against cu
 
 ## Live events
 
-`GameHub.JoinRoom` accepts only the current character's visible current room. Subscription state is tied to the connection, account, full character identity, and full room identity. Enabled delivery checks the current link, current location, source identity, reality masks, and interaction permissions for each recipient. Leaving or replacing a subscription invalidates an in-flight subscription check.
+`GameHub.JoinRoom` accepts only the current character's physical location. A hidden room can still carry an audible speaker on a shared layer, matching telnet hearing; the subscription itself exposes no room metadata. Subscription state is tied to the connection, account, full character identity, and full room identity. Enabled delivery checks the current link, current location, source identity, reality masks, and interaction permissions for each recipient. Leaving or replacing a subscription invalidates an in-flight subscription check. A failed recipient does not prevent delivery to other authorized observers.
 
 Publishers of `RoomEventMessage` should set `ActorDbref` to the source object's full objid (`#number:creation`). `ActorName` remains display text. When layers are enabled, an absent, malformed, bare, stale, or hidden actor identity cannot deliver an event. NATS and internal hub helpers use the same dispatcher. When layers are disabled, the legacy room-group delivery remains available for existing publishers that omit `ActorDbref`.
 

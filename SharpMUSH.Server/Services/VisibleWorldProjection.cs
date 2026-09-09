@@ -14,6 +14,7 @@ public interface IVisibleWorldProjection
 {
 	ValueTask<SharpPlayer?> ResolveCharacterAsync(CapabilityActor actor, CancellationToken ct = default);
 	ValueTask<bool> CanObserveRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default);
+	ValueTask<bool> CanSubscribeRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default);
 	ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, DBRef source, RoomEventType type, CancellationToken ct = default);
 	ValueTask<EngineStateResponse?> GetStateAsync(CapabilityActor actor, CancellationToken ct = default);
 }
@@ -32,13 +33,15 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		return result.IsPlayer && result.AsPlayer.Object.DBRef == character ? result.AsPlayer : null;
 	}
 
-	private async ValueTask<AnySharpContainer?> VisibleLocationAsync(SharpPlayer player, CancellationToken ct)
+	private async ValueTask<AnySharpContainer?> CurrentLocationAsync(SharpPlayer player, CancellationToken ct)
 	{
 		var location = await mediator.Send(new GetLocationQuery(player.Object.DBRef), ct);
-		if (location.IsNone) return null;
-		var room = location.WithoutNone();
-		return await reality.CanPerceiveAsync(player.Object.DBRef, room.Object().DBRef, ct) ? room : null;
+		return location.IsNone ? null : location.WithoutNone();
 	}
+
+	private async ValueTask<AnySharpContainer?> VisibleLocationAsync(SharpPlayer player, CancellationToken ct)
+		=> await CurrentLocationAsync(player, ct) is { } room
+			&& await reality.CanPerceiveAsync(player.Object.DBRef, room.Object().DBRef, ct) ? room : null;
 
 	public async ValueTask<bool> CanObserveRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default)
 	{
@@ -46,12 +49,18 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		return await VisibleLocationAsync(player, ct) is { } location && location.Object().DBRef == room;
 	}
 
+	public async ValueTask<bool> CanSubscribeRoomAsync(CapabilityActor actor, DBRef room, CancellationToken ct = default)
+	{
+		if (!room.IsObjid || await ResolveCharacterAsync(actor, ct) is not { } player) return false;
+		return await CurrentLocationAsync(player, ct) is { } location && location.Object().DBRef == room;
+	}
+
 	public async ValueTask<bool> CanReceiveRoomEventAsync(CapabilityActor actor, DBRef room, DBRef source,
 		RoomEventType type, CancellationToken ct = default)
 	{
 		if (!room.IsObjid || !source.IsObjid || !Enum.IsDefined(type)
 			|| await ResolveCharacterAsync(actor, ct) is not { } player) return false;
-		if (await VisibleLocationAsync(player, ct) is not { } location || location.Object().DBRef != room) return false;
+		if (await CurrentLocationAsync(player, ct) is not { } location || location.Object().DBRef != room) return false;
 		var sender = await mediator.Send(new GetObjectNodeQuery(source), ct);
 		if (sender.IsNone || sender.Known.Object().DBRef != source
 			|| !await reality.CanPerceiveAsync(player.Object.DBRef, source, ct)) return false;

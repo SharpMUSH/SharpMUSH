@@ -81,7 +81,7 @@ public class GameHubTests
 				player.Object.CreationTime = identity.CreationMilliseconds!.Value;
 				return ValueTask.FromResult<SharpPlayer?>(player);
 			});
-			projection.CanObserveRoomAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+			projection.CanSubscribeRoomAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		}
 
 		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry, guard, projection)
@@ -106,7 +106,7 @@ public class GameHubTests
 	}
 
 	[Test]
-	public async Task CannotSubscribeToAHiddenOrForeignRoom()
+	public async Task CannotSubscribeWithoutCurrentPhysicalRoomAuthorization()
 	{
 		var (hub, groups, _) = BuildHubWithBus(projection: Substitute.For<IVisibleWorldProjection>());
 		await Assert.That(async () => await hub.JoinRoom("#99:1")).Throws<HubException>();

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
@@ -24,7 +25,7 @@ public class RealityRoomEventTests
 		_hub.Clients.Returns(Substitute.For<IHubClients<IGameHubClient>>());
 		_hub.Clients.Group(Arg.Any<string>()).Returns(Substitute.For<IGameHubClient>());
 		_hub.Clients.Client(Arg.Any<string>()).Returns(_ => Substitute.For<IGameHubClient>());
-		_dispatcher = new(_hub, _registry, _projection, _reality);
+		_dispatcher = new(_hub, _registry, _projection, _reality, NullLogger<RoomEventDispatcher>.Instance);
 	}
 
 	private CapabilityActor Subscribe(string connection, int character)
@@ -69,6 +70,22 @@ public class RealityRoomEventTests
 		var message = new RoomEventMessage(_room.ToString(), RoomEventType.Arrive, "Actor", "arrived");
 		await _dispatcher.DispatchAsync(message);
 		await _hub.Clients.Group(GameHub.RoomGroupName(_room)).Received(1).ReceiveRoomEvent(message);
+	}
+
+	[Test]
+	public async Task FailedRecipientDoesNotPreventDeliveryToOtherObservers()
+	{
+		_reality.IsEnabledAsync(Arg.Any<CancellationToken>()).Returns(true);
+		Subscribe("first", 30);
+		Subscribe("second", 31);
+		_projection.CanReceiveRoomEventAsync(Arg.Any<CapabilityActor>(), _room, _source, RoomEventType.Say, Arg.Any<CancellationToken>()).Returns(true);
+		var client = Substitute.For<IGameHubClient>();
+		_hub.Clients.Client(Arg.Any<string>()).Returns(client);
+		var attempts = 0;
+		client.ReceiveRoomEvent(Arg.Any<RoomEventMessage>()).Returns(_ => ++attempts == 1
+			? Task.FromException(new IOException("Disconnected client")) : Task.CompletedTask);
+		await _dispatcher.DispatchAsync(new(_room.ToString(), RoomEventType.Say, "Actor", "Words", _source.ToString()));
+		await Assert.That(attempts).IsEqualTo(2);
 	}
 
 	[Test]

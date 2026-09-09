@@ -232,9 +232,8 @@ public class ObjectsController(
 	}
 
 	/// <summary>
-	/// The character this request acts as. Same rule as <c>MailController</c>: the
-	/// <c>character_dbref</c> claim, which <c>AuthController.SwitchCharacter</c> keeps in step with
-	/// the terminal's own character.
+	/// Resolves the claimed full character identity against its current account link.
+	/// A stale cookie cannot retain object access after unlinking or character recycling.
 	/// </summary>
 	private async Task<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct)
 	{

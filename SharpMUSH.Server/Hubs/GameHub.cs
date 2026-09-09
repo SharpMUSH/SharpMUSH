@@ -88,12 +88,8 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 		}
 		else
 		{
-			// A bare dbref is refused rather than routed: it would name char:#N while publishers
-			// name char:#N:creation, and the connection would receive nothing with no error anywhere.
-			logger.LogWarning(
-				"[GameHub] Connection {ConnectionId} has no usable {Claim} claim (absent, unparseable, " +
-				"or a bare dbref rather than an objid); not added to character group",
-				Context.ConnectionId, CharacterDbrefClaim);
+			logger.LogWarning("[GameHub] Connection {ConnectionId} has no current linked character; not added to character group",
+				Context.ConnectionId);
 		}
 
 		var accountId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -122,13 +118,9 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 		if (Context.User?.GetCapabilityActor() is not { } actor
 			|| await projection.ResolveCharacterAsync(actor, Context.ConnectionAborted) is not { } player)
 		{
-			// No routable character identity → the command is unroutable; fail at the auth boundary
-			// rather than publishing a reference the engine cannot reply to onto the bus.
-			logger.LogWarning(
-				"[GameHub] Connection {ConnectionId} sent a command without a usable {Claim} claim " +
-				"(absent, unparseable, or a bare dbref rather than an objid); rejecting",
-				Context.ConnectionId, CharacterDbrefClaim);
-			throw new HubException("No character identity on this connection.");
+			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a current linked character; rejecting",
+				Context.ConnectionId);
+			throw new HubException("No current linked character on this connection.");
 		}
 
 		var dbref = player.Object.DBRef.ToString();
@@ -151,7 +143,7 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	{
 		var room = ParseRoomOrThrow(roomDbref);
 		if (Context.User?.GetCapabilityActor() is not { } actor
-			|| !await projection.CanObserveRoomAsync(actor, room, Context.ConnectionAborted))
+			|| !await projection.CanSubscribeRoomAsync(actor, room, Context.ConnectionAborted))
 			throw new HubException("This room is not available to the current character.");
 		var previous = registry.SubscriptionFor(Context.ConnectionId);
 		if (!registry.JoinRoom(Context.ConnectionId, actor, room))

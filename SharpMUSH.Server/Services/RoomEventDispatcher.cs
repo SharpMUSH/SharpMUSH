@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
@@ -12,7 +13,7 @@ public interface IRoomEventDispatcher
 }
 
 public sealed class RoomEventDispatcher(IHubContext<GameHub, IGameHubClient> hub,
-	HubConnectionRegistry registry, IVisibleWorldProjection projection, IRealityPolicy reality) : IRoomEventDispatcher
+	HubConnectionRegistry registry, IVisibleWorldProjection projection, IRealityPolicy reality, ILogger<RoomEventDispatcher> logger) : IRoomEventDispatcher
 {
 	public async Task DispatchAsync(RoomEventMessage message, CancellationToken ct = default)
 	{
@@ -26,10 +27,17 @@ public sealed class RoomEventDispatcher(IHubContext<GameHub, IGameHubClient> hub
 		foreach (var subscription in registry.Subscribers(room.Value))
 		{
 			ct.ThrowIfCancellationRequested();
-			if (!registry.IsCurrent(subscription)
-				|| !await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source.Value, message.EventType, ct)
-				|| !registry.IsCurrent(subscription)) continue;
-			await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message);
+			try
+			{
+				if (!registry.IsCurrent(subscription)
+					|| !await projection.CanReceiveRoomEventAsync(subscription.Actor, room.Value, source.Value, message.EventType, ct)
+					|| !registry.IsCurrent(subscription)) continue;
+				await hub.Clients.Client(subscription.ConnectionId).ReceiveRoomEvent(message);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				logger.LogWarning(ex, "Room event delivery failed for connection {ConnectionId}", subscription.ConnectionId);
+			}
 		}
 	}
 }

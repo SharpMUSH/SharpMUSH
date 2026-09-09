@@ -79,6 +79,19 @@ public class VisibleWorldProjectionTests
 	}
 
 	[Test]
+	public async Task HiddenRoomDoesNotSuppressAPerceivedSpeaker()
+	{
+		var source = _objects.CreatePlayer(12, "Speaker", _room).AsPlayer;
+		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
+		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), IPermissionService.InteractType.Hear).Returns(true);
+		_reality.CanPerceiveAsync(_player.Object.DBRef, _room.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
+		await Assert.That(await _projection.CanObserveRoomAsync(_actor, _room.Object.DBRef)).IsFalse();
+		await Assert.That(await _projection.CanSubscribeRoomAsync(_actor, _room.Object.DBRef)).IsTrue();
+		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsTrue();
+		await Assert.That(await _projection.GetStateAsync(_actor)).IsNull();
+	}
+
+	[Test]
 	public async Task AccountRevocationOrHiddenRoomCannotReturnRoomMetadata()
 	{
 		_reality.CanPerceiveAsync(_player.Object.DBRef, _room.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
