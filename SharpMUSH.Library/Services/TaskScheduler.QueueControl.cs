@@ -17,7 +17,6 @@ public partial class TaskScheduler
 		public string Reason { get; init; } = "";
 		public long Generation { get; init; }
 		public bool ReleasePending { get; init; }
-		public bool ReleaseTimeout { get; init; }
 	}
 	private readonly HashSet<long> _running = [];
 	private readonly SemaphoreSlim _deferredChanges = new(1, 1);
@@ -121,7 +120,7 @@ public partial class TaskScheduler
 			deferred = entry.Deferred!;
 			_pendingEntries[pid] = entry with { Deferred = deferred with { Paused = false, Reason = "" } };
 		}
-		if (deferred.ReleasePending) await Activate(pid, deferred.ReleaseTimeout);
+		if (deferred.ReleasePending) await Activate(pid);
 		return QueueControlResult.Applied;
 	}
 
