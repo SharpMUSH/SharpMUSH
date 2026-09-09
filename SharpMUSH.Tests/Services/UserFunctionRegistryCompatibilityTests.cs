@@ -46,13 +46,34 @@ public class UserFunctionRegistryCompatibilityTests
 	[Test]
 	public async Task LegacyRegistryImplementationLoadsAndDispatchesWithoutNewOwnerFeatures()
 	{
+		var instance = CreateLegacyRegistry();
+		await Assert.That(instance.Resolve("missing")).IsNull();
+	}
+
+	[Test]
+	public async Task LegacyRegistryInvalidationIsHarmless()
+	{
+		var instance = CreateLegacyRegistry();
+		instance.InvalidateLocalDefinitions(new DBRef(10));
+		instance.InvalidateLocalName("name");
+		await Assert.That(instance.Resolve("missing")).IsNull();
+	}
+
+	internal static IUserDefinedFunctionService CreateLegacyRegistry()
+	{
 		var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("LegacyRegistry" + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
 		var type = assembly.DefineDynamicModule("legacy").DefineType("LegacyImplementation", TypeAttributes.Public);
 		type.AddInterfaceImplementation(typeof(IUserDefinedFunctionService));
 		type.DefineDefaultConstructor(MethodAttributes.Public);
-		foreach (var (name, result, parameters) in Legacy) DefineDefaultMethod(type, name, result, parameters);
-		var instance = (IUserDefinedFunctionService)Activator.CreateInstance(type.CreateType()!)!;
-		await Assert.That(instance.Resolve("missing")).IsNull();
+		var calls = type.DefineField("DefinitionCalls", typeof(int), FieldAttributes.Public);
+		foreach (var (name, result, parameters) in Legacy)
+		{
+			if (name != "Define") { DefineDefaultMethod(type, name, result, parameters); continue; }
+			var method = type.DefineMethod(name, MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final, result, parameters);
+			var il = method.GetILGenerator();
+			il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Dup); il.Emit(OpCodes.Ldfld, calls); il.Emit(OpCodes.Ldc_I4_1); il.Emit(OpCodes.Add); il.Emit(OpCodes.Stfld, calls); il.Emit(OpCodes.Ret);
+		}
+		return (IUserDefinedFunctionService)Activator.CreateInstance(type.CreateType()!)!;
 	}
 
 	private static void DefineDefaultMethod(TypeBuilder type, string name, Type result, Type[] parameters)

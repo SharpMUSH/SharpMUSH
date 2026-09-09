@@ -24,6 +24,12 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 	private readonly ConcurrentDictionary<string, string> _builtinRestrictions =
 		new(StringComparer.OrdinalIgnoreCase);
 
+	public void DefineLocal(UserDefinedFunction function)
+	{
+		if (function.Owner is not { IsObjid: true }) throw new ArgumentException("A full owner identity is required.", nameof(function));
+		Define(function);
+	}
+
 	public void Define(UserDefinedFunction function)
 	{
 		lock (_mutations)

@@ -85,7 +85,11 @@ public partial class Commands
 		var readable = await AttributeService.GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Read, false);
 		if (readable.IsError) return await Report(readable.AsError.Value);
 		if (readable.IsNone) return await Report(ErrorMessages.Returns.NoSuchAttribute);
-		registry.Define(new UserDefinedFunction(name, obj.Object().DBRef, readable.AsAttribute.Last().LongName!, min, max, true, null) { Owner = owner });
+		try
+		{
+			registry.DefineLocal(new UserDefinedFunction(name, obj.Object().DBRef, readable.AsAttribute.Last().LongName!, min, max, true, null) { Owner = owner });
+		}
+		catch (NotSupportedException) { return await Report(ErrorMessages.Returns.PermissionDenied); }
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor,
 			name, $"{obj.Object().DBRef}/{attribute}");
 		return CallState.Empty;
