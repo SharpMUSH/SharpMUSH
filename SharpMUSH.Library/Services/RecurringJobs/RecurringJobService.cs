@@ -145,6 +145,11 @@ public sealed class RecurringJobService(
 				await Save(jobs, ct); // At-most-once claim, even if admission or the process fails next.
 				try
 				{
+					// Admission's provider reads use the ambient token. Link host polling cancellation
+					// without extending an existing evaluation deadline or detaching the admission.
+					using var admissionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
+					using var admissionBudget = new ExecutionBudget(Timeout.InfiniteTimeSpan, admissionCancellation.Token);
+					using var admissionScope = admissionBudget.Enter();
 					var admission = await queue.EnqueueWork(() => Execute(job.Id, token), "recurring:" + job.Id, "recurring", Identity(job.Character));
 					if (!admission.Accepted)
 					{

@@ -65,6 +65,47 @@ public class RecurringJobTests
 	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 
 	[Test, NotInParallel]
+	public async Task PollingCancellationReachesQueueAdmissionAndReleasesTheGate()
+	{
+		var context = await Setup();
+		await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		CancellationToken observed = default;
+		async ValueTask<QueueAdmissionResult> Admit()
+		{
+			observed = ExecutionBudget.CurrentToken;
+			entered.TrySetResult();
+			await release.Task.WaitAsync(observed);
+			return new QueueAdmissionResult(1, QueueRejectionReason.None);
+		}
+		context.Queue.EnqueueWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DBRef>())
+			.Returns(_ => Admit());
+		using var cancellation = new CancellationTokenSource();
+		var polling = context.Service.RunDueAsync(cancellation.Token);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		cancellation.Cancel();
+		var cancelled = false;
+		try
+		{
+			try { await polling.WaitAsync(TimeSpan.FromSeconds(2)); }
+			catch (OperationCanceledException) { cancelled = true; }
+		}
+		finally
+		{
+			release.TrySetResult();
+			try { await polling; } catch (OperationCanceledException) { }
+		}
+		await Assert.That(cancelled).IsTrue();
+		await Assert.That(observed.IsCancellationRequested).IsTrue();
+		// The durable claim precedes admission; cancelled acknowledgement must not erase it.
+		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		await Assert.That(document!.Jobs.Single().RunToken).IsNotNull();
+		await context.Service.ListAsync(context.Actor).WaitAsync(TimeSpan.FromSeconds(2));
+	}
+
+	[Test, NotInParallel]
 	public async Task DelayedFiringDoesNotAccumulateQueueReservations()
 	{
 		var context = await Setup();
