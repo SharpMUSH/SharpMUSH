@@ -9,13 +9,22 @@ namespace SharpMUSH.Library.Models.Portal;
 /// The room's objid — <c>"#7:1700000000"</c>, the round-trip form of <c>DBRef</c>. A value that
 /// does not parse is dropped by the bridge.
 /// </param>
-/// <param name="ActorDbref">
-/// The source object's full objid. Required when reality layers are enabled; absent or bare
-/// identities are dropped in enabled mode. ActorName is display text and never identifies authority.
-/// </param>
+[method: System.Text.Json.Serialization.JsonConstructor]
 public record RoomEventMessage(
 	string RoomDbref,
 	RoomEventType EventType,
 	string ActorName,
-	string Content,
-	string? ActorDbref = null);
+	string Content)
+{
+	/// <summary>
+	/// The source object's full objid. Reality-enabled delivery drops absent or bare identities;
+	/// ActorName is display text and never identifies authority.
+	/// </summary>
+	public string? ActorDbref { get; init; }
+
+	public RoomEventMessage(string RoomDbref, RoomEventType EventType, string ActorName,
+		string Content, string? ActorDbref) : this(RoomDbref, EventType, ActorName, Content)
+	{
+		this.ActorDbref = ActorDbref;
+	}
+}

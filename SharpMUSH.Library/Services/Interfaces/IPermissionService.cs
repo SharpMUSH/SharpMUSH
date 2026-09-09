@@ -50,7 +50,7 @@ public interface IPermissionService
 
 	/// <summary>Checks the executor's interaction permissions while hearing the effective message source.</summary>
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type,
-		AnySharpObject hearingSource);
+		AnySharpObject hearingSource) => CanInteract(interactor, interacted, type);
 
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
