@@ -57,4 +57,7 @@ running finishes under its existing budget. Definitions do not bypass Penn game 
 
 The engine is the single writer of these definitions. Last firing attempt means the time
 of admission attempt; rejected and failed attempts remain visible. Attribute errors and
-budget failures are recorded without exposing provider internals.
+budget failures are recorded without exposing provider internals. Pre-dispatch
+authority and attribute reads share the firing's execution budget. Final status
+persistence gets one separate, bounded attempt; an unacknowledged firing is never
+replayed just because its status update failed.

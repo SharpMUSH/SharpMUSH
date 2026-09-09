@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SharpMUSH.Server.Services;
@@ -306,6 +307,153 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
+	}
+
+	[Test, NotInParallel]
+	[Arguments("read")]
+	[Arguments("running-save")]
+	[Arguments("authorize")]
+	[Arguments("executor")]
+	[Arguments("target")]
+	public async Task QueuedPredispatchIoReceivesTheExecutionBudget(string stage)
+	{
+		var context = await Setup();
+		var backing = Get<IExpandedDataStore>();
+		var store = Substitute.For<IExpandedDataStore>();
+		var objects = Substitute.For<IObjectStore>();
+		var armed = false;
+		var blocked = false;
+		CancellationToken observed = default;
+		async Task Block(string current, CancellationToken ct)
+		{
+			if (!armed || blocked || current != stage) return;
+			blocked = true;
+			observed = ct;
+			using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+			await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token);
+		}
+		async ValueTask<RecurringJobDocument?> Read(CancellationToken ct)
+		{
+			await Block("read", ct);
+			return await backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, ct);
+		}
+		async ValueTask Save(RecurringJobDocument document, CancellationToken ct)
+		{
+			if (document.Jobs.Any(job => job.Status == "running")) await Block("running-save", ct);
+			await backing.SetExpandedServerData(RecurringJobService.StorageKey, document, ct);
+		}
+		async ValueTask<AnyOptionalSharpObject> Object(DBRef identity, CancellationToken ct)
+		{
+			await Block(identity == context.Target ? "target" : "executor", ct);
+			return await Get<IObjectStore>().GetObjectNodeAsync(identity, ct);
+		}
+		async Task<bool> Authorize(CancellationToken ct) { await Block("authorize", ct); return true; }
+		store.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, Arg.Any<CancellationToken>())
+			.Returns(call => Read(call.ArgAt<CancellationToken>(1)));
+		store.SetExpandedServerData(RecurringJobService.StorageKey, Arg.Any<object>(), Arg.Any<CancellationToken>())
+			.Returns(call => Save(call.ArgAt<RecurringJobDocument>(1), call.ArgAt<CancellationToken>(2)));
+		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => Object(call.ArgAt<DBRef>(0), call.ArgAt<CancellationToken>(1)));
+		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(call => Authorize(call.ArgAt<CancellationToken>(2)));
+		var service = new RecurringJobService(store, objects, context.Capabilities, Get<IPermissionService>(),
+			Get<IAttributeService>(), context.Queue, Factory.CommandParser, context.Clock);
+		await service.InitializeAsync();
+		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		armed = true;
+		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100));
+		using (budget.Enter()) await context.Callbacks.Single()();
+		await Assert.That(blocked).IsTrue();
+		await Assert.That(observed).IsEqualTo(budget.Token);
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		var saved = await backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		await Assert.That(saved!.Jobs.Single().Status).IsEqualTo("failed");
+		await Assert.That(saved.Jobs.Single().RunToken).IsNull();
+	}
+
+	[Test, NotInParallel]
+	public async Task CancelledFiringDoesNotWaitIndefinitelyForTheDefinitionGate()
+	{
+		var context = await Setup();
+		var job = await Create(context);
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await context.Service.RunDueAsync();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+			.Returns(async _ => { entered.TrySetResult(); await release.Task; return true; });
+		var configure = context.Service.ConfigureAsync(context.Actor, job.Id, job.Schedule, job.TimeZone, false);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		using var budget = new ExecutionBudget(TimeSpan.Zero);
+		Task<CallState?>? firing = null;
+		try
+		{
+			using var scope = budget.Enter();
+			firing = context.Callbacks.Single()().AsTask();
+			try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+			catch (OperationCanceledException) { }
+		}
+		finally
+		{
+			release.TrySetResult();
+			await configure;
+			if (firing is not null)
+			{
+				try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+				catch (OperationCanceledException) { }
+			}
+		}
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+
+	[Test, NotInParallel]
+	public async Task TerminalPersistenceHasOneFreshBoundedAttemptAndRetainsUnacknowledgedClaim()
+	{
+		var context = await Setup();
+		var backing = Get<IExpandedDataStore>();
+		var store = Substitute.For<IExpandedDataStore>();
+		var armed = false;
+		var attempts = 0;
+		var activeWrites = 0;
+		CancellationToken observed = default;
+		store.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, Arg.Any<CancellationToken>())
+			.Returns(call => backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, call.ArgAt<CancellationToken>(1)));
+		async ValueTask Save(RecurringJobDocument document, CancellationToken ct)
+		{
+			if (armed && document.Jobs.Any(job => job.Status is "completed" or "failed"))
+			{
+				attempts++;
+				activeWrites++;
+				observed = ct;
+				using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+				try { await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token); }
+				finally { activeWrites--; }
+			}
+			await backing.SetExpandedServerData(RecurringJobService.StorageKey, document, ct);
+		}
+		store.SetExpandedServerData(RecurringJobService.StorageKey, Arg.Any<object>(), Arg.Any<CancellationToken>())
+			.Returns(call => Save(call.ArgAt<RecurringJobDocument>(1), call.ArgAt<CancellationToken>(2)));
+		var service = new RecurringJobService(store, Get<IObjectStore>(), context.Capabilities, Get<IPermissionService>(),
+			Get<IAttributeService>(), context.Queue, Factory.CommandParser, context.Clock);
+		await service.InitializeAsync();
+		await service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
+		context.Clock.Now = context.Clock.Now.AddMinutes(1);
+		await service.RunDueAsync();
+		armed = true;
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(3));
+		try { using var scope = budget.Enter(); await context.Callbacks.Single()().AsTask().WaitAsync(TimeSpan.FromSeconds(3)); }
+		catch (OperationCanceledException) { }
+		await Assert.That(attempts).IsEqualTo(1);
+		await Assert.That(activeWrites).IsEqualTo(0);
+		await Assert.That(observed.CanBeCanceled).IsTrue();
+		await Assert.That(observed.IsCancellationRequested).IsTrue();
+		await Assert.That(observed == budget.Token).IsFalse();
+		var document = await backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		await Assert.That(document!.Jobs.Single().RunToken).IsNotNull();
+		await service.RunDueAsync();
+		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
 	}
 
 }

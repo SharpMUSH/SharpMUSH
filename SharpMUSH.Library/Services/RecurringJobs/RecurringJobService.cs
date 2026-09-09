@@ -165,21 +165,24 @@ public sealed class RecurringJobService(
 
 	private async ValueTask<CallState?> Execute(string id, string token)
 	{
+		CallState? result;
+		string? error;
+		var ct = ExecutionBudget.CurrentToken;
 		try
 		{
 			ValueTask<CallState?> evaluation;
-			await _gate.WaitAsync();
+			await _gate.WaitAsync(ct);
 			try
 			{
-				var jobs = await Read(default);
+				var jobs = await Read(ct);
 				var job = jobs.SingleOrDefault(j => j.Id == id);
 				if (job is null || !job.Enabled || job.RunToken != token) return null;
-				await Save(Replace(jobs, job with { Status = "running" }), default);
+				await Save(Replace(jobs, job with { Status = "running" }), ct);
 				var active = Identity(job.Character);
 				var actor = new CapabilityActor(job.OwnerAccount, active, active);
-				var executor = await Authorize(actor, PortalPermission.JobsManageOwn, default);
+				var executor = await Authorize(actor, PortalPermission.JobsManageOwn, ct);
 				var target = Identity(job.Target);
-				var code = await Executable(executor, target, job.Attribute, default);
+				var code = await Executable(executor, target, job.Attribute, ct);
 				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Starting evaluation is the dispatch boundary. Do not hold the gate while awaiting
 				// softcode, which may itself disable or delete this job through normal commands.
@@ -190,26 +193,32 @@ public sealed class RecurringJobService(
 				}).CommandListParse(code);
 			}
 			finally { _gate.Release(); }
-			var result = await evaluation;
+			result = await evaluation;
 			var message = result?.Message?.ToPlainText();
-			await Finish(id, token, message?.StartsWith("#-", StringComparison.Ordinal) == true ? "Attribute execution returned an error." : null);
-			return result;
+			error = message?.StartsWith("#-", StringComparison.Ordinal) == true ? "Attribute execution returned an error." : null;
 		}
 		catch (Exception ex)
 		{
-			await Finish(id, token, ex is RecurringJobException ? ex.Message : "Attribute execution failed or exceeded its budget.");
-			return null;
+			result = null;
+			error = ex is RecurringJobException ? ex.Message : "Attribute execution failed or exceeded its budget.";
 		}
+		// A failed acknowledgement must not retry a second status mutation or reset the claim.
+		// Await the bounded write directly, including provider cancellation acknowledgement.
+		await Finish(id, token, error);
+		return result;
 	}
 
 	private async Task Finish(string id, string token, string? error)
 	{
-		await _gate.WaitAsync();
+		using var cleanup = new ExecutionBudget(TimeSpan.FromSeconds(1));
+		using var scope = cleanup.Enter();
+		var ct = cleanup.Token;
+		await _gate.WaitAsync(ct);
 		try
 		{
-			var jobs = await Read(default);
+			var jobs = await Read(ct);
 			var job = jobs.SingleOrDefault(j => j.Id == id && j.RunToken == token);
-			if (job is not null) await Save(Replace(jobs, job with { RunToken = null, LastError = error, Status = error is null ? "completed" : "failed" }), default);
+			if (job is not null) await Save(Replace(jobs, job with { RunToken = null, LastError = error, Status = error is null ? "completed" : "failed" }), ct);
 		}
 		finally { _gate.Release(); }
 	}
@@ -226,7 +235,7 @@ public sealed class RecurringJobService(
 	{
 		var obj = await objects.GetObjectNodeAsync(target, ct);
 		if (obj.IsNone || obj.Known.Object().DBRef != target || (await obj.Known.Object().Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The target identity no longer exists.");
-		if (!await permissions.Controls(executor, obj.Known)) throw Error("denied", "The executing player must control the target.");
+		if (!await permissions.Controls(executor, obj.Known).AsTask().WaitAsync(ct)) throw Error("denied", "The executing player must control the target.");
 		var value = await attributes.GetAttributeAsync(executor, obj.Known, attribute, IAttributeService.AttributeMode.Execute, false);
 		if (!value.IsAttribute || value.AsAttribute.Length == 0) throw Error("denied", "The target attribute is missing or not executable.");
 		return value.AsAttribute.Last().Value;
