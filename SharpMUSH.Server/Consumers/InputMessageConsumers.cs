@@ -12,7 +12,7 @@ namespace SharpMUSH.Server.Consumers;
 /// <summary>
 /// Consumes telnet input messages from NATS JetStream and processes them
 /// </summary>
-public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null)
+public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null, IInputSessionService? inputSessions = null)
 	: IMessageConsumer<TelnetInputMessage>
 {
 	public async Task HandleAsync(TelnetInputMessage message, CancellationToken cancellationToken = default)
@@ -24,7 +24,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 		{
 			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
 
-			if (string.IsNullOrWhiteSpace(message.Input))
+			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions?.GetCapturing(message.Handle) is null)
 			{
 				logger.LogDebug("[NATS-RECV] TelnetInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
@@ -32,7 +32,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MarkupText.Plain(message.Input),
+				command: MarkupText.Plain(message.Input ?? ""),
 				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
 		}
 		catch (Exception ex)
@@ -47,7 +47,7 @@ public class TelnetInputConsumer(ILogger<TelnetInputConsumer> logger, ITaskSched
 /// WebSocket connections publish <see cref="WebSocketInputMessage"/> rather than
 /// <see cref="TelnetInputMessage"/>; both are processed identically by the MUSH engine.
 /// </summary>
-public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null)
+public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITaskScheduler scheduler, IConnectionService? connectionService = null, IInputSessionService? inputSessions = null)
 	: IMessageConsumer<WebSocketInputMessage>
 {
 	public async Task HandleAsync(WebSocketInputMessage message, CancellationToken cancellationToken = default)
@@ -59,7 +59,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 		{
 			if (!await ConnectionIncarnation.WaitForRegistrationAsync(connectionService, message.Handle, message.SessionId, cancellationToken)) return;
 
-			if (string.IsNullOrWhiteSpace(message.Input))
+			if (string.IsNullOrWhiteSpace(message.Input) && inputSessions?.GetCapturing(message.Handle) is null)
 			{
 				logger.LogDebug("[NATS-RECV] WebSocketInputMessage ignored - empty input for Handle: {Handle}", message.Handle);
 				return;
@@ -67,7 +67,7 @@ public class WebSocketInputConsumer(ILogger<WebSocketInputConsumer> logger, ITas
 
 			await scheduler.WriteUserCommand(
 				handle: message.Handle,
-				command: MarkupText.Plain(message.Input),
+				command: MarkupText.Plain(message.Input ?? ""),
 				state: ParserState.Empty with { Handle = message.Handle, ConnectionSessionId = message.SessionId });
 		}
 		catch (Exception ex)

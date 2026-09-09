@@ -128,4 +128,16 @@
   <data name="SocksetInvalidDescriptor" xml:space="preserve">
     <value>Descripteur invalide.</value>
   </data>
+  <data name="InputSessionCancelled" xml:space="preserve">
+    <value>Session de saisie annulée. Les commandes ordinaires sont disponibles.</value>
+  </data>
+  <data name="InputSessionInputTooLarge" xml:space="preserve">
+    <value>La saisie est trop longue. La session reste active ; utilisez @input/cancel pour la quitter.</value>
+  </data>
+  <data name="InputSessionRevoked" xml:space="preserve">
+    <value>La session de saisie a pris fin car les autorisations du rappel ou l’identité du personnage ont changé.</value>
+  </data>
+  <data name="InputSessionTimeoutRejected" xml:space="preserve">
+    <value>La session de saisie a expiré. Son rappel d’expiration n’a pas pu être mis en file.</value>
+  </data>
 </root>

@@ -451,6 +451,8 @@ public class Startup(
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IInputSessionService, InputSessionService>();
+		services.AddHostedService<Services.InputSessionTimeoutService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();

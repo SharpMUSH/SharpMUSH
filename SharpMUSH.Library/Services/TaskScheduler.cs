@@ -7,6 +7,7 @@ using Quartz;
 using Quartz.Impl.Matchers;
 using Quartz.Lambda;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -42,7 +43,8 @@ public class TaskScheduler(
 	IMediator mediator,
 	ILogger<TaskScheduler> logger,
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
-	INotifyService? notifyService = null) : ITaskScheduler, IAsyncDisposable
+	INotifyService? notifyService = null,
+	IInputSessionService? inputSessions = null) : ITaskScheduler, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -59,7 +61,8 @@ public class TaskScheduler(
 		string Owner,
 		DBRef? Executor,
 		Func<ValueTask>? BeforeExecution = null,
-		DBRef? SemaphoreTarget = null
+		DBRef? SemaphoreTarget = null,
+		Action? OnReleased = null
 	);
 
 	// The reservation ledger bounds this channel, including cancelled entries until consumed.
@@ -90,6 +93,7 @@ public class TaskScheduler(
 	{
 		QueueEntry? entry;
 		lock (_admissionLock) entry = RemoveEntry(pid);
+		entry?.OnReleased?.Invoke();
 		entry?.Cts.Dispose();
 	}
 	private void CancelEntry(QueueEntry entry)
@@ -112,7 +116,7 @@ public class TaskScheduler(
 		else entry.Cts.Dispose();
 	}
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
-	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
+	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null, Action? onReleased = null)
 	{
 		string owner = $"handle:{handle}";
 		if (executor is not null)
@@ -131,7 +135,7 @@ public class TaskScheduler(
 			else
 			{
 				var pid = NextPid();
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget);
+				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased);
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
@@ -207,7 +211,10 @@ public class TaskScheduler(
 						try { await entry.BeforeExecution(); }
 						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}; continuing admitted work", entry.Pid); }
 					}
-					if (entry.Cts.IsCancellationRequested) continue;
+					lock (_admissionLock)
+					{
+						if (_stopping || entry.Cts.IsCancellationRequested) continue;
+					}
 					using var budget = ExecutionBudget.FromMilliseconds(configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000, entry.Cts.Token);
 					using var scope = budget.Enter();
 					try
@@ -274,12 +281,30 @@ public class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
-	 => Admit(async () =>
-	 {
-		 if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
-		 return await parser.FromState(state).CommandParse(handle, connectionService, command);
-	 }, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle);
+	public async ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
+	{
+		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command))
+			return new QueueAdmissionResult(0, QueueRejectionReason.None);
+		var capture = inputSessions?.GetCapturing(handle);
+		return await Admit(async () =>
+		{
+			if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
+			// A captured generation never becomes ordinary command text, even if cancelled while queued.
+			var session = capture ?? inputSessions?.GetCapturing(handle);
+			if (session is not null)
+			{
+				if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
+				return await inputSessions!.DeliverAsync(parser, session, command);
+			}
+			return await parser.FromState(state).CommandParse(handle, connectionService, command);
+		}, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle);
+	}
+
+	public ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session)
+		=> inputSessions is null
+			? ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.InvalidTarget))
+			: Admit(() => inputSessions.DeliverAsync(parser, session, MString.Empty, timeout: true),
+				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session));
 
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{

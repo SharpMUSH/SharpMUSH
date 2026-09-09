@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -8,6 +9,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface ITaskScheduler
 {
 	QueueUsage GetQueueUsage();
+	/// <summary>Admit an expired input callback under its initiating executor and normal queue budget.</summary>
+	ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session);
 	/// <summary>
 	/// Write a user command to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>
