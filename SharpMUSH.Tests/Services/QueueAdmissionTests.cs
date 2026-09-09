@@ -58,6 +58,28 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task QueuedWorkDoesNotConsumeSubmittingBreakState()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		ParserState? captured = null;
+		parser.FromState(Arg.Do<ParserState>(state => captured = state)).Returns(parser);
+		var executed = Signal();
+		parser.CommandListParse(Arg.Any<MarkupString.MarkupText>()).Returns(call =>
+		{
+			captured!.ExecutionStack.TryPop(out _);
+			executed.SetResult();
+			return ValueTask.FromResult<CallState?>(null);
+		});
+		var source = ParserState.Empty;
+		source.ExecutionStack.Push(new Execution(CommandListBreak: true));
+		await using var queue = Create(parser: parser);
+		await queue.WriteCommandList(MarkupString.MarkupText.Plain("think queued"), source);
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(source.ExecutionStack.TryPeek(out var execution) && execution.CommandListBreak).IsTrue();
+		await Assert.That(ReferenceEquals(source.ExecutionStack, captured!.ExecutionStack)).IsFalse();
+	}
+
+	[Test]
 	public async Task DrainDoesNotCancelWorkWhoseTimeoutAlreadyPublishedIt()
 	{
 		var scheduler = Substitute.For<IScheduler>();
@@ -168,6 +190,36 @@ public class QueueAdmissionTests
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(result.Accepted).IsTrue();
 		await Assert.That(observedAtPublication).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task FailedManagedTimeoutWriteRetainsRetryableReservation()
+	{
+		var count = 0;
+		var fail = false;
+		var mediator = CountingMediator(() => count, value =>
+		{
+			if (fail) throw new InvalidOperationException("injected counter failure");
+			count = value;
+		});
+		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>());
+		var result = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ready"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true);
+		fail = true;
+		try
+		{
+			await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true);
+			throw new Exception("Expected injected counter failure");
+		}
+		catch (InvalidOperationException exception)
+		{
+			await Assert.That(exception.Message).IsEqualTo("injected counter failure");
+		}
+		await Assert.That(count).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		fail = false;
+		await Assert.That((await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true)).Accepted).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
 	}
 
