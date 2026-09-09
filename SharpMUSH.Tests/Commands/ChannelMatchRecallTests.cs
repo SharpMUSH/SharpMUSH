@@ -14,8 +14,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Two things every other MUSH does that this one did not: a channel name may be abbreviated, and
-/// <c>@channel/recall</c> replays a conversation forwards inside a header and a footer.
+/// A channel name may be abbreviated, and <c>@channel/recall</c> replays a conversation forwards
+/// inside a header and a footer.
 ///
 /// <para>PennMUSH's matcher is <c>find_channel</c> and its two scoped variants
 /// (<c>src/extchat.c:943-1160</c>); its recall is <c>do_chan_recall</c> (<c>:3990-4098</c>).</para>
@@ -320,9 +320,8 @@ public class ChannelMatchRecallTests
 	}
 
 	/// <summary>
-	/// <c>crecall()</c> reads the same buffer, so it inherited the same reversal
-	/// (<c>fun_crecall</c>, <c>src/extchat.c:3554-3574</c>). Its lines are separated by the output
-	/// separator, a space by default.
+	/// <c>crecall()</c> reads the same buffer, oldest line first, separated by the output separator —
+	/// a space by default (<c>fun_crecall</c>, <c>src/extchat.c:3554-3574</c>).
 	/// </summary>
 	[Test]
 	public async Task Crecall_IsChronologicalAndSeparated()
@@ -345,8 +344,8 @@ public class ChannelMatchRecallTests
 	}
 
 	/// <summary>
-	/// PennMUSH lets anyone who COULD join a channel recall from it (<c>src/extchat.c:4050</c>); this
-	/// required membership, so a player could not read a public channel's history before joining it.
+	/// Anyone who COULD join a channel may recall from it (<c>src/extchat.c:4050</c>), which is what
+	/// makes recall usable for deciding whether to join.
 	/// </summary>
 	[Test]
 	public async Task Recall_IsAllowedToANonMemberWhoCouldJoin()
@@ -651,8 +650,8 @@ public class ChannelMatchRecallTests
 		await Mediator.Send(new AddUserToChannelCommand(channel,
 			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
 
-		// Creating a channel joins its creator to it, so take God back off: the point of the test is an
-		// authorized emitter who is NOT a member.
+		// Creating a channel joins its creator to it, so take God back off — this needs an authorized
+		// emitter who is NOT a member.
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
 		await Mediator.Send(new RemoveUserFromChannelCommand(
 			(await Mediator.Send(new GetChannelQuery(name)))!, god));
