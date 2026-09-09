@@ -25,6 +25,51 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RejectedCommandCounterWriteRetainsTheWaitingEntry(bool drain)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("command-accounting-" + Guid.NewGuid().ToString("N"), player));
+		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
+		var state = ParserState.RootFor(player.Object.DBRef);
+		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think accounting-finished"), state,
+			semaphore, 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		await Assert.That(admitted.Accepted).IsTrue();
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.Send(call.ArgAt<GetObjectNodeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.ArgAt<GetAttributeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(false);
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.ClearAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(false);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+		parser.CurrentState.Returns(state with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
+		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+		try
+		{
+			using var budget = ExecutionBudget.FromMilliseconds(30000);
+			using var scope = budget.Enter();
+			await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+			{
+				if (drain) await commands.Drain(parser, metadata); else await commands.Notify(parser, metadata);
+			});
+			var writeTokens = mediator.ReceivedCalls().Where(call => call.GetArguments().FirstOrDefault() is
+				SharpMUSH.Library.Commands.Database.SetAttributeCommand or SharpMUSH.Library.Commands.Database.ClearAttributeCommand)
+				.SelectMany(call => call.GetArguments().OfType<CancellationToken>()).ToArray();
+			await Assert.That(writeTokens.Length).IsEqualTo(1);
+			await Assert.That(writeTokens[0]).IsEqualTo(budget.Token);
+			await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo("1");
+			using (await Scheduler.EnterSemaphoreMutationAsync())
+				await Assert.That(await Scheduler.DrainCounted(semaphore)).IsEqualTo(1);
+		}
+		finally { await Scheduler.HaltByPid(admitted.Pid!.Value); }
+	}
+
+	[Test]
 	public async ValueTask NotifyCommand_ShouldWakeWaitingTask()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

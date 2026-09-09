@@ -34,7 +34,7 @@ namespace SharpMUSH.Library.Services;
 /// </example>
 /// <param name="parser"></param>
 /// <param name="schedulerFactory"></param>
-public class TaskScheduler(
+public partial class TaskScheduler(
 	IMUSHCodeParser parser,
 	IConnectionService connectionService,
 	ISchedulerFactory schedulerFactory,
@@ -98,7 +98,7 @@ public class TaskScheduler(
 	}
 	private QueueEntry? RemoveEntry(long pid)
 	{
-		if (_semaphoreRepairs.ContainsKey(pid)) return null;
+		if (_semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return null;
 		_ready.Remove(pid);
 		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
 	}
@@ -175,11 +175,16 @@ public class TaskScheduler(
 		await _semaphoreMutations.WaitAsync(ExecutionBudget.CurrentToken);
 		try
 		{
-			if (!_semaphoreRepairs.IsEmpty)
+			if (!_semaphoreRepairs.IsEmpty || _semaphoreCommandRepair is not null)
 			{
 				using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
 				using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
 				using var scope = budget.Enter();
+				if (_semaphoreCommandRepair is { } commandRepair)
+				{
+					await commandRepair();
+					_semaphoreCommandRepair = null;
+				}
 				foreach (var (pid, repair) in _semaphoreRepairs)
 				{
 					await repair();
@@ -222,7 +227,7 @@ public class TaskScheduler(
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
-			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
+			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (readyReserved ? !_ready.Contains(pid) : !_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			var group = entry.Group;
 			var semaphoreTarget = entry.SemaphoreTarget;
@@ -842,6 +847,10 @@ public class TaskScheduler(
 			logger.LogError("Shutdown with unrepaired semaphore admission PID {Pid}; the in-memory repair cannot survive restart", pid);
 			_semaphoreRepairs.TryRemove(pid, out _);
 		}
+		if (_semaphoreCommandRepair is not null)
+			logger.LogError("Shutdown with uncertain semaphore command accounting; manual counter reconciliation is required before restarting queued work");
+		_semaphoreCommandRepair = null;
+		lock (_admissionLock) _semaphoreCommandReservations.Clear();
 		foreach (var pid in _pendingEntries.Keys) Release(pid);
 		_shutdownCts.Dispose();
 		GC.SuppressFinalize(this);
