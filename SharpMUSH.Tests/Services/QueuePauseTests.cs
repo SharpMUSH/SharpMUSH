@@ -24,6 +24,54 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task NotifyRetriesJobDeletionAfterTriggerIsGone(bool canceled)
+	{
+		var fail = true;
+		ITrigger? stored = null;
+		var jobs = new HashSet<JobKey>();
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var job = call.Arg<IJobDetail>();
+			stored = call.Arg<ITrigger>().GetTriggerBuilder().ForJob(job).Build();
+			jobs.Add(job.Key);
+			return Task.FromResult(DateTimeOffset.UtcNow);
+		});
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(stored));
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { stored = null; return Task.FromResult(true); });
+		scheduler.DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			if (fail) throw canceled ? new OperationCanceledException() : new IOException("delete failed");
+			return Task.FromResult(jobs.Remove(call.Arg<JobKey>()));
+		});
+		var parser = Substitute.For<IMUSHCodeParser>(); parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = 0;
+		var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { Interlocked.Increment(ref ran); executed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser, scheduler);
+		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, target, 0);
+		if (canceled) await Assert.ThrowsAsync<OperationCanceledException>(async () => await queue.NotifyCounted(target, 1));
+		else await Assert.ThrowsAsync<IOException>(async () => await queue.NotifyCounted(target, 1));
+		await Assert.That(stored).IsNull();
+		await Assert.That(jobs.Count).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(ran).IsEqualTo(0);
+		await Assert.That(await queue.PausePending(admission.Pid!.Value, "cleanup pending")).IsEqualTo(QueueControlResult.NotPending);
+		await queue.RescheduleSemaphoreTask(admission.Pid!.Value, TimeSpan.FromHours(1));
+		await Assert.That(stored).IsNull();
+		await Assert.That((await queue.ReleaseScheduledWork(admission.Pid!.Value, true)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(ran).IsEqualTo(0);
+		fail = false;
+		await queue.NotifyCounted(target, 1);
+		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(jobs.Count).IsEqualTo(0);
+		await Assert.That(ran).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task DelayedReleaseRetainsWorkUntilTransportCleanupSucceeds()
 	{
 		var fail = true;

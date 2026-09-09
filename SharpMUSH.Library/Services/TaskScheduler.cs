@@ -392,7 +392,7 @@ public partial class TaskScheduler(
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
 			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
-				|| entry.Deferred?.ReleasePending == true || _delayedRepairs.Contains(pid)
+				|| entry.Deferred?.ReleasePending == true || (semaphoreTimeout && entry.Deferred?.CleanupJob is not null) || _delayedRepairs.Contains(pid)
 				|| generation is not null && entry.Deferred?.Generation != generation)
 				return new(null, QueueRejectionReason.AlreadyReleased);
 		}
