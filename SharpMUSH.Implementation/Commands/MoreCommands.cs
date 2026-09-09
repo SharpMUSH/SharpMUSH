@@ -25,14 +25,6 @@ public partial class Commands
 	private const string AttrDrop = "DROP";
 	private const string AttrODrop = "ODROP";
 	private const string AttrADrop = "ADROP";
-	private const string AttrEnter = "ENTER";
-	private const string AttrOEnter = "OENTER";
-	private const string AttrOXEnter = "OXENTER";
-	private const string AttrAEnter = "AENTER";
-	private const string AttrLeave = "LEAVE";
-	private const string AttrOLeave = "OLEAVE";
-	private const string AttrOXLeave = "OXLEAVE";
-	private const string AttrALeave = "ALEAVE";
 	private const string AttrLFail = "LFAIL";
 	private const string AttrOLFail = "OLFAIL";
 	private const string AttrALFail = "ALFAIL";
@@ -1614,68 +1606,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Get old location for %0 substitution
-		var oldLocation = await executor.Where();
-
 		var executorAsContent = executor.AsContent;
 		var containerToEnter = objectToEnter.AsContainer;
 		await MoveService.MoveIt(parser, executorAsContent, containerToEnter, noMoveMsgs: false,
 			executor.Object().DBRef, "enter");
 
-		var enterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEnter, IAttributeService.AttributeMode.Read, true);
-		if (enterAttr.IsAttribute && enterAttr.AsT0.Length > 0)
-		{
-			var enterMsg = enterAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(enterMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, enterMsg, executor);
-			}
-		}
-
-		var oenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOEnter, IAttributeService.AttributeMode.Read, true);
-		if (oenterAttr.IsAttribute && oenterAttr.AsT0.Length > 0)
-		{
-			var oenterMsg = oenterAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(oenterMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					containerToEnter,
-					_ => oenterMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor });
-			}
-		}
-
-		var oxenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOXEnter, IAttributeService.AttributeMode.Read, true);
-		if (oxenterAttr.IsAttribute && oxenterAttr.AsT0.Length > 0)
-		{
-			var oxenterMsg = oxenterAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(oxenterMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					oldLocation,
-					_ => oxenterMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor });
-			}
-		}
-
-		// Executor = the container being entered; enactor = player (PennMUSH @a* semantics)
-		var aenterAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrAEnter, IAttributeService.AttributeMode.Read, true);
-		if (aenterAttr.IsAttribute && aenterAttr.AsT0.Length > 0)
-		{
-			var aenterActions = aenterAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(aenterActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(aenterActions));
-			}
-		}
-
-		await NotifyService.Notify(executor, $"You enter {objectToEnter.Object().Name}.", executor);
 		return CallState.Empty;
 	}
 
@@ -2232,55 +2167,6 @@ public partial class Commands
 
 		await MoveService.MoveIt(parser, executor.AsContent, destinationLocation, noMoveMsgs: false,
 			executor.Object().DBRef, "leave");
-
-		var leaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLeave, IAttributeService.AttributeMode.Read, true);
-		if (leaveAttr.IsAttribute && leaveAttr.AsT0.Length > 0)
-		{
-			var leaveMsg = leaveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(leaveMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, leaveMsg, executor);
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"You leave {currentLocation.Object().Name}.", executor);
-		}
-
-		var oleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOLeave, IAttributeService.AttributeMode.Read, true);
-		if (oleaveAttr.IsAttribute && oleaveAttr.AsT0.Length > 0)
-		{
-			var oleaveMsg = oleaveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(oleaveMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(executor, currentLocation, _ => oleaveMsg,
-					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
-			}
-		}
-
-		var oxleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOXLeave, IAttributeService.AttributeMode.Read, true);
-		if (oxleaveAttr.IsAttribute && oxleaveAttr.AsT0.Length > 0)
-		{
-			var oxleaveMsg = oxleaveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(oxleaveMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(executor, destinationLocation, _ => oxleaveMsg,
-					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
-			}
-		}
-
-		// Executor = the container left; enactor = player (PennMUSH @a* semantics)
-		var aleaveAttr = await AttributeService.GetAttributeAsync(executor, container, AttrALeave, IAttributeService.AttributeMode.Read, true);
-		if (aleaveAttr.IsAttribute && aleaveAttr.AsT0.Length > 0)
-		{
-			var aleaveActions = aleaveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(aleaveActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(aleaveActions));
-			}
-		}
 
 		if (executor.IsPlayer)
 		{

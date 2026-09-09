@@ -259,8 +259,11 @@ public class ObjectDestructionService(
 			var destination = await ResolveEvacuationTargetAsync(content, containerDbRefNumber, ct);
 			if (destination is null) continue;
 
-			await moveService.MoveIt(parser, content, destination, noMoveMsgs: true,
-				content.Object().DBRef, "container destroyed");
+			// PennMUSH's empty_contents calls moveto with nomovemsgs = 0, "so that AENTER and such are
+			// all triggered properly" (destroy.c:821), and SYSEVENT — #-1 (externs.h:168) — as the
+			// enactor, which this codebase resolves to God the same way EventService does.
+			await moveService.MoveIt(parser, content, destination, noMoveMsgs: false,
+				new DBRef(-1), "container destroyed");
 		}
 	}
 

@@ -32,7 +32,28 @@ public class MoveService(
 			return null;
 		}
 
-		var current = await obj.AsContent.Location();
+		// The walk starts at an exit's home — its destination — and at everything else's location
+		// (utils.c:802). Only the seed uses home; the walk out of the containers uses location.
+		AnySharpContainer current;
+
+		if (obj.IsExit)
+		{
+			var home = await obj.AsExit.Home.WithCancellation(CancellationToken.None);
+
+			if (home.IsNone)
+			{
+				return null;
+			}
+
+			current = home.WithoutNone();
+		}
+		else
+		{
+			current = await obj.AsContent.Location();
+		}
+
+		// PennMUSH caps this walk at a hard 20 (utils.c:801); SharpMUSH uses the configured
+		// Limit.MaxDepth instead, so one setting bounds every recursive walk in the server.
 		var maxDepth = (int)configuration.CurrentValue.Limit.MaxDepth;
 
 		for (var depth = 0; depth < maxDepth; depth++)
@@ -63,6 +84,8 @@ public class MoveService(
 	/// Bounded by the same <c>Limit.MaxDepth</c> as <see cref="AbsoluteRoom"/>, and fails closed:
 	/// a walk that ran out of depth cannot know whether the destination is a descendant further
 	/// down, and permitting the move on a truncated answer would build the cycle it could not see.
+	/// PennMUSH's <c>recursive_member</c> caps at a hard 50 (<c>src/utils.c:512</c>); SharpMUSH uses
+	/// the configured <c>Limit.MaxDepth</c> so one setting bounds every recursive walk.
 	/// </remarks>
 	public async ValueTask<bool> WouldCreateLoop(AnySharpContent objectToMove, AnySharpContainer destination)
 	{
@@ -121,14 +144,16 @@ public class MoveService(
 		var old = oldContainer.Object().DBRef;
 		var destination = where.Object().DBRef;
 
-		// Both absolute rooms are resolved exactly twice per move, before and after, and handed to
-		// the zone triads. Walking per triad would multiply the location queries.
+		// The absolute room is walked once before the write and once after, and each side's zone is
+		// read once from it. Both are handed to the zone triads, which re-walk nothing.
 		var absOld = await AbsoluteRoom(mover);
 
 		await mediator.Send(new MoveObjectCommand(
 			what, where, enactor, noMoveMsgs, cause, OldContainer: old));
 
 		var absNew = await AbsoluteRoom(mover);
+		var oldZone = absOld is null ? null : await ZoneOf(absOld);
+		var newZone = absNew is null ? null : await ZoneOf(absNew);
 		var destinationObject = where.WithExitOption();
 		var oldObject = oldContainer.WithExitOption();
 
@@ -150,7 +175,7 @@ public class MoveService(
 					AWhat: "ALEAVE", Loc: oldContainer, Env0: destination,
 					Interact: IPermissionService.InteractType.Presence));
 
-				await ZoneTriad(parser, mover, absOld, absNew, leaving: true, loc: oldContainer);
+				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer);
 
 				if (!oldObject.IsRoom)
 				{
@@ -169,7 +194,7 @@ public class MoveService(
 						Interact: IPermissionService.InteractType.See));
 				}
 
-				await ZoneTriad(parser, mover, absOld, absNew, leaving: false, loc: where);
+				await ZoneTriad(parser, mover, oldZone, newZone, leaving: false, loc: where);
 
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: destinationObject,
@@ -182,8 +207,8 @@ public class MoveService(
 				// A non-hearer triggers the actions and none of the messages.
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: oldObject, AWhat: "ALEAVE", Loc: oldContainer));
-				await ZoneTriad(parser, mover, absOld, absNew, leaving: true, loc: oldContainer, actionsOnly: true);
-				await ZoneTriad(parser, mover, absOld, absNew, leaving: false, loc: where, actionsOnly: true);
+				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer, actionsOnly: true);
+				await ZoneTriad(parser, mover, oldZone, newZone, leaving: false, loc: where, actionsOnly: true);
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: destinationObject, AWhat: "AENTER", Loc: where));
 			}
@@ -206,15 +231,12 @@ public class MoveService(
 	private async ValueTask ZoneTriad(
 		IMUSHCodeParser parser,
 		AnySharpObject mover,
-		AnySharpContainer? absOld,
-		AnySharpContainer? absNew,
+		AnySharpObject? oldZone,
+		AnySharpObject? newZone,
 		bool leaving,
 		AnySharpContainer loc,
 		bool actionsOnly = false)
 	{
-		var oldZone = absOld is null ? null : await ZoneOf(absOld);
-		var newZone = absNew is null ? null : await ZoneOf(absNew);
-
 		var zone = leaving ? oldZone : newZone;
 
 		if (zone is null)
@@ -327,10 +349,15 @@ public class MoveService(
 			return false;
 		}
 
+		// Carried to every MoveObjectCommand below: without it the command falls back to the global
+		// ObjectContents tag and wipes every container's cached contents list.
+		DBRef? oldContainer = null;
+
 		try
 		{
 			var location = await player.AsPlayer.Location.WithCancellation(CancellationToken.None);
 			var locationDbRef = location.Object().DBRef;
+			oldContainer = locationDbRef;
 
 			// Valid location - not in the void
 			if (locationDbRef.Number >= 0)
@@ -358,7 +385,8 @@ public class MoveService(
 					home,
 					Enactor: null,
 					IsSilent: true,
-					Cause: "void_rescue"));
+					Cause: "void_rescue",
+					OldContainer: oldContainer));
 				return true;
 			}
 		}
@@ -382,7 +410,8 @@ public class MoveService(
 						fallbackContainer,
 						Enactor: null,
 						IsSilent: true,
-						Cause: "void_rescue"));
+						Cause: "void_rescue",
+						OldContainer: oldContainer));
 					return true;
 				}
 			}

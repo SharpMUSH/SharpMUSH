@@ -48,18 +48,37 @@ public class MovementParityTests
 		var to = await Dig($"{prefix}To");
 
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent me={from}"));
-		var open = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open out={to}"));
-		var exit = open.Message!.ToPlainText().Trim();
 
-		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Mover");
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={from}"));
+		try
+		{
+			var open = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@open out={to}"));
+			var exit = open.Message!.ToPlainText().Trim();
 
-		// God goes back where the rest of the session expects to find it: DbrefFunctionUnitTests
-		// asserts loc(#1) is #0, and this factory is shared for the whole test session.
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain("@teleport/silent me=#0"));
+			var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Mover");
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={from}"));
 
-		return (mover, from, to, exit);
+			return (mover, from, to, exit);
+		}
+		finally
+		{
+			// God goes back where the rest of the session expects to find it: DbrefFunctionUnitTests
+			// asserts loc(#1) is #0, and this factory is shared for the whole test session. In a
+			// finally, because a throw between here and there would leave #1 displaced for every
+			// later test — [NotInParallel] only serialises against other [NotInParallel] tests.
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain("@teleport/silent me=#0"));
+		}
+	}
+
+	/// <summary>
+	/// The number half of a reference that may have been rendered as a full objid (<c>#N:creation</c>).
+	/// <c>@dig</c> answers with an objid and a triad's <c>%0</c> with a bare dbref, so both sides of a
+	/// comparison go through this.
+	/// </summary>
+	private static string BareDbref(string reference)
+	{
+		var colon = reference.IndexOf(':');
+		return colon < 0 ? reference : reference[..colon];
 	}
 
 	[Test]
@@ -188,5 +207,95 @@ public class MovementParityTests
 				MarkupText.Plain($"@teleport {mover.DbRef}={toVehicle}")));
 
 		await Assert.That(seen.Any(m => m == $"{mover.Name} climbs out of the car.")).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>did_it_with(what, where, "ENTER", …, "AENTER", where, old, NOTHING, …)</c>
+	/// (<c>move.c:138</c>): the enter triad's <c>%0</c> is the container the mover LEFT, and it has
+	/// no <c>%1</c>. The mover is a player because only the hearer branch carries an environment —
+	/// the non-hearer branch queues a bare <c>did_it</c> (<c>move.c:154</c>) with none.
+	/// </summary>
+	[Test]
+	public async ValueTask TheEnterTriadReceivesTheContainerLeftAsPercentZero()
+	{
+		var origin = await Dig("EnterEnvOrigin");
+		var destination = await Dig("EnterEnvDest");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EnterEnvMover");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={origin}"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&AENTER {destination}=&ENTERENV me=%0/%1/"));
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {mover.DbRef}={destination}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERENV)]"));
+		var parts = seen!.Message!.ToPlainText().Trim().Split('/');
+
+		await Assert.That(BareDbref(parts[0])).IsEqualTo(BareDbref(origin));
+		await Assert.That(parts[1]).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>
+	/// <c>did_it_with(what, what, "MOVE", …, "AMOVE", where, where, old, …)</c> (<c>move.c:163</c>):
+	/// the move triad's <c>%0</c> is the destination and its <c>%1</c> is the origin.
+	/// </summary>
+	[Test]
+	public async ValueTask TheMoveTriadReceivesDestinationThenOrigin()
+	{
+		var origin = await Dig("MoveEnvOrigin");
+		var destination = await Dig("MoveEnvDest");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "MoveEnvThing");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={origin}"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&AMOVE {thing}=&MOVEENV me=%0/%1"));
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var seen = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/MOVEENV)]"));
+		var parts = seen!.Message!.ToPlainText().Trim().Split('/');
+
+		await Assert.That(BareDbref(parts[0])).IsEqualTo(BareDbref(destination));
+		await Assert.That(BareDbref(parts[1])).IsEqualTo(BareDbref(origin));
+	}
+
+	/// <summary>
+	/// <c>OXLEAVE</c> goes through <c>did_it_interact</c> (<c>move.c:120</c>), which passes
+	/// <c>pe_regs = NULL</c> (<c>predicat.c:191</c>) — so it gets no environment at all, and an
+	/// unset <c>%0</c> is an empty string rather than the dbref the with-environment triads carry.
+	/// </summary>
+	[Test]
+	public async ValueTask OxLeaveReceivesNoEnvironment()
+	{
+		var origin = await Dig("NoEnvOrigin");
+		var destinationRoom = await Dig("NoEnvDest");
+
+		var fromVehicle = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "NoEnvFromCar");
+		var toVehicle = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "NoEnvToCar");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {fromVehicle}={origin}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {toVehicle}={destinationRoom}"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&OXLEAVE {fromVehicle}=climbs out carrying [strlen(%0)] items."));
+
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoEnvMover");
+		var destinationWatcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoEnvWatch");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={fromVehicle}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {destinationWatcher.DbRef}={toVehicle}"));
+
+		var seen = await MessagesWhile(destinationWatcher.DbRef, async () =>
+			await GodParser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@teleport {mover.DbRef}={toVehicle}")));
+
+		await Assert.That(seen.Any(m => m == $"{mover.Name} climbs out carrying 0 items.")).IsTrue();
 	}
 }
