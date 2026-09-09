@@ -21,6 +21,8 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 	ILogger<QueueDiagnosticsService> logger) : IQueueDiagnosticsService
 {
 	private readonly SemaphoreSlim _collector = new(1, 1);
+	// At most one bounded mailbox batch survives cancellation; do not drain again until it finishes.
+	private Dictionary<Guid, QueueProfileSample[]>? _pendingProfileSamples;
 	private static bool CanInspect(QueueInspectionScope? scope) => scope is not null
 		&& (scope.Scopes.Contains(PortalPermission.QueueInspect) || scope.Scopes.Contains(PortalPermission.QueueInspectOwn));
 	private static bool CanProfile(QueueInspectionScope? scope) => CanInspect(scope)
@@ -92,32 +94,39 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		await _collector.WaitAsync(ct);
 		try
 		{
-			var samples = recorder.DrainProfileSamples().GroupBy(s => s.ProfileId).ToDictionary(g => g.Key, g => g.ToArray());
-			foreach (var profile in recorder.ProfileRegistrations())
+			var batches = _pendingProfileSamples is null ? 1 : 2;
+			for (var batchIndex = 0; batchIndex < batches; batchIndex++)
 			{
-				if (!samples.ContainsKey(profile.Id) && !recorder.IsProfileRecording(profile.Id)) continue;
-				try
+				var samples = _pendingProfileSamples ??= recorder.DrainProfileSamples().GroupBy(s => s.ProfileId).ToDictionary(g => g.Key, g => g.ToArray());
+				foreach (var profile in recorder.ProfileRegistrations())
 				{
-					var scope = await queues.GetInspectionScopeAsync(profile.Actor, ct);
-					if (!CanProfile(scope)) { recorder.StopProfile(profile.Id, discard: true); continue; }
-					if (!samples.TryGetValue(profile.Id, out var batch)) continue;
-					var allowed = new List<QueueProfileSample>();
-					var visibility = new Dictionary<(DBRef? Owner, DBRef? Source), bool>();
-					foreach (var sample in batch)
+					if (!samples.ContainsKey(profile.Id) && !recorder.IsProfileRecording(profile.Id)) continue;
+					try
 					{
-						var key = (sample.Owner, sample.Source);
-						if (!visibility.TryGetValue(key, out var visible))
-							visibility[key] = visible = await queues.CanInspectAsync(scope!, sample.Owner, sample.Source, ct);
-						if (visible) allowed.Add(sample);
+						var scope = await queues.GetInspectionScopeAsync(profile.Actor, ct);
+						if (!CanProfile(scope)) { recorder.StopProfile(profile.Id, discard: true); samples.Remove(profile.Id); continue; }
+						if (!samples.TryGetValue(profile.Id, out var batch)) continue;
+						var allowed = new List<QueueProfileSample>();
+						var visibility = new Dictionary<(DBRef? Owner, DBRef? Source), bool>();
+						foreach (var sample in batch)
+						{
+							var key = (sample.Owner, sample.Source);
+							if (!visibility.TryGetValue(key, out var visible))
+								visibility[key] = visible = await queues.CanInspectAsync(scope!, sample.Owner, sample.Source, ct);
+							if (visible) allowed.Add(sample);
+						}
+						recorder.ApplyProfileSamples(profile.Id, allowed);
+						samples.Remove(profile.Id);
 					}
-					recorder.ApplyProfileSamples(profile.Id, allowed);
+					catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+					catch
+					{
+						recorder.StopProfile(profile.Id, discard: true);
+						samples.Remove(profile.Id);
+						logger.LogWarning("Profiling session ended because authorization could not be refreshed");
+					}
 				}
-				catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-				catch
-				{
-					recorder.StopProfile(profile.Id, discard: true);
-					logger.LogWarning("Profiling session ended because authorization could not be refreshed");
-				}
+				_pendingProfileSamples = null;
 			}
 		}
 		finally { _collector.Release(); }

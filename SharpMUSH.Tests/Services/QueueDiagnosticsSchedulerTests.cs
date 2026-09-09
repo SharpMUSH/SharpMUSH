@@ -1,3 +1,7 @@
+using Mediator;
+using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Quartz;
@@ -15,7 +19,7 @@ namespace SharpMUSH.Tests.Services;
 public class QueueDiagnosticsSchedulerTests
 {
 	private static Scheduler Create(QueueDiagnosticsRecorder? recorder, uint capacity = 10, uint milliseconds = 1000,
-		IMUSHCodeParser? parser = null, IScheduler? scheduled = null)
+		IMUSHCodeParser? parser = null, IScheduler? scheduled = null, IMediator? mediator = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -23,7 +27,7 @@ public class QueueDiagnosticsSchedulerTests
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduled is not null) factory.GetScheduler().Returns(scheduled);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(), factory,
-			Substitute.For<IAttributeService>(), QueueAdmissionTests.TargetMediator(), NullLogger<Scheduler>.Instance,
+			Substitute.For<IAttributeService>(), mediator ?? QueueAdmissionTests.TargetMediator(), NullLogger<Scheduler>.Instance,
 			options, diagnostics: recorder);
 	}
 	private static async Task HistoryCount(QueueDiagnosticsRecorder recorder, int count)
@@ -109,6 +113,28 @@ public class QueueDiagnosticsSchedulerTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MissingDeferredTargetIsRecorded(bool attribute)
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		var mediator = QueueAdmissionTests.TargetMediator();
+		var missing = new DBRef(999, 1);
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(query => query.DBRef == missing), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(new None()));
+		await using var queue = Create(recorder, mediator: mediator);
+		var state = ParserState.Empty with { Executor = new DBRef(2, 1) };
+		var target = new DbRefAttribute(missing, ["ACTION"]);
+		var result = attribute
+			? await queue.WriteAsyncAttribute(() => ValueTask.FromResult(state), target, state.Executor)
+			: await queue.WriteCommandList(MarkupText.Plain("secret body"), state, target, 0);
+		await Assert.That(result.Reason).IsEqualTo(SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.InvalidTarget);
+		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.InvalidTarget);
+		await Assert.That(recorder.Recent().Single().Source).IsEqualTo(state.Executor);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task RejectedAndCancelledWorkHaveNoExecutionDuration()
 	{
 		var recorder = new QueueDiagnosticsRecorder();
@@ -148,6 +174,27 @@ public class QueueDiagnosticsSchedulerTests
 		await queue.EnqueueWork(async () => { await Task.Delay(Timeout.InfiniteTimeSpan, ExecutionBudget.CurrentToken); return null; }, "wait", "enqueue");
 		await HistoryCount(recorder, 1);
 		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
+	}
+
+	[Test]
+	public async Task TimeoutBookkeepingExpiryRecordsExecutionLimitAndTiming()
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		await using var queue = Create(recorder, milliseconds: 20, scheduled: Substitute.For<IScheduler>());
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var result = await queue.WriteCommandList(MarkupText.Plain("not executed"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1);
+		await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true);
+		using var held = await queue.EnterSemaphoreMutationAsync();
+		release.TrySetResult();
+		await HistoryCount(recorder, 2);
+		var row = recorder.Recent().Single(entry => entry.Pid == result.Pid);
+		await Assert.That(row.Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
+		await Assert.That(row.StartedAt).IsNotNull();
+		await Assert.That(row.ExecutionDuration).IsNotNull();
 	}
 
 	[Test]

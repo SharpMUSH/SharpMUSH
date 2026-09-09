@@ -173,6 +173,25 @@ public partial class TaskScheduler(
 	}
 	private static string? SourceAttribute(ParserState state) => state.CurrentEvaluation is { } current
 		&& current.DB == state.Executor ? current.Name : null;
+	private async ValueTask<QueueAdmissionResult> RejectInvalidTarget(DBRef? executor, string kind)
+	{
+		if (diagnostics is not null)
+		{
+			DBRef? owner = null;
+			if (executor is { } reference)
+			{
+				var source = await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken);
+				if (!source.IsNone)
+				{
+					executor = source.Known().Object().DBRef;
+					owner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+				}
+			}
+			diagnostics.Rejected(executor, owner, kind, QueueOutcome.InvalidTarget);
+		}
+		return Reject(QueueRejectionReason.InvalidTarget);
+	}
+
 	private static string DiagnosticKind(string group) => group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
 		? "semaphore" : group.StartsWith(DelayGroup + ":", StringComparison.Ordinal) ? "delay"
 		: group == DirectInputGroup ? "direct-input" : group == EnqueueGroup ? "enqueue" : "other";
@@ -267,6 +286,7 @@ public partial class TaskScheduler(
 					// entry's elapsed-time limit. Link halt cancellation only for the user body.
 					using var accountingBudget = entry.BeforeExecution is null ? null : ExecutionBudget.FromMilliseconds(milliseconds, shutdownToken);
 					using var accountingScope = accountingBudget?.Enter();
+					using var accountingObservation = entry.BeforeExecution is null ? null : entry.Observation?.Enter();
 					if (entry.BeforeExecution is not null)
 					{
 						try { await entry.BeforeExecution(); }
@@ -286,7 +306,7 @@ public partial class TaskScheduler(
 						? ExecutionBudget.FromMilliseconds(milliseconds, entry.Cts.Token)
 						: new ExecutionBudget(accountingBudget.Remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : accountingBudget.Remaining, entry.Cts.Token);
 					using var scope = budget.Enter();
-					using var observation = entry.Observation?.Enter();
+					using var observation = accountingObservation is null ? entry.Observation?.Enter() : null;
 					try
 					{
 						budget.ThrowIfExceeded();
@@ -397,7 +417,7 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
 		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
-		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
+		if (target.IsNone) return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
 		dbAttribute = new DbRefAttribute(target.Known().Object().DBRef, dbAttribute.Attribute);
 		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
 		return await Admit(async () =>
@@ -423,7 +443,7 @@ public partial class TaskScheduler(
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
-		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
+		if (target.IsNone) return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;

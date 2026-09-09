@@ -130,6 +130,37 @@ public class QueueDiagnosticsAuthorizationTests
 	}
 
 	[Test]
+	[Arguments(1)]
+	[Arguments(2)]
+	public async Task CancelledCollectionPreservesSamplesForEveryProfile(int cancelAt)
+	{
+		var h = new Harness();
+		var first = h.Recorder.StartProfile(h.Actor, TimeSpan.FromMinutes(1))!;
+		var other = h.Actor with { AccountId = "other" };
+		var second = h.Recorder.StartProfile(other, TimeSpan.FromMinutes(1))!;
+		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
+		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
+		using var cancellation = new CancellationTokenSource();
+		var interrupt = true;
+		var checks = 0;
+		h.Queues.CanInspectAsync(Arg.Any<QueueInspectionScope>(), Arg.Any<DBRef?>(), Arg.Any<DBRef?>(), Arg.Any<CancellationToken>())
+			.Returns(_ =>
+			{
+				if (interrupt && ++checks == cancelAt) { cancellation.Cancel(); throw new OperationCanceledException(cancellation.Token); }
+				return Task.FromResult(true);
+			});
+		try { await h.Service.CollectProfilesAsync(cancellation.Token); throw new Exception("Expected cancellation"); }
+		catch (OperationCanceledException) { }
+		interrupt = false;
+		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
+		await h.Service.StopProfileAsync(h.Actor);
+		await Assert.That(h.Recorder.Profile(first.Id)!.Aggregates.Sum(row => row.Count)).IsEqualTo(2L);
+		await Assert.That(h.Recorder.Profile(second.Id)!.Aggregates.Sum(row => row.Count)).IsEqualTo(2L);
+		await h.Service.CollectProfilesAsync();
+		await Assert.That(h.Recorder.Profile(first.Id)!.Aggregates.Sum(row => row.Count)).IsEqualTo(2L);
+	}
+
+	[Test]
 	public async Task ActiveInspectionRequestsOnlyOneExtraVisibleRowForTruncation()
 	{
 		var h = new Harness();
