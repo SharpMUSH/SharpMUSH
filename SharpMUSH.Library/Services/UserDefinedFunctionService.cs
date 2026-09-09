@@ -12,6 +12,8 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 {
+	private readonly object _aliasMutations = new();
+
 	private static string Key(string name, DBRef? owner) => $"{owner?.ToString() ?? "global"}/{name.ToLowerInvariant()}";
 
 	private readonly ConcurrentDictionary<string, UserDefinedFunction> _functions =
@@ -76,24 +78,29 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 
 	public bool Alias(string alias, string target, DBRef? owner = null)
 	{
-		var targetKey = target.ToLowerInvariant();
-		if (string.Equals(alias, target, StringComparison.OrdinalIgnoreCase)) return false;
-		if (!_functions.TryGetValue(Key(targetKey, owner), out var targetEntry) || targetEntry.AliasOf is not null)
+		lock (_aliasMutations)
 		{
-			return false;
-		}
+			var targetKey = target.ToLowerInvariant();
+			if (string.Equals(alias, target, StringComparison.OrdinalIgnoreCase)) return false;
+			if (!_functions.TryGetValue(Key(targetKey, owner), out var targetEntry) || targetEntry.AliasOf is not null)
+			{
+				return false;
+			}
 
-		var aliasKey = alias.ToLowerInvariant();
-		_functions[Key(aliasKey, owner)] = new UserDefinedFunction(
-			Name: aliasKey,
-			Object: targetEntry.Object,
-			Attribute: targetEntry.Attribute,
-			MinArgs: targetEntry.MinArgs,
-			MaxArgs: targetEntry.MaxArgs,
-			Enabled: true,
-			AliasOf: targetKey,
-			Owner: owner);
-		return true;
+			var aliasKey = alias.ToLowerInvariant();
+			if (_functions.Any(pair => pair.Value.Owner == owner
+				&& string.Equals(pair.Value.AliasOf, aliasKey, StringComparison.OrdinalIgnoreCase))) return false;
+			_functions[Key(aliasKey, owner)] = new UserDefinedFunction(
+				Name: aliasKey,
+				Object: targetEntry.Object,
+				Attribute: targetEntry.Attribute,
+				MinArgs: targetEntry.MinArgs,
+				MaxArgs: targetEntry.MaxArgs,
+				Enabled: true,
+				AliasOf: targetKey,
+				Owner: owner);
+			return true;
+		}
 	}
 
 	public bool SetRestriction(string name, string? restriction, DBRef? owner = null)
