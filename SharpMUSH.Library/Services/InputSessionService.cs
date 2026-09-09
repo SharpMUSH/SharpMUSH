@@ -1,4 +1,6 @@
 using Mediator;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -27,6 +29,10 @@ public sealed class InputSessionService : IInputSessionService
 		public bool TimeoutPending { get; set; }
 	}
 
+	private sealed class Generation { public Guid Id { get; set; } = Guid.NewGuid(); }
+	// Metadata survives bind/unbind but belongs to one transport incarnation. Weak keys do not
+	// retain disconnected handles, while their last capture still fences previously queued replies.
+	private readonly ConditionalWeakTable<ConcurrentDictionary<string, string>, Generation> _generations = new();
 	private readonly Lock _gate = new();
 	private readonly Dictionary<long, Entry> _sessions = [];
 	private readonly IConnectionService _connections;
@@ -54,6 +60,14 @@ public sealed class InputSessionService : IInputSessionService
 		return current is not null && ReferenceEquals(current, session.Connection)
 			&& current.State == IConnectionService.ConnectionState.LoggedIn
 			&& current.Metadata.GetValueOrDefault("SessionId") == session.TransportSessionId;
+	}
+
+	private Generation GenerationFor(IConnectionService.ConnectionData connection)
+		=> _generations.GetValue(connection.Metadata, static _ => new Generation());
+
+	public Guid GetCaptureGeneration(long handle)
+	{
+		lock (_gate) return _connections.Get(handle) is { } connection ? GenerationFor(connection).Id : Guid.Empty;
 	}
 
 	public InputSession? GetCapturing(long handle)
@@ -97,6 +111,7 @@ public sealed class InputSessionService : IInputSessionService
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
 			if (_sessions.Count(pair => pair.Key != handle && pair.Value.Session.Owner == owner) >= MaxOwnerSessions) return SessionLimit;
 			_sessions[handle] = new Entry(session);
+			GenerationFor(connection).Id = session.Id;
 		}
 		try { await _notify.Prompt(handle, prompt); }
 		catch { Discard(session); throw; }

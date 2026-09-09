@@ -306,6 +306,7 @@ public class TaskScheduler(
 
 	public async ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
 	{
+		var generation = inputSessions?.GetCaptureGeneration(handle);
 		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command))
 			return new QueueAdmissionResult(0, QueueRejectionReason.None);
 		var capture = inputSessions?.GetCapturing(handle);
@@ -322,6 +323,8 @@ public class TaskScheduler(
 				if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
 				return await inputSessions!.DeliverAsync(parser, session, command);
 			}
+			// A capture that opened after admission still owns this reply after it ends.
+			if (inputSessions?.GetCaptureGeneration(handle) != generation) return null;
 			if (string.IsNullOrWhiteSpace(command.Text)) return null;
 			return await parser.FromState(state).CommandParse(handle, connectionService, command);
 		}, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle);

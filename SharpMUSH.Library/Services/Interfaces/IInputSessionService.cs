@@ -7,6 +7,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IInputSessionService
 {
 	InputSession? GetCapturing(long handle);
+	/// <summary>Opaque transport revision retained after capture ends; changes on each successful start.</summary>
+	Guid GetCaptureGeneration(long handle);
 	ValueTask<string?> StartAsync(IMUSHCodeParser parser, DBRef target, string attribute, MString prompt, TimeSpan timeout);
 	ValueTask<string?> PromptAsync(IMUSHCodeParser parser, MString prompt);
 	ValueTask<string?> CancelAsync(IMUSHCodeParser parser);

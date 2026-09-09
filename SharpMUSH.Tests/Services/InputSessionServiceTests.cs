@@ -424,6 +424,49 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("escape")]
+	[Arguments("expire")]
+	[Arguments("cancel")]
+	[Arguments("unbind")]
+	public async Task ReplyQueuedBeforeStartCannotExecuteAfterThatSessionEnds(string ending)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await using var queue = Queue(h);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await queue.EnqueueWork(async () =>
+		{
+			entered.SetResult();
+			await release.Task;
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			switch (ending)
+			{
+				case "escape": await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); break;
+				case "expire": h.Time.Now += TimeSpan.FromSeconds(61); break;
+				case "cancel": await h.Sessions.CancelAsync(caller); break;
+				case "unbind": await h.Connections.Unbind(1); break;
+			}
+			return null;
+		}, "queued-start-and-end", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await queue.WriteUserCommand(1, MarkupText.Plain("@destroy me"),
+				ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
+		}
+		finally { release.TrySetResult(); }
+		await Drained(queue);
+		await h.Parser.DidNotReceive().CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>());
+		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
+		// Tombstones fence previously queued replies, without consuming future ordinary input.
+		await queue.WriteUserCommand(1, MarkupText.Plain("think ordinary"),
+			ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" });
+		await Drained(queue);
+		await h.Parser.Received(1).CommandParse(1, h.Connections,
+			Arg.Is<MarkupText>(text => text.Text == "think ordinary"));
+	}
+
+	[Test]
 	public async Task BlankInputWithoutCaptureDoesNotInvokeTheCommandParser()
 	{
 		var h = new Harness(); await h.Connect();
