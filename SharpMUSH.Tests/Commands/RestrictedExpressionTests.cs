@@ -523,4 +523,24 @@ public class RestrictedExpressionTests
 		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
 	}
 
+	[Test]
+	[Arguments("restrictedexpr(add,add(1,2))", "3")]
+	[Arguments("restricted_alias(add,add(1,2))", "3")]
+	[Arguments("fn(restricted_alias,add,add(1,2))", "3")]
+	[Arguments("restrictedexpr(add,get(#1/DESC))", EvaluationRestrictions.Error)]
+	public async Task RestrictedWrappersAcceptANullExecutorWithoutDiagnostics(string expression, string expected)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var parser = (original with { Logger = logger, FunctionLibrary = library }).FromState(ParserState.RootFor(default)
+			with
+		{ Executor = null, Enactor = null, Caller = null });
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+	}
+
 }

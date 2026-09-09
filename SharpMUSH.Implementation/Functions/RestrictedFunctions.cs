@@ -37,8 +37,11 @@ public partial class Functions
 		var inputs = Enumerable.Range(0, args.Count - 2).ToDictionary(i => i.ToString(), i => new CallState(args[(i + 2).ToString()].Message));
 		// A fresh root drops every evaluated register/history/response frame. Only explicit inputs
 		// and shared execution accounting cross this boundary.
-		var state = ParserState.RootFor(parent.Executor!.Value) with
+		var state = ParserState.RootFor(parent.Executor.GetValueOrDefault()) with
 		{
+			Executor = parent.Executor,
+			Enactor = parent.Executor,
+			Caller = parent.Executor,
 			Flags = ParserStateFlags.NoDebug,
 			EnvironmentRegisters = inputs,
 			CallDepth = parent.CallDepth,
