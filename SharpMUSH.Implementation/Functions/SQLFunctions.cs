@@ -142,7 +142,7 @@ public partial class Functions
 
 		var doFieldNames = args.Count > 3
 											 && args.TryGetValue("3", out var fieldNameArg)
-											 && fieldNameArg.Message.Truthy();
+											 && fieldNameArg.Message.Truthy(parser);
 
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
 		var isPreparedStatement = args.Count > 4;

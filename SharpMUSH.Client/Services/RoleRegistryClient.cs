@@ -12,6 +12,19 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<RoleRegistryClient> logger)
 {
+	public async Task<IReadOnlyDictionary<string, SharpMUSH.Library.Authorization.PermissionExplanation>> EffectiveAsync()
+	{
+		try
+		{
+			return await httpClientFactory.CreateClient("api").GetFromJsonAsync<Dictionary<string, SharpMUSH.Library.Authorization.PermissionExplanation>>("api/roles/effective") ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
+		{
+			logger.LogWarning(ex, "Failed to load effective permissions.");
+			return new Dictionary<string, SharpMUSH.Library.Authorization.PermissionExplanation>();
+		}
+	}
+
 	/// <summary>Lists every defined role (caller sorts/filters for display).</summary>
 	public async Task<IReadOnlyList<PortalRoleModel>> ListAsync()
 	{

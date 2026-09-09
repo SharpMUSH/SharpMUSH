@@ -487,10 +487,7 @@ public partial class Functions
 					parent: true);
 
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
-				return new CallState(
-					Configuration.CurrentValue.Compatibility.TinyBooleans
-						? (hasValue ? "1" : "0")
-						: (hasValue ? "1" : "0"));
+				return new CallState(hasValue ? "1" : "0");
 			});
 	}
 
@@ -517,10 +514,7 @@ public partial class Functions
 					parent: false);
 
 				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
-				return new CallState(
-					Configuration.CurrentValue.Compatibility.TinyBooleans
-						? (hasValue ? "1" : "0")
-						: (hasValue ? "1" : "0"));
+				return new CallState(hasValue ? "1" : "0");
 			});
 	}
 
@@ -795,6 +789,16 @@ public partial class Functions
 			});
 	}
 
+	/// <summary>
+	/// The object id: the dbref, a colon, and the creation time in <em>milliseconds</em>.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH documents objid as <c>[num(&lt;object&gt;)]:[csecs(&lt;object&gt;)]</c> because it stores
+	/// creation times in seconds. SharpMUSH stores milliseconds, and objid carries them, so that
+	/// identity does NOT hold here: <c>[num(%0)]:[csecs(%0)]</c> is a thousand-fold-truncated stamp
+	/// and will not resolve. Use <c>objid()</c>, or <c>csecs(&lt;object&gt;,ms)</c> for the field alone.
+	/// See docs/superpowers/specs/2026-09-08-millisecond-precision-design.md.
+	/// </remarks>
 	[SharpFunction(Name = "objid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ObjectId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

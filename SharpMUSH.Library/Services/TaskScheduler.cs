@@ -98,19 +98,16 @@ public class TaskScheduler(
 		catch (ObjectDisposedException) { /* The consumer already completed and released this entry. */ }
 		catch (AggregateException ex) { logger.LogWarning(ex, "Cancellation callback failed for PID {Pid}", entry.Pid); }
 	}
-	private void CancelOrRelease(long pid)
+	private void ReleasePending(long pid)
 	{
 		QueueEntry? entry;
-		bool ready;
 		lock (_admissionLock)
-		{
-			ready = _ready.Contains(pid);
-			entry = ready ? _pendingEntries.GetValueOrDefault(pid) : RemoveEntry(pid);
-		}
-		if (entry is null) return;
-		if (ready) CancelEntry(entry);
-		else entry.Cts.Dispose();
+			// A timeout may have won while Quartz's stale trigger was being unscheduled.
+			// Drain owns waiting work only; it must not cancel a published/running body.
+			entry = _ready.Contains(pid) ? null : RemoveEntry(pid);
+		entry?.Cts.Dispose();
 	}
+
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null)
 	{
@@ -349,9 +346,10 @@ public class TaskScheduler(
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef));
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
+		// Do not expose a reservation to halt until its counter transaction owns the lease.
+		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef);
 		if (!admission.Accepted) return admission;
-		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
 		var counterWritten = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
@@ -494,7 +492,7 @@ public class TaskScheduler(
 
 		var selected = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last())).Take(count ?? int.MaxValue).ToArray();
 		await _scheduler.UnscheduleJobs(selected);
-		foreach (var key in selected) CancelOrRelease(long.Parse(key.Name.Split('-').Last()));
+		foreach (var key in selected) ReleasePending(long.Parse(key.Name.Split('-').Last()));
 	}
 
 	public async ValueTask Halt(DBRef dbRef)

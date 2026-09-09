@@ -4544,4 +4544,6 @@
     <value>Ahelp-emnerne. Kun for Troldmænd og Gud, i portalen som i spillet.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Den udtrykkelige regel med højest prioritet afgør adgangen; afvisning vinder ved lighed. Arv bruges kun uden en udtrykkelig regel. Uden tilladelse afvises adgang. Delegerede administratorer kan kun administrere egne tilladelser med lavere prioritet og kan ikke ændre egne roller eller begrænsninger.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuel adgang: {0}; prioritet {1}; roller {2}; afgørelse {3}.</value></data>
 </root>
