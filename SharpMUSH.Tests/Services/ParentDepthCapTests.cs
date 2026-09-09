@@ -36,8 +36,11 @@ public class ParentDepthCapTests
 
 	private async ValueTask<AnySharpObject> CreateAsync(string name)
 	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		var message = result.Message!.ToPlainText()!;
+		await Assert.That(result.Message).IsNotNull();
+		var message = result.Message!.ToPlainText();
 
 		// This test builds ancestor chains of up to ~23 objects and has been implicated in
 		// parallel-load flakiness; a bare DBRef.Parse on unexpected output (an error message,
