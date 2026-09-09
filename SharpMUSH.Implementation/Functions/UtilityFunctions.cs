@@ -2025,7 +2025,19 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
+		var objAttr = args["0"].Message!.ToPlainText();
+
+		// wipe(<object>[/<attribute pattern>]) - the same argument @wipe takes, because
+		// PennMUSH's fun_wipe hands it straight to do_wipe (src/set.c). The pattern half is not
+		// optional decoration: without it every call wiped the whole object.
+		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
+
+		if (!split.TryPickT0(out var details, out _))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidObject);
+		}
+
+		var (objectName, maybeAttribute) = details;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
@@ -2036,17 +2048,20 @@ public partial class Functions
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				// Every non-system attribute (those not starting with _), materialized: they are cleared
-				// while this list is walked.
-				var attributesToClear = await obj.Object().Attributes.Value
-					.Where(attr => !attr.Name.StartsWith('_'))
-					.Select(attr => attr.Name)
-					.ToListAsync();
-
-				foreach (var attrName in attributesToClear)
+				if (await obj.HasFlag("SAFE"))
 				{
-					await Mediator.Send(new ClearAttributeCommand(obj.Object().DBRef, [attrName]));
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
+					return ErrorMessages.Returns.Safe;
 				}
+
+				// Everything else - the per-match write gate, the ancestor walk, the wizard- and
+				// safe-attribute guards, and do_wipe's own per-match/tally reporting - belongs to
+				// ClearAttributeAsync's wipe branch, exactly as it does for @WIPE. Enumerating the
+				// attributes here and firing raw ClearAttributeCommands skipped all of it.
+				var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
+				await AttributeService.ClearAttributeAsync(executor, obj, attributePattern,
+					IAttributeService.AttributePatternMode.Wildcard);
 
 				// PennMUSH's wipe() "returns nothing" (help WIPE()); it is @wipe's side effect
 				// exposed as a function, not a reporting call.
