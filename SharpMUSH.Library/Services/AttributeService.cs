@@ -755,8 +755,8 @@ public class AttributeService(
 	/// build; only legacy or hand-edited data could. The fix belongs in the three providers (bound
 	/// their traversals to <c>MaxParents</c>), not here.
 	/// </remarks>
-	private ValueTask<DBRef[]> ParentChainAsync(AnySharpObject obj)
-		=> AttributeAncestry.ChainAsync(obj.Object(), (int)configuration.CurrentValue.Limit.MaxParents);
+	private async ValueTask<List<DBRef>> ParentChainAsync(AnySharpObject obj)
+		=> [.. await AttributeAncestry.ChainAsync(obj.Object(), (int)configuration.CurrentValue.Limit.MaxParents)];
 
 	/// <inheritdoc/>
 	public async ValueTask<bool> ExceedsMaxParentDepthAsync(AnySharpObject prospectiveParent, CancellationToken cancellationToken = default)

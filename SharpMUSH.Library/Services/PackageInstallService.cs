@@ -773,7 +773,11 @@ public class PackageInstallService(
 		{
 			// Through the Mediator for the same reason as the create commands above: the object
 			// entry is the cache unit, and only the command declares the key that expires it.
-			await mediator.Send(new SetNameCommand(node, MarkupText.Plain(spec.Name)), cancellationToken);
+			// PrimaryName, as the create path uses: a manifest name carries its aliases
+			// ("Out;out;o"), and nothing on the write path splits them, so passing the whole string
+			// here would rename an object the install itself created as "Out" to "Out;out;o" on the
+			// next run.
+			await mediator.Send(new SetNameCommand(node, MarkupText.Plain(PrimaryName(spec.Name))), cancellationToken);
 		}
 
 		// Parent.
