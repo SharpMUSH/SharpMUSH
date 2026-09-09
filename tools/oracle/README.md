@@ -88,12 +88,29 @@ Observed with the handler softcode above and baked into the SharpMUSH tests:
 
 ## Pinned softcode compatibility capture
 
-`fixtures/compatibility-penn-95ad3511.json` records a disposable PennMUSH world
-built from commit `95ad3511d0410b9e132f140fabc4ca7afec433da` on Linux x86_64.
-Each case includes the actual configuration and observed output. Boolean and
-conditional results are covered by `BooleanCompatibilityTests`,
-`BooleanFunctionUnitTests`, and `ConditionalFunctionUnitTests`. Numeric rows
-tracked in [issue #940](https://github.com/SharpMUSH/SharpMUSH/issues/940) and marked as follow-up are reference evidence, not passing-parity claims.
+The JSON files in `fixtures/` record observed results from a disposable PennMUSH
+world built from commit `95ad3511d0410b9e132f140fabc4ca7afec433da` on Linux x86_64.
+Every case states its configuration and expression. `expected` is the reference
+output; `sharpmush_expected` is used only for an explicitly stated intentional
+difference. Never replace a reference observation with SharpMUSH output.
+
+`PinnedCompatibilityMatrixTests` replays both files with per-case configuration
+through the real function parser. It covers boolean and numeric coercion, signed
+64-bit boundaries, trim dialects, arity, evaluation order, register effects and
+explicit delimiters. A separate test switches `tiny_trim_fun` on the same parser
+and confirms the explicit `trimpenn()` and `trimtiny()` dialects remain stable.
+The numeric follow-up [#940](https://github.com/SharpMUSH/SharpMUSH/issues/940)
+was completed in [#947](https://github.com/SharpMUSH/SharpMUSH/pull/947).
+
+```bash
+dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/PinnedCompatibilityMatrixTests/*"
+```
+
+Boundary and markup tests remain in `BooleanCompatibilityTests`,
+`BooleanFunctionUnitTests`, `ConditionalFunctionUnitTests`, and the numeric test
+classes. This matrix is a finite regression corpus, not a compatibility percentage.
+Intentional lexical dispatch, literal iteration data and fail-fast limits remain
+specified in `help pennmush compatibility` and their dedicated parser tests.
 
 Start a disposable world on a loopback-only port with the built `info_slave`
 and `ssl_slave` helpers linked into its game directory. A fresh minimal database

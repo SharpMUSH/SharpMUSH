@@ -1,5 +1,7 @@
 using DotNext.Collections.Generic;
 using Humanizer;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
@@ -1859,16 +1861,18 @@ public partial class Functions
 	[SharpFunction(Name = "trim", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "characters", "trim-style"])]
 	public ValueTask<CallState> Trim(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var tinyTrim = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Compatibility.TinyTrimFun;
 		var arg0 = parser.CurrentState.Arguments["0"].Message!;
 		var arg1 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration.CurrentValue.Compatibility.TinyTrimFun
+			tinyTrim
 				? "2"
 				: "1", out var arg1Value)
 			? arg1Value.Message
 			: MarkupText.Space;
 
 		var arg2 = parser.CurrentState.Arguments.TryGetValue(
-			Configuration.CurrentValue.Compatibility.TinyTrimFun
+			tinyTrim
 				? "1"
 				: "2", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
@@ -1892,7 +1896,6 @@ public partial class Functions
 		var arg1 = parser.CurrentState.Arguments.TryGetValue("1", out var arg1Value)
 			? arg1Value.Message
 			: MarkupText.Space;
-		;
 		var arg2 = parser.CurrentState.Arguments.TryGetValue("2", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
 			: "b";
@@ -1915,7 +1918,6 @@ public partial class Functions
 		var arg1 = parser.CurrentState.Arguments.TryGetValue("2", out var arg1Value)
 			? arg1Value.Message
 			: MarkupText.Space;
-		;
 		var arg2 = parser.CurrentState.Arguments.TryGetValue("1", out var arg2Value)
 			? arg2Value.Message!.ToPlainText()
 			: "b";

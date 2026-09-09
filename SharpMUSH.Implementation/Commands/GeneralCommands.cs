@@ -3197,10 +3197,7 @@ public partial class Commands
 
 		if (isSpoof)
 		{
-			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-			if (!canSpoof && !controlsExecutor)
+			if (!await PermissionService.CanSpoofAs(executor, enactor))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -5197,29 +5194,47 @@ public partial class Commands
 			// /list, /recall and /decompile combine with other switches (`@channel/list/on/quiet`), so they
 			// match on membership rather than on a positional list pattern that only fires when they are last.
 			_ when switches.Contains("LIST") => await ChannelCommand.ChannelList.Handle(parser, LocateService,
-				PermissionService, Mediator, NotifyService, emptyIfMissing0, emptyIfMissing1, switches),
+				PermissionService, Mediator, NotifyService, ConnectionService, emptyIfMissing0, emptyIfMissing1,
+				switches),
+			// CB.RSArgs comma-splits the right-hand side, so `@channel/recall <chan>=<lines>,<start>` arrives
+			// as two arguments — PennMUSH reads the same pair out of its lineinfo array (src/extchat.c:4008).
 			_ when switches.Contains("RECALL") && arg0 is not null => await ChannelRecall.Handle(parser, LocateService,
-				PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1, switches),
+				PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1,
+				args.GetValueOrDefault("2")?.Message ?? MarkupText.Empty, switches),
 			_ when switches.Contains("DECOMPILE") && arg0 is not null => await ChannelDecompile.Handle(parser,
-				LocateService, PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1, switches),
+				LocateService, PermissionService, Mediator, NotifyService, ConnectionService, arg0, emptyIfMissing1,
+				switches),
 			["WHAT"] => await ChannelWhat.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
 				emptyIfMissing0),
 			["WHO"] when arg0 is not null => await ChannelWho.Handle(parser, LocateService, PermissionService, Mediator,
-				NotifyService, arg0),
+				NotifyService, ConnectionService, arg0),
 			(["ON"] or ["JOIN"]) when arg0 is not null => await ChannelOn.Handle(parser, LocateService, PermissionService,
 				Mediator, NotifyService, arg0, arg1),
 			(["OFF"] or ["LEAVE"]) when arg0 is not null => await ChannelOff.Handle(parser, LocateService,
 				PermissionService, Mediator, NotifyService, arg0, arg1),
-			["GAG"] when arg0 is not null => await ChannelGag.Handle(parser, LocateService, PermissionService, Mediator,
-				NotifyService, arg0, arg1, switches),
-			["MUTE"] when arg0 is not null => await ChannelMute.Handle(parser, LocateService, PermissionService, Mediator,
-				NotifyService, arg0, emptyIfMissing1),
-			["HIDE"] when arg0 is not null => await ChannelHide.Handle(parser, LocateService, PermissionService, Mediator,
-				NotifyService, arg0, arg1),
-			["COMBINE"] when arg0 is not null => await ChannelCombine.Handle(parser, LocateService, PermissionService,
-				Mediator, NotifyService, arg0, arg1),
+			// The eight per-member switches are one operation in PennMUSH (do_chan_user_flags,
+			// src/extchat.c:1900), and the un-forms are it with "n" for an answer (cmd_channel, :3628-3640).
+			// The channel is OPTIONAL in every one of them: omitted, they act on every channel you are on.
+			["GAG"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: false),
+			["UNGAG"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: true),
+			["MUTE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: false),
+			["UNMUTE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: true),
+			["HIDE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: false),
+			["UNHIDE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: true),
+			["COMBINE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: false),
+			["UNCOMBINE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: true),
+			// arg1 is null when no `=` was typed at all, which is the QUERY form — distinct from an `=` with
+			// nothing after it, which clears the title (do_chan_title's rhs_present, src/extchat.c:3145).
 			["TITLE"] when arg0 is not null => await ChannelTitle.Handle(parser, LocateService, PermissionService,
-				Mediator, NotifyService, arg0, emptyIfMissing1),
+				Mediator, NotifyService, Configuration, arg0, arg1),
 			["ADD"] when arg0 is not null && arg1 is not null
 				=> await ChannelAdd.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
 					Configuration, arg0, arg1),
@@ -5588,10 +5603,7 @@ public partial class Commands
 
 		if (isSpoof)
 		{
-			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-			if (!canSpoof && !controlsExecutor)
+			if (!await PermissionService.CanSpoofAs(executor, enactor))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -5675,10 +5687,7 @@ public partial class Commands
 			.Where(async (obj, _) =>
 				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
 
-		var canSpoof = await executor.HasPower("CAN_SPOOF");
-		var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-		if (!canSpoof && !controlsExecutor)
+		if (!await PermissionService.CanSpoofAs(executor, enactor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

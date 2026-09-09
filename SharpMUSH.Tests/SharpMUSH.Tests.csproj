@@ -94,6 +94,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\tools\oracle\fixtures\*.json">
+      <Link>OracleFixtures\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Build the command-only Phase 3 fixture before this project so its DLL exists to copy into the
          test output. ReferenceOutputAssembly=false: we do NOT link the plugin; the unload test loads it at
          runtime from disk through PluginLoaderService, exactly as the booting server would. -->

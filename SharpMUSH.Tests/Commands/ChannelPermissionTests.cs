@@ -660,31 +660,19 @@ public class ChannelPermissionTests
 	}
 
 	/// <summary>
-	/// With no channel named, <c>@channel/hide</c>, <c>/gag</c> and <c>/combine</c> walk every channel from
-	/// <c>GetChannelListQuery</c> and notify per channel, routing around
-	/// <see cref="ChannelHelper.GetVisibleChannelOrError"/> — so the argument-less form named exactly the
-	/// channels that gate exists to hide.
+	/// With no channel named, the per-member switches walk the executor's OWN channel list and say one
+	/// thing about the lot of them (PennMUSH <c>do_chan_user_flags</c>, <c>src/extchat.c:1913-1936</c>).
 	///
-	/// <para>These call the handlers directly on purpose. <c>@CHANNEL</c>'s dispatcher matches
-	/// <c>["HIDE"] when arg0 is not null</c> (GeneralCommands.cs:5036-5043), so the bulk path is
-	/// unreachable from the command surface today and no player can currently trigger the leak. The
-	/// handlers implement it regardless, and whoever wires the argument-less form — PennMUSH has it —
-	/// must not reintroduce the oracle. Testing through the dispatcher would assert nothing.</para>
-	///
-	/// <para>The loop below asserts an ABSENCE over a collection, which asserts nothing at all if the
-	/// collection is empty, so the bulk path is first required to have said SOMETHING. For <c>hide</c> —
-	/// the deterministic case, and the only one reachable from Penn's dispatcher — the requirement is
-	/// sharper: a channel the mortal CAN see must be named, proving the handler walked the list and the
-	/// hidden channel's absence is the gate working rather than the walk never happening. <c>gag</c> and
-	/// <c>combine</c> cannot be pinned that way because they <c>return</c> on the first channel the
-	/// executor is not a member of, and in a session-shared database that is whichever visible channel
-	/// another test happened to create first.</para>
+	/// <para>The summary line names no channel at all — which is also what keeps the argument-less form
+	/// from being an enumeration oracle — so the assertion is that neither the channel the mortal can see
+	/// nor the one they cannot appears anywhere in what they were told.</para>
 	/// </summary>
 	[Test]
 	[Arguments("hide")]
 	[Arguments("gag")]
 	[Arguments("combine")]
-	public async Task BulkSwitchesDoNotNameChannelsTheExecutorCannotSee(string switchName)
+	[Arguments("mute")]
+	public async Task BulkSwitchesNameNoChannelAtAll(string switchName)
 	{
 		var name = UniqueChannel($"Bulk{switchName}");
 		await CreateChannel(name, "Player", "Wizard");
@@ -695,78 +683,88 @@ public class ChannelPermissionTests
 		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
 		await Mediator.Send(new AddUserToChannelCommand(visible, mortalObject));
 
-		var parser = WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
-		var locate = WebAppFactoryArg.Services.GetRequiredService<ILocateService>();
+		var messages = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/{switchName}"));
 
-		var messages = await MessagesWhile(mortal.DbRef, async () =>
-		{
-			_ = switchName switch
-			{
-				"hide" => await ChannelHide.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null),
-				"gag" => await ChannelGag.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null, []),
-				_ => await ChannelCombine.Handle(parser, locate, PermissionService, Mediator, NotifyService, null, null)
-			};
-		});
-
-		await Assert.That(messages).IsNotEmpty();
-
-		if (switchName == "hide")
-		{
-			await Assert.That(messages.Any(message => message.Contains(visibleName))).IsTrue();
-		}
+		await Assert.That(messages).IsNotEmpty()
+			.Because("the bulk form is reachable from the command surface and reports what it did");
 
 		foreach (var message in messages)
 		{
 			await Assert.That(message).DoesNotContain(name);
+			await Assert.That(message).DoesNotContain(visibleName);
 		}
 	}
 
-	// --- Third-party status writes need the channel's modify right ---------------------------------
-
 	/// <summary>
-	/// <c>@channel/mute</c> writes the status of a player the executor NAMES. Before this stack it wrote
-	/// against the executor instead, which made it a harmless self-mute; correcting the target without
-	/// adding authorization would have turned a no-op bug into "any non-guest may silence any member of
-	/// any channel", which is worse than the bug.
-	///
-	/// <para><c>/gag</c>, <c>/hide</c>, <c>/combine</c> and <c>/title</c> only ever write the executor's
-	/// own status and correctly require no modify right; <c>/hide</c> has its own <c>Chan_Can_Hide</c>
-	/// gate.</para>
+	/// PennMUSH routes the <c>un</c> switches to the same handler as their counterparts, with "n" for an
+	/// answer (<c>cmd_channel</c>, <c>src/extchat.c:3628-3640</c>).
 	/// </summary>
 	[Test]
-	public async Task MuteRequiresModifyRightsOnTheChannel()
+	[Arguments("gag", "ungag")]
+	[Arguments("mute", "unmute")]
+	[Arguments("combine", "uncombine")]
+	public async Task UnSwitchesClearTheFlagTheirCounterpartSets(string setSwitch, string clearSwitch)
 	{
-		var name = UniqueChannel("MuteGate");
+		var name = UniqueChannel($"Un{setSwitch}");
+		var channel = await CreateChannel(name, "Player");
+		var mortal = await CreateMortal($"ChanPermUn{setSwitch}");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		bool Flag(SharpChannelStatus status) => setSwitch switch
+		{
+			"gag" => status.Gagged ?? false,
+			"mute" => status.Mute ?? false,
+			_ => status.Combine ?? false
+		};
+
+		await Run(mortal, $"@channel/{setSwitch} {name}");
+		var afterSet = await ChannelHelper.ChannelMemberStatus(mortalObject,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(Flag(afterSet!.Status)).IsTrue();
+
+		await Run(mortal, $"@channel/{clearSwitch} {name}");
+		var afterClear = await ChannelHelper.ChannelMemberStatus(mortalObject,
+			(await Mediator.Send(new GetChannelQuery(name)))!);
+		await Assert.That(Flag(afterClear!.Status)).IsFalse();
+	}
+
+	/// <summary>
+	/// <c>@channel/mute</c> is a personal preference — <c>CU_QUIET</c> on the CALLER, which suppresses the
+	/// channel's connect and disconnect announcements. PennMUSH has no command for silencing somebody
+	/// else, and the second argument here is the yes/no answer rather than a target.
+	/// </summary>
+	[Test]
+	public async Task MuteSetsTheCallersOwnQuietFlag()
+	{
+		var name = UniqueChannel("MuteSelf");
 		var channel = await CreateChannel(name, "Player");
 
-		var victim = await CreateMortal("ChanPermMuteVictim");
-		var meddler = await CreateMortal("ChanPermMuteMeddler");
+		var bystander = await CreateMortal("ChanPermMuteBystander");
+		var muter = await CreateMortal("ChanPermMuteSelf");
 
-		foreach (var player in new[] { victim, meddler })
+		foreach (var player in new[] { bystander, muter })
 		{
-			var obj = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
-			await Mediator.Send(new AddUserToChannelCommand(channel, obj));
+			await Mediator.Send(new AddUserToChannelCommand(channel,
+				(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known));
 		}
 
-		var victimObject = (await Mediator.Send(new GetObjectNodeQuery(victim.DbRef))).Known;
-		// @channel/mute resolves its target by name, not dbref.
-		var victimName = victimObject.Object().Name;
+		// The second argument is the yes/no answer, not a target: naming a player is not a way to mute them.
+		var bystanderObject = (await Mediator.Send(new GetObjectNodeQuery(bystander.DbRef))).Known;
+		await Run(muter, $"@channel/mute {name}={bystanderObject.Object().Name}");
 
-		await Assert.That(await PermissionService.ChannelCanModifyAsync(
-			(await Mediator.Send(new GetObjectNodeQuery(meddler.DbRef))).Known, channel)).IsFalse();
-
-		await Run(meddler, $"@channel/mute {name}={victimName}");
-
-		var afterMeddler = await ChannelHelper.ChannelMemberStatus(victimObject,
+		var bystanderStatus = await ChannelHelper.ChannelMemberStatus(bystanderObject,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
-		await Assert.That(afterMeddler!.Status.Mute ?? false).IsFalse();
+		await Assert.That(bystanderStatus!.Status.Mute ?? false).IsFalse()
+			.Because("a mortal cannot silence another member by naming them");
 
-		// God owns the channel, so the same command from God does mute.
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/mute {name}={victimName}"));
+		await Run(muter, $"@channel/mute {name}");
 
-		var afterOwner = await ChannelHelper.ChannelMemberStatus(victimObject,
+		var muterStatus = await ChannelHelper.ChannelMemberStatus(
+			(await Mediator.Send(new GetObjectNodeQuery(muter.DbRef))).Known,
 			(await Mediator.Send(new GetChannelQuery(name)))!);
-		await Assert.That(afterOwner!.Status.Mute ?? false).IsTrue();
+		await Assert.That(muterStatus!.Status.Mute ?? false).IsTrue();
 	}
 
 	// --- The oracle on the lock and admin surfaces -------------------------------------------------
