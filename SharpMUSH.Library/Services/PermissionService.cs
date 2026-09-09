@@ -7,7 +7,11 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options) : IPermissionService
+public class PermissionService(
+	ILockService lockService,
+	IOptionsMonitor<SharpMUSHOptions> options,
+	IConnectionService connectionService,
+	Lazy<IAttributeService> attributeService) : IPermissionService
 {
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
@@ -382,6 +386,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interactee,
 		IPermissionService.InteractType type)
 		=> await CanInteract(interactor, interactee.WithRoomOption(), type);
+
+	public ValueTask<bool> IsHearer(AnySharpObject obj)
+		=> obj.IsHearer(connectionService, attributeService.Value);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !await evaluationTarget.IsPriv()

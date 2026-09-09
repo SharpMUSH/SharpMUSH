@@ -133,8 +133,8 @@ public class HiddenWhoVisibilityTests
 		var hidden = await HiddenPlayer("ZwhoHidden");
 		var visible = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZwhoVisible");
-		await God($"@teleport/quiet {hidden.DbRef}={playerRoom}");
-		await God($"@teleport/quiet {visible.DbRef}={playerRoom}");
+		await God($"@teleport/silent {hidden.DbRef}={playerRoom}");
+		await God($"@teleport/silent {visible.DbRef}={playerRoom}");
 
 		var zwho = await EvalAs(new DBRef(1), $"zwho({zoneRoom})");
 		var zmwho = await EvalAs(new DBRef(1), $"zmwho({zoneRoom})");
@@ -165,8 +165,8 @@ public class HiddenWhoVisibilityTests
 		var hidden = await HiddenPlayer("ZwhoViewHidden");
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZwhoViewMortal");
-		await God($"@teleport/quiet {hidden.DbRef}={playerRoom}");
-		await God($"@teleport/quiet {mortal.DbRef}={playerRoom}");
+		await God($"@teleport/silent {hidden.DbRef}={playerRoom}");
+		await God($"@teleport/silent {mortal.DbRef}={playerRoom}");
 
 		await Assert.That(Lists(await EvalAs(new DBRef(1), $"zwho({zoneRoom},{mortal.DbRef})"), hidden.DbRef))
 			.IsFalse().Because("computing the answer for a mortal viewer must drop hidden connections");
@@ -192,7 +192,7 @@ public class HiddenWhoVisibilityTests
 
 		var offline = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "ZwhoOffline");
-		await God($"@teleport/quiet {offline}={playerRoom}");
+		await God($"@teleport/silent {offline}={playerRoom}");
 
 		await Assert.That(Lists(await EvalAs(new DBRef(1), $"zwho({zoneRoom})"), offline)).IsFalse();
 		await Assert.That(Lists(await EvalAs(new DBRef(1), $"zmwho({zoneRoom})"), offline)).IsFalse();

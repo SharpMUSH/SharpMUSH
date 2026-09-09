@@ -1646,7 +1646,7 @@ public partial class Commands
 
 
 	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2,
-		Switches = ["LIST", "INSIDE", "QUIET"], ParameterNames = ["object", "destination"])]
+		Switches = ["LIST", "INSIDE", "SILENT"], ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -1802,7 +1802,7 @@ public partial class Commands
 				}
 			}
 
-			var isSilent = parser.CurrentState.Switches.Contains("QUIET");
+			var isSilent = parser.CurrentState.Switches.Contains("SILENT");
 			var moveResult = await MoveService.ExecuteMoveAsync(
 				parser,
 				targetContent,

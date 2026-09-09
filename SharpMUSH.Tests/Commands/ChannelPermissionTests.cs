@@ -123,14 +123,14 @@ public class ChannelPermissionTests
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
-		// /QUIET, not a plain @teleport: without it, @teleport queues a "look" command for the
+		// /SILENT, not a plain @teleport: without it, @teleport queues a "look" command for the
 		// target (GeneralCommands.cs's Teleport, QueueCommandListRequest) rather than running it
 		// inline - so the arrival autolook (including a "Contents:" line) can land at an
 		// unpredictable later tick, inside whichever MessagesWhile window happens to be open when
-		// the queue drains it. /QUIET skips that queued look entirely, so there is nothing left to
+		// the queue drains it. /SILENT skips that queued look entirely, so there is nothing left to
 		// race against.
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@teleport/quiet {player.DbRef}={roomDbRef}"));
+			MarkupText.Plain($"@teleport/silent {player.DbRef}={roomDbRef}"));
 
 		return player;
 	}

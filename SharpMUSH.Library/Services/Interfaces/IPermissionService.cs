@@ -50,6 +50,13 @@ public interface IPermissionService
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
 	/// <summary>
+	/// PennMUSH <c>Hearer</c> (<c>src/game.c:1564</c>): a connected player, a <c>PUPPET</c>, an
+	/// <c>AUDIBLE</c> object carrying a <c>FORWARDLIST</c>, or anything with a <c>LISTEN</c>.
+	/// A move by a non-hearer fires action attributes only, never messages.
+	/// </summary>
+	ValueTask<bool> IsHearer(AnySharpObject obj);
+
+	/// <summary>
 	/// PennMUSH <c>Can_Nspemit</c> (<c>hdrs/mushdb.h:33</c>): may this object emit without a nospoof
 	/// header. The power is <c>Can_Spoof</c> — <c>NOSPOOF</c> is a FLAG (<c>FlagSeed.cs:39</c>), so
 	/// testing it here matched nothing and reduced the whole predicate to the wizard half.
