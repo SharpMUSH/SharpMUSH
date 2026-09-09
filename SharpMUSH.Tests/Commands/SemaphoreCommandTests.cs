@@ -25,6 +25,99 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	[Arguments(0, "none")]
+	[Arguments(0, "flag")]
+	[Arguments(0, "child")]
+	[Arguments(1, "none")]
+	[Arguments(2, "none")]
+	[Arguments(3, "none")]
+	[Arguments(2, "flag")]
+	[Arguments(2, "child")]
+	public async Task NotifyRepairsPartialCustomCounterInitialization(int failAt, string concurrentEdit)
+	{
+		using var budget = ExecutionBudget.FromMilliseconds(30000);
+		using var scope = budget.Enter();
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("notify-repair-" + Guid.NewGuid().ToString("N"), player));
+		string[] path = ["CUSTOM_COUNTER"];
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.Send(call.ArgAt<GetObjectNodeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.ArgAt<GetAttributeQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAllAttributeEntriesQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.ArgAt<GetAllAttributeEntriesQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.CreateStream(Arg.Any<GetAttributeFlagsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.ArgAt<GetAttributeFlagsQuery>(0), call.ArgAt<CancellationToken>(1)));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call => SetCount(call));
+		async ValueTask<bool> SetCount(NSubstitute.Core.CallInfo call)
+		{
+			var written = await Mediator.Send(call.ArgAt<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(0), call.ArgAt<CancellationToken>(1));
+			if (failAt != 0) return written;
+			var current = await Mediator.CreateStream(new GetAttributeQuery(target, path)).LastAsync();
+			if (concurrentEdit == "flag")
+			{
+				var flag = await Mediator.CreateStream(new GetAttributeFlagsQuery()).FirstAsync(x => x.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase));
+				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand(target, current, flag));
+			}
+			else if (concurrentEdit == "child")
+				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["CUSTOM_COUNTER", "CHILD"], MarkupText.Plain("preserve"), player));
+			return false; // The count committed, but no creation identity or flag was captured yet.
+		}
+		var flagCalls = 0;
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call => FailFlag(call));
+		async ValueTask<bool> FailFlag(NSubstitute.Core.CallInfo call)
+		{
+			var command = call.ArgAt<SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand>(0);
+			if (++flagCalls != failAt) return await Mediator.Send(command, call.ArgAt<CancellationToken>(1));
+			if (concurrentEdit == "flag")
+			{
+				var flag = await Mediator.CreateStream(new GetAttributeFlagsQuery()).FirstAsync(x => x.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase));
+				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand(target, command.Target, flag));
+			}
+			else if (concurrentEdit == "child")
+				await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["CUSTOM_COUNTER", "CHILD"], MarkupText.Plain("preserve"), player));
+			return false;
+		}
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(WebAppFactoryArg.Services, mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+		parser.CurrentState.Returns(ParserState.RootFor(player.Object.DBRef) with { Arguments = new() { ["0"] = new(target + "/CUSTOM_COUNTER") } });
+		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+		try
+		{
+			try { await commands.Notify(parser, metadata); }
+			catch (InvalidOperationException) { }
+			catch (AggregateException) { }
+			if (concurrentEdit == "none")
+			{
+				using var lease = await Scheduler.EnterSemaphoreMutationAsync();
+				var current = await Mediator.CreateStream(new GetAttributeQuery(target, path)).LastAsync();
+				await Assert.That(current.Value.ToPlainText()).IsEqualTo("-1");
+				await Assert.That(current.Flags.Select(x => x.Name.ToLowerInvariant()).Order().ToArray())
+					.IsEquivalentTo(new[] { "locked", "no_clone", "no_inherit" });
+			}
+			else
+			{
+				await Assert.ThrowsAsync<InvalidOperationException>(async () => { using var lease = await Scheduler.EnterSemaphoreMutationAsync(); });
+				await Assert.That(flagCalls).IsEqualTo(failAt);
+				var current = await Mediator.CreateStream(new GetAttributeQuery(target, path)).LastAsync();
+				await Assert.That(current.Value.ToPlainText()).IsEqualTo("-1");
+				if (concurrentEdit == "flag") await Assert.That(current.Flags.Any(x => x.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase))).IsTrue();
+				else await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["CUSTOM_COUNTER", "CHILD"])).LastAsync()).Value.ToPlainText()).IsEqualTo("preserve");
+			}
+		}
+		finally
+		{
+			await Mediator.Send(new SharpMUSH.Library.Commands.Database.WipeAttributeCommand(target, path));
+			using var lease = await Scheduler.EnterSemaphoreMutationAsync();
+		}
+	}
+
+	[Test]
 	public async Task DrainOfAnAbsentSemaphoreIsANoOp()
 	{
 		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
