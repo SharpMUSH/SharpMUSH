@@ -19,7 +19,6 @@ public class ControlFlowCommandTests
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
-	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 
 	private static string? ExtractMessageForExecutor(object?[] args, DBRef executor)
 	{
@@ -42,27 +41,31 @@ public class ControlFlowCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SelectCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@select 1=1,@pemit #1=One,@pemit #1=Other"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@select 1=1,@pemit #1=SelectCommand_One,@pemit #1=SelectCommand_Other"));
+
+		// No /inline, so the matched action is a new queue entry -- poll rather than race it.
+		await Assert.That(await WaitForMessage(executor, "SelectCommand_One")).IsTrue();
 
 		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("One"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SelectCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
 	public async ValueTask SwitchCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@switch 1=1,@pemit #1=One,@pemit #1=Other"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@switch 1=1,@pemit #1=SwitchCommand_One,@pemit #1=SwitchCommand_Other"));
+
+		// No /inline, so the matched action is a new queue entry -- poll rather than race it.
+		await Assert.That(await WaitForMessage(executor, "SwitchCommand_One")).IsTrue();
 
 		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("One"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.DidNotReceive()
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SwitchCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -270,7 +273,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/first: only the first matching action fires, second match should not run.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch/first 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
+			MarkupText.Plain("@switch/first/inline 1=1,@pemit #1=SwFirst_A_47592,1,@pemit #1=SwFirst_B_47592"));
 
 		await NotifyService
 			.Received(1)
@@ -289,7 +292,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch (default) / @switch/all: all matching actions run.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch/all 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
+			MarkupText.Plain("@switch/all/inline 1=1,@pemit #1=SwAll_A_58603,1,@pemit #1=SwAll_B_58603"));
 
 		await NotifyService
 			.Received(1)
@@ -308,7 +311,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/regexp: patterns are treated as case-insensitive regular expressions.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch/regexp hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
+			MarkupText.Plain("@switch/regexp/inline hello=HEL+O,@pemit #1=SwRegexp_Match_69714,world,@pemit #1=SwRegexp_NoMatch_69714"));
 
 		await NotifyService
 			.Received(1)
@@ -327,7 +330,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// @switch/regexp: per helpfile, matches are case-insensitive.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch/regexp HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
+			MarkupText.Plain("@switch/regexp/inline HELLO=hello,@pemit #1=SwRegexpCI_Match_70825,world,@pemit #1=SwRegexpCI_NoMatch_70825"));
 
 		await NotifyService
 			.Received(1)
@@ -346,7 +349,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// #$ in action text should be replaced with the test string before execution.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
+			MarkupText.Plain("@switch/inline hello=hel*,@pemit #1=SwHashDollar_#$_81936,nomatch,@pemit #1=SwHashDollar_NoMatch_81936"));
 
 		await NotifyService
 			.Received(1)
@@ -360,7 +363,7 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		// #$ in default action text should also be replaced with the test string.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
+			MarkupText.Plain("@switch/inline goodbye=hello,@pemit #1=SwHashDollarDef_NoMatch_92047,@pemit #1=SwHashDollarDef_#$_92047"));
 
 		await NotifyService
 			.Received(1)
@@ -372,20 +375,28 @@ public class ControlFlowCommandTests
 	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// @switch/notify: action fires normally; @notify me is also queued.
-		// Verify the action itself executes correctly.
-		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain("@switch/notify 1=1,@pemit #1=SwNotify_Match_93158,@pemit #1=SwNotify_Default_93158"));
+		// @switch/notify: the action fires normally, and "@notify me" is queued after it,
+		// releasing a task parked on the executor's semaphore.
+		var id = Guid.NewGuid().ToString("N")[..8];
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@drain/all me"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwNotify_Match_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit #1=SwNotify_Released_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwNotify_Released_{id}", 500)).IsFalse()
+			.Because("the parked task must still be waiting before @switch/notify runs");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/notify 1=1,@pemit #1=SwNotify_Match_{id},@pemit #1=SwNotify_Default_{id}"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwNotify_Match_{id}")).IsTrue();
+		await Assert.That(await WaitForMessage(executor, $"SwNotify_Released_{id}")).IsTrue()
+			.Because("@switch/notify queues '@notify me', which releases the waiting semaphore task");
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwNotify_Default_93158")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, $"SwNotify_Default_{id}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -631,9 +642,9 @@ public class ControlFlowCommandTests
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var id = Guid.NewGuid().ToString("N")[..8];
 
-		// Clear any semaphore task another test parked on the executor, so the single
-		// '@notify me' this queues can only release the task parked below.
-		await Scheduler.Drain(new DbRefAttribute(executor, ["SEMAPHORE"]));
+		// Clear any semaphore task another test parked on the executor, and reset the count, so the
+		// single '@notify me' this queues can only release the task parked below.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@drain/all me"));
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@wait me/SEMAPHORE=@pemit #1=SelNotify_Released_{id}"));
