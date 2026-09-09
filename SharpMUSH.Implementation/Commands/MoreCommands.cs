@@ -2989,8 +2989,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var isNoisy = switches.Contains("NOISY");
-		var isSilent = switches.Contains("SILENT");
+		// PennMUSH cmd_whisper (src/cmds.c): `noisy = SW_ISSET(NOISY) || (!SW_ISSET(SILENT) &&
+		// NOISY_WHISPER)`, and `noisy` governs ONLY whether the room may overhear. The whisperer's own
+		// echo is unconditional — `whisper/silent X=hi` still says "You whisper, ..." to the whisperer.
+		var isNoisy = switches.Contains("NOISY")
+									|| (!switches.Contains("SILENT") && Configuration.CurrentValue.Command.NoisyWhisper);
 		var messageText = messageArg.ToPlainText();
 
 		// PennMUSH do_whisper (src/speech.c) reads the message type off the first character exactly as
@@ -3011,11 +3014,8 @@ public partial class Commands
 				await NotifyService.Notify(target, $"You sense: {sensed}", executor, INotifyService.NotificationType.Say);
 			}
 
-			if (!isSilent)
-			{
-				var verb = successfulTargets.Count > 1 ? "sense" : "senses";
-				await NotifyService.Notify(executor, $"{targetList} {verb}: {sensed}", executor);
-			}
+			var verb = successfulTargets.Count > 1 ? "sense" : "senses";
+			await NotifyService.Notify(executor, $"{targetList} {verb}: {sensed}", executor);
 		}
 		else
 		{
@@ -3027,10 +3027,7 @@ public partial class Commands
 				await NotifyService.Notify(target, $"{heading}: {body}", executor, INotifyService.NotificationType.Say);
 			}
 
-			if (!isSilent)
-			{
-				await NotifyService.Notify(executor, $"You whisper, \"{body}\" to {targetList}.", executor);
-			}
+			await NotifyService.Notify(executor, $"You whisper, \"{body}\" to {targetList}.", executor);
 		}
 
 		if (isNoisy)

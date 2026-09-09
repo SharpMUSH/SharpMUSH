@@ -238,6 +238,17 @@ public class SpeechCommandParityTests
 		await Assert.That(theirs).Contains($"You sense: {_speakerName}'s thing");
 	}
 
+	// PennMUSH's /silent and /noisy decide only whether the ROOM may overhear; the whisperer's own
+	// echo is unconditional. Verified live: `whisper/silent Two=quiet one` still answers
+	// `You whisper, "quiet one" to Two.`
+	[Test]
+	public async ValueTask SilentWhisper_StillEchoesToTheWhisperer()
+	{
+		var listenerName = await NameOf(_listener.DbRef);
+		var (mine, _) = await Speak($"whisper/silent {listenerName}=quiet one");
+		await Assert.That(mine).Contains($"You whisper, \"quiet one\" to {listenerName}.");
+	}
+
 	private async Task<string> NameOf(DBRef who)
 		=> (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(who))).Known.Object().Name;
 
