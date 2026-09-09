@@ -147,7 +147,7 @@ public class QueueAdmissionTests
 		await Assert.That(count).IsEqualTo(2);
 	}
 
-	private static IMediator CountingMediator(Func<int> read, Action<int> write)
+	internal static IMediator CountingMediator(Func<int> read, Action<int> write)
 	{
 		var mediator = TargetMediator();
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>

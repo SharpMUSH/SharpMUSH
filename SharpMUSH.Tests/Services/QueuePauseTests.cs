@@ -49,6 +49,32 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task ObsoletePausedTimerCannotDecrementTheManagedSemaphore()
+	{
+		var count = 0;
+		var mediator = QueueAdmissionTests.CountingMediator(() => count, value => count = value);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
+		{ ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser, mediator: mediator);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10, 1), ["SEMAPHORE"]), 0, TimeSpan.FromHours(1), manageSemaphoreCount: true);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true, generation: 0)).Reason)
+			.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(count).IsEqualTo(1);
+		await queue.ResumePending(job.Pid.Value);
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true, generation: 0)).Reason)
+			.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That(count).IsEqualTo(1);
+		await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: true, generation: 2);
+		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task ARepeatedReleaseCannotReplaceTheSignalHeldByAPause()
 	{
 		await using var queue = Create();
