@@ -808,6 +808,42 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ShutdownCancelsHaltProviderCallBeforeWaitingForDelayedLease()
+	{
+		var entered = Signal();
+		var release = Signal();
+		var settled = false;
+		CancellationToken providerToken = default;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			providerToken = call.Arg<CancellationToken>();
+			entered.TrySetResult();
+			try { await release.Task.WaitAsync(providerToken); }
+			finally { settled = true; }
+			return true;
+		});
+		var queue = Create(scheduler: scheduler);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100));
+		var halt = queue.HaltByPid(admission.Pid!.Value).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		var stopping = queue.DisposeAsync().AsTask();
+		try
+		{
+			await stopping.WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(providerToken.IsCancellationRequested).IsTrue();
+			await Assert.That(settled).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally
+		{
+			release.TrySetResult();
+			try { await halt; } catch (OperationCanceledException) { }
+			await stopping;
+		}
+	}
+
+	[Test]
 	public async Task ShutdownWaitsForDelayedPublicationCleanup()
 	{
 		var entered = Signal();
