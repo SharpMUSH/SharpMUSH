@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
@@ -289,12 +290,17 @@ public partial class Commands
 							parser.CurrentState,
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
 							-1));
-						if (!completionAdmission.Accepted)
+						if (completionAdmission.Reason is QueueRejectionReason.GlobalLimit or QueueRejectionReason.OwnerLimit)
 						{
 							// The waiter already owns its reservation. Releasing it through the normal
 							// command path preserves permissions and appends it after admitted rows,
 							// even when no extra slot is available for the completion command itself.
 							await parser.CommandParse(completion);
+						}
+						else if (!completionAdmission.Accepted)
+						{
+							await NotifyService.Notify(executor, completionAdmission.Error, executor);
+							return new CallState(completionAdmission.Error);
 						}
 					}
 
