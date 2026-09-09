@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,7 +17,8 @@ public class MoveService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IPermissionService permissionService,
-	INotifyService notifyService) : IMoveService
+	INotifyService notifyService,
+	IRealityPolicy? reality = null) : IMoveService
 {
 	/// <summary>
 	/// Standard attribute names for move hooks
@@ -188,6 +190,8 @@ public class MoveService(
 			player => player,
 			room => room,
 			thing => thing);
+
+		if (reality is not null && !await reality.CanPerceiveAsync(target.Object().DBRef, dest.Object().DBRef)) return false;
 
 		if (!await permissionService.Controls(who, target))
 		{

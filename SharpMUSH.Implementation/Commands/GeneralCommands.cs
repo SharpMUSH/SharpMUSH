@@ -17,6 +17,7 @@ using System.Net;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
@@ -643,6 +644,9 @@ public partial class Commands
 		}
 
 		var realViewing = viewing.Known;
+		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		if (!await reality.CanPerceiveAsync(executor.Object().DBRef, realViewing.Object().DBRef))
+			return new CallState("#-1 NO MATCH");
 		var viewingObject = realViewing.Object();
 
 		var executorLocation = executor.IsContent
@@ -663,8 +667,20 @@ public partial class Commands
 		var tryIdesc = viewingFromInside && !lookOutside
 			&& (realViewing.IsPlayer || realViewing.IsThing);
 		var usedIdesc = false;
+		var customDescription = false;
+		var layerDescription = await reality.DescriptionAttributeAsync(executor.Object().DBRef, viewingObject.DBRef);
+		if (layerDescription is not null)
+		{
+			var layerAttribute = await AttributeService.GetAttributeAsync(executor, realViewing, layerDescription,
+				IAttributeService.AttributeMode.Read, true);
+			if (layerAttribute.IsAttribute)
+			{
+				customDescription = true;
+				descriptionAttributeName = layerDescription;
+			}
+		}
 
-		if (tryIdesc)
+		if (tryIdesc && !customDescription)
 		{
 			var idescResult = await AttributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
 				IAttributeService.AttributeMode.Read, true);
@@ -678,7 +694,7 @@ public partial class Commands
 			}
 		}
 
-		if (!usedIdesc)
+		if (!usedIdesc && !customDescription)
 		{
 			var descResult = await AttributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, true);
@@ -699,7 +715,7 @@ public partial class Commands
 				state => state with { Enactor = lookerEnactor },
 				lookParser => AttributeService.EvaluateAttributeFunctionAsync(
 					lookParser, executor, realViewing, descriptionAttributeName,
-					new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true));
+					new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !customDescription));
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
@@ -789,52 +805,14 @@ public partial class Commands
 		{
 			var allContents = await Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer))!.ToListAsync();
 
-			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
-			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
 			var canSeeAll = await executor.IsSee_All();
-
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
-
 			foreach (var item in allContents)
 			{
-				var itemObj = item.WithRoomOption();
-				var isDark = await itemObj.IsDarkLegal();
-				var isLight = await itemObj.IsLight();
-
-				bool visible = false;
-				if (isRoomLight)
-				{
-					visible = true;
-				}
-				else if (isRoomDark)
-				{
-					visible = canSeeAll || isLight;
-				}
-				else
-				{
-					visible = !isDark || canSeeAll;
-				}
-
-				if (visible)
-				{
-					if (item.IsExit)
-					{
-						if (!isDark || canSeeAll)
-						{
-							visibleExits.Add(item);
-						}
-					}
-					else
-					{
-						// Disconnected / portal-only players are "asleep" — omitted from contents (PennMUSH).
-						// Objects always show.
-						if (!item.IsPlayer || await ConnectionService.IsOnline(itemObj))
-						{
-							visibleContents.Add(item);
-						}
-					}
-				}
+				if (!await WorldVisibility.CanSeeContentAsync(executor, realViewing, item, reality, ConnectionService)) continue;
+				if (item.IsExit) visibleExits.Add(item);
+				else visibleContents.Add(item);
 			}
 
 			if (visibleContents.Count > 0)

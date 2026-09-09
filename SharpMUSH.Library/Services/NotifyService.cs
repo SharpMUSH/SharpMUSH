@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -23,8 +24,16 @@ public class NotifyService(
 	ILocalizationService localizationService,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
-	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
+	IHttpOutputCapture? httpOutputCapture = null,
+	IRealityPolicy? reality = null) : INotifyService
 {
+	private async ValueTask<bool> CanReceive(DBRef? receiver, AnySharpObject? sender)
+	{
+		if (reality is null || sender is null) return true;
+		if (receiver is null) return !await reality.IsEnabledAsync();
+		return await reality.CanPerceiveAsync(receiver.Value, sender.Object().DBRef);
+	}
+
 	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
 	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
@@ -86,6 +95,7 @@ public class NotifyService(
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (what.Match(
 			markupString => markupString.Length == 0,
 			str => str.Length == 0
@@ -133,7 +143,7 @@ public class NotifyService(
 
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkup(conn.Handle, what);
+			if (await CanReceive(connections.Get(conn.Handle)?.Ref, sender)) await PublishMarkup(conn.Handle, what);
 		}
 	}
 
@@ -150,7 +160,7 @@ public class NotifyService(
 			return;
 		}
 
-		await PublishMarkup(handle, what);
+		if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkup(handle, what);
 	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -165,12 +175,13 @@ public class NotifyService(
 
 		foreach (var handle in handles)
 		{
-			await PublishMarkup(handle, what);
+			if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkup(handle, what);
 		}
 	}
 
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (what.Match(
 			markupString => markupString.Length == 0,
 			str => str.Length == 0
@@ -181,7 +192,7 @@ public class NotifyService(
 
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkupPrompt(conn.Handle, what);
+			if (await CanReceive(connections.Get(conn.Handle)?.Ref, sender)) await PublishMarkupPrompt(conn.Handle, what);
 		}
 	}
 
@@ -203,7 +214,7 @@ public class NotifyService(
 
 		foreach (var handle in handles)
 		{
-			await PublishMarkupPrompt(handle, what);
+			if (await CanReceive(connections.Get(handle)?.Ref, sender)) await PublishMarkupPrompt(handle, what);
 		}
 	}
 
@@ -299,6 +310,7 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (TryCaptureLocalized(who, key, args))
 		{
 			return;
@@ -325,6 +337,7 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (httpOutputCapture is not null)
 		{
 			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);

@@ -1,13 +1,15 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options) : IPermissionService
+public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
+	IRealityPolicy? reality = null) : IPermissionService
 {
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
@@ -227,6 +229,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
 	{
+		if (reality is not null && !await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -237,6 +240,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target)
 	{
+		if (reality is not null && !await reality.CanPerceiveAsync(viewer.Object().DBRef, target.DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -256,6 +260,7 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
 	{
+		if (reality is not null && !await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -371,6 +376,11 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
 	{
+		if (reality is not null)
+		{
+			var hear = type == IPermissionService.InteractType.Hear;
+			if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? from : to).Object().DBRef)) return false;
+		}
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
 		if (type.HasFlag(IPermissionService.InteractType.Hear) && !await lockService.Evaluate(LockType.Interact, to, from))

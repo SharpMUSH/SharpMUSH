@@ -318,7 +318,8 @@ public partial class LocateService(
 		if (TypeAllows(preferred, flags, TypeOf(looker))
 				&& flags.HasFlag(LocateFlags.MatchMeForLooker)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
-				&& name.Equals("me", StringComparison.OrdinalIgnoreCase))
+				&& name.Equals("me", StringComparison.OrdinalIgnoreCase)
+				&& await permissionService.CanInteract(executor, looker, IPermissionService.InteractType.Match))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, looker))
@@ -335,7 +336,8 @@ public partial class LocateService(
 				&& flags.HasFlag(LocateFlags.MatchHereForLookerLocation)
 				&& !flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerInventory)
 				&& name.Equals("here", StringComparison.OrdinalIgnoreCase)
-				&& TypeAllows(preferred, flags, TypeOf(location.WithExitOption())))
+				&& TypeAllows(preferred, flags, TypeOf(location.WithExitOption()))
+				&& await permissionService.CanInteract(executor, location.WithExitOption(), IPermissionService.InteractType.Match))
 		{
 			if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					|| await permissionService.Controls(executor, location.WithExitOption()))
@@ -359,7 +361,8 @@ public partial class LocateService(
 			if (player is not null)
 			{
 				AnySharpObject found = player;
-				if (await InLookerContents(found)
+				if (await permissionService.CanInteract(executor, found, IPermissionService.InteractType.Match)
+						&& await InLookerContents(found)
 						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 								|| await executor.HasLongFingers()
 								|| await Nearby(executor, found)
@@ -383,7 +386,8 @@ public partial class LocateService(
 			if (!found.IsNone)
 			{
 				var known = found.WithoutError().WithoutNone();
-				if (TypeAllows(preferred, flags, TypeOf(known))
+				if (await permissionService.CanInteract(executor, known, IPermissionService.InteractType.Match)
+						&& TypeAllows(preferred, flags, TypeOf(known))
 						&& await InLookerContents(known)
 						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
 								|| await executor.HasLongFingers()
@@ -571,7 +575,7 @@ public partial class LocateService(
 			// stays a candidate and merely loses to a preferred-type one in ChooseThing.
 			if (!TypeAllows(state.Preferred, state.Flags, TypeOf(cur))) continue;
 
-			// An absolute dbref match is taken ahead of can_interact, as match.c does.
+			// Resolve exact identity before classifying names; every candidate still passes interaction policy.
 			var absolute = abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue());
 			var kind = absolute
 				? MatchKind.Exact
@@ -584,8 +588,7 @@ public partial class LocateService(
 			// match.c asks can_interact before comparing names. A candidate whose name does not match is
 			// skipped either way, so asking only about the ones that matched is the same answer for
 			// fewer questions — and this is a per-candidate permission call.
-			if (!absolute
-					&& !await permissionService.CanInteract(executor, cur, IPermissionService.InteractType.Match))
+			if (!await permissionService.CanInteract(executor, cur, IPermissionService.InteractType.Match))
 			{
 				continue;
 			}

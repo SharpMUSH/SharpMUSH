@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -33,7 +34,8 @@ public class ListenerRoutingService(
 	ILockService lockService,
 	IConnectionService connectionService,
 	IServiceProvider serviceProvider,
-	IMessageBus publishEndpoint) : IListenerRoutingService
+	IMessageBus publishEndpoint,
+	IRealityPolicy? reality = null) : IListenerRoutingService
 {
 	private IAttributeService? _attributeService;
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
@@ -233,6 +235,9 @@ public class ListenerRoutingService(
 			return;
 
 		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
+		if (owner is null) return;
+		if (reality is not null && (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
+			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef))) return;
 
 		var connections = connectionService.Get(owner.Object.DBRef);
 		var isConnected = await connections.AnyAsync();
