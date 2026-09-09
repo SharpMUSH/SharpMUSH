@@ -36,6 +36,14 @@ A conflicting raw attribute edit is preserved and reported; restore the original
 counter, or remove the newly created attribute, before retrying. These repair
 records are in memory; an unrepaired counter is logged if the engine shuts down.
 
+`@notify` and `@drain` persist their counter before releasing or removing waiters.
+If the provider cannot confirm whether a write committed, the selected waiters
+keep their reservations until a bounded reconciliation succeeds. Later semaphore
+operations retry that reconciliation first. An unchanged counter leaves waiters
+waiting; the intended counter completes the original operation exactly once. A
+conflicting counter or metadata edit requires administrator repair before these
+operations can continue. Ordinary queued commands remain available.
+
 Wizards can use `@ps/all` to inspect admitted totals, configured limits, and
 rejection counts by reason. Counts last for the lifetime of the engine process.
 The configuration interface exposes both queue limits in the Limit category.

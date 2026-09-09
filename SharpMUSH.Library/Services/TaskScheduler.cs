@@ -548,7 +548,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
 		{
@@ -570,7 +570,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true).MinBy(e => e.Pid);
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).MinBy(e => e.Pid);
 		if (entry?.Deferred is not { } deferred) return false;
 		if (!deferred.State.Registers.TryPeek(out var registers))
 		{
@@ -593,7 +593,7 @@ public partial class TaskScheduler(
 			lock (_admissionLock)
 			{
 				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-					&& e.Deferred?.ReleasePending != true).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
+					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
 				foreach (var entry in removed) RemoveEntry(entry.Pid);
 			}
 			foreach (var entry in removed)
