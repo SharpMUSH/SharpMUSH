@@ -9,6 +9,52 @@ internal static class HexadecimalNumber
 		return text.StartsWith("0x", StringComparison.OrdinalIgnoreCase);
 	}
 
+	/// <summary>Rounds the actual binary value to decimal's 96-bit coefficient and scale, without
+	/// an intermediate decimal string. All arithmetic is bounded independently of the input length.</summary>
+	public static bool TryConvertDecimal(double number, out decimal value)
+	{
+		value = 0;
+		var bits = BitConverter.DoubleToUInt64Bits(number);
+		var encodedExponent = (int)((bits >> 52) & 0x7ff);
+		var exponent = encodedExponent == 0 ? -1074 : encodedExponent - 1023 - 52;
+		if (exponent > 43) return false; // Includes NaN, infinity, and values at least 2^96.
+		var significand = (UInt128)(bits & ((1UL << 52) - 1));
+		if (encodedExponent != 0) significand |= (UInt128)1 << 52;
+		var maximum = ((UInt128)1 << 96) - 1;
+		UInt128 powerOfFive = 1;
+		for (var i = 0; i < 28; i++) powerOfFive *= 5;
+		for (var scale = 28; scale >= 0; scale--, powerOfFive /= 5)
+		{
+			// The numerator uses at most 119 bits. Reject an overflowing positive shift
+			// before computing it; that scale cannot fit decimal's smaller coefficient.
+			var numerator = significand * powerOfFive;
+			var shift = exponent + scale;
+			UInt128 coefficient;
+			if (shift >= 0)
+			{
+				if (numerator > (UInt128.MaxValue >> shift)) continue;
+				coefficient = numerator << shift;
+			}
+			else if (shift <= -128) coefficient = 0;
+			else
+			{
+				var discarded = -shift;
+				coefficient = numerator >> discarded;
+				var remainder = numerator & (((UInt128)1 << discarded) - 1);
+				var halfway = (UInt128)1 << (discarded - 1);
+				if (remainder > halfway || remainder == halfway && (coefficient & 1) != 0)
+					coefficient++;
+			}
+			if (coefficient > maximum) continue;
+			while (scale > 0 && coefficient % 10 == 0) { coefficient /= 10; scale--; }
+			value = new decimal(unchecked((int)(uint)coefficient),
+				unchecked((int)(uint)(coefficient >> 32)), unchecked((int)(uint)(coefficient >> 64)),
+				(bits >> 63) != 0, (byte)scale);
+			return true;
+		}
+		return false;
+	}
+
 	public static bool TryParse(ReadOnlySpan<char> text, bool allowTrailing, out double value)
 	{
 		value = 0;

@@ -36,8 +36,7 @@ public readonly record struct NumericEvaluation(bool TinyMath, bool NullEqualsZe
 		var text = input.AsSpan().TrimStart(" \t\r\n\v\f");
 		if (HexadecimalNumber.HasPrefix(text) && HexadecimalNumber.TryParse(text, TinyMath, out var number))
 		{
-			// A direct double-to-decimal cast rounds to 15 digits, losing exact large integers.
-			return decimal.TryParse(number.ToString("R", CultureInfo.InvariantCulture), Real, CultureInfo.InvariantCulture, out value);
+			return HexadecimalNumber.TryConvertDecimal(number, out value);
 		}
 		return decimal.TryParse(Candidate(input, integer: false), Real, CultureInfo.InvariantCulture, out value);
 	}

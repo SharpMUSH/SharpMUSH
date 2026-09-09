@@ -31,6 +31,36 @@ public class NumericHexTests
 	}
 
 	[Test]
+	[Arguments("0x800000000000000000000000", "39614081257132168796771975168")]
+	[Arguments("-0x800000000000000000000000", "-39614081257132168796771975168")]
+	[Arguments("0x1.0000000000001p0", "1.0000000000000002220446049250")]
+	[Arguments("0x1.0000001p0", "1.0000000037252902984619140625")]
+	public async Task DecimalConversionPreservesRepresentableBinaryValues(string text, string expected)
+	{
+		var valid = new NumericEvaluation(false, true).TryDecimal(text, out var actual);
+		await Assert.That(valid).IsTrue();
+		await Assert.That(actual).IsEqualTo(decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture));
+	}
+
+	[Test]
+	[Arguments("0x0", "0")]
+	[Arguments("0x1", "1")]
+	[Arguments("0x1.8", "1.5")]
+	[Arguments("0x1p-1074", "0")]
+	public async Task DecimalConversionDoesNotIntroduceTrailingZeroes(string text, string expected)
+	{
+		await Assert.That(new NumericEvaluation(false, true).TryDecimal(text, out var value)).IsTrue();
+		await Assert.That(value.ToString(System.Globalization.CultureInfo.InvariantCulture)).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("0x1p96")]
+	[Arguments("-0x1p96")]
+	[Arguments("0x1p1024")]
+	public async Task DecimalConversionRejectsOutOfRangeValues(string text)
+		=> await Assert.That(new NumericEvaluation(false, true).TryDecimal(text, out _)).IsFalse();
+
+	[Test]
 	[Arguments("0x1junk")]
 	[Arguments("0x1p+")]
 	[Arguments("0x.p2")]
