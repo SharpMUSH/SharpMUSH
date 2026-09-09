@@ -2139,18 +2139,28 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 
+		// The semaphore attribute is owned by God and stamped LOCKED, as PennMUSH's add_to_sem
+		// maintains it (atr_add(..., GOD, SEMAPHORE_FLAGS), src/cque.c:216). Writing the count back
+		// through the permission-checked service therefore fails CanSet for an ordinary player, and
+		// the result is discarded — releasing the task while leaving the count stale. Maintain it on
+		// the same system path that QueueSemaphore creates it on.
+		var systemOwner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var semaphorePath = attribute.Split("`");
+
+		async ValueTask WriteSemaphoreCount(int value) =>
+			await Mediator.Send(new SetAttributeCommand(objectToNotify.Object().DBRef, semaphorePath,
+				MarkupText.Plain(value.ToString()), systemOwner));
+
 		switch (notifyType)
 		{
 			case "ANY":
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, notifyCount));
 				var newCount = oldSemaphoreCount - notifyCount;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCount.ToString()));
+				await WriteSemaphoreCount(newCount);
 				break;
 			case "ALL":
 				await Mediator.Send(new NotifyAllSemaphoreRequest(dbRefAttribute));
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(0.ToString()));
+				await WriteSemaphoreCount(0);
 				break;
 			case "SETQ":
 				var modified = await Mediator.Send(new ModifyQRegistersRequest(dbRefAttribute, qRegisters!));
@@ -2161,8 +2171,7 @@ public partial class Commands
 				}
 				await Mediator.Send(new NotifySemaphoreRequest(dbRefAttribute, oldSemaphoreCount, 1));
 				var newCountSetQ = oldSemaphoreCount - 1;
-				await AttributeService.SetAttributeAsync(executor, objectToNotify, attribute,
-					MarkupText.Plain(newCountSetQ.ToString()));
+				await WriteSemaphoreCount(newCountSetQ);
 				return new None();
 		}
 
@@ -2658,6 +2667,13 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>SEMAPHORE_FLAGS</c> (<c>src/cque.c:98</c>), which <c>add_to_sem</c> stamps on the
+	/// attribute as GOD every time it touches it, and which <c>waitable_attr</c> (<c>:125</c>) then
+	/// requires before it will let a later @wait use that attribute at all.
+	/// </summary>
+	private static readonly string[] SemaphoreAttributeFlags = ["no_inherit", "no_clone", "locked"];
+
 	private async ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1, ParserState? callbackState = null)
 	{
@@ -2667,21 +2683,14 @@ public partial class Commands
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
-		if (attrValue is null)
-		{
-
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-
-			var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
-
-			await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-				dbRefAttr, 0));
-
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		// PennMUSH's semaphore attribute holds the number of tasks waiting on it. A parking @wait is
+		// add_to_sem(thing, 1, aname) (src/cque.c:1615), and add_to_generic reads a MISSING attribute
+		// as zero before adding — so the first @wait on a fresh object must leave 1 behind, not 0.
+		// Writing 0 made the matching @notify drive the count to -1, which reads as a banked notify,
+		// so the NEXT @wait on that object ran its command immediately instead of parking. Treating
+		// "absent" as zero and falling through to the common path is add_to_generic's own shape.
+		var last = 0;
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out last))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
@@ -2690,10 +2699,15 @@ public partial class Commands
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
 
-		var dbRefAttr2 = new DbRefAttribute(located.Object().DBRef, attribute);
+		if (attrValue is null)
+		{
+			await StampSemaphoreFlags(located, attribute);
+		}
+
+		var dbRefAttr = new DbRefAttribute(located.Object().DBRef, attribute);
 
 		await Mediator.Send(new QueueCommandListRequest(arg1, stateForCallback,
-			dbRefAttr2, last));
+			dbRefAttr, last));
 
 	}
 
@@ -2706,16 +2720,9 @@ public partial class Commands
 		var attrValues = Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute));
 		var attrValue = await attrValues.LastOrDefaultAsync();
 
-		if (attrValue is null)
-		{
-			await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MushText.Zero,
-				one.AsPlayer));
-			await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
-				new DbRefAttribute(located.Object().DBRef, attribute), 0, delay));
-			return;
-		}
-
-		if (!int.TryParse(attrValue.Value.ToPlainText(), out var last))
+		// Same counting rule as QueueSemaphore above: absent means zero, and this wait makes it one.
+		var last = 0;
+		if (attrValue is not null && !int.TryParse(attrValue.Value.ToPlainText(), out last))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.Integer, executor);
 			return;
@@ -2723,8 +2730,46 @@ public partial class Commands
 
 		await Mediator.Send(new SetAttributeCommand(located.Object().DBRef, attribute, MarkupText.Plain($"{last + 1}"),
 			one.AsPlayer));
+
+		if (attrValue is null)
+		{
+			await StampSemaphoreFlags(located, attribute);
+		}
+
 		await Mediator.Send(new QueueCommandListWithTimeoutRequest(arg1, stateForCallback,
 			new DbRefAttribute(located.Object().DBRef, attribute), last, delay));
+	}
+
+	/// <summary>
+	/// A semaphore attribute this command just created carries no flags, but <c>waitable_attr</c>
+	/// refuses an existing attribute that does not have all of <see cref="SemaphoreAttributeFlags"/> —
+	/// so without this the FIRST @wait works and every later one on the same attribute is refused.
+	/// Stamped as God, matching Penn's <c>atr_add(player, name, buff, GOD, flags)</c>.
+	/// </summary>
+	private async ValueTask StampSemaphoreFlags(AnySharpObject located, string[] attribute)
+	{
+		// Not AttributeService.SetAttributeFlagsAsync: that is the @set/attribute-flag path and reports
+		// "flags set" to the executor it is handed, so every fresh semaphore would tell a connected #1
+		// about bookkeeping it did not ask for. This is internal, so it goes straight to the command.
+		var stamped = await Mediator.CreateStream(new GetAttributeQuery(located.Object().DBRef, attribute))
+			.LastOrDefaultAsync();
+
+		if (stamped is null)
+		{
+			return;
+		}
+
+		var known = await Mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+
+		foreach (var name in SemaphoreAttributeFlags)
+		{
+			var flag = known.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+			if (flag is not null)
+			{
+				await Mediator.Send(new SetAttributeFlagCommand(located.Object().DBRef, stamped, flag));
+			}
+		}
 	}
 
 	private async ValueTask<Option<CallState>> AtWaitForPid(IMUSHCodeParser parser, string? arg0,
