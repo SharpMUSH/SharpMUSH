@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -13,6 +14,8 @@ public class UtilityFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
@@ -573,6 +576,126 @@ public class UtilityFunctionUnitTests
 		var after2 = (await Parser.FunctionParse(MarkupText.Plain($"get({createResult}/ATTR2)")))?.Message!;
 		await Assert.That(after1.ToPlainText()).IsEmpty();
 		await Assert.That(after2.ToPlainText()).IsEmpty();
+	}
+
+	/// <summary>
+	/// <c>wipe()</c> is PennMUSH's <c>@wipe</c> exposed as a function - <c>fun_wipe</c> hands its
+	/// argument straight to <c>do_wipe</c> (<c>src/set.c</c>) - so the object <c>SAFE</c> flag that
+	/// stops the command has to stop the function too. <c>wipe()</c> used to enumerate the object's
+	/// attributes itself and fire a raw <c>ClearAttributeCommand</c> per name, which never consulted
+	/// a flag at all.
+	/// </summary>
+	[Test]
+	public async Task Wipe_SafeObject_IsNotWiped()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "WipeFnSafe");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WFS{uid} {thing}=keepme"));
+
+		// Control: the attribute is there and readable before the wipe, so a surviving value below
+		// cannot be an attribute that was never set in the first place.
+		var before = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFS{uid})")))?.Message!;
+		await Assert.That(before.ToPlainText()).IsEqualTo("keepme");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=SAFE"));
+
+		var wipeResult = (await Parser.FunctionParse(MarkupText.Plain($"wipe({thing})")))?.Message!;
+		await Assert.That(wipeResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.Safe)
+			.Because("@wipe refuses a SAFE object, and wipe() is the same operation");
+
+		var after = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFS{uid})")))?.Message!;
+		await Assert.That(after.ToPlainText()).IsEqualTo("keepme")
+			.Because("a SAFE object's attributes must survive wipe()");
+	}
+
+	/// <summary>
+	/// <c>wipe(&lt;object&gt;[/&lt;attribute pattern&gt;])</c> - the pattern is half the documented
+	/// argument (<c>help WIPE()</c>). <c>wipe()</c> used to parse no pattern at all: every call
+	/// wiped every attribute whose name did not start with <c>_</c>, so a targeted
+	/// <c>wipe(obj/ONE)</c> silently destroyed the rest of the object as well.
+	/// </summary>
+	[Test]
+	public async Task Wipe_HonoursAttributePattern()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "WipeFnPattern");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WFPHIT{uid} {thing}=gone"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WFPKEEP{uid} {thing}=keepme"));
+
+		// Control: both attributes exist before the wipe.
+		var beforeKeep = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFPKEEP{uid})")))?.Message!;
+		await Assert.That(beforeKeep.ToPlainText()).IsEqualTo("keepme");
+
+		await Parser.FunctionParse(MarkupText.Plain($"wipe({thing}/WFPHIT{uid})"));
+
+		var hit = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFPHIT{uid})")))?.Message!;
+		await Assert.That(hit.ToPlainText()).IsEmpty()
+			.Because("the named attribute is the one the pattern matched");
+
+		var keep = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFPKEEP{uid})")))?.Message!;
+		await Assert.That(keep.ToPlainText()).IsEqualTo("keepme")
+			.Because("wipe() must clear only what its attribute pattern matched");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>wipe_helper</c> (<c>src/set.c:1503-1504</c>) refuses to touch a wizard-flagged
+	/// attribute through a wildcarded wipe unless the player is God, even when that player owns and
+	/// controls the object. <c>wipe()</c> never consulted an attribute flag, so an object's own
+	/// mortal owner could destroy every wizard-protected attribute on it.
+	/// </summary>
+	[Test]
+	public async Task Wipe_WizardAttribute_SurvivesMortalWildcardWipe()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WipeFnWizAttr");
+		var ownerDbRef = owner.DbRef.ToString();
+
+		await CommandParser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WFW{uid}PROT me=keepme"));
+		await CommandParser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WFW{uid}OPEN me=gone"));
+		// Applied by God: the point under test is what a wildcarded wipe does to a wizard-flagged
+		// attribute, not who is allowed to raise the flag.
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/WFW{uid}PROT=wizard"));
+
+		// Control: both attributes are set and readable (as God) before the wipe.
+		var beforeProt = (await Parser.FunctionParse(MarkupText.Plain($"get({ownerDbRef}/WFW{uid}PROT)")))?.Message!;
+		await Assert.That(beforeProt.ToPlainText()).IsEqualTo("keepme");
+
+		var mortalParser = WebAppFactoryArg.FunctionParserFor(owner.DbRef);
+		await mortalParser.FunctionParse(MarkupText.Plain($"wipe({ownerDbRef}/WFW{uid}*)"));
+
+		var open = (await Parser.FunctionParse(MarkupText.Plain($"get({ownerDbRef}/WFW{uid}OPEN)")))?.Message!;
+		await Assert.That(open.ToPlainText()).IsEmpty()
+			.Because("the unprotected attribute is wiped, so the wipe really ran");
+
+		var prot = (await Parser.FunctionParse(MarkupText.Plain($"get({ownerDbRef}/WFW{uid}PROT)")))?.Message!;
+		await Assert.That(prot.ToPlainText()).IsEqualTo("keepme")
+			.Because("a wildcarded wipe() steps over a wizard-flagged attribute for anyone but God");
+	}
+
+	/// <summary>
+	/// Regression guard on the control check: an executor who does not control the target wipes
+	/// nothing and gets <c>#-1 PERMISSION DENIED</c>.
+	/// </summary>
+	[Test]
+	public async Task Wipe_NonControllingExecutor_IsDenied()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "WipeFnPerm");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WFN{uid} {thing}=keepme"));
+
+		var stranger = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "WipeFnStranger");
+		var strangerParser = WebAppFactoryArg.FunctionParserFor(stranger);
+
+		var wipeResult = (await strangerParser.FunctionParse(MarkupText.Plain($"wipe({thing})")))?.Message!;
+		await Assert.That(wipeResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+
+		var after = (await Parser.FunctionParse(MarkupText.Plain($"get({thing}/WFN{uid})")))?.Message!;
+		await Assert.That(after.ToPlainText()).IsEqualTo("keepme")
+			.Because("a non-controlling executor wipes nothing");
 	}
 
 	[Test]
