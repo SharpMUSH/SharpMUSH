@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace SharpMUSH.Library.Utilities;
 
 /// <summary>
@@ -8,6 +10,8 @@ namespace SharpMUSH.Library.Utilities;
 /// </summary>
 public static class RegisterNames
 {
+	private static readonly SearchValues<char> RegisterSafe = SearchValues.Create("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-");
+
 	/// <summary>
 	/// Normalizes a name segment into a q-register-acceptable key: uppercased, with anything
 	/// outside [A-Z0-9_.-] replaced by an underscore.
@@ -16,12 +20,6 @@ public static class RegisterNames
 		=> string.Create(name.Length, name, static (normalized, source) =>
 		{
 			source.AsSpan().ToUpperInvariant(normalized);
-			foreach (ref var c in normalized)
-			{
-				if (c is not ((>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '.' or '-'))
-				{
-					c = '_';
-				}
-			}
+			normalized.ReplaceAnyExcept(RegisterSafe, '_');
 		});
 }

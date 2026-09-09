@@ -1,16 +1,28 @@
-using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Server.Helpers;
 
 /// <summary>
 /// Provides utilities for sanitizing user input before logging to prevent log injection attacks.
 /// </summary>
-public static class LogSanitizer
+public static partial class LogSanitizer
 {
 	/// <summary>
 	/// Maximum length for sanitized log values before truncation.
 	/// </summary>
 	private const int MaxLogLength = 200;
+
+	/// <summary>The C0 and C1 controls — what <see cref="char.IsControl(char)"/> answers to.</summary>
+	[GeneratedRegex(@"\p{Cc}")]
+	private static partial Regex ControlCharacter();
+
+	/// <summary>A line break becomes a visible <c>\n</c>, a tab a space, and any other control vanishes.</summary>
+	private static string Replacement(Match control) => control.ValueSpan[0] switch
+	{
+		'\n' or '\r' => @"\n",
+		'\t' => " ",
+		_ => string.Empty,
+	};
 
 	/// <summary>
 	/// Sanitizes a string value for safe inclusion in log messages.
@@ -27,40 +39,15 @@ public static class LogSanitizer
 		if (string.IsNullOrWhiteSpace(input))
 			return "[empty]";
 
-		// Most values are short and carry nothing to strip; those go back as they came. The two ranges
-		// are the C0 and C1 controls, which is what char.IsControl answers to.
-		if (input.Length <= MaxLogLength
-				&& !input.AsSpan().ContainsAnyInRange('\0', '\x1f')
-				&& !input.AsSpan().ContainsAnyInRange('\x7f', '\x9f'))
+		// Most values are short and carry nothing to strip; those go back as they came.
+		if (input.Length <= MaxLogLength && !ControlCharacter().IsMatch(input))
 			return input;
 
-		var sanitized = new StringBuilder(input.Length);
-		foreach (var c in input)
-		{
-			switch (c)
-			{
-				case '\n':
-				case '\r':
-					sanitized.Append("\\n");
-					break;
-				case '\t':
-					sanitized.Append(' ');
-					break;
-				default:
-					if (!char.IsControl(c))
-						sanitized.Append(c);
-					break;
-			}
-		}
+		var result = ControlCharacter().Replace(input, Replacement);
 
-		var result = sanitized.ToString();
-
-		if (result.Length > MaxLogLength)
-		{
-			return result[..MaxLogLength] + "... [truncated]";
-		}
-
-		return result;
+		return result.Length > MaxLogLength
+			? result[..MaxLogLength] + "... [truncated]"
+			: result;
 	}
 
 	/// <summary>

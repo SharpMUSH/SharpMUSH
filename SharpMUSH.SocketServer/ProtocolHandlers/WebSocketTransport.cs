@@ -32,43 +32,45 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 	public async Task<string?> ReceiveTextAsync(CancellationToken ct)
 	{
 		var buffer = ArrayPool<byte>.Shared.Rent(1024 * 4);
-		MemoryStream? messageBuffer = null;
 
 		try
 		{
 			// A single text message can arrive fragmented across several ReceiveAsync calls.
-			// Accumulate until EndOfMessage and decode the complete UTF-8 payload once, so a
-			// fragmented control frame (e.g. NAWS JSON) is never partially parsed and then
-			// misrouted as a command, and multi-byte characters are never split mid-frame.
-			// A message that fits one fragment — every command line does — is decoded in place.
-			while (true)
+			// A message that fits one fragment — every command line does — is decoded in place;
+			// anything longer is accumulated until EndOfMessage and decoded once, so a fragmented
+			// control frame (e.g. NAWS JSON) is never partially parsed and then misrouted as a
+			// command, and multi-byte characters are never split mid-frame.
+			var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
+			if (result.MessageType == WebSocketMessageType.Close)
 			{
-				var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
+				await CloseAsync(ct);
+				return null;
+			}
 
+			if (result.EndOfMessage)
+			{
+				return Encoding.UTF8.GetString(buffer, 0, result.Count);
+			}
+
+			using var messageBuffer = new MemoryStream();
+			messageBuffer.Write(buffer, 0, result.Count);
+
+			while (!result.EndOfMessage)
+			{
+				result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
 				if (result.MessageType == WebSocketMessageType.Close)
 				{
 					await CloseAsync(ct);
 					return null;
 				}
 
-				if (result.EndOfMessage && messageBuffer is null)
-				{
-					return Encoding.UTF8.GetString(buffer, 0, result.Count);
-				}
-
-				messageBuffer ??= new MemoryStream();
 				messageBuffer.Write(buffer, 0, result.Count);
-
-				if (result.EndOfMessage)
-				{
-					return Encoding.UTF8.GetString(messageBuffer.GetBuffer(), 0, (int)messageBuffer.Length);
-				}
 			}
+
+			return Encoding.UTF8.GetString(messageBuffer.GetBuffer(), 0, (int)messageBuffer.Length);
 		}
 		finally
 		{
-			// Not a disposal: the receive buffer is rented, and this hands it back to the pool. The
-			// MemoryStream owns nothing but a managed array and needs no disposal.
 			ArrayPool<byte>.Shared.Return(buffer);
 		}
 	}

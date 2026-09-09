@@ -669,18 +669,8 @@ public class ManipulateSharpObjectService(
 	}
 
 	/// <summary>Whether <paramref name="executor"/> holds at least one of <paramref name="permissions"/>.</summary>
-	private static async ValueTask<bool> HasAnyFlagPermission(AnySharpObject executor, AnySharpObject obj, string[] permissions)
-	{
-		foreach (var permission in permissions)
-		{
-			if (await HasFlagPermission(executor, obj, permission))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
+	private static ValueTask<bool> HasAnyFlagPermission(AnySharpObject executor, AnySharpObject obj, string[] permissions)
+		=> permissions.ToAsyncEnumerable().AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
 
 	/// <summary>
 	/// Resolves a named flag permission level to the appropriate privilege check.

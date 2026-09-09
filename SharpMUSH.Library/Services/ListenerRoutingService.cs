@@ -234,9 +234,10 @@ public class ListenerRoutingService(
 
 		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
 
-		// Held rather than streamed: the same list gates the relay here and receives it below.
-		var connections = await connectionService.Get(owner.Object.DBRef).ToListAsync();
-		if (connections.Count == 0)
+		// A filter over the in-memory connection table, so asking it twice — once to gate, once to
+		// deliver — is cheaper than holding a list across the checks between.
+		var connections = connectionService.Get(owner.Object.DBRef);
+		if (!await connections.AnyAsync())
 			return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
@@ -271,7 +272,7 @@ public class ListenerRoutingService(
 			message.Match(markupString => markupString, MarkupText.Plain));
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
-		foreach (var conn in connections)
+		await foreach (var conn in connections)
 		{
 			await publishEndpoint.HandlePublish(new MarkupOutputMessage(conn.Handle, serialized));
 		}

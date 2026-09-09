@@ -310,25 +310,37 @@ public class ObjectDestructionService(
 	private async ValueTask RehomeDependentsAsync(DBRef dbref, CancellationToken ct)
 	{
 		// Exits are handled by RelinkEntrancesAsync — for an exit the home edge is its destination.
-		// Materialized before mutating: the rehome below writes the edges this stream reads.
-		var homeless = await mediator.CreateStream(new GetHomedAtQuery(dbref), ct)
-			.Where(dependent => !dependent.IsExit)
-			.ToListAsync(ct);
-		if (homeless.Count == 0) return;
+		// The stream is a snapshot in every provider (Lightning reads it inside one transaction,
+		// SurrealDB awaits the whole response), so rehoming while walking it is safe. The default
+		// home is resolved on the first dependent, so an object nothing is homed at costs no lookup.
+		var homeless = mediator.CreateStream(new GetHomedAtQuery(dbref), ct).Where(dependent => !dependent.IsExit);
+		AnySharpContainer? defaultHome = null;
+		var resolved = false;
+		var abandoned = 0;
 
-		var defaultHome = await ResolveDefaultHomeAsync(ct);
-		if (defaultHome is null)
+		await foreach (var dependent in homeless.WithCancellation(ct))
+		{
+			if (!resolved)
+			{
+				defaultHome = await ResolveDefaultHomeAsync(ct);
+				resolved = true;
+			}
+
+			if (defaultHome is null)
+			{
+				abandoned++;
+				continue;
+			}
+
+			await mediator.Send(new SetObjectHomeCommand(dependent, defaultHome), ct);
+		}
+
+		if (abandoned > 0)
 		{
 			logger.LogError(
 				"default_home (#{DefaultHome}) is not a valid container; {Count} object(s) homed at "
 				+ "#{DbRef} will be left without a home.",
-				configuration.CurrentValue.Database.DefaultHome, homeless.Count, dbref.Number);
-			return;
-		}
-
-		foreach (var dependent in homeless)
-		{
-			await mediator.Send(new SetObjectHomeCommand(dependent, defaultHome), ct);
+				configuration.CurrentValue.Database.DefaultHome, abandoned, dbref.Number);
 		}
 	}
 

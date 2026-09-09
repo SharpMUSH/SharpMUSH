@@ -177,18 +177,7 @@ public static class SoftcodeFormatter
 			})
 			.ToArray();
 
-		// Consulted once per character of the source, so the probe is a plain loop rather than a
-		// closure-allocating LINQ call per offset.
-		return offset =>
-		{
-			foreach (var span in spans)
-			{
-				if (offset >= span.Start && offset < span.End)
-					return ErrorStyle;
-			}
-
-			return null;
-		};
+		return offset => spans.Any(span => offset >= span.Start && offset < span.End) ? ErrorStyle : null;
 	}
 
 	/// <summary>
