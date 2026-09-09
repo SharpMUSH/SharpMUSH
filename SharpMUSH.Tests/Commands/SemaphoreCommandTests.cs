@@ -375,4 +375,26 @@ public class SemaphoreCommandTests
 		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
 	}
 
+	[Test]
+	public async Task HaltingExecutorReleasesItsPendingSemaphoreReservation()
+	{
+		var executor = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltExecutor");
+		var semaphore = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemHaltTarget");
+		var name = "COUNT_" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{name} {semaphore}=1"));
+		var attribute = new SharpMUSH.Library.Models.DbRefAttribute(semaphore, [name]);
+		var before = Scheduler.GetQueueUsage().Total;
+		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
+		await Assert.That(admitted.Accepted).IsTrue();
+		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(executor))).AsThing.Object.DBRef;
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(executor.Number, incarnation.CreationMilliseconds + 1));
+		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before + 1);
+		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(executor.Number));
+		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before);
+		await Assert.That((await Scheduler.GetSemaphoreTasks(attribute).ToArrayAsync()).Length).IsEqualTo(0);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(semaphore))).Known;
+		var current = await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false);
+		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+	}
+
 }
