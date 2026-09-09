@@ -80,7 +80,14 @@ public class PennMUSHConcurrentImportTests
 
 			held = true;
 			objectsCreated.SetResult();
-			secondImportDone.Task.Wait(HandoffTimeout);
+			// Wait returns whether it succeeded. Discarding it would let a timed-out handoff resume
+			// the first import anyway: the overlap never happens, the assertions still pass, and the
+			// test reports success without having exercised concurrency at all.
+			if (!secondImportDone.Task.Wait(HandoffTimeout))
+			{
+				throw new TimeoutException(
+					"The second import did not finish inside the handoff window, so the two never overlapped.");
+			}
 		});
 
 		var first = Task.Run(() => converter.ConvertDatabaseAsync(Fixture("Held", 5100), progress));
