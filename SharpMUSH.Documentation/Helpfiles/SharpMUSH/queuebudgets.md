@@ -22,6 +22,11 @@ or semaphore job retains its original reservation and PID when released. It
 does not need to compete for capacity a second time. Immediate work is FIFO;
 semaphore notifications and partial drains select ascending PIDs.
 
+Draining removes only work still waiting on the semaphore. A timeout that has
+already made a command runnable keeps its reservation until execution accounts
+for it. Partial drains subtract only removed waiters and preserve unused
+notification credits; a full drain also clears unused notification credits.
+
 Wizards can use `@ps/all` to inspect admitted totals, configured limits, and
 rejection counts by reason. Counts last for the lifetime of the engine process.
 The configuration interface exposes both queue limits in the Limit category.
