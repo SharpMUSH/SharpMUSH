@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -166,81 +167,12 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
+
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!split.TryPickT0(out var details, out _))
-		{
-			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
-		}
-
-		var (dbref, maybeAttribute) = details;
-
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor,
-			executor,
-			dbref,
-			LocateFlags.All);
-
-		if (locate.IsError)
-		{
-			return locate.AsError;
-		}
-
-		var realLocated = locate.AsSharpObject;
-
-		if (!string.IsNullOrEmpty(maybeAttribute))
-		{
-			// Every token is applied as ONE batch: Penn's do_attrib_flags/af_helper checks permission
-			// once for the whole flag argument, not once per flag, so `@set obj/attr=!safe wizard`
-			// isn't order-dependent on whether "!safe" or "wizard" is processed first.
-			var flagTokens = MushText.SplitList(MarkupText.Space, args["1"].Message!)
-				.Select(x => x.ToPlainText())
-				.ToList();
-
-			var flagResult = await AttributeService.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
-
-			if (flagResult.IsT1)
-			{
-				await NotifyService.Notify(executor, flagResult.AsT1.Value, executor);
-			}
-
-			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
-		}
-
-		var maybeColonLocation = args["1"].Message!.IndexOf(":");
-		if (maybeColonLocation > -1)
-		{
-			var arg1 = args["1"].Message!;
-			var attribute = arg1.Substring(0, maybeColonLocation);
-			var content = arg1.Substring(maybeColonLocation + 1);
-
-			var setResult =
-				await AttributeService.SetAttributeAsync(executor, realLocated, attribute.ToPlainText(), content);
-
-			if (setResult.IsT0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					realLocated.Object().Name, attribute.ToPlainText());
-			}
-			else
-			{
-				await NotifyService.Notify(executor, setResult.AsT1.Value, executor);
-			}
-
-			return new CallState(setResult.Match(
-				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-				failure => failure.Value));
-		}
-
-		foreach (var flag in MushText.SplitList(MarkupText.Space, args["1"].Message!))
-		{
-			await ManipulateSharpObjectService.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
-		}
-
-		return CallState.Empty;
+		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+			NotifyService, executor, args["0"].Message!, args["1"].Message!);
 	}
 
 
