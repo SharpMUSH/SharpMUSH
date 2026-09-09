@@ -5,7 +5,6 @@ using SharpMUSH.Library.Extensions;
 using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
-using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -480,7 +479,7 @@ public partial class TaskScheduler(
 					throw new OperationCanceledException("Semaphore reservation was released before activation.");
 				}
 			}
-			await _scheduler.ScheduleJob(JobBuilder.CreateForAsync<SemaphoreTask>()
+			await _scheduler.ScheduleJob(JobBuilder.Create<SemaphoreTask>()
 			 .SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object> { { "Command", command }, { "State", state } })).Build(),
 			 TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + timeout)
 				.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", group).Build(), ExecutionBudget.CurrentToken);
@@ -512,7 +511,7 @@ public partial class TaskScheduler(
 							&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
 							&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
 								.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
-						if (!retry || createdIdentity is null && expectedCreation) createdIdentity = identity;
+						if (createdIdentity is null && expectedCreation) createdIdentity = identity;
 						else if (createdIdentity != identity)
 							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
 					}
@@ -708,9 +707,9 @@ public partial class TaskScheduler(
 		if (!admission.Accepted) return admission;
 		try
 		{
-			await _scheduler.ScheduleJob(async () => { await Activate(admission.Pid!.Value); },
-			 builder => builder.StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0))
-				.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", $"{DelayGroup}:{state.Executor}"));
+			await _scheduler.ScheduleJob(JobBuilder.Create<DelayedTask>().Build(),
+				TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow + delay).WithSimpleSchedule(x => x.WithRepeatCount(0))
+					.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", $"{DelayGroup}:{state.Executor}").Build(), ExecutionBudget.CurrentToken);
 			return admission;
 		}
 		catch { Release(admission.Pid!.Value); throw; }
@@ -724,7 +723,8 @@ public partial class TaskScheduler(
 
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
+			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
+			.Where(trigger => trigger is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
@@ -753,12 +753,12 @@ public partial class TaskScheduler(
 		var keys = candidates.Where(key => DbRefAttribute.TryParse(key.Group[(SemaphoreGroup.Length + 1)..], out var attribute)
 		 && attribute!.Value.DbRef.Matches(obj));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
 
 		await foreach (var key in keyTriggers)
 		{
-			yield return key;
+			if (key is not null) yield return key;
 		}
 	}
 
@@ -767,12 +767,12 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
 
 		await foreach (var key in keyTriggers)
 		{
-			yield return key;
+			if (key is not null) yield return key;
 		}
 	}
 
@@ -781,12 +781,12 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
+			.Select<TriggerKey, SemaphoreTaskData?>(async (triggerKey, _) =>
 				await MapSemaphoreTaskData(_scheduler, triggerKey));
 
 		await foreach (var key in keyTriggers)
 		{
-			yield return key;
+			if (key is not null) yield return key;
 		}
 	}
 
@@ -815,10 +815,12 @@ public partial class TaskScheduler(
 			.ToAsyncEnumerable();
 	}
 
-	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
+	private static async ValueTask<SemaphoreTaskData?> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
 	{
 		var trigger = await scheduler.GetTrigger(triggerKey);
+		if (trigger is null) return null;
 		var job = await scheduler.GetJobDetail(trigger.JobKey);
+		if (job is null) return null;
 		var data = job.JobDataMap;
 		var command = (MString)data["Command"];
 		var state = (ParserState)data["State"];
@@ -840,6 +842,7 @@ public partial class TaskScheduler(
 		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
 		{
 			var trigger = await _scheduler.GetTrigger(key);
+			if (trigger is null) continue;
 			await _scheduler.RescheduleJob(key, trigger.GetTriggerBuilder().StartAt(DateTimeOffset.UtcNow + delay).Build());
 		}
 	}
