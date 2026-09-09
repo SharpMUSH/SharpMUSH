@@ -100,10 +100,11 @@ public class HookOverrideBehaviorTests
 
 	/// <summary>
 	/// Same contract as <see cref="Override_CapturesEvaluatedArgument_NotRawSubstitution"/>, but through
-	/// <c>@hook/override/inline</c>. <c>ExecuteHookCode</c> branches on <c>hook.Inline</c> before dispatching
-	/// the matched <c>$</c>-command, so without this test the inline arm of that branch is never executed by
-	/// the suite. Both arms must behave identically: nothing about a matched <c>$</c>-command's execution
-	/// depends on the hook's inline flag.
+	/// <c>@hook/override/inline</c>. Both spellings now reach the matched <c>$</c>-command through one
+	/// dispatch path; <c>hook.Inline</c> survives only as a register-handling flag, gating the
+	/// <c>/localize</c> save-restore and the <c>/clearregs</c> wipe around that dispatch. This test holds
+	/// the two spellings to the same result, so the shared path cannot regress into treating them
+	/// differently: nothing about a matched <c>$</c>-command's execution depends on the inline flag.
 	/// </summary>
 	[Test]
 	public async ValueTask OverrideInline_CapturesEvaluatedArgument_SameAsNonInline()
