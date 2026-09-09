@@ -20,17 +20,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IAttributeService _attributeService;
 	private readonly IMediator _mediator;
 
-	// Mapping from PennMUSH DBRef to SharpMUSH DBRef
-	private readonly Dictionary<int, DBRef> _dbrefMapping = [];
-
-	/// <summary>
-	/// One conversion at a time. The converter is a singleton (<c>Startup.cs:521</c>) and
-	/// <see cref="_dbrefMapping"/> is per-conversion state, so two overlapping imports clear each
-	/// other's mapping and write into the same non-concurrent dictionary, which throws
-	/// <see cref="InvalidOperationException"/> and leaves the import reporting success over nothing.
-	/// </summary>
-	private readonly SemaphoreSlim _conversionGate = new(1, 1);
-
 	public PennMUSHDatabaseConverter(
 		ISharpDatabase database,
 		PennMUSHDatabaseParser parser,
@@ -74,31 +63,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IProgress<ConversionProgress>? progress,
 		CancellationToken cancellationToken = default)
 	{
-		await _conversionGate.WaitAsync(cancellationToken);
-
-		try
-		{
-			return await ConvertDatabaseCoreAsync(pennDatabase, progress, cancellationToken);
-		}
-		finally
-		{
-			_conversionGate.Release();
-		}
-	}
-
-	private async Task<ConversionResult> ConvertDatabaseCoreAsync(
-		PennMUSHDatabase pennDatabase,
-		IProgress<ConversionProgress>? progress,
-		CancellationToken cancellationToken)
-	{
-		// A singleton holding per-conversion state: uncleared, every dbref looks already-converted and
-		// a second import in the same process silently creates nothing.
-		_dbrefMapping.Clear();
+		// Per-conversion, never a field: the converter is a singleton, so state kept on it is shared
+		// with every other import running at the same time. See PennMUSHConversionContext.
+		var context = new PennMUSHConversionContext();
+		var errors = context.Errors;
+		var warnings = context.Warnings;
 
 		var stopwatch = Stopwatch.StartNew();
 		var result = new ConversionResult();
-		var errors = new List<string>();
-		var warnings = new List<string>();
 
 		var totalObjects = pennDatabase.Objects.Count;
 		var playersConverted = 0;
@@ -142,20 +114,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			ReportProgress("Creating objects", 0.0);
 
-			var objectCounts = await CreateObjectsAsync(pennDatabase, errors, warnings, cancellationToken);
+			var objectCounts = await CreateObjectsAsync(pennDatabase, context, cancellationToken);
 			playersConverted = objectCounts.players;
 			roomsConverted = objectCounts.rooms;
 			thingsConverted = objectCounts.things;
 			exitsConverted = objectCounts.exits;
 			ReportProgress("Objects created", 0.25);
 
-			await EstablishRelationshipsAsync(pennDatabase, errors, warnings, cancellationToken);
+			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Relationships established", 0.50);
 
-			attributesConverted = await CreateAttributesAsync(pennDatabase, errors, warnings, cancellationToken);
+			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Attributes created", 0.75);
 
-			locksConverted = await CreateLocksAsync(pennDatabase, errors, warnings, cancellationToken);
+			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
 			stopwatch.Stop();
@@ -235,10 +207,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	private async Task<(int players, int rooms, int things, int exits)> CreateObjectsAsync(
 		PennMUSHDatabase pennDatabase,
-		List<string> errors,
-		List<string> warnings,
+		PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
+		var dbrefMapping = context.DbrefMapping;
+		var errors = context.Errors;
+		var warnings = context.Warnings;
+
 		int playersConverted = 0, roomsConverted = 0, thingsConverted = 0, exitsConverted = 0;
 
 		_logger.LogInformation("Object creation phase - converting {Count} objects", pennDatabase.Objects.Count);
@@ -258,7 +233,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
-			_dbrefMapping[1] = tempGodDbRef;
+			dbrefMapping[1] = tempGodDbRef;
 			playersConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing God player #1 from database migration");
 
@@ -277,7 +252,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				// restamp. The order is otherwise free: an imported PennMUSH hash validates against
 				// salt + plaintext, never against the objid.
 				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
-				_dbrefMapping[1] = tempGodDbRef;
+				dbrefMapping[1] = tempGodDbRef;
 
 				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
 			}
@@ -301,7 +276,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					godModified,
 					cancellationToken);
 
-				_dbrefMapping[1] = tempGodDbRef;
+				dbrefMapping[1] = tempGodDbRef;
 				playersConverted++;
 				_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
 			}
@@ -316,7 +291,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					10000,
 					null,
 					cancellationToken: cancellationToken);
-				_dbrefMapping[1] = tempGodDbRef;
+				dbrefMapping[1] = tempGodDbRef;
 				playersConverted++;
 				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
 			}
@@ -337,7 +312,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
-			_dbrefMapping[0] = tempRoom0DbRef;
+			dbrefMapping[0] = tempRoom0DbRef;
 			roomsConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
 
@@ -346,7 +321,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				await _database.SetObjectName(existingRoom0.AsT1, MarkupText.Plain(room0Penn.Name), cancellationToken);
 				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
-				_dbrefMapping[0] = tempRoom0DbRef;
+				dbrefMapping[0] = tempRoom0DbRef;
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
 			}
 		}
@@ -363,7 +338,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					room0Created,
 					room0Modified,
 					cancellationToken);
-				_dbrefMapping[0] = tempRoom0DbRef;
+				dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
 				_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
 			}
@@ -373,7 +348,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					"Limbo",
 					godPlayer,
 					cancellationToken: cancellationToken);
-				_dbrefMapping[0] = tempRoom0DbRef;
+				dbrefMapping[0] = tempRoom0DbRef;
 				roomsConverted++;
 				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
 			}
@@ -387,7 +362,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var room2Penn = pennDatabase.GetObject(2);
 
 			// Master Room #2 already exists (from database migration), reuse it
-			_dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
+			dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
 
 			if (room2Penn != null)
 			{
@@ -429,7 +404,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			cancellationToken.ThrowIfCancellationRequested();
 
 			// Skip already created or reused objects (God, Limbo, and potentially #2 if it was reused)
-			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || _dbrefMapping.ContainsKey(pennObj.DBRef))
+			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || dbrefMapping.ContainsKey(pennObj.DBRef))
 			{
 				continue;
 			}
@@ -527,7 +502,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						continue;
 				}
 
-				_dbrefMapping[pennObj.DBRef] = newDbRef;
+				dbrefMapping[pennObj.DBRef] = newDbRef;
 
 				_logger.LogDebug("Created object #{PennDBRef} -> {SharpDBRef}: {Name}",
 					pennObj.DBRef, newDbRef, pennObj.Name);
@@ -545,17 +520,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	private async Task EstablishRelationshipsAsync(
 		PennMUSHDatabase pennDatabase,
-		List<string> errors,
-		List<string> warnings,
+		PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
+		var dbrefMapping = context.DbrefMapping;
+		var errors = context.Errors;
+		var warnings = context.Warnings;
+
 		_logger.LogInformation("Establishing object relationships for {Count} objects", pennDatabase.Objects.Count);
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
+			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
 			}
@@ -574,7 +552,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				// Handle location for content objects (players, things, exits)
 				if (pennObj.Type != PennMUSHObjectType.Room && pennObj.Location >= 0)
 				{
-					if (_dbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
+					if (dbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
 					{
 						var locationObj = await _database.GetObjectNodeAsync(locationDbRef, cancellationToken);
 						var container = TryGetContainer(locationObj);
@@ -616,7 +594,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				if (pennObj.Type == PennMUSHObjectType.Exit && pennObj.Link >= 0)
 				{
-					if (_dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
+					if (dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
 					{
 						var destObj = await _database.GetObjectNodeAsync(destDbRef, cancellationToken);
 						var container = TryGetContainer(destObj);
@@ -629,7 +607,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 				}
 
-				if (pennObj.Parent >= 0 && _dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
+				if (pennObj.Parent >= 0 && dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
 					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
 					if (!parentObj.IsNone)
@@ -643,7 +621,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 				}
 
-				if (pennObj.Zone >= 0 && _dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
+				if (pennObj.Zone >= 0 && dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
 					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
 					if (!zoneObj.IsNone)
@@ -668,10 +646,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	private async Task<int> CreateAttributesAsync(
 		PennMUSHDatabase pennDatabase,
-		List<string> errors,
-		List<string> warnings,
+		PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
+		var dbrefMapping = context.DbrefMapping;
+		var errors = context.Errors;
+		var warnings = context.Warnings;
+
 		_logger.LogInformation("Creating attributes");
 		var count = 0;
 
@@ -679,7 +660,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
+			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
 			}
@@ -772,10 +753,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	private async Task<int> CreateLocksAsync(
 		PennMUSHDatabase pennDatabase,
-		List<string> errors,
-		List<string> warnings,
+		PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
+		var dbrefMapping = context.DbrefMapping;
+		var errors = context.Errors;
+		var warnings = context.Warnings;
+
 		_logger.LogInformation("Creating locks");
 		var count = 0;
 
@@ -783,7 +767,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			if (!_dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
+			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
 			}

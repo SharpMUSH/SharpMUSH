@@ -329,6 +329,9 @@
   <data name="MayNotSpeakHere" xml:space="preserve">
     <value>You may not speak here!</value>
   </data>
+  <data name="MayNotSpeakThere" xml:space="preserve">
+    <value>You may not speak there!</value>
+  </data>
 
   <!-- @force guardrails -->
   <data name="CantForceGod" xml:space="preserve">
@@ -1510,39 +1513,6 @@
   <!-- @select command -->
   <data name="SelectMustSpecifyTestString" xml:space="preserve">
     <value>You must specify a test string.</value>
-  </data>
-  <data name="SelectTestingStringFormat" xml:space="preserve">
-    <value>@select: Testing string '{0}'</value>
-  </data>
-  <data name="SelectExpressionActionPairsFormat" xml:space="preserve">
-    <value>  Expression/action pairs: {0}</value>
-  </data>
-  <data name="SelectHasDefaultAction" xml:space="preserve">
-    <value>  Has default action</value>
-  </data>
-  <data name="SelectModeRegexp" xml:space="preserve">
-    <value>  Mode: Regular expression matching</value>
-  </data>
-  <data name="SelectModeWildcard" xml:space="preserve">
-    <value>  Mode: Wildcard pattern matching</value>
-  </data>
-  <data name="SelectExecutionInline" xml:space="preserve">
-    <value>  Execution: Inline (immediate)</value>
-  </data>
-  <data name="SelectNoBreakWontPropagate" xml:space="preserve">
-    <value>  @break won't propagate to caller</value>
-  </data>
-  <data name="SelectQregistersLocalized" xml:space="preserve">
-    <value>  Q-registers will be localized</value>
-  </data>
-  <data name="SelectQregistersCleared" xml:space="preserve">
-    <value>  Q-registers will be cleared</value>
-  </data>
-  <data name="SelectExecutionQueued" xml:space="preserve">
-    <value>  Execution: Queued</value>
-  </data>
-  <data name="SelectWillQueueNotify" xml:space="preserve">
-    <value>  Will queue @notify after completion</value>
   </data>
   <data name="SelectInvalidRegexPatternFormat" xml:space="preserve">
     <value>Invalid regex pattern: {0}</value>

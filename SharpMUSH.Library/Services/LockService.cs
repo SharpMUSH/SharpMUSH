@@ -33,42 +33,16 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		{ "locked", ("l", LockFlags.Locked) }
 	};
 
-	public Dictionary<string, LockFlags> SystemLocks { get; } = new(StringComparer.OrdinalIgnoreCase)
-	{
-		{ "Basic", LockFlags.Private },
-		{ "Enter", LockFlags.Private },
-		{ "Use", LockFlags.Private },
-		{ "Zone", LockFlags.Private },
-		{ "Page", LockFlags.Private },
-		{ "Teleport", LockFlags.Private },
-		{ "Speech", LockFlags.Private },
-		{ "Listen", LockFlags.Private },
-		{ "Command", LockFlags.Private },
-		{ "Parent", LockFlags.Private },
-		{ "Link", LockFlags.Private },
-		{ "Leave", LockFlags.Private },
-		{ "Drop", LockFlags.Private },
-		{ "Give", LockFlags.Private },
-		{ "From", LockFlags.Private },
-		{ "Pay", LockFlags.Private },
-		{ "Receive", LockFlags.Private },
-		{ "Mail", LockFlags.Private },
-		{ "Follow", LockFlags.Private },
-		{ "Examine", LockFlags.Private },
-		{ "Chzone", LockFlags.Private },
-		{ "Forward", LockFlags.Private },
-		{ "Control", LockFlags.Private },
-		{ "Dropto", LockFlags.Private },
-		{ "Destroy", LockFlags.Private },
-		{ "Interact", LockFlags.Private },
-		{ "MailForward", LockFlags.Private },
-		{ "Take", LockFlags.Private },
-		{ "Open", LockFlags.Private },
-		{ "Filter", LockFlags.Private },
-		{ "InFilter", LockFlags.Private },
-		{ "DropIn", LockFlags.Private },
-		{ "Chown", LockFlags.Private },
-	};
+	/// <summary>
+	/// The standard locks and the flags they are given when set without explicit ones. Derived from
+	/// <see cref="LockType"/> rather than written out again, because these keys are what
+	/// <c>@lock</c> stores under and <see cref="GetIfSet"/> looks up — a second list of spellings is
+	/// exactly how four of them came to disagree and pass everybody. Every standard lock is
+	/// <see cref="LockFlags.Private"/>; use <see cref="LockNames.Canonical"/> on a name from a
+	/// player or a foreign world before looking it up here.
+	/// </summary>
+	public Dictionary<string, LockFlags> SystemLocks { get; } =
+		Enum.GetNames<LockType>().ToDictionary(name => name, _ => LockFlags.Private, LockNames.Comparer);
 
 	[Flags]
 	public enum LockFlags
@@ -130,6 +104,14 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 	/// wrong one for a permission check: evaluating an absent control lock would hand control of every
 	/// unlocked object to everyone. PennMUSH <c>controls()</c> (<c>predicat.c:416</c>) reads the raw
 	/// boolexp and skips it when it is <c>TRUE_BOOLEXP</c> for exactly this reason.
+	/// </para>
+	/// <para>
+	/// Because an absent lock is the permissive answer, a name that fails to match here is a
+	/// permission hole and not a no-op. The lookup is by <see cref="LockType"/> name against a
+	/// dictionary every provider builds through <see cref="LockNames.FoldToImmutable{TIn,TOut}"/>,
+	/// so its keys are canonical and its comparer case-insensitive; a name that came from a player
+	/// switch, a package manifest or a foreign world must go through
+	/// <see cref="LockNames.Canonical"/> before it is used as a lock key.
 	/// </para>
 	/// </summary>
 	public static string? GetIfSet(LockType standardType, AnySharpObject lockee)

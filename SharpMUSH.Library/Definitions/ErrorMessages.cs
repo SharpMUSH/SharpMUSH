@@ -535,6 +535,13 @@ public static class ErrorMessages
 		// --- Speech lock enforcement (PennMUSH src/speech.c) ---
 		public const string MayNotSpeakHere = "You may not speak here!";
 
+		/// <summary>
+		/// The Speech-lock refusal for a room the speaker is not standing in — what @remit and
+		/// @lemit report, against MayNotSpeakHere for the speaker's own room
+		/// (PennMUSH src/speech.c, do_one_remit and do_lemit).
+		/// </summary>
+		public const string MayNotSpeakThere = "You may not speak there!";
+
 		// --- @force guardrails (PennMUSH src/wiz.c) ---
 		public const string CantForceGod = "You can't force God!";
 
@@ -1347,19 +1354,6 @@ public static class ErrorMessages
 		public const string PsQueueManagementNotImplemented = "Note: Queue management not yet implemented.";
 
 		public const string SelectMustSpecifyTestString = "You must specify a test string.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SelectTestingStringFormat = "@select: Testing string '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SelectExpressionActionPairsFormat = "  Expression/action pairs: {0}";
-		public const string SelectHasDefaultAction = "  Has default action";
-		public const string SelectModeRegexp = "  Mode: Regular expression matching";
-		public const string SelectModeWildcard = "  Mode: Wildcard pattern matching";
-		public const string SelectExecutionInline = "  Execution: Inline (immediate)";
-		public const string SelectNoBreakWontPropagate = "  @break won't propagate to caller";
-		public const string SelectQregistersLocalized = "  Q-registers will be localized";
-		public const string SelectQregistersCleared = "  Q-registers will be cleared";
-		public const string SelectExecutionQueued = "  Execution: Queued";
-		public const string SelectWillQueueNotify = "  Will queue @notify after completion";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SelectInvalidRegexPatternFormat = "Invalid regex pattern: {0}";
 

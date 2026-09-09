@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -499,13 +500,17 @@ public class PackagePlanService : IPackagePlanService
 			var baseLocks = baseline?.Locks ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			var liveLocks = (existing ? live!.Locks : null)
 				?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			// The manifest may spell a standard lock any way PennMUSH does; the live object's keys are
+			// LockType's spelling, so both sides are canonicalised or "teleport" reads as drift
+			// against the TPort it just wrote.
+			var specLocks = LockNames.Fold(obj.Locks);
 			var lockTypes = new HashSet<string>(baseLocks.Keys, StringComparer.OrdinalIgnoreCase);
-			lockTypes.UnionWith(obj.Locks.Keys);
+			lockTypes.UnionWith(specLocks.Keys);
 			foreach (var lockType in lockTypes.OrderBy(t => t, StringComparer.Ordinal))
 			{
 				string? newValue = null;
 				var requiresApply = false;
-				if (obj.Locks.TryGetValue(lockType, out var rawNew))
+				if (specLocks.TryGetValue(lockType, out var rawNew))
 				{
 					newValue = PackageRefSubstitution.Substitute(rawNew, Resolve, out var unresolved);
 					if (unresolved.Count > 0)

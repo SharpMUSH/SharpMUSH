@@ -355,11 +355,21 @@ public static partial class HelperFunctions
 		return await obj.IsOrphan() ? null : typeAncestor;
 	}
 
+	/// <summary>
+	/// PennMUSH <c>dbdefs.h:219</c>:
+	/// <code>#define Inheritable(x) (IsPlayer(x) || Inherit(x) || Inherit(Owner(x)) || Wizard(x))</code>
+	/// where <c>Inherit(x)</c> is <c>has_flag_by_name(x, "TRUST", NOTYPE)</c> (<c>dbdefs.h:143</c>).
+	/// Both TRUST tests go through <see cref="HasFlag(SharpObject,string)"/> so they ask the same
+	/// question the same way: <c>has_flag_by_name</c> resolves via <c>match_flag</c> →
+	/// <c>ptab_find</c>, which compares with <c>strcasecmp</c>/<c>string_prefix</c>, so the match is
+	/// case-insensitive and alias-aware. An ordinal comparison here could never match the seeded
+	/// flag, which is spelled <c>TRUST</c> with the alias <c>INHERIT</c> (<c>FlagSeed.cs:22</c>).
+	/// </summary>
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
 		=> obj.IsPlayer
 			 || await obj.HasFlag("Trust")
 			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.Flags.Value.AnyAsync(x => x.Name == "Trust")
+				 .Object.HasFlag("Trust")
 			 || await IsWizard(obj);
 
 	public static async ValueTask<bool> Owns(this AnySharpObject who,
@@ -511,30 +521,11 @@ public static partial class HelperFunctions
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>
-	/// A regular expression for literal attribute names (no wildcards).
-	/// Allows alphanumeric, @, _, -, ., `, and # (PennMUSH permits # in attribute names,
-	/// e.g. bb_post_bdy_#1 produced by &amp; attr_%# obj=value patterns).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`#]+)$")]
-	private static partial Regex ObjectWithLiteralAttribute();
-
-	/// <summary>
-	/// A regular expression for wildcard attribute patterns.
-	/// Allows * and ? for pattern matching in addition to literal characters (including #).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\*\?#]+)$")]
-	private static partial Regex ObjectWithWildcardAttribute();
-
-	/// <summary>
-	/// A regular expression for regex attribute patterns.
-	/// Allows full regex syntax for advanced pattern matching (including # as a literal).
-	/// </summary>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
-	private static partial Regex ObjectWithRegexAttribute();
-
-	/// <summary>
-	/// A regular expression that takes the form of 'Object/attributeName'.
-	/// Legacy method - use ObjectWithLiteralAttribute, ObjectWithWildcardAttribute, or ObjectWithRegexAttribute instead.
+	/// A regular expression that takes the form of 'Object/attributeName'. The attribute half
+	/// accepts wildcard and regex metacharacters as literals, so one pattern covers every caller;
+	/// which of those the characters actually mean is decided later, by the matching mode the
+	/// caller asks for. '#' is allowed because PennMUSH permits it in attribute names
+	/// (e.g. bb_post_bdy_#1, produced by &amp; attr_%# obj=value patterns).
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
 	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]

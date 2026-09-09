@@ -316,6 +316,10 @@ public partial class SurrealDatabase(
 	}
 
 
+	/// <summary>
+	/// Serialises the loaded lock map. Its keys are already canonical and unique under
+	/// <see cref="LockNames.Comparer"/>, so the plain <c>ToDictionary</c> here cannot collide.
+	/// </summary>
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";
@@ -326,28 +330,25 @@ public partial class SurrealDatabase(
 	}
 
 	/// <summary>
-	/// Lock names compare case-insensitively (<see cref="SharpObject.LockNameComparer"/>), but a
-	/// stored world can still hold two that differ only in case. Folding them keeps that world
-	/// loadable instead of throwing out of every read of the object.
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. The
+	/// intermediate dictionary is deliberately ordinal: the stored JSON may hold two spellings of
+	/// one lock, and deserialising straight into a case-insensitive map would throw on it. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives.
 	/// </summary>
-	private IImmutableDictionary<string, SharpLockData> DeserializeLocks(string id, string? json)
+	internal static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
-			return SharpObject.EmptyLocks;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		try
 		{
 			var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOptions);
-			if (dict == null) return SharpObject.EmptyLocks;
-			return SharpObject.FoldLockNames(dict, (kept, dropped) =>
-					logger.LogWarning(
-						"Object {Id} holds lock names {Kept} and {Dropped}, which differ only in case. Keeping {Kept} and dropping {Dropped}.",
-						id, kept, dropped, kept, dropped))
-				.ToImmutableDictionary(kvp => kvp.Key, kvp => DeserializeLock(kvp.Value),
-					SharpObject.LockNameComparer);
+			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
+			return LockNames.FoldToImmutable(dict, DeserializeLock);
 		}
 		catch
 		{
-			return SharpObject.EmptyLocks;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		}
 	}
 
@@ -382,7 +383,7 @@ public partial class SurrealDatabase(
 			CreationTime = creationTime,
 			ModifiedTime = modifiedTime,
 			Warnings = warnings,
-			Locks = DeserializeLocks(id, locksJson),
+			Locks = DeserializeLocks(locksJson),
 			Flags = FlagsOf(id, type, record.flags),
 			Powers = PowersOf(id, record.powers),
 			Attributes = new(() => new FreshAsyncEnumerable<SharpAttribute>(enumCt => GetTopLevelAttributesAsync(id, enumCt))),

@@ -736,9 +736,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				var lockKey = obj.Object().Locks.Keys
-					.FirstOrDefault(k => string.Equals(k, lockType, StringComparison.OrdinalIgnoreCase));
-				if (lockKey == null || !obj.Object().Locks.TryGetValue(lockKey, out var lockData))
+				if (!obj.Object().Locks.TryGetValue(LockNames.Canonical(lockType), out var lockData))
 				{
 					await NotifyService.Notify(executor, $"No such lock: {lockType}", executor);
 					return new CallState(ErrorMessages.Returns.NoSuchLock);
@@ -3040,28 +3038,45 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var isNoisy = switches.Contains("NOISY");
-		var isSilent = switches.Contains("SILENT");
+		// PennMUSH cmd_whisper (src/cmds.c): `noisy = SW_ISSET(NOISY) || (!SW_ISSET(SILENT) &&
+		// NOISY_WHISPER)`, and `noisy` governs ONLY whether the room may overhear. The whisperer's own
+		// echo is unconditional — `whisper/silent X=hi` still says "You whisper, ..." to the whisperer.
+		var isNoisy = switches.Contains("NOISY")
+									|| (!switches.Contains("SILENT") && Configuration.CurrentValue.Command.NoisyWhisper);
 		var messageText = messageArg.ToPlainText();
 
-		var isPose = messageText.StartsWith(":");
-		var isSemiPose = messageText.StartsWith(";");
+		// PennMUSH do_whisper (src/speech.c) reads the message type off the first character exactly as
+		// do_pose does: ';' is a pose with no gap, ':' a pose with one, anything else plain speech.
+		// The two kinds have completely different wording — the pose kind is "senses", not "whispers".
+		var gap = messageText.StartsWith(';') ? string.Empty : " ";
+		var isPose = messageText.StartsWith(':') || messageText.StartsWith(';');
+		var body = isPose ? messageText[1..] : messageText;
 
-		var displayText = (isPose || isSemiPose)
-			? $"{executor.Object().Name}{messageText.Substring(1)}"
-			: messageText;
+		var targetList = MessageFormatting.FormatWithOxfordComma(
+			[.. successfulTargets.Select(t => t.Object().Name)]);
 
-		foreach (var target in successfulTargets)
+		if (isPose)
 		{
-			var whisperMsg = $"{executor.Object().Name} whispers, \"{displayText}\"";
-			await NotifyService.Notify(target, whisperMsg, executor, INotifyService.NotificationType.Say);
+			var sensed = $"{executor.Object().Name}{gap}{body}";
+			foreach (var target in successfulTargets)
+			{
+				await NotifyService.Notify(target, $"You sense: {sensed}", executor, INotifyService.NotificationType.Say);
+			}
+
+			var verb = successfulTargets.Count > 1 ? "sense" : "senses";
+			await NotifyService.Notify(executor, $"{targetList} {verb}: {sensed}", executor);
 		}
-
-		var targetList = string.Join(", ", successfulTargets.Select(t => t.Object().Name));
-
-		if (!isSilent)
+		else
 		{
-			await NotifyService.Notify(executor, $"You whisper \"{displayText}\" to {targetList}.", executor);
+			var heading = successfulTargets.Count > 1
+				? $"{executor.Object().Name} whispers to {targetList}"
+				: $"{executor.Object().Name} whispers";
+			foreach (var target in successfulTargets)
+			{
+				await NotifyService.Notify(target, $"{heading}: {body}", executor, INotifyService.NotificationType.Say);
+			}
+
+			await NotifyService.Notify(executor, $"You whisper, \"{body}\" to {targetList}.", executor);
 		}
 
 		if (isNoisy)
@@ -3076,7 +3091,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(obj.WithRoomOption(),
-					$"{executor.Object().Name} whispers something to {targetList}.");
+					$"{executor.Object().Name} whispers to {targetList}.");
 			}
 		}
 
@@ -3340,7 +3355,10 @@ public partial class Commands
 			else
 			{
 				// No direct handle (e.g. @force context) — fall back to persisted LOCALE attribute.
-				current = await Database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None)
+				// Through the Mediator, not the store: GetAttributeQuery is ICacheable, and reading the
+				// same attribute around the cache is what leaves a write's invalidation with nothing
+				// to invalidate (engine data trunk §1).
+				current = await Mediator.CreateStream(new GetAttributeQuery(executor.Object().DBRef, ["LOCALE"]))
 					.Select(attr => attr.Value.ToPlainText())
 					.FirstOrDefaultAsync(saved => !string.IsNullOrEmpty(saved)) ?? current;
 			}

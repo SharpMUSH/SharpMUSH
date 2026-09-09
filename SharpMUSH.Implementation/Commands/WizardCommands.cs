@@ -708,49 +708,95 @@ public partial class Commands
 	}
 
 
-	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
+	/// <summary>
+	/// Who a wall broadcast reaches. PennMUSH's do_wall() (src/speech.c) picks a flag mask per
+	/// command and hands it to flag_broadcast() (src/notify.c), which delivers only to connected
+	/// players whose flags satisfy the mask.
+	/// </summary>
+	private enum WallAudience
+	{
+		/// <summary>No mask: every connected player. @wall.</summary>
+		Everyone,
+
+		/// <summary>Mask "WIZARD ROYALTY", which flaglist_check_long() reads as any-of. @rwall.</summary>
+		RoyaltyAndWizards,
+
+		/// <summary>Mask "WIZARD". @wizwall.</summary>
+		Wizards
+	}
+
+	/// <summary>
+	/// The one body behind @wall, @rwall and @wizwall — PennMUSH's do_wall(), which the three
+	/// commands differ from each other only in the prefix and the flag mask they pass it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> WallCore(IMUSHCodeParser parser, SharpCommandAttribute attribute,
+		WallAudience audience, string prefix)
+	{
+		if (await RejectIfTooFewArguments(parser, attribute) is { } tooFewArguments) return tooFewArguments;
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var switches = parser.CurrentState.Switches;
+		var shout = switches.Contains("NOEVAL")
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
+			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
+
+		if (!switches.Contains("EMIT"))
+		{
+			shout = MarkupText.Concat(MarkupText.Plain(prefix + " "), shout);
+		}
+
+		await foreach (var connection in ConnectionService.GetAll())
+		{
+			// PennMUSH iterates DESC_ITER_CONN, so a socket sitting at the connect screen hears nothing.
+			if (connection.State is not IConnectionService.ConnectionState.LoggedIn || connection.Ref is null)
+			{
+				continue;
+			}
+
+			if (!await WallAudienceIncludes(audience, connection.Ref.Value))
+			{
+				continue;
+			}
+
+			await NotifyService.Notify(connection.Handle, shout, executor);
+		}
+
+		return new CallState(shout);
+	}
+
+	/// <summary>PennMUSH flag_broadcast()'s per-listener mask test.</summary>
+	private async ValueTask<bool> WallAudienceIncludes(WallAudience audience, DBRef listener)
+	{
+		if (audience is WallAudience.Everyone)
+		{
+			return true;
+		}
+
+		var listenerObject = await Mediator.Send(new GetObjectNodeQuery(listener));
+		if (listenerObject.IsNone)
+		{
+			return false;
+		}
+
+		var known = listenerObject.Known;
+
+		return audience switch
+		{
+			WallAudience.Wizards => await known.IsWizard(),
+			WallAudience.RoyaltyAndWizards => await known.IsWizard() || await known.IsRoyalty(),
+			_ => true
+		};
+	}
+
+	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService.GetAll().Select(x => x.Handle);
+	public ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> WallCore(parser, _2, WallAudience.RoyaltyAndWizards, Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix);
 
-		if (!parser.CurrentState.Switches.Contains("EMIT"))
-		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix + " "), shout);
-		}
-
-		await foreach (var handle in handles)
-		{
-			await NotifyService.Notify(handle, shout, executor);
-		}
-
-		return new CallState(shout);
-	}
-
-	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService.GetAll().Select(x => x.Handle);
-
-		if (!parser.CurrentState.Switches.Contains("EMIT"))
-		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WizardWallPrefix + " "), shout);
-		}
-
-		await foreach (var handle in handles)
-		{
-			await NotifyService.Notify(handle, shout, executor);
-		}
-
-		return new CallState(shout);
-	}
+	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
+		CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
+	public ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> WallCore(parser, _2, WallAudience.Wizards, Configuration.CurrentValue.Cosmetic.WizardWallPrefix);
 
 	[SharpCommand(Name = "@ALLQUOTA", Switches = ["QUIET"], Behavior = CB.Default,
 		CommandLock = "FLAG^WIZARD|POWER^QUOTA", MinArgs = 1, MaxArgs = 1, ParameterNames = ["type"])]
@@ -2547,12 +2593,12 @@ public partial class Commands
 	/// otherwise be silently dropped by an overwrite based on a stale in-memory copy.
 	/// </summary>
 	private async ValueTask<SharpMUSHOptions> CurrentPersistedOptionsAsync()
-		=> await Database.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions))
+		=> await ObjectDataService.GetExpandedServerDataAsync<SharpMUSHOptions>()
 			?? Configuration.CurrentValue;
 
 	/// <summary>
 	/// Adds or replaces the sitelock rule for <paramref name="pattern"/> with <paramref name="flags"/>,
-	/// persists it via <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, signals a reload via
+	/// persists it via <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, signals a reload via
 	/// <see cref="ConfigurationReloadService.SignalChange"/>, and immediately enforces it via
 	/// <see cref="IBanEnforcer.EnforceHostRuleAsync"/> so live connections matching the new rule are
 	/// dropped right away. Mirrors <c>SitelockController.AddSitelockRule</c> (SharpMUSH.Server).
@@ -2570,14 +2616,14 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
 		await BanEnforcer.EnforceHostRuleAsync(pattern);
 	}
 
 	/// <summary>
 	/// Removes the sitelock rule for <paramref name="pattern"/>, persists via
-	/// <see cref="ISharpDatabase.SetExpandedServerData{T}"/>, and signals a reload via
+	/// <see cref="IExpandedObjectDataService.SetExpandedServerDataAsync{T}"/>, and signals a reload via
 	/// <see cref="ConfigurationReloadService.SignalChange"/>. Mirrors
 	/// <c>SitelockController.DeleteSitelockRule</c> (SharpMUSH.Server). Returns <see langword="false"/>
 	/// without persisting anything when no rule for <paramref name="pattern"/> exists.
@@ -2597,32 +2643,15 @@ public partial class Commands
 			SitelockRules = new SitelockRulesOptions(newRules)
 		};
 
-		await Database.SetExpandedServerData(nameof(SharpMUSHOptions), updatedOptions);
+		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
 		return true;
 	}
 
-	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default,
+	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "FLAG^WIZARD|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var shout = parser.CurrentState.Arguments["0"].Message!;
-		var handles = ConnectionService.GetAll().Select(x => x.Handle);
-
-		if (!parser.CurrentState.Switches.Contains("EMIT"))
-		{
-			shout = MarkupText.Concat(MarkupText.Plain(Configuration.CurrentValue.Cosmetic.WallPrefix + " "), shout);
-		}
-
-		await foreach (var handle in handles)
-		{
-			await NotifyService.Notify(handle, shout, executor);
-		}
-
-		return new CallState(shout);
-	}
+	public ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> WallCore(parser, _2, WallAudience.Everyone, Configuration.CurrentValue.Cosmetic.WallPrefix);
 
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]

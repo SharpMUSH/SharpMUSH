@@ -231,8 +231,12 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = FoldLocks(dbref, found.Record.Locks);
-			locks[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
+			// Fold rather than copy: the row may predate canonical lock names, and a plain
+			// case-insensitive copy constructor would throw on the two spellings of one lock it can
+			// still hold. Writing the folded map back is what retires the old spelling on disk.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks[LockNames.Canonical(lockName)] =
+				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -243,8 +247,9 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = FoldLocks(dbref, found.Record.Locks);
-			locks.Remove(lockName);
+			// Folding first is what makes @unlock able to clear a lock stored under an old spelling.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks.Remove(LockNames.Canonical(lockName));
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -783,7 +788,7 @@ public partial class LightningDatabase
 			CreationTime = record.CreationTime,
 			ModifiedTime = record.ModifiedTime,
 			Warnings = ParseWarnings(record.Warnings),
-			Locks = MapLocks(dbref, record.Locks),
+			Locks = MapLocks(record.Locks),
 			Flags = FlagsOf(dbref, type),
 			Powers = PowersOf(dbref),
 			// Attributes: the object's own top level, and the whole tree, both streamed from the
@@ -978,23 +983,15 @@ public partial class LightningDatabase
 		}
 	}
 
-	private IImmutableDictionary<string, SharpLockData> MapLocks(long dbref, Dictionary<string, LockRecord> locks)
-		=> FoldLocks(dbref, locks).ToImmutableDictionary(
-			entry => entry.Key,
-			entry => new SharpLockData(entry.Value.LockString,
-				Enum.TryParse<LockService.LockFlags>(entry.Value.Flags, out var parsed) ? parsed : LockService.LockFlags.Default),
-			SharpObject.LockNameComparer);
-
 	/// <summary>
-	/// Lock names compare case-insensitively (<see cref="SharpObject.LockNameComparer"/>), but a
-	/// stored world can still hold two that differ only in case. Folding them keeps that world
-	/// loadable instead of throwing out of every read of the object.
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
 	/// </summary>
-	private Dictionary<string, LockRecord> FoldLocks(long dbref, Dictionary<string, LockRecord> locks)
-		=> SharpObject.FoldLockNames(locks, (kept, dropped) =>
-			_logger.LogWarning(
-				"Object #{Dbref} holds lock names {Kept} and {Dropped}, which differ only in case. Keeping {Kept} and dropping {Dropped}.",
-				dbref, kept, dropped, kept, dropped));
+	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
+		=> LockNames.FoldToImmutable(locks,
+			record => new SharpLockData(record.LockString,
+				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;

@@ -1122,6 +1122,32 @@ public class SharpMUSHParserVisitor(
 				return new None();
 			}
 
+			// PennMUSH src/command.c command_parse(): before any command-table lookup, a leading
+			// SAY_TOKEN ("), POSE_TOKEN (:), SEMI_POSE_TOKEN (;) or EMIT_TOKEN (\) is replaced by the
+			// corresponding command name and the token character is skipped. Two details of that
+			// branch matter and are reproduced here:
+			//   * ';' followed by a space means POSE, not SEMIPOSE (`; waves` -> `One waves`).
+			//   * `parse_switches = 0` for every replacer, so `"/noeval x` says "/noeval x" rather
+			//     than invoking SAY with a NOEVAL switch.
+			// Re-dispatching the rewritten line (rather than calling the command directly) keeps the
+			// token forms on exactly the same path as the spelled-out commands, including @hook.
+			// command_parse runs `while (*p == ' ') p++` BEFORE that switch, so the token still counts
+			// when the player typed spaces in front of it: `  "hello` is a SAY. commandText is the raw
+			// slice and still carries those spaces (`command` above was TrimStart()ed, commandText was
+			// not), so the token test and the re-dispatched remainder both work off tokenText — one
+			// value, so the slice can never be taken from a different offset than the test.
+			var tokenStart = SkipSpaces(commandText, 0);
+			var tokenText = tokenStart > 0
+				? commandText.Substring(tokenStart, commandText.Length - tokenStart)
+				: commandText;
+			var speechReplacer = SpeechTokenCommand(tokenText);
+			if (speechReplacer is not null)
+			{
+				await parser.CommandParse(MarkupText.Concat(
+					MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+				return CallState.Empty;
+			}
+
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				var channels = Mediator.CreateStream(new GetChannelListQuery());
@@ -1478,11 +1504,16 @@ public class SharpMUSHParserVisitor(
 		return await chatParser.CommandLibrary["@CHAT"].LibraryInformation.Command.Invoke(chatParser);
 	}
 
-	private async Task<Option<CallState>> HandleUserDefinedCommand(
+	/// <summary>
+	/// Runs the bodies of every matched <c>$</c>-command, each as its own <c>Push</c>ed parser frame with the
+	/// matching object as executor. Execution is immediate on the current call stack for every caller —
+	/// the ordinary dispatch path and <see cref="ExecuteHookCode"/>'s OVERRIDE/EXTEND path alike, whether
+	/// or not that hook is <c>/inline</c>. Nothing here queues.
+	/// </summary>
+	private async ValueTask<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser prs,
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
-		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (obj, attr, arguments) in matches)
 		{
 			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
@@ -1698,7 +1729,8 @@ public class SharpMUSHParserVisitor(
 		CommandContext context, string rootCommand, string[] switches,
 		CommandDefinition libraryCommandDefinition)
 	{
-		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand);
+		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
+		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)
@@ -2025,15 +2057,10 @@ public class SharpMUSHParserVisitor(
 					return new None();
 				}
 
-				var matches = matchResult.AsValue();
-				if (hook.Inline)
-				{
-					return await HandleUserDefinedCommandInline(localParser, matches);
-				}
-				else
-				{
-					return await HandleUserDefinedCommand(localParser, matches);
-				}
+				// Dispatch is the same whether or not the hook is /inline: the matched $-command's body
+				// runs here on this call stack either way. The flag only selects the register handling
+				// above (/localize, /clearregs).
+				return await HandleUserDefinedCommand(localParser, matchResult.AsValue());
 			}
 
 			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
@@ -2065,40 +2092,6 @@ public class SharpMUSHParserVisitor(
 		}
 	}
 
-	/// <summary>
-	/// Handles user-defined command execution inline (immediate, not queued).
-	/// Used for /inline hooks.
-	/// </summary>
-	private async ValueTask<Option<CallState>> HandleUserDefinedCommandInline(
-		IMUSHCodeParser prs,
-		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
-	{
-		foreach (var (obj, attr, arguments) in matches)
-		{
-			// See HandleUserDefinedCommand: a HALTED object's $-commands do not run.
-			if (await obj.HasFlag("HALT"))
-			{
-				continue;
-			}
-
-			var newParser = prs.Push(prs.CurrentState with
-			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
-				EnvironmentRegisters = arguments,
-				Arguments = arguments,
-				Function = null,
-				Executor = obj.Object().DBRef,
-				Caller = prs.CurrentState.Executor
-			});
-
-			var commandList = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
-
-			await newParser.CommandListParse(commandList);
-		}
-
-		return CallState.Empty;
-	}
-
 	private async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
 		CommandContext context, string command, CommandDefinition librarySocketCommandDefinition)
 	{
@@ -2122,6 +2115,45 @@ public class SharpMUSHParserVisitor(
 			Arguments = NumberedArguments(arguments),
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
+	}
+
+	/// <summary>
+	/// The index of the first non-space character at or after <paramref name="from"/>, or the length of
+	/// <paramref name="text"/> when there is none.
+	/// </summary>
+	private static int SkipSpaces(MString text, int from)
+	{
+		var plain = text.ToPlainText();
+		var index = from;
+		while (index < plain.Length && plain[index] == ' ')
+		{
+			index++;
+		}
+
+		return index;
+	}
+
+	/// <summary>
+	/// The command a leading speech token stands for, or <see langword="null"/> when the line does not
+	/// begin with one. Mirrors the <c>switch (*p)</c> in PennMUSH's <c>command_parse</c>
+	/// (src/command.c), including its special case that <c>';'</c> followed by a space is POSE.
+	/// </summary>
+	private static string? SpeechTokenCommand(MString commandText)
+	{
+		var text = commandText.ToPlainText();
+		if (text.Length == 0)
+		{
+			return null;
+		}
+
+		return text[0] switch
+		{
+			'"' => "SAY",
+			':' => "POSE",
+			';' => text.Length > 1 && text[1] == ' ' ? "POSE" : "SEMIPOSE",
+			'\\' => "@EMIT",
+			_ => null
+		};
 	}
 
 	private async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
@@ -2165,10 +2197,19 @@ public class SharpMUSHParserVisitor(
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
-		string? rootCommand = null)
+		string? rootCommand = null,
+		bool noEvalSwitch = false)
 	{
 		var argCallState = CallState.EmptyArgument;
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
+
+		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
+		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
+		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". Restricted to non-EQSPLIT commands
+		// here: Penn's EQSPLIT branch has an extra rule (an `=` present means the LHS is evaluated
+		// after all) that SharpMUSH does not model yet, and guessing at it would be worse than
+		// leaving those commands as they are.
+		var noEval = noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
 
 		// Do not parse the argument splitting.
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:
@@ -2181,12 +2222,24 @@ public class SharpMUSHParserVisitor(
 		//   naturally survive. In SharpMUSH, the ANTLR walk still processes them, so we
 		//   preserve braces via the flag to match PennMUSH behavior.
 		var preserveBraces = behavior.HasFlag(CommandBehavior.RSBrace)
-												 || behavior.HasFlag(CommandBehavior.NoParse);
+												 || behavior.HasFlag(CommandBehavior.NoParse)
+												 || noEval;
 		var newFlags = preserveBraces
 			? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 			: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces;
 		var newNoParseParser = prs.Push(prs.CurrentState with { ParseMode = ParseMode.NoParse, Flags = newFlags });
 		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+
+		// PennMUSH's command_parse skips leading spaces (`while (*p == ' ') p++`) before it reads the
+		// command name, so `  say hi` says "hi". EvaluateCommands already TrimStart()s to find the
+		// command name; without the same trim here the first space would read as the name/argument
+		// boundary and the command name itself would land in the argument.
+		var leadingSpaces = SkipSpaces(realSubtext, 0);
+		if (leadingSpaces > 0)
+		{
+			realSubtext = realSubtext.Substring(leadingSpaces, realSubtext.Length - leadingSpaces);
+		}
+
 		var spaceInContext = realSubtext.IndexOf(" ");
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
@@ -2198,9 +2251,20 @@ public class SharpMUSHParserVisitor(
 		// command (space) argument(s)
 		if (spaceInContext != -1)
 		{
-			var remainder =
-				realSubtext.Substring(spaceInContext + 1, realSubtext.Length - spaceInContext);
+			// PennMUSH's command_argparse (src/command.c) opens each argument with
+			// `while (*f == ' ') f++`, so EVERY space between the command name and its argument is
+			// eaten, not just the one that ended the command word: `say   hi` says "hi", and so do
+			// `pose   waves` and `"  hi`. Skipping only one space left the rest inside the argument.
+			var argumentStart = SkipSpaces(realSubtext, spaceInContext);
+			var remainder = realSubtext.Substring(argumentStart, realSubtext.Length - argumentStart);
 			parsedArgumentText = remainder;
+
+			// Nothing but trailing spaces after the command name: the command has no arguments at all
+			// (`say ` is `say`), so leave the EmptyArgument sentinel in place rather than splitting "".
+			if (remainder.Length == 0)
+			{
+				return new List<CallState>();
+			}
 
 			// command arg0 = arg1,still arg 1
 			if (behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs))
@@ -2279,7 +2343,7 @@ public class SharpMUSHParserVisitor(
 		List<CallState> arguments = [];
 
 		var eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
-		var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.NoParse);
+		var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.NoParse) || noEval;
 		var noRsParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.RSNoParse);
 		var nArgs = argCallState?.Arguments?.Length;
 

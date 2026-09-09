@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -166,81 +167,12 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
+
 		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!split.TryPickT0(out var details, out _))
-		{
-			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
-		}
-
-		var (dbref, maybeAttribute) = details;
-
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			enactor,
-			executor,
-			dbref,
-			LocateFlags.All);
-
-		if (locate.IsError)
-		{
-			return locate.AsError;
-		}
-
-		var realLocated = locate.AsSharpObject;
-
-		if (!string.IsNullOrEmpty(maybeAttribute))
-		{
-			// Every token is applied as ONE batch: Penn's do_attrib_flags/af_helper checks permission
-			// once for the whole flag argument, not once per flag, so `@set obj/attr=!safe wizard`
-			// isn't order-dependent on whether "!safe" or "wizard" is processed first.
-			var flagTokens = MushText.SplitList(MarkupText.Space, args["1"].Message!)
-				.Select(x => x.ToPlainText())
-				.ToList();
-
-			var flagResult = await AttributeService.SetAttributeFlagsAsync(executor, realLocated, maybeAttribute, flagTokens);
-
-			if (flagResult.IsT1)
-			{
-				await NotifyService.Notify(executor, flagResult.AsT1.Value, executor);
-			}
-
-			return new CallState(flagResult.Match(_ => string.Empty, failure => failure.Value));
-		}
-
-		var maybeColonLocation = args["1"].Message!.IndexOf(":");
-		if (maybeColonLocation > -1)
-		{
-			var arg1 = args["1"].Message!;
-			var attribute = arg1.Substring(0, maybeColonLocation);
-			var content = arg1.Substring(maybeColonLocation + 1);
-
-			var setResult =
-				await AttributeService.SetAttributeAsync(executor, realLocated, attribute.ToPlainText(), content);
-
-			if (setResult.IsT0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					realLocated.Object().Name, attribute.ToPlainText());
-			}
-			else
-			{
-				await NotifyService.Notify(executor, setResult.AsT1.Value, executor);
-			}
-
-			return new CallState(setResult.Match(
-				_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-				failure => failure.Value));
-		}
-
-		foreach (var flag in MushText.SplitList(MarkupText.Space, args["1"].Message!))
-		{
-			await ManipulateSharpObjectService.SetOrUnsetFlag(executor, realLocated, flag.ToPlainText(), true);
-		}
-
-		return CallState.Empty;
+		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
+			NotifyService, executor, args["0"].Message!, args["1"].Message!);
 	}
 
 
@@ -938,15 +870,18 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
-
-						// Default ChZone lock is the zone object itself (allows controlled objects)
-						if (!zoneObj.Object().Locks.ContainsKey("ChZone"))
-						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), "ChZone", zoneObj.Object().DBRef.ToString()));
-						}
-
-						// Clear privileged flags and powers unless /preserve is used
+						// Clear privileged flags and powers unless /preserve is used.
+						//
+						// Ahead of the zone change, and not after it as PennMUSH's do_chzone (src/set.c:373)
+						// writes it: PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(),
+						// which ask nobody's permission, so its one controls() check above is the whole
+						// authorization. These go through ManipulateSharpObjectService, which checks Controls
+						// itself — and Controls reads the object's *current* zone (PermissionService.Controls,
+						// Zone Master Object branch). Once the zone has moved, an executor who held the object
+						// only through the zone it is leaving no longer controls it, the strip is refused, and
+						// @CHZONE reports "Zone changed." over an object that kept every power. Running the
+						// strip first is what keeps the authorization checked at the top of this command the
+						// one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
 						if (!preserve && !obj.IsPlayer)
 						{
 							if (await obj.HasFlag("WIZARD"))
@@ -962,11 +897,19 @@ public partial class Commands
 								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
 							}
 
-							var allPowers = obj.Object().Powers.Value;
-							await foreach (var power in allPowers)
-							{
-								await Mediator.Send(new UnsetObjectPowerCommand(obj, power));
-							}
+							// Same clearing @CHZONEALL uses: it materializes the collection before
+							// unsetting and publishes ObjectFlagChangedNotification per power, which
+							// the hand-rolled loop here did not.
+							await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
+						}
+
+						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
+
+						// Default ChZone lock is the zone object itself (allows controlled objects)
+						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
+						{
+							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
+								zoneObj.Object().DBRef.ToString()));
 						}
 
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
@@ -1077,11 +1020,9 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			// Resolve to canonical lock name (e.g. "USE" -> "Use") if it's a known system lock
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "teleport" ->
+			// "TPort"); a switch naming no standard lock is a user lock and passes through as typed.
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -1116,10 +1057,7 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			var switchName = parser.CurrentState.Switches.First();
-			var canonicalName = LockService.SystemLocks.Keys
-				.FirstOrDefault(k => string.Equals(k, switchName, StringComparison.OrdinalIgnoreCase));
-			lockType = canonicalName ?? switchName;
+			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,

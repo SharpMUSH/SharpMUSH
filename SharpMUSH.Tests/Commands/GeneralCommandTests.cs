@@ -533,9 +533,21 @@ public class GeneralCommandTests
 	public async ValueTask Select_MatchesFirstExpression()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@select test=foo,:action1,bar,:action2"));
+		// @select runs the action for the FIRST matching expression only ('help @switch'); both
+		// patterns here match "test", so the second must not fire. /inline so the actions run in
+		// place rather than becoming queue entries this assertion would race.
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@select/inline test=t*,@pemit #1=SelectFirst_A_31708,*est,@pemit #1=SelectFirst_B_31708"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SelectTestingStringFormat), executor, executor)).IsTrue();
+		await NotifyService.Received(1).Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf.OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_A_31708")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+
+		await NotifyService.DidNotReceive().Notify(
+			TestHelpers.MatchingObject(executor),
+			Arg.Is<OneOf.OneOf<MString, string>>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_B_31708")),
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
