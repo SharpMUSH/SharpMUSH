@@ -469,13 +469,13 @@ public class InputSessionServiceTests
 		await queue.DidNotReceive().WriteUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
 	}
 
-	private static Scheduler Queue(Harness h, IInputSessionService? sessions = null, uint global = 10)
+	private static Scheduler Queue(Harness h, IInputSessionService? sessions = null, uint global = 10, IQueueDiagnosticsRecorder? diagnostics = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = 100, QueueEntryCpuTime = 1000 } });
 		return new(h.Parser, h.Connections, Substitute.For<ISchedulerFactory>(), h.Attributes, h.Mediator,
-			NullLogger<Scheduler>.Instance, options, h.Notify, sessions ?? h.Sessions);
+			NullLogger<Scheduler>.Instance, options, h.Notify, sessions ?? h.Sessions, diagnostics);
 	}
 
 	private static async Task Drained(Scheduler queue)
@@ -675,13 +675,18 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness(); var session = await h.Start();
 		var captures = Substitute.For<IInputSessionService>();
-		var queue = Queue(h, captures);
+		var diagnostics = new QueueDiagnosticsRecorder();
+		var queue = Queue(h, captures, diagnostics: diagnostics);
 		var cleanupCouldReadQueue = false;
 		var cleanupFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		captures.When(service => service.Discard(session)).Do(_ =>
 		{
 			// A dedicated thread tests the lock boundary without depending on thread-pool availability.
-			var probe = new Thread(() => queue.GetQueueUsage()) { IsBackground = true };
+			var probe = new Thread(() =>
+			{
+				queue.GetQueueUsage();
+				queue.PausePending(long.MaxValue, "probe").AsTask().GetAwaiter().GetResult();
+			}) { IsBackground = true };
 			probe.Start();
 			cleanupCouldReadQueue = probe.Join(TimeSpan.FromSeconds(5));
 			cleanupFinished.TrySetResult();
@@ -712,6 +717,8 @@ public class InputSessionServiceTests
 			captures.Received(1).Discard(session);
 			await captures.DidNotReceive().DeliverAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<InputSession>(), Arg.Any<MarkupText>(), Arg.Any<bool>());
 			await Assert.That(cleanupCouldReadQueue).IsTrue();
+			await Assert.That(diagnostics.Recent().Single(row => row.Pid == timeout.Pid).Outcome)
+				.IsEqualTo(SharpMUSH.Library.Models.Diagnostics.QueueOutcome.Cancelled);
 		}
 		finally
 		{

@@ -29,6 +29,7 @@ internal static class PortalSurfaces
 		["Res"] = "mixed: wiki, scenes, config leftovers",
 		["WidgetZone"] = "staff: layout editor zone names",
 		["Adm"] = "staff: admin pages and dashboard",
+		["Diag"] = "staff: queue diagnostics and invocation profiles",
 		["Lay"] = "staff: layout and application administration",
 		["Pkg"] = "staff: softcode package manager",
 		["Enum"] = "mixed: permission labels and enum display names",

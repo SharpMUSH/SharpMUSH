@@ -38,7 +38,7 @@ public sealed class SurrealWorldBackupService : IWorldBackupService
 		ILogger<SurrealWorldBackupService> logger)
 		=> _writer = new WorldBackupWriter(options, async (directory, ct) =>
 		{
-			var script = await client.Export(cancellationToken: ct);
+			var script = await SurrealRequestCancellation.RunAsync(token => client.Export(cancellationToken: token), ct);
 			await File.WriteAllTextAsync(Path.Combine(directory, ExportFileName), script ?? string.Empty, ct);
 		}, logger);
 

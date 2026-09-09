@@ -63,7 +63,7 @@ public partial class SurrealDatabase
 				["dataType"] = dataType,
 				["data"] = jsonData
 			};
-			await ExecuteAsync(
+			await ExecuteExpandedWriteAsync(
 				"UPDATE object_data SET data = $data WHERE objectKey = $key AND dataType = $dataType",
 				updateParams, cancellationToken);
 		}
@@ -77,7 +77,7 @@ public partial class SurrealDatabase
 				["dataType"] = dataType,
 				["data"] = jsonData
 			};
-			await ExecuteAsync(
+			await ExecuteExpandedWriteAsync(
 				"CREATE object_data SET objectKey = $key, sharpObjectId = $objId, dataType = $dataType, data = $data",
 				createParams, cancellationToken);
 		}
@@ -113,32 +113,32 @@ public partial class SurrealDatabase
 			["data"] = jsonData
 		};
 
-		await ExecuteAsync(
+		await ExecuteExpandedWriteAsync(
 			"UPSERT server_data:⟨$dataType⟩ SET dataType = $dataType, data = $data",
 			parameters, cancellationToken);
 	}
 
 	public async ValueTask<T?> GetExpandedServerData<T>(string dataType, CancellationToken cancellationToken = default)
 	{
-		try
-		{
-			var parameters = new Dictionary<string, object?> { ["dataType"] = dataType };
-			var response = await ExecuteAsync(
-				"SELECT data FROM server_data:⟨$dataType⟩",
-				parameters, cancellationToken);
+		var parameters = new Dictionary<string, object?> { ["dataType"] = dataType };
+		var response = await ExecuteAsync(
+			"SELECT data FROM server_data:⟨$dataType⟩",
+			parameters, cancellationToken);
 
-			var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
-			if (results.Count == 0) return default;
+		var results = response.GetValue<List<ExpandedDataDbRecord>>(0)!;
+		if (results.Count == 0) return default;
 
-			var jsonData = results[0].data;
-			if (string.IsNullOrEmpty(jsonData)) return default;
-			return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
-		}
-		catch (Exception ex)
-		{
-			logger.LogWarning(ex, "Failed to retrieve expanded server data for type '{DataType}'", dataType);
-			return default;
-		}
+		var jsonData = results[0].data;
+		if (string.IsNullOrEmpty(jsonData)) return default;
+		return JsonSerializer.Deserialize<T>(jsonData, JsonOptions);
+	}
+
+	private async ValueTask ExecuteExpandedWriteAsync(string query, IReadOnlyDictionary<string, object?> parameters,
+		CancellationToken cancellationToken)
+	{
+		var response = await ExecuteAsync(query, parameters, cancellationToken);
+		if (response.HasErrors)
+			throw new InvalidOperationException("SurrealDB rejected the expanded-data write.");
 	}
 
 	#endregion

@@ -2584,4 +2584,18 @@
   <data name="InputSessionTimeoutRejected" xml:space="preserve">
     <value>Input session expired. Its timeout callback could not be queued.</value>
   </data>
+  <data name="QueueControlSyntax" xml:space="preserve"><value>Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.</value></data>
+  <data name="QueueControlBadReason" xml:space="preserve"><value>Pause reasons must contain at most 160 characters and no control characters.</value></data>
+  <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0}: {1}.</value></data>
+  <data name="QueueControlEntry" xml:space="preserve"><value>PID {0} source {1} owner {2} {3} {4}; remaining {5}s; signalled {6}; {7}</value></data>
+  <data name="QueueControlTruncated" xml:space="preserve"><value>Showing or processing at most 200 entries. Narrow the selection; repeat a batch operation for remaining eligible entries.</value></data>
+  <data name="QueueControlEmpty" xml:space="preserve"><value>No accessible matching queue entries.</value></data>
+  <data name="QueuePausedHint" xml:space="preserve"><value>Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.</value></data>
+  <data name="QueueProfileStarted" xml:space="preserve"><value>Profile recording for {0} seconds.</value></data>
+  <data name="QueueProfileStopped" xml:space="preserve"><value>Profile stopped.</value></data>
+  <data name="QueueProfileReport" xml:space="preserve"><value>Profile expires {0}. Columns: source/attribute kind name count failures inclusive-ms max-ms. Inclusive elapsed time includes nested calls and awaits; it is not CPU time. Sampling is limited to 256 keys and 4,096 pending samples; excess data may be omitted.
+{1}</value></data>
+  <data name="QueueHistoryReport" xml:space="preserve"><value>Recent queue outcomes (15-minute history). Columns: PID source owner kind outcome wait-ms execution-ms invocations.
+{0}</value></data>
+  <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostics unavailable: {0}.</value></data>
 </root>

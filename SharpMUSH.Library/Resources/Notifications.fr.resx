@@ -140,4 +140,18 @@
   <data name="InputSessionTimeoutRejected" xml:space="preserve">
     <value>La session de saisie a expiré. Son rappel d’expiration n’a pas pu être mis en file.</value>
   </data>
+  <data name="QueueControlSyntax" xml:space="preserve"><value>Utilisez @queue/list [pid], @queue/pause pid=raison ou @queue/resume pid ; ajoutez /owner ou /object pour un groupe cible.</value></data>
+  <data name="QueueControlBadReason" xml:space="preserve"><value>Une raison de pause doit contenir au plus 160 caractères, sans caractères de contrôle.</value></data>
+  <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0} : {1}.</value></data>
+  <data name="QueueControlEntry" xml:space="preserve"><value>PID {0} source {1} propriétaire {2} {3} {4} ; reste {5}s ; signalé {6} ; {7}</value></data>
+  <data name="QueueControlTruncated" xml:space="preserve"><value>Au plus 200 entrées affichées ou traitées. Précisez la sélection ; répétez une opération groupée pour les entrées restantes.</value></data>
+  <data name="QueueControlEmpty" xml:space="preserve"><value>Aucune entrée accessible ne correspond.</value></data>
+  <data name="QueuePausedHint" xml:space="preserve"><value>Tâches en pause : {0}. Utilisez @queue/list pour les détails, et @queue/pause ou @queue/resume pour gérer les tâches en attente.</value></data>
+  <data name="QueueProfileStarted" xml:space="preserve"><value>Enregistrement du profil pendant {0} secondes.</value></data>
+  <data name="QueueProfileStopped" xml:space="preserve"><value>Profil arrêté.</value></data>
+  <data name="QueueProfileReport" xml:space="preserve"><value>Expiration du profil : {0}. Colonnes : source/attribut type nom appels échecs ms-inclusives ms-max. Le temps inclusif comprend les appels imbriqués et les attentes ; ce n’est pas du temps processeur. Limites : 256 clés et 4 096 échantillons en attente ; les données excédentaires peuvent être omises.
+{1}</value></data>
+  <data name="QueueHistoryReport" xml:space="preserve"><value>Résultats récents de la file (historique de 15 minutes). Colonnes : PID source propriétaire type résultat attente-ms exécution-ms appels.
+{0}</value></data>
+  <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostic indisponible : {0}.</value></data>
 </root>

@@ -1,0 +1,32 @@
+@using SharpMUSH.Library.Models.Diagnostics
+@inject IStringLocalizer<SharedResource> Loc
+
+<div class="diagnostics-table">
+    <table>
+        <thead><tr>
+            <th>@Loc["DiagPid"]</th><th>@Loc["DiagSource"]</th><th>@Loc["DiagOwner"]</th>
+            <th>@Loc["DiagKind"]</th><th>@Loc["DiagStatus"]</th><th>@Loc["DiagEnqueued"]</th>
+            <th>@Loc["DiagStarted"]</th><th>@Loc["DiagEnded"]</th><th>@Loc["DiagWait"]</th>
+            <th>@Loc["DiagElapsed"]</th><th>@Loc["DiagInvocations"]</th>
+        </tr></thead>
+        <tbody>
+            @foreach (var row in Rows)
+            {
+                <tr>
+                    <td>@(row.Pid?.ToString() ?? "—")</td>
+                    <td>@(row.Source ?? "—")@if (row.SourceAttribute is not null) { <span>/@row.SourceAttribute</span> }</td>
+                    <td>@(row.Owner ?? "—")</td><td>@Loc[$"DiagKind_{row.Kind}"]</td><td>@Loc[$"DiagStatus_{row.Status}"]</td>
+                    <td>@Time(row.EnqueuedAt)</td><td>@Time(row.StartedAt)</td><td>@Time(row.EndedAt)</td>
+                    <td>@Duration(row.WaitDuration)</td><td>@Duration(row.ExecutionDuration)</td><td>@row.InvocationCount</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (Rows.Count == 0) { <p>@Loc["DiagEmpty"]</p> }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DiagnosticQueueRow> Rows { get; set; } = [];
+    private static string Time(DateTimeOffset? value) => value?.ToString("u") ?? "—";
+    private static string Duration(TimeSpan? value) => value?.TotalMilliseconds.ToString("N2") ?? "—";
+}

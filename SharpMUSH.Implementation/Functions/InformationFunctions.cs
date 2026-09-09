@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Globalization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -169,6 +170,10 @@ public partial class Functions
 		if (semaphoreTasks.Count > 0)
 		{
 			var task = semaphoreTasks[0];
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			return FormatTaskInfo(task, field, delimiter);
 		}
 

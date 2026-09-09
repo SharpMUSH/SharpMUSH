@@ -432,6 +432,11 @@ public class Startup(
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<QueueDiagnosticsRecorder>();
+		services.AddSingleton<IQueueDiagnosticsRecorder>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<ITelemetryInvocationObserver>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<IQueueDiagnosticsService, QueueDiagnosticsService>();
+		services.AddHostedService<Services.QueueProfileCollector>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
 		services.AddSingleton<IConnectionStateStore>(sp =>
@@ -450,6 +455,7 @@ public class Startup(
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
+		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
 		services.AddHostedService<Services.InputSessionTimeoutService>();
