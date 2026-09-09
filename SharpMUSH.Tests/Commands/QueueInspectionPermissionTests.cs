@@ -26,7 +26,7 @@ public class QueueInspectionPermissionTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, connections, "QueueReader");
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "PrivateQueue");
 		var reference = target;
-		var job = await queue.WriteCommandList(MarkupText.Plain("think PrivateQueueSecret"),
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think PrivateQueueSecret"),
 			ParserState.Empty with { Executor = reference }, new DbRefAttribute(reference, ["SEMAPHORE"]), 1);
 		try
 		{

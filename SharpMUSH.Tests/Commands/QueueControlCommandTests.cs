@@ -22,7 +22,7 @@ public class QueueControlCommandTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueRetime");
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
-		var job = await queue.WriteCommandList(MarkupText.Plain("think later"), ParserState.Empty with { Executor = objid },
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think later"), ParserState.Empty with { Executor = objid },
 			new SharpMUSH.Library.Models.DbRefAttribute(objid, ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
 		try
 		{
@@ -50,9 +50,9 @@ public class QueueControlCommandTests
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
 		var state = ParserState.Empty with { Executor = objid };
 		var job = semaphore
-			? await queue.WriteCommandList(MarkupText.Plain("think later"), state,
+			? await queue.AdmitCommandList(MarkupText.Plain("think later"), state,
 				new SharpMUSH.Library.Models.DbRefAttribute(objid, ["SEMAPHORE"]), 1, TimeSpan.FromHours(1))
-			: await queue.WriteCommandList(MarkupText.Plain("think later"), state, TimeSpan.FromHours(1));
+			: await queue.AdmitCommandList(MarkupText.Plain("think later"), state, TimeSpan.FromHours(1));
 		try
 		{
 			await queue.PausePending(job.Pid!.Value, "hold");
@@ -80,7 +80,7 @@ public class QueueControlCommandTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueuePause");
 		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
-		var job = await queue.WriteCommandList(MarkupText.Plain("think QueuePrivatePayload"), ParserState.Empty with { Executor = objid }, TimeSpan.FromHours(1));
+		var job = await queue.AdmitCommandList(MarkupText.Plain("think QueuePrivatePayload"), ParserState.Empty with { Executor = objid }, TimeSpan.FromHours(1));
 		try
 		{
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@queue/pause {job.Pid}=Inspect timer"));

@@ -46,7 +46,7 @@ public class QueueDiagnosticsCommandTests
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain("@profile/start 60"));
 		try
 		{
-			var queued = await queue.WriteCommandList(MarkupText.Plain("think add(2,3)"), ParserState.Empty with { Executor = full, Enactor = full, Caller = full, CurrentEvaluation = new DBAttribute(full, "DIAGNOSTIC_SOURCE") });
+			var queued = await queue.AdmitCommandList(MarkupText.Plain("think add(2,3)"), ParserState.Empty with { Executor = full, Enactor = full, Caller = full, CurrentEvaluation = new DBAttribute(full, "DIAGNOSTIC_SOURCE") });
 			await Assert.That(queued.Accepted).IsTrue();
 			using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 			while (!recorder.Recent().Any(row => row.Pid == queued.Pid)) await Task.Delay(10, timeout.Token);

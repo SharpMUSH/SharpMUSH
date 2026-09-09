@@ -51,7 +51,7 @@ public class QueueDiagnosticsSchedulerTests
 				await using var queue = Create(recorder, capacity: count + 1);
 				// Warm the queue and each observer mode before comparing their steady-state hot paths.
 				for (var warmup = 0; warmup < 300; warmup++)
-					await queue.EnqueueWork(() =>
+					await queue.AdmitWork(() =>
 					{
 						telemetry.RecordFunctionInvocation("add", .01, true);
 						telemetry.RecordFunctionInvocation("mul", .01, true);
@@ -68,7 +68,7 @@ public class QueueDiagnosticsSchedulerTests
 				for (var i = 0; i < count; i++)
 				{
 					var expected = i;
-					var admitted = await queue.EnqueueWork(() =>
+					var admitted = await queue.AdmitWork(() =>
 					{
 						if (observed != expected) throw new InvalidOperationException("Queue order changed");
 						telemetry.RecordFunctionInvocation("add", .01, true);
@@ -99,7 +99,7 @@ public class QueueDiagnosticsSchedulerTests
 		for (var i = 0; i < 3; i++)
 		{
 			var value = i;
-			await queue.EnqueueWork(() =>
+			await queue.AdmitWork(() =>
 			{
 				seen.Add(value);
 				recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 1, true));
@@ -126,8 +126,8 @@ public class QueueDiagnosticsSchedulerTests
 		var state = ParserState.Empty with { Executor = new DBRef(2, 1) };
 		var target = new DbRefAttribute(missing, ["ACTION"]);
 		var result = attribute
-			? await queue.WriteAsyncAttribute(() => ValueTask.FromResult(state), target, state.Executor)
-			: await queue.WriteCommandList(MarkupText.Plain("secret body"), state, target, 0);
+			? await queue.AdmitAsyncAttribute(() => ValueTask.FromResult(state), target, state.Executor)
+			: await queue.AdmitCommandList(MarkupText.Plain("secret body"), state, target, 0);
 		await Assert.That(result.Reason).IsEqualTo(SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.InvalidTarget);
 		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.InvalidTarget);
 		await Assert.That(recorder.Recent().Single().Source).IsEqualTo(state.Executor);
@@ -141,12 +141,12 @@ public class QueueDiagnosticsSchedulerTests
 		var scheduled = Substitute.For<IScheduler>();
 		await using var queue = Create(recorder, capacity: 1, scheduled: scheduled);
 		var state = ParserState.Empty with { Executor = new DBRef(2, 1), CurrentEvaluation = new DBAttribute(new DBRef(2, 1), "ACTION") };
-		var first = await queue.WriteCommandList(MarkupText.Plain("private body"), state, TimeSpan.FromHours(1));
+		var first = await queue.AdmitCommandList(MarkupText.Plain("private body"), state, TimeSpan.FromHours(1));
 		await Assert.That(first.Accepted).IsTrue();
 		var snapshot = queue.GetQueueEntry(first.Pid!.Value)!;
 		await Assert.That(snapshot.SourceAttribute).IsEqualTo("ACTION");
 		await Assert.That(snapshot.StartedAt).IsNull();
-		var rejected = await queue.WriteCommandList(MarkupText.Plain("other secret"), state);
+		var rejected = await queue.AdmitCommandList(MarkupText.Plain("other secret"), state);
 		await Assert.That(rejected.Accepted).IsFalse();
 		await queue.HaltByPid(first.Pid.Value);
 		await HistoryCount(recorder, 2);
@@ -160,7 +160,7 @@ public class QueueDiagnosticsSchedulerTests
 		var recorder = new QueueDiagnosticsRecorder();
 		// The exception contract must not race a 20ms scheduling deadline on a loaded runner.
 		await using var queue = Create(recorder, milliseconds: 30000);
-		await queue.EnqueueWork(() => throw new InvalidOperationException("sensitive exception"), "throw", "enqueue");
+		await queue.AdmitWork(() => throw new InvalidOperationException("sensitive exception"), "throw", "enqueue");
 		await HistoryCount(recorder, 1);
 		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Failed);
 		await Assert.That(System.Text.Json.JsonSerializer.Serialize(recorder.Recent()).Contains("sensitive", StringComparison.Ordinal)).IsFalse();
@@ -171,7 +171,7 @@ public class QueueDiagnosticsSchedulerTests
 	{
 		var recorder = new QueueDiagnosticsRecorder();
 		await using var queue = Create(recorder, milliseconds: 20);
-		await queue.EnqueueWork(async () => { await Task.Delay(Timeout.InfiniteTimeSpan, ExecutionBudget.CurrentToken); return null; }, "wait", "enqueue");
+		await queue.AdmitWork(async () => { await Task.Delay(Timeout.InfiniteTimeSpan, ExecutionBudget.CurrentToken); return null; }, "wait", "enqueue");
 		await HistoryCount(recorder, 1);
 		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
 	}
@@ -183,9 +183,9 @@ public class QueueDiagnosticsSchedulerTests
 		await using var queue = Create(recorder, milliseconds: 20, scheduled: Substitute.For<IScheduler>());
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
+		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		var result = await queue.WriteCommandList(MarkupText.Plain("not executed"), ParserState.Empty,
+		var result = await queue.AdmitCommandList(MarkupText.Plain("not executed"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1);
 		await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true);
 		using var held = await queue.EnterSemaphoreMutationAsync();
@@ -202,7 +202,7 @@ public class QueueDiagnosticsSchedulerTests
 	{
 		var recorder = new QueueDiagnosticsRecorder();
 		var queue = Create(recorder, scheduled: Substitute.For<IScheduler>());
-		var result = await queue.WriteCommandList(MarkupText.Plain("private"), ParserState.Empty with { Executor = new DBRef(2, 1) }, TimeSpan.FromHours(1));
+		var result = await queue.AdmitCommandList(MarkupText.Plain("private"), ParserState.Empty with { Executor = new DBRef(2, 1) }, TimeSpan.FromHours(1));
 		await Assert.That(result.Accepted).IsTrue();
 		await queue.DisposeAsync();
 		await Assert.That(recorder.Recent().Count).IsEqualTo(1);

@@ -76,7 +76,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (_ready.Contains(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
+			if (_ready.Contains(pid) || _delayedRepairs.Contains(pid) || entry.Deferred is null) return QueueControlResult.NotPending;
 			if (entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 			entry = entry with
 			{
@@ -106,7 +106,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry!)) return QueueControlResult.NotFound;
-			if (entry.Deferred is null || _ready.Contains(pid)) return QueueControlResult.NotPending;
+			if (entry.Deferred is null || _ready.Contains(pid) || _delayedRepairs.Contains(pid)) return QueueControlResult.NotPending;
 			if (!entry.Deferred.Paused) return QueueControlResult.AlreadyInState;
 		}
 		if (!await ValidQueuedIdentity(entry)) return QueueControlResult.InvalidIdentity;
@@ -161,9 +161,9 @@ public partial class TaskScheduler
 	private async ValueTask RemoveDeferredTrigger(QueueEntry entry)
 	{
 		var key = new TriggerKey(entry.TriggerName, entry.Group);
-		var trigger = await _scheduler.GetTrigger(key);
-		await _scheduler.UnscheduleJob(key);
-		if (trigger is not null) await _scheduler.DeleteJob(trigger.JobKey);
+		var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
+		await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+		if (trigger is not null) await _scheduler.DeleteJob(trigger.JobKey, ExecutionBudget.CurrentToken);
 	}
 	private static TimeSpan Nonnegative(TimeSpan value) => value < TimeSpan.Zero ? TimeSpan.Zero : value;
 }

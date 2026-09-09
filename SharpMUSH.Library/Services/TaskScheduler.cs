@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Extensions;
@@ -66,6 +66,7 @@ public partial class TaskScheduler(
 	{
 		public DeferredSchedule? Deferred { get; init; }
 		public QueueObservation? Observation { get; init; }
+		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 	}
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -103,7 +104,7 @@ public partial class TaskScheduler(
 	}
 	private QueueEntry? RemoveEntry(long pid)
 	{
-		if (_semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return null;
+		if (_semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid)) return null;
 		_ready.Remove(pid);
 		_running.Remove(pid);
 		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
@@ -116,7 +117,7 @@ public partial class TaskScheduler(
 	}
 	private static void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
-		entry.Observation?.Complete(outcome);
+		entry.Observation?.Complete(entry.DeferredReleaseOutcome ?? outcome);
 		entry.Cts.Dispose();
 	}
 	private bool ReleasePending(long pid)
@@ -220,6 +221,8 @@ public partial class TaskScheduler(
 		? "semaphore" : group.StartsWith(DelayGroup + ":", StringComparison.Ordinal) ? "delay"
 		: group == DirectInputGroup ? "direct-input" : group == EnqueueGroup ? "enqueue" : "other";
 	private readonly SemaphoreSlim _semaphoreMutations = new(1, 1);
+	private readonly HashSet<long> _delayedRepairs = [];
+
 	// Failed admission repairs retain their PID/quota. No later semaphore transaction
 	// may pass this gate until the uncertain write has been restored.
 	private readonly ConcurrentDictionary<long, Func<ValueTask>> _semaphoreRepairs = new();
@@ -282,7 +285,7 @@ public partial class TaskScheduler(
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
-			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
+			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (entry.Deferred?.Paused == true)
 			{
 				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
@@ -390,10 +393,10 @@ public partial class TaskScheduler(
 		catch (Exception ex) { logger.LogWarning(ex, "Could not report execution limit for PID {Pid}", entry.Pid); }
 	}
 
-	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
 	 => Admit(action, triggerName, group, null);
 
-	public ValueTask<QueueAdmissionResult> EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
+	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null)
@@ -406,7 +409,7 @@ public partial class TaskScheduler(
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
 			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
-				|| entry.Deferred?.ReleasePending == true
+				|| entry.Deferred?.ReleasePending == true || _delayedRepairs.Contains(pid)
 				|| generation is not null && entry.Deferred?.Generation != generation)
 				return new(null, QueueRejectionReason.AlreadyReleased);
 		}
@@ -446,7 +449,7 @@ public partial class TaskScheduler(
 		Recurse = InPlace | NoBreaks | PreserveQReg
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteUserCommand(long handle, MString command, ParserState state)
+	public ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
 	 => Admit(async () =>
 	 {
 		 if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
@@ -459,7 +462,7 @@ public partial class TaskScheduler(
 		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
 		return target.IsNone ? state : state with { Executor = target.Known().Object().DBRef };
 	}
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state)
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
 		state = await CaptureExecutor(state);
 		return await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", EnqueueGroup, state.Executor, sourceAttribute: SourceAttribute(state));
@@ -474,10 +477,10 @@ public partial class TaskScheduler(
 		return new QueueCommandReservation(admission, () => Activate(pid), () => ReleasePending(pid));
 	}
 
-	public ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
-	 => WriteCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
+	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
+	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
 
-	public async ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
 		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
@@ -497,10 +500,10 @@ public partial class TaskScheduler(
 		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
 	}
 
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state,
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
 	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
-		if (!manageSemaphoreCount && oldValue < 0) return await WriteCommandList(command, state);
+		if (!manageSemaphoreCount && oldValue < 0) return await AdmitCommandList(command, state);
 		// Serialize counter mutation before exposing a reservation or taking the deferred lease.
 		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
 		using var lease = await LockDeferred();
@@ -626,7 +629,7 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
+	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		using var lease = await LockDeferred();
 		QueueEntry[] waiting;
@@ -644,8 +647,8 @@ public partial class TaskScheduler(
 		return outcomes;
 	}
 
-	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAll(DbRefAttribute dbAttribute)
-	 => Notify(dbAttribute, 0, int.MaxValue);
+	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
+	 => NotifyCounted(dbAttribute, 0, int.MaxValue);
 
 	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
 	{
@@ -726,16 +729,25 @@ public partial class TaskScheduler(
 			if (entry.Group.StartsWith(SemaphoreGroup + ":") && (entry.Deferred?.ReleasePending != true
 				|| entry.Deferred is { ReleaseTimeout: true } && !entry.ManagesSemaphoreCount))
 				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
-			lock (_admissionLock) entry = RemoveEntry(pid);
+			var delayed = entry.Group.StartsWith(DelayGroup + ":", StringComparison.Ordinal);
+			if (delayed) await RemoveDeferredTrigger(entry);
+			lock (_admissionLock)
+			{
+				_delayedRepairs.Remove(pid);
+				entry = RemoveEntry(pid);
+			}
 			if (entry is null) return true;
-			try { await RemoveDeferredTrigger(entry); }
-			catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
+			if (!delayed)
+			{
+				try { await RemoveDeferredTrigger(entry); }
+				catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
+			}
 		}
 		DisposeEntry(entry);
 		return true;
 	}
 
-	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state, TimeSpan delay)
+	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, TimeSpan delay)
 	{
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
@@ -743,19 +755,43 @@ public partial class TaskScheduler(
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
+		QueueEntry entry;
+		lock (_admissionLock) entry = _pendingEntries[pid];
+		var trigger = new TriggerKey(entry.TriggerName, entry.Group);
 		async ValueTask Schedule(DateTimeOffset due, long generation)
 		{
+			using var publication = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, entry.Cts.Token);
 			await _scheduler.ScheduleJob(JobBuilder.Create<DelayedTask>()
 				.SetJobData(new JobDataMap { ["Generation"] = generation }).Build(),
 				TriggerBuilder.Create().StartAt(due).WithSimpleSchedule(x => x.WithRepeatCount(0))
-					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build(), ExecutionBudget.CurrentToken);
+					.WithIdentity(trigger).Build(), publication.Token);
+			publication.Token.ThrowIfCancellationRequested();
+			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
 		delay = Nonnegative(delay);
 		var due = DateTimeOffset.UtcNow + delay;
-		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
+		lock (_admissionLock) _pendingEntries[pid] = entry with
 		{ Deferred = new(due, Schedule, null, command, state) };
 		try { await Schedule(due, 0); return admission; }
-		catch { Release(pid, QueueOutcome.ScheduleFailed); throw; }
+		catch
+		{
+			using var cleanup = ExecutionBudget.FromMilliseconds(1000);
+			using var cleanupScope = cleanup.Enter();
+			try { await _scheduler.UnscheduleJob(trigger, cleanup.Token); }
+			catch (Exception cleanupFailure)
+			{
+				// Uncertain publication retains quota until halt confirms trigger cleanup.
+				lock (_admissionLock)
+				{
+					_delayedRepairs.Add(pid);
+					_pendingEntries[pid] = _pendingEntries[pid] with { DeferredReleaseOutcome = QueueOutcome.ScheduleFailed };
+				}
+				logger.LogError(cleanupFailure, "Delayed schedule cleanup failed for PID {Pid}; retry halt to release its reservation", pid);
+				throw;
+			}
+			Release(pid, QueueOutcome.ScheduleFailed);
+			throw;
+		}
 	}
 
 	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
@@ -878,6 +914,16 @@ public partial class TaskScheduler(
 			{
 				// Expected during shutdown
 			}
+		}
+		// Publication observes the cancelled entry token and settles its provider write
+		// before shutdown disposes the reservation. Release callbacks run after this gate.
+		await _deferredChanges.WaitAsync();
+		_deferredChanges.Release();
+		lock (_admissionLock)
+		{
+			if (_delayedRepairs.Count != 0)
+				logger.LogError("Shutdown with {Count} unrepaired delayed triggers", _delayedRepairs.Count);
+			_delayedRepairs.Clear();
 		}
 		foreach (var pid in _semaphoreRepairs.Keys)
 		{
