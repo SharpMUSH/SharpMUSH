@@ -39,6 +39,40 @@ public class QueueControlCommandTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task PidUntilUsesUnixSecondsForBothDeferredQueueKinds(bool semaphore)
+	{
+		var connections = Factory.Services.GetRequiredService<IConnectionService>();
+		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueUntil");
+		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
+		var state = ParserState.Empty with { Executor = objid };
+		var job = semaphore
+			? await queue.WriteCommandList(MarkupText.Plain("think later"), state,
+				new SharpMUSH.Library.Models.DbRefAttribute(objid, ["SEMAPHORE"]), 1, TimeSpan.FromHours(1))
+			: await queue.WriteCommandList(MarkupText.Plain("think later"), state, TimeSpan.FromHours(1));
+		try
+		{
+			await queue.PausePending(job.Pid!.Value, "hold");
+			var timestamp = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+			var result = await Factory.CommandParser.CommandParse(1, connections,
+				MarkupText.Plain($"@wait/pid/until {job.Pid}={timestamp}"));
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(job.Pid.Value.ToString());
+			var remaining = queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay!.Value;
+			await Assert.That(remaining.TotalSeconds).IsGreaterThan(290);
+			await Assert.That(remaining.TotalSeconds).IsLessThanOrEqualTo(300);
+			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+			var invalid = await Factory.CommandParser.CommandParse(1, connections,
+				MarkupText.Plain($"@wait/pid {job.Pid}=9223372036854775807"));
+			await Assert.That(invalid.Message!.ToPlainText()).IsEqualTo("#-1 INVALID TIME");
+			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay).IsEqualTo(remaining);
+		}
+		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }
+	}
+
+	[Test]
 	public async Task GameCommandsPauseListAndResumeWithoutExposingCommandText()
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();

@@ -47,6 +47,23 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task InspectionNeverReturnsArbitraryInternalGroupText()
+	{
+		await using var queue = Create();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var job = await queue.EnqueueWork(async () =>
+		{ entered.SetResult(); await release.Task; return null; }, "private trigger", "private group payload");
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(queue.GetQueueEntry(job.Pid!.Value)!.Kind).IsEqualTo("other");
+			await Assert.That(queue.GetQueueEntries().Single().Kind).IsEqualTo("other");
+		}
+		finally { release.TrySetResult(); }
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ResumeRejectsMissingCapturedExecutorOrSemaphoreTarget(bool semaphore)

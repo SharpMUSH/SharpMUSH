@@ -107,7 +107,9 @@ public class DatabaseCommandTests
 	[Arguments(true)]
 	public async Task MapSqlDoesNotReportRejectedRowsOrSkipARejectedHeader(bool columnNames)
 	{
-		var player = await CreateWizardTestPlayerAsync("MapSqlCapacity");
+		// Exercise the ordinary owner ceiling; Wizards have an additional database-sized allowance.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCapacity");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think callback"));
 		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();

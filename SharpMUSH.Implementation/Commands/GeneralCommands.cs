@@ -2719,7 +2719,7 @@ public partial class Commands
 		AnySharpObject executor, string? arg1,
 		string[] switches)
 	{
-		if (!int.TryParse(arg0, out var pid))
+		if (!long.TryParse(arg0, out var pid))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPid);
@@ -2731,10 +2731,9 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var exists = Mediator.CreateStream(new ScheduleSemaphoreQuery(pid));
-		var maybeFoundPid = await exists.FirstOrDefaultAsync();
+		var maybeFoundPid = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueEntry(pid);
 
-		if (maybeFoundPid is null)
+		if (maybeFoundPid is null || maybeFoundPid.RemainingDelay is null || maybeFoundPid.ReleasePending)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPid);
@@ -2747,49 +2746,33 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var timeArg = arg1;
-
-		if (switches.Contains("UNTIL"))
-		{
-			if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
-				return new CallState(ErrorMessages.Returns.InvalidTime);
-			}
-
-			var until = DateTimeOffset.UtcNow - dateTimeOffset;
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-
-			return new CallState(maybeFoundPid.Pid.ToString());
-		}
-
-		if (arg1.StartsWith('+') || arg1.StartsWith('-'))
-		{
-			timeArg = arg1[1..];
-		}
-
-		if (!long.TryParse(timeArg, out var secs))
+		if (!long.TryParse(arg1, System.Globalization.NumberStyles.Integer,
+			System.Globalization.CultureInfo.InvariantCulture, out var seconds))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidTime);
 		}
 
-		if (arg1.StartsWith('+'))
+		TimeSpan delay;
+		try
 		{
-			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) + TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-			return new CallState(maybeFoundPid.Pid.ToString());
+			var now = DateTimeOffset.UtcNow;
+			delay = switches.Contains("UNTIL")
+				? DateTimeOffset.FromUnixTimeSeconds(seconds) - now
+				: arg1.StartsWith('+') || arg1.StartsWith('-')
+					? maybeFoundPid.RemainingDelay.Value + TimeSpan.FromSeconds(seconds)
+					: TimeSpan.FromSeconds(seconds);
+			if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+			if (delay > DateTimeOffset.MaxValue - now) throw new ArgumentOutOfRangeException(nameof(seconds));
+		}
+		catch (Exception ex) when (ex is ArgumentOutOfRangeException or OverflowException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
+			return new CallState(ErrorMessages.Returns.InvalidTime);
 		}
 
-		if (arg1.StartsWith('-'))
-		{
-			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) - TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-			return new CallState(maybeFoundPid.Pid.ToString());
-		}
-
-		await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
-		return new CallState(maybeFoundPid.Pid.ToString());
+		await Mediator.Send(new RescheduleSemaphoreRequest(pid, delay));
+		return new CallState(pid.ToString());
 	}
 
 	[SharpCommand(Name = "@COMMAND",
