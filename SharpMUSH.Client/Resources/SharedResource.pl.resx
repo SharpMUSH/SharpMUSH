@@ -4544,4 +4544,6 @@
     <value>Tematy ahelp. Tylko dla Czarodziejów i Boga, w portalu tak samo jak w grze.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Decyduje jawna reguła o najwyższym priorytecie; przy remisie wygrywa odmowa. Dziedziczenie działa tylko bez jawnej reguły. Bez zezwolenia dostęp jest zabroniony. Delegowani administratorzy mogą zarządzać tylko posiadanymi uprawnieniami o niższym priorytecie, bez zmiany własnych ról i ograniczeń.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Bieżący dostęp: {0}; priorytet {1}; role {2}; rozstrzygnięcie {3}.</value></data>
 </root>

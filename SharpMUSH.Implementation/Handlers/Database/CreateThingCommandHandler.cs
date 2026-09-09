@@ -14,10 +14,10 @@ public class CreateThingCommandHandler(
 {
 	public async ValueTask<DBRef> Handle(CreateThingCommand request, CancellationToken cancellationToken)
 	{
-		var created = await database.CreateThingAsync(request.Name, request.Where, request.Owner, request.Home, cancellationToken);
+		var created = await database.CreateThingAsync(request.Name, request.Where, request.Owner, request.Home, cancellationToken: cancellationToken);
 
 		await DefaultObjectFlags.ApplyAsync(flags, database, created,
-			configuration.CurrentValue.Flag.ThingFlags, cancellationToken);
+			configuration.CurrentValue.Flag.ThingFlags, cancellationToken: cancellationToken);
 
 		return created;
 	}

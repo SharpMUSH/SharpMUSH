@@ -81,12 +81,17 @@ public class PennMUSHObject
 	public List<string> Warnings { get; init; } = [];
 
 	/// <summary>
-	/// Creation timestamp (Unix time)
+	/// Creation timestamp, in Unix <em>seconds</em> — PennMUSH stores a time_t.
 	/// </summary>
+	/// <remarks>
+	/// SharpMUSH stores milliseconds, so anything carrying this into a SharpObject must scale by
+	/// 1000. Nothing does yet: PennMUSHDatabaseConverter creates objects with a fresh timestamp, so
+	/// an imported object's objid does not match the one it had in PennMUSH.
+	/// </remarks>
 	public long CreationTime { get; init; }
 
 	/// <summary>
-	/// Last modification timestamp (Unix time)
+	/// Last modification timestamp, in Unix <em>seconds</em>. See <see cref="CreationTime"/> on units.
 	/// </summary>
 	public long ModificationTime { get; init; }
 

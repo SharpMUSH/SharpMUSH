@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Implementation.Definitions;
 using DotNext;
 using DotNext.Collections.Generic;
 using MarkupString;
@@ -316,23 +317,17 @@ public partial class Functions
 
 		var delimArg = args[(args.Count - 1).ToString()];
 		var delimParsed = await parser.FunctionParse(delimArg.Message!);
-		var delimiter = (delimParsed!.Message ?? MarkupText.Empty).ToPlainText();
+		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
 
-		var truthyValues = new List<string>();
+		var truthyValues = new List<MString>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
 			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
-			var value = (parsed!.Message ?? MarkupText.Empty).ToPlainText();
-			// Truthy: non-empty, not "0", not starting with "#-"
-			if (!string.IsNullOrEmpty(value) &&
-				value != "0" &&
-				!value.StartsWith("#-"))
-			{
-				truthyValues.Add(value);
-			}
+			var value = parsed?.Message ?? MarkupText.Empty;
+			if (value.Truthy(parser)) truthyValues.Add(value);
 		}
 
-		return new CallState(string.Join(delimiter, truthyValues));
+		return new CallState(MarkupText.Join(delimiter, truthyValues));
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

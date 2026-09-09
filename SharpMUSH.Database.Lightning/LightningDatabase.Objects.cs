@@ -24,22 +24,38 @@ public partial class LightningDatabase
 {
 	#region Object CRUD
 
-	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		string? salt = null, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// Resolves the optional creation/modification stamps an importer may supply: absent means now,
+	/// and an absent modification time matches the creation time, which is what every freshly created
+	/// object has anyway.
+	/// </summary>
+	private static (long Created, long Modified) Timestamps(long? creationTime, long? modifiedTime)
 	{
+		var created = creationTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		return (created, modifiedTime ?? created);
+	}
+
+	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
+		string? salt = null, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
+	{
+		var (created, modified) = Timestamps(creationTime, modifiedTime);
+
 		return await Store.WriteAsync(tx =>
 		{
 			var dbref = AllocateDbref(tx);
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-			var hashedPassword = salt != null ? password : _passwordService.HashPassword($"#{dbref}:{now}", password);
+			// Hashed against the objid this object is about to have, not against the wall clock — an
+			// imported player carries its original creation time, and hashing before that is settled
+			// would key the hash to an objid the object never has.
+			var hashedPassword = salt != null ? password : _passwordService.HashPassword($"#{dbref}:{created}", password);
 
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 			{
 				Name = name,
 				Type = DatabaseConstants.TypePlayer,
 				Aliases = [],
-				CreationTime = now,
-				ModifiedTime = now,
+				CreationTime = created,
+				ModifiedTime = modified,
 				PasswordHash = hashedPassword,
 				PasswordSalt = salt ?? "",
 				Quota = quota,
@@ -53,18 +69,19 @@ public partial class LightningDatabase
 			SetSingleEdge(tx, Tables.Location, dbref, (long)location.Number);
 			SetSingleEdge(tx, Tables.Home, dbref, (long)home.Number);
 
-			return new DBRef((int)dbref, now);
+			return new DBRef((int)dbref, created);
 		}, cancellationToken);
 	}
 
-	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default)
+	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, long? creationTime = null,
+		long? modifiedTime = null, CancellationToken cancellationToken = default)
 	{
 		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(tx =>
 		{
 			var dbref = AllocateDbref(tx);
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 			{
@@ -72,7 +89,7 @@ public partial class LightningDatabase
 				Type = DatabaseConstants.TypeRoom,
 				Aliases = [],
 				CreationTime = now,
-				ModifiedTime = now,
+				ModifiedTime = modified,
 				Quota = 0,
 				Warnings = null,
 				Locks = new Dictionary<string, LockRecord>()
@@ -87,16 +104,17 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
-		AnySharpContainer home, CancellationToken cancellationToken = default)
+		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
 	{
 		var locKey = (long)location.Object().Key;
 		var homeKey = (long)home.Object().Key;
 		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(tx =>
 		{
 			var dbref = AllocateDbref(tx);
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 			{
@@ -104,7 +122,7 @@ public partial class LightningDatabase
 				Type = DatabaseConstants.TypeThing,
 				Aliases = [],
 				CreationTime = now,
-				ModifiedTime = now,
+				ModifiedTime = modified,
 				Quota = 0,
 				Warnings = null,
 				Locks = new Dictionary<string, LockRecord>()
@@ -120,15 +138,16 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
-		SharpPlayer creator, CancellationToken cancellationToken = default)
+		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
 	{
 		var locKey = (long)location.Object().Key;
 		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(tx =>
 		{
 			var dbref = AllocateDbref(tx);
-			var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 			{
@@ -136,7 +155,7 @@ public partial class LightningDatabase
 				Type = DatabaseConstants.TypeExit,
 				Aliases = aliases,
 				CreationTime = now,
-				ModifiedTime = now,
+				ModifiedTime = modified,
 				Quota = 0,
 				Warnings = null,
 				Locks = new Dictionary<string, LockRecord>()
@@ -488,6 +507,20 @@ public partial class LightningDatabase
 			tx.Delete(Tables.ObjName, Keys.Lower(found.Record.Name), Keys.Dbref(dbref));
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Name = plain }));
 			tx.Put(Tables.ObjName, Keys.Lower(plain), Keys.Dbref(dbref));
+		}, cancellationToken);
+	}
+
+	public async ValueTask SetObjectTimestampsAsync(DBRef target, long creationTime, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
+	{
+		var dbref = (long)target.Number;
+		var modified = modifiedTime ?? creationTime;
+
+		await Store.WriteAsync(tx =>
+		{
+			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
+			tx.Put(Tables.Obj, Keys.Dbref(dbref),
+				Codec.Serialize(found.Record with { CreationTime = creationTime, ModifiedTime = modified }));
 		}, cancellationToken);
 	}
 

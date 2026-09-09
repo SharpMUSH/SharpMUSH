@@ -4544,4 +4544,6 @@
     <value>Los temas de ahelp. Solo para Magos y Dios, tanto en el portal como en el juego.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Decide la regla explícita de mayor prioridad; la denegación gana los empates. Solo se hereda si no hay una regla explícita. Sin permiso se deniega el acceso. Los administradores delegados solo pueden gestionar permisos que poseen con menor prioridad, sin cambiar sus propios roles ni restricciones.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acceso actual: {0}; prioridad {1}; roles {2}; resolución {3}.</value></data>
 </root>
