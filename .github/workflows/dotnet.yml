@@ -18,7 +18,7 @@ on:
     # the day it is cut instead of after someone remembers to edit this file.
     # Every link is verified while it is still reviewable, not after it has
     # already been approved on trust.
-    branches: [ "main", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**" ]
+    branches: [ "main", "codex/**", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**" ]
 
 jobs:
   build-and-test:
