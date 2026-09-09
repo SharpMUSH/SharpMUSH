@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
+using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
@@ -254,35 +255,29 @@ public partial class Commands
 	/// Splits a prepared statement's <c>query,param,param...</c> input on unescaped commas; a
 	/// backslash escapes the character after it. Every part comes back trimmed.
 	/// </summary>
-	private static List<string> SplitPreparedInput(string rawInput)
+	internal static List<string> SplitPreparedInput(string rawInput)
 	{
+		// A comma after an odd run of backslashes is escaped, so its segment continues into the next one.
 		var parts = new List<string>();
-		var currentPart = new System.Text.StringBuilder();
-		var escaped = false;
-
-		foreach (var ch in rawInput)
+		var escapedComma = false;
+		foreach (var segment in rawInput.Split(','))
 		{
-			if (escaped)
+			if (escapedComma)
 			{
-				currentPart.Append(ch);
-				escaped = false;
-			}
-			else if (ch == '\\')
-			{
-				escaped = true;
-			}
-			else if (ch == ',')
-			{
-				parts.Add(currentPart.ToString().Trim());
-				currentPart.Clear();
+				parts[^1] = $"{parts[^1]},{segment}";
 			}
 			else
 			{
-				currentPart.Append(ch);
+				parts.Add(segment);
 			}
+
+			escapedComma = (segment.Length - segment.AsSpan().TrimEnd('\\').Length) % 2 == 1;
 		}
 
-		parts.Add(currentPart.ToString().Trim());
-		return parts;
+		return parts.ConvertAll(part => EscapedCharacter().Replace(part, "$1").Trim());
 	}
+
+	/// <summary>A backslash and the character it escapes, or a bare backslash ending the input.</summary>
+	[GeneratedRegex(@"\\([\s\S]?)")]
+	private static partial Regex EscapedCharacter();
 }

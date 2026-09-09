@@ -218,14 +218,14 @@ public partial class Functions
 			return false;
 		}
 
+		// "123", or "FOLDER:123": a folder before the first colon, the number after it.
 		var text = arg.AsSpan();
-		var colon = text.IndexOf(':');
-		if (colon < 0)
+		Span<System.Range> parts = stackalloc System.Range[2];
+		return text.Split(parts, ':') switch
 		{
-			return !text.ContainsAnyExceptInRange('0', '9');
-		}
-
-		return !text[..colon].IsWhiteSpace() && !text[(colon + 1)..].ContainsAnyExceptInRange('0', '9');
+			1 => !text.ContainsAnyExceptInRange('0', '9'),
+			_ => !text[parts[0]].IsWhiteSpace() && !text[parts[1]].ContainsAnyExceptInRange('0', '9')
+		};
 	}
 	[SharpFunction(Name = "maillist", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder", "flags"])]
 	public async ValueTask<CallState> maillist(IMUSHCodeParser parser, SharpFunctionAttribute _2)

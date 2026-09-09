@@ -17,7 +17,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Library.Markup;
-using System.Buffers;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -910,25 +909,14 @@ public partial class Functions
 	/// PennMUSH's <c>escaped_chars</c> table (src/tables.c): the characters the parser gives meaning
 	/// to, which escape() backslashes and secure() blanks.
 	/// </summary>
-	private static readonly SearchValues<char> SoftcodeSpecials = SearchValues.Create(@"$%(),;[\]^{}");
+	[GeneratedRegex(@"[$%(),;\[\\\]^{}]")]
+	private static partial Regex SoftcodeSpecial();
 
 	/// <summary>
-	/// <paramref name="text"/> with a backslash before every character in <see cref="SoftcodeSpecials"/>,
-	/// as one pass; the text comes back unchanged when it holds none of them.
+	/// <paramref name="text"/> with a backslash before every <see cref="SoftcodeSpecial"/> character;
+	/// the text comes back unchanged when it holds none of them.
 	/// </summary>
-	private static string EscapeSoftcode(string text)
-	{
-		if (text.AsSpan().IndexOfAny(SoftcodeSpecials) < 0) return text;
-
-		var result = new StringBuilder(text.Length + 8);
-		foreach (var c in text)
-		{
-			if (SoftcodeSpecials.Contains(c)) result.Append('\\');
-			result.Append(c);
-		}
-
-		return result.ToString();
-	}
+	private static string EscapeSoftcode(string text) => SoftcodeSpecial().Replace(text, @"\$0");
 
 	/// <summary>
 	/// fun_escape (src/funstr.c): a leading backslash, then the text with every special escaped
@@ -976,7 +964,7 @@ public partial class Functions
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var modifiedPattern = patternArg.Message!.IndexOf("##") >= 0
+		var modifiedPattern = patternArg.Message!.Text.Contains("##")
 			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
 			: null;
 
@@ -1595,19 +1583,11 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(MarkupText.Concat(shuffled));
 	}
 
-	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeSpecials"/> character becomes a space.</summary>
+	/// <summary>fun_secure (src/funstr.c): every <see cref="SoftcodeSpecial"/> character becomes a space.</summary>
 	[SharpFunction(Name = "secure", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Secure(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.Apply(text =>
-			text.AsSpan().IndexOfAny(SoftcodeSpecials) < 0
-				? text
-				: string.Create(text.Length, text, static (span, source) =>
-				{
-					for (var i = 0; i < span.Length; i++)
-					{
-						span[i] = SoftcodeSpecials.Contains(source[i]) ? ' ' : source[i];
-					}
-				})));
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!
+			.Apply(text => SoftcodeSpecial().Replace(text, " ")));
 
 	[SharpFunction(Name = "space", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["count"])]
 	public ValueTask<CallState> Space(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1657,23 +1637,39 @@ public partial class Functions
 		}
 
 		// fun_squish (src/funstr.c): a run of delimiters at either end goes, and every other run of two
-		// or more collapses to one. Spliced in a single pass so the markup around each run is kept.
-		var edits = new List<MarkupString.Edit>();
-		var start = text.IndexOf(delimiter, StringComparison.Ordinal);
-		while (start >= 0)
+		// or more collapses to one. The non-empty pieces of the split are the words; the gap between
+		// two of them is a run, and one longer than the delimiter holds more than one copy.
+		var words = new List<(int Start, int End)>();
+		foreach (var range in text.AsSpan().Split(delimiter))
 		{
-			var end = start + delimiter.Length;
-			while (text.AsSpan(end).StartsWith(delimiter)) end += delimiter.Length;
-			if (start == 0 || end == text.Length)
+			var (offset, length) = range.GetOffsetAndLength(text.Length);
+			if (length > 0)
 			{
-				edits.Add(new MarkupString.Edit(start, end - start, MarkupText.Empty));
+				words.Add((offset, offset + length));
 			}
-			else if (end - start > delimiter.Length)
-			{
-				edits.Add(new MarkupString.Edit(start, end - start, arg1));
-			}
+		}
 
-			start = text.IndexOf(delimiter, end, StringComparison.Ordinal);
+		if (words.Count == 0)
+		{
+			return ValueTask.FromResult<CallState>(text.Length == 0
+				? arg0
+				: arg0.Splice([new MarkupString.Edit(0, text.Length, MarkupText.Empty)]));
+		}
+
+		// Spliced together so the markup around each run is kept.
+		var edits = new List<MarkupString.Edit>();
+		if (words[0].Start > 0)
+		{
+			edits.Add(new MarkupString.Edit(0, words[0].Start, MarkupText.Empty));
+		}
+
+		edits.AddRange(words.Zip(words.Skip(1))
+			.Where(gap => gap.Second.Start - gap.First.End > delimiter.Length)
+			.Select(gap => new MarkupString.Edit(gap.First.End, gap.Second.Start - gap.First.End, arg1)));
+
+		if (words[^1].End < text.Length)
+		{
+			edits.Add(new MarkupString.Edit(words[^1].End, text.Length - words[^1].End, MarkupText.Empty));
 		}
 
 		return ValueTask.FromResult<CallState>(edits.Count == 0
@@ -2002,7 +1998,10 @@ public partial class Functions
 		Span<byte> src = byteCount <= 512 ? stackalloc byte[byteCount] : new byte[byteCount];
 		Encoding.UTF8.GetBytes(input, src);
 
-		var result = new StringBuilder(src.Length);
+		// Decoding never grows the text, so it fits a buffer the size of the input. The walk is by
+		// index because each byte is read together with the two after it.
+		Span<char> decoded = byteCount <= 512 ? stackalloc char[byteCount] : new char[byteCount];
+		var written = 0;
 		for (var i = 0; i < src.Length; i++)
 		{
 			var b = src[i];
@@ -2013,10 +2012,10 @@ public partial class Functions
 				i += 2;
 			}
 
-			result.Append(b is >= 0x20 and <= 0x7E ? (char)b : '?');
+			decoded[written++] = b is >= 0x20 and <= 0x7E ? (char)b : '?';
 		}
 
-		return result.ToString();
+		return new string(decoded[..written]);
 	}
 
 	[SharpFunction(Name = "wrap", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["string", "width", "first line width", "line separator"])]

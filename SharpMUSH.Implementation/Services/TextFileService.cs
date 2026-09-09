@@ -362,29 +362,21 @@ public class TextFileService : ITextFileService
 		var firstHeaderLength = 0;
 		var afterHeaders = 0;
 
-		// Walk the leading run of header lines without splitting the whole entry into lines.
-		var position = 0;
-		while (position <= text.Length)
+		// The leading run of header lines, up to the first line that is not one.
+		foreach (var range in text.Split('\n'))
 		{
-			var rest = text[position..];
-			var newline = rest.IndexOf('\n');
-			var line = newline < 0 ? rest : rest[..newline];
-			if (!line.StartsWith("# "))
+			var (offset, length) = range.GetOffsetAndLength(text.Length);
+			if (!text.Slice(offset, length).StartsWith("# "))
 			{
 				break;
 			}
 
 			if (headers++ == 0)
 			{
-				firstHeaderLength = line.Length;
+				firstHeaderLength = length;
 			}
 
-			afterHeaders = newline < 0 ? text.Length : position + newline + 1;
-			position = afterHeaders;
-			if (newline < 0)
-			{
-				break;
-			}
+			afterHeaders = Math.Min(offset + length + 1, text.Length);
 		}
 
 		return headers > 1

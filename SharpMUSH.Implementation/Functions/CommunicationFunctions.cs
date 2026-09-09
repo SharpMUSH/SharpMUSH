@@ -503,9 +503,9 @@ public partial class Functions
 		var tokens = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		ports = new long[tokens.Length];
 
-		for (var i = 0; i < tokens.Length; i++)
+		foreach (var (i, token) in tokens.Index())
 		{
-			if (!long.TryParse(tokens[i], out ports[i]))
+			if (!long.TryParse(token, out ports[i]))
 			{
 				return false;
 			}

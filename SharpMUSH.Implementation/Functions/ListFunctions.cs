@@ -578,7 +578,7 @@ public partial class Functions
 
 		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
 		var patternArg = parser.CurrentState.Arguments["1"];
-		var modifiedPattern = patternArg.Message!.IndexOf("##") >= 0
+		var modifiedPattern = patternArg.Message!.Text.Contains("##")
 			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
 			: null;
 
@@ -1338,24 +1338,7 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var comparisonTasks = new List<Task<(int index, MString value, int order)>>();
-			for (var i = 0; i < list.Length; i++)
-			{
-				var index = i;
-				comparisonTasks.Add(Task.Run(async () =>
-				{
-					var orderSum = 0;
-					for (var j = 0; j < list.Length; j++)
-					{
-						if (index == j) continue;
-						orderSum += await CompareViaLambda(list[index], list[j]);
-					}
-					return (index, list[index], orderSum);
-				}));
-			}
-			var results = await Task.WhenAll(comparisonTasks);
-			var sorted = results.OrderBy(r => r.order).Select(r => r.value);
-			return new CallState(MarkupText.Join(sep, sorted));
+			return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1403,45 +1386,48 @@ public partial class Functions
 		var attr = maybeAttr.AsAttribute;
 		var attrValue = attr.Last().Value;
 
-		// We need to do this synchronously since List.Sort doesn't support async
-		var attrComparisonTasks = new List<Task<(int index, MString value, int order)>>();
-		for (var i = 0; i < list.Length; i++)
+		async Task<int> CompareViaAttribute(MString a, MString b)
 		{
-			var index = i;
-			attrComparisonTasks.Add(Task.Run(async () =>
+			var newParser = parser.Push(parser.CurrentState with
 			{
-				var orderSum = 0;
-				for (var j = 0; j < list.Length; j++)
+				Arguments = new Dictionary<string, CallState>
 				{
-					if (index == j) continue;
-
-					var newParser = parser.Push(parser.CurrentState with
-					{
-						Arguments = new Dictionary<string, CallState>
-						{
-							{ "0", new CallState(list[index]) },
-							{ "1", new CallState(list[j]) }
-						},
-						EnvironmentRegisters = new Dictionary<string, CallState>
-						{
-							["0"] = new CallState(list[index]),
-							["1"] = new CallState(list[j])
-						}
-					});
-					var result = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
-					if (int.TryParse(result, out var cmp))
-					{
-						orderSum += cmp > 0 ? 1 : (cmp < 0 ? -1 : 0);
-					}
+					{ "0", new CallState(a) },
+					{ "1", new CallState(b) }
+				},
+				EnvironmentRegisters = new Dictionary<string, CallState>
+				{
+					["0"] = new CallState(a),
+					["1"] = new CallState(b)
 				}
-				return (index, list[index], orderSum);
-			}));
+			});
+			var result = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
+			return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
 		}
 
-		var attrResults = await Task.WhenAll(attrComparisonTasks);
-		var attrSorted = attrResults.OrderBy(r => r.order).Select(r => r.value);
+		return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaAttribute)));
+	}
 
-		return new CallState(MarkupText.Join(sep, attrSorted));
+	/// <summary>
+	/// fun_sortby's order: every item is compared against every other, its rank is the sum of those
+	/// results, and equal ranks keep list order. One item's comparisons run as a unit, the items
+	/// concurrently.
+	/// </summary>
+	private static async Task<IEnumerable<MString>> SortByComparisons(MString[] list,
+		Func<MString, MString, Task<int>> compare)
+	{
+		var ranked = await Task.WhenAll(list.Select((item, index) => Task.Run(async () =>
+		{
+			var rank = 0;
+			foreach (var other in list.Where((_, j) => j != index))
+			{
+				rank += await compare(item, other);
+			}
+
+			return (Item: item, Rank: rank);
+		})));
+
+		return ranked.OrderBy(r => r.Rank).Select(r => r.Item);
 	}
 
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]

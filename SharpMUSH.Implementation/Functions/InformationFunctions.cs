@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using SharpMUSH.Configuration.Options;
@@ -798,17 +799,22 @@ public partial class Functions
 				continue;
 			}
 
-			var i = 0;
-			while (i < part.Length && IsAnsiControlChar(part[i]))
+			// The code letters run ahead of any named colour; each is a style, kept once.
+			var codeLetters = part.AsSpan().IndexOfAnyExcept(AnsiCodeLetters) switch
 			{
-				if (!styles.Contains(part[i]))
+				-1 => part.Length,
+				var end => end
+			};
+
+			foreach (var style in part.AsSpan(0, codeLetters))
+			{
+				if (!styles.Contains(style))
 				{
-					styles.Add(part[i]);
+					styles.Add(style);
 				}
-				i++;
 			}
 
-			var colorPart = part[i..];
+			var colorPart = part[codeLetters..];
 			if (!string.IsNullOrWhiteSpace(colorPart))
 			{
 				foreground = colorPart;
@@ -818,12 +824,8 @@ public partial class Functions
 		return (foreground, background, new string(CollectionsMarshal.AsSpan(styles)));
 	}
 
-	private bool IsAnsiControlChar(char ch)
-	{
-		return ch is 'f' or 'u' or 'i' or 'h' or
-					 'x' or 'r' or 'g' or 'y' or 'b' or 'm' or 'c' or 'w' or
-					 'X' or 'R' or 'G' or 'Y' or 'B' or 'M' or 'C' or 'W';
-	}
+	/// <summary>The single letters an ansi() code spells its styles and colours with.</summary>
+	private static readonly SearchValues<char> AnsiCodeLetters = SearchValues.Create("fuihxrgybmcwXRGYBMCW");
 
 	private string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles,
 		SharpMUSH.Configuration.Options.ColorsOptions config)

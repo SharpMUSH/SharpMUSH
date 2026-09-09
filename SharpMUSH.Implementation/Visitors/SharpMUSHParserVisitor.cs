@@ -511,9 +511,9 @@ public class SharpMUSHParserVisitor(
 	private static Dictionary<string, CallState> NumberedArguments(List<CallState> values)
 	{
 		var arguments = new Dictionary<string, CallState>(values.Count);
-		for (var i = 0; i < values.Count; i++)
+		foreach (var (i, value) in values.Index())
 		{
-			arguments[i.ToString()] = values[i];
+			arguments[i.ToString()] = value;
 		}
 
 		return arguments;
@@ -2144,9 +2144,9 @@ public class SharpMUSHParserVisitor(
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
 		var numbered = new Dictionary<string, CallState>(arguments.Count + 1) { ["0"] = new CallState(rest) };
-		for (var i = 0; i < arguments.Count; i++)
+		foreach (var (i, argument) in arguments.Index())
 		{
-			numbered[(i + 1).ToString()] = arguments[i];
+			numbered[(i + 1).ToString()] = argument;
 		}
 
 		return await prs.With(state =>

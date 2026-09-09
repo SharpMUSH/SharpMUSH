@@ -7,7 +7,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using static MarkupString.MStringInterpolation;
 namespace SharpMUSH.Implementation.Common;
@@ -49,16 +48,14 @@ public static class MessageHelpers
 	}
 
 	/// <summary>
-	/// The flag symbols an object displays after its dbref, e.g. the <c>Tn</c> of <c>(#5Tn)</c>,
-	/// folded straight from the flag stream.
+	/// The flag symbols an object displays after its dbref, e.g. the <c>Tn</c> of <c>(#5Tn)</c>.
 	/// </summary>
 	public static async ValueTask<string> FlagSymbolsAsync(Library.Models.SharpObject obj)
-		=> (await obj.Flags.Value.AggregateAsync(new StringBuilder(), (symbols, flag) => symbols.Append(flag.Symbol)))
-			.ToString();
+		=> string.Concat(await obj.Flags.Value.Select(flag => flag.Symbol).ToArrayAsync());
 
 	/// <inheritdoc cref="FlagSymbolsAsync"/>
 	public static string FlagSymbols(IEnumerable<SharpObjectFlag> flags)
-		=> flags.Aggregate(new StringBuilder(), (symbols, flag) => symbols.Append(flag.Symbol)).ToString();
+		=> string.Concat(flags.Select(flag => flag.Symbol));
 
 	/// <summary>
 	/// Formats an object name with its dbref and flag symbols as a markup-preserving MString.
