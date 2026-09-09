@@ -24,6 +24,17 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task QuartzDelayedJobPreservesItsScheduleGeneration()
+	{
+		var queue = Substitute.For<ITaskScheduler>();
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "delay:10").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 7L });
+		await new DelayedTask(queue).Execute(context);
+		await queue.Received(1).ReleaseScheduledWork(42, false, 7);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ManagedCommandsDoNotConsumeAlreadyNotifiedPausedWaiters(bool drainAgain)
@@ -269,6 +280,9 @@ public class QueuePauseTests
 			parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
 			{ Interlocked.Increment(ref count); ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
 			await using var queue = Create(parser, quartz);
+			var jobFactory = Substitute.For<Quartz.Spi.IJobFactory>();
+			jobFactory.NewJob(Arg.Any<Quartz.Spi.TriggerFiredBundle>(), quartz).Returns(new DelayedTask(queue));
+			quartz.JobFactory = jobFactory;
 			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromSeconds(1));
 			await Assert.That(await queue.PausePending(job.Pid!.Value, "hold")).IsEqualTo(QueueControlResult.Applied);
 			await Task.Delay(1200);

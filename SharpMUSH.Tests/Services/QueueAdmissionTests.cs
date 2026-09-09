@@ -156,7 +156,7 @@ public class QueueAdmissionTests
 				_ => ValueTask.FromException(new IOException("commit acknowledgement lost")),
 				() => readable ? ValueTask.FromResult(false) : ValueTask.FromException<bool>(new IOException("provider unavailable")));
 			}
-			catch (Exception) { }
+			catch (AggregateException) { }
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
 			await Assert.That(await queue.ModifyQRegisters(semaphore, new() { ["unexpected"] = MarkupText.Plain("change") })).IsFalse();
 			await Assert.That(await queue.DrainCounted(semaphore)).IsEqualTo(0);
@@ -540,7 +540,10 @@ public class QueueAdmissionTests
 		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
 			attribute = new SharpAttribute("", "", "CUSTOM", [], null, "CUSTOM", null!, null!, null!)
-			{ Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value };
+			{
+				Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value,
+				Owner = new(_ => Task.FromResult<SharpPlayer?>(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Owner))
+			};
 			return ValueTask.FromResult(true);
 		});
 		mediator.CreateStream(Arg.Any<GetAttributeFlagsQuery>(), Arg.Any<CancellationToken>()).Returns(
@@ -686,6 +689,84 @@ public class QueueAdmissionTests
 
 	[Test]
 	[Arguments("none")]
+	[Arguments("owner")]
+	[Arguments("name")]
+	[Arguments("flags")]
+	[Arguments("children")]
+	public async Task FirstCreatedSemaphoreCleanupPreservesChangedMetadata(string changed)
+	{
+		SharpAttribute? attribute = null;
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			(attribute is null ? Array.Empty<SharpAttribute>() : new[] { attribute }).ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			var command = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>();
+			attribute = new SharpAttribute("created-id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = command.Value, Owner = new(_ => Task.FromResult<SharpPlayer?>(command.Owner)) };
+			return ValueTask.FromResult(true);
+		});
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.WipeAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{ attribute = null; return ValueTask.FromResult(true); });
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			attribute = changed switch
+			{
+				"owner" => attribute! with { Owner = new(_ => Task.FromResult<SharpPlayer?>(null)) },
+				"name" => attribute! with { Name = "RENAMED" },
+				"flags" => attribute! with { Flags = [new SharpAttributeFlag { Name = "wizard", Symbol = "", System = true, Inheritable = false }] },
+				"children" => attribute! with { Leaves = new(_ => Task.FromResult(new[] { attribute! }.ToAsyncEnumerable())) },
+				_ => attribute
+			};
+			return Task.FromException<DateTimeOffset>(new InvalidOperationException("schedule unavailable"));
+		});
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		try
+		{
+			await queue.WriteCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true);
+		}
+		catch (InvalidOperationException) { }
+		catch (AggregateException) { }
+		if (changed == "none") await Assert.That(attribute).IsNull();
+		else
+		{
+			await Assert.That(attribute).IsNotNull();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await mediator.DidNotReceive().Send(Arg.Any<SharpMUSH.Library.Commands.Database.WipeAttributeCommand>(), Arg.Any<CancellationToken>());
+			attribute = null; // Explicit administrator acknowledgement permits reservation cleanup.
+			await queue.HaltByPid(1);
+		}
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task DelayedSchedulingHonorsExecutionCancellation()
+	{
+		using var escape = new CancellationTokenSource();
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(call.Arg<CancellationToken>(), escape.Token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
+			return DateTimeOffset.UtcNow;
+		});
+		await using var queue = Create(scheduler: scheduler);
+		using var budget = ExecutionBudget.FromMilliseconds(50);
+		using var scope = budget.Enter();
+		var pending = queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromHours(1)).AsTask();
+		try { await Assert.That(async () => await pending.WaitAsync(TimeSpan.FromSeconds(1))).Throws<OperationCanceledException>(); }
+		finally
+		{
+			escape.Cancel();
+			try { await pending; } catch (OperationCanceledException) { }
+		}
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("none")]
 	[Arguments("flags")]
 	[Arguments("children")]
 	public async Task CreatedSemaphoreRepairPreservesInterveningMetadata(string changed)
@@ -698,7 +779,10 @@ public class QueueAdmissionTests
 		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
 			attribute = new SharpAttribute("created-id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
-			{ Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value };
+			{
+				Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value,
+				Owner = new(_ => Task.FromResult<SharpPlayer?>(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Owner))
+			};
 			return ValueTask.FromResult(true);
 		});
 		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.WipeAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(_ =>

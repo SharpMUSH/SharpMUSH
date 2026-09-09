@@ -5,7 +5,6 @@ using SharpMUSH.Library.Extensions;
 using OneOf;
 using Quartz;
 using Quartz.Impl.Matchers;
-using Quartz.Lambda;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -489,7 +488,7 @@ public partial class TaskScheduler(
 		var pid = admission.Pid!.Value;
 		async ValueTask Schedule(TimeSpan delay, long generation)
 		{
-			await _scheduler.ScheduleJob(JobBuilder.CreateForAsync<SemaphoreTask>()
+			await _scheduler.ScheduleJob(JobBuilder.Create<SemaphoreTask>()
 				.SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object>
 				{ { "Command", command }, { "State", state }, { "Generation", generation } })).Build(),
 				TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + delay)
@@ -568,7 +567,7 @@ public partial class TaskScheduler(
 							&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
 							&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
 								.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
-						if (!retry || createdIdentity is null && expectedCreation) createdIdentity = identity;
+						if (createdIdentity is null && expectedCreation) createdIdentity = identity;
 						else if (createdIdentity != identity)
 							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
 					}
@@ -720,9 +719,10 @@ public partial class TaskScheduler(
 		var pid = admission.Pid!.Value;
 		async ValueTask Schedule(TimeSpan nextDelay, long generation)
 		{
-			await _scheduler.ScheduleJob(async () => { await ReleaseScheduledWork(pid, generation: generation); },
-				builder => builder.StartAt(DateTimeOffset.UtcNow + nextDelay).WithSimpleSchedule(x => x.WithRepeatCount(0))
-					.WithIdentity($"dbref:{state.Executor}-{pid}", group));
+			await _scheduler.ScheduleJob(JobBuilder.Create<DelayedTask>()
+				.SetJobData(new JobDataMap { ["Generation"] = generation }).Build(),
+				TriggerBuilder.Create().StartAt(DateTimeOffset.UtcNow + nextDelay).WithSimpleSchedule(x => x.WithRepeatCount(0))
+					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build(), ExecutionBudget.CurrentToken);
 		}
 		delay = Nonnegative(delay);
 		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
@@ -739,7 +739,8 @@ public partial class TaskScheduler(
 
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
 		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, ITrigger>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
+			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
+			.Where(trigger => trigger is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers)
 		{
