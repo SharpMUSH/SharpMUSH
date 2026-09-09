@@ -55,3 +55,7 @@ ceiling. Expansion and concatenation are checked before allocation.
 
 This is a boundary for softcode expressions using the supported core operations.
 Native plugins and server code remain trusted code and are not isolated by it.
+
+Call this wrapper with direct function syntax. `#apply` entry, including aliases
+and `fn` indirection, is rejected because those arguments have already been
+evaluated by the caller and cannot supply the required raw expression and inputs.

@@ -19,10 +19,11 @@ public static class FunctionDispatcher
 		var attribute = definition.Attribute;
 		var flags = attribute.Flags;
 		var name = attribute.Name.ToUpperInvariant();
-		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
-			|| definition.RestrictedOperation == "restrictedexpr"
-			|| definition.RestrictedOperation == "fn" && EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
-				parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message?.ToPlainText() ?? ""), parser.FunctionLibrary);
+		var restrictedEntry = EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
+			parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message?.ToPlainText() ?? ""), parser.FunctionLibrary);
+		// #apply receives values after caller evaluation; it cannot establish a raw-input boundary.
+		if (restrictedEntry && !deferredArguments) return new CallState(EvaluationRestrictions.Error);
+		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null || restrictedEntry;
 		if (isolated)
 		{
 			var permissionError = CheckPermissionWithoutObjectData(attribute);

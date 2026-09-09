@@ -27,6 +27,24 @@ public class RestrictedExpressionTests
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
 	[Test]
+	[Arguments("#apply2/restrictedexpr,")]
+	[Arguments("#apply2/restricted_alias,")]
+	[Arguments("#apply3/fn,restrictedexpr,")]
+	[Arguments("#apply3/fn,restricted_alias,")]
+	public async Task AlreadyEvaluatedApplyCannotEnterRestrictedEvaluation(string apply)
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser,
+			Factory.Services.GetRequiredService<IConnectionService>(), "RestrictedApply");
+		await Cmd($"&SECRET {target}=private-apply-value");
+		var library = new FunctionLibraryService();
+		foreach (var pair in Factory.FunctionParser.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var parser = (MUSHCodeParser)Factory.FunctionParser with { FunctionLibrary = library };
+		var result = (await parser.FunctionParse(MarkupText.Plain($"ulambda({apply},get({target}/SECRET))")))!.Message!.ToPlainText();
+		await Assert.That(result).IsEqualTo(EvaluationRestrictions.Error);
+	}
+
+	[Test]
 	public async Task ExplicitInputsAndPureOperationsWork()
 	{
 		await Assert.That(await Eval("restrictedexpr(add,add(%0,%1),2,3)")).IsEqualTo("5");
