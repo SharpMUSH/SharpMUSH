@@ -12,6 +12,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Library.Services;
 
@@ -699,11 +700,11 @@ public class AttributeService(
 		IAttributeService.AttributePatternMode mode)
 	{
 		var attributes = mediator.CreateStream(
-			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
+			new GetAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode), ExecutionBudget.CurrentToken);
 
-		var results = await attributes.ToArrayAsync();
+		var results = await attributes.ToArrayAsync(ExecutionBudget.CurrentToken);
 
-		if (executor.IsGod() || await executor.IsWizard())
+		if (executor.IsGod() || await executor.IsWizard(ExecutionBudget.CurrentToken))
 		{
 			// PennMUSH's Can_Read_Attr macro (hdrs/mushdb.h:100-101) is
 			// `!AF_Internal(a) && (See_All(p) || can_read_attr_internal(...))`: See_All skips the
@@ -739,6 +740,7 @@ public class AttributeService(
 		var permitted = new List<SharpAttribute>();
 		foreach (var (attr, source) in results)
 		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
 			// A self-sourced match returns at the very first target, so it never needs the chain -
 			// which keeps every checkParents:false caller, and the common case of lattrp on an
 			// object that inherits nothing, at zero extra queries. The chain is built at most once
@@ -749,7 +751,7 @@ public class AttributeService(
 
 			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
 					(target, parts) => FetchAncestorAsync(target, parts, knownBySource),
-					path => ps.CanViewAttribute(executor, obj, path)))
+					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path))))
 			{
 				permitted.Add(attr);
 			}
@@ -966,33 +968,46 @@ public class AttributeService(
 		AnySharpObject obj, string attributePattern,
 		bool checkParents, IAttributeService.AttributePatternMode mode = IAttributeService.AttributePatternMode.Exact)
 	{
+		var token = ExecutionBudget.CurrentToken;
+		token.ThrowIfCancellationRequested();
+		var isPrivileged = executor.IsGod() || await executor.IsWizard(token);
+		return LazySharpAttributesOrError.FromAsync(ReadLazyPattern(executor, obj, attributePattern,
+			checkParents, mode, isPrivileged, ExecutionBudget.Current, token));
+	}
+
+	private async IAsyncEnumerable<LazySharpAttribute> ReadLazyPattern(AnySharpObject executor,
+		AnySharpObject obj, string attributePattern, bool checkParents, IAttributeService.AttributePatternMode mode,
+		bool isPrivileged, ExecutionBudget? originatingBudget, CancellationToken executionToken,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		// Enumeration may happen after the API call returns or with a caller token of its own.
+		// Keep the original deadline and carry both lifetimes through the read-walk helpers.
+		using var linked = CancellationTokenSource.CreateLinkedTokenSource(executionToken, cancellationToken);
+		var remaining = originatingBudget?.Remaining ?? TimeSpan.MaxValue;
+		using var budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, linked.Token);
+		using var scope = budget.Enter();
+		budget.ThrowIfExceeded();
 		var attributes = mediator.CreateStream(
-			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode));
-
-		var isPrivileged = executor.IsGod() || await executor.IsWizard();
-
-		if (isPrivileged)
+			new GetLazyAttributesQuery(obj.Object().DBRef, attributePattern.ToUpper(), checkParents, mode), budget.Token);
+		// Privilege skips the ancestor walk but never the leaf's own internal flag.
+		var permitted = isPrivileged
+			? attributes.Where(x => !x.Attribute.IsInternal()).Select(x => x.Attribute).OrderBy(x => x.LongName, _attributeSort)
+			: FilterLazyAttributes(executor, obj, attributes);
+		await foreach (var attribute in permitted.WithCancellation(budget.Token))
 		{
-			// See GetAttributePatternAsync: See_All skips the ancestor walk but never the
-			// leaf's own internal flag (hdrs/mushdb.h:100-101).
-			return LazySharpAttributesOrError
-				.FromAsync(attributes
-					.Where(x => !x.Attribute.IsInternal())
-					.Select(x => x.Attribute)
-					.OrderBy(x => x.LongName, _attributeSort));
+			budget.ThrowIfExceeded();
+			yield return attribute;
 		}
-
-		// For non-privileged viewers, materialize so each match's ancestor path can be walked.
-		return LazySharpAttributesOrError.FromAsync(FilterLazyAttributes(executor, obj, attributes));
 	}
 
 	private async IAsyncEnumerable<LazySharpAttribute> FilterLazyAttributes(
-		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes)
+		AnySharpObject executor, AnySharpObject obj, IAsyncEnumerable<LazyAttributeWithSource> attributes,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		// See GetAttributePatternAsync: permission follows the real root..leaf path, re-walked
 		// over the target chain from `obj` outward - not whatever subset of the tree the pattern
 		// happened to match, and not a single object.
-		var results = await attributes.ToArrayAsync();
+		var results = await attributes.ToArrayAsync(cancellationToken);
 		var knownBySource = results
 			.GroupBy(x => x.SourceObject)
 			.ToDictionary(g => g.Key, g => IndexByLongName(g.Select(x => x.Attribute), static x => x.LongName));
@@ -1003,13 +1018,14 @@ public class AttributeService(
 
 		foreach (var (attr, source) in ordered)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			var chain = source.SameObjectAs(origin)
 				? [origin]
 				: parentChain ??= await ParentChainAsync(obj);
 
 			if (await AttributeAncestry.CanReadAsync(attr, source, chain, origin,
 					(target, parts) => FetchLazyAncestorAsync(target, parts, knownBySource),
-					path => ps.CanViewAttribute(executor, obj, path)))
+					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path))))
 			{
 				yield return attr;
 			}

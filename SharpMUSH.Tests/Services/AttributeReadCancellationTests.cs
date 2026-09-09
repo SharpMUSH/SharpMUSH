@@ -17,6 +17,106 @@ namespace SharpMUSH.Tests.Services;
 public class AttributeReadCancellationTests
 {
 	[Test]
+	public async Task DeferredPatternDoesNotRestartADisposedOriginatingDeadline()
+	{
+		var target = new TestObjectFactory().CreateThing(1, "god");
+		var mediator = Substitute.For<IMediator>();
+		var service = new AttributeService(mediator, Substitute.For<IPermissionService>(), Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+		LazySharpAttributesOrError result;
+		using (var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100)))
+		using (budget.Enter())
+			result = await service.LazilyGetAttributePatternAsync(target, target, "*", false);
+		await Task.Delay(150);
+		await Assert.That(async () => await result.AsAttributes.ToArrayAsync()).Throws<OperationCanceledException>();
+		mediator.DidNotReceive().CreateStream(Arg.Any<GetLazyAttributesQuery>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	[Arguments(false, "query")]
+	[Arguments(true, "query")]
+	[Arguments(false, "flags")]
+	[Arguments(true, "flags")]
+	[Arguments(false, "permission")]
+	[Arguments(true, "permission")]
+	[Arguments(true, "caller-query")]
+	[Arguments(true, "caller-permission")]
+	[Arguments(true, "privileged-query")]
+	[Arguments(false, "parent")]
+	[Arguments(true, "parent")]
+	[Arguments(true, "caller-parent")]
+	[Arguments(false, "prefix")]
+	[Arguments(true, "prefix")]
+	[Arguments(true, "caller-prefix")]
+	public async Task PatternReadsRespectExecutionAndEnumerationCancellation(bool lazy, string stage)
+	{
+		var target = new TestObjectFactory().CreateThing(10, "target");
+		var mediator = Substitute.For<IMediator>();
+		var permissions = Substitute.For<IPermissionService>();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst")));
+		var service = new AttributeService(mediator, permissions, Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
+			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>());
+		using var cancel = new CancellationTokenSource();
+		using var cleanup = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
+		using var scope = stage.StartsWith("caller-") ? null : budget.Enter();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		async Task Block(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+		}
+		async IAsyncEnumerable<T> BlockStream<T>([EnumeratorCancellation] CancellationToken token = default)
+		{
+			await Block(token);
+			yield break;
+		}
+		if (stage.EndsWith("parent")) target.Object().Parent = new(async token => { await Block(token); return new None(); });
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => BlockStream<SharpAttribute>(call.Arg<CancellationToken>()));
+		mediator.CreateStream(Arg.Any<GetLazyAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(call => BlockStream<LazySharpAttribute>(call.Arg<CancellationToken>()));
+		var source = stage.EndsWith("parent") ? new DBRef(11) : target.Object().DBRef;
+		var attr = TestAttributeFactory.Named(stage.EndsWith("prefix") ? "TREE`LEAF" : "RUN");
+		var lazyAttr = new LazySharpAttribute(attr.Id, attr.Key, attr.Name, attr.Flags, null, attr.LongName,
+			new(_ => Task.FromResult(AsyncEnumerable.Empty<LazySharpAttribute>())), attr.Owner, attr.SharpAttributeEntry,
+			new(_ => Task.FromResult<MarkupString.MarkupText>(MarkupString.MarkupText.Empty)));
+		mediator.CreateStream(Arg.Any<GetAttributesQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			stage.EndsWith("query") ? BlockStream<AttributeWithSource>() : new[] { new AttributeWithSource(attr, source) }.ToAsyncEnumerable());
+		mediator.CreateStream(Arg.Any<GetLazyAttributesQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			stage.EndsWith("query") ? BlockStream<LazyAttributeWithSource>() : new[] { new LazyAttributeWithSource(lazyAttr, source) }.ToAsyncEnumerable());
+		if (stage == "flags") target.Object().Flags = new(() => BlockStream<SharpObjectFlag>());
+		if (stage == "privileged-query") target.Object().Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", UnsetPermissions = [], SetPermissions = [], System = false, TypeRestrictions = [] } }.ToAsyncEnumerable());
+		async ValueTask<bool> Permission()
+		{
+			await Block(CancellationToken.None); // Legacy permission API cannot accept a token.
+			return true;
+		}
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Permission());
+		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute[]>()).Returns(_ => Permission());
+		async Task Read()
+		{
+			if (!lazy) await service.GetAttributePatternAsync(target, target, "*", false, IAttributeService.AttributePatternMode.Wildcard);
+			else
+			{
+				var result = await service.LazilyGetAttributePatternAsync(target, target, "*", false);
+				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") ? cancel.Token : default);
+			}
+		}
+		var operation = Read();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			cancel.Cancel();
+			await Assert.That(async () => await operation.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+		}
+		finally
+		{
+			cleanup.Cancel();
+			try { await operation; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task StalledPermissionReadsDoNotHoldTheExecutionAfterCancellation(bool execute)

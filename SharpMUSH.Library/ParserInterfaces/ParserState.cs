@@ -388,7 +388,7 @@ public partial record ParserState(
 	public async ValueTask<AnyOptionalSharpObject> ExecutorObject(IMediator mediator)
 	{
 		ValidateAndClearCacheIfNeeded(ref _executorObject, Executor);
-		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value));
+		return _executorObject ??= Executor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Executor.Value), ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
@@ -399,7 +399,7 @@ public partial record ParserState(
 	public async ValueTask<AnyOptionalSharpObject> EnactorObject(IMediator mediator)
 	{
 		ValidateAndClearCacheIfNeeded(ref _enactorObject, Enactor);
-		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value));
+		return _enactorObject ??= Enactor is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Enactor.Value), ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
@@ -410,7 +410,7 @@ public partial record ParserState(
 	public async ValueTask<AnyOptionalSharpObject> CallerObject(IMediator mediator)
 	{
 		ValidateAndClearCacheIfNeeded(ref _callerObject, Caller);
-		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value));
+		return _callerObject ??= Caller is null ? new None() : await mediator.Send(new GetObjectNodeQuery(Caller.Value), ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
