@@ -18,10 +18,22 @@ public interface IObjectStore
 	/// <param name="home"></param>
 	/// <param name="quota">Initial quota for the player</param>
 	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
+	/// <param name="creationTime">
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
+	/// </param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
+	/// <remarks>
+	/// A new player's password is hashed against its own objid, so <paramref name="creationTime"/>
+	/// has to be settled before the hash is computed: keyed to an objid the object does not end up
+	/// with, the player cannot log in.
+	/// </remarks>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		string? salt = null, CancellationToken cancellationToken = default);
+		string? salt = null, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets a hashed password for a player.
@@ -62,9 +74,16 @@ public interface IObjectStore
 	/// </summary>
 	/// <param name="name">Room Name</param>
 	/// <param name="creator">Room Player-Creator</param>
+	/// <param name="creationTime">
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
+	/// </param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New room <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, CancellationToken cancellationToken = default);
+	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, long? creationTime = null,
+		long? modifiedTime = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new thing.
@@ -73,9 +92,17 @@ public interface IObjectStore
 	/// <param name="location">Location to create it in</param>
 	/// <param name="creator">Owner to the thing</param>
 	/// <param name="home">Home location for the thing</param>
+	/// <param name="creationTime">
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
+	/// </param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default);
+	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
+		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new exit.
@@ -84,9 +111,17 @@ public interface IObjectStore
 	/// <param name="aliases">Exit Aliases</param>
 	/// <param name="location">Location for the Exit</param>
 	/// <param name="creator">Owner to the exit</param>
+	/// <param name="creationTime">
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
+	/// </param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
-	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location, SharpPlayer creator, CancellationToken cancellationToken = default);
+	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
+		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Irrevocably remove an object from the database — the storage half of PennMUSH's
@@ -178,6 +213,29 @@ public interface IObjectStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>Result</returns>
 	ValueTask SetObjectName(AnySharpObject obj, MString value, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Rewrites an existing object's creation and modification times, in Unix milliseconds.
+	/// </summary>
+	/// <remarks>
+	/// This changes the object's <b>identity</b> — the objid is <c>#N:&lt;creationTime&gt;</c> — so
+	/// anything holding the old one stops resolving. It exists for the importer, which reuses
+	/// <c>#0</c>, <c>#1</c> and <c>#2</c> from the migration seed rather than creating them and so
+	/// cannot stamp them at creation.
+	/// <para><b>Importer only, and unsafe on a live object.</b> This is a raw store write below the
+	/// Mediator layer and does not invalidate the number-keyed cache <c>GetObjectNodeByNumberQuery</c>
+	/// fills; a cached copy keeps the old creation time, and the objid check in
+	/// <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to the
+	/// object stops resolving. A conversion runs at startup before the cache is populated, as do the
+	/// other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent, SetObjectZone). Any
+	/// other caller needs a Mediator command carrying <c>ICacheInvalidating</c>.</para>
+	/// </remarks>
+	/// <param name="target">Object to restamp</param>
+	/// <param name="creationTime">Creation time in Unix milliseconds</param>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/></param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	ValueTask SetObjectTimestampsAsync(DBRef target, long creationTime, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Sets the Home of a content object. The 'home' of a Room is its Drop-To.
