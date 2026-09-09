@@ -8,6 +8,9 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface ITaskScheduler
 {
 	QueueUsage GetQueueUsage();
+	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries();
+	ValueTask<QueueControlResult> PausePending(long pid, string reason);
+	ValueTask<QueueControlResult> ResumePending(long pid);
 	/// <summary>
 	/// Write a user command to the scheduler, to be immediately executed when the scheduler runs.
 	/// </summary>

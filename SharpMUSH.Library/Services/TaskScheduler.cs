@@ -34,7 +34,7 @@ namespace SharpMUSH.Library.Services;
 /// </example>
 /// <param name="parser"></param>
 /// <param name="schedulerFactory"></param>
-public class TaskScheduler(
+public partial class TaskScheduler(
 	IMUSHCodeParser parser,
 	IConnectionService connectionService,
 	ISchedulerFactory schedulerFactory,
