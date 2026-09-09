@@ -24,6 +24,16 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	public async Task OverflowingDelayDoesNotReserveAQueueEntry()
+	{
+		await using var queue = Create(scheduler: Substitute.For<IScheduler>());
+		await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+			await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.MaxValue));
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(queue.GetQueueEntries().Count).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task UncertainDeferredCleanupCannotBePausedOrResumed(bool semaphore)

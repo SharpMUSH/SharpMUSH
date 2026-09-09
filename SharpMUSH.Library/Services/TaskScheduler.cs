@@ -723,6 +723,8 @@ public partial class TaskScheduler(
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var group = $"{DelayGroup}:{state.Executor}";
+		delay = Nonnegative(delay);
+		var due = DateTimeOffset.UtcNow + delay;
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
@@ -739,8 +741,6 @@ public partial class TaskScheduler(
 			publication.Token.ThrowIfCancellationRequested();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
-		delay = Nonnegative(delay);
-		var due = DateTimeOffset.UtcNow + delay;
 		lock (_admissionLock) _pendingEntries[pid] = entry with
 		{ Deferred = new(due, Schedule, null, command, state) };
 		try { await Schedule(due, 0); return admission; }
