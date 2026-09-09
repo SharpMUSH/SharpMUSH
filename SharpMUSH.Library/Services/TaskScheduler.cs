@@ -390,12 +390,25 @@ public partial class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
-				currentCount = attribute is null ? 0 : int.Parse(attribute.Value.ToPlainText());
+				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
 					MarkupString.MarkupText.Plain(checked(currentCount + 1).ToString()), god)))
 					throw new InvalidOperationException("Semaphore count update failed.");
 				counterWritten = true;
+				if (attribute is null && !(dbRefAttribute.Attribute.Length == 1 &&
+					dbRefAttribute.Attribute[0].Equals("SEMAPHORE", StringComparison.OrdinalIgnoreCase)))
+				{
+					// A newly created custom semaphore must remain valid for subsequent waits.
+					var created = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastAsync();
+					var flags = await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
+					foreach (var name in new[] { "no_inherit", "no_clone", "locked" })
+					{
+						var flag = flags.Single(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+						if (!await mediator.Send(new SetAttributeFlagCommand(fullTarget, created, flag)))
+							throw new InvalidOperationException($"Semaphore flag update failed: {name}.");
+					}
+				}
 				if (currentCount < 0)
 				{
 					var activated = await Activate(admission.Pid!.Value);
