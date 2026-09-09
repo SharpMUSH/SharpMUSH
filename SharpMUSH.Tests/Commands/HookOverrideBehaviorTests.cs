@@ -97,4 +97,36 @@ public class HookOverrideBehaviorTests
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
 		}
 	}
+
+	/// <summary>
+	/// Same contract as <see cref="Override_CapturesEvaluatedArgument_NotRawSubstitution"/>, but through
+	/// <c>@hook/override/inline</c>. <c>ExecuteHookCode</c> branches on <c>hook.Inline</c> before dispatching
+	/// the matched <c>$</c>-command, so without this test the inline arm of that branch is never executed by
+	/// the suite. Both arms must behave identically: nothing about a matched <c>$</c>-command's execution
+	/// depends on the hook's inline flag.
+	/// </summary>
+	[Test]
+	public async ValueTask OverrideInline_CapturesEvaluatedArgument_SameAsNonInline()
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookOvrInline");
+		var token = TestIsolationHelpers.GenerateUniqueName("hovi");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%1"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override/inline @EMIT={obj},OVR"));
+
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&WRAP {obj}=${token} *:@emit payload=%0"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} hello"));
+
+			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("payload=hello")
+				.Because("an inline override must dispatch the matched $-command exactly as a non-inline one does");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
+		}
+	}
 }
