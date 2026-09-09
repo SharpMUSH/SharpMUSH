@@ -241,7 +241,14 @@ public sealed class RecurringJobService(
 		var obj = await objects.GetObjectNodeAsync(target, ct);
 		if (obj.IsNone || obj.Known.Object().DBRef != target || (await obj.Known.Object().Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The target identity no longer exists.");
 		if (!await permissions.Controls(executor, obj.Known).AsTask().WaitAsync(ct)) throw Error("denied", "The executing player must control the target.");
-		var value = await attributes.GetAttributeAsync(executor, obj.Known, attribute, IAttributeService.AttributeMode.Execute, false);
+		// HTTP callers carry a request token but have no ambient queue budget. Propagate
+		// both lifetimes into the read-only attribute API and bound legacy implementations.
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue;
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
+		using var readBudget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, cancellation.Token);
+		using var readScope = readBudget.Enter();
+		var value = await attributes.GetAttributeAsync(executor, obj.Known, attribute, IAttributeService.AttributeMode.Execute, false)
+			.AsTask().WaitAsync(readBudget.Token);
 		if (!value.IsAttribute || value.AsAttribute.Length == 0) throw Error("denied", "The target attribute is missing or not executable.");
 		return value.AsAttribute.Last().Value;
 	}

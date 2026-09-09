@@ -141,6 +141,63 @@ public class RecurringJobTests
 	}
 
 	[Test, NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HttpCreationCancelsAttributeReadsAndReleasesTheServiceGate(bool cooperativeRead)
+	{
+		var context = await Setup();
+		var attributes = Substitute.For<IAttributeService>();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		var block = true;
+		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+			.Returns(async ValueTask<OptionalSharpAttributeOrError> (call) =>
+			{
+				if (block)
+				{
+					var token = ExecutionBudget.CurrentToken;
+					entered.TrySetResult(token);
+					await Task.Delay(Timeout.InfiniteTimeSpan, cooperativeRead ? token : CancellationToken.None).WaitAsync(cleanup.Token);
+				}
+				return await Get<IAttributeService>().GetAttributeAsync(call.ArgAt<AnySharpObject>(0), call.ArgAt<AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<IAttributeService.AttributeMode>(3), call.ArgAt<bool>(4));
+			});
+		var service = new RecurringJobService(Get<IExpandedDataStore>(), Get<IObjectStore>(), context.Capabilities,
+			Get<IPermissionService>(), attributes, context.Queue, Factory.CommandParser, context.Clock);
+		await service.InitializeAsync();
+		var controller = new SharpMUSH.Server.Controllers.RecurringJobsController(service)
+		{
+			ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+			{
+				HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+				{
+					User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(new[]
+					{
+						new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, context.Actor.AccountId),
+						new System.Security.Claims.Claim(SharpMUSH.Server.Hubs.GameHub.CharacterDbrefClaim, context.Actor.ActiveCharacter!.Value.ToString())
+					}, "test"))
+				}
+			}
+		};
+		using var cancel = new CancellationTokenSource();
+		var request = new RecurringJobRequest(context.Target.ToString(), "RUN", "* * * * *", "UTC");
+		var creating = controller.Create(request, cancel.Token);
+		try
+		{
+			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			cancel.Cancel();
+			await Assert.That(observed.CanBeCanceled).IsTrue();
+			await Assert.That(async () => await creating.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+			block = false;
+			await service.CreateAsync(context.Actor, request).WaitAsync(TimeSpan.FromSeconds(2));
+		}
+		finally
+		{
+			cleanup.Cancel();
+			try { await creating; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test, NotInParallel]
 	public async Task PollingCancellationReachesQueueAdmissionAndReleasesTheGate()
 	{
 		var context = await Setup();
