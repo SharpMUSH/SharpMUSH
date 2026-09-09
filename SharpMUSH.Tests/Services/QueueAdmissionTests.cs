@@ -773,10 +773,12 @@ public class QueueAdmissionTests
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(
 			new[] { new SharpAttribute("id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
 			{ Value = MarkupText.Plain(value) } }.ToAsyncEnumerable());
-		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>());
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>(), diagnostics: diagnostics);
 		var admission = await queue.WriteCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true);
 		await Assert.That(admission.Reason).IsEqualTo(QueueRejectionReason.InvalidTarget);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.InvalidTarget);
 		await Assert.That(writes).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 	}

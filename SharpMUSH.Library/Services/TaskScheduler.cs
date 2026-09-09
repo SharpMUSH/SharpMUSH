@@ -517,7 +517,7 @@ public partial class TaskScheduler(
 				if (attribute is null || attribute.Value.Length == 0) currentCount = 0;
 				else if (!int.TryParse(attribute.Value.ToPlainText(), out currentCount) || currentCount == int.MaxValue)
 				{
-					Release(admission.Pid!.Value);
+					Release(admission.Pid!.Value, QueueOutcome.InvalidTarget);
 					return Reject(QueueRejectionReason.InvalidTarget);
 				}
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken)).AsPlayer;
