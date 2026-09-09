@@ -1,3 +1,6 @@
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Requests;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
@@ -129,6 +132,36 @@ public class DatabaseCommandTests
 				TestHelpers.MatchingMessage("0 rows queued for execution."), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 		}
 		finally { foreach (var pid in pids) await scheduler.HaltByPid(pid); }
+	}
+
+	[Test]
+	[Arguments(QueueRejectionReason.ShuttingDown)]
+	[Arguments(QueueRejectionReason.InvalidTarget)]
+	[Arguments(QueueRejectionReason.AlreadyReleased)]
+	public async Task MapSqlNotifyDoesNotBypassNonCapacityAdmissionFailures(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlRejectedCompletion");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPREJECTION me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPREJECTION"), ["1"] = new CallState("SELECT 1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		parser.CommandParse(Arg.Any<MString>()).Returns(CallState.Empty);
+		var admission = Substitute.For<IMediator>();
+		admission.Send(Arg.Any<QueueAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
+		admission.Send(Arg.Any<QueueCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(null, reason));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+		await parser.DidNotReceive().CommandParse(Arg.Any<MString>());
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+			TestHelpers.MatchingMessage(new QueueAdmissionResult(null, reason).Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
