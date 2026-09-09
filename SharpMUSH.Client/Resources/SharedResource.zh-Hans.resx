@@ -4544,4 +4544,6 @@
     <value>ahelp 主题。仅限巫师和上帝查看，门户与游戏一致。</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>优先级最高的明确规则决定权限；优先级相同时拒绝优先。只有没有明确规则时才继承父级权限。没有授权即拒绝访问。委派管理员只能管理自己拥有的较低优先级权限，不能更改自己的角色或限制。</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>当前访问权限：{0}；优先级：{1}；角色：{2}；判定：{3}。</value></data>
 </root>

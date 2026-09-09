@@ -3737,4 +3737,6 @@
     <value>Les sujets ahelp. Réservés aux Sorciers et à Dieu, dans le portail comme dans le jeu.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>La règle explicite de priorité la plus élevée décide ; le refus gagne en cas d’égalité. L’héritage s’applique uniquement en l’absence de règle explicite. Sans autorisation, l’accès est refusé. Les administrateurs délégués ne peuvent gérer que leurs autorisations de priorité inférieure, sans modifier leurs propres rôles ni restrictions.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Accès actuel : {0} ; priorité {1} ; rôles {2} ; décision {3}.</value></data>
 </root>

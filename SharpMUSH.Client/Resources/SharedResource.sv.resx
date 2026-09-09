@@ -4544,4 +4544,6 @@
     <value>Ahelp-ämnena. Endast för Trollkarlar och Gud, i portalen liksom i spelet.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Den uttryckliga regeln med högst prioritet avgör; avslag vinner vid lika prioritet. Arv används endast utan uttrycklig regel. Utan tillstånd nekas åtkomst. Delegerade administratörer får endast hantera egna behörigheter med lägre prioritet och får inte ändra sina egna roller eller begränsningar.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuell åtkomst: {0}; prioritet {1}; roller {2}; beslut {3}.</value></data>
 </root>

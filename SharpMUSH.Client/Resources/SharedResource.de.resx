@@ -4544,4 +4544,6 @@
     <value>Die ahelp-Themen. Nur für Zauberer und Gott, im Portal wie im Spiel.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Die ausdrückliche Regel mit höchster Priorität entscheidet; bei Gleichstand gewinnt Verweigern. Vererbung gilt nur ohne ausdrückliche Regel. Ohne Erlaubnis wird der Zugriff verweigert. Delegierte Administratoren dürfen nur eigene Berechtigungen mit niedrigerer Priorität verwalten und ihre eigenen Rollen oder Einschränkungen nicht ändern.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktueller Zugriff: {0}; Priorität {1}; Rollen {2}; Entscheidung {3}.</value></data>
 </root>

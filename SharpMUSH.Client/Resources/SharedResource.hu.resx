@@ -4544,4 +4544,6 @@
     <value>Az ahelp témakörök. Csak Varázslóknak és Istennek, a portálon is, mint a játékban.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>A legmagasabb prioritású kifejezett szabály dönt; egyezéskor a tiltás győz. Öröklés csak kifejezett szabály nélkül érvényes. Engedély nélkül a hozzáférés tiltott. A megbízott kezelők csak a saját, alacsonyabb prioritású engedélyeiket kezelhetik, saját szerepeiket és korlátozásaikat nem módosíthatják.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Jelenlegi hozzáférés: {0}; prioritás {1}; szerepek {2}; döntés {3}.</value></data>
 </root>
