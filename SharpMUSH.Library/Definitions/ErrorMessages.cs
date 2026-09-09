@@ -183,6 +183,7 @@ public static class ErrorMessages
 		public const string InvalidOperation = "#-1 INVALID OPERATION";
 		public const string InvalidPid = "#-1 INVALID PID";
 		public const string InvalidPort = "#-1 INVALID PORT";
+		public const string InvalidPrecision = "#-1 INVALID PRECISION";
 		public const string InvalidQueueType = "#-1 INVALID QUEUE TYPE";
 		public const string InvalidRegex = "#-1 INVALID REGEX";
 		public const string InvalidSearchType = "#-1 INVALID SEARCH TYPE";
