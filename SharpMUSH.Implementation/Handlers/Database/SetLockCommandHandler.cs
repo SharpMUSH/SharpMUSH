@@ -22,7 +22,7 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 		// This ensures locks won't match recycled dbrefs after objects are destroyed
 		var normalizedLockString = booleanParser.Normalize(request.LockString, request.Executor);
 
-		var flags = lockService.SystemLocks.GetValueOrDefault(request.LockName, Library.Services.LockService.LockFlags.Default);
+		var flags = request.Flags ?? lockService.SystemLocks.GetValueOrDefault(request.LockName, Library.Services.LockService.LockFlags.Default);
 
 		var lockData = new Library.Models.SharpLockData(normalizedLockString, flags);
 
