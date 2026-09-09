@@ -3262,10 +3262,7 @@ public partial class Commands
 
 		if (isSpoof)
 		{
-			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-			if (!canSpoof && !controlsExecutor)
+			if (!await PermissionService.CanSpoofAs(executor, enactor))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -5667,10 +5664,7 @@ public partial class Commands
 
 		if (isSpoof)
 		{
-			var canSpoof = await executor.HasPower("CAN_SPOOF");
-			var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-			if (!canSpoof && !controlsExecutor)
+			if (!await PermissionService.CanSpoofAs(executor, enactor))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -5754,10 +5748,7 @@ public partial class Commands
 			.Where(async (obj, _) =>
 				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
 
-		var canSpoof = await executor.HasPower("CAN_SPOOF");
-		var controlsExecutor = await PermissionService.Controls(executor, enactor);
-
-		if (!canSpoof && !controlsExecutor)
+		if (!await PermissionService.CanSpoofAs(executor, enactor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouDoNotHavePermissionToSpoofEmitsDetail), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

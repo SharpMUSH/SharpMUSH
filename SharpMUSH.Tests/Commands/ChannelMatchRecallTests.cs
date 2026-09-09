@@ -737,4 +737,32 @@ public class ChannelMatchRecallTests
 		await Assert.That(commandOutput).DoesNotContain("wizard business");
 		await Assert.That(functionOutput).DoesNotContain("wizard business");
 	}
+
+	// --- Can_Nspemit --------------------------------------------------------------------------------
+
+	/// <summary>
+	/// PennMUSH <c>Can_Nspemit</c> (<c>hdrs/mushdb.h:33</c>) is <c>Wizard(x) || CAN_SPOOF power</c>. The
+	/// power is seeded as <c>Can_Spoof</c> (<c>PowerSeed.cs:16</c>); <c>NOSPOOF</c> is a FLAG, so a
+	/// predicate testing it as a power matches nothing and collapses to the wizard half — which denies
+	/// every non-wizard the power exists to grant.
+	///
+	/// <para>Asserted through <c>nscemit()</c> because it is the shortest route to the predicate, but the
+	/// predicate is shared with the whole <c>@pemit</c>/<c>@nsemit</c> family.</para>
+	/// </summary>
+	[Test]
+	public async Task CanNoSpoof_IsGrantedByTheCanSpoofPower()
+	{
+		var permissions = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+		var mortal = await CreateMortal("ChanSpoofPower");
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+
+		await Assert.That(await permissions.CanNoSpoof(mortalObject)).IsFalse()
+			.Because("the control: a plain mortal may not spoof");
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@power {mortal.DbRef}=Can_Spoof"));
+
+		var granted = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		await Assert.That(await permissions.CanNoSpoof(granted)).IsTrue();
+	}
 }
