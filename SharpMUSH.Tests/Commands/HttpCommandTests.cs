@@ -4,6 +4,9 @@ using NSubstitute;
 using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Requests;
+using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -18,6 +21,48 @@ public class HttpCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	[Test]
+	[Arguments(QueueRejectionReason.OwnerLimit)]
+	[Arguments(QueueRejectionReason.GlobalLimit)]
+	[Arguments(QueueRejectionReason.ShuttingDown)]
+	[Arguments(QueueRejectionReason.InvalidTarget)]
+	[Arguments(QueueRejectionReason.AlreadyReleased)]
+	[Arguments(QueueRejectionReason.None)]
+	public async Task HttpReportsCallbackAdmissionResultBeforeIssuingRequest(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HttpAdmission");
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Arguments = new()
+			{
+				["0"] = new CallState(player.DbRef + "/CALLBACK"),
+				["1"] = new CallState("https://example.invalid/queued")
+			}
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var admission = new QueueAdmissionResult(reason == QueueRejectionReason.None ? 42 : null, reason);
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(admission);
+		var clients = Substitute.For<IHttpClientFactory>();
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, mediator, clients);
+
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" });
+
+		await Assert.That(result.AsValue().Message?.ToPlainText() ?? "").IsEqualTo(admission.Accepted ? "" : admission.Error);
+		await mediator.Received(1).Send(Arg.Any<AdmitAttributeRequest>(), budget.Token);
+		clients.DidNotReceive().CreateClient(Arg.Any<string>());
+		if (!admission.Accepted)
+			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+				TestHelpers.MatchingMessage(admission.Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
 
 	/// <summary>
 	/// Runs a command list under an HTTP request context: a fresh parser state carrying a live
