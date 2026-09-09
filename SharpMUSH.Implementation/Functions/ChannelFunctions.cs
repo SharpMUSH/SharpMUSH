@@ -112,21 +112,16 @@ public partial class Functions
 
 		var channel = maybeChannel.AsChannel;
 
-		// cemit() is @cemit with a different spelling, so it answers to the same gate — otherwise softcode
-		// is a way around it.
+		// cemit() is @cemit with a different spelling, so it answers to the same gate and no more —
+		// Chan_Can_Cemit alone (extchat.c:1622-1655), membership not required. A gate softcode can walk
+		// around is not a gate, and one softcode alone answers to is a trap.
 		if (await ChannelHelper.CemitRefusal(PermissionService, executor, channel) is not null)
 		{
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			return new CallState(ErrorMessages.Returns.NotAMember);
-		}
-
-		var (_, status) = maybeMemberStatus;
+		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
+								 ?? new SharpChannelStatus(null, null, null, null, null);
 
 		await Mediator.Publish(new ChannelMessageNotification(
 			channel,
@@ -604,14 +599,8 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			return new CallState(ErrorMessages.Returns.NotAMember);
-		}
-
-		var (_, status) = maybeMemberStatus;
+		var status = (await ChannelHelper.ChannelMemberStatus(executor, channel))?.Status
+								 ?? new SharpChannelStatus(null, null, null, null, null);
 
 		var canNoSpoof = await PermissionService.CanNoSpoof(executor);
 

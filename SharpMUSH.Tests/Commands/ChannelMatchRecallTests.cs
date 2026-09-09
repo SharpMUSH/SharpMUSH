@@ -626,4 +626,50 @@ public class ChannelMatchRecallTests
 
 		await Assert.That(messages).Contains(ErrorMessages.Notifications.ChatMustBeOnChannelToSpeak);
 	}
+
+	// --- do_cemit ---------------------------------------------------------------------------------
+
+	/// <summary>
+	/// <c>do_cemit</c> (<c>src/extchat.c:1622-1655</c>) gates on <c>Chan_Can_Cemit</c> and nothing else,
+	/// which is what lets the wizard or the channel-owning object emit onto a channel it does not listen
+	/// to. <c>cemit()</c> and <c>nscemit()</c> are the same command with a different spelling and answer
+	/// to the same gate — no stricter, so softcode is not shut out of what the command allows, and no
+	/// looser, so it is not a way around it.
+	/// </summary>
+	[Test]
+	[Arguments("@cemit")]
+	[Arguments("@nscemit")]
+	[Arguments("cemit")]
+	[Arguments("nscemit")]
+	public async Task Cemit_DoesNotRequireMembership(string spelling)
+	{
+		var name = UniqueChannel($"Cemit{spelling.TrimStart('@')}");
+		var channel = await CreateChannel(name, "Player", "Open");
+		var listener = await CreateMortal($"ChanCemitEar{spelling.TrimStart('@')}");
+		await Mediator.Send(new AddUserToChannelCommand(channel,
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+
+		// Creating a channel joins its creator to it, so take God back off: the point of the test is an
+		// authorized emitter who is NOT a member.
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		await Mediator.Send(new RemoveUserFromChannelCommand(
+			(await Mediator.Send(new GetChannelQuery(name)))!, god));
+		await Assert.That(await IsMember(name, new DBRef(1))).IsFalse();
+
+		var heard = await MessagesWhile(listener.DbRef, async () =>
+		{
+			if (spelling.StartsWith('@'))
+			{
+				await GodParser.CommandParse(1, ConnectionService,
+					MarkupText.Plain($"{spelling} {name}=emitted from outside"));
+			}
+			else
+			{
+				await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
+					.FunctionParse(MarkupText.Plain($"{spelling}({name},emitted from outside)"));
+			}
+		});
+
+		await Assert.That(string.Join("\n", heard)).Contains("emitted from outside");
+	}
 }
