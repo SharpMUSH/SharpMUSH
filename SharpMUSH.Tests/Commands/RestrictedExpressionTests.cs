@@ -27,6 +27,47 @@ public class RestrictedExpressionTests
 		Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(command)).AsTask();
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestrictedSiblingArgumentsStopAtTheCombinedCeiling(bool restricted)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var space = library["space"].LibraryInformation;
+		var expansions = 0;
+		library["space"] = (space with { Function = async parser => { expansions++; return await space.Function(parser); } }, true);
+		var parser = (original with { FunctionLibrary = library }).FromState(ParserState.RootFor(original.CurrentState.Executor!.Value));
+		var size = FunctionLimits.MaxOutputCodeUnits / 2 + 1;
+		var expression = $"cat(space({size}),space({size}),space({size}))";
+		var result = await parser.FunctionParse(MarkupText.Plain(restricted ? $"restrictedexpr(space cat,{expression})" : expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
+		await Assert.That(expansions).IsEqualTo(restricted ? 2 : 3);
+	}
+
+	[Test]
+	public async Task RestrictedWrapperScanStopsDuringWideChildTraversal()
+	{
+		var visitor = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Visitors.SharpMUSHParserVisitor>(
+			Factory.Services, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance, Factory.FunctionParser, MarkupText.Empty);
+		var root = Substitute.For<Antlr4.Runtime.Tree.IParseTree>();
+		var leaf = Substitute.For<Antlr4.Runtime.Tree.IParseTree>();
+		root.ChildCount.Returns(128);
+		leaf.ChildCount.Returns(0);
+		using var cancel = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
+		using var scope = budget.Enter();
+		var reads = 0;
+		root.GetChild(Arg.Any<int>()).Returns(_ => { reads++; cancel.Cancel(); return leaf; });
+		var scan = visitor.GetType().GetMethod("ContainsRestrictedEvaluation", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+		Exception? observed = null;
+		try { scan.Invoke(visitor, [root]); }
+		catch (System.Reflection.TargetInvocationException exception) { observed = exception.InnerException; }
+		await Assert.That(observed).IsTypeOf<OperationCanceledException>();
+		await Assert.That(reads).IsEqualTo(1);
+	}
+
+	[Test]
 	[Arguments("fn", true)]
 	[Arguments("arityalias", true)]
 	[Arguments("fn", false)]

@@ -64,6 +64,7 @@ public class SharpMUSHParserVisitor(
 	private int _debugNestDepth;
 	private bool _didEmitFunctionDebug;
 	private bool _containsRestrictedWrapper;
+	private readonly Dictionary<FunctionContext, bool> _restrictedScanResults = new();
 	internal bool SuppressSubstitutionOnlyDebugTrace => _didEmitFunctionDebug || _containsRestrictedWrapper;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
@@ -346,7 +347,7 @@ public class SharpMUSHParserVisitor(
 
 	private void CheckRestrictedOutput(ref long length, MString? message)
 	{
-		if (EvaluationRestrictions.Current is null) return;
+		if (EvaluationRestrictions.Current is null && parser.CurrentState.Restrictions is null) return;
 		length += message?.Length ?? 0;
 		if (!FunctionLimits.ExceedsOutput(length)) return;
 		FunctionLimits.RejectOutput(parser.CurrentState);
@@ -541,12 +542,36 @@ public class SharpMUSHParserVisitor(
 
 	private bool ContainsRestrictedEvaluation(IParseTree context)
 	{
-		var pending = new Stack<IParseTree>();
-		pending.Push(context);
-		while (pending.TryPop(out var node))
+		// Keep traversal storage proportional to depth, not the number of comma tokens.
+		var pending = new Stack<(IParseTree Node, int NextChild)>();
+		pending.Push((context, 0));
+		while (pending.TryPeek(out var frame))
 		{
-			if (node is FunctionContext function && BeginsRestrictedEvaluation(function)) return true;
-			for (var child = 0; child < node.ChildCount; child++) pending.Push(node.GetChild(child));
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (frame.Node is FunctionContext function && frame.NextChild == 0)
+			{
+				var found = _restrictedScanResults.TryGetValue(function, out var cached)
+					? cached : BeginsRestrictedEvaluation(function);
+				if (found)
+				{
+					foreach (var ancestor in pending)
+					{
+						ExecutionBudget.Current?.ThrowIfExceeded();
+						if (ancestor.Node is FunctionContext ancestorFunction) _restrictedScanResults[ancestorFunction] = true;
+					}
+					return true;
+				}
+				if (_restrictedScanResults.ContainsKey(function)) { pending.Pop(); continue; }
+			}
+			if (frame.NextChild >= frame.Node.ChildCount)
+			{
+				if (frame.Node is FunctionContext completed) _restrictedScanResults[completed] = false;
+				pending.Pop();
+				continue;
+			}
+			pending.Pop();
+			pending.Push((frame.Node, frame.NextChild + 1));
+			pending.Push((frame.Node.GetChild(frame.NextChild), 0));
 		}
 		return false;
 	}
@@ -873,6 +898,7 @@ public class SharpMUSHParserVisitor(
 				// the enumerable adapters and a state machine per argument were a twelfth of the bytes
 				// a nested call allocated.
 				refinedArguments = new List<CallState>(Math.Max(args.Length, 1));
+				long retainedArgumentLength = 0;
 				foreach (var x in args)
 				{
 					if (x is null)
@@ -882,6 +908,7 @@ public class SharpMUSHParserVisitor(
 					}
 
 					var msg = (await visitor.VisitChildren(x))?.Message ?? MarkupText.Empty;
+					CheckRestrictedOutput(ref retainedArgumentLength, msg);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
 					refinedArguments.Add(new CallState(msg, x.Depth()));
 				}
