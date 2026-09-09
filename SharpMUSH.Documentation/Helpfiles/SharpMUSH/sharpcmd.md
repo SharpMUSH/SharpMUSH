@@ -1608,6 +1608,8 @@ You say, "c/3"
 
 This command discards commands waiting on a semaphore without executing them. (For non-semaphore queues, use @halt or @halt/pid.)
 
+Waiting commands are discarded only after the corresponding counter change is confirmed. An uncertain database result retains the waiting entries for reconciliation, using the same recovery behavior as [@notify].
+
 If the `/any` switch is given, then all semaphores associated with `<object>` are @drained. Otherwise, only the specified semaphore attribute (or SEMAPHORE if no `<attribute>` is specified) is @drained.
 
 If the `/all` switch is given, then all queue entries associated with the selected semaphore(s) are discarded, and the semaphore attribute(s) are cleared. Otherwise, only the indicated `<number>` of queue entries are discarded. If no `<number>` is given, then the `/all` switch is assumed.
@@ -2959,6 +2961,8 @@ The `<password>` must not contain whitespace, unprintable characters, or '='.
 `@notify/setq <object>[/<attribute>]=<qreg1>,<qval1>[,...]`
 
 This command notifies a semaphore, allowing commands queued for that semaphore to be executed.
+
+The semaphore counter is stored before waiting commands are released. If the database cannot confirm a counter change, affected work stays reserved and further semaphore changes are refused until reconciliation succeeds. A later attempt verifies the stored count before completing or abandoning the uncertain operation. Conflicting counts or incomplete semaphore flags require administrator repair.
 
 If the `/any` switch is given, then all semaphores associated with `<object>` are @notified. Otherwise, only the specified semaphore `<attribute>` (or SEMAPHORE if no attribute is specified) is @notified.
 

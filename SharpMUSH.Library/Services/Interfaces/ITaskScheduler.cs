@@ -10,6 +10,15 @@ public interface ITaskScheduler
 {
 	/// <summary>Serialize semaphore counter updates; acquire before deferred queue locks.</summary>
 	ValueTask<IDisposable> EnterSemaphoreMutationAsync();
+
+	/// <summary>
+	/// Apply a game semaphore command while its mutation lease is held. Persistence precedes
+	/// publication/removal; reconciliation returns true only when the intended count committed.
+	/// An unreadable or conflicting count must throw so reservations remain protected for retry.
+	/// </summary>
+	ValueTask<int> ApplySemaphoreCommandAsync(DbRefAttribute target, int? count, bool drain,
+		Func<int, ValueTask> persist, Func<ValueTask<bool>> reconcile, Dictionary<string, MString>? registers = null);
+
 	QueueUsage GetQueueUsage();
 	/// <summary>Admit an expired input callback under its initiating executor and normal queue budget.</summary>
 	ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session);
