@@ -980,20 +980,7 @@ public partial class Functions
 	/// rearrangement (flip, scramble) has to move whole clusters: splitting on UTF-16 code units
 	/// tears surrogate pairs and separates combining marks from what they combine with.
 	/// </summary>
-	private static MString[] SplitIntoGraphemes(MString text)
-	{
-		var plain = text.ToPlainText();
-		var pieces = new List<MString>(plain.Length);
-		var position = 0;
-		while (position < plain.Length)
-		{
-			var length = StringInfo.GetNextTextElementLength(plain.AsSpan(position));
-			if (length <= 0) length = 1;
-			pieces.Add(text.Substring(position, length));
-			position += length;
-		}
-		return pieces.ToArray();
-	}
+	private static MString[] SplitIntoGraphemes(MString text) => text.EnumerateGraphemes().ToArray();
 
 	[SharpFunction(Name = "flip", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> Flip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
