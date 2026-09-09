@@ -1121,6 +1121,23 @@ public class SharpMUSHParserVisitor(
 				return new None();
 			}
 
+			// PennMUSH src/command.c command_parse(): before any command-table lookup, a leading
+			// SAY_TOKEN ("), POSE_TOKEN (:), SEMI_POSE_TOKEN (;) or EMIT_TOKEN (\) is replaced by the
+			// corresponding command name and the token character is skipped. Two details of that
+			// branch matter and are reproduced here:
+			//   * ';' followed by a space means POSE, not SEMIPOSE (`; waves` -> `One waves`).
+			//   * `parse_switches = 0` for every replacer, so `"/noeval x` says "/noeval x" rather
+			//     than invoking SAY with a NOEVAL switch.
+			// Re-dispatching the rewritten line (rather than calling the command directly) keeps the
+			// token forms on exactly the same path as the spelled-out commands, including @hook.
+			var speechReplacer = SpeechTokenCommand(commandText);
+			if (speechReplacer is not null)
+			{
+				await parser.CommandParse(MarkupText.Concat(
+					MarkupText.Plain(speechReplacer + " "), commandText.Substring(1)));
+				return CallState.Empty;
+			}
+
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
 			{
 				var channels = Mediator.CreateStream(new GetChannelListQuery());
@@ -2121,6 +2138,29 @@ public class SharpMUSHParserVisitor(
 			Arguments = NumberedArguments(arguments),
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
+	}
+
+	/// <summary>
+	/// The command a leading speech token stands for, or <see langword="null"/> when the line does not
+	/// begin with one. Mirrors the <c>switch (*p)</c> in PennMUSH's <c>command_parse</c>
+	/// (src/command.c), including its special case that <c>';'</c> followed by a space is POSE.
+	/// </summary>
+	private static string? SpeechTokenCommand(MString commandText)
+	{
+		var text = commandText.ToPlainText();
+		if (text.Length == 0)
+		{
+			return null;
+		}
+
+		return text[0] switch
+		{
+			'"' => "SAY",
+			':' => "POSE",
+			';' => text.Length > 1 && text[1] == ' ' ? "POSE" : "SEMIPOSE",
+			'\\' => "@EMIT",
+			_ => null
+		};
 	}
 
 	private async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
