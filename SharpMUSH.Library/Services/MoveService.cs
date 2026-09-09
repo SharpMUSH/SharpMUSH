@@ -20,6 +20,11 @@ public class MoveService(
 	INotifyService notifyService,
 	IRealityPolicy reality) : IMoveService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public MoveService(IMediator mediator, IAttributeService attributeService,
+		IPermissionService permissionService, INotifyService notifyService)
+		: this(mediator, attributeService, permissionService, notifyService, DisabledRealityPolicy.Instance) { }
+
 	/// <summary>
 	/// Standard attribute names for move hooks
 	/// </summary>

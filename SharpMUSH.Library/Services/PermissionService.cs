@@ -12,6 +12,10 @@ namespace SharpMUSH.Library.Services;
 public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
 	IRealityPolicy reality) : IPermissionService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options)
+		: this(lockService, options, DisabledRealityPolicy.Instance) { }
+
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 

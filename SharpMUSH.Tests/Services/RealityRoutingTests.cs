@@ -162,9 +162,10 @@ public class RealityRoutingTests
 	[Arguments(typeof(NotifyService))]
 	[Arguments(typeof(MoveService))]
 	[Arguments(typeof(ListenerRoutingService))]
-	public async Task PerceptionPolicyIsARequiredDependency(Type service)
+	public async Task RealityAwareConstructorRequiresExplicitPolicy(Type service)
 	{
-		var parameter = service.GetConstructors().Single().GetParameters().Single(p => p.ParameterType == typeof(IRealityPolicy));
+		var parameter = service.GetConstructors().Single(c => c.GetParameters().Any(p => p.ParameterType == typeof(IRealityPolicy)))
+			.GetParameters().Single(p => p.ParameterType == typeof(IRealityPolicy));
 		await Assert.That(parameter.HasDefaultValue).IsFalse();
 	}
 

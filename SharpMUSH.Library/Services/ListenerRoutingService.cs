@@ -37,6 +37,14 @@ public class ListenerRoutingService(
 	IMessageBus publishEndpoint,
 	IRealityPolicy reality) : IListenerRoutingService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
+		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
+		IServiceProvider serviceProvider, IMessageBus publishEndpoint)
+		: this(mediator, patternMatcher, permissionService, lockService, connectionService,
+			serviceProvider, publishEndpoint, DisabledRealityPolicy.Instance)
+	{ }
+
 	private IAttributeService? _attributeService;
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
 	/// <summary>
