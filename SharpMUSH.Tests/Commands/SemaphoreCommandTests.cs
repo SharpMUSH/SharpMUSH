@@ -189,9 +189,9 @@ public class SemaphoreCommandTests
 			await Command($"@wait {target}/{attribute}=think pending");
 			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
 			await Command($"@{(notifyAll ? "notify" : "drain")}/all {target}/{attribute}");
-			await Assert.That(await Count()).IsEqualTo("1");
+			await Assert.That(await Count()).IsIn("", "0");
 			await Command($"@wait {target}/{attribute}=think later");
-			await Assert.That(await Count()).IsEqualTo("2");
+			await Assert.That(await Count()).IsEqualTo("1");
 			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drain-complete", "test");
 		}
 		finally { release.SetResult(); }
@@ -199,6 +199,31 @@ public class SemaphoreCommandTests
 		await Assert.That(await Count()).IsEqualTo("1");
 		await Command($"@drain {target}/{attribute}");
 		await Assert.That(await Count()).IsEqualTo("");
+	}
+
+	[Test]
+	public async ValueTask NotifyCreditSurvivesAlreadyPublishedManagedTimeout()
+	{
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TimeoutCredit");
+		var attribute = $"SEM_{Guid.NewGuid():N}";
+		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, [attribute]);
+		var blocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		await Scheduler.EnqueueWork(async () => { blocked.SetResult(); await release.Task; return null; }, "credit-block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var timeout = await Scheduler.WriteCommandList(MarkupText.Plain("think timeout"),
+				WebAppFactoryArg.FunctionParser.CurrentState, semaphore, 0, manageSemaphoreCount: true);
+			await Scheduler.ReleaseScheduledWork(timeout.Pid!.Value, semaphoreTimeout: true);
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@notify {target}/{attribute}"));
+			await Scheduler.EnqueueWork(() => { completed.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "credit-complete", "test");
+		}
+		finally { release.SetResult(); }
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var result = (await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"get({target}/{attribute})")))!.Message!.ToPlainText();
+		await Assert.That(result).IsEqualTo("-1");
 	}
 
 	[Test]

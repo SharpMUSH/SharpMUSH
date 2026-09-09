@@ -415,13 +415,19 @@ public class PageCommandTests
 
 	private async Task CommandAsync(PagePlayer sender, string command)
 	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
 		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
 		await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain(command));
 	}
 
 	private async Task GodCommandAsync(string command)
-		=> await WebAppFactoryArg.CommandParser.CommandParse(
+	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		await WebAppFactoryArg.CommandParser.CommandParse(
 			1, ConnectionService, MarkupText.Plain(command));
+	}
 
 	private sealed record PagePlayer(DBRef DbRef, long Handle, AnySharpObject Object, string Name);
 }
