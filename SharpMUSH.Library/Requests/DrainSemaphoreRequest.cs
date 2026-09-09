@@ -4,3 +4,5 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Requests;
 
 public record DrainSemaphoreRequest(DbRefAttribute DbRefAttribute, int? Count = null) : IRequest;
+
+public record DrainSemaphoreCountedRequest(DbRefAttribute DbRefAttribute, int? Count = null) : IRequest<int>;

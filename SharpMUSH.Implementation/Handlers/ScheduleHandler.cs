@@ -91,6 +91,12 @@ public class ScheduleDrainHandler(ITaskScheduler scheduler) : IRequestHandler<Dr
 	}
 }
 
+public class ScheduleDrainCountedHandler(ITaskScheduler scheduler) : IRequestHandler<DrainSemaphoreCountedRequest, int>
+{
+	public ValueTask<int> Handle(DrainSemaphoreCountedRequest request, CancellationToken cancellationToken)
+		=> scheduler.DrainCounted(request.DbRefAttribute, request.Count);
+}
+
 public class ScheduleHaltHandler(ITaskScheduler scheduler) : IRequestHandler<HaltObjectQueueRequest>
 {
 	public async ValueTask<Unit> Handle(HaltObjectQueueRequest request, CancellationToken cancellationToken)

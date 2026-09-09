@@ -98,7 +98,7 @@ public class TaskScheduler(
 		catch (ObjectDisposedException) { /* The consumer already completed and released this entry. */ }
 		catch (AggregateException ex) { logger.LogWarning(ex, "Cancellation callback failed for PID {Pid}", entry.Pid); }
 	}
-	private void ReleasePending(long pid)
+	private bool ReleasePending(long pid)
 	{
 		QueueEntry? entry;
 		lock (_admissionLock)
@@ -106,6 +106,7 @@ public class TaskScheduler(
 			// Drain owns waiting work only; it must not cancel a published/running body.
 			entry = _ready.Contains(pid) ? null : RemoveEntry(pid);
 		entry?.Cts.Dispose();
+		return entry is not null;
 	}
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
@@ -486,13 +487,16 @@ public class TaskScheduler(
 	}
 
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
+		=> _ = await DrainCounted(dbAttribute, count);
+
+	public async ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
 	{
 		var semaphoresForObject = await _scheduler
 			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
 
 		var selected = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last())).Take(count ?? int.MaxValue).ToArray();
 		await _scheduler.UnscheduleJobs(selected);
-		foreach (var key in selected) ReleasePending(long.Parse(key.Name.Split('-').Last()));
+		return selected.Count(key => ReleasePending(long.Parse(key.Name.Split('-').Last())));
 	}
 
 	public async ValueTask Halt(DBRef dbRef)
