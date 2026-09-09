@@ -117,12 +117,12 @@ public class TaskScheduler(
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{
-			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value));
+			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken);
 			if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 			executor = target.Known().Object().DBRef;
 			if (await target.Known().IsWizard() || await target.Known().HasPower("Queue"))
-				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery()));
-			owner = (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.ToString();
+				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
+			owner = (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
 		}
 		QueueAdmissionResult result;
 		lock (_admissionLock)
@@ -207,7 +207,7 @@ public class TaskScheduler(
 	}
 	private async ValueTask<CallState?> ExecuteList(MString command, ParserState state)
 	{
-		if (state.Executor is not null && (await mediator.Send(new GetObjectNodeQuery(state.Executor.Value))).IsNone) return null;
+		if (state.Executor is not null && (await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken)).IsNone) return null;
 		// Deferred bodies cannot consume the submitting command list's break/include state.
 		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null }).CommandListParse(command);
 	}
@@ -231,7 +231,7 @@ public class TaskScheduler(
 					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
 					// Released semaphore accounting still runs for halted entries, but shares the
 					// entry's elapsed-time limit. Link halt cancellation only for the user body.
-					using var accountingBudget = entry.BeforeExecution is null ? null : ExecutionBudget.FromMilliseconds(milliseconds);
+					using var accountingBudget = entry.BeforeExecution is null ? null : ExecutionBudget.FromMilliseconds(milliseconds, shutdownToken);
 					using var accountingScope = accountingBudget?.Enter();
 					if (entry.BeforeExecution is not null)
 					{
@@ -348,7 +348,7 @@ public class TaskScheduler(
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{
 		if (state.Executor is not { } executor) return state;
-		var target = await mediator.Send(new GetObjectNodeQuery(executor));
+		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
 		return target.IsNone ? state : state with { Executor = target.Known().Object().DBRef };
 	}
 	public async ValueTask<QueueAdmissionResult> WriteCommandList(MString command, ParserState state)
@@ -362,14 +362,14 @@ public class TaskScheduler(
 
 	public async ValueTask<QueueAdmissionResult> WriteAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
-		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
+		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		dbAttribute = new DbRefAttribute(target.Known().Object().DBRef, dbAttribute.Attribute);
 		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
 		return await Admit(async () =>
 		{
-			if (executor is not null && (await mediator.Send(new GetObjectNodeQuery(executor.Value))).IsNone) return null;
-			var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef));
+			if (executor is not null && (await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken)).IsNone) return null;
+			var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
 			if (obj.IsNone) return null;
 			var parserState = await function();
 			ExecutionBudget.Current?.ThrowIfExceeded();
@@ -385,14 +385,14 @@ public class TaskScheduler(
 	{
 		if (!manageSemaphoreCount && oldValue < 0) return await WriteCommandList(command, state);
 		state = await CaptureExecutor(state);
-		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef));
+		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return Reject(QueueRejectionReason.InvalidTarget);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
 		// Do not expose a reservation to halt until its counter transaction owns the lease.
 		using var mutation = manageSemaphoreCount ? await EnterSemaphoreMutationAsync() : null;
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
-		var counterWritten = false;
+		var counterWriteAttempted = false;
 		var counterCreated = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
@@ -409,14 +409,16 @@ public class TaskScheduler(
 					Release(admission.Pid!.Value);
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
-				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
+				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
 				counterCreated = attribute is null;
 				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
-				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken)).AsPlayer;
+				var nextCount = checked(currentCount + 1);
+				// A cancelled acknowledgement does not prove the provider failed to commit.
+				counterWriteAttempted = true;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-					MarkupString.MarkupText.Plain(checked(currentCount + 1).ToString()), god)))
+					MarkupString.MarkupText.Plain(nextCount.ToString()), god), ExecutionBudget.CurrentToken))
 					throw new InvalidOperationException("Semaphore count update failed.");
-				counterWritten = true;
 				if (attribute is null)
 					await SemaphoreAttributes.InitializeAsync(mediator, fullTarget, dbRefAttribute.Attribute);
 				if (currentCount < 0)
@@ -429,23 +431,31 @@ public class TaskScheduler(
 			await _scheduler.ScheduleJob(JobBuilder.CreateForAsync<SemaphoreTask>()
 			 .SetJobData(new JobDataMap((IDictionary<string, object>)new Dictionary<string, object> { { "Command", command }, { "State", state } })).Build(),
 			 TriggerBuilder.Create().WithSimpleSchedule(x => x.WithRepeatCount(0)).StartAt(DateTimeOffset.UtcNow + timeout)
-				.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", group).Build());
+				.WithIdentity($"dbref:{state.Executor}-{admission.Pid}", group).Build(), ExecutionBudget.CurrentToken);
 			return admission;
 		}
-		catch
+		catch (Exception admissionFailure)
 		{
 			try
 			{
 				// The mutation lease excludes notify, drain and timeout bookkeeping until rollback completes.
-				if (counterWritten)
+				if (counterWriteAttempted)
 				{
+					// Cleanup must survive the expired entry budget, but remains bounded and
+					// shutdown-cancellable. Await provider settlement while still owning the lease.
+					using var cleanup = ExecutionBudget.FromMilliseconds(1000, _shutdownCts.Token);
+					using var cleanupScope = cleanup.Enter();
 					// Restore absence as well as value: partial custom flags cannot pass validation.
 					var restored = counterCreated
-						? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute))
+						? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute), cleanup.Token)
 						: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-							MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+							MarkupString.MarkupText.Plain(currentCount.ToString()), god!), cleanup.Token);
 					if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
 				}
+			}
+			catch (Exception cleanupFailure)
+			{
+				throw new AggregateException("Semaphore admission and rollback failed.", admissionFailure, cleanupFailure);
 			}
 			finally { Release(admission.Pid!.Value); }
 			throw;
