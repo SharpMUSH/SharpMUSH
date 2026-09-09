@@ -391,7 +391,7 @@ public partial class Commands
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			return new CallState(string.Join(" ", results));
@@ -415,7 +415,7 @@ public partial class Commands
 					attribute.Value,
 					stateForElement,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			if (switches.Contains("NOTIFY"))
@@ -424,7 +424,7 @@ public partial class Commands
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			return CallState.Empty;
@@ -511,7 +511,7 @@ public partial class Commands
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
@@ -519,7 +519,7 @@ public partial class Commands
 					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			return lastCallState!;
@@ -553,7 +553,7 @@ public partial class Commands
 					command,
 					stateForIteration,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			if (switches.Contains("NOTIFY"))
@@ -562,7 +562,7 @@ public partial class Commands
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 			else if (hasPid && !string.IsNullOrEmpty(notifyPid))
 			{
@@ -570,7 +570,7 @@ public partial class Commands
 					MarkupText.Plain($"@notify {notifyPid}"),
 					parser.CurrentState,
 					new DbRefAttribute(enactor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			return CallState.Empty;
@@ -777,7 +777,7 @@ public partial class Commands
 					action.Value,
 					actionState,
 					new DbRefAttribute(viewingObject.DBRef, action.LongName!.Split('`')),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 		}
 
@@ -1831,7 +1831,7 @@ public partial class Commands
 					MarkupText.Plain("look"),
 					targetPlayerState,
 					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 		}
 
@@ -2032,7 +2032,7 @@ public partial class Commands
 					replacementActions!,
 					parser.CurrentState,
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedPlayerAndObjectsFormat), executor, targetObject.Name);
@@ -2047,7 +2047,7 @@ public partial class Commands
 					replacementActions!,
 					parser.CurrentState,
 					new DbRefAttribute(targetObject.DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltedObjectWithActionsFormat), executor, targetObject.Name);
 			}
 			else
@@ -2498,7 +2498,7 @@ public partial class Commands
 					MarkupText.Plain("@notify me"),
 					parser.CurrentState,
 					new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+					-1), ExecutionBudget.CurrentToken);
 			}
 
 			return new CallState(matched);
@@ -3565,7 +3565,7 @@ public partial class Commands
 						command!,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["BREAK"]),
-						-1));
+						-1), ExecutionBudget.CurrentToken);
 				}
 				else
 				{
@@ -4853,7 +4853,7 @@ public partial class Commands
 							actionMString,
 							parser.CurrentState,
 							new DbRefAttribute(executor.Object().DBRef, []),
-							0));
+							0), ExecutionBudget.CurrentToken);
 					}
 
 					break;
@@ -4880,7 +4880,7 @@ public partial class Commands
 							actionMString,
 							parser.CurrentState,
 							new DbRefAttribute(executor.Object().DBRef, []),
-							0));
+							0), ExecutionBudget.CurrentToken);
 					}
 				}
 			}
@@ -7215,7 +7215,7 @@ public partial class Commands
 						command!,
 						parser.CurrentState,
 						new DbRefAttribute(executor, ["ASSERT"]),
-						-1));
+						-1), ExecutionBudget.CurrentToken);
 				}
 				else
 				{
