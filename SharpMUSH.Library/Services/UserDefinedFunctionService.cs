@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 {
-	private readonly object _aliasMutations = new();
+	private readonly object _mutations = new();
 
 	private static string Key(string name, DBRef? owner) => $"{owner?.ToString() ?? "global"}/{name.ToLowerInvariant()}";
 
@@ -26,8 +26,11 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 
 	public void Define(UserDefinedFunction function)
 	{
-		var key = function.Name.ToLowerInvariant();
-		_functions[Key(key, function.Owner)] = function with { Name = key, AliasOf = null };
+		lock (_mutations)
+		{
+			var key = function.Name.ToLowerInvariant();
+			_functions[Key(key, function.Owner)] = function with { Name = key, AliasOf = null };
+		}
 	}
 
 	public UserDefinedFunction? Get(string name, DBRef? owner = null)
@@ -57,28 +60,34 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 
 	public bool Delete(string name, DBRef? owner = null)
 	{
-		if (!_functions.TryRemove(Key(name, owner), out _)) return false;
-		if (owner is not null)
-			foreach (var entry in _functions)
-				if (entry.Value.Owner == owner && string.Equals(entry.Value.AliasOf, name, StringComparison.OrdinalIgnoreCase))
-					_functions.TryRemove(entry);
-		return true;
+		lock (_mutations)
+		{
+			if (!_functions.TryRemove(Key(name, owner), out _)) return false;
+			if (owner is not null)
+				foreach (var entry in _functions)
+					if (entry.Value.Owner == owner && string.Equals(entry.Value.AliasOf, name, StringComparison.OrdinalIgnoreCase))
+						_functions.TryRemove(entry);
+			return true;
+		}
 	}
 
 	public bool SetEnabled(string name, bool enabled, DBRef? owner = null)
 	{
-		if (!_functions.TryGetValue(Key(name, owner), out var entry))
+		lock (_mutations)
 		{
-			return false;
-		}
+			if (!_functions.TryGetValue(Key(name, owner), out var entry))
+			{
+				return false;
+			}
 
-		_functions[Key(entry.Name, owner)] = entry with { Enabled = enabled };
-		return true;
+			_functions[Key(entry.Name, owner)] = entry with { Enabled = enabled };
+			return true;
+		}
 	}
 
 	public bool Alias(string alias, string target, DBRef? owner = null)
 	{
-		lock (_aliasMutations)
+		lock (_mutations)
 		{
 			var targetKey = target.ToLowerInvariant();
 			if (string.Equals(alias, target, StringComparison.OrdinalIgnoreCase)) return false;
@@ -105,82 +114,106 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 
 	public bool SetRestriction(string name, string? restriction, DBRef? owner = null)
 	{
-		if (!_functions.TryGetValue(Key(name, owner), out var entry))
+		lock (_mutations)
 		{
-			return false;
-		}
+			if (!_functions.TryGetValue(Key(name, owner), out var entry))
+			{
+				return false;
+			}
 
-		var normalized = string.IsNullOrWhiteSpace(restriction) ? null : restriction.Trim();
-		_functions[Key(entry.Name, owner)] = entry with { Restriction = normalized };
-		return true;
+			var normalized = string.IsNullOrWhiteSpace(restriction) ? null : restriction.Trim();
+			_functions[Key(entry.Name, owner)] = entry with { Restriction = normalized };
+			return true;
+		}
 	}
 
 	public bool Clone(string newName, string existing, DBRef? owner = null)
 	{
-		// Clone the concrete (alias-resolved) target so the copy is independent of the source.
-		var source = Resolve(existing, owner) ?? Get(existing, owner);
-		if (source is null || source.AliasOf is not null)
+		lock (_mutations)
 		{
-			return false;
-		}
+			// Clone the concrete (alias-resolved) target so the copy is independent of the source.
+			var source = Resolve(existing, owner) ?? Get(existing, owner);
+			if (source is null || source.AliasOf is not null)
+			{
+				return false;
+			}
 
-		var cloneKey = newName.ToLowerInvariant();
-		_functions[Key(cloneKey, owner)] = source with
-		{
-			Name = cloneKey,
-			AliasOf = null,
-			Enabled = true,
-			Restriction = null,
-			Preserved = false
-		};
-		return true;
+			var cloneKey = newName.ToLowerInvariant();
+			_functions[Key(cloneKey, owner)] = source with
+			{
+				Name = cloneKey,
+				AliasOf = null,
+				Enabled = true,
+				Restriction = null,
+				Preserved = false
+			};
+			return true;
+		}
 	}
 
 	public bool SetPreserved(string name, bool preserved, DBRef? owner = null)
 	{
-		if (!_functions.TryGetValue(Key(name, owner), out var entry))
+		lock (_mutations)
 		{
-			return false;
-		}
+			if (!_functions.TryGetValue(Key(name, owner), out var entry))
+			{
+				return false;
+			}
 
-		_functions[Key(entry.Name, owner)] = entry with { Preserved = preserved };
-		return true;
+			_functions[Key(entry.Name, owner)] = entry with { Preserved = preserved };
+			return true;
+		}
 	}
 
 	public int ResetUnpreserved(DBRef? owner = null)
 	{
-		var removed = 0;
-		foreach (var entry in _functions.Values.ToArray())
+		lock (_mutations)
 		{
-			if (entry.Owner == owner && !entry.Preserved && _functions.TryRemove(Key(entry.Name, owner), out _))
+			var removed = 0;
+			var entries = _functions.Values.Where(entry => entry.Owner == owner).ToArray();
+			var retained = entries.Where(entry => entry.Preserved).Select(entry => entry.Name)
+				.ToHashSet(StringComparer.OrdinalIgnoreCase);
+			// A preserved alias retains its concrete dependency without changing that entry's own flag.
+			foreach (var alias in entries.Where(entry => entry.Preserved && entry.AliasOf is not null))
+				retained.Add(alias.AliasOf!);
+			foreach (var entry in entries)
 			{
-				removed++;
+				if (!retained.Contains(entry.Name) && _functions.TryRemove(Key(entry.Name, owner), out _))
+				{
+					removed++;
+				}
 			}
-		}
 
-		return removed;
+			return removed;
+		}
 	}
 
 	public void InvalidateLocalDefinitions(DBRef target)
 	{
-		var entries = _functions.ToArray();
-		var invalidated = entries.Where(entry => entry.Value.Owner is { } owner &&
-			(owner.Matches(target) || (entry.Value.AliasOf is null && entry.Value.Object.Matches(target))))
-			.Select(entry => entry.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		foreach (var entry in entries)
+		lock (_mutations)
 		{
-			if (invalidated.Contains(entry.Key) || (entry.Value.Owner is { } owner && entry.Value.AliasOf is { } alias && invalidated.Contains(Key(alias, owner))))
-				_functions.TryRemove(entry);
+			var entries = _functions.ToArray();
+			var invalidated = entries.Where(entry => entry.Value.Owner is { } owner &&
+				(owner.Matches(target) || (entry.Value.AliasOf is null && entry.Value.Object.Matches(target))))
+				.Select(entry => entry.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+			foreach (var entry in entries)
+			{
+				if (invalidated.Contains(entry.Key) || (entry.Value.Owner is { } owner && entry.Value.AliasOf is { } alias && invalidated.Contains(Key(alias, owner))))
+					_functions.TryRemove(entry);
+			}
 		}
 	}
 
 	public void InvalidateLocalName(string name)
 	{
-		foreach (var entry in _functions)
-			if (entry.Value.Owner is not null &&
-				(string.Equals(entry.Value.Name, name, StringComparison.OrdinalIgnoreCase)
-				 || string.Equals(entry.Value.AliasOf, name, StringComparison.OrdinalIgnoreCase)))
-				_functions.TryRemove(entry);
+		lock (_mutations)
+		{
+			foreach (var entry in _functions)
+				if (entry.Value.Owner is not null &&
+					(string.Equals(entry.Value.Name, name, StringComparison.OrdinalIgnoreCase)
+					 || string.Equals(entry.Value.AliasOf, name, StringComparison.OrdinalIgnoreCase)))
+					_functions.TryRemove(entry);
+		}
 	}
 
 	public void SetBuiltinRestriction(string name, string? restriction)

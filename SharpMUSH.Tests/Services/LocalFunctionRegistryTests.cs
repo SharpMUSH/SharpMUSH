@@ -12,6 +12,42 @@ public class LocalFunctionRegistryTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
+	public async Task PreservedAliasesRetainTheirConcreteDependencyDuringReset(bool global)
+	{
+		var registry = new UserDefinedFunctionService();
+		DBRef? owner = global ? null : Ref("#10:100");
+		registry.Define(Entry("target", owner, Ref("#20:100")));
+		registry.Define(Entry("discard", owner, Ref("#21:100")));
+		registry.Alias("kept", "target", owner);
+		registry.SetPreserved("kept", true, owner);
+		await Assert.That(registry.ResetUnpreserved(owner)).IsEqualTo(1);
+		await Assert.That(registry.Resolve("kept", owner)!.Object).IsEqualTo(Ref("#20:100"));
+		await Assert.That(registry.Get("target", owner)!.Preserved).IsFalse();
+		registry.SetPreserved("kept", false, owner);
+		await Assert.That(registry.ResetUnpreserved(owner)).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task ConcurrentDeleteAndAliasCreationCannotLeaveDanglingEntries()
+	{
+		var registry = new UserDefinedFunctionService();
+		var owner = Ref("#10:100");
+		using var start = new Barrier(2);
+		for (var iteration = 0; iteration < 5000; iteration++)
+		{
+			registry.Define(Entry("target", owner, Ref("#20:100")));
+			registry.Delete("alias", owner);
+			await Task.WhenAll(
+				Task.Run(() => { start.SignalAndWait(); registry.Alias("alias", "target", owner); }),
+				Task.Run(() => { start.SignalAndWait(); registry.Delete("target", owner); }));
+			if (registry.Get("alias", owner) is not null)
+				await Assert.That(registry.Resolve("alias", owner)).IsNotNull();
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
 	public async Task ReplacingAnAliasedConcreteTargetIsRejected(bool global)
 	{
 		var registry = new UserDefinedFunctionService();

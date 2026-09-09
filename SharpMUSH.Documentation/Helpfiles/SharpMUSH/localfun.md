@@ -40,14 +40,17 @@ scope:
 - `@function/local/disable <name>` prevents calls.
 - `@function/local/enable <name>` enables calls.
 - `@function/local/alias <alias>=<name>` creates an alias to a concrete local entry.
-- `@function/local/preserve <name>` retains it during a bulk restore.
-- `@function/local/restore *` removes unpreserved entries in your scope.
+- `@function/local/preserve <name>` retains it during a bulk restore, including
+  its concrete target when the preserved entry is an alias.
+- `@function/local/restore *` removes unpreserved entries in your scope, except
+  targets required by preserved aliases.
 - `@function/local/restore <name>` removes that entry, including a preserved one.
 
 Aliases stay within the same full owner identity. A disabled target cannot be
 called through its alias. Aliases cannot point to other aliases or global
-functions. Local cloning, restriction overlays and built-in replacement are
-not supported.
+functions. Replacing a concrete entry with an alias is rejected while other
+aliases depend on that entry. Local cloning, restriction overlays and built-in
+replacement are not supported.
 
 Ownership changes and deletion remove affected local registrations and aliases.
 Each call also checks the backing object's full identity and current owner, so
