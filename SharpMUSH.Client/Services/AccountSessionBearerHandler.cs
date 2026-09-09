@@ -21,8 +21,8 @@ public sealed class AccountSessionBearerHandler(IAccountAuthState accountAuth) :
 			// anonymous and come back 401. Today every authenticated caller happens to hydrate first —
 			// either behind an [Authorize] page (AuthorizeRouteView awaits AccountAuthStateProvider,
 			// which awaits InitAsync) or by calling InitAsync itself — but nothing enforces that, and a
-			// caller that forgets fails intermittently rather than loudly. Single-flight and JS-interop
-			// only: no HTTP, so this cannot re-enter the pipeline, and it is a no-op after the first call.
+			// caller that forgets fails intermittently rather than loudly. Single-flight session
+			// hydration refresh sends an explicit bearer, so it bypasses this block and cannot re-enter.
 			await _accountAuth.InitAsync();
 
 			if (_accountAuth.AccountSessionToken is { } token)

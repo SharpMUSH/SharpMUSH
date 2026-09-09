@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
@@ -52,6 +54,7 @@ public class AccountAuthService(
 	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private record ChangeUsernameRequest(string NewUsername);
 	private record SetupStatusResponse(bool NeedsSetup);
+	private record SessionStateResponse(string Username, bool MustChangePassword, string? Role, IReadOnlyList<string>? Permissions);
 	private record SetupCompleteRequest(string Username, string Password);
 
 	public string? AccountSessionToken { get; private set; }
@@ -211,7 +214,7 @@ public class AccountAuthService(
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
-		if (AccountSessionToken is null)
+		if (AccountSessionToken is null || ExplicitlyLoggedOut)
 		{
 			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
 			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
@@ -224,11 +227,28 @@ public class AccountAuthService(
 		Username = await js.InvokeAsync<string?>("sessionStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
-		Role = await js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
-		var permissionsJson = await js.InvokeAsync<string?>("sessionStorage.getItem", PermissionsKey);
-		Permissions = permissionsJson is null
-			? []
-			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
+		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
+		Role = null;
+		Permissions = [];
+		var token = AccountSessionToken;
+		using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
+		// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
+		// recursively waiting on this same initialization task.
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+		using var response = await httpClientFactory.CreateClient("api").SendAsync(request);
+		if (AccountSessionToken != token || ExplicitlyLoggedOut) return;
+		if (response.StatusCode == HttpStatusCode.Unauthorized)
+		{
+			ClearSessionState();
+			return;
+		}
+		if (!response.IsSuccessStatusCode) return;
+		var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>();
+		if (current is null || AccountSessionToken != token || ExplicitlyLoggedOut) return;
+		Username = current.Username;
+		MustChangePassword = current.MustChangePassword;
+		Role = current.Role;
+		Permissions = current.Permissions ?? [];
 	}
 
 	/// <summary>Everything a tab holding no usable session must look like. Does not raise
