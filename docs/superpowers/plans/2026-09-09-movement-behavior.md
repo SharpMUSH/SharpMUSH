@@ -71,6 +71,10 @@
 **Files:**
 - Modify: `SharpMUSH.Library/Services/Interfaces/IPermissionService.cs`
 - Modify: `SharpMUSH.Library/Services/PermissionService.cs`
+- Modify: `SharpMUSH.Implementation/Commands/GeneralCommands.cs` (the `@TELEPORT` switch list)
+- Modify: `SharpMUSH.Tests/Commands/AttributeTreePatternVisibilityTests.cs`,
+  `ChannelPermissionTests.cs`, `ChannelMatchRecallTests.cs`,
+  `SharpMUSH.Tests/Functions/HiddenWhoVisibilityTests.cs`
 - Test: `SharpMUSH.Tests/Services/DidItServiceTests.cs` (created here)
 
 **Interfaces:**
@@ -226,15 +230,44 @@ dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/DidItServiceTest
 
 Expected: 5 passed.
 
-- [ ] **Step 6: Format and commit**
+- [ ] **Step 6: Rename `@teleport/quiet` to `/silent`**
+
+PennMUSH's switch is `SILENT` (`src/command.c:312`). This lands here, not with the rest of the
+`@teleport` work, because every task from Task 3 onward writes tests whose setup calls
+`@teleport/silent` — leaving the rename until Task 13 would ship ten tasks with red suites.
+
+In `GeneralCommands.cs`, on the `Teleport` command's `[SharpCommand]` attribute,
+`Switches = ["LIST", "INSIDE", "QUIET"]` becomes `Switches = ["LIST", "INSIDE", "SILENT"]`, and the
+one `Switches.Contains("QUIET")` in its body becomes `Contains("SILENT")`. Then update the four
+existing test files that used the old name:
 
 ```bash
-dotnet format whitespace --folder SharpMUSH.Library --exclude "**/bin/**" --exclude "**/obj/**"
-dotnet format whitespace --folder SharpMUSH.Library --exclude "**/bin/**" --exclude "**/obj/**"
-dotnet format whitespace --folder SharpMUSH.Tests --exclude "**/bin/**" --exclude "**/obj/**"
-dotnet format whitespace --folder SharpMUSH.Tests --exclude "**/bin/**" --exclude "**/obj/**"
-git add SharpMUSH.Library SharpMUSH.Tests
-git commit -m "Add IsHearer, PennMUSH's Hearer predicate"
+grep -rln "teleport/quiet" --include="*.cs" . | grep -v obj/ | xargs sed -i 's#teleport/quiet#teleport/silent#g'
+grep -rn "teleport/quiet\|QUIET" --include="*.cs" . | grep -v obj/ | grep -i teleport
+```
+
+The second command must print nothing.
+
+- [ ] **Step 7: Run the four renamed suites**
+
+```bash
+for c in AttributeTreePatternVisibilityTests ChannelPermissionTests ChannelMatchRecallTests HiddenWhoVisibilityTests; do
+  dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/$c/*" > /tmp/t1-$c.log 2>&1
+  echo "$c: $(grep -cE '^\s*Failed' /tmp/t1-$c.log) failed"
+done
+```
+
+Expected: zero failures in each.
+
+- [ ] **Step 8: Format and commit**
+
+```bash
+for d in SharpMUSH.Library SharpMUSH.Implementation SharpMUSH.Tests; do
+  dotnet format whitespace --folder $d --exclude "**/bin/**" --exclude "**/obj/**"
+  dotnet format whitespace --folder $d --exclude "**/bin/**" --exclude "**/obj/**"
+done
+git add -A
+git commit -m "Add IsHearer, and rename @teleport/quiet to PennMUSH's /silent"
 ```
 
 ---
@@ -501,11 +534,11 @@ Add the shared helper used above:
 	}
 ```
 
-> **Note for the implementer:** `DrainImmediateQueueForTests` and `@teleport/silent` do not exist
-> yet — they arrive in Task 5 and Task 14 respectively. Until then this file will not compile, which
-> is why Task 3 Step 2 expects a compile failure and why Task 5 re-runs this suite. If you want the
-> suite green at the end of Task 3, temporarily use `@teleport/quiet` and drop the drain call,
-> then restore both in Task 14 and Task 5. Prefer implementing Tasks 3–5 back to back.
+> **Note for the implementer:** `@teleport/silent` exists as of Task 1.
+> `DrainImmediateQueueForTests` does not — it arrives in Task 5. Write
+> `ADarkLegalActorProducesNoOMessageButStillActs` exactly as given, leave it failing on the missing
+> method, and let Task 5 turn it green; Task 5's Step 6 re-runs this suite for that reason. Every
+> other test in this file must pass at the end of Task 3.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -2031,22 +2064,48 @@ Replace `ExecuteMoveAsync`, `TriggerLeaveHooksAsync`, `TriggerEnterHooksAsync`,
 
 Add `IDidItService didItService` to the constructor.
 
-- [ ] **Step 4: Confirm `WizNoAEnter` is exposed**
+- [ ] **Step 4: Fix the three callers `ExecuteMoveAsync` leaves behind**
+
+Step 3 removed `ExecuteMoveAsync`, so its external callers stop compiling here — not in Task 15.
+Point each at the new surface now, so the branch builds at every task boundary:
+
+- `SharpMUSH.Library/Services/ObjectDestructionService.cs:262` →
+  `EnterRoom(parser, content, destination, noMoveMsgs: false, enactor, "container destroyed")`
+- `SharpMUSH.Library/Services/DatabaseConversion/PennMUSHDatabaseConverter.cs:574` →
+  `EnterRoom(parser, ..., noMoveMsgs: true, ...)`. An import must not narrate itself, and it runs
+  before the world is coherent enough for a look.
+- `SharpMUSH.Tests/Services/CachingBehaviorTests.cs:569` →
+  `EnterRoom(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true, ...)`
+
+`EnterRoom` does not exist until Task 10. Until then, have these three call `MoveIt` directly with
+the same arguments minus the return value — `MoveIt` is the part they actually needed — and leave
+them there. Task 10 does not need to revisit them.
+
+Verify nothing else referenced it:
+
+```bash
+grep -rn "ExecuteMoveAsync" --include="*.cs" . | grep -v obj/
+```
+
+Expected: no output.
+
+- [ ] **Step 5: Confirm `WizNoAEnter` is exposed**
 
 `CommandOptions.cs:53` declares `wiz_noaenter`. Check the property name on `CommandOptions` and use
 it verbatim; if the option is declared but has no property, add one following the neighbouring
 options' shape.
 
-- [ ] **Step 5: Run the tests**
+- [ ] **Step 6: Run the tests**
 
 ```bash
+dotnet build SharpMUSH.sln > /tmp/t9b.log 2>&1; grep -E "error|Build succeeded" /tmp/t9b.log | head
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MovementParityTests/*" > /tmp/t9.log 2>&1; grep -E "Passed|Failed" /tmp/t9.log | tail -3
 ```
 
-Tests that need `EnterRoom` (arrival through an exit) still fail here — `GOTO` is rewired in
+The build must succeed before the tests are meaningful. Tests that need `EnterRoom` (arrival through an exit) still fail here — `GOTO` is rewired in
 Task 12. Departure/arrival by `@teleport` should pass.
 
-- [ ] **Step 6: Format and commit**
+- [ ] **Step 7: Format and commit**
 
 ```bash
 for d in SharpMUSH.Library SharpMUSH.Tests; do
@@ -2666,8 +2725,7 @@ git commit -m "Put GOTO on the movement pipeline and enforce exit locks"
 **Files:**
 - Modify: `SharpMUSH.Implementation/Commands/GeneralCommands.cs:1646-1830`
 - Modify: `SharpMUSH.Tests/Commands/AttributeTreePatternVisibilityTests.cs`,
-  `ChannelPermissionTests.cs`, `ChannelMatchRecallTests.cs`,
-  `SharpMUSH.Tests/Functions/HiddenWhoVisibilityTests.cs`
+  `ChannelPermissionTests.cs` (comment trims only)
 - Modify: `SharpMUSH.Documentation/Helpfiles/SharpMUSH/sharpcmd.md`
 
 PennMUSH's switch is `SILENT` (`src/command.c:312`), and its attributes are
@@ -2721,11 +2779,13 @@ counterpart and go. `silent` suppresses the `TPORT` triad and the `MOVE` triad; 
 dotnet run --project SharpMUSH.Tests -- --treenode-filter "/*/*/MovementParityTests/*Tport*" > /tmp/t13.log 2>&1; grep -E "Failed" /tmp/t13.log | head
 ```
 
-- [ ] **Step 3: Rename the switch**
+- [ ] **Step 3: Confirm the switch rename from Task 1 is in place**
 
-In the `[SharpCommand]` attribute on `Teleport`, `Switches = ["LIST", "INSIDE", "QUIET"]` becomes
-`Switches = ["LIST", "INSIDE", "SILENT"]`, and `parser.CurrentState.Switches.Contains("QUIET")`
-becomes `Contains("SILENT")`.
+```bash
+grep -n 'Switches = \["LIST", "INSIDE", "SILENT"\]' SharpMUSH.Implementation/Commands/GeneralCommands.cs
+```
+
+Expected: one match. The rename landed in Task 1 because every intervening task's tests depend on it.
 
 - [ ] **Step 4: Replace the move call and the hand-queued look**
 
@@ -2764,13 +2824,9 @@ Delete the whole `if (target.IsPlayer && !isSilent)` block that follows — its
 `EnterRoom`'s automatic look. Remove `TeleportedPlayerNotified` from `ErrorMessages.Notifications`
 and both resx files if nothing else uses it.
 
-- [ ] **Step 5: Update the four test files that used the old switch**
+- [ ] **Step 5: Trim the two comments that described the old queued look**
 
-```bash
-grep -rln "teleport/quiet" --include="*.cs" . | grep -v obj/ | xargs sed -i 's#teleport/quiet#teleport/silent#g'
-```
-
-Then, in `ChannelPermissionTests.cs`, replace the comment block above the teleport in `CreateMortal`
+In `ChannelPermissionTests.cs`, replace the comment block above the teleport in `CreateMortal`
 (the one explaining that `/QUIET` avoids a racing queued look) with:
 
 ```csharp
@@ -2965,10 +3021,11 @@ git commit -m "Route ENTER, LEAVE and HOME through the movement pipeline"
 None of the following exist in PennMUSH; this is pre-release software, so they are deleted rather
 than kept behind an option.
 
-- [ ] **Step 1: Delete `ExecuteMoveAsync`, `CanMoveAsync` and `CalculateMoveCostAsync`**
+- [ ] **Step 1: Delete `CanMoveAsync` and `CalculateMoveCostAsync`**
 
-All three go from `IMoveService` and `MoveService`. `ExecuteMoveAsync` is superseded by
-`EnterRoom`/`SafeTel`. `CalculateMoveCostAsync` always returned zero and has no caller.
+`ExecuteMoveAsync` and its external callers were already dealt with in Task 9. What remains here is
+`CanMoveAsync` and `CalculateMoveCostAsync`. `CalculateMoveCostAsync` always returned zero and has
+no caller.
 
 `CanMoveAsync` required `Controls(who, target)` for **every** move, which PennMUSH never does — it
 gates exit traversal on the exit's basic lock plus the room's leave lock (`src/move.c:441-456`),
@@ -2982,13 +3039,13 @@ Confirm nothing still calls it before deleting:
 grep -rn "CanMoveAsync\|CalculateMoveCostAsync\|ExecuteMoveAsync" --include="*.cs" . | grep -v obj/
 ```
 
-Update the remaining external callers:
+Task 9 already repointed `ObjectDestructionService`, `PennMUSHDatabaseConverter` and
+`CachingBehaviorTests` at `MoveIt`. Promote each of those three to `EnterRoom` now that it exists,
+keeping the same arguments — they want the automatic look and the drop-to handling too:
 
-- `SharpMUSH.Library/Services/ObjectDestructionService.cs:262` → `EnterRoom(...)` with
-  `cause: "container destroyed"`.
-- `SharpMUSH.Library/Services/DatabaseConversion/PennMUSHDatabaseConverter.cs:574` →
-  `EnterRoom(...)` with `noMoveMsgs: true` — an import must not narrate itself.
-- `SharpMUSH.Tests/Services/CachingBehaviorTests.cs:569` → `EnterRoom(..., noMoveMsgs: true, ...)`.
+```bash
+grep -rn "MoveIt(" --include="*.cs" . | grep -v obj/ | grep -v "MoveService.cs"
+```
 
 - [ ] **Step 2: Delete the invented strings**
 
@@ -3186,7 +3243,8 @@ connect/disconnect announcements fire `ACONNECT`/`ADISCONNECT` the same way.
 
 In `ConnectionAnnounceService`, replace the hand-rolled `ACONNECT`/`ADISCONNECT` execution with
 `DidIt` carrying only `AWhat`. Keep the existing state-propagation shape at line 354 — it already
-threads the counters correctly — and add `MoveDepth` to it per Task 4.
+threads the counters correctly, and Task 4 added `MoveDepth` to it; confirm that line still carries
+all five counters rather than adding it again.
 
 - [ ] **Step 3: Run the connection suites and commit**
 
@@ -3230,8 +3288,9 @@ For each hit, confirm the call passes `OldContainer:`. `MoveService.MoveIt` does
 	public async ValueTask EveryMoveCommandCarriesItsOriginContainer()
 	{
 		// A move that omits OldContainer falls back to the global contents tag, which wipes the
-		// contents entry of every container in the game. Cheaper to assert here than to notice
-		// it as a cache-miss storm in production.
+		// contents entry of every container in the game. This covers the SafeTel path that
+		// @teleport takes; MovementParityTests covers the EnterRoom path an exit takes. They are
+		// different callers of MoveObjectCommand, so both are worth holding.
 		var bystanderRoom = await Dig("GuardRoom");
 		var bystander = await TestIsolationHelpers.CreateTestThingAsync(
 			WebAppFactoryArg.Services, Mediator, TestIsolationHelpers.GenerateUniqueName("GuardThing"));
