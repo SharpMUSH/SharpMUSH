@@ -44,9 +44,15 @@ public static partial class HelperFunctions
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
 	/// </summary>
-	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> obj.IsGod() || await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
+	public static ValueTask<bool> IsWizard(this AnySharpObject obj)
+		=> obj.IsWizard(CancellationToken.None);
+
+	public static async ValueTask<bool> IsWizard(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsGod() || await obj.Object().Flags.Value
+			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
 
 	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
 		=> await (obj.Object().Flags.Value)
@@ -192,6 +198,9 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> obj.Object().HasPower(power);
 
+	public static ValueTask<bool> HasPower(this AnySharpObject obj, string power, CancellationToken cancellationToken)
+		=> obj.Object().HasPower(power, cancellationToken);
+
 	/// <summary>
 	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
 	/// property and handed it to every consumer, so one consumer's disposal could land on another's
@@ -199,10 +208,13 @@ public static partial class HelperFunctions
 	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
 	/// fail-open for anything phrased as a restriction. See issue #798.
 	/// </summary>
-	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
+	public static ValueTask<bool> HasPower(this SharpObject obj, string power)
+		=> obj.HasPower(power, CancellationToken.None);
+
+	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
 		=> await obj.Powers.Value
 			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
-									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
+									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false), cancellationToken);
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
@@ -270,6 +282,9 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
 		=> obj.Object().HasFlag(flag);
 
+	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag, CancellationToken cancellationToken)
+		=> obj.Object().HasFlag(flag, cancellationToken);
+
 	/// <summary>
 	/// Name <b>or</b> alias, as PennMUSH's <c>has_flag_by_name</c> resolves it: the name goes through
 	/// <c>flag_hash_lookup</c> → <c>match_flag_ns</c>, which searches <c>ptab_flag</c> — declared in
@@ -293,7 +308,7 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasFlag(this SharpObject obj, string flag)
 		=> HasFlag(obj, flag, CancellationToken.None);
 
-	private static async ValueTask<bool> HasFlag(SharpObject obj, string flag, CancellationToken cancellationToken)
+	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> await obj.Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
 									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
