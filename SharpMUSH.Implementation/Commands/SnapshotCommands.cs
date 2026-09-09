@@ -21,10 +21,11 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Snapshot(IMUSHCodeParser parser, SharpCommandAttribute command)
 	{
 		if (await RejectIfTooFewArguments(parser, command) is { } invalid) return invalid;
+		var cancellationToken = ExecutionBudget.CurrentToken;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var capabilities = parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>();
 		var snapshots = parser.ServiceProvider.GetRequiredService<IObjectSnapshotService>();
-		var actor = await capabilities.GetGameActorAsync(executor.Object().DBRef);
+		var actor = await capabilities.GetGameActorAsync(executor.Object().DBRef, cancellationToken);
 		if (actor is null) return await NotifyService.NotifyAndReturn(executor.Object().DBRef, "#-1 PERMISSION DENIED", "A linked player executor is required.", true);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(), LocateFlags.All, async obj =>
@@ -36,15 +37,15 @@ public partial class Commands
 					var rhs = parser.CurrentState.Arguments.TryGetValue("1", out var argument) ? argument.Message?.ToPlainText() ?? "" : "";
 					var operations = switches.Where(s => s is "CAPTURE" or "LIST" or "PREVIEW" or "RESTORE" or "RESOLVE").ToArray();
 					if (operations.Length != 1) throw new SnapshotOperationException("invalid", "Choose one of /capture, /list, /preview, /restore or /resolve.");
-					if (operations[0] == "CAPTURE") output = "Captured snapshot " + (await snapshots.CaptureAsync(actor, obj.Object().DBRef, rhs)).Id;
+					if (operations[0] == "CAPTURE") output = "Captured snapshot " + (await snapshots.CaptureAsync(actor, obj.Object().DBRef, rhs, ct: cancellationToken)).Id;
 					else if (operations[0] == "RESOLVE")
 					{
-						await snapshots.ResolveRecoveryAsync(actor, obj.Object().DBRef, rhs);
+						await snapshots.ResolveRecoveryAsync(actor, obj.Object().DBRef, rhs, cancellationToken);
 						output = "Recovery marker acknowledged; current object kept.";
 					}
 					else
 					{
-						var history = await snapshots.ListAsync(actor, obj.Object().DBRef);
+						var history = await snapshots.ListAsync(actor, obj.Object().DBRef, cancellationToken);
 						if (operations[0] == "LIST") output = string.Join('\n', history.Snapshots.Select(s => $"{s.Id} {s.Description} ({s.CreatedAt})")) +
 							(history.PendingRecoveryId is { } recovery ? "\nPending recovery: " + recovery : "");
 						else
@@ -54,13 +55,13 @@ public partial class Commands
 							var selection = new SnapshotSelection(saved.DefaultAttributes(), switches.Contains("LOCKS"), switches.Contains("FLAGS"), switches.Contains("NAME"));
 							if (operations[0] == "PREVIEW")
 							{
-								var preview = await snapshots.PreviewAsync(actor, obj.Object().DBRef, saved.Id, selection);
+								var preview = await snapshots.PreviewAsync(actor, obj.Object().DBRef, saved.Id, selection, cancellationToken);
 								output = string.Join('\n', preview.Changes.Select(c => c.Field + ": " + c.Before + " -> " + c.After)) + "\nPreview token: " + preview.Token;
 							}
 							else
 							{
 								if (parts.Length != 2) throw new SnapshotOperationException("invalid", "Restore requires snapshot-id,preview-token.");
-								var result = await snapshots.RestoreAsync(actor, obj.Object().DBRef, saved.Id, selection, parts[1]);
+								var result = await snapshots.RestoreAsync(actor, obj.Object().DBRef, saved.Id, selection, parts[1], cancellationToken);
 								output = result.Completed ? "Restored. Recovery snapshot: " + result.RecoverySnapshotId : result.Error!;
 							}
 						}

@@ -4,6 +4,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
@@ -283,11 +284,24 @@ public partial class Commands
 
 					if (notifySwitch)
 					{
-						await Mediator.Send(new QueueCommandListRequest(
-							MarkupText.Plain("@notify me"),
+						var completion = MarkupText.Plain("@notify me");
+						var completionAdmission = await Mediator.Send(new QueueCommandListRequest(
+							completion,
 							parser.CurrentState,
 							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")),
 							-1));
+						if (completionAdmission.Reason is QueueRejectionReason.GlobalLimit or QueueRejectionReason.OwnerLimit)
+						{
+							// The waiter already owns its reservation. Releasing it through the normal
+							// command path preserves permissions and appends it after admitted rows,
+							// even when no extra slot is available for the completion command itself.
+							await parser.CommandParse(completion);
+						}
+						else if (!completionAdmission.Accepted)
+						{
+							await NotifyService.Notify(executor, completionAdmission.Error, executor);
+							return new CallState(completionAdmission.Error);
+						}
 					}
 
 					// Note: SPOOF switch affects who the queued attributes execute as
