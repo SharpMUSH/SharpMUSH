@@ -10,6 +10,29 @@ namespace SharpMUSH.Tests.Database;
 public class SurrealCancellationTests
 {
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RejectedExpandedDataWritesAreNotReportedAsDurable(bool objectData)
+	{
+		var services = new ServiceCollection();
+		services.AddSurreal($"Endpoint=mem://;Namespace=writefailure;Database=test{Guid.NewGuid():N}")
+			.AddInMemoryProvider();
+		await using var provider = services.BuildServiceProvider();
+		var client = provider.GetRequiredService<ISurrealDbClient>();
+		await client.Connect();
+		var table = objectData ? "object_data" : "server_data";
+		var definition = await client.RawQuery($"DEFINE TABLE {table} SCHEMALESS; DEFINE FIELD data ON TABLE {table} TYPE string ASSERT false;");
+		await Assert.That(definition.HasErrors).IsFalse();
+		var database = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client,
+			Substitute.For<IPasswordService>(), Substitute.For<IObjectRelationLoader>());
+		await Assert.That(async () =>
+		{
+			if (objectData) await database.SetExpandedObjectData("Object/10", "reality", new { Value = 1 });
+			else await database.SetExpandedServerData("reality", new { Value = 1 });
+		}).Throws<InvalidOperationException>();
+	}
+
+	[Test]
 	public async Task CompletedQueriesReleaseCallerCancellationRegistrations()
 	{
 		var services = new ServiceCollection();
