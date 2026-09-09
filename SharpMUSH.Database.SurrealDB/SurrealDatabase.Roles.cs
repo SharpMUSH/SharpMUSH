@@ -59,7 +59,10 @@ public partial class SurrealDatabase : IRoleRegistryService
 		if (response.HasErrors) throw new InvalidOperationException("SurrealDB rejected the role write.");
 	}
 
-	public async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken = default)
+	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)
+		=> GetRoleAsync(slug, CancellationToken.None);
+
+	public async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {RoleFields} FROM role WHERE slug = $slug",

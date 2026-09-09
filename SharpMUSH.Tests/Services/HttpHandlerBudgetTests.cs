@@ -15,13 +15,13 @@ namespace SharpMUSH.Tests.Services;
 public class HttpHandlerBudgetTests
 {
 	private static (HttpHandlerCommandService Service, IMUSHCodeParser Parser, HttpOutputCapture Capture) Create(
-		Func<ParserState, ValueTask<CallState?>> execute, uint milliseconds = 0)
+		Func<ParserState, ValueTask<CallState?>> execute, uint milliseconds = 0, IAttributeService? attributeService = null)
 	{
 		var handler = new TestObjectFactory().CreateThing(8, "HTTP handler").AsThing;
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(handler);
-		var attributes = Substitute.For<IAttributeService>();
-		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
+		var attributes = attributeService ?? Substitute.For<IAttributeService>();
+		if (attributeService is null) attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
 			IAttributeService.AttributeMode.Execute, false).Returns((OptionalSharpAttributeOrError)new[]
 			{ new SharpAttribute("", "", "GET", [], null, "GET", null!, null!, null!) { Value = MarkupText.Plain("think handler") } });
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -38,6 +38,39 @@ public class HttpHandlerBudgetTests
 		var capture = new HttpOutputCapture();
 		return (new(mediator, attributes, parser, capture, Substitute.For<IEventService>(), options,
 			NullLogger<HttpHandlerCommandService>.Instance), parser, capture);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task HandlerLookupHonorsRequestCancellationAndDeadline(bool expire)
+	{
+		var attributes = Substitute.For<IAttributeService>();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var release = new CancellationTokenSource();
+		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "GET",
+			IAttributeService.AttributeMode.Execute, false).Returns(async ValueTask<OptionalSharpAttributeOrError> (_) =>
+		{
+			entered.TrySetResult();
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, release.Token);
+			await Task.Delay(Timeout.Infinite, linked.Token);
+			throw new InvalidOperationException("The blocked lookup must be cancelled.");
+		});
+		var (service, _, capture) = Create(_ => ValueTask.FromResult<CallState?>(CallState.Empty), expire ? 100u : 0u, attributes);
+		using var cancellation = new CancellationTokenSource();
+		var dispatch = service.DispatchAsync("GET", "/lookup", "", [], cancellation.Token).AsTask();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).AsT0.Status).IsEqualTo(503);
+			else
+			{
+				cancellation.Cancel();
+				await Assert.That(async () => await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+			}
+			await Assert.That(capture.TryCapture(8, "late output")).IsFalse();
+		}
+		finally { release.Cancel(); }
 	}
 
 	[Test]
