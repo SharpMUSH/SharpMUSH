@@ -10,6 +10,25 @@ public class LocalFunctionRegistryTests
 	private static UserDefinedFunction Entry(string name, DBRef? owner, DBRef target) => new(name, target, "CODE", 0, 32, true, null, Owner: owner);
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ReplacingAnAliasedConcreteTargetIsRejected(bool global)
+	{
+		var registry = new UserDefinedFunctionService();
+		DBRef? owner = global ? null : Ref("#10:100");
+		registry.Define(Entry("a", owner, Ref("#20:100")));
+		registry.Define(Entry("b", owner, Ref("#21:100")));
+		await Assert.That(registry.Alias("c", "a", owner)).IsTrue();
+		await Assert.That(registry.Alias("A", "b", owner)).IsFalse();
+		await Assert.That(registry.Resolve("c", owner)!.Object).IsEqualTo(Ref("#20:100"));
+		await Assert.That(registry.Get("a", owner)!.AliasOf).IsNull();
+		var other = Ref("#10:200");
+		registry.Define(Entry("a", other, Ref("#22:100")));
+		registry.Define(Entry("b", other, Ref("#23:100")));
+		await Assert.That(registry.Alias("a", "b", other)).IsTrue();
+	}
+
+	[Test]
 	public async Task NamesAliasesAndMutationsRemainWithinFullOwnerScope()
 	{
 		var registry = new UserDefinedFunctionService();
