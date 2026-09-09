@@ -179,6 +179,8 @@ public partial class SurrealDatabase
 
 			await CreateInitialPowers(cancellationToken);
 
+			await MergeRenamedPower("Pueblo_Send", "Send_OOB", cancellationToken);
+
 			await CreateInitialAttributeEntries(cancellationToken);
 
 			await SeedPluginFlags(cancellationToken);
@@ -545,6 +547,37 @@ public partial class SurrealDatabase
 	/// Sanitizes a name for use as a SurrealDB record ID segment.
 	/// Wraps names containing special characters in backticks.
 	/// </summary>
+	/// <summary>
+	/// PennMUSH renames Pueblo_Send to Send_OOB at load (<c>src/flags.c:850-855</c>) by rewriting the
+	/// FLAG struct's name in place, so the struct keeps its identity and every object already holding
+	/// the power follows the rename for free. Grants here are edges keyed by the power's name, so the
+	/// equivalent is to move the edges onto the new record and drop the superseded one.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private async Task MergeRenamedPower(string oldName, string newName, CancellationToken ct)
+	{
+		var oldId = $"power:{SanitizeRecordId(oldName)}";
+		var newId = $"power:{SanitizeRecordId(newName)}";
+
+		// Delete-then-relate rather than UPDATE ... SET out: `out` on an existing graph edge does not
+		// move, and ExecuteAsync only logs SurrealQL errors, so an UPDATE here fails silently and
+		// strands the grant. Holders that somehow already hold the new power are excluded so the
+		// has_powers_in_out unique index is not violated by the RELATE.
+		var response = await ExecuteAsync(
+			$"LET $holders = (SELECT VALUE in FROM has_powers WHERE out = {oldId} "
+			+ $"AND in NOT IN (SELECT VALUE in FROM has_powers WHERE out = {newId}));"
+			+ $"DELETE has_powers WHERE out = {oldId};"
+			+ $"FOR $holder IN $holders {{ RELATE $holder->has_powers->{newId}; }};"
+			+ $"DELETE {oldId};", ct);
+
+		if (response.HasErrors)
+		{
+			logger.LogWarning("Renaming power {Old} to {New} reported errors; existing grants may not have moved.",
+				oldName, newName);
+		}
+	}
+
+
 	private static string SanitizeRecordId(string name)
 	{
 		// SurrealDB record IDs with special characters need to be wrapped in backticks
