@@ -26,14 +26,14 @@ public partial class Commands
 		try
 		{
 			var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>()
-				.GetGameActorAsync(executor.Object().DBRef)
+				.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken)
 				?? throw new UnauthorizedAccessException("A linked active player is required.");
 			var switches = parser.CurrentState.Switches;
 			if (switches.Count() > 1) throw new ArgumentException("Choose one reality operation.");
 			var operation = switches.FirstOrDefault() ?? "LIST";
 			var target = parser.CurrentState.Arguments.TryGetValue("0", out var left) ? left.Message?.ToPlainText() ?? "" : "";
 			var value = parser.CurrentState.Arguments.TryGetValue("1", out var right) ? right.Message?.ToPlainText() ?? "" : "";
-			output = await parser.ServiceProvider.GetRequiredService<RealityAdministration>().ExecuteAsync(actor, operation, target, value);
+			output = await parser.ServiceProvider.GetRequiredService<RealityAdministration>().ExecuteAsync(actor, operation, target, value, ExecutionBudget.CurrentToken);
 		}
 		catch (Exception ex) when (ex is ArgumentException or UnauthorizedAccessException or InvalidDataException)
 		{

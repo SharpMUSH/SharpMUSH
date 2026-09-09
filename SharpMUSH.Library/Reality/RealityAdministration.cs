@@ -2,6 +2,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Reality;
@@ -104,7 +105,14 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 		var found = await objects.GetObjectNodeAsync(reference, ct);
 		if (found is null || found.IsNone || !found.Known.Object().DBRef.Matches(reference) || found.Known.Object().Id is null)
 			throw new ArgumentException("The object no longer exists.");
-		if (!await permissions.Controls(executor, found.Known)) throw new UnauthorizedAccessException("The active player must control the object.");
+		// Controls is a legacy read-only interface. Give builtin reads the caller's
+		// cancellation and bound implementations that cannot accept an explicit token.
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, ExecutionBudget.CurrentToken);
+		using var budget = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
+		using var scope = budget.Enter();
+		budget.ThrowIfExceeded();
+		if (!await permissions.Controls(executor, found.Known).AsTask().WaitAsync(budget.Token))
+			throw new UnauthorizedAccessException("The active player must control the object.");
 		return found.Known;
 	}
 }

@@ -4,6 +4,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -11,6 +12,45 @@ namespace SharpMUSH.Tests.Services;
 
 public class RealityAdministrationTests
 {
+	[Test]
+	public async Task DirectCallerCancellationBoundsControlAuthorization()
+	{
+		var player = new TestObjectFactory().CreatePlayer(45, "admin");
+		player.Object().Id = "admin";
+		var store = Substitute.For<IExpandedDataStore>();
+		var objects = Substitute.For<IObjectStore>();
+		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player.AsPlayer));
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(true);
+		var permissions = Substitute.For<IPermissionService>();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var release = new CancellationTokenSource();
+		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(async ValueTask<bool> (_) =>
+		{
+			var token = ExecutionBudget.CurrentToken;
+			entered.TrySetResult(token);
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
+			await Task.Delay(Timeout.Infinite, linked.Token);
+			return true;
+		});
+		var service = new RealityAdministration(new(store, objects), capabilities, objects, permissions, Substitute.For<IValidateService>());
+		using var cancellation = new CancellationTokenSource();
+		var invocation = service.ExecuteAsync(new("admin", player.Object().DBRef, player.Object().DBRef),
+			"inspect", player.Object().DBRef.ToString(), "", cancellation.Token);
+		try
+		{
+			await Assert.That((await entered.Task.WaitAsync(TimeSpan.FromSeconds(2))).CanBeCanceled).IsTrue();
+			cancellation.Cancel();
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await invocation.WaitAsync(TimeSpan.FromSeconds(2)));
+			await store.DidNotReceiveWithAnyArgs().SetExpandedObjectData(default!, default!, default!);
+		}
+		finally
+		{
+			release.Cancel();
+			try { await invocation; } catch (OperationCanceledException) { }
+		}
+	}
+
 	[Test]
 	public async Task RevokedAccountCannotChangeConfiguration()
 	{
