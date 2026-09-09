@@ -224,6 +224,88 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task FailedCustomSemaphoreInitializationRemovesPartialAttribute()
+	{
+		SharpAttribute? attribute = null;
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			(attribute is null ? Array.Empty<SharpAttribute>() : new[] { attribute }).ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			attribute = new SharpAttribute("", "", "CUSTOM", [], null, "CUSTOM", null!, null!, null!)
+			{ Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value };
+			return ValueTask.FromResult(true);
+		});
+		mediator.CreateStream(Arg.Any<GetAttributeFlagsQuery>(), Arg.Any<CancellationToken>()).Returns(
+			new[] { "no_inherit", "no_clone", "locked" }.Select(name => new SharpAttributeFlag
+			{ Name = name, Symbol = "", System = true, Inheritable = false }).ToAsyncEnumerable());
+		var fail = true;
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call => !fail || call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeFlagCommand>().Flag.Name != "no_clone");
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.WipeAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(_ => { attribute = null; return true; });
+		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>());
+		await Assert.That(async () => await queue.WriteCommandList(MarkupText.Plain("think pending"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["CUSTOM"]), 0, manageSemaphoreCount: true)).Throws<InvalidOperationException>();
+		await Assert.That(attribute).IsNull();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		fail = false;
+		var retry = await queue.WriteCommandList(MarkupText.Plain("think pending"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["CUSTOM"]), 0, manageSemaphoreCount: true);
+		await Assert.That(retry.Accepted).IsTrue();
+		await Assert.That(attribute!.Value.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task FailedHaltCounterWriteRetainsPidForRetry()
+	{
+		var count = 0;
+		var fail = false;
+		var mediator = CountingMediator(() => count, value =>
+		{
+			if (fail) throw new InvalidOperationException("injected halt failure");
+			count = value;
+		});
+		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>());
+		var admitted = await queue.WriteCommandList(MarkupText.Plain("think pending"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true);
+		fail = true;
+		await Assert.That(async () => await queue.HaltByPid(admitted.Pid!.Value)).Throws<InvalidOperationException>();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(1);
+		fail = false;
+		await Assert.That(await queue.HaltByPid(admitted.Pid!.Value)).IsTrue();
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task FailedQuartzSemaphoreReleaseRequestsRetryBeforeDeletingSchedule()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		var queue = Substitute.For<ITaskScheduler>();
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Scheduler.Returns(scheduler);
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
+		var fail = true;
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => fail
+			? throw new InvalidOperationException("injected release failure")
+			: ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None)));
+		var job = new SemaphoreTask(queue);
+		await Assert.That(async () => await job.Execute(context)).Throws<JobExecutionException>();
+		await scheduler.DidNotReceive().UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
+		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
+		fail = false;
+		await job.Execute(context);
+		await queue.Received(2).ReleaseScheduledWork(42, true, 0);
+		// Generation-aware cleanup belongs to the ledger, so a stale job cannot remove a new timer.
+		await scheduler.DidNotReceive().UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
+		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
 	public async Task ManagedNegativeCreditIsRereadAndCommittedBeforeExecution()
 	{
 		var count = -1;

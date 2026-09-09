@@ -384,6 +384,7 @@ public partial class TaskScheduler(
 					.WithIdentity($"dbref:{state.Executor}-{pid}", group).Build());
 		}
 		var counterWritten = false;
+		var counterCreated = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
 		var fullTarget = target.Known().Object().DBRef;
@@ -400,6 +401,7 @@ public partial class TaskScheduler(
 					return new(null, QueueRejectionReason.AlreadyReleased);
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute)).LastOrDefaultAsync();
+				counterCreated = attribute is null;
 				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
 				if (!await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
@@ -427,8 +429,14 @@ public partial class TaskScheduler(
 			{
 				// The mutation lease excludes notify, drain and timeout bookkeeping until rollback completes.
 				if (counterWritten)
-					await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
-						MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+				{
+					// Restore absence as well as value: partial custom flags cannot pass validation.
+					var restored = counterCreated
+						? await mediator.Send(new WipeAttributeCommand(fullTarget, dbRefAttribute.Attribute))
+						: await mediator.Send(new SetAttributeCommand(fullTarget, dbRefAttribute.Attribute,
+							MarkupString.MarkupText.Plain(currentCount.ToString()), god!));
+					if (!restored) throw new InvalidOperationException("Semaphore admission rollback failed.");
+				}
 			}
 			finally { Release(admission.Pid!.Value); }
 			throw;
@@ -527,18 +535,15 @@ public partial class TaskScheduler(
 		{
 			lock (_admissionLock)
 			{
-				if (_ready.Contains(pid)) return true;
-				entry = RemoveEntry(pid);
+				if (!_pendingEntries.TryGetValue(pid, out entry) || _ready.Contains(pid)) return true;
 			}
+			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
+			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
+				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
+			lock (_admissionLock) entry = RemoveEntry(pid);
 			if (entry is null) return true;
 			try { await RemoveDeferredTrigger(entry); }
 			catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
-			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
-			{
-				try { await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget); }
-				catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed after halting PID {Pid}", pid); }
-			}
-
 		}
 		entry.Cts.Dispose();
 		return true;
