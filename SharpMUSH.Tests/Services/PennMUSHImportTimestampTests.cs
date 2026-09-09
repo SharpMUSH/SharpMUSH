@@ -169,14 +169,20 @@ public class PennMUSHImportTimestampTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Read back out of the store rather than through softcode: the import drops its objects into
-		// its own Limbo, which the test executor is not in, so name matching cannot see them. The
-		// stored fields are the property under test anyway — how csecs() renders them is settled
-		// separately (PR #921).
+		// Found through the store rather than by name: the import drops its objects into its own
+		// Limbo, which the test executor is not in, so name matching cannot see them. Addressed by
+		// objid afterwards, which can.
 		var imported = await FindByNameAsync("ImportedTimestampThing");
 		await Assert.That(imported.CreationTime).IsEqualTo(pennCreatedSeconds * 1000);
 		await Assert.That(imported.ModifiedTime).IsEqualTo(pennModifiedSeconds * 1000);
 		await Assert.That(imported.DBRef.ToString()).EndsWith($":{pennCreatedSeconds * 1000}");
+
+		// The softcode-visible half, and the point of the whole exercise: csecs() is PennMUSH
+		// seconds, so an imported object reports exactly the number the source database recorded.
+		var objid = imported.DBRef.ToString();
+		await Assert.That(await Eval($"csecs({objid})")).IsEqualTo(pennCreatedSeconds.ToString());
+		await Assert.That(await Eval($"msecs({objid})")).IsEqualTo(pennModifiedSeconds.ToString());
+		await Assert.That(await Eval($"csecs({objid},ms)")).IsEqualTo((pennCreatedSeconds * 1000).ToString());
 	}
 
 	/// <summary>

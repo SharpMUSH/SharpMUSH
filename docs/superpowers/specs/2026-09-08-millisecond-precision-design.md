@@ -131,15 +131,27 @@ use `objid()`. Softcode ported from a Penn game that holds hardcoded `#N:<second
 strings will not resolve those after import, even though the objects themselves import
 correctly.
 
-`PennMUSHDatabaseParser` reads Penn's `created` and `modified` fields correctly, but
-`PennMUSHDatabaseConverter` never carries them across — an imported object is created
-with a fresh timestamp, so **every objid changes on import** and any softcode holding
-one stops resolving. Preserving them requires an explicit creation time on
-`IObjectStore`'s four create methods and on both database providers, which is a
-cross-cutting change with its own review surface; it is tracked separately rather than
-folded in here. What this change does is document the unit on `PennMUSHObject` —
-seconds, as PennMUSH writes it — so the eventual carry-over scales by 1000 rather than
-storing seconds into a millisecond field.
+That incompatibility is the price of keeping milliseconds in the objid. It is only
+tolerable because the objid still *works* — which it did not before this change.
+
+`PennMUSHDatabaseParser` read Penn's `created` and `modified` fields correctly, but
+`PennMUSHDatabaseConverter` never carried them across: an imported object was created
+with a fresh timestamp, so **every objid changed on import** and any softcode holding
+one stopped resolving. The four `IObjectStore` create methods now take an optional
+creation and modification time in milliseconds, defaulting to now so no existing caller
+changes, and the converter passes PennMUSH's seconds scaled by 1000.
+
+Two details that are not obvious:
+
+- The stamp is a create parameter rather than something patched in afterwards because a
+  new player's password is hashed against its own objid, and login recomputes that key
+  from the stored fields. Creating with the wall clock and then restamping would key the
+  hash to an objid the object never has.
+- `#0`, `#1` and `#2` already exist in a migrated database, so the converter *reuses*
+  them and never reaches the create path. They are restamped explicitly through
+  `SetObjectTimestampsAsync`, which is documented as importer-only: it is a raw store
+  write below the Mediator layer and does not invalidate the number-keyed object cache,
+  so it is safe only at startup, before that cache is populated.
 
 ## Shared mechanism
 
