@@ -633,6 +633,10 @@ public class ListFunctionUnitTests
 	[Arguments("namegrab(#0 #1 #2,Master Room)", "#2")]
 	[Arguments("namegrab(#0 #1 #2,God)", "#1")]
 	[Arguments("namegrab(#0 #1 #2,god)", "#1")]
+	// A dbref past the top of the db parses fine and names nothing: fun_namegrab walks its list
+	// with GoodObject() and steps over those rather than failing the whole call.
+	[Arguments("namegrab(#1 #999999,God)", "#1")]
+	[Arguments("namegrab(#999999 #1,God)", "#1")]
 	public async Task Namegrab(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
@@ -644,6 +648,9 @@ public class ListFunctionUnitTests
 	[Arguments("namegraball(#0 #1 #2,Master Room)", "#2")]
 	[Arguments("namegraball(#0 #1 #2,God)", "#1")]
 	[Arguments("namegraball(#0 #1 #2,nobody)", "")]
+	[Arguments("namegraball(#1 #999999,God)", "#1")]
+	// fun_namegraball separates with the input delimiter, not a space (src/funlist.c:1371-1373).
+	[Arguments("namegraball(#0|#1|#2,room,|)", "#0|#2")]
 	public async Task NameGrabAll(string function, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
