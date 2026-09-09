@@ -128,4 +128,11 @@
   <data name="SocksetInvalidDescriptor" xml:space="preserve">
     <value>Descripteur invalide.</value>
   </data>
+  <data name="QueueControlSyntax" xml:space="preserve"><value>Utilisez @queue/list [pid], @queue/pause pid=raison ou @queue/resume pid ; ajoutez /owner ou /object pour un groupe cible.</value></data>
+  <data name="QueueControlBadReason" xml:space="preserve"><value>Une raison de pause doit contenir au plus 160 caractères, sans caractères de contrôle.</value></data>
+  <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0} : {1}.</value></data>
+  <data name="QueueControlEntry" xml:space="preserve"><value>PID {0} source {1} propriétaire {2} {3} {4} ; reste {5}s ; signalé {6} ; {7}</value></data>
+  <data name="QueueControlTruncated" xml:space="preserve"><value>Au plus 200 entrées affichées ou traitées. Précisez la sélection ; répétez une opération groupée pour les entrées restantes.</value></data>
+  <data name="QueueControlEmpty" xml:space="preserve"><value>Aucune entrée accessible ne correspond.</value></data>
+  <data name="QueuePausedHint" xml:space="preserve"><value>Tâches en pause : {0}. Utilisez @queue/list pour les détails, et @queue/pause ou @queue/resume pour gérer les tâches en attente.</value></data>
 </root>

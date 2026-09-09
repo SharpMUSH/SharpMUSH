@@ -1,4 +1,5 @@
 using Quartz;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -9,7 +10,7 @@ namespace SharpMUSH.Library.Services;
 
 public partial class TaskScheduler
 {
-	private sealed record DeferredSchedule(DateTimeOffset Due, Func<TimeSpan, long, ValueTask> Schedule, DbRefAttribute? Semaphore)
+	private sealed record DeferredSchedule(DateTimeOffset Due, Func<TimeSpan, long, ValueTask> Schedule, DbRefAttribute? Semaphore, MString Command, ParserState State)
 	{
 		public bool Paused { get; init; }
 		public TimeSpan Remaining { get; init; }
@@ -120,6 +121,11 @@ public partial class TaskScheduler
 
 	private async ValueTask<bool> ValidQueuedIdentity(QueueEntry entry)
 	{
+		if (entry.SemaphoreTarget is { } semaphoreTarget)
+		{
+			var semaphore = await mediator.Send(new GetObjectNodeQuery(semaphoreTarget));
+			if (semaphore.IsNone || semaphore.Known().Object().DBRef != semaphoreTarget) return false;
+		}
 		if (entry.Executor is not { } executor) return true;
 		var target = await mediator.Send(new GetObjectNodeQuery(executor));
 		if (target.IsNone || target.Known().Object().DBRef != executor) return false;

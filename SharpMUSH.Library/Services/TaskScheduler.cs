@@ -360,7 +360,7 @@ public partial class TaskScheduler(
 		}
 		timeout = Nonnegative(timeout);
 		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-		{ Deferred = new(DateTimeOffset.UtcNow + timeout, Schedule, dbRefAttribute) };
+		{ Deferred = new(DateTimeOffset.UtcNow + timeout, Schedule, dbRefAttribute, command, state) };
 		try { await Schedule(timeout, 0); return admission; }
 		catch { Release(pid); throw; }
 	}
@@ -368,15 +368,17 @@ public partial class TaskScheduler(
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> Notify(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		using var lease = await LockDeferred();
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
-		var outcomes = new List<QueueAdmissionResult>();
-		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last())).Take(Math.Max(0, count)))
+		QueueEntry[] waiting;
+		var group = $"{SemaphoreGroup}:{dbAttribute}";
+		lock (_admissionLock)
+			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+				&& e.Deferred?.ReleasePending != true).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
+		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
+		foreach (var entry in waiting)
 		{
-			var trigger = await _scheduler.GetTrigger(key);
-			if (trigger is null) continue;
-			await _scheduler.UnscheduleJob(key);
-			await _scheduler.DeleteJob(trigger.JobKey);
-			outcomes.Add(await Activate(long.Parse(key.Name.Split('-').Last())));
+			try { await RemoveDeferredTrigger(entry); }
+			catch (Exception ex) { logger.LogWarning(ex, "Could not remove notified trigger for PID {Pid}", entry.Pid); }
+			outcomes.Add(await Activate(entry.Pid));
 		}
 		return outcomes;
 	}
@@ -386,70 +388,21 @@ public partial class TaskScheduler(
 
 	public async ValueTask<bool> ModifyQRegisters(DbRefAttribute dbAttribute, Dictionary<string, MString> qRegisters)
 	{
+		if (qRegisters is null || qRegisters.Count == 0) return false;
 		using var lease = await LockDeferred();
-		if (qRegisters == null || qRegisters.Count == 0)
+		QueueEntry? entry;
+		var group = $"{SemaphoreGroup}:{dbAttribute}";
+		lock (_admissionLock)
+			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
+				&& e.Deferred?.ReleasePending != true).MinBy(e => e.Pid);
+		if (entry?.Deferred is not { } deferred) return false;
+		if (!deferred.State.Registers.TryPeek(out var registers))
 		{
-			return false;
+			registers = new Dictionary<string, MString>();
+			deferred.State.Registers.Push(registers);
 		}
-
-		var semaphoresForObject = await _scheduler
-			.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"));
-
-		var firstTrigger = semaphoresForObject.OrderBy(k => long.Parse(k.Name.Split('-').Last())).FirstOrDefault();
-		if (firstTrigger == null)
-		{
-			return false;
-		}
-
-		try
-		{
-			var trigger = await _scheduler.GetTrigger(firstTrigger, CancellationToken.None);
-			if (trigger == null)
-			{
-				return false;
-			}
-
-			var job = await _scheduler.GetJobDetail(trigger.JobKey);
-			if (job == null)
-			{
-				return false;
-			}
-
-			var data = job.JobDataMap;
-
-			if (!data.TryGetValue("State", out var stateObj) || stateObj is not ParserState state)
-			{
-				return false;
-			}
-
-			if (state.Registers.TryPeek(out var registers))
-			{
-				foreach (var qreg in qRegisters)
-				{
-					registers[qreg.Key.ToUpper()] = qreg.Value;
-				}
-			}
-			else
-			{
-				var newRegisters = new Dictionary<string, MString>();
-				foreach (var qreg in qRegisters)
-				{
-					newRegisters[qreg.Key.ToUpper()] = qreg.Value;
-				}
-				state.Registers.Push(newRegisters);
-			}
-
-			data["State"] = state;
-
-			await _scheduler.AddJob(job, replace: true, storeNonDurableWhileAwaitingScheduling: true);
-
-			return true;
-		}
-		catch (Exception)
-		{
-			// Job may have been removed or modified concurrently
-			return false;
-		}
+		foreach (var (key, value) in qRegisters) registers[key.ToUpperInvariant()] = value;
+		return true;
 	}
 
 	public async ValueTask Drain(DbRefAttribute dbAttribute, int? count = null)
@@ -532,7 +485,7 @@ public partial class TaskScheduler(
 		}
 		delay = Nonnegative(delay);
 		lock (_admissionLock) _pendingEntries[pid] = _pendingEntries[pid] with
-		{ Deferred = new(DateTimeOffset.UtcNow + delay, Schedule, null) };
+		{ Deferred = new(DateTimeOffset.UtcNow + delay, Schedule, null, command, state) };
 		try { await Schedule(delay, 0); return admission; }
 		catch { Release(pid); throw; }
 	}
@@ -568,46 +521,24 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
+		=> SemaphoreSnapshots(e => e.SemaphoreTarget?.Matches(obj) == true).ToAsyncEnumerable();
+
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
+		=> SemaphoreSnapshots(e => e.Pid == pid).ToAsyncEnumerable();
+
+	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
+		=> SemaphoreSnapshots(e => e.Group == $"{SemaphoreGroup}:{objAttribute}").ToAsyncEnumerable();
+
+	private SemaphoreTaskData[] SemaphoreSnapshots(Func<QueueEntry, bool> predicate)
 	{
-		var candidates = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:#{obj.Number}"));
-		var keys = candidates.Where(key => DbRefAttribute.TryParse(key.Group[(SemaphoreGroup.Length + 1)..], out var attribute)
-		 && attribute!.Value.DbRef.Matches(obj));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
+		lock (_admissionLock)
 		{
-			yield return key;
-		}
-	}
-
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(long pid)
-	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}:"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Where(key => key.Name.EndsWith($"-{pid}"))
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
-		{
-			yield return key;
-		}
-	}
-
-	public async IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DbRefAttribute objAttribute)
-	{
-		var keys = await _scheduler.GetTriggerKeys(
-			GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{objAttribute}"));
-		var keyTriggers = keys.ToAsyncEnumerable()
-			.Select<TriggerKey, SemaphoreTaskData>(async (triggerKey, _) =>
-				await MapSemaphoreTaskData(_scheduler, triggerKey));
-
-		await foreach (var key in keyTriggers)
-		{
-			yield return key;
+			var now = DateTimeOffset.UtcNow;
+			return _pendingEntries.Values.Where(e => e.Deferred?.Semaphore is not null && !_ready.Contains(e.Pid) && predicate(e))
+				.OrderBy(e => e.Pid).Select(e => new SemaphoreTaskData(e.Pid, e.Deferred!.Command,
+					e.Executor ?? new DBRef(-1), new DbRefAttribute(e.SemaphoreTarget!.Value, e.Deferred.Semaphore!.Value.Attribute),
+					e.Deferred.Paused ? e.Deferred.Remaining : Nonnegative(e.Deferred.Due - now))).ToArray();
 		}
 	}
 
@@ -636,22 +567,6 @@ public partial class TaskScheduler(
 			.ToAsyncEnumerable();
 	}
 
-	private static async ValueTask<SemaphoreTaskData> MapSemaphoreTaskData(IScheduler scheduler, TriggerKey triggerKey)
-	{
-		var trigger = await scheduler.GetTrigger(triggerKey);
-		var job = await scheduler.GetJobDetail(trigger.JobKey);
-		var data = job.JobDataMap;
-		var command = (MString)data["Command"];
-		var state = (ParserState)data["State"];
-		var fireDelay = trigger.FinalFireTimeUtc is null
-			? null
-			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
-		var semaphoreSourceString = string.Join(':', triggerKey.Group.Split(':').Skip(1));
-		var semaphoreSource = DbRefAttribute.Parse(semaphoreSourceString);
-		var pid = long.Parse(triggerKey.Name.Split('-').Last());
-
-		return new SemaphoreTaskData(pid, command, state.Caller!.Value, semaphoreSource, fireDelay);
-	}
 
 	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
 	{

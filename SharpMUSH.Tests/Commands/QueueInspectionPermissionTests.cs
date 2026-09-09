@@ -13,9 +13,12 @@ public class QueueInspectionPermissionTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task AnotherPlayersQueuedCommandIsPrivate(bool debug)
+	[Arguments("list")]
+	[Arguments("debug")]
+	[Arguments("pidinfo")]
+	[Arguments("halt")]
+	[Arguments("reschedule")]
+	public async Task AnotherPlayersQueueCannotBeReadOrChanged(string operation)
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
@@ -28,7 +31,14 @@ public class QueueInspectionPermissionTests
 		try
 		{
 			var before = Factory.Notifications.CountFor(mortal.DbRef);
-			var command = debug ? $"@ps/debug {job.Pid}" : $"@ps {target}";
+			var command = operation switch
+			{
+				"debug" => $"@ps/debug {job.Pid}",
+				"pidinfo" => $"think [pidinfo({job.Pid},command)]",
+				"halt" => $"@halt/pid {job.Pid}",
+				"reschedule" => $"@wait/pid {job.Pid}=30",
+				_ => $"@ps {target}"
+			};
 			var result = await Factory.CommandParser.CommandParse(mortal.Handle, connections, MarkupText.Plain(command));
 			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 			await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains("PrivateQueueSecret"))).IsFalse();

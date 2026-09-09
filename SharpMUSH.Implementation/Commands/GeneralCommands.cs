@@ -1951,6 +1951,13 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
+			if (scheduler.GetQueueEntry(pid) is not null && !await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var halted = await Mediator.Send(new HaltByPidRequest(pid));
 			if (halted)
 			{
@@ -2781,6 +2788,13 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
+		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var timeArg = arg1;
 
 		if (switches.Contains("UNTIL"))
@@ -2799,7 +2813,7 @@ public partial class Commands
 
 		if (arg1.StartsWith('+') || arg1.StartsWith('-'))
 		{
-			timeArg = arg1.Skip(1).ToString();
+			timeArg = arg1[1..];
 		}
 
 		if (!long.TryParse(timeArg, out var secs))
@@ -4666,6 +4680,19 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
+			var queued = scheduler.GetQueueEntry(pid);
+			if (queued is null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
+				return new CallState(ErrorMessages.Returns.NotFound);
+			}
+			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
 			var tasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).ToArrayAsync();
 			if (tasks.Length == 0)
 			{
@@ -4675,7 +4702,7 @@ public partial class Commands
 
 			var task = tasks[0];
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), executor, pid);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, task.Owner);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, queued.Owner?.ToString() ?? "?");
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), executor, task.SemaphoreSource);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugCommandFormat), executor, task.Command.ToPlainText());
 			if (task.RunDelay.HasValue)
@@ -4710,9 +4737,17 @@ public partial class Commands
 			target = executor;
 		}
 
+		if (!await PermissionService.Controls(executor, target) && !await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var targetDbRef = target.Object().DBRef;
 
-		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
+		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef))
+			.Where(async (task, ct) => await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, task.Pid, mutate: false, ct)).ToArrayAsync();
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
 		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 
@@ -4737,7 +4772,7 @@ public partial class Commands
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsWizard())
+			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -4796,7 +4831,9 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
 			}
 		}
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueManagementNotImplemented), executor);
+		var paused = scheduler.GetQueueEntries().Count(e => e.State == SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Paused
+			&& (e.Source == targetDbRef || e.Owner == targetDbRef));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueuePausedHint), executor, paused);
 
 		return CallState.Empty;
 	}

@@ -30,7 +30,7 @@ public class QueueAdmissionTests
 		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
 		 NullLogger<Scheduler>.Instance, options);
 	}
-	private static IMediator TargetMediator()
+	internal static IMediator TargetMediator()
 	{
 		var mediator = Substitute.For<IMediator>();
 		ConfigureTargets(mediator);
@@ -190,7 +190,7 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
-	public async Task HaltRacingDeferredReleaseRetainsReservationUntilConsumed()
+	public async Task HaltRacingDeferredReleaseCannotReactivateRemovedWork()
 	{
 		var scheduler = Substitute.For<IScheduler>();
 		var unscheduling = Signal();
@@ -209,12 +209,15 @@ public class QueueAdmissionTests
 			var deferred = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ignored"), ParserState.Empty, TimeSpan.FromHours(1));
 			var halt = queue.HaltByPid(deferred.Pid!.Value).AsTask();
 			await unscheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			await queue.ReleaseScheduledWork(deferred.Pid.Value);
+			// Release now serializes behind cancellation's deferred transition. Do not await
+			// it before releasing the fake Quartz barrier, which would deadlock the fixture.
+			var firing = queue.ReleaseScheduledWork(deferred.Pid.Value).AsTask();
 			unscheduled.SetResult(true);
-			await Assert.That(await halt).IsTrue();
-			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
-			var rejected = await queue.EnqueueWork(() => ValueTask.FromResult<CallState?>(null), "extra", "test");
-			await Assert.That(rejected.Accepted).IsFalse();
+			await Assert.That(await halt.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+			await Assert.That((await firing.WaitAsync(TimeSpan.FromSeconds(5))).Reason)
+				.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That(queue.GetQueueEntry(deferred.Pid.Value)).IsNull();
 		}
 		finally { unscheduled.TrySetResult(true); release.TrySetResult(); }
 	}

@@ -1,4 +1,7 @@
 using Mediator;
+using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Quartz;
@@ -12,9 +15,105 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueuePauseTests
 {
-	private static Scheduler Create(IMUSHCodeParser? parser = null) => new(parser ?? Substitute.For<IMUSHCodeParser>(),
-		Substitute.For<IConnectionService>(), Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(),
-		Substitute.For<IMediator>(), NullLogger<Scheduler>.Instance);
+	private static Scheduler Create(IMUSHCodeParser? parser = null, IScheduler? scheduler = null, IMediator? mediator = null)
+	{
+		var factory = Substitute.For<ISchedulerFactory>();
+		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
+		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(), factory,
+			Substitute.For<IAttributeService>(), mediator ?? QueueAdmissionTests.TargetMediator(), NullLogger<Scheduler>.Instance);
+	}
+
+	[Test]
+	public async Task RacingFirePauseResumeAndCancelNeverExecuteTwice()
+	{
+		for (var iteration = 0; iteration < 25; iteration++)
+		{
+			var parser = Substitute.For<IMUSHCodeParser>();
+			parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+			var count = 0;
+			parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
+			{ Interlocked.Increment(ref count); return ValueTask.FromResult<CallState?>(null); });
+			var queue = Create(parser);
+			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromHours(1));
+			var pid = job.Pid!.Value;
+			await Task.WhenAll(
+				Task.Run(async () => { await queue.PausePending(pid, "race"); await queue.ResumePending(pid); }),
+				Task.Run(async () => { await queue.ReleaseScheduledWork(pid, generation: 0); await queue.ReleaseScheduledWork(pid, generation: 2); }),
+				Task.Run(async () => await queue.HaltByPid(pid)));
+			await queue.DisposeAsync();
+			await Assert.That(count).IsLessThanOrEqualTo(1);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ResumeRejectsMissingCapturedExecutorOrSemaphoreTarget(bool semaphore)
+	{
+		var mediator = QueueAdmissionTests.TargetMediator();
+		await using var queue = Create(mediator: mediator);
+		var state = ParserState.Empty with { Executor = new DBRef(7, 1) };
+		var job = semaphore
+			? await queue.WriteCommandList(MarkupText.Plain("think retained"), state, new DbRefAttribute(new DBRef(8, 1), ["SEMAPHORE"]), 1)
+			: await queue.WriteCommandList(MarkupText.Plain("think retained"), state, TimeSpan.FromHours(1));
+		await queue.PausePending(job.Pid!.Value, "hold");
+		var missing = new DBRef(semaphore ? 8 : 7, 1);
+		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == missing), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(new None()));
+		await Assert.That(await queue.ResumePending(job.Pid.Value)).IsEqualTo(QueueControlResult.InvalidIdentity);
+		await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task PausedWaiterRetainsNotifyRegistersEvenWithoutAQuartzTrigger()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		ParserState? captured = null;
+		parser.FromState(Arg.Any<ParserState>()).Returns(call => { captured = call.Arg<ParserState>(); return parser; });
+		var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser);
+		var semaphore = new DbRefAttribute(new DBRef(50, 1), ["SEMAPHORE"]);
+		var job = await queue.WriteCommandList(MarkupText.Plain("think signal"), ParserState.Empty, semaphore, 1);
+		await queue.PausePending(job.Pid!.Value, "hold");
+		await Assert.That(await queue.ModifyQRegisters(semaphore, new() { ["signal"] = MarkupText.Plain("retained") })).IsTrue();
+		await queue.Notify(semaphore, 1);
+		await queue.ResumePending(job.Pid.Value);
+		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		captured!.Registers.TryPeek(out var registers);
+		await Assert.That(registers!["SIGNAL"].ToPlainText()).IsEqualTo("retained");
+	}
+
+	[Test]
+	public async Task RealTimerStaysPausedPastItsDeadlineAndFiresOnceAfterResume()
+	{
+		var quartz = await new Quartz.Impl.StdSchedulerFactory(new System.Collections.Specialized.NameValueCollection
+		{
+			["quartz.scheduler.instanceName"] = "pause-" + Guid.NewGuid().ToString("N"),
+			["quartz.threadPool.threadCount"] = "1"
+		}).GetScheduler();
+		await quartz.Start();
+		try
+		{
+			var parser = Substitute.For<IMUSHCodeParser>();
+			parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+			var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+			var count = 0;
+			parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
+			{ Interlocked.Increment(ref count); ran.TrySetResult(); return ValueTask.FromResult<CallState?>(null); });
+			await using var queue = Create(parser, quartz);
+			var job = await queue.WriteCommandList(MarkupText.Plain("think once"), ParserState.Empty, TimeSpan.FromSeconds(1));
+			await Assert.That(await queue.PausePending(job.Pid!.Value, "hold")).IsEqualTo(QueueControlResult.Applied);
+			await Task.Delay(1200);
+			await Assert.That(count).IsEqualTo(0);
+			await Assert.That(await queue.ResumePending(job.Pid.Value)).IsEqualTo(QueueControlResult.Applied);
+			await ran.Task.WaitAsync(TimeSpan.FromSeconds(10));
+			await Assert.That(count).IsEqualTo(1);
+		}
+		finally { await quartz.Shutdown(); }
+	}
 
 	[Test]
 	public async Task PauseRetainsPendingPidAndQuota()
@@ -47,8 +146,7 @@ public class QueuePauseTests
 		});
 		await using var queue = Create(parser);
 		var state = ParserState.Empty;
-		state.Registers.TryPeek(out var registers);
-		registers!["CHECK"] = MarkupText.Plain("retained");
+		state.Registers.Push(new Dictionary<string, MarkupText> { ["CHECK"] = MarkupText.Plain("retained") });
 		var job = await queue.WriteCommandList(MarkupText.Plain("think once"), state, TimeSpan.FromHours(1));
 		var pid = job.Pid!.Value;
 		await queue.PausePending(pid, "inspect");

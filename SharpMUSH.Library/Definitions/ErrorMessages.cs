@@ -372,6 +372,13 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Notifications
 	{
+		public const string QueueControlSyntax = "Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.";
+		public const string QueueControlBadReason = "Pause reasons must contain at most 160 characters and no control characters.";
+		public const string QueueControlOutcome = "PID {0}: {1}.";
+		public const string QueueControlEntry = "PID {0} source {1} owner {2} {3} {4}; remaining {5}s; signalled {6}; {7}";
+		public const string QueueControlTruncated = "Showing or processing at most 200 entries. Narrow the selection; repeat a batch operation for remaining eligible entries.";
+		public const string QueueControlEmpty = "No accessible matching queue entries.";
+		public const string QueuePausedHint = "Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.";
 		public const string QueueRejected = "Queue admission rejected: {0}.";
 		public const string QueueUsage = "Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.";
 		public const string QueueRejections = "Queue rejections ({0}): {1}.";
