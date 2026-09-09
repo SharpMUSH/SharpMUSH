@@ -437,13 +437,18 @@ public class PermissionService(
 			_ => PassesLock(who, thing.Known, LockType.Basic)
 		};
 
+	/// <summary>
+	/// PennMUSH <c>could_doit</c> (<c>src/predicat.c:75</c>) as <c>do_move</c> uses it
+	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover.
+	/// </summary>
+	/// <remarks>
+	/// <paramref name="destination"/> takes no part in the decision. Penn resolves the destination
+	/// only after <c>could_doit</c> has passed, so nothing about where the exit leads can influence
+	/// whether it may be walked; the parameter stays because callers already hold it and the
+	/// signature is the seam a game that wants a destination-aware rule would override.
+	/// </remarks>
 	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
-	{
-		var _ = who;
-		var _2 = exit;
-		var _3 = destination;
-		return ValueTask.FromResult(true);
-	}
+		=> PassesLock(who, new AnySharpObject(exit), LockType.Basic);
 
 	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>
 	public bool ChannelOkType(AnySharpObject target, SharpChannel channel)

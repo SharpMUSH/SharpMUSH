@@ -14,6 +14,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
@@ -44,6 +45,7 @@ public partial class Commands
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
 	private const string AttrFollowing = "FOLLOWING";
+	private const string AttrFollowers = "FOLLOWERS";
 
 	/// <summary>
 	/// Clears a follower's FOLLOWING attribute on the engine's own authority.
@@ -66,6 +68,222 @@ public partial class Commands
 		AnySharpObject follower, AnySharpObject leader)
 		=> await AttributeService.SetAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
 			AttrFollowing, MarkupText.Plain(leader.Object().DBRef.ToString()));
+
+	/// <summary>
+	/// The dbrefs on <paramref name="leader"/>'s <c>FOLLOWERS</c> list, in order.
+	/// PennMUSH keeps this list beside each follower's <c>FOLLOWING</c> so that
+	/// <c>follower_command</c> (<c>src/move.c:1458</c>) can read the leader's followers directly
+	/// instead of scanning every object's <c>FOLLOWING</c> after every successful move.
+	/// </summary>
+	/// <remarks>
+	/// Read as GOD for the same reason the writes are: <c>FOLLOWERS</c> carries the <c>wizard</c>
+	/// attribute flag (<c>AttributeEntrySeed.cs:68</c>), and a mortal following someone else has to
+	/// be able to reach the leader's copy.
+	/// </remarks>
+	private async ValueTask<string[]> FollowersOfAsync(AnySharpObject leader)
+	{
+		var followers = await AttributeService.GetAttributeAsync(
+			await HelperFunctions.GetGod(Mediator), leader, AttrFollowers,
+			IAttributeService.AttributeMode.Read, parent: false);
+
+		return followers.IsAttribute
+			? [.. followers.AsAttribute.Last().Value.ToPlainText()
+				.Split(' ', StringSplitOptions.RemoveEmptyEntries)]
+			: [];
+	}
+
+	/// <inheritdoc cref="FollowersOfAsync"/>
+	private async ValueTask<OneOf<Success, Error<string>>> WriteFollowersAsync(
+		AnySharpObject leader, IEnumerable<string> followers)
+	{
+		var god = await HelperFunctions.GetGod(Mediator);
+		var value = string.Join(' ', followers);
+
+		// PennMUSH's atr_add with an empty value removes the attribute (src/atr.c), which is what
+		// del_follower relies on to leave no empty FOLLOWERS behind.
+		return value.Length == 0
+			? await AttributeService.ClearAttributeAsync(god, leader, AttrFollowers,
+				IAttributeService.AttributePatternMode.Exact)
+			: await AttributeService.SetAttributeAsync(god, leader, AttrFollowers, MarkupText.Plain(value));
+	}
+
+	/// <summary>PennMUSH <c>add_follower</c> (<c>src/move.c:1208</c>).</summary>
+	private async ValueTask AddFollowerAsync(AnySharpObject leader, AnySharpObject follower)
+	{
+		var followerRef = follower.Object().DBRef.ToString();
+		var current = await FollowersOfAsync(leader);
+
+		if (current.Contains(followerRef))
+		{
+			return;
+		}
+
+		await WriteFollowersAsync(leader, [.. current, followerRef]);
+	}
+
+	/// <summary>PennMUSH <c>del_follower</c> (<c>src/move.c:1262</c>).</summary>
+	private async ValueTask RemoveFollowerAsync(AnySharpObject leader, AnySharpObject follower)
+	{
+		var followerRef = follower.Object().DBRef.ToString();
+		var current = await FollowersOfAsync(leader);
+
+		if (!current.Contains(followerRef))
+		{
+			return;
+		}
+
+		await WriteFollowersAsync(leader, current.Where(x => x != followerRef));
+	}
+
+	/// <summary>
+	/// Whoever <paramref name="follower"/> currently follows, or none. SharpMUSH's <c>FOLLOWING</c>
+	/// holds one leader rather than PennMUSH's list, so a new FOLLOW replaces the old one — and has
+	/// to take the follower off the previous leader's <c>FOLLOWERS</c> as it does.
+	/// </summary>
+	private async ValueTask<AnySharpObject?> LeaderOfAsync(AnySharpObject follower)
+	{
+		var following = await AttributeService.GetAttributeAsync(
+			await HelperFunctions.GetGod(Mediator), follower, AttrFollowing,
+			IAttributeService.AttributeMode.Read, parent: false);
+
+		if (!following.IsAttribute
+				|| !DBRef.TryParse(following.AsAttribute.Last().Value.ToPlainText().Trim(), out var leaderRef))
+		{
+			return null;
+		}
+
+		var node = await Mediator.Send(new GetObjectNodeQuery(leaderRef!.Value));
+
+		return node.IsNone ? null : node.Known;
+	}
+
+	/// <summary>
+	/// Stops <paramref name="follower"/> following anyone, taking them off their leader's
+	/// <c>FOLLOWERS</c> too. PennMUSH <c>clear_following</c> (<c>src/move.c:1425</c>).
+	/// </summary>
+	private async ValueTask<OneOf<Success, Error<string>>> StopFollowingAsync(AnySharpObject follower)
+	{
+		var leader = await LeaderOfAsync(follower);
+
+		if (leader is not null)
+		{
+			await RemoveFollowerAsync(leader, follower);
+		}
+
+		return await ClearFollowingAsync(follower);
+	}
+
+	/// <summary>
+	/// Stops everyone following <paramref name="leader"/>, clearing each follower's
+	/// <c>FOLLOWING</c> and then the leader's own list. PennMUSH <c>clear_followers</c>
+	/// (<c>src/move.c:1400</c>). Answers with the followers that were actually cleared, so the
+	/// caller can report them.
+	/// </summary>
+	private async ValueTask<AnySharpObject[]> ClearFollowersAsync(AnySharpObject leader)
+	{
+		var followers = await FollowersOfAsync(leader);
+		var cleared = new List<AnySharpObject>(followers.Length);
+
+		foreach (var token in followers)
+		{
+			if (!DBRef.TryParse(token, out var followerRef))
+			{
+				continue;
+			}
+
+			var node = await Mediator.Send(new GetObjectNodeQuery(followerRef!.Value));
+
+			if (node.IsNone || (await ClearFollowingAsync(node.Known)).IsT1)
+			{
+				continue;
+			}
+
+			cleared.Add(node.Known);
+		}
+
+		await WriteFollowersAsync(leader, []);
+
+		return [.. cleared];
+	}
+
+	/// <summary>
+	/// Re-issues <paramref name="command"/> for every object following <paramref name="leader"/>
+	/// that was standing with them. PennMUSH <c>follower_command</c> (<c>src/move.c:1458</c>).
+	/// </summary>
+	/// <remarks>
+	/// Each follower's command is queued as that follower with the leader as enactor, not run
+	/// inline: a chain of followers would otherwise recurse on the stack.
+	/// </remarks>
+	private async ValueTask FollowerCommand(
+		IMUSHCodeParser parser,
+		AnySharpObject leader,
+		AnySharpContainer from,
+		string command,
+		DBRef? toward)
+	{
+		var followers = await FollowersOfAsync(leader);
+
+		if (followers.Length == 0)
+		{
+			return;
+		}
+
+		var line = toward is null ? command : $"{command} {toward}";
+		var leaderIsHidden = await leader.IsDarkLegal();
+
+		foreach (var token in followers)
+		{
+			if (!DBRef.TryParse(token, out var followerRef))
+			{
+				continue;
+			}
+
+			var node = await Mediator.Send(new GetObjectNodeQuery(followerRef!.Value));
+
+			if (node.IsNone)
+			{
+				continue;
+			}
+
+			var follower = node.Known;
+
+			if (!follower.IsContent)
+			{
+				continue;
+			}
+
+			var followerLocation = await follower.AsContent.Location();
+
+			if (!followerLocation.Object().DBRef.Equals(from.Object().DBRef))
+			{
+				continue;
+			}
+
+			if (leaderIsHidden && !await follower.HasPower("See_All"))
+			{
+				continue;
+			}
+
+			await NotifyService.NotifyLocalized(follower.Object().DBRef,
+				nameof(ErrorMessages.Notifications.YouFollowFormat), leader.Object().Name);
+
+			// parse_que gives the queued command its own pe_info (src/parse.c), so the follower's move
+			// does not spend the leader's recursion budget; and it is not direct input, so it carries
+			// no connection handle.
+			await Mediator.Send(new QueueCommandListRequest(
+				MarkupText.Plain(line),
+				parser.CurrentState with
+				{
+					Executor = follower.Object().DBRef,
+					Enactor = leader.Object().DBRef,
+					Caller = leader.Object().DBRef,
+					Handle = null,
+					MoveDepth = new InvocationCounter()
+				},
+				new DbRefAttribute(follower.Object().DBRef, DefaultSemaphoreAttributeArray),
+				-1));
+		}
+	}
 
 
 	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
@@ -990,34 +1208,17 @@ public partial class Commands
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			var selfCleared = await ClearFollowingAsync(executor);
+			// clear_following then clear_followers (move.c:1201-1202), both of which keep the two
+			// lists in step. The leader's FOLLOWERS is what names the followers, so no scan of every
+			// object's FOLLOWING is needed to find them.
+			var selfCleared = await StopFollowingAsync(executor);
 			if (selfCleared.IsT1)
 			{
 				await NotifyService.Notify(executor, selfCleared.AsT1.Value, executor);
 				return CallState.Empty;
 			}
 
-			var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
-			var executorDbref = executor.Object().DBRef.ToString();
-
-			await foreach (var obj in allObjects)
-			{
-				var objAttributes = obj.Attributes.Value;
-				await foreach (var attr in objAttributes)
-				{
-					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
-					{
-						var locateResult = await LocateService.Locate(parser, executor, executor,
-							obj.DBRef.ToString(), LocateFlags.All);
-						if (locateResult.IsValid())
-						{
-							var objAny = locateResult.AsAnyObject;
-							await ClearFollowingAsync(objAny);
-						}
-						break;
-					}
-				}
-			}
+			await ClearFollowersAsync(executor);
 
 			await NotifyService.Notify(executor, "You stop following and dismiss all followers.", executor);
 			return CallState.Empty;
@@ -1044,7 +1245,8 @@ public partial class Commands
 			var followingDbref = followingAttr.AsAttribute.Last().Value.ToPlainText();
 			if (followingDbref == target.Object().DBRef.ToString())
 			{
-				var cleared = await ClearFollowingAsync(executor);
+				// del_follow(player, who) — both lists (move.c:1197).
+				var cleared = await StopFollowingAsync(executor);
 				if (cleared.IsT1)
 				{
 					await NotifyService.Notify(executor, cleared.AsT1.Value, executor);
@@ -1063,7 +1265,8 @@ public partial class Commands
 			var targetFollowingDbref = targetFollowingAttr.AsAttribute.Last().Value.ToPlainText();
 			if (targetFollowingDbref == executor.Object().DBRef.ToString())
 			{
-				var dismissed = await ClearFollowingAsync(target);
+				// del_follow(who, player) — the other direction (move.c:1198).
+				var dismissed = await StopFollowingAsync(target);
 				if (dismissed.IsT1)
 				{
 					await NotifyService.Notify(executor, dismissed.AsT1.Value, executor);
@@ -1086,36 +1289,16 @@ public partial class Commands
 
 		if (!args.ContainsKey("0") || string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText()))
 		{
-			var allObjects = Mediator.CreateStream(new GetAllObjectsQuery());
-			var dismissedCount = 0;
-			var executorDbref = executor.Object().DBRef.ToString();
+			// clear_followers (move.c:1163). The leader's own FOLLOWERS names them, so nothing has to
+			// walk every object in the database to find out who was following.
+			var dismissed = await ClearFollowersAsync(executor);
 
-			await foreach (var obj in allObjects)
+			foreach (var follower in dismissed)
 			{
-				var objAttributes = obj.Attributes.Value;
-				await foreach (var attr in objAttributes)
-				{
-					if (attr.LongName == AttrFollowing && attr.Value.ToPlainText() == executorDbref)
-					{
-						var locateResult = await LocateService.Locate(parser, executor, executor,
-							obj.DBRef.ToString(), LocateFlags.All);
-						if (locateResult.IsValid())
-						{
-							var objAny = locateResult.AsAnyObject;
-							if ((await ClearFollowingAsync(objAny)).IsT1)
-							{
-								continue;
-							}
-
-							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
-							dismissedCount++;
-						}
-						break;
-					}
-				}
+				await NotifyService.Notify(follower, $"{executor.Object().Name} dismisses you. You stop following.");
 			}
 
-			await NotifyService.Notify(executor, $"You dismiss all your followers. ({dismissedCount} dismissed)", executor);
+			await NotifyService.Notify(executor, $"You dismiss all your followers. ({dismissed.Length} dismissed)", executor);
 			return CallState.Empty;
 		}
 
@@ -1148,7 +1331,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetDismissed = await ClearFollowingAsync(target);
+		// del_follow(player, follower) — both lists (move.c:1162).
+		var targetDismissed = await StopFollowingAsync(target);
 		if (targetDismissed.IsT1)
 		{
 			await NotifyService.Notify(executor, targetDismissed.AsT1.Value, executor);
@@ -1632,12 +1816,24 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// PennMUSH add_follow (move.c:1246) writes both halves: FOLLOWING on the follower and
+		// FOLLOWERS on the leader. SharpMUSH's FOLLOWING holds one leader, so switching leaders has
+		// to come off the previous one's list first or the two lists drift apart.
+		var previousLeader = await LeaderOfAsync(executor);
+
 		var followSet = await SetFollowingAsync(executor, target);
 		if (followSet.IsT1)
 		{
 			await NotifyService.Notify(executor, followSet.AsT1.Value, executor);
 			return CallState.Empty;
 		}
+
+		if (previousLeader is not null && !previousLeader.Object().DBRef.Equals(target.Object().DBRef))
+		{
+			await RemoveFollowerAsync(previousLeader, executor);
+		}
+
+		await AddFollowerAsync(target, executor);
 
 		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
 		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.");
@@ -2620,7 +2816,8 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var unfollowed = await ClearFollowingAsync(executor);
+		// del_follow removes from both lists (move.c:1292).
+		var unfollowed = await StopFollowingAsync(executor);
 		if (unfollowed.IsT1)
 		{
 			await NotifyService.Notify(executor, unfollowed.AsT1.Value, executor);

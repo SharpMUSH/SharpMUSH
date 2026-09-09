@@ -3982,6 +3982,8 @@ Teleportation from a room can be stopped by setting the NO_TEL flag. Royalty and
 
 Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<room>` is an exit or the `/silent` switch is given. With @oxtport, %0 is the dbref of the object causing the dbref. The others, in addition to %0, get the former location of the object that was teleported passed in %1.
 
+`/silent` suppresses exactly two things: the @tport/@otport/@atport (and @oxtport) attributes above, and the @move/@omove/@amove attributes the move itself would trigger. It does not suppress the @enter/@oenter/@aenter and @leave/@oleave/@aleave attributes, the arrival and departure messages, or the automatic look at the destination.
+
 As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
 
 

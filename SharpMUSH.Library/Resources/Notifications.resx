@@ -1230,8 +1230,8 @@
   <data name="ExitNameToDestFormat" xml:space="preserve">
     <value>{0} to {1}</value>
   </data>
-  <data name="TeleportedPlayerNotified" xml:space="preserve">
-    <value>You have been teleported.</value>
+  <data name="YouFollowFormat" xml:space="preserve">
+    <value>You follow {0}.</value>
   </data>
 
   <!-- @find command -->

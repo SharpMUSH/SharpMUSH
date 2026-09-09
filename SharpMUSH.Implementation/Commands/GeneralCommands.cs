@@ -1027,57 +1027,6 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>fail_lock</c> (<c>lock.c:832</c>) for an exit's basic lock: the exit's
-	/// <c>@fail</c> replaces the default message, <c>@ofail</c> goes to the rest of the room, and
-	/// <c>@afail</c> runs as the exit.
-	/// </summary>
-	private async ValueTask<Option<CallState>> FailToGoThatWay(
-		IMUSHCodeParser parser, AnySharpObject executor, SharpExit exit)
-	{
-		var exitObject = new AnySharpObject(exit);
-
-		var failAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "FAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (failAttr.IsAttribute && failAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(failAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await NotifyService.Notify(executor, failAttr.AsAttribute[0].Value, executor);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
-		}
-
-		var ofailAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "OFAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (ofailAttr.IsAttribute && ofailAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(ofailAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await CommunicationService.SendToRoomAsync(
-				executor,
-				await executor.Where(),
-				_ => ofailAttr.AsAttribute[0].Value,
-				INotifyService.NotificationType.Emit,
-				excludeObjects: [executor]);
-		}
-
-		var afailAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "AFAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (afailAttr.IsAttribute && afailAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(afailAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await parser.With(
-				state => state with { Executor = exit.Object.DBRef, Caller = state.Executor },
-				async p => await p.CommandParse(afailAttr.AsAttribute[0].Value));
-		}
-
-		return CallState.Empty;
-	}
-
-	/// <summary>
 	/// How the exit was linked. PennMUSH stores HOME and AMBIGUOUS directly in Destination(); SharpMUSH
 	/// records them in a <c>_LINKTYPE</c> attribute instead, which is the convention <c>loc()</c> already
 	/// reads to answer <c>#-3</c> and <c>#-2</c>.
@@ -1243,8 +1192,27 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// enter_room only moves a Mobile (move.c:243). A room cannot be content, and asking it where
+		// it is would throw rather than refuse.
+		if (!executor.IsContent)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
+			return CallState.Empty;
+		}
+
 		var exitObj = exit.AsExit;
 		var exitObject = new AnySharpObject(exitObj);
+
+		// The leave lock on the room the mover is standing in is evaluated before the exit's own
+		// lock (move.c:441).
+		var currentLocation = await executor.Where();
+
+		if (!await PermissionService.PassesLock(executor, currentLocation.WithExitOption(), LockType.Leave))
+		{
+			await DidItService.FailLock(parser, executor, currentLocation.WithExitOption(), LockType.Leave,
+				MarkupText.Plain(ErrorMessages.Notifications.CantGoThatWay));
+			return CallState.Empty;
+		}
 
 		// The exit name or alias actually typed: args["1"] when the visitor routed a bare exit command
 		// here, otherwise the argument to an explicit `goto`.
@@ -1256,11 +1224,11 @@ public partial class Commands
 
 		if (!resolved.IsT0)
 		{
-			// PennMUSH could_doit() (predicat.c:75) refuses an exit with no destination before the basic
+			// PennMUSH could_doit() (predicat.c:77) refuses an exit with no destination before the basic
 			// lock is even evaluated, so do_move falls through to fail_lock. A variable exit that could
 			// not work out where it leads has already reported that itself.
 			return resolved.AsT1 == ExitDestinationFailure.Unlinked
-				? await FailToGoThatWay(parser, executor, exitObj)
+				? await FailBasicLock(parser, executor, exitObject)
 				: CallState.Empty;
 		}
 
@@ -1268,7 +1236,7 @@ public partial class Commands
 
 		if (!await PermissionService.CanGoto(executor, exitObj, destination))
 		{
-			return await FailToGoThatWay(parser, executor, exitObj);
+			return await FailBasicLock(parser, executor, exitObject);
 		}
 
 		if (await MoveService.WouldCreateLoop(executor.AsContent, destination))
@@ -1277,9 +1245,53 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await Mediator.Send(new MoveObjectCommand(executor.AsContent, destination));
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: exitObject,
+			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
+			Loc: currentLocation));
+
+		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
+		// is var_dest, not the room being left (move.c:483).
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: exitObject,
+			What: "DROP", OWhat: "ODROP", AWhat: "ADROP",
+			Loc: destination));
+
+		// A room destination goes through enter_room, anything else through safe_tel (move.c:486-508).
+		var result = destination.WithExitOption().IsRoom
+			? await MoveService.EnterRoom(parser, executor.AsContent, destination,
+				noMoveMsgs: false, executor.Object().DBRef, "move")
+			: await MoveService.SafeTel(parser, executor.AsContent, destination,
+				noMoveMsgs: false, executor.Object().DBRef, "move");
+
+		if (result.IsT1)
+		{
+			await NotifyService.Notify(executor, result.AsT1.Value, executor);
+			return CallState.Empty;
+		}
+
+		// Followers trail the leader only if the leader actually went somewhere (move.c:493).
+		var newLocation = await executor.Where();
+
+		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
+		{
+			await FollowerCommand(parser, executor, currentLocation, "GOTO", exitObj.Object.DBRef);
+		}
 
 		return new CallState(destination.ToString());
+	}
+
+	/// <summary>
+	/// PennMUSH <c>fail_lock(player, exit, Basic_Lock, "You can't go that way.", NOTHING)</c>
+	/// (<c>src/move.c:516</c>).
+	/// </summary>
+	private async ValueTask<Option<CallState>> FailBasicLock(
+		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject exitObject)
+	{
+		await DidItService.FailLock(parser, executor, exitObject, LockType.Basic,
+			MarkupText.Plain(ErrorMessages.Notifications.CantGoThatWay));
+
+		return CallState.Empty;
 	}
 
 
@@ -1440,25 +1452,36 @@ public partial class Commands
 				}
 			}
 
+			// PennMUSH do_teleport_one (wiz.c:568-579). /SILENT suppresses the OXTPORT and TPORT
+			// triads and, through safe_tel's nomovemsgs, the MOVE triad. It does not reach ENTER or
+			// LEAVE, and it does not reach the automatic look enter_room ends with.
 			var isSilent = parser.CurrentState.Switches.Contains("SILENT");
-			await MoveService.MoveIt(parser, targetContent, destinationContainer, isSilent,
-				executor.Object().DBRef, "teleport");
+			var currentLocation = await targetContent.Location();
+			var changesRoom = !currentLocation.Object().DBRef.Equals(destinationContainer.Object().DBRef);
 
-			if (target.IsPlayer && !isSilent)
+			if (!isSilent && changesRoom)
 			{
-				await NotifyService.NotifyLocalized(target.Object().DBRef, nameof(ErrorMessages.Notifications.TeleportedPlayerNotified));
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: target, Thing: target, OWhat: "OXTPORT",
+					Loc: currentLocation, Env0: executor.Object().DBRef));
+			}
 
-				var targetPlayerState = parser.CurrentState with
-				{
-					Executor = target.Object().DBRef,
-					Enactor = target.Object().DBRef
-				};
+			var moveResult = await MoveService.SafeTel(
+				parser, targetContent, destinationContainer, isSilent, executor.Object().DBRef, "teleport");
 
-				await Mediator.Send(new QueueCommandListRequest(
-					MarkupText.Plain("look"),
-					targetPlayerState,
-					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1));
+			if (moveResult.IsT1)
+			{
+				await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+				continue;
+			}
+
+			if (!isSilent && changesRoom)
+			{
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: target, Thing: target,
+					What: "TPORT", OWhat: "OTPORT", AWhat: "ATPORT",
+					Loc: destinationContainer,
+					Env0: executor.Object().DBRef, Env1: currentLocation.Object().DBRef));
 			}
 		}
 

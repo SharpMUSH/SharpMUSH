@@ -129,6 +129,12 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {containerName}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {containerName}=ENTER_OK"));
 
+		// @create leaves the container in the creator's inventory, and stepping into something you are
+		// carrying is a containment loop - PennMUSH refuses it with "Bad destination."
+		// (recursive_member, src/wiz.c:440). Put the container in the room first so this test is about
+		// entering a container rather than about the loop guard.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {containerName}=#0"));
+
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
 
 		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");

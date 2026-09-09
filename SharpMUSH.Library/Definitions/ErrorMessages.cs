@@ -1195,7 +1195,10 @@ public static class ErrorMessages
 		public const string ExitNoValidLocationDetail = "That exit doesn't go to a valid location.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ExitNameToDestFormat = "{0} to {1}";
-		public const string TeleportedPlayerNotified = "You have been teleported.";
+
+		/// <summary>PennMUSH <c>follower_command</c> — src/move.c:1485.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouFollowFormat = "You follow {0}.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FindSearchingFormat = "@find: Searching for objects{0}...";

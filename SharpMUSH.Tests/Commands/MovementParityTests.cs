@@ -17,15 +17,13 @@ namespace SharpMUSH.Tests.Commands;
 /// </summary>
 /// <remarks>
 /// <para>
-/// TASK 12 MUST ADD: one command-level assertion that the recursion counters thread through
-/// <c>GOTO</c>. Every test here calls <see cref="IMoveService.EnterRoom"/> directly and hands it
-/// this class's own parser, so none of them can see whether <c>GOTO</c> passes the caller's parser
-/// or builds a fresh one. A fresh parser carries fresh counters, which would silently defeat both
-/// the <c>MoveDepth</c> cap and the function-recursion guard that
-/// <see cref="TheAutomaticLookRunsOnTheCallersRecursionCounters"/> pins — and every test below would
-/// still pass. The command-level shape is the one that protects it: walk an exit with
-/// <c>GOTO</c> from a parser whose counters are already spent, and assert the spend is still
-/// visible on the other side.
+/// Most tests here call <see cref="IMoveService.EnterRoom"/> directly and hand it this class's own
+/// parser, so none of them can see whether <c>GOTO</c> passes the caller's parser or builds a fresh
+/// one — a fresh parser carries fresh counters, which would silently defeat both the
+/// <c>MoveDepth</c> cap and the function-recursion guard that
+/// <see cref="TheAutomaticLookRunsOnTheCallersRecursionCounters"/> pins, while every one of those
+/// tests still passed. <see cref="GotoHandsTheMovePipelineTheCallersCounters"/> is the
+/// command-level shape that protects that layer.
 /// </para>
 /// </remarks>
 [NotInParallel]
@@ -336,9 +334,8 @@ public class MovementParityTests
 	/// <c>enter_room</c> (<c>src/move.c:279</c>) ends in <c>look_room(player, loc, LOOK_AUTO, NULL)</c>.
 	/// </summary>
 	/// <remarks>
-	/// Drives <see cref="IMoveService.EnterRoom"/> rather than a command: <c>GOTO</c> and
-	/// <c>@teleport</c> still end at a bare <c>MoveObjectCommand</c> and are rewired onto this
-	/// pipeline by Tasks 12 and 13.
+	/// Drives <see cref="IMoveService.EnterRoom"/> rather than a command, so the assertion is about
+	/// the pipeline itself rather than about either command's wiring onto it.
 	/// </remarks>
 	[Test]
 	public async ValueTask ArrivingSomewhereLooksAtIt()
@@ -768,5 +765,197 @@ public class MovementParityTests
 
 		var movedNow = await GodParser.FunctionParse(MarkupText.Plain($"[get({sticky}/MOVED)]"));
 		await Assert.That(movedNow!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+	}
+
+	/// <summary>
+	/// <c>could_doit</c> (<c>src/predicat.c:75</c>) is the exit's basic lock, and a failed one runs
+	/// <c>fail_lock(player, exit, Basic_Lock, …)</c> (<c>src/move.c:516</c>) — which evaluates the
+	/// <c>@fail</c> attribute rather than echoing its stored text.
+	/// </summary>
+	[Test]
+	public async ValueTask AnExitWhoseBasicLockFailsRunsTheFailureTriad()
+	{
+		var (mover, from, _, exit) = await Corridor("Locked");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock {exit}=#0"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&FAILURE {exit}=The door is [switch(1,1,stuck)]."));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
+
+		// Evaluated, not echoed raw.
+		await Assert.That(seen.Any(m => m == "The door is stuck.")).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(from));
+	}
+
+	/// <summary>
+	/// The leave lock on the room the mover is standing in is evaluated before the exit's own lock
+	/// (<c>src/move.c:441</c>), and fails through <c>LFAIL</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask AFailedLeaveLockRunsTheLeaveFailureTriad()
+	{
+		var (mover, from, _, _) = await Corridor("LeaveLocked");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/leave {from}=#0"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LFAIL {from}=The walls hold you."));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
+
+		await Assert.That(seen.Any(m => m == "The walls hold you.")).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(from));
+	}
+
+	/// <summary>
+	/// <c>did_it_with(player, exit, "SUCCESS", …)</c> then <c>did_it(player, exit, "DROP", …, var_dest)</c>
+	/// (<c>src/move.c:480-484</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask AnExitFiresItsSuccessTriadAndItsDropTriadInTheDestination()
+	{
+		var (mover, _, to, exit) = await Corridor("Triads");
+		var greeter = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TriadGreet");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {greeter.DbRef}={to}"));
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&SUCCESS {exit}=You slip through."));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ODROP {exit}=slips in."));
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
+		await Assert.That(moverSaw.Any(m => m == "You slip through.")).IsTrue();
+
+		// @odrop on an exit is shown where the mover arrives (move.c:483, loc = var_dest).
+		var greeterSaw = WebAppFactoryArg.Notifications.For(greeter.DbRef).ToList();
+		await Assert.That(greeterSaw.Any(m => m == $"{mover.Name} slips in.")).IsTrue();
+	}
+
+	/// <summary>
+	/// Every write must name the container it came out of. A <c>MoveObjectCommand</c> sent without
+	/// one falls back to the global <c>CacheTags.ObjectContents</c> tag, which drops every
+	/// container's cached contents on every step through an exit.
+	/// </summary>
+	[Test]
+	public async ValueTask WalkingThroughAnExitDoesNotWipeUnrelatedContentsCaches()
+	{
+		var bystanderRoom = await Dig("CacheBystander");
+		var bystander = await TestIsolationHelpers.CreateTestThingAsync(
+			GodParser, ConnectionService, "CacheThing");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {bystander}={bystanderRoom}"));
+
+		// Warm the bystander room's contents entry.
+		var before = await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
+
+		var (mover, _, _, _) = await Corridor("CacheWalk");
+		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out"));
+
+		var after = await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
+		await Assert.That(after!.Message!.ToPlainText()).IsEqualTo(before!.Message!.ToPlainText());
+	}
+
+	/// <summary>
+	/// <c>GOTO</c> hands <see cref="IMoveService.EnterRoom"/> the caller's parser, so the counters
+	/// that bound an evaluation still bound the move it makes.
+	/// </summary>
+	/// <remarks>
+	/// This is the one assertion in the class that can see the command's wiring. Every other test
+	/// calls <c>EnterRoom</c> itself, so a <c>GOTO</c> that built a fresh parser — fresh counters,
+	/// no bound at all — would leave all of them green.
+	/// </remarks>
+	[Test]
+	public async ValueTask GotoHandsTheMovePipelineTheCallersCounters()
+	{
+		var (mover, from, to, _) = await Corridor("CounterThread");
+
+		ParserState AsMover(InvocationCounter depth) => GodParser.CurrentState with
+		{
+			Executor = mover.DbRef,
+			Enactor = mover.DbRef,
+			Caller = mover.DbRef,
+			MoveDepth = depth
+		};
+
+		// One frame past enter_room's cap (move.c:232): the move must be abandoned.
+		var pastCap = new InvocationCounter();
+		for (var i = 0; i < 16; i++)
+		{
+			pastCap.Increment();
+		}
+
+		await GodParser.Push(AsMover(pastCap)).CommandParse(MarkupText.Plain("goto out"));
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString()))
+			.IsEqualTo(BareDbref(from))
+			.Because("GOTO must spend the caller's MoveDepth, not a counter of its own");
+
+		// Control: the same walk on a fresh counter goes through, so the refusal above is the
+		// counter and not the corridor.
+		await GodParser.Push(AsMover(new InvocationCounter())).CommandParse(MarkupText.Plain("goto out"));
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(to));
+	}
+
+	/// <summary>
+	/// <c>follower_command</c> (<c>src/move.c:1458</c>) re-issues the leader's <c>GOTO</c> for every
+	/// follower who was standing with them.
+	/// </summary>
+	[Test]
+	public async ValueTask AFollowerTrailsItsLeaderThroughAnExit()
+	{
+		var (leader, from, to, _) = await Corridor("Follow");
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowTrail");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {follower.DbRef}={from}"));
+		await GodParser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain($"follow {leader.Name}"));
+		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await LocationOf(follower.DbRef.ToString())).IsEqualTo(BareDbref(to));
+	}
+
+	/// <summary>
+	/// <c>@teleport/silent</c> passes <c>nomovemsgs</c> to <c>safe_tel</c> and skips the <c>TPORT</c>
+	/// triad (<c>src/wiz.c:568-579</c>). It reaches neither the <c>ENTER</c> triad nor the automatic
+	/// look, both of which are inside <c>enter_room</c> below that flag.
+	/// </summary>
+	[Test]
+	public async ValueTask SilentTeleportSuppressesTheMoveTriadButNotTheEnterTriad()
+	{
+		var destination = await Dig("SilentSplit");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SilentSplitMover");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AMOVE {mover.DbRef}=&MOVED me=yes"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AENTER {destination}=&ENTERED me=yes"));
+
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@teleport/silent {mover.DbRef}={destination}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var moved = await GodParser.FunctionParse(MarkupText.Plain($"[get({mover.DbRef}/MOVED)]"));
+		var entered = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ENTERED)]"));
+
+		await Assert.That(moved!.Message!.ToPlainText().Trim()).IsEmpty();
+		await Assert.That(entered!.Message!.ToPlainText().Trim()).IsEqualTo("yes");
+	}
+
+	/// <summary>
+	/// <c>did_it_with(victim, victim, "TPORT", …, "OTPORT", …, "ATPORT", …)</c>
+	/// (<c>src/wiz.c:578</c>) — the attributes are <c>TPORT</c>, not <c>TELEPORT</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportFiresTheTportTriad()
+	{
+		var destination = await Dig("TportDest");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TportMover");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TPORT {mover.DbRef}=The world folds."));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@teleport {mover.DbRef}={destination}")));
+
+		await Assert.That(seen.Any(m => m == "The world folds.")).IsTrue();
 	}
 }

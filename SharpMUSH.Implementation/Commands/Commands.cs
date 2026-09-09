@@ -42,6 +42,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IMoveService MoveService { get; }
 
+	private IDidItService DidItService { get; }
+
 	private ILookService LookService { get; }
 
 	private IObjectDestructionService ObjectDestructionService { get; }
@@ -107,6 +109,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ISqlService sqlService,
 		ILockService lockService,
 		IMoveService moveService,
+		IDidItService didItService,
 		ILookService lookService,
 		IObjectDestructionService objectDestructionService,
 		ILogger<Commands> logger,
@@ -147,6 +150,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		SqlService = sqlService;
 		LockService = lockService;
 		MoveService = moveService;
+		DidItService = didItService;
 		LookService = lookService;
 		ObjectDestructionService = objectDestructionService;
 		Logger = logger;
