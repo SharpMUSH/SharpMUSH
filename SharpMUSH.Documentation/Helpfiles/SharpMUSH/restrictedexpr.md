@@ -30,6 +30,8 @@ Only `%0` through `%9`, `%b` (space), `%r` (newline), `%t` (tab), and `%%` are
 available as substitutions. Ordinary quoting and literal text still work. Parent
 Q-registers, regex captures, iteration registers, attribute values, and identity
 substitutions are not inputs. The expression receives fresh register frames.
+Debug and verbose forwarding are suppressed inside restricted evaluation, including
+for executors with DEBUG set; expression text and results are not forwarded.
 
 An unsupported operation or substitution returns `#-1 RESTRICTED EXPRESSION`.
 Object reads, attribute evaluation (`u()`), global and local user-defined

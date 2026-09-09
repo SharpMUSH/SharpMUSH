@@ -39,6 +39,7 @@ public partial class Functions
 		// and shared execution accounting cross this boundary.
 		var state = ParserState.RootFor(parent.Executor!.Value) with
 		{
+			Flags = ParserStateFlags.NoDebug,
 			EnvironmentRegisters = inputs,
 			CallDepth = parent.CallDepth,
 			TotalInvocations = parent.TotalInvocations,

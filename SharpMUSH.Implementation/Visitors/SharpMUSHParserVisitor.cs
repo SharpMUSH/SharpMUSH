@@ -312,6 +312,8 @@ public class SharpMUSHParserVisitor(
 	/// <param name="message">The message to send</param>
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
+		if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+			return;
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		await NotifyService.Notify(owner, MarkupText.Plain(message));
 
@@ -547,7 +549,10 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		var executor = await parser.CurrentState.ExecutorObject(Mediator);
+		// Restricted evaluation must not read DEBUG flags or forwarding attributes.
+		var executor = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
+			? new AnyOptionalSharpObject(new None())
+			: await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
 		AnySharpObject? executorObj = null;
 		string? indent = null;

@@ -1,8 +1,10 @@
 using SharpMUSH.Configuration.Options;
+using NSubstitute;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.Interfaces;
@@ -34,6 +36,32 @@ public class RestrictedExpressionTests
 		await Assert.That(await Eval("restrictedexpr(fn add,fn(add,2,3))")).IsEqualTo("5");
 		await Assert.That(await Eval("restrictedexpr(fn,fn(add,2,3))")).Contains("RESTRICTED EXPRESSION");
 		await Assert.That(await Eval("restrictedexpr(get,get(#1/DESC))")).Contains("RESTRICTED EXPRESSION");
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task RestrictedDebugExecutorDoesNotForwardExpressionOrResults(bool denied)
+	{
+		var connection = Factory.Services.GetRequiredService<IConnectionService>();
+		DBRef target;
+		using (var setupBudget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+		using (setupBudget.Enter())
+		{
+			target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connection, "RestrictedDebug");
+			await Cmd($"&DEBUGFORWARDLIST {target}=#1");
+			await Cmd($"@set {target}=DEBUG");
+			await Assert.That(await Eval($"hasflag({target},DEBUG)")).IsEqualTo("1");
+		}
+		var state = ParserState.RootFor(target) with { Flags = ParserStateFlags.NoDebug };
+		var parser = Factory.FunctionParser.FromState(state);
+		var notify = Factory.Services.GetRequiredService<INotifyService>();
+		notify.ClearReceivedCalls();
+		var expression = denied ? "restrictedexpr(ucstr,get(%0),private-input)" : "restrictedexpr(ucstr,ucstr(%0),private-input)";
+		var result = (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
+		if (denied) await Assert.That(result).Contains("RESTRICTED EXPRESSION");
+		else await Assert.That(result).IsEqualTo("PRIVATE-INPUT");
+		await Assert.That(notify.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Notify")).IsFalse();
 	}
 
 	[Test]
