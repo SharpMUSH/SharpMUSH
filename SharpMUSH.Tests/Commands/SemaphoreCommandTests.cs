@@ -182,6 +182,28 @@ public class SemaphoreCommandTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task QueuedMalformedSemaphoreCommandNotifiesTheExecutor(bool drain)
+	{
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("invalid-notice-" + Guid.NewGuid().ToString("N"), player));
+		var value = "invalid-" + Guid.NewGuid().ToString("N");
+		await Assert.That(await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["SEMAPHORE"], MarkupText.Plain(value), player))).IsTrue();
+		var command = (drain ? "@drain " : "@notify ") + target + "/SEMAPHORE";
+		var admitted = await Scheduler.WriteCommandList(MarkupText.Plain(command), ParserState.RootFor(player.Object.DBRef));
+		await Assert.That(admitted.Accepted).IsTrue();
+		var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var sentinel = await Scheduler.EnqueueWork(() => { completed.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "notice-sentinel", "test");
+		await Assert.That(sentinel.Accepted).IsTrue();
+		await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.Object.DBRef),
+			TestHelpers.MatchingMessage($"Semaphore attribute must have a numeric or empty value. Current value: {value}"),
+			TestHelpers.MatchingObject(player.Object.DBRef));
+		await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo(value);
+	}
+
+	[Test]
 	[Arguments(false, "invalid")]
 	[Arguments(true, "invalid")]
 	[Arguments(false, "2147483648")]

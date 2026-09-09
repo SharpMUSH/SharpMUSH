@@ -2169,11 +2169,11 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
-		if (validation.IsT1) return new CallState(validation.AsT1.Value);
+		if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
-		if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
+		if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			accounting.AsT0.Persist, accounting.AsT0.Reconcile, qRegisters);
@@ -3010,10 +3010,10 @@ public partial class Commands
 		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
-			if (validation.IsT1) return new CallState(validation.AsT1.Value);
+			if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
 			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
 				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
-			if (accounting.IsT1) return new CallState(accounting.AsT1.Value);
+			if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, accounting.AsT0.Persist, accounting.AsT0.Reconcile);
 			return null;

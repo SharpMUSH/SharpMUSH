@@ -12,6 +12,13 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	private async ValueTask<CallState> ReportSemaphoreCommandError(AnySharpObject executor, string message)
+	{
+		// Queued command lists discard return values; publish validation errors explicitly.
+		await NotifyService.Notify(executor, message, executor);
+		return new CallState(message);
+	}
+
 	private sealed record CreatedCommandSemaphore(string Id, string Key, string Name, string LongName, int? CommandListIndex, DBRef Owner);
 
 	private sealed record SemaphoreAccounting(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile);
