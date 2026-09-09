@@ -26,6 +26,7 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var name = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
 		var operation = switches.FirstOrDefault(s => s != "LOCAL");
+		var aliasTarget = args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "";
 		async ValueTask<Option<CallState>> Report(string message)
 		{
 			await NotifyService.NotifyLocalized(executor, "LocalFunctionMessage", executor, message);
@@ -61,8 +62,8 @@ public partial class Commands
 				"DISABLE" => registry.SetEnabled(name, false, owner),
 				"PRESERVE" => registry.SetPreserved(name, true, owner),
 				"RESTORE" => registry.Delete(name, owner),
-				"ALIAS" => !IsReservedLocalFunctionName(name)
-					&& registry.Alias(name, args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "", owner),
+				"ALIAS" => !IsReservedLocalFunctionName(name) && !IsReservedLocalFunctionName(aliasTarget)
+					&& registry.Alias(name, aliasTarget, owner),
 				_ => false
 			}, out var found);
 			if (!supported || !found) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
