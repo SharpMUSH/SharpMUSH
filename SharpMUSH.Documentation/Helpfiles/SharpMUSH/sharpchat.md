@@ -184,9 +184,9 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 
 `@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@channel list] explains the output in detail. If a *\<prefix\>* is given, only channels whose names begin with *\<prefix\>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
 
-`@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given.
+`@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given. Channels you may decompile also show their locks.
 
-`@channel/who` lists all the players on the given channel.
+`@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you have the `Who` power. A member's own hidden or gagging state is noted beside their name.
 
 `@channel/on` and `@channel/off` add or remove you from the given *\<channel\>*. You only hear messages for channels you're on, and most channels require you to join them before you can speak on them. /join and /leave are aliases for /on and /off.
 
@@ -203,6 +203,10 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 - `@channel/mute [<channel>][=<yes|no>]`
 - `@channel/hide [<channel>][=<yes|no>]`
 - `@channel/combine [<channel>][=<yes|no>]`
+- `@channel/ungag [<channel>]`
+- `@channel/unmute [<channel>]`
+- `@channel/unhide [<channel>]`
+- `@channel/uncombine [<channel>]`
 
 `@channel/gag` allows you to stay on a channel but stop receiving messages on it. Channels are automatically ungagged when you disconnect. You cannot speak on channels you're gagging unless they have the "open" priv.
 
@@ -212,7 +216,9 @@ On channels with the 'hide_ok' priv, `@channel/hide` lets you hide from the @cha
 
 Connect and disconnect messages across all channels you have marked with `@channel/combine` will be combined into a single message with a |-separated list of all channel names. Only players can use this.
 
-For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect all channels you're on. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
+For all four of these commands, you can specify a single channel to affect, or omit *\<channel\>* to affect every channel you are on. Naming a channel resolves against the channels you are on, so an abbreviation cannot be made ambiguous by a channel you never joined; the argument-less form reports what it did in one line and names no channel. To undo the gag/mute/hide, either use `@channel/<switch> [<channel>]=no` or `@channel/un<switch> [<channel>]`.
+
+These are all your OWN settings on a channel. There is no command for muting or gagging somebody else; to stop a member speaking, lock the channel with `@clock/speak` (see [@clock]).
 
 **See Also:**
 - [@channel/who]
@@ -231,9 +237,9 @@ For all four of these commands, you can specify a single channel to affect, or o
 - `@channel/title <channel>=<title>`
 - `@channel/buffer <channel>=<size>`
 
-`@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*. If *\<count\>* is not given, it shows the last 10. The /last switch shows messages starting from the *<count>*th most recent message.
+`@channel/recall` displays the last *\<count\>* messages sent on *\<channel\>*, oldest first, between a `CHAT: Recall from channel <name>` header and a `CHAT: End recall` footer, with each line stamped with the time it was said. If *\<count\>* is not given, it shows the last 10; `=0` shows the whole buffer. A second right-hand argument (`@channel/recall <channel>=<count>,<start>`) starts the replay at the *\<start\>*th line of the buffer. The /quiet switch drops the timestamps, keeping the header and footer. You need not be a member to recall from a channel — being able to join it is enough.
 
-`@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. If *\<title\>* is not given, your title is cleared.
+`@channel/title` sets your title on *\<channel\>*. Your title appears in front of your name when you speak on the channel, if the channel is set to show titles. `@channel/title <channel>=` with nothing after the `=` clears it, and `@channel/title <channel>` with no `=` at all tells you what it currently is. A title may not be longer than the `chan_title_len` configuration setting, and may not contain a newline, a tab or a bell.
 
 `@channel/buffer` sets the recall buffer size for *\<channel\>* to *\<size\>*. Only channel admins can do this. A size of 0 disables the recall buffer.
 
@@ -251,6 +257,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 # @channel/describe
 # @channel/privs
 # @channel/wipe
+# @channel/decompile
 
 - `@channel/add <channel>=<privlist>`
 - `@channel/delete <channel>`
@@ -261,6 +268,7 @@ For all four of these commands, you can specify a single channel to affect, or o
 - `@channel/describe <channel>=<description>`
 - `@channel/privs <channel>=<privlist>`
 - `@channel/wipe <channel>`
+- `@channel/decompile[/brief] <channel>`
 - `@clock/join|/speak|/see|/hide|/mod <channel>[=<lock>]`
 
 `@channel/add` creates a new channel with the privileges in *<privlist>* — the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
@@ -279,6 +287,8 @@ For all four of these commands, you can specify a single channel to affect, or o
 
 `@channel/wipe` removes all players from a channel. Only channel admins can do this.
 
+`@channel/decompile` prints the commands that would recreate the channel: its privileges, owner, mogrifier, locks, description, buffer size and membership. You must be able to decompile the channel. The /brief switch stops before the membership; members hiding on the channel are listed only to someone who could see them on [@channel/who].
+
 Channel locks are managed by the separate `@clock` command, not by a `@channel` switch. See [@clock] for details.
 
 **See Also:**
@@ -288,25 +298,25 @@ Channel locks are managed by the separate `@clock` command, not by a `@channel` 
 
 # @CHANNEL LIST
 
-The output of `@channel/list` looks like this:
+The output of `@channel/list` is one header line and one row per channel:
 ```text
-Channel        Status  Lock                  Description
-Public         On-     *UNLOCKED*           Public chat channel
-Admin          Off     =WIZARD              Administrative discussion
+Name                           Users     Msgs Chan Type        Status    Buf
+Public                            12      843 [-P----o -----*] [On     ]   1
+Admin                              3       17 [-P-A--- js---- ] [Off    ]   0
 ```
 
-The Status column shows whether you are on the channel (On) or not (Off), followed by any special flags:
-- `-`: Channel is gagged
-- `!`: Channel is hidden
-- `@`: Channel is muted
-- `+`: Channel is combined
+- **Name** is the channel's name, padded to 30 columns. A longer name overflows the column rather than being truncated.
+- **Users** is how many of its members are listed by [@channel/who] — connected players, things, and members hiding on the channel only if you may see them.
+- **Msgs** is how many messages the channel's recall buffer holds.
+- **Chan Type** is two groups in one bracket. The first seven characters are the channel's privileges, a `-` where the privilege is absent: `D`isabled, `P`layer, Object (`T`), `A`dmin or `W`izard, `Q`uiet, `H`ide_ok, `o`pen. The next six are its locks and your relationship to it: `j`oin, `s`peak, `m`od, see (`v`), `h`ide, and `*` if you own the channel.
+- **Status** is `On`, `Off`, or `Gag` if you are gagging the channel, followed by a character each for your own `Q` (muted), `H` (hidden) and `C` (combined) flags on it.
+- **Buf** is the channel's configured buffer size.
 
-The Lock column shows:
-- `*UNLOCKED*` if anyone can use the channel
-- `=<lock>` if there's a lock on speaking
-- `J=<lock>` if there's a lock on joining
-- `H=<lock>` if there's a lock on hiding
-- `(DISABLED)` if the channel is disabled
+`@channel/list/quiet` replaces all of that with a single line:
+```text
+CHAT: Channel list: Public, Admin
+```
+which reads `(None)` when nothing matched.
 
 **See Also:**
 - [@channel/who]
@@ -394,14 +404,24 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 # CHANNELS()
 # COWNER()
 # CFLAGS()
+# CLFLAGS()
 # CSTATUS()
+# CWHO()
+# CRECALL()
+# CBUFFERADD()
+# CLOCK()
 # CEMIT()
 # NSCEMIT()
 
 `channels([<player>][,<type>])`<br>
 `cowner(<channel>)`<br>
-`cflags(<channel>[,<player>])`<br>
+`cflags(<channel>[,<object>])`<br>
+`clflags(<channel>[,<object>])`<br>
 `cstatus([<player>][,<channel>])`<br>
+`cwho(<channel>[,<on|off|all>[,<skip gagged?>]])`<br>
+`crecall(<channel>[,<lines>[,<start>[,<osep>[,<timestamps?>]]]])`<br>
+`cbufferadd(<channel>,<message>[,<spoof?>])`<br>
+`clock(<channel>[/<locktype>])`<br>
 `cemit(<channel>,<message>[,<noisy>])`<br>
 `nscemit(<channel>,<message>[,<noisy>])`
 
@@ -415,9 +435,7 @@ These functions provide information about channels:
 
 - **cowner()**: Returns the dbref of *\<channel\>*'s owner
 
-- **cflags()**: Returns *\<channel\>*'s privileges, or status flags for *\<player\>* on *\<channel\>*:
-  - Channel privileges, uppercased, any of: PLAYER OBJECT ADMIN WIZARD QUIET OPEN HIDE_OK NOTITLES NONAMES NOCEMIT INTERACT DISABLED. See [@channel privs].
-  - Status flags: COMBINE GAG HIDE MUTE
+- **cflags()** and **clflags()**: With one argument, *\<channel\>*'s privileges; with two, *\<object\>*'s own flags on that channel. `cflags()` abbreviates each to its single letter and `clflags()` spells it out — that is the only difference between them. See [@channel privs] for the privilege letters; a member's own flags are `Q`uiet, `H`ide, `G`ag and `C`ombine. Reading another object's flags requires that you be able to examine it, and answers `#-1 NOT ON CHANNEL` when it is not a member.
 
 - **cstatus()**: Returns information about *\<player\>*'s channel status:
   - With no args: List of channels I'm on
@@ -425,6 +443,14 @@ These functions provide information about channels:
   - With *\<channel\>*: My status on that channel
   - With both: Their status on that channel
   Status is one of: OFF ON GAG HIDE MUTE COMBINE
+
+- **cwho()**: The dbrefs of *\<channel\>*'s members, space separated. The second argument selects which: **on** (default) lists connected members, **off** lists the rest, and **all** lists everyone. Members hiding on the channel are treated as off unless you have the `Who` power; things are always listed. A true third argument omits members who are gagging the channel.
+
+- **crecall()**: The last *\<lines\>* lines of *\<channel\>*'s recall buffer, oldest first, joined by *\<osep\>* (a space by default). *\<lines\>* defaults to 10, and 0 means the whole buffer; *\<start\>* begins the replay at that line of the buffer. A true fifth argument prefixes each line with the time it was said. As with [@channel/recall], being able to join the channel is enough — membership is not required.
+
+- **cbufferadd()**: Appends *\<message\>* to *\<channel\>*'s recall buffer WITHOUT broadcasting it, for softcode that reconstructs history. You must be able to modify the channel. A true third argument attributes the line to the enactor instead of you.
+
+- **clock()**: The key of one of *\<channel\>*'s locks. The lock type is a suffix on the channel argument, one of `JOIN` (the default), `SPEAK`, `MOD`, `SEE` or `HIDE`; anything else answers `#-1 NO SUCH LOCK TYPE`. You must be able to decompile the channel. See [@clock].
 
 - **cemit()** and **nscemit()**: Emit *\<message\>* on *\<channel\>*. See [@cemit].
 
@@ -435,17 +461,22 @@ Public Admin
 > think cowner(Public)
 #1
 > think cflags(Public)
-OPEN
+Po
+> think clflags(Public)
+Player Open
 > think cflags(Public,#123)
-COMBINE
+C
 > think cstatus(#123,Public)
 ON COMBINE
+> think clock(Public/SPEAK)
+!FLAG^GAGGED
 ```
 
 **See Also:**
 - [@channel]
 - [@chat]
 - [@cemit]
+- [@clock]
 
 # MUXCOMSYS
 
