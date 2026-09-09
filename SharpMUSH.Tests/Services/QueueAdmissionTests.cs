@@ -801,6 +801,122 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ShutdownWaitsForDelayedPublicationCleanup()
+	{
+		var entered = Signal();
+		var publish = Signal();
+		var exists = false;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			entered.TrySetResult();
+			await publish.Task;
+			exists = true;
+			return DateTimeOffset.UtcNow;
+		});
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { exists = false; return true; });
+		var queue = Create(scheduler: scheduler);
+		var pending = queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100)).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		var stopping = queue.DisposeAsync().AsTask();
+		try { await Assert.That(stopping.IsCompleted).IsFalse(); }
+		finally
+		{
+			publish.TrySetResult();
+			try { await pending; } catch (OperationCanceledException) { }
+			await stopping;
+		}
+		await Assert.That(exists).IsFalse();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task ImmediateDelayedTriggerWaitsForPublicationToSettle()
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		Task<QueueAdmissionResult>? firing = null;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async _ =>
+		{
+			firing = queue.ReleaseScheduledWork(1).AsTask();
+			await Assert.That(firing.IsCompleted).IsFalse();
+			return DateTimeOffset.UtcNow;
+		});
+		var admission = await queue.WriteCommandList(MarkupText.Plain("think immediate"), ParserState.Empty, TimeSpan.Zero);
+		await Assert.That(admission.Accepted).IsTrue();
+		await Assert.That((await firing!.WaitAsync(TimeSpan.FromSeconds(2))).Accepted).IsTrue();
+	}
+
+	[Test]
+	public async Task HaltDuringDelayedPublicationCancelsAndRemovesThePublishedTrigger()
+	{
+		var entered = Signal();
+		var publish = Signal();
+		var exists = false;
+		var publicationToken = CancellationToken.None;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			publicationToken = call.Arg<CancellationToken>();
+			entered.TrySetResult();
+			await publish.Task; // Simulate a provider that commits despite cancellation.
+			exists = true;
+			return DateTimeOffset.UtcNow;
+		});
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { exists = false; return true; });
+		await using var queue = Create(scheduler: scheduler);
+		var pending = queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100)).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		var halt = queue.HaltByPid(1).AsTask();
+		try
+		{
+			await Assert.That(publicationToken.IsCancellationRequested).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		}
+		finally
+		{
+			publish.TrySetResult();
+			try { await pending; } catch (OperationCanceledException) { }
+			await halt;
+		}
+		await Assert.That(exists).IsFalse();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task LostDelayedScheduleAcknowledgementKeepsQuotaUntilTriggerCleanup(bool cleanupFails)
+	{
+		var exists = false;
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns<DateTimeOffset>(_ =>
+		{
+			exists = true;
+			throw new InvalidOperationException("Schedule acknowledgement lost");
+		});
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			if (cleanupFails) throw new InvalidOperationException("Cleanup unavailable");
+			exists = false;
+			return true;
+		});
+		await using var queue = Create(scheduler: scheduler);
+		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+			await queue.WriteCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100)));
+		await Assert.That(exists).IsEqualTo(cleanupFails);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(cleanupFails ? 1 : 0);
+		if (cleanupFails)
+		{
+			await Assert.That((await queue.ReleaseScheduledWork(1)).Accepted).IsFalse();
+			cleanupFails = false;
+			await queue.HaltByPid(1);
+			await Assert.That(exists).IsFalse();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		}
+	}
+
+	[Test]
 	public async Task DelayedSchedulingHonorsExecutionCancellation()
 	{
 		using var escape = new CancellationTokenSource();
@@ -1207,7 +1323,7 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
-	public async Task HaltRacingDeferredReleaseRetainsReservationUntilConsumed()
+	public async Task HaltRacingDeferredReleaseCannotReactivateRemovedWork()
 	{
 		var scheduler = Substitute.For<IScheduler>();
 		var unscheduling = Signal();
@@ -1226,12 +1342,14 @@ public class QueueAdmissionTests
 			var deferred = await queue.WriteCommandList(MarkupString.MarkupText.Plain("think ignored"), ParserState.Empty, TimeSpan.FromHours(1));
 			var halt = queue.HaltByPid(deferred.Pid!.Value).AsTask();
 			await unscheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			await queue.ReleaseScheduledWork(deferred.Pid.Value);
+			// Publication now waits for the in-progress cancellation transition.
+			var firing = queue.ReleaseScheduledWork(deferred.Pid.Value).AsTask();
+			await Assert.That(firing.IsCompleted).IsFalse();
 			unscheduled.SetResult(true);
-			await Assert.That(await halt).IsTrue();
-			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
-			var rejected = await queue.EnqueueWork(() => ValueTask.FromResult<CallState?>(null), "extra", "test");
-			await Assert.That(rejected.Accepted).IsFalse();
+			await Assert.That(await halt.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
+			await Assert.That((await firing.WaitAsync(TimeSpan.FromSeconds(5))).Reason)
+				.IsEqualTo(QueueRejectionReason.AlreadyReleased);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
 		}
 		finally { unscheduled.TrySetResult(true); release.TrySetResult(); }
 	}
