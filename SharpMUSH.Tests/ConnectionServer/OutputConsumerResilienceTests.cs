@@ -16,6 +16,27 @@ public class OutputConsumerResilienceTests
 		capabilities ?? new ProtocolCapabilities(), preferences, "telnet");
 
 	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	public async Task GuidedPromptRejectsAReusedTransportHandle(bool replacedBeforeReceive, bool replacedDuringRender)
+	{
+		var writes = 0;
+		var connections = Substitute.For<IConnectionServerService>();
+		var current = Connection(1, _ => { writes++; return ValueTask.CompletedTask; }) with { SessionId = replacedBeforeReceive ? "replacement" : "original" };
+		connections.Get(1).Returns(_ => current);
+		var renderer = Substitute.For<IMarkupOutputRenderer>();
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			if (replacedDuringRender) current = current with { SessionId = "replacement" };
+			return ValueTask.FromResult(new RenderedOutput("prompt"u8.ToArray(), false));
+		});
+		var message = System.Text.Json.JsonSerializer.Deserialize<MarkupPromptMessage>("""{"Handle":1,"Markup":"private prompt","SessionId":"original"}""")!;
+		await new MarkupPromptConsumer(connections, renderer, Substitute.For<IOutputTransformService>(), NullLogger<MarkupPromptConsumer>.Instance).HandleAsync(message);
+		await Assert.That(writes).IsEqualTo(replacedBeforeReceive || replacedDuringRender ? 0 : 1);
+	}
+
+	[Test]
 	public async Task BroadcastRendersOncePerValueEqualCapabilitiesAndPreferences()
 	{
 		var received = new Dictionary<long, byte[]>();

@@ -96,19 +96,19 @@ public sealed class InputSessionService : IInputSessionService
 		if (state.Handle is not { } handle || _connections.Get(handle) is not { Ref: { } character } connection
 			|| connection.State != IConnectionService.ConnectionState.LoggedIn || state.Executor is not { } executor
 			|| state.Enactor is not { } enactor || !TransportMatches(connection, state.ConnectionSessionId)) return InvalidContext;
-		var player = await _mediator.Send(new GetObjectNodeQuery(character));
-		var actor = await _mediator.Send(new GetObjectNodeQuery(executor));
-		var source = await _mediator.Send(new GetObjectNodeQuery(target));
-		var cause = await _mediator.Send(new GetObjectNodeQuery(enactor));
+		var player = await _mediator.Send(new GetObjectNodeQuery(character), ExecutionBudget.CurrentToken);
+		var actor = await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
+		var source = await _mediator.Send(new GetObjectNodeQuery(target), ExecutionBudget.CurrentToken);
+		var cause = await _mediator.Send(new GetObjectNodeQuery(enactor), ExecutionBudget.CurrentToken);
 		if (player.IsNone || actor.IsNone || source.IsNone || cause.IsNone
 			|| player.Known().Object().DBRef != cause.Known().Object().DBRef) return InvalidContext;
-		if (await actor.Known().HasFlag("HALT") || !await _permissions.Controls(actor.Known(), source.Known()))
+		if (await actor.Known().HasFlag("HALT", ExecutionBudget.CurrentToken) || !await CheckReadAsync(() => _permissions.Controls(actor.Known(), source.Known())))
 			return ErrorMessages.Returns.PermissionDenied;
 		if (!(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
 			|| !(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
 			return InvalidCallback;
-		var owner = (await actor.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
-		var callbackOwner = (await source.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		var owner = (await actor.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		var callbackOwner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
 			player.Known().Object().DBRef, actor.Known().Object().DBRef, owner, source.Known().Object().DBRef,
 			callbackOwner, attribute, _time.GetUtcNow() + timeout);
@@ -124,9 +124,21 @@ public sealed class InputSessionService : IInputSessionService
 			generation.Ticket.ObserveStart(session.Id);
 			generation.Ticket = new InputCaptureTicket(session.Id);
 		}
-		try { await _notify.Prompt(handle, prompt); }
+		try { await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt); }
 		catch { Discard(session); throw; }
 		return null;
+	}
+
+	private static async ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
+	{
+		var token = ExecutionBudget.CurrentToken;
+		token.ThrowIfCancellationRequested();
+		// Legacy permission APIs have no token parameter. Bound only their read-only
+		// decision; callback execution and output publication remain directly awaited.
+		var pending = read();
+		var result = pending.IsCompletedSuccessfully ? pending.Result : await pending.AsTask().WaitAsync(token);
+		token.ThrowIfCancellationRequested();
+		return result;
 	}
 
 	private static bool TransportMatches(IConnectionService.ConnectionData connection, string? expected)
@@ -136,7 +148,7 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!TransportMatches(session.Connection, parser.CurrentState.ConnectionSessionId)
 			|| parser.CurrentState.Executor is not { } executor) return false;
-		var actor = await _mediator.Send(new GetObjectNodeQuery(executor));
+		var actor = await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
 		return !actor.IsNone && (actor.Known().Object().DBRef == session.Executor || actor.Known().Object().DBRef == session.Character);
 	}
 
@@ -145,7 +157,7 @@ public sealed class InputSessionService : IInputSessionService
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
 		if (GetCapturing(handle)?.Id != session.Id) return NotActive;
-		await _notify.Prompt(handle, prompt);
+		await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
 		return null;
 	}
 
@@ -220,14 +232,14 @@ public sealed class InputSessionService : IInputSessionService
 			await _notify.NotifyLocalized(session.Connection.Handle, "InputSessionInputTooLarge");
 			return null;
 		}
-		var actor = await _mediator.Send(new GetObjectNodeQuery(session.Executor));
-		var target = await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget));
-		var character = await _mediator.Send(new GetObjectNodeQuery(session.Character));
+		var actor = await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken);
+		var target = await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken);
+		var character = await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken);
 		if (actor.IsNone || target.IsNone || character.IsNone
-			|| await actor.Known().HasFlag("HALT")
-			|| (await actor.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef != session.Owner
-			|| (await target.Known().Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef != session.CallbackOwner
-			|| !await _permissions.Controls(actor.Known(), target.Known())) return await Revoke(session);
+			|| await actor.Known().HasFlag("HALT", ExecutionBudget.CurrentToken)
+			|| (await actor.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.Owner
+			|| (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.CallbackOwner
+			|| !await CheckReadAsync(() => _permissions.Controls(actor.Known(), target.Known()))) return await Revoke(session);
 		var readable = await _attributes.GetAttributeAsync(actor.Known(), target.Known(), session.CallbackAttribute, IAttributeService.AttributeMode.Read, false);
 		var executable = await _attributes.GetAttributeAsync(actor.Known(), target.Known(), session.CallbackAttribute, IAttributeService.AttributeMode.Execute, false);
 		if (!readable.IsAttribute || !executable.IsAttribute) return await Revoke(session);

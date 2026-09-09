@@ -112,6 +112,82 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("object")]
+	[Arguments("actor-owner")]
+	[Arguments("target-owner")]
+	[Arguments("control")]
+	[Arguments("flag")]
+	public async Task CallbackRevalidationStopsWhenExecutionIsCancelled(string boundary)
+	{
+		var h = new Harness();
+		var session = await h.Start();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		async ValueTask<AnyOptionalSharpObject> ReadObject(CancellationToken token)
+		{
+			entered.TrySetResult();
+			await release.Task.WaitAsync(token);
+			return h.Actor;
+		}
+		async ValueTask<bool> ReadControl()
+		{ entered.TrySetResult(); await release.Task; return true; }
+		CancellationToken flagToken = default;
+		async IAsyncEnumerable<SharpObjectFlag> ReadFlags([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			flagToken = token;
+			entered.TrySetResult();
+			await release.Task.WaitAsync(token);
+			yield break;
+		}
+		if (boundary == "object")
+			h.Mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call => ReadObject(call.Arg<CancellationToken>()));
+		else if (boundary == "control")
+			h.Permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(_ => ReadControl());
+		else if (boundary == "flag") h.Actor.Object.Flags = new(() => ReadFlags());
+		else
+			(boundary == "actor-owner" ? h.Actor : h.Target).Object.Owner = new(async token =>
+			{ entered.TrySetResult(); await release.Task.WaitAsync(token); return h.Owner; });
+		using var caller = new CancellationTokenSource();
+		using var budget = ExecutionBudget.FromMilliseconds(0, caller.Token);
+		using var scope = budget.Enter();
+		var delivery = h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("literal")).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		caller.Cancel();
+		try
+		{
+			await Assert.That(async () => await delivery.WaitAsync(TimeSpan.FromSeconds(2))).Throws<OperationCanceledException>();
+			await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+			await Assert.That(h.Deliveries.Count).IsEqualTo(0);
+			if (boundary == "flag") await Assert.That(flagToken.IsCancellationRequested).IsTrue();
+		}
+		finally
+		{
+			release.TrySetResult();
+			try { await delivery; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task GuidedPromptPublicationCarriesCapturedTransportIdentity(bool reprompt)
+	{
+		var h = new Harness();
+		var caller = await h.Connect();
+		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
+		MarkupPromptMessage? published = null;
+		bus.HandlePublish(Arg.Any<MarkupPromptMessage>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{ published = call.Arg<MarkupPromptMessage>(); return Task.CompletedTask; });
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
+		await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("private prompt"), TimeSpan.FromSeconds(60));
+		if (reprompt) await sessions.PromptAsync(caller, MarkupText.Plain("another private prompt"));
+		var serialized = System.Text.Json.JsonSerializer.SerializeToElement(published);
+		await Assert.That(serialized.TryGetProperty("SessionId", out var identity)).IsTrue();
+		await Assert.That(identity.GetString()).IsEqualTo("transport");
+	}
+
+	[Test]
 	[Arguments("[setq(x,evil)];@destroy me;%q<x>\r\nnext line")]
 	[Arguments("")]
 	[Arguments("  \t  ")]
@@ -315,7 +391,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var caller = await h.Connect();
-		h.Notify.Prompt(Arg.Any<long>(), Arg.Any<OneOf.OneOf<MarkupText, string>>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
+		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<OneOf.OneOf<MarkupText, string>>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
 		try { await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)); }
 		catch (InvalidOperationException) { }
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();

@@ -41,10 +41,10 @@ public class NotifyService(
 	/// Publishes prompt output to a single connection as serialized markup. Prompts are not wrapped
 	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline.
 	/// </summary>
-	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what)
+	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what, string? sessionId = null)
 	{
 		var ms = what.Match(markup => markup, MarkupText.Plain);
-		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)), ExecutionBudget.CurrentToken);
+		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)) { SessionId = sessionId }, ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>
@@ -187,6 +187,9 @@ public class NotifyService(
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
+
+	public ValueTask PromptToSession(long handle, string sessionId, OneOf<MString, string> what)
+		=> PublishMarkupPrompt(handle, what, sessionId);
 
 	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> await Prompt([handle], what, sender, type);

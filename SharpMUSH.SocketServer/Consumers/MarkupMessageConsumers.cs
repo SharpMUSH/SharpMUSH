@@ -71,6 +71,8 @@ public class MarkupPromptConsumer(
 			return;
 		}
 
+		if (message.SessionId is { } expected && connection.SessionId != expected) return;
+
 		if (string.IsNullOrEmpty(message.Markup))
 			return;
 
@@ -81,6 +83,7 @@ public class MarkupPromptConsumer(
 				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
 				: rendered.Data;
 
+			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
 			await connection.PromptOutputFunction(data);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
