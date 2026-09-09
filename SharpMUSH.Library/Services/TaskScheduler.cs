@@ -154,7 +154,7 @@ public class TaskScheduler(
 	/// <summary>Serialize semaphore counter transactions. Acquire before any deferred queue lease.</summary>
 	public async ValueTask<IDisposable> EnterSemaphoreMutationAsync()
 	{
-		await _semaphoreMutations.WaitAsync();
+		await _semaphoreMutations.WaitAsync(ExecutionBudget.CurrentToken);
 		return new SemaphoreMutationLease(_semaphoreMutations);
 	}
 

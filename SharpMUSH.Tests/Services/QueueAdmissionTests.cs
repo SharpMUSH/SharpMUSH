@@ -222,6 +222,27 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task ContendedSemaphoreLeaseCannotBlockTheQueuePastItsDeadline()
+	{
+		await using var queue = Create();
+		using var held = await queue.EnterSemaphoreMutationAsync();
+		var entered = Signal();
+		var drained = Signal();
+		var acquired = false;
+		await queue.EnqueueWork(async () =>
+		{
+			entered.SetResult();
+			using var lease = await queue.EnterSemaphoreMutationAsync();
+			acquired = true;
+			return null;
+		}, "contended", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await queue.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(acquired).IsFalse();
+	}
+
+	[Test]
 	public async Task FailedCustomSemaphoreInitializationRemovesPartialAttribute()
 	{
 		SharpAttribute? attribute = null;
