@@ -64,9 +64,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IProgress<ConversionProgress>? progress,
 		CancellationToken cancellationToken = default)
 	{
-		// This service is a singleton, and the mapping is per-conversion state. Left over from a
-		// previous run it makes every dbref look already-converted, so a second import in the same
-		// process — a retry after a failure, or importing two databases — silently creates nothing.
+		// A singleton holding per-conversion state: uncleared, every dbref looks already-converted and
+		// a second import in the same process silently creates nothing.
 		_dbrefMapping.Clear();
 
 		var stopwatch = Stopwatch.StartNew();
@@ -166,13 +165,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
 	/// </summary>
 	/// <remarks>
-	/// The ×1000 is the whole point: PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c>
-	/// writes <c>o-&gt;creation_time</c> as an int), while SharpMUSH keeps milliseconds and puts them
-	/// in the objid. Carrying the stamps across unscaled would date every imported object to January
-	/// 1970; not carrying them at all — which is what happened before — gives every object a brand
-	/// new objid, so any softcode in the imported database that holds one stops resolving.
-	/// <para>A PennMUSH object with no recorded creation time (a 0 field) is left to default to now,
-	/// since 1970 is not a more truthful answer than the import date.</para>
+	/// PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c> writes <c>o-&gt;creation_time</c>
+	/// as an int) while SharpMUSH keeps milliseconds and puts them in the objid, so unscaled stamps
+	/// would date every imported object to January 1970.
+	/// <para>An object with no recorded creation time (a 0 field) defaults to now, since 1970 is not
+	/// a more truthful answer than the import date.</para>
 	/// </remarks>
 	/// <summary>
 	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
@@ -180,8 +177,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <remarks>
 	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
 	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
-	/// seed's startup time, so their PennMUSH objids — God's especially, which softcode references
-	/// constantly — still fail to resolve, which is exactly the defect this is all meant to fix.
+	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which
+	/// imported softcode references constantly.
 	/// </remarks>
 	private async Task<DBRef> RestampReusedObjectAsync(int dbrefNumber, PennMUSHObject? pennObject,
 		CancellationToken cancellationToken)
@@ -249,10 +246,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					await _database.SetPlayerPasswordAsync(existingPlayer1.AsT0, hash, salt, cancellationToken);
 				}
 
-				// Restamped after the password is set, not before: an imported PennMUSH hash validates
-				// against salt + plaintext and never against the objid, so the order is free — but
-				// SetPlayerPasswordAsync takes the object read before the restamp, and reusing a stale
-				// one to write is the kind of thing that only bites once.
+				// After the password, because SetPlayerPasswordAsync takes the object read before the
+				// restamp. The order is otherwise free: an imported PennMUSH hash validates against
+				// salt + plaintext, never against the objid.
 				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
 				_dbrefMapping[1] = tempGodDbRef;
 

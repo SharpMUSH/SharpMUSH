@@ -9,9 +9,9 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// SharpMUSH's objid is <c>#N:&lt;creation milliseconds&gt;</c>, so an import that does not carry the
-/// original creation time gives every object a brand new object id and any softcode in the imported
-/// database that holds one stops resolving.
+/// SharpMUSH's objid is <c>#N:&lt;creation milliseconds&gt;</c>, so an import that does not carry
+/// the original creation time gives every object a new object id, and softcode in the imported
+/// database holding one stops resolving.
 /// </summary>
 public class PennMUSHImportTimestampTests
 {
@@ -31,8 +31,8 @@ public class PennMUSHImportTimestampTests
 	// ---- the unit conversion --------------------------------------------------------------------
 
 	/// <summary>
-	/// PennMUSH keeps a time_t in seconds; SharpMUSH keeps milliseconds. Carrying the stamps across
-	/// unscaled would date every imported object to January 1970.
+	/// PennMUSH keeps a time_t in seconds; SharpMUSH keeps milliseconds. Unscaled, every imported
+	/// object dates to January 1970.
 	/// </summary>
 	[Test]
 	public async Task PennSecondsScaleToSharpMilliseconds()
@@ -260,11 +260,9 @@ public class PennMUSHImportTimestampTests
 	/// seed (#0, #1, #2) rather than creating.
 	/// </summary>
 	/// <remarks>
-	/// Exercised on a throwaway object, deliberately not on the seed objects themselves. Restamping
-	/// changes an objid, every other test in this shared session resolves God, and they run
-	/// concurrently — so a test that restamped #1 would break unrelated suites during its window
-	/// however carefully it restored afterwards. The wiring into the three reuse branches is plain
-	/// enough to read; what needs proving is that the store write lands.
+	/// On a throwaway object, deliberately not on the seed objects themselves: restamping changes an
+	/// objid, every other test in this shared session resolves God, and they run concurrently, so
+	/// restamping #1 breaks unrelated suites for the duration whatever it restores afterwards.
 	/// </remarks>
 	[Test]
 	public async Task RestampingRewritesBothTimesAndTheObjid()

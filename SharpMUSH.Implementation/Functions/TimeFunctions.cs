@@ -57,8 +57,7 @@ public partial class Functions
 			found => FormatInstant(found.Object().CreationTime, utc));
 	}
 
-	// PennMUSH returns a time string from both branches of ctime()/mtime(); <utc> chooses the zone
-	// it is rendered in, not whether it is rendered at all.
+	// PennMUSH renders a time string from both branches of ctime()/mtime(); <utc> chooses the zone.
 	private static string FormatInstant(long milliseconds, bool utc)
 	{
 		var instant = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
@@ -286,9 +285,8 @@ public partial class Functions
 		}
 
 		// The whole accumulation sits inside the guard, not just the final cast: each term is a
-		// user-supplied decimal scaled by up to 31,536,000,000, so "99999999999999999999999999y"
-		// overflows at the multiplication and the running sum can overflow too. Either would escape
-		// as an exception from a function softcode is allowed to call.
+		// user-supplied decimal scaled by up to 31,536,000,000, so the multiplication and the running
+		// sum can both overflow, and softcode can reach either.
 		try
 		{
 			decimal total = 0;
@@ -567,7 +565,7 @@ public partial class Functions
 		}
 
 		// Both parts carry the sign, so a sub-second negative — where the whole part is 0 — is only
-		// visible in the remainder. Testing totalSecs alone let timestring(-0.5) render "0s".
+		// visible in the remainder.
 		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
@@ -621,8 +619,8 @@ public partial class Functions
 
 	/// <remarks>
 	/// PennMUSH's uptime() is seconds for every type, and -1 for an event that has not happened or
-	/// is disabled. SharpMUSH has no save or dbck scheduler yet, so those report -1 rather than a
-	/// plausible-looking "now" that softcode would treat as a real timestamp.
+	/// is disabled. SharpMUSH has no save or dbck scheduler, so those report -1 rather than a
+	/// plausible "now" that softcode would treat as a real timestamp.
 	/// </remarks>
 	[SharpFunction(Name = "uptime", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.StripAnsi,
 		ParameterNames = ["type", "precision"])]
@@ -726,9 +724,8 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.Integer);
 		}
 
-		// PennMUSH's fun_etime rejects a negative (src/funtime.c: "secs < 0" -> e_range), as
-		// timestring() and etimefmt() already do here. This rendered "-1s" instead. Both parts carry
-		// the sign, so a sub-second negative shows up only in the remainder.
+		// PennMUSH's fun_etime rejects a negative (src/funtime.c: "secs < 0" -> e_range). Both parts
+		// carry the sign, so a sub-second negative shows up only in the remainder.
 		if (totalSecs < 0 || fractionMs < 0)
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.SecondsMustNotBeNegative);
@@ -824,9 +821,8 @@ public partial class Functions
 			var flags = match.Groups["flags"].Value.ToLowerInvariant();
 			var codeChar = match.Groups["code"].Value;
 
-			// TryParse, not Parse: the pattern's width group is \d* with no length bound, so
-			// "$99999999999s" overflows Int32 and the exception escapes this Regex.Replace callback.
-			// A width nobody could render falls back to no padding.
+			// The pattern's width group is \d* with no length bound, so "$99999999999s" overflows
+			// Int32. A width nobody could render falls back to no padding.
 			var width = int.TryParse(widthStr, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedWidth)
 				? parsedWidth
 				: 0;

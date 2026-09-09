@@ -33,9 +33,8 @@ public static class TimePrecisions
 	/// <see cref="TimePrecision.Seconds"/>, so every PennMUSH call site keeps its unit.
 	/// </summary>
 	/// <remarks>
-	/// An unrecognised token fails rather than falling back to seconds. A silent fallback would
-	/// turn a typo into a plausible-looking wrong number, which is the failure the precision
-	/// argument exists to prevent.
+	/// An unrecognised token fails rather than falling back to seconds, so a typo cannot become a
+	/// plausible-looking wrong number.
 	/// </remarks>
 	public static bool TryParse(string? token, out TimePrecision precision)
 	{
@@ -80,11 +79,10 @@ public static class TimePrecisions
 	/// Milliseconds to whole seconds, rounding towards negative infinity.
 	/// </summary>
 	/// <remarks>
-	/// Floor rather than truncation, because that is what <see cref="DateTimeOffset.ToUnixTimeSeconds"/>
-	/// does for pre-epoch instants: -1500ms is -2s there, and a second convention here would make
-	/// <c>csecs()</c> and <c>convsecs()</c> disagree about the same moment. This is about naming an
-	/// instant; <see cref="TryParseSecondsParts"/> splits a signed <em>duration</em> and truncates
-	/// towards zero instead, since its two parts are read back as one signed magnitude.
+	/// Floor, matching <see cref="DateTimeOffset.ToUnixTimeSeconds"/> for pre-epoch instants where
+	/// -1500ms is -2s; a second convention would make <c>csecs()</c> and <c>convsecs()</c> disagree
+	/// about one moment. <see cref="TryParseSecondsParts"/> splits a signed <em>duration</em> and
+	/// truncates towards zero instead.
 	/// </remarks>
 	public static long ToWholeSeconds(long milliseconds)
 		=> (long)Math.Floor(milliseconds / 1000m);
@@ -93,10 +91,9 @@ public static class TimePrecisions
 	/// Reads a seconds value, which may carry a fractional part, as milliseconds.
 	/// </summary>
 	/// <remarks>
-	/// Invariant culture is load-bearing, not hygiene: under a comma decimal separator a
-	/// current-culture parse reads "1.5" as 15, so a game's arithmetic would depend on its host's
-	/// locale. Exponent notation is rejected — PennMUSH does not accept it, and accepting it here
-	/// would make "1e3" mean something SharpMUSH-only in an otherwise portable expression.
+	/// Invariant culture is load-bearing: under a comma decimal separator a current-culture parse
+	/// reads "1.5" as 15, making a game's arithmetic depend on its host's locale. Exponent notation
+	/// is rejected because PennMUSH does not accept it.
 	/// </remarks>
 	public static bool TryParseSeconds(string? value, out long milliseconds)
 	{
@@ -123,11 +120,9 @@ public static class TimePrecisions
 	/// the sign</b>, so a caller rejecting negative durations must test both.
 	/// </summary>
 	/// <remarks>
-	/// The duration renderers use this rather than <see cref="TryParseSeconds"/> because a single
-	/// millisecond <see cref="long"/> only reaches ~292 million years, while a seconds one reaches
-	/// ~292 billion. timestring() documents and tests the full 64-bit seconds range, so collapsing
-	/// the two parts into one number would narrow an input range by a factor of 1000 to buy a
-	/// precision nobody asks for at that magnitude.
+	/// The duration renderers use this rather than <see cref="TryParseSeconds"/> for range: a
+	/// millisecond <see cref="long"/> reaches ~292 million years, a seconds one ~292 billion, and
+	/// timestring() accepts the full 64-bit seconds range.
 	/// </remarks>
 	public static bool TryParseSecondsParts(string? value, out long seconds, out int milliseconds)
 	{
@@ -139,10 +134,9 @@ public static class TimePrecisions
 			return false;
 		}
 
-		// Split the magnitude and reapply the sign, rather than reading the sign back off the
-		// truncated whole part. decimal.Truncate returns 0 for everything in (-1, 0), so a value like
-		// -0.5 would otherwise arrive as a positive 500ms with nothing left to say it was negative —
-		// and timestring(-0.5) would render "0s" instead of refusing a negative duration.
+		// The sign comes from the parsed value, not from the truncated whole part: decimal.Truncate
+		// returns 0 for everything in (-1, 0), so -0.5 would otherwise arrive as a positive 500ms
+		// with nothing left to say it was negative.
 		var negative = parsed < 0;
 		var magnitude = Math.Abs(parsed);
 		var whole = decimal.Truncate(magnitude);
@@ -173,12 +167,10 @@ public static class TimePrecisions
 	/// <see cref="DateTimeOffset"/> can represent.
 	/// </summary>
 	/// <remarks>
-	/// The range check is the point. Callers used to hand the parsed value straight to
-	/// <see cref="DateTimeOffset.FromUnixTimeMilliseconds"/>, which throws for a value a caller can
-	/// trivially supply — a millisecond stamp passed where seconds are expected is 1000x too large
-	/// and lands well outside it. The exception escaped into the function dispatcher and came back as
-	/// an empty result rather than an error, which is the one answer softcode cannot tell from a real
-	/// one.
+	/// A millisecond stamp passed where seconds are expected is 1000x too large and falls outside
+	/// that range. Unchecked, <see cref="DateTimeOffset.FromUnixTimeMilliseconds"/> throws and the
+	/// function dispatcher turns the exception into an empty result — the one answer softcode cannot
+	/// tell from a real one.
 	/// </remarks>
 	public static bool TryParseInstant(string? value, out DateTimeOffset instant)
 	{

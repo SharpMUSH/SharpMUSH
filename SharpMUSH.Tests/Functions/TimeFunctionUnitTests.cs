@@ -89,8 +89,8 @@ public class TimeFunctionUnitTests
 	}
 
 	/// <summary>
-	/// PennMUSH's ctime() is a time string in time() format, in both the local and the utc branch.
-	/// This asserted only IsNotNull, so it stayed green while the utc branch returned a raw number.
+	/// PennMUSH's ctime() and mtime() are time strings in time() format, in both the local and the
+	/// utc branch.
 	/// </summary>
 	[Test]
 	[Arguments("ctime(#0)")]

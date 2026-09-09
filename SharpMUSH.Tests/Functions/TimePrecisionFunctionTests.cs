@@ -38,8 +38,8 @@ public class TimePrecisionFunctionTests
 	}
 
 	/// <summary>
-	/// Only the six documented spellings. "secs" and "millis" read like precision tokens but are
-	/// not ones, and accepting an undocumented alias makes the guide wrong rather than generous.
+	/// Only the six documented spellings: "secs" and "millis" read like precision tokens but are not
+	/// ones, and an undocumented alias makes the guide wrong rather than the parser generous.
 	/// </summary>
 	[Test]
 	[Arguments("us")]
@@ -57,8 +57,8 @@ public class TimePrecisionFunctionTests
 
 	/// <summary>
 	/// The sign of a duration in (-1, 0) lives entirely in the millisecond remainder, because the
-	/// whole-second part truncates to zero. Reading the sign off the whole part let a negative
-	/// duration through the guard and render as a positive one.
+	/// whole-second part truncates to zero. Read off the whole part it is lost, and a negative
+	/// duration passes the guard and renders positive.
 	/// </summary>
 	[Test]
 	[Arguments("-0.5", 0L, -500)]
@@ -82,8 +82,7 @@ public class TimePrecisionFunctionTests
 
 	/// <summary>
 	/// Each term is a user-supplied decimal scaled by up to 31,536,000,000, so the multiplication
-	/// itself overflows — not just the final cast. An OverflowException here escapes a function
-	/// softcode is allowed to call.
+	/// overflows before the final cast does, and softcode can reach it.
 	/// </summary>
 	[Test]
 	[Arguments("stringsecs(99999999999999999999999999y)")]
@@ -93,8 +92,8 @@ public class TimePrecisionFunctionTests
 
 	/// <summary>
 	/// A millisecond stamp handed to a seconds argument is 1000x too large and lands outside the
-	/// range DateTimeOffset can represent. That threw, and the dispatcher turned the exception into
-	/// an empty result — the one answer softcode cannot tell from a real one.
+	/// range DateTimeOffset can represent. Unchecked it throws, and the dispatcher turns that into an
+	/// empty result — the one answer softcode cannot tell from a real one.
 	/// </summary>
 	[Test]
 	[Arguments("timefmt($Y,1778518155494)", "#-1 TIME INTEGER OUT OF RANGE")]
@@ -105,8 +104,8 @@ public class TimePrecisionFunctionTests
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 
 	/// <summary>
-	/// etimefmt's width group is \d* with no length bound, so a width too large for Int32 threw out
-	/// of the Regex.Replace callback. It falls back to no padding.
+	/// etimefmt's width group is \d* with no length bound, so a width too large for Int32 would throw
+	/// out of the Regex.Replace callback. It falls back to no padding.
 	/// </summary>
 	[Test]
 	public async Task AnEtimefmtWidthTooLargeForInt32DoesNotThrow()
@@ -209,8 +208,8 @@ public class TimePrecisionFunctionTests
 	// ---- csecs() / msecs() --------------------------------------------------------------------
 
 	/// <summary>
-	/// The idiom this whole change exists for: PennMUSH softcode ages an object with
-	/// sub(secs(),csecs(%0)), which is only meaningful when both are in the same unit.
+	/// PennMUSH softcode ages an object with sub(secs(),csecs(%0)), which is only meaningful when
+	/// both are in the same unit.
 	/// </summary>
 	[Test]
 	public async Task CsecsIsInTheSameUnitAsSecs()
@@ -248,9 +247,7 @@ public class TimePrecisionFunctionTests
 	}
 
 	/// <summary>
-	/// msecs() and mtime() reported the creation time whenever a second argument was truthy. The
-	/// precision argument now occupies that slot, so the only remaining question is that they read
-	/// ModifiedTime at all.
+	/// msecs() reads ModifiedTime, not CreationTime.
 	/// </summary>
 	/// <remarks>
 	/// ModifiedTime is currently only ever written at creation, so it equals CreationTime for every
@@ -266,7 +263,7 @@ public class TimePrecisionFunctionTests
 
 	// ---- ctime() / mtime() --------------------------------------------------------------------
 
-	/// <summary>PennMUSH returns a time string from both branches; the utc branch returned a raw number.</summary>
+	/// <summary>PennMUSH returns a time string from both branches, local and utc.</summary>
 	[Test]
 	[Arguments("ctime(#1)")]
 	[Arguments("ctime(#1,1)")]
@@ -290,8 +287,7 @@ public class TimePrecisionFunctionTests
 		=> await Assert.That((await Eval(code)).Trim()).IsEqualTo(expected.Trim());
 
 	/// <summary>
-	/// PennMUSH's fun_etime rejects a negative (src/funtime.c), as timestring() and etimefmt()
-	/// already did here. etime() rendered "-1s".
+	/// PennMUSH's fun_etime rejects a negative (src/funtime.c), as timestring() and etimefmt() do.
 	/// </summary>
 	[Test]
 	public async Task EtimeRejectsNegativeSeconds()
@@ -339,8 +335,8 @@ public class TimePrecisionFunctionTests
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 
 	/// <summary>
-	/// isdaylight() read its PennMUSH-seconds argument through FromUnixTimeMilliseconds, so it
-	/// answered for January 1970 whatever it was asked.
+	/// isdaylight() takes PennMUSH seconds. Read as milliseconds it answers for January 1970 whatever
+	/// it is asked.
 	/// </summary>
 	[Test]
 	public async Task IsdaylightReadsSeconds()
@@ -382,7 +378,7 @@ public class TimePrecisionFunctionTests
 
 	// ---- uptime() / starttime() / restarttime() -----------------------------------------------
 
-	/// <summary>PennMUSH's uptime() is seconds for every type; the named types returned milliseconds.</summary>
+	/// <summary>PennMUSH's uptime() is seconds for every type, not just the default.</summary>
 	[Test]
 	[Arguments("uptime()")]
 	[Arguments("uptime(upsince)")]

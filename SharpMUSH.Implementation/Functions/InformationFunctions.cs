@@ -135,8 +135,8 @@ public partial class Functions
 	}
 
 	/// <remarks>
-	/// PennMUSH returns this in time() format, not as a number — see restarttime() in
-	/// game/txt/hlp/pennfunc.hlp. uptime(reboot) is the numeric form.
+	/// PennMUSH returns this in time() format, not as a number (game/txt/hlp/pennfunc.hlp).
+	/// uptime(reboot) is the numeric form.
 	/// </remarks>
 	[SharpFunction(Name = "restarttime", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> RestartTime(IMUSHCodeParser parser, SharpFunctionAttribute _2)

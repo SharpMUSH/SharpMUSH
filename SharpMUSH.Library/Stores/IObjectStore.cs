@@ -19,17 +19,17 @@ public interface IObjectStore
 	/// <param name="quota">Initial quota for the player</param>
 	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
 	/// <param name="creationTime">
-	/// Creation time in Unix milliseconds, or <c>null</c> for now. Only an importer should pass this:
-	/// the objid is <c>#N:&lt;creationTime&gt;</c>, so supplying the original stamp is what lets a
-	/// converted database keep the object ids its softcode already holds.
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
 	/// </param>
 	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	/// <remarks>
 	/// A new player's password is hashed against its own objid, so <paramref name="creationTime"/>
-	/// has to be settled before the hash is computed rather than patched in afterwards — otherwise
-	/// the hash is keyed to an objid the object no longer has, and the player cannot log in.
+	/// has to be settled before the hash is computed: keyed to an objid the object does not end up
+	/// with, the player cannot log in.
 	/// </remarks>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
 		string? salt = null, long? creationTime = null, long? modifiedTime = null,
@@ -75,9 +75,9 @@ public interface IObjectStore
 	/// <param name="name">Room Name</param>
 	/// <param name="creator">Room Player-Creator</param>
 	/// <param name="creationTime">
-	/// Creation time in Unix milliseconds, or <c>null</c> for now. Only an importer should pass this:
-	/// the objid is <c>#N:&lt;creationTime&gt;</c>, so supplying the original stamp is what lets a
-	/// converted database keep the object ids its softcode already holds.
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
 	/// </param>
 	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
@@ -93,9 +93,9 @@ public interface IObjectStore
 	/// <param name="creator">Owner to the thing</param>
 	/// <param name="home">Home location for the thing</param>
 	/// <param name="creationTime">
-	/// Creation time in Unix milliseconds, or <c>null</c> for now. Only an importer should pass this:
-	/// the objid is <c>#N:&lt;creationTime&gt;</c>, so supplying the original stamp is what lets a
-	/// converted database keep the object ids its softcode already holds.
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
 	/// </param>
 	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
@@ -112,9 +112,9 @@ public interface IObjectStore
 	/// <param name="location">Location for the Exit</param>
 	/// <param name="creator">Owner to the exit</param>
 	/// <param name="creationTime">
-	/// Creation time in Unix milliseconds, or <c>null</c> for now. Only an importer should pass this:
-	/// the objid is <c>#N:&lt;creationTime&gt;</c>, so supplying the original stamp is what lets a
-	/// converted database keep the object ids its softcode already holds.
+	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
+	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
+	/// the object ids its softcode holds.
 	/// </param>
 	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
@@ -218,20 +218,17 @@ public interface IObjectStore
 	/// Rewrites an existing object's creation and modification times, in Unix milliseconds.
 	/// </summary>
 	/// <remarks>
-	/// This changes the object's <b>identity</b>: the objid is <c>#N:&lt;creationTime&gt;</c>, so
-	/// anything holding the old one stops resolving. It exists for the importer, which has to restamp
-	/// the three objects it reuses from the migration seed (<c>#0</c>, <c>#1</c>, <c>#2</c>) rather
-	/// than creating them — without it those keep the seed's timestamps and their PennMUSH objids
-	/// still do not resolve, which is the whole defect the create-time parameter exists to fix.
-	/// <para>Not for general use, and not safe on a live object. This is a raw store write below the
-	/// Mediator layer, so it does <b>not</b> invalidate the number-keyed object cache that
-	/// <c>GetObjectNodeByNumberQuery</c> fills. A cached copy would keep the old creation time while
-	/// the store has the new one, and the objid check in <c>GetObjectNodeQuery</c> compares against
-	/// that stale value — so every reference to the object stops resolving. The importer gets away
-	/// with it because a conversion runs at startup, before the cache is populated, which is equally
-	/// true of the other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent,
-	/// SetObjectZone). Any caller that is not the importer needs a Mediator command carrying
-	/// <c>ICacheInvalidating</c> instead.</para>
+	/// This changes the object's <b>identity</b> — the objid is <c>#N:&lt;creationTime&gt;</c> — so
+	/// anything holding the old one stops resolving. It exists for the importer, which reuses
+	/// <c>#0</c>, <c>#1</c> and <c>#2</c> from the migration seed rather than creating them and so
+	/// cannot stamp them at creation.
+	/// <para><b>Importer only, and unsafe on a live object.</b> This is a raw store write below the
+	/// Mediator layer and does not invalidate the number-keyed cache <c>GetObjectNodeByNumberQuery</c>
+	/// fills; a cached copy keeps the old creation time, and the objid check in
+	/// <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to the
+	/// object stops resolving. A conversion runs at startup before the cache is populated, as do the
+	/// other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent, SetObjectZone). Any
+	/// other caller needs a Mediator command carrying <c>ICacheInvalidating</c>.</para>
 	/// </remarks>
 	/// <param name="target">Object to restamp</param>
 	/// <param name="creationTime">Creation time in Unix milliseconds</param>

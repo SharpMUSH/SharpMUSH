@@ -37,11 +37,9 @@ objects:
       FN`CHARCAT: |-
         firstof(if(hasflag(%0,WIZARD),Wizard),if(hasflag(%0,ROYALTY),Royalty),if(haspower(%0,Guest),Guest))
       # One character-directory row. %0 = player. created = unix ms, which is what the portal's
-      # timestamp contract expects and what objid carries. csecs() is seconds by default like
+      # timestamp contract expects and what objid carries. csecs() is seconds by default, like
       # PennMUSH's, so the millisecond form has to be asked for: see 'help time precision'.
-      # This used to read ctime(%0,1), which returned a raw millisecond number only because ctime's
-      # utc branch was skipping its own formatting; ctime returns a time string in both branches now,
-      # and json(number,<time string>) is a #-1 BAD ARGUMENT FORMAT.
+      # Not ctime(), which is a time string — json(number,<time string>) is a #-1 BAD ARGUMENT FORMAT.
       FN`CHARROW: |-
         json(object,name,json(string,name(%0)),objid,json(string,objid(%0)),created,json(number,csecs(%0,ms)),category,json(string,u(FN`CHARCAT,%0)))
       # Directory visibility predicate (%0): 1 lists, 0 hides. Default hides Guests and the

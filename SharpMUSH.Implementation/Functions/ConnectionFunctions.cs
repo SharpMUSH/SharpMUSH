@@ -467,8 +467,8 @@ public partial class Functions
 			: TimePrecisions.Format((long)idle.Value.TotalMilliseconds, precision);
 
 	/// <remarks>
-	/// PennMUSH's idle() is a whole number of seconds. This returned TimeSpan.TotalSeconds, so it
-	/// rendered a fractional one and disagreed with its own idlesecs() alias, which truncated.
+	/// PennMUSH's idle() is a whole number of seconds, and idlesecs() is an alias for it, so the two
+	/// must render the same value.
 	/// </remarks>
 	[SharpFunction(Name = "idle", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["object", "precision"])]
@@ -1651,8 +1651,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// Connections with no known idle time are filtered out rather than mapped to -1: mixed in,
-		// the sentinel wins the Min() and an executor with one unavailable connection reports -1
-		// however long its other connections have actually been idle.
+		// the sentinel wins the Min() and one unavailable connection hides every real idle time.
 		var data = ConnectionService.Get(executor.Object().DBRef);
 		var idleMilliseconds = await data
 			.Where(x => x.Idle is not null)
