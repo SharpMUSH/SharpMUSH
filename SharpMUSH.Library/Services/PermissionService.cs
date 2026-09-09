@@ -380,7 +380,8 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to,
 		IPermissionService.InteractType type, AnySharpObject hearingSource)
 	{
-		var hear = (type & (IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)) != 0;
+		var hear = type != IPermissionService.InteractType.Presence
+			&& (type & (IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)) != 0;
 		if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? hearingSource : to).Object().DBRef)) return false;
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 

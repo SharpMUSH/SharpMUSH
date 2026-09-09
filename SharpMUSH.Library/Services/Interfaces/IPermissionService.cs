@@ -8,7 +8,8 @@ public interface IPermissionService
 	[Flags]
 	enum InteractType
 	{
-		None = 0, Hear = 1, Match = 2, Presence = 4, Page = 8, See = 16
+		// Published plugin ABI: Presence historically occupies the combined value 3.
+		See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4
 	}
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);

@@ -18,6 +18,69 @@ namespace SharpMUSH.Tests.Services;
 public class RealityRoutingTests
 {
 	[Test]
+	[Arguments(0, false)]
+	[Arguments(3, false)]
+	[Arguments(4, true)]
+	public async Task PublishedInteractionConstantsKeepTheirPerceptionDirection(int publishedValue, bool hearing)
+	{
+		var factory = new TestObjectFactory();
+		var actor = factory.CreatePlayer(61, "actor");
+		var target = factory.CreatePlayer(62, "target");
+		actor.AsPlayer.Id = "actor";
+		target.AsPlayer.Id = "target";
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(actor.Object().DBRef, target.Object().DBRef).Returns(true);
+		reality.CanPerceiveAsync(target.Object().DBRef, actor.Object().DBRef).Returns(false);
+		var locks = Substitute.For<ILockService>();
+		locks.Evaluate(LockType.Interact, target, actor).Returns(true);
+		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
+		await Assert.That(await permissions.CanInteract(actor, target, (IPermissionService.InteractType)publishedValue)).IsEqualTo(!hearing);
+	}
+
+	[Test]
+	[Arguments("See", 0)]
+	[Arguments("Hear", 1)]
+	[Arguments("Match", 2)]
+	[Arguments("Presence", 3)]
+	[Arguments("Page", 4)]
+	public async Task InteractionEnumRetainsItsPublishedBinaryValues(string name, int publishedValue)
+	{
+		await Assert.That((int)Enum.Parse<IPermissionService.InteractType>(name)).IsEqualTo(publishedValue);
+	}
+
+	[Test]
+	[Arguments("notify")]
+	[Arguments("prompt")]
+	[Arguments("localized")]
+	[Arguments("system")]
+	[Arguments("markup")]
+	[Arguments("except")]
+	public async Task BareRecipientDoesNotFollowAStampedReplacementWithTheSameNumber(string route)
+	{
+		var sender = new TestObjectFactory().CreatePlayer(10, "sender");
+		var receiver = new DBRef(11);
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		var connections = Substitute.For<IConnectionService>();
+		var old = new IConnectionService.ConnectionData(5, receiver, IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+		connections.Get(receiver).Returns(new[] { old }.ToAsyncEnumerable());
+		connections.Get(5).Returns(old with { Ref = new DBRef(receiver.Number, 2) });
+		var bus = Substitute.For<IMessageBus>();
+		var notify = new NotifyService(bus, connections, new LocalizationService(), reality);
+		switch (route)
+		{
+			case "notify": await notify.Notify(receiver, "private", sender); break;
+			case "prompt": await notify.Prompt(receiver, "private", sender); break;
+			case "localized": await notify.NotifyLocalized(receiver, "private", sender); break;
+			case "system": await notify.NotifyLocalized(receiver, "private"); break;
+			case "markup": await notify.NotifyLocalizedMarkup(receiver, "private", sender); break;
+			default: await notify.NotifyExcept(receiver, "private", [], sender); break;
+		}
+		await Assert.That(bus.ReceivedCalls().Any()).IsFalse();
+	}
+
+	[Test]
 	[Arguments(false, true)]
 	[Arguments(true, false)]
 	[Arguments(true, true)]
@@ -92,13 +155,6 @@ public class RealityRoutingTests
 		await bus.DidNotReceive().HandlePublish(Arg.Any<MarkupPromptMessage>());
 		await Assert.That(capture.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(listeners.ReceivedCalls().Any()).IsFalse();
-	}
-	[Test]
-	public async Task VisualInteractionHasADistinctNonzeroBit()
-	{
-		var visual = Enum.Parse<IPermissionService.InteractType>("See");
-		await Assert.That((int)visual).IsNotEqualTo(0);
-		await Assert.That(IPermissionService.InteractType.Hear.HasFlag(IPermissionService.InteractType.See)).IsFalse();
 	}
 
 	[Test]

@@ -30,10 +30,10 @@ public class NotifyService(
 	// A notification caches only perception results, never a connection binding.
 	private async ValueTask<bool> CanReceiveBound(long handle, DBRef intended, AnySharpObject? sender, Dictionary<DBRef, bool> perceptions)
 	{
-		if (connections.Get(handle)?.Ref is not { } current || !current.Matches(intended)) return false;
+		if (connections.Get(handle)?.Ref is not { } current || !current.Equals(intended)) return false;
 		if (!perceptions.TryGetValue(current, out var allowed))
 			perceptions[current] = allowed = await CanReceive(current, sender);
-		return allowed && connections.Get(handle)?.Ref is { } latest && latest.Equals(current);
+		return allowed && connections.Get(handle)?.Ref is { } latest && latest.Equals(intended);
 	}
 
 	private async ValueTask<bool> CanReceiveHandle(long handle, AnySharpObject? sender)
