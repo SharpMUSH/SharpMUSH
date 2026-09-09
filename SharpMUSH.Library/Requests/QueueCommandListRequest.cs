@@ -9,7 +9,8 @@ public record QueueCommandListRequest(
 	MString Command,
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
-	int OldValue) : IRequest<QueueAdmissionResult>;
+	int OldValue,
+	bool ManageSemaphoreCount = false) : IRequest<QueueAdmissionResult>;
 
 public record QueueAttributeRequest(
 	Func<ValueTask<ParserState>> Input,
@@ -26,4 +27,5 @@ public record QueueCommandListWithTimeoutRequest(
 	ParserState State,
 	DbRefAttribute DbRefAttribute,
 	int OldValue,
-	TimeSpan Timeout) : IRequest<QueueAdmissionResult>;
+	TimeSpan Timeout,
+	bool ManageSemaphoreCount = false) : IRequest<QueueAdmissionResult>;

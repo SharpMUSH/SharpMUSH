@@ -27,6 +27,15 @@ public class FunctionParameterNamesTests
 	}
 
 	[Test]
+	public async Task StringDistanceExposesItsTwoArgumentSignature()
+	{
+		var function = AllFunctions().Single(f => f.Name == "strdistance").Attr;
+		await Assert.That(function.MinArgs).IsEqualTo(2);
+		await Assert.That(function.MaxArgs).IsEqualTo(2);
+		await Assert.That(function.ParameterNames.SequenceEqual(new[] { "source", "target" })).IsTrue();
+	}
+
+	[Test]
 	public async Task PrintfExposesItsBoundedVariadicSignature()
 	{
 		var function = AllFunctions().Single(f => f.Name == "printf").Attr;
