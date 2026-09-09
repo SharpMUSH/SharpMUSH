@@ -324,4 +324,30 @@ public class ObjectSnapshotTests
 		await Assert.That(stored.LastResolution!.AccountId).IsEqualTo(actor.AccountId);
 		await Assert.That((await service.RestoreAsync(actor, target, own.Id, selection, preview.Token)).Completed).IsTrue();
 	}
+	[Test, NotInParallel]
+	public async Task RecoveryMetadataCannotExceedTheFinalImageSizeLimit()
+	{
+		var (actor, target, player) = await Setup();
+		var service = Get<IObjectSnapshotService>();
+		var names = Enumerable.Range(0, 30).Select(i => "ATTR" + i.ToString("D3") + new string('X', 50)).ToArray();
+		foreach (var name in names) await Get<IMediator>().Send(new SetAttributeCommand(target, [name], MarkupText.Plain("saved"), player));
+		var saved = await service.CaptureAsync(actor, target, "saved");
+		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		foreach (var name in names) await Get<IAttributeService>().ClearAttributeAsync(player, node, name, IAttributeService.AttributePatternMode.Exact);
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("x"), player));
+		var probe = await service.CaptureAsync(actor, target, "probe");
+		var bytes = System.Text.Encoding.UTF8.GetByteCount(System.Text.Json.JsonSerializer.Serialize(probe, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)));
+		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain(new string('x', 2 * 1024 * 1024 - bytes - 500 + 1)), player));
+		var selection = new SnapshotSelection(names);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		SnapshotOperationException? failure = null;
+		try { await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token); }
+		catch (SnapshotOperationException ex) { failure = ex; }
+		await Assert.That(failure?.Code).IsEqualTo("limit");
+		var history = await service.ListAsync(actor, target);
+		await Assert.That(history.PendingRecoveryId).IsNull();
+		await Assert.That(history.Snapshots.Length).IsEqualTo(2);
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(target, [names[0]]).ToArrayAsync()).Length).IsEqualTo(0);
+	}
+
 }

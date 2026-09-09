@@ -94,7 +94,7 @@ public sealed partial class ObjectSnapshotService(
 				RecoverySelection = selection,
 				Locks = before.Locks.Where(p => selection.Locks && (snapshot.Locks.ContainsKey(p.Key) || snapshot.AbsentLocks.Contains(p.Key))).ToDictionary(p => p.Key, p => p.Value)
 			};
-			before = before with { Digest = Hash(JsonSerializer.Serialize(before with { Digest = "" }, Json)) };
+			before = FinalizeImage(before);
 			history = Append(history, before) with { PendingRecoveryId = before.Id, LastRestoreError = null };
 			// Once this durable write succeeds, every partial mutation has a retained recovery image.
 			await Save(obj, history, ct);
@@ -180,9 +180,14 @@ public sealed partial class ObjectSnapshotService(
 			actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), description, retain,
 			obj.Object().Name, captured.OrderBy(a => a.Name).ToArray(), lockData,
 			(await obj.Object().Flags.Value.ToListAsync(ct)).Where(f => f.Name != obj.Object().Type).Select(f => f.Name).Order().ToArray(), "");
-		var serialized = JsonSerializer.Serialize(snapshot, Json);
-		if (Encoding.UTF8.GetByteCount(serialized) > MaxBytes) throw Error("limit", "Snapshot exceeds 2 MiB.");
-		return snapshot with { Digest = Hash(serialized) };
+		return FinalizeImage(snapshot);
+	}
+
+	private static ObjectSnapshot FinalizeImage(ObjectSnapshot snapshot)
+	{
+		var finalized = snapshot with { Digest = Hash(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)) };
+		if (Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(finalized, Json)) > MaxBytes) throw Error("limit", "Snapshot exceeds 2 MiB.");
+		return finalized;
 	}
 
 	private static ObjectSnapshot Find(SnapshotHistory history, string id, AnySharpObject obj, string accountId)
@@ -194,6 +199,7 @@ public sealed partial class ObjectSnapshotService(
 			snapshot.Attributes.Select(a => a.Name).Distinct(StringComparer.Ordinal).Count() != snapshot.Attributes.Length ||
 			snapshot.AbsentAttributes.Intersect(snapshot.Attributes.Select(a => a.Name)).Any() || snapshot.AbsentLocks.Intersect(snapshot.Locks.Keys).Any() ||
 			snapshot.Locks.Any(p => p.Value is null || p.Value.Expression is null) ||
+			Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(snapshot, Json)) > MaxBytes ||
 			snapshot.SchemaVersion != 1 || snapshot.ObjectId != obj.Object().DBRef.ToString() || snapshot.ObjectType != obj.Object().Type ||
 			snapshot.Digest != Hash(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)))
 			throw Error("corrupt", "Snapshot schema, digest, type or stable object identity is invalid.");
