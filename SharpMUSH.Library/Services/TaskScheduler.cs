@@ -74,6 +74,10 @@ public partial class TaskScheduler(
 
 	private static async ValueTask<SemaphoreRepairIdentity> CaptureRepairIdentity(SharpAttribute attribute)
 	{
+		// Wipe removes the whole subtree. Never remove children created after this counter.
+		if (attribute.Leaves is not null
+			&& await (await attribute.Leaves.WithCancellation(ExecutionBudget.CurrentToken)).AnyAsync(ExecutionBudget.CurrentToken))
+			throw new InvalidOperationException("Created semaphore has child attributes; refusing admission cleanup of the subtree.");
 		var owner = attribute.Owner is null ? null : await attribute.Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		return new(attribute.Id, attribute.Key, attribute.Name, attribute.LongName, attribute.CommandListIndex,
 			owner?.Object.DBRef, string.Join('\0', attribute.Flags.Select(flag => flag.Name).Order(StringComparer.Ordinal)));
@@ -100,7 +104,7 @@ public partial class TaskScheduler(
 	}
 	private QueueEntry? RemoveEntry(long pid)
 	{
-		if (_semaphoreRepairs.ContainsKey(pid)) return null;
+		if (_semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return null;
 		_ready.Remove(pid);
 		_running.Remove(pid);
 		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
@@ -217,11 +221,16 @@ public partial class TaskScheduler(
 		await _semaphoreMutations.WaitAsync(ExecutionBudget.CurrentToken);
 		try
 		{
-			if (!_semaphoreRepairs.IsEmpty)
+			if (!_semaphoreRepairs.IsEmpty || _semaphoreCommandRepair is not null)
 			{
 				using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
 				using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
 				using var scope = budget.Enter();
+				if (_semaphoreCommandRepair is { } commandRepair)
+				{
+					await commandRepair();
+					_semaphoreCommandRepair = null;
+				}
 				foreach (var (pid, repair) in _semaphoreRepairs)
 				{
 					await repair();
@@ -264,7 +273,7 @@ public partial class TaskScheduler(
 		lock (_admissionLock)
 		{
 			if (_stopping) return ValueTask.FromResult(Reject(QueueRejectionReason.ShuttingDown));
-			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
+			if (!_pendingEntries.TryGetValue(pid, out var entry) || _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
 			if (entry.Deferred?.Paused == true)
 			{
 				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
@@ -329,7 +338,7 @@ public partial class TaskScheduler(
 					if (accountingBudget?.IsExceeded == true)
 					{
 						entry.Observation?.Complete(QueueOutcome.ExecutionLimit);
-						await NotifyExpired(entry);
+						if (!shutdownToken.IsCancellationRequested) await NotifyExpired(entry);
 						continue;
 					}
 					using var budget = accountingBudget is null
@@ -505,7 +514,12 @@ public partial class TaskScheduler(
 				}
 				var attribute = await mediator.CreateStream(new GetAttributeQuery(fullTarget, dbRefAttribute.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
 				counterCreated = attribute is null;
-				currentCount = attribute is null || attribute.Value.Length == 0 ? 0 : int.Parse(attribute.Value.ToPlainText());
+				if (attribute is null || attribute.Value.Length == 0) currentCount = 0;
+				else if (!int.TryParse(attribute.Value.ToPlainText(), out currentCount) || currentCount == int.MaxValue)
+				{
+					Release(admission.Pid!.Value);
+					return Reject(QueueRejectionReason.InvalidTarget);
+				}
 				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken)).AsPlayer;
 				var nextCount = checked(currentCount + 1);
 				// A cancelled acknowledgement does not prove the provider failed to commit.
@@ -546,7 +560,15 @@ public partial class TaskScheduler(
 					if (counterCreated)
 					{
 						var identity = await CaptureRepairIdentity(attribute);
-						if (!retry) createdIdentity = identity;
+						// A read outage may prevent the first snapshot. Accept the first successful
+						// read only if it still has the exact counter and metadata we create.
+						var expectedCreation = identity.Owner == god!.Object.DBRef
+							&& identity.CommandListIndex is null
+							&& identity.Name.Equals(dbRefAttribute.Attribute[^1], StringComparison.OrdinalIgnoreCase)
+							&& identity.LongName.Equals(string.Join('`', dbRefAttribute.Attribute), StringComparison.OrdinalIgnoreCase)
+							&& identity.Flags.Split('\0', StringSplitOptions.RemoveEmptyEntries)
+								.All(flag => SemaphoreAttributes.RequiredFlagNames.Contains(flag, StringComparer.OrdinalIgnoreCase));
+						if (!retry || createdIdentity is null && expectedCreation) createdIdentity = identity;
 						else if (createdIdentity != identity)
 							throw new InvalidOperationException("Created semaphore metadata changed or could not be verified; remove the newly created attribute before retrying admission repair.");
 					}
@@ -586,7 +608,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			waiting = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count)).ToArray();
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
 		{
@@ -608,7 +630,7 @@ public partial class TaskScheduler(
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
 		lock (_admissionLock)
 			entry = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-				&& e.Deferred?.ReleasePending != true).MinBy(e => e.Pid);
+				&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).MinBy(e => e.Pid);
 		if (entry?.Deferred is not { } deferred) return false;
 		if (!deferred.State.Registers.TryPeek(out var registers))
 		{
@@ -631,7 +653,7 @@ public partial class TaskScheduler(
 			lock (_admissionLock)
 			{
 				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
-					&& e.Deferred?.ReleasePending != true).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
+					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
 				foreach (var entry in removed) RemoveEntry(entry.Pid);
 			}
 			foreach (var entry in removed)
@@ -666,7 +688,7 @@ public partial class TaskScheduler(
 		// User cancellation callbacks must never run while either scheduler lock is held.
 		CancelEntry(entry);
 		if (ready) return true;
-		using (await EnterSemaphoreMutationAsync())
+		using (entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal) ? await EnterSemaphoreMutationAsync() : null)
 		using (await LockDeferred())
 		{
 			lock (_admissionLock)
@@ -831,6 +853,10 @@ public partial class TaskScheduler(
 			logger.LogError("Shutdown with unrepaired semaphore admission PID {Pid}; the in-memory repair cannot survive restart", pid);
 			_semaphoreRepairs.TryRemove(pid, out _);
 		}
+		if (_semaphoreCommandRepair is not null)
+			logger.LogError("Shutdown with uncertain semaphore command accounting; manual counter reconciliation is required before restarting queued work");
+		_semaphoreCommandRepair = null;
+		lock (_admissionLock) _semaphoreCommandReservations.Clear();
 		foreach (var pid in _pendingEntries.Keys) Release(pid);
 		_shutdownCts.Dispose();
 		GC.SuppressFinalize(this);
