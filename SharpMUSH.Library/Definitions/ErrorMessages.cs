@@ -372,6 +372,11 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Notifications
 	{
+		public const string LocalFunctionMessage = "{0}";
+		public const string LocalFunctionHeader = "Owner-local functions (call with localfun):";
+		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
+		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
+
 		public const string QueueRejected = "Queue admission rejected: {0}.";
 		public const string QueueUsage = "Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.";
 		public const string QueueRejections = "Queue rejections ({0}): {1}.";

@@ -3,9 +3,9 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// An in-memory entry describing a global user-defined function registered via <c>@function</c>.
+/// An in-memory entry describing a global or owner-local user-defined function registered via <c>@function</c>.
 /// </summary>
-/// <param name="Name">The function name, lower-cased (the lookup key).</param>
+/// <param name="Name">The function name, lower-cased within its scope.</param>
 /// <param name="Object">The object whose attribute is evaluated as softcode.</param>
 /// <param name="Attribute">The attribute name on <paramref name="Object"/> evaluated with <c>%0..</c> = call args.</param>
 /// <param name="MinArgs">Minimum number of arguments the function accepts.</param>
@@ -25,6 +25,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// When <c>true</c>, the entry was marked via <c>@function/preserve</c> so it survives a bulk
 /// reset (<c>@function/restore</c> with no argument) and is reported for re-registration.
 /// </param>
+/// <param name="Owner">Full owner identity for a local definition; null for a global definition.</param>
 public record UserDefinedFunction(
 	string Name,
 	DBRef Object,
@@ -34,10 +35,11 @@ public record UserDefinedFunction(
 	bool Enabled,
 	string? AliasOf,
 	string? Restriction = null,
-	bool Preserved = false);
+	bool Preserved = false,
+	DBRef? Owner = null);
 
 /// <summary>
-/// In-memory registry of global user-defined functions (<c>@function</c>).
+/// In-memory registry of global and owner-local user-defined functions (<c>@function</c>).
 ///
 /// <para>
 /// Intentionally NOT persisted: durability comes from re-running <c>@function</c> on boot via the
@@ -46,11 +48,14 @@ public record UserDefinedFunction(
 /// </para>
 ///
 /// <para>Built-in functions always take precedence — the parser only consults this registry on a
-/// FunctionLibrary miss.</para>
+/// FunctionLibrary miss. Owner-local calls use explicit localfun invocation with an owner scope.</para>
 /// </summary>
 public interface IUserDefinedFunctionService
 {
-	/// <summary>Registers (or overwrites) a global user-defined function.</summary>
+	/// <summary>Removes local definitions backed by, or scoped to, a deleted or re-owned object.</summary>
+	void InvalidateLocalDefinitions(DBRef target);
+
+	/// <summary>Registers (or overwrites) a user-defined function in its declared scope.</summary>
 	void Define(UserDefinedFunction function);
 
 	/// <summary>
@@ -62,26 +67,26 @@ public interface IUserDefinedFunctionService
 	/// <see cref="UserDefinedFunction.Attribute"/> / arg-count bounds to evaluate, while
 	/// <see cref="UserDefinedFunction.Name"/> remains the requested name.
 	/// </remarks>
-	UserDefinedFunction? Resolve(string name);
+	UserDefinedFunction? Resolve(string name, DBRef? owner = null);
 
 	/// <summary>Returns the raw entry for a name (case-insensitive) without following aliases.</summary>
-	UserDefinedFunction? Get(string name);
+	UserDefinedFunction? Get(string name, DBRef? owner = null);
 
 	/// <summary>Removes a function (or alias) by name. Returns whether an entry was removed.</summary>
-	bool Delete(string name);
+	bool Delete(string name, DBRef? owner = null);
 
 	/// <summary>Enables or disables a function by name. Returns whether an entry was found.</summary>
-	bool SetEnabled(string name, bool enabled);
+	bool SetEnabled(string name, bool enabled, DBRef? owner = null);
 
 	/// <summary>Registers <paramref name="alias"/> as another name for the existing function <paramref name="target"/>.</summary>
 	/// <returns><c>true</c> if <paramref name="target"/> exists and the alias was created.</returns>
-	bool Alias(string alias, string target);
+	bool Alias(string alias, string target, DBRef? owner = null);
 
 	/// <summary>
 	/// Sets (or clears, when <paramref name="restriction"/> is <c>null</c>/empty) the permission
 	/// restriction on an existing user function. Returns whether an entry was found.
 	/// </summary>
-	bool SetRestriction(string name, string? restriction);
+	bool SetRestriction(string name, string? restriction, DBRef? owner = null);
 
 	/// <summary>
 	/// Creates <paramref name="newName"/> as an independent copy of the existing user function
@@ -89,18 +94,18 @@ public interface IUserDefinedFunctionService
 	/// reset). The clone can be restricted, disabled, or deleted without touching the original.
 	/// </summary>
 	/// <returns><c>true</c> if <paramref name="existing"/> resolves and the clone was created.</returns>
-	bool Clone(string newName, string existing);
+	bool Clone(string newName, string existing, DBRef? owner = null);
 
 	/// <summary>Marks or unmarks a user function as preserved (survives <see cref="ResetUnpreserved"/>).</summary>
 	/// <returns>Whether an entry was found.</returns>
-	bool SetPreserved(string name, bool preserved);
+	bool SetPreserved(string name, bool preserved, DBRef? owner = null);
 
 	/// <summary>
 	/// Removes every entry that is NOT marked <see cref="UserDefinedFunction.Preserved"/>.
 	/// Implements <c>@function/restore</c> (no argument): preserved entries survive a bulk reset.
 	/// </summary>
 	/// <returns>The number of entries removed.</returns>
-	int ResetUnpreserved();
+	int ResetUnpreserved(DBRef? owner = null);
 
 	/// <summary>
 	/// Sets (or clears, when <paramref name="restriction"/> is <c>null</c>/empty) a restriction
@@ -113,5 +118,5 @@ public interface IUserDefinedFunctionService
 	string? GetBuiltinRestriction(string name);
 
 	/// <summary>All registered entries, including aliases and disabled ones.</summary>
-	IReadOnlyCollection<UserDefinedFunction> All();
+	IReadOnlyCollection<UserDefinedFunction> All(DBRef? owner = null);
 }
