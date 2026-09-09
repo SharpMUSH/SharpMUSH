@@ -15,7 +15,7 @@ internal class DelayedTask(ITaskScheduler taskScheduler, IOptionsWrapper<SharpMU
 			using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, context.CancellationToken);
 			using var scope = budget.Enter();
 			await taskScheduler.ReleaseScheduledWork(long.Parse(context.Trigger.Key.Name.Split('-').Last()),
-				generation: context.MergedJobDataMap.GetLong("Generation"));
+				semaphoreTimeout: false, generation: context.MergedJobDataMap.GetLong("Generation"));
 		}
 		catch (Exception exception) when (!context.CancellationToken.IsCancellationRequested)
 		{

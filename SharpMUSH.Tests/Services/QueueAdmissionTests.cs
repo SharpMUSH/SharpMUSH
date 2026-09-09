@@ -87,6 +87,49 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AdmissionPrivilegeStreamsReceiveTheConsumerExecutionToken(bool powers)
+	{
+		var target = new TestObjectFactory().CreateThing(10, "target");
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async IAsyncEnumerable<T> Block<T>([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			yield break;
+		}
+		if (powers) target.AsThing.Object.Powers = new(() => Block<SharpPower>());
+		else target.AsThing.Object.Flags = new(() => Block<SharpObjectFlag>());
+		var mediator = TargetMediator();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(target.AsThing));
+		await using var queue = Create(global: 10, mediator: mediator, milliseconds: 200);
+		var following = Signal();
+		var ran = false;
+		await queue.AdmitWork(async () =>
+		{
+			await queue.AdmitWork(() => { ran = true; return ValueTask.FromResult<CallState?>(null); }, "nested", "test", new DBRef(10, 1));
+			return null;
+		}, "outer", "test");
+		await queue.AdmitWork(() => { following.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		try
+		{
+			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await Assert.That(observed.CanBeCanceled).IsTrue();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await Assert.That(ran).IsFalse();
+		}
+		finally
+		{
+			cleanup.Cancel();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+
+	}
+
+	[Test]
 	public async Task ExecutionLimitNoticeGetsItsOwnBoundedBudget()
 	{
 		var connections = Substitute.For<IConnectionService>();
@@ -251,12 +294,67 @@ public class QueueAdmissionTests
 					await queue.ApplySemaphoreCommandAsync(semaphore, 1, drain,
 					_ => ValueTask.FromException(new IOException("committed acknowledgement lost")), () => ValueTask.FromResult(true));
 				}
-				catch (IOException) { }
+				catch (AggregateException) { }
 				await Assert.That((await queue.ReleaseScheduledWork(pending.Pid!.Value)).Accepted).IsFalse();
-				await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(drain ? 1 : 2);
+				await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
 			}
+			scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(true);
+			using (await queue.EnterSemaphoreMutationAsync()) { }
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(drain ? 1 : 2);
 		}
 		finally { release.SetResult(); }
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task SemaphoreCommandRetainsTimersAndQuotaUntilCleanupAcknowledged(bool drain, bool expire)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(global: 3, scheduler: scheduler);
+		var entered = Signal(); var release = Signal();
+		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+			var first = await queue.AdmitCommandList(MarkupText.Plain("first"), ParserState.Empty, target, 0);
+			var second = await queue.AdmitCommandList(MarkupText.Plain("second"), ParserState.Empty, target, 0);
+			var retained = new HashSet<string> { $"dbref:-{first.Pid}", $"dbref:-{second.Pid}" };
+			var fail = true;
+			scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(call =>
+			{
+				call.Arg<CancellationToken>().ThrowIfCancellationRequested();
+				var key = call.Arg<TriggerKey>().Name;
+				if (fail && key == $"dbref:-{second.Pid}") throw new IOException("cleanup acknowledgement lost");
+				return Task.FromResult(retained.Remove(key));
+			});
+			using var cancellation = new CancellationTokenSource();
+			using var budget = ExecutionBudget.FromMilliseconds(30000, cancellation.Token);
+			var failed = false;
+			using (await queue.EnterSemaphoreMutationAsync())
+			using (budget.Enter())
+			{
+				try
+				{
+					await queue.ApplySemaphoreCommandAsync(target, null, drain,
+						_ => { if (expire) cancellation.Cancel(); return ValueTask.CompletedTask; },
+						() => ValueTask.FromException<bool>(new Exception("A confirmed write must not be reconciled again")));
+				}
+				catch (IOException) { failed = true; }
+				catch (OperationCanceledException) { failed = true; }
+				await Assert.That(failed).IsTrue();
+				await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(3);
+				await Assert.That((await queue.ReleaseScheduledWork(first.Pid!.Value)).Accepted).IsFalse();
+			}
+			fail = false;
+			using (await queue.EnterSemaphoreMutationAsync()) { }
+			await Assert.That(retained.Count).IsEqualTo(0);
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(drain ? 1 : 3);
+		}
+		finally { release.TrySetResult(); }
 	}
 
 	[Test]

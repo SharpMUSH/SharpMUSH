@@ -152,7 +152,7 @@ public partial class TaskScheduler(
 				return Reject(QueueRejectionReason.InvalidTarget);
 			}
 			executor = target.Known().Object().DBRef;
-			if (await target.Known().IsWizard() || await target.Known().HasPower("Queue"))
+			if (await target.Known().IsWizard(ExecutionBudget.CurrentToken) || await target.Known().HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
 			owner = (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
 		}
@@ -400,7 +400,10 @@ public partial class TaskScheduler(
 	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
 
-	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false, long? generation = null)
+	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
+
+	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 	{
 		QueueEntry entry;
 		lock (_admissionLock)
@@ -667,8 +670,7 @@ public partial class TaskScheduler(
 		var outcomes = new List<QueueAdmissionResult>(waiting.Length);
 		foreach (var entry in waiting)
 		{
-			try { await RemoveDeferredTrigger(entry); }
-			catch (Exception ex) { logger.LogWarning(ex, "Could not remove notified trigger for PID {Pid}", entry.Pid); }
+			await RemoveDeferredTrigger(entry);
 			outcomes.Add(await Activate(entry.Pid));
 		}
 		return outcomes;
@@ -709,13 +711,10 @@ public partial class TaskScheduler(
 			{
 				removed = _pendingEntries.Values.Where(e => e.Group == group && !_ready.Contains(e.Pid)
 					&& e.Deferred?.ReleasePending != true && !_semaphoreCommandReservations.Contains(e.Pid) && !_semaphoreRepairs.ContainsKey(e.Pid) && !_semaphorePublications.Contains(e.Pid)).OrderBy(e => e.Pid).Take(Math.Max(0, count ?? int.MaxValue)).ToArray();
+			}
+			foreach (var entry in removed) await RemoveDeferredTrigger(entry);
+			lock (_admissionLock)
 				foreach (var entry in removed) RemoveEntry(entry.Pid);
-			}
-			foreach (var entry in removed)
-			{
-				try { await RemoveDeferredTrigger(entry); }
-				catch (Exception ex) { logger.LogWarning(ex, "Could not remove drained trigger for PID {Pid}", entry.Pid); }
-			}
 		}
 		foreach (var entry in removed) DisposeEntry(entry);
 		return removed.Length;
@@ -755,25 +754,19 @@ public partial class TaskScheduler(
 			{
 				if (!_pendingEntries.TryGetValue(pid, out entry) || _ready.Contains(pid)) return true;
 			}
+			await RemoveDeferredTrigger(entry);
 			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
 			// Unmanaged timeouts defer accounting until execution; a paused entry halted here
 			// will never execute. Notifications and managed timeouts have already accounted.
 			if (entry.Group.StartsWith(SemaphoreGroup + ":") && (entry.Deferred?.ReleasePending != true
 				|| entry.Deferred is { ReleaseTimeout: true } && !entry.ManagesSemaphoreCount))
 				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
-			var delayed = entry.Group.StartsWith(DelayGroup + ":", StringComparison.Ordinal);
-			if (delayed) await RemoveDeferredTrigger(entry);
 			lock (_admissionLock)
 			{
 				_delayedRepairs.Remove(pid);
 				entry = RemoveEntry(pid);
 			}
 			if (entry is null) return true;
-			if (!delayed)
-			{
-				try { await RemoveDeferredTrigger(entry); }
-				catch (Exception ex) { logger.LogWarning(ex, "Could not remove halted trigger for PID {Pid}", pid); }
-			}
 		}
 		DisposeEntry(entry);
 		return true;
@@ -784,6 +777,8 @@ public partial class TaskScheduler(
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
 		var group = $"{DelayGroup}:{state.Executor}";
+		delay = Nonnegative(delay);
+		var due = DateTimeOffset.UtcNow + delay;
 		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, sourceAttribute: SourceAttribute(state));
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
@@ -800,8 +795,6 @@ public partial class TaskScheduler(
 			publication.Token.ThrowIfCancellationRequested();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
-		delay = Nonnegative(delay);
-		var due = DateTimeOffset.UtcNow + delay;
 		lock (_admissionLock) _pendingEntries[pid] = entry with
 		{ Deferred = new(due, Schedule, null, command, state) };
 		try { await Schedule(due, 0); return admission; }

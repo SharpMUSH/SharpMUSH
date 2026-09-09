@@ -24,6 +24,45 @@ public class QueuePauseTests
 	}
 
 	[Test]
+	[Arguments("notify")]
+	[Arguments("drain")]
+	[Arguments("halt")]
+	public async Task LegacySemaphoreCleanupFailureRetainsInspectablePid(string operation)
+	{
+		var scheduler = Substitute.For<IScheduler>();
+		await using var queue = Create(scheduler: scheduler);
+		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think waiting"), ParserState.Empty, target, 0);
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>())
+			.Returns(_ => Task.FromException<bool>(new IOException("Quartz unavailable")));
+		async Task Change()
+		{
+			switch (operation)
+			{
+				case "notify": await queue.NotifyCounted(target, 1); break;
+				case "drain": await queue.DrainCounted(target); break;
+				case "halt": await queue.HaltByPid(admission.Pid!.Value); break;
+			}
+		}
+		await Assert.ThrowsAsync<IOException>(Change);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(queue.GetQueueEntries().Single().Pid).IsEqualTo(admission.Pid!.Value);
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(true);
+		await Change();
+		if (operation != "notify") await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task OverflowingDelayDoesNotReserveAQueueEntry()
+	{
+		await using var queue = Create(scheduler: Substitute.For<IScheduler>());
+		await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+			await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.MaxValue));
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(queue.GetQueueEntries().Count).IsEqualTo(0);
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task UncertainDeferredCleanupCannotBePausedOrResumed(bool semaphore)
@@ -280,7 +319,7 @@ public class QueuePauseTests
 			var pid = job.Pid!.Value;
 			await Task.WhenAll(
 				Task.Run(async () => { await queue.PausePending(pid, "race"); await queue.ResumePending(pid); }),
-				Task.Run(async () => { await queue.ReleaseScheduledWork(pid, generation: 0); await queue.ReleaseScheduledWork(pid, generation: 2); }),
+				Task.Run(async () => { await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 0); await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 2); }),
 				Task.Run(async () => await queue.HaltByPid(pid)));
 			await queue.DisposeAsync();
 			await Assert.That(count).IsLessThanOrEqualTo(1);
@@ -412,13 +451,13 @@ public class QueuePauseTests
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think once"), state, TimeSpan.FromHours(1));
 		var pid = job.Pid!.Value;
 		await queue.PausePending(pid, "inspect");
-		await Assert.That((await queue.ReleaseScheduledWork(pid, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That((await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
 		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(await queue.ResumePending(pid)).IsEqualTo(QueueControlResult.Applied);
-		await Assert.That((await queue.ReleaseScheduledWork(pid, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
-		await queue.ReleaseScheduledWork(pid, generation: 2);
+		await Assert.That((await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 2);
 		await ran.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		await queue.ReleaseScheduledWork(pid, generation: 2);
+		await queue.ReleaseScheduledWork(pid, semaphoreTimeout: false, generation: 2);
 		await Assert.That(count).IsEqualTo(1);
 		captured!.Registers.TryPeek(out var capturedRegisters);
 		await Assert.That(capturedRegisters!["CHECK"].ToPlainText()).IsEqualTo("retained");
@@ -466,7 +505,7 @@ public class QueuePauseTests
 		await queue.PausePending(job.Pid!.Value, "inspect");
 		await queue.HaltByPid(job.Pid.Value);
 		await Assert.That(await queue.ResumePending(job.Pid.Value)).IsEqualTo(QueueControlResult.NotFound);
-		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		await Assert.That((await queue.ReleaseScheduledWork(job.Pid.Value, semaphoreTimeout: false, generation: 0)).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 	}
 
