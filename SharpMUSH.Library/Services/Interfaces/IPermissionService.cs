@@ -49,7 +49,19 @@ public interface IPermissionService
 
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
+	/// <summary>
+	/// PennMUSH <c>Can_Nspemit</c> (<c>hdrs/mushdb.h:33</c>): may this object emit without a nospoof
+	/// header. The power is <c>Can_Spoof</c> — <c>NOSPOOF</c> is a FLAG (<c>FlagSeed.cs:39</c>), so
+	/// testing it here matched nothing and reduced the whole predicate to the wizard half.
+	/// </summary>
 	ValueTask<bool> CanNoSpoof(AnySharpObject executor);
+
+	/// <summary>
+	/// PennMUSH's spoof rule, <c>Can_Nspemit(executor) || controls(executor, enactor)</c>
+	/// (<c>hdrs/dbdefs.h:333-336</c>): may <paramref name="executor"/> emit as
+	/// <paramref name="enactor"/>. Every <c>/spoof</c> switch answers to this.
+	/// </summary>
+	ValueTask<bool> CanSpoofAs(AnySharpObject executor, AnySharpObject enactor);
 
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 

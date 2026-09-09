@@ -83,13 +83,25 @@ public class ChannelFunctionUnitTests
 		await Assert.That(owner).StartsWith($"#{TestPlayerDbRef}:");
 	}
 
+	/// <summary>
+	/// PennMUSH <c>fun_cflags</c> abbreviates each privilege to its <c>priv_table</c> letter
+	/// (<c>src/extchat.c:2287</c>) — 'o' for Open, lowercase because 'O' is Object.
+	/// </summary>
 	[Test]
-	public async Task Cflags_ReturnsChannelFlags()
+	public async Task Cflags_ReturnsChannelPrivilegeLetters()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain($"cflags({TestChannelName})")))?.Message!;
-		var flags = result.ToPlainText();
 
-		await Assert.That(flags).Contains(TestChannelPrivilege.ToUpper());
+		await Assert.That(result.ToPlainText()).IsEqualTo("o");
+	}
+
+	/// <summary>The same privileges spelled out, which is the only difference between the two functions.</summary>
+	[Test]
+	public async Task Clflags_ReturnsChannelPrivilegeNames()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"clflags({TestChannelName})")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(TestChannelPrivilege);
 	}
 
 	[Test]

@@ -244,8 +244,7 @@
       },
       "expression": "add(,2)",
       "expected": "2",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -256,8 +255,7 @@
       },
       "expression": "add(foo,2)",
       "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -268,8 +266,7 @@
       },
       "expression": "add(1e2,2)",
       "expected": "102",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -324,7 +321,8 @@
       },
       "expression": "not(1,2)",
       "expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2",
-      "intent": "intentional error wording difference; argument-count behavior is covered separately"
+      "intent": "intentional error wording difference; argument-count behavior is covered separately",
+      "sharpmush_expected": "#-1 FUNCTION (NOT) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2"
     },
     {
       "configuration": {
@@ -456,8 +454,7 @@
       },
       "expression": "add(,2)",
       "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -468,8 +465,7 @@
       },
       "expression": "add(foo,2)",
       "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -480,8 +476,7 @@
       },
       "expression": "eq(,0)",
       "expected": "#-1 ARGUMENTS MUST BE NUMBERS",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -492,8 +487,7 @@
       },
       "expression": "add(foo,2)",
       "expected": "2",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -504,8 +498,7 @@
       },
       "expression": "add(12foo,2)",
       "expected": "14",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -516,8 +509,7 @@
       },
       "expression": "add(1.5foo,2)",
       "expected": "3.5",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -528,8 +520,7 @@
       },
       "expression": "add(,2)",
       "expected": "2",
-      "intent": "parity",
-      "status": "numeric coercion follow-up; observed Penn result, not a claim of current SharpMUSH parity"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -551,6 +542,84 @@
       },
       "expression": "trim(%babc%b)",
       "expected": "abc",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(probe,clean)][not(setq(probe,changed),1)]|%q<probe>",
+      "expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2|changed",
+      "intent": "intentional arity-before-evaluation divergence; invalid calls cannot change registers",
+      "sharpmush_expected": "#-1 FUNCTION (NOT) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2|clean"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(probe,clean)][cand(0,setq(probe,changed))]|%q<probe>",
+      "expected": "0|clean",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(probe,clean)][cor(1,setq(probe,changed))]|%q<probe>",
+      "expected": "1|clean",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(probe,clean)][cat(setq(probe,a),setq(probe,b))]|%q<probe>",
+      "expected": " |b",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "trim(xxabcxx,x,l)",
+      "expected": "abcxx",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "trimpenn(xxabcxx,x,r)",
+      "expected": "xxabc",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "trimtiny(xxabcxx,r,x)",
+      "expected": "xxabc",
       "intent": "parity"
     }
   ]

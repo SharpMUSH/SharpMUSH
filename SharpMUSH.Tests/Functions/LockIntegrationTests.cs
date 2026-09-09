@@ -32,7 +32,7 @@ public class LockIntegrationTests
 
 	private async Task<DBRef> CreateObject(string name)
 	{
-		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var result = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, name);
 		return DBRef.Parse(result.Message!.ToPlainText()!);
 	}
 
