@@ -33,6 +33,22 @@ public class SurrealCancellationTests
 	}
 
 	[Test]
+	public async Task RejectedRoleWritesCannotCompleteCapabilityMigration()
+	{
+		var services = new ServiceCollection();
+		services.AddSurreal($"Endpoint=mem://;Namespace=rolefailure;Database=test{Guid.NewGuid():N}").AddInMemoryProvider();
+		await using var provider = services.BuildServiceProvider();
+		var client = provider.GetRequiredService<ISurrealDbClient>();
+		await client.Connect();
+		var definition = await client.RawQuery("DEFINE TABLE role SCHEMALESS; DEFINE FIELD name ON TABLE role TYPE string ASSERT false;");
+		await Assert.That(definition.HasErrors).IsFalse();
+		var database = new SurrealDatabase(NullLogger<SurrealDatabase>.Instance, client,
+			Substitute.For<IPasswordService>(), Substitute.For<IObjectRelationLoader>());
+		await Assert.That(() => database.UpsertRoleAsync(new SharpMUSH.Library.Models.SharpRole { Slug = "wizard", Name = "Wizard" }))
+			.Throws<InvalidOperationException>();
+	}
+
+	[Test]
 	public async Task CompletedQueriesReleaseCallerCancellationRegistrations()
 	{
 		var services = new ServiceCollection();
