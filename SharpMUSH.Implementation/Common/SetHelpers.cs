@@ -133,11 +133,11 @@ public static class SetHelpers
 		{
 			CallState? failure = null;
 
-			foreach (var flag in MushText.SplitList(MarkupText.Space, flagOrAttributeValue))
+			foreach (var flagName in MushText.SplitList(MarkupText.Space, flagOrAttributeValue)
+								 .Select(token => token.ToPlainText()))
 			{
 				// set_flag reports when `is_flag(f, "QUIET") || !AreQuiet(player, thing)` — touching the
 				// QUIET flag itself always reports, so you can see what you just made quiet.
-				var flagName = flag.ToPlainText();
 				var togglesQuiet = flagName.TrimStart('!').Equals("QUIET", StringComparison.OrdinalIgnoreCase);
 				var result = await manipulateSharpObjectService.SetOrUnsetFlag(executor, found, flagName,
 					togglesQuiet || !areQuiet);
