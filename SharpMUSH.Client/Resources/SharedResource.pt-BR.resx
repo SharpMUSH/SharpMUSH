@@ -4544,4 +4544,6 @@
     <value>Os tópicos do ahelp. Apenas para Magos e Deus, no portal como no jogo.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>A regra explícita de maior prioridade decide; a negação vence empates. A herança só se aplica sem regra explícita. Sem permissão, o acesso é negado. Administradores delegados só podem gerenciar permissões que possuem com prioridade menor, sem alterar seus próprios papéis ou restrições.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acesso atual: {0}; prioridade {1}; papéis {2}; resolução {3}.</value></data>
 </root>

@@ -4544,4 +4544,6 @@
     <value>Subiectele ahelp. Doar pentru Vrăjitori și Dumnezeu, atât în portal, cât și în joc.</value>
     <comment>MT</comment>
   </data>
+<data name="RolResolutionExplanation" xml:space="preserve"><value>Decide regula explicită cu prioritatea cea mai mare; refuzul câștigă la egalitate. Moștenirea se aplică numai fără o regulă explicită. Fără permisiune, accesul este refuzat. Administratorii delegați pot gestiona doar permisiunile deținute cu prioritate mai mică, fără a-și schimba propriile roluri sau restricții.</value></data>
+<data name="RolEffectiveExplanation" xml:space="preserve"><value>Acces curent: {0}; prioritate {1}; roluri {2}; decizie {3}.</value></data>
 </root>
