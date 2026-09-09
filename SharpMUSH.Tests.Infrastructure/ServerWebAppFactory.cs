@@ -188,6 +188,12 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
 													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
 
+		if (!isConsoleEnabled)
+		{
+			// Per-query SQL traces can exhaust the test report while parallel fixtures initialize.
+			logConfig.MinimumLevel.Override("SharpMUSH.Database.SurrealDB", LogEventLevel.Warning);
+		}
+
 		if (isConsoleEnabled)
 		{
 			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);

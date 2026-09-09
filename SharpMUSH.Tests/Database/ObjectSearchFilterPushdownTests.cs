@@ -40,7 +40,7 @@ public class ObjectSearchFilterPushdownTests
 
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var result = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, name);
 		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 

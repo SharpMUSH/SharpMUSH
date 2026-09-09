@@ -42,6 +42,16 @@ append 1 or -1 only when `null_eq_zero` is on; otherwise they report an integer
 suffix error. Overflow reports `#-1 OUT OF RANGE`. `tiny_math` does not change
 these string-counter rules.
 
+## Trim argument order
+
+With `tiny_trim_fun` off, `trim(text,characters,side)` uses Penn argument order.
+With it on, `trim(text,side,characters)` uses Tiny argument order. The default
+characters are spaces and the default side is both; `l` and `r` select the left
+or right side. The setting is read when the function runs.
+
+Use `trimpenn(text,characters,side)` or `trimtiny(text,side,characters)` when a
+package needs a fixed argument order regardless of game configuration.
+
 ## Intentional divergences
 
 These are deliberate. SharpMUSH does not intend to change them to match PennMUSH.

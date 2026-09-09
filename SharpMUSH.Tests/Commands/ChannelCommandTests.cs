@@ -80,6 +80,9 @@ public class ChannelCommandTests
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
 
+	/// <summary>
+	/// <c>@channel/list</c> opens with PennMUSH's column header (<c>src/extchat.c:2622</c>).
+	/// </summary>
 	[Test]
 	public async ValueTask ChannelCommand()
 	{
@@ -89,7 +92,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Name:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "Name  ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
