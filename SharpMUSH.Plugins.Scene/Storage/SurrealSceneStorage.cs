@@ -672,8 +672,8 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		// A deterministic edge id makes the insert-or-update atomic. Only a new member receives
 		// default focus/persona values; changing a role preserves the existing participation state.
 		await ExecuteMembershipWriteAsync(
-			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, isCurrent, grantedAt, memberName) " +
-			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, $role, '', false, $now, $name) " +
+			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, grantedAt, memberName) " +
+			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, $role, '', $now, $name) " +
 			"ON DUPLICATE KEY UPDATE role = $role, memberName = $name",
 			new Dictionary<string, object?>
 			{
@@ -698,8 +698,11 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			return new OkNone();
 
 		var sceneKey = SceneKey(sceneId);
-		await _accessor.ExecuteAsync(
-			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩",
+		await ExecuteMembershipWriteAsync(
+			"BEGIN TRANSACTION; " +
+			"UPDATE scene_focus:[object:$pk] SET scene = NONE WHERE scene = scene:⟨$sid⟩; " +
+			"DELETE scene_member WHERE in = object:$pk AND out = scene:⟨$sid⟩; " +
+			"COMMIT TRANSACTION;",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 
 		return new OkNone();
@@ -721,7 +724,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		}
 
 		var response = await _accessor.ExecuteAsync(
-			$"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member WHERE {where}",
+			$"SELECT role, showAs, (out = type::thing('scene_focus', [in]).scene) AS isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member WHERE {where}",
 			parameters);
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0) ?? [];
 		var members = rows.Select(r => ProjectMember(r, sceneKey)).ToList();
@@ -740,7 +743,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 
 		var sceneKey = SceneKey(sceneId);
 		var response = await _accessor.ExecuteAsync(
-			"SELECT role, showAs, isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member " +
+			"SELECT role, showAs, (out = type::thing('scene_focus', [in]).scene) AS isCurrent, grantedAt, memberName, in.key AS memberKey FROM scene_member " +
 			"WHERE in = object:$pk AND out = scene:⟨$sid⟩",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value, ["sid"] = sceneKey.Split(':')[1] });
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0);
@@ -759,7 +762,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (string.IsNullOrWhiteSpace(sceneId))
 		{
 			await ExecuteMembershipWriteAsync(
-				"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk",
+				"UPSERT scene_focus:[object:$pk] SET scene = NONE",
 				new Dictionary<string, object?> { ["pk"] = playerKey.Value });
 			return new OkNone();
 		}
@@ -768,14 +771,15 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (sceneExisting.IsT1)
 			return new NotFound();
 
-		// Clear the old focus and create/update the target in the same transaction. A simultaneous
-		// role grant cannot create another edge or lose its role, persona, or original grant time.
+		// One durable pointer is the authority for focus; competing transactions cannot create
+		// multiple focused memberships, even when they commit different member edges.
+		// Membership role, persona, and original grant time remain unchanged on an existing edge.
 		await ExecuteMembershipWriteAsync(
 			"BEGIN TRANSACTION; " +
-			"UPDATE scene_member SET isCurrent = false WHERE in = object:$pk; " +
-			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, isCurrent, grantedAt, memberName) " +
-			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, '', '', true, $now, $name) " +
-			"ON DUPLICATE KEY UPDATE isCurrent = true, memberName = $name; " +
+			"UPSERT scene_focus:[object:$pk] SET scene = scene:⟨$sid⟩; " +
+			"INSERT RELATION INTO scene_member (id, in, out, role, showAs, grantedAt, memberName) " +
+			"VALUES (scene_member:[object:$pk, scene:⟨$sid⟩], object:$pk, scene:⟨$sid⟩, '', '', $now, $name) " +
+			"ON DUPLICATE KEY UPDATE memberName = $name; " +
 			"COMMIT TRANSACTION;",
 			new Dictionary<string, object?>
 			{
@@ -814,7 +818,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			return new NotFound();
 
 		var response = await _accessor.ExecuteAsync(
-			"SELECT VALUE meta::id(out) FROM scene_member WHERE in = object:$pk AND isCurrent = true LIMIT 1",
+			"SELECT VALUE meta::id(out) FROM scene_member WHERE in = object:$pk AND out = type::thing('scene_focus', [in]).scene LIMIT 1",
 			new Dictionary<string, object?> { ["pk"] = playerKey.Value });
 		var ids = response.GetValue<List<string>>(0);
 		if (ids is null or { Count: 0 })
