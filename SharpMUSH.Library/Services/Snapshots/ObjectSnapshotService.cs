@@ -307,7 +307,9 @@ public sealed partial class ObjectSnapshotService(
 	private static void ValidateLockWrite(AnySharpObject obj, string name, LockService.LockFlags savedFlags = 0)
 	{
 		var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
-		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(name, new()).Flags) & protectedFlags) != 0)
+		// A snapshot taken before lock names were canonical can name a lock the way the old world
+		// spelled it; the live object's keys are LockType's spelling.
+		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags) & protectedFlags) != 0)
 			throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
 	}
 
@@ -334,7 +336,7 @@ public sealed partial class ObjectSnapshotService(
 		}
 		foreach (var (name, value) in saved.Locks)
 			if (!await permissions.CanReadLock(executor, obj, (LockService.LockFlags)value.Flags) ||
-				!await permissions.CanReadLock(executor, obj, obj.Object().Locks.GetValueOrDefault(name, new()).Flags)) return false;
+				!await permissions.CanReadLock(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags)) return false;
 		return true;
 	}
 
