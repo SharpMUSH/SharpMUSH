@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
@@ -289,10 +290,13 @@ public static partial class HelperFunctions
 	/// ANSI share 'A'), Penn disambiguates by object type, and nothing here asks by letter.
 	/// </para>
 	/// </remarks>
-	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag)
+	public static ValueTask<bool> HasFlag(this SharpObject obj, string flag)
+		=> HasFlag(obj, flag, CancellationToken.None);
+
+	private static async ValueTask<bool> HasFlag(SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> await obj.Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
-									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)));
+									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
 	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and
@@ -345,7 +349,7 @@ public static partial class HelperFunctions
 			return null;
 		}
 
-		return await obj.IsOrphan() ? null : typeAncestor;
+		return await HasFlag(obj.Object(), "ORPHAN", ExecutionBudget.CurrentToken) ? null : typeAncestor;
 	}
 
 	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
