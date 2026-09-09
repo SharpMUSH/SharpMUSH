@@ -222,6 +222,24 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task TimeoutBookkeepingCannotBlockTheQueuePastItsDeadline()
+	{
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var ran = false;
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { ran = true; return ValueTask.FromResult<CallState?>(null); });
+		await using var queue = Create(parser: parser, mediator: CountingMediator(() => 1, _ => { }));
+		var waiting = await queue.WriteCommandList(MarkupText.Plain("think expired"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
+		using var held = await queue.EnterSemaphoreMutationAsync();
+		await queue.ReleaseScheduledWork(waiting.Pid!.Value, semaphoreTimeout: true);
+		var drained = Signal();
+		await queue.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(ran).IsFalse();
+	}
+
+	[Test]
 	public async Task ContendedSemaphoreLeaseCannotBlockTheQueuePastItsDeadline()
 	{
 		await using var queue = Create();
