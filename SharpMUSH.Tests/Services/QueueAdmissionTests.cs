@@ -427,6 +427,144 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task QuartzSemaphoreReleaseObservesShutdownCancellation()
+	{
+		using var shutdown = new CancellationTokenSource();
+		using var escape = new CancellationTokenSource();
+		var entered = Signal();
+		var queue = Substitute.For<ITaskScheduler>();
+		var context = Substitute.For<IJobExecutionContext>();
+		context.CancellationToken.Returns(shutdown.Token);
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
+		async ValueTask<QueueAdmissionResult> WaitForShutdown()
+		{
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, escape.Token);
+			entered.TrySetResult();
+			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
+			return new QueueAdmissionResult(42, QueueRejectionReason.None);
+		}
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => WaitForShutdown());
+		var running = new SemaphoreTask(queue).Execute(context);
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			shutdown.Cancel();
+			await Assert.That(async () => await running.WaitAsync(TimeSpan.FromSeconds(1))).Throws<OperationCanceledException>();
+		}
+		finally { escape.Cancel(); try { await running; } catch (OperationCanceledException) { } }
+	}
+
+	[Test]
+	public async Task QuartzSemaphoreReleaseHasFiniteAccountingBudget()
+	{
+		var queue = Substitute.For<ITaskScheduler>();
+		var context = Substitute.For<IJobExecutionContext>();
+		context.Scheduler.Returns(Substitute.For<IScheduler>());
+		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
+		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		TimeSpan? remaining = null;
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ =>
+		{
+			remaining = ExecutionBudget.Current?.Remaining;
+			return ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None));
+		});
+		await new SemaphoreTask(queue).Execute(context);
+		await Assert.That(remaining.HasValue && remaining.Value > TimeSpan.Zero && remaining.Value < TimeSpan.FromMinutes(1)).IsTrue();
+		await Assert.That(ExecutionBudget.Current).IsNull();
+	}
+
+	[Test]
+	[Arguments("false")]
+	[Arguments("throw")]
+	[Arguments("cancel")]
+	public async Task FailedAdmissionRollbackRetainsRepairUntilProviderRecovers(string failure)
+	{
+		var count = 0;
+		var broken = true;
+		var writes = 0;
+		var mediator = CountingMediator(() => count, value => count = value);
+		async ValueTask<bool> Write(NSubstitute.Core.CallInfo call)
+		{
+			if (Interlocked.Increment(ref writes) > 1 && broken)
+			{
+				if (failure == "throw") throw new InvalidOperationException("repair unavailable");
+				if (failure == "cancel") await Task.Delay(Timeout.InfiniteTimeSpan, call.Arg<CancellationToken>());
+				return false;
+			}
+			count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+			return true;
+		}
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call => Write(call));
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(_ => Task.FromException<DateTimeOffset>(new InvalidOperationException("schedule unavailable")));
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		await Assert.That(async () => await queue.WriteCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true)).Throws<AggregateException>();
+		await Assert.That(count).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That((await queue.ReleaseScheduledWork(1)).Accepted).IsFalse();
+		// No later counter transaction may run before the uncertain write is repaired.
+		using (var bounded = ExecutionBudget.FromMilliseconds(50))
+		using (bounded.Enter())
+			await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<Exception>();
+		await Assert.That(count).IsEqualTo(1);
+		broken = false;
+		count = 7; // An administrator may bypass the semaphore gate with a raw attribute edit.
+		await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<InvalidOperationException>();
+		await Assert.That(count).IsEqualTo(7);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		count = 1;
+		await Assert.That(await queue.HaltByPid(1)).IsTrue();
+		await Assert.That(count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CreatedSemaphoreRepairPreservesInterveningMetadata(bool changed)
+	{
+		SharpAttribute? attribute = null;
+		var available = false;
+		var mediator = TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			(attribute is null ? Array.Empty<SharpAttribute>() : new[] { attribute }).ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			attribute = new SharpAttribute("created-id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value };
+			return ValueTask.FromResult(true);
+		});
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.WipeAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			if (!available) return ValueTask.FromResult(false);
+			attribute = null;
+			return ValueTask.FromResult(true);
+		});
+		var scheduler = Substitute.For<IScheduler>();
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+			.Returns(_ => Task.FromException<DateTimeOffset>(new InvalidOperationException("schedule unavailable")));
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		await Assert.That(async () => await queue.WriteCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true)).Throws<AggregateException>();
+		available = true;
+		if (changed)
+		{
+			attribute = attribute! with { Flags = [new SharpAttributeFlag { Name = "wizard", Symbol = "", System = true, Inheritable = false }] };
+			await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<InvalidOperationException>();
+			await Assert.That(attribute).IsNotNull();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			attribute = null; // Explicit administrator removal acknowledges the conflicting repair.
+		}
+		await Assert.That(await queue.HaltByPid(1)).IsTrue();
+		await Assert.That(attribute).IsNull();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task FailedQuartzSemaphoreReleaseRequestsRetryBeforeDeletingSchedule()
 	{
 		var scheduler = Substitute.For<IScheduler>();
