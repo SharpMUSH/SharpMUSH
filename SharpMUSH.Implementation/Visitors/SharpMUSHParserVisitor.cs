@@ -1443,11 +1443,16 @@ public class SharpMUSHParserVisitor(
 		return await chatParser.CommandLibrary["@CHAT"].LibraryInformation.Command.Invoke(chatParser);
 	}
 
-	private async Task<Option<CallState>> HandleUserDefinedCommand(
+	/// <summary>
+	/// Runs the bodies of every matched <c>$</c>-command, each as its own <c>Push</c>ed parser frame with the
+	/// matching object as executor. Execution is immediate on the current call stack for every caller —
+	/// the ordinary dispatch path and <see cref="ExecuteHookCode"/>'s OVERRIDE/EXTEND path alike, whether
+	/// or not that hook is <c>/inline</c>. Nothing here queues.
+	/// </summary>
+	private async ValueTask<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser prs,
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
-		// Step 1: Validate if the command can be evaluated (locks)
 		foreach (var (obj, attr, arguments) in matches)
 		{
 			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
@@ -1991,15 +1996,10 @@ public class SharpMUSHParserVisitor(
 					return new None();
 				}
 
-				var matches = matchResult.AsValue();
-				if (hook.Inline)
-				{
-					return await HandleUserDefinedCommandInline(localParser, matches);
-				}
-				else
-				{
-					return await HandleUserDefinedCommand(localParser, matches);
-				}
+				// Dispatch is the same whether or not the hook is /inline: the matched $-command's body
+				// runs here on this call stack either way. The flag only selects the register handling
+				// above (/localize, /clearregs).
+				return await HandleUserDefinedCommand(localParser, matchResult.AsValue());
 			}
 
 			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
@@ -2029,40 +2029,6 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 		}
-	}
-
-	/// <summary>
-	/// Handles user-defined command execution inline (immediate, not queued).
-	/// Used for /inline hooks.
-	/// </summary>
-	private async ValueTask<Option<CallState>> HandleUserDefinedCommandInline(
-		IMUSHCodeParser prs,
-		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
-	{
-		foreach (var (obj, attr, arguments) in matches)
-		{
-			// See HandleUserDefinedCommand: a HALTED object's $-commands do not run.
-			if (await obj.HasFlag("HALT"))
-			{
-				continue;
-			}
-
-			var newParser = prs.Push(prs.CurrentState with
-			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
-				EnvironmentRegisters = arguments,
-				Arguments = arguments,
-				Function = null,
-				Executor = obj.Object().DBRef,
-				Caller = prs.CurrentState.Executor
-			});
-
-			var commandList = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
-
-			await newParser.CommandListParse(commandList);
-		}
-
-		return CallState.Empty;
 	}
 
 	private async ValueTask<Option<CallState>> HandleSocketCommandPattern(IMUSHCodeParser prs, MString src,
