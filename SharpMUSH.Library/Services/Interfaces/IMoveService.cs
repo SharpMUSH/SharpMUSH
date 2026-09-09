@@ -1,4 +1,6 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+﻿using OneOf;
+using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -35,6 +37,54 @@ public interface IMoveService
 	/// <param name="enactor">The object that caused the move.</param>
 	/// <param name="cause">What caused the move, for events.</param>
 	ValueTask MoveIt(
+		IMUSHCodeParser parser,
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause);
+
+	/// <summary>
+	/// Moves something into a container: the recursion guard, the validity checks,
+	/// <see cref="MoveIt"/>, a vacated STICKY room's drop-to, and then the automatic look.
+	/// PennMUSH <c>enter_room</c> (<c>src/move.c:227</c>).
+	/// </summary>
+	/// <remarks>
+	/// The automatic look is unconditional (<c>move.c:279</c>): <paramref name="noMoveMsgs"/> does
+	/// not reach it, and only <c>TERSE</c> shortens it.
+	/// </remarks>
+	/// <param name="parser">
+	/// The caller's parser. Its <see cref="ParserState.MoveDepth"/> bounds re-entry, and its
+	/// evaluation counters are threaded into the automatic look.
+	/// </param>
+	/// <param name="what">The object being moved. An exit is not <c>Mobile</c> and is refused.</param>
+	/// <param name="where">The destination container.</param>
+	/// <param name="noMoveMsgs">Suppresses the <c>MOVE</c> triad only.</param>
+	/// <param name="enactor">The object that caused the move.</param>
+	/// <param name="cause">What caused the move, for events.</param>
+	/// <returns>
+	/// An error carrying the reason the move was refused — Penn rawlogs these and returns; naming
+	/// them lets a caller decide whether to tell the mover.
+	/// </returns>
+	ValueTask<OneOf<Success, Error<string>>> EnterRoom(
+		IMUSHCodeParser parser,
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause);
+
+	/// <summary>
+	/// <see cref="EnterRoom"/>, first sending home anything carried that the mover does not control,
+	/// is <c>STICKY</c>, and is not homed to the mover — but only when the destination's owner
+	/// differs from the current location's. PennMUSH <c>safe_tel</c> (<c>src/move.c:286</c>).
+	/// </summary>
+	/// <remarks>
+	/// <c>safe_tel</c> resolves a <c>HOME</c> destination itself (<c>move.c:293</c>); SharpMUSH has no
+	/// <c>HOME</c> sentinel in <see cref="AnySharpContainer"/>, so a caller that means home resolves
+	/// it before calling.
+	/// </remarks>
+	ValueTask<OneOf<Success, Error<string>>> SafeTel(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,

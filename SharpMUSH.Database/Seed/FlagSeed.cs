@@ -28,6 +28,7 @@ public static class FlagSeed
 		("NO_TEL", "N", null, [], [], ["ROOM"]),
 		("OPAQUE", "O", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("QUIET", "Q", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
+		("STICKY", "S", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("UNFINDABLE", "U", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("VISUAL", "V", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("SAFE", "X", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),

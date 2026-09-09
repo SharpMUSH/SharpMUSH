@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Options;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -17,8 +19,18 @@ public class MoveService(
 	IPermissionService permissionService,
 	INotifyService notifyService,
 	IDidItService didItService,
+	ILookService lookService,
+	IConnectionService connectionService,
 	IOptionsMonitor<SharpMUSHOptions> configuration) : IMoveService
 {
+	/// <summary>
+	/// PennMUSH's <c>enter_room</c> bails once more than fifteen frames are already on the stack
+	/// (<c>src/move.c:232</c>). That number is Penn's own and is kept literal rather than folded into
+	/// <c>Limit.MaxDepth</c>: <c>MaxDepth</c> bounds a walk over containment, this bounds re-entry
+	/// through a drop-to or a <c>safe_tel</c> home, and they are not the same budget.
+	/// </summary>
+	private const int MaxMoveDepth = 15;
+
 	/// <inheritdoc />
 	public async ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj)
 	{
@@ -265,6 +277,226 @@ public class MoveService(
 	{
 		var zone = await container.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
 		return zone.IsNone() ? null : zone.Known();
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<OneOf<Success, Error<string>>> EnterRoom(
+		IMUSHCodeParser parser,
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause)
+	{
+		var depth = parser.CurrentState.MoveDepth;
+
+		// move.c:232-235. Penn's counter is a process-global `static int deep`, which is only safe
+		// under its single-threaded queue; SharpMUSH moves objects concurrently, so the counter rides
+		// the evaluation instead — one player's deep move must not abort another's shallow one.
+		if (depth is not null && depth.Count > MaxMoveDepth)
+		{
+			return new Error<string>(ErrorMessages.Notifications.TooManyContainers);
+		}
+
+		depth?.Increment();
+
+		try
+		{
+			var mover = what.WithRoomOption();
+
+			// move.c:243-247: only a Mobile — a thing or a player — is moved by enter_room.
+			// Penn's IsExit(loc) guard (move.c:249) has no analogue: AnySharpContainer is
+			// player/room/thing, so an exit cannot be named as a destination in the first place.
+			if (what.IsExit)
+			{
+				return new Error<string>(ErrorMessages.Notifications.CantGoThatWay);
+			}
+
+			// move.c:254: nothing enters itself.
+			if (where.Object().DBRef.Equals(what.Object().DBRef))
+			{
+				return new Error<string>(ErrorMessages.Notifications.CantGoThatWay);
+			}
+
+			// move.c:259, recursive_member: nothing enters something it is already carrying.
+			if (await WouldCreateLoop(what, where))
+			{
+				return new Error<string>(ErrorMessages.Notifications.CantGoThatWayContainmentLoop);
+			}
+
+			var oldContainer = await what.Location();
+
+			await MoveIt(parser, what, where, noMoveMsgs, enactor, cause);
+
+			// move.c:270-273: a STICKY room a Dropper just left empties through its drop-to, which for
+			// a room is its own location.
+			if (!oldContainer.Object().DBRef.Equals(where.Object().DBRef)
+					&& oldContainer.IsRoom
+					&& await IsDropper(mover)
+					&& await oldContainer.WithExitOption().HasFlag("STICKY"))
+			{
+				var dropTo = await oldContainer.AsRoom.Location.WithCancellation(CancellationToken.None);
+
+				if (!dropTo.IsNone)
+				{
+					await MaybeDropTo(parser, oldContainer, dropTo.WithoutNone(), enactor);
+				}
+			}
+
+			// move.c:279: the automatic look. Unconditional — nomovemsgs never reaches it, and only
+			// TERSE shortens it, which LookKey.Auto carries.
+			await lookService.LookRoom(
+				parser, mover, where.WithNoneOption().WithExitOption(), LookKey.Auto);
+
+			return new Success();
+		}
+		finally
+		{
+			depth?.Decrement();
+		}
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<OneOf<Success, Error<string>>> SafeTel(
+		IMUSHCodeParser parser,
+		AnySharpContent what,
+		AnySharpContainer where,
+		bool noMoveMsgs,
+		DBRef enactor,
+		string cause)
+	{
+		// safe_tel resolves `dest == HOME` first (move.c:293). SharpMUSH has no HOME sentinel in
+		// AnySharpContainer, so a caller that means home resolves it before calling.
+		var mover = what.WithRoomOption();
+		var currentLocation = await what.Location();
+
+		var currentOwner = (await currentLocation.WithExitOption().Object().Owner
+			.WithCancellation(CancellationToken.None)).Object.DBRef;
+		var destinationOwner = (await where.WithExitOption().Object().Owner
+			.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		// move.c:294: same owner on both ends and nothing is stripped.
+		if (currentOwner.Equals(destinationOwner))
+		{
+			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+		}
+
+		// The list is materialised before anything moves, because each EnterRoom below rewrites the
+		// contents it is being read from.
+		var carried = await mover.AsContainer.Content(mediator).ToListAsync();
+
+		foreach (var item in carried)
+		{
+			var carriedObject = item.WithRoomOption();
+
+			// move.c:311: an item goes home only when the mover does not control it, it is STICKY, and
+			// the mover is not already its home. Everything else travels along.
+			if (await permissionService.Controls(mover, carriedObject)
+					|| !await carriedObject.HasFlag("STICKY"))
+			{
+				continue;
+			}
+
+			var home = await item.Home();
+
+			// An item with no home has nowhere to be sent; it stays where it is rather than being
+			// pushed at dbref -1.
+			if (home.IsNone)
+			{
+				continue;
+			}
+
+			var homeContainer = home.WithoutNone();
+
+			if (homeContainer.Object().DBRef.Equals(mover.Object().DBRef))
+			{
+				continue;
+			}
+
+			await EnterRoom(parser, item, homeContainer, noMoveMsgs, enactor, cause);
+		}
+
+		return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>maybe_dropto</c> (<c>src/move.c:203</c>) together with the <c>send_contents</c>
+	/// (<c>src/move.c:173</c>) it tail-calls.
+	/// </summary>
+	private async ValueTask MaybeDropTo(
+		IMUSHCodeParser parser,
+		AnySharpContainer room,
+		AnySharpContainer dropTo,
+		DBRef enactor)
+	{
+		// move.c:207-210: a room dropping to itself, or something that is not a room, keeps its
+		// contents. The caller has already established the room half; both are kept here so this
+		// reads as maybe_dropto does.
+		if (dropTo.Object().DBRef.Equals(room.Object().DBRef) || !room.IsRoom)
+		{
+			return;
+		}
+
+		// The contents are read once: send_contents walks a list Penn has already detached, and each
+		// EnterRoom below rewrites the live one.
+		var contents = await room.Content(mediator).ToListAsync();
+
+		// move.c:212-215: one Dropper still present and the room keeps everything.
+		foreach (var content in contents)
+		{
+			if (await IsDropper(content.WithRoomOption()))
+			{
+				return;
+			}
+		}
+
+		foreach (var content in contents)
+		{
+			var thing = content.WithRoomOption();
+
+			// move.c:186: a Dropper stays, and so does anything the room's drop-to lock refuses.
+			if (await IsDropper(thing)
+					|| !await permissionService.PassesLock(thing, room.WithExitOption(), LockType.DropTo))
+			{
+				continue;
+			}
+
+			// move.c:187: a STICKY object goes home instead of through the drop-to.
+			var destination = dropTo;
+
+			if (await thing.HasFlag("STICKY"))
+			{
+				var home = await content.Home();
+
+				if (home.IsNone)
+				{
+					continue;
+				}
+
+				destination = home.WithoutNone();
+			}
+
+			// Penn attributes this move to SYSEVENT (move.c:187). SharpMUSH has no such dbref, so the
+			// enactor that caused the emptying move is carried through instead — a deliberate
+			// deviation, visible only in the OBJECT`MOVE event's enactor field.
+			await EnterRoom(parser, content, destination, noMoveMsgs: false, enactor, "dropto");
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH <c>Dropper</c> (<c>src/move.c:171</c>): something that can hear and whose owner is
+	/// connected.
+	/// </summary>
+	private async ValueTask<bool> IsDropper(AnySharpObject thing)
+	{
+		if (!await permissionService.IsHearer(thing))
+		{
+			return false;
+		}
+
+		var owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
+
+		return await connectionService.IsConnected(owner);
 	}
 
 	/// <summary>
