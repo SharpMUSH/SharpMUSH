@@ -310,7 +310,7 @@ public class SharpMUSHParserVisitor(
 	/// <param name="message">The message to send</param>
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
-		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		await NotifyService.Notify(owner, MarkupText.Plain(message), executor);
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(

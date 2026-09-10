@@ -180,7 +180,13 @@ public class HttpCompletionEventLifetimeTests
 
 	private sealed class HeldTimerProvider : TimeProvider
 	{
-		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period) => new HeldTimer();
+		private Action? _fire;
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			_fire = () => callback(state);
+			return new HeldTimer();
+		}
+		public void Fire() => _fire!();
 		private sealed class HeldTimer : ITimer
 		{
 			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
@@ -214,6 +220,40 @@ public class HttpCompletionEventLifetimeTests
 		await Assert.ThrowsAsync<OperationCanceledException>(async () =>
 			await service.TriggerEventAsync(fixture.Parser, "TEST", null, budget.Token));
 		await Assert.That(budget.Token.IsCancellationRequested).IsFalse();
+	}
+
+	[Test]
+	[Arguments("handler", false)]
+	[Arguments("body", false)]
+	[Arguments("handler", true)]
+	[Arguments("body", true)]
+	public async Task ParentTimerExpiryIsNotMistakenForRequestCancellation(string stage, bool cancelRequest)
+	{
+		var fixture = new Fixture(0);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		fixture.Visit = async (current, token) =>
+		{
+			if (current != stage) return;
+			entered.TrySetResult();
+			await Task.Delay(Timeout.Infinite, token);
+		};
+		var timer = new HeldTimerProvider();
+		using var parent = new ExecutionBudget(TimeSpan.FromMinutes(1), default, timer);
+		using var scope = parent.Enter();
+		using var request = new CancellationTokenSource();
+		var pending = fixture.Service.DispatchAsync("GET", "/parent-timer", "", [], request.Token).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		if (cancelRequest) request.Cancel();
+		timer.Fire();
+		await Assert.That(parent.Remaining).IsGreaterThan(TimeSpan.Zero);
+		if (cancelRequest)
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(1)));
+		else
+		{
+			var response = (await pending.WaitAsync(TimeSpan.FromSeconds(1))).AsT0;
+			await Assert.That(response.Status).IsEqualTo(503);
+			await Assert.That(response.Body).IsEqualTo(ExecutionBudget.Error);
+		}
 	}
 
 }
