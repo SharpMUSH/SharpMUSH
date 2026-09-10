@@ -58,6 +58,14 @@ public class CommunicationCommandTests
 		{
 			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
 		}
+
+		// The notify substitute lives for the whole test session, so every call any earlier test made
+		// to it is still on the record when Received(1) counts. The matchers here are necessarily
+		// broad — "a message to #1 reading 3", "a message to #1 starting #-1 PARSER FAILURE" — so
+		// another suite emitting the same thing to God made these fail in a full run while passing on
+		// their own. Start each test from an empty record; the setup above notifies nothing itself,
+		// but it runs first so anything it did would be cleared too.
+		NotifyService.ClearReceivedCalls();
 	}
 
 	[Test]

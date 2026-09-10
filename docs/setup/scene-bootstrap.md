@@ -46,9 +46,26 @@ like the un-hooked built-in — it simply isn't recorded. Requiring **active + f
 passers-by, and people focused on a different scene in the room, are not logged.
 
 > Only **override** hooks work for capture: `@hook/after`/`/before` run with empty args and
-> never see the pose text. The portal's live composer sends a normal `POSE`/`SAY`/`SEMIPOSE`
-> through `GameHub.SendCommand`, so the **same** hook fires — there is **one** stored pose,
-> rendered both to the room and over `game.scene.{id}` (no double-capture, no echo loop).
+> never see the pose text.
+
+Every capture pattern is a **regexp** `$`-command carrying **both** inline flags, `(?is)`. The
+`s` is load-bearing: `$`-commands are matched against the command line *after* evaluation, so a
+`%r` in the text is a real line break by then, and without `s` a `.` cannot cross it. The
+pattern would not match, the built-in would run instead, and the pose would reach the room and
+be **silently** absent from the archive — the failure has no error to look for.
+
+The portal's live composer does **not** take this path. It sends the explicit
+`+scene/<mode> <id>=<text>` verbs (below), which name the scene rather than inferring it from
+the room — its compose box sits on one scene's page, and the character may not be standing in
+that scene's room at all. Those verbs record from anywhere, join the poser to the cast, focus
+them on the scene, and emit to the room only when they are actually in it. There is still
+**one** stored pose, rendered both to the room and over `game.scene.{id}` (no double-capture,
+no echo loop) — the capture hooks deliberately do not fire for them.
+
+Whitespace crosses that boundary as substitutions, not as itself: the compose box encodes every
+run of spaces, every indent, every line break and every `;` as `%b` / `%r` / `%;` before the
+command leaves the browser, because MUSH evaluation compresses space runs, eats the ones at an
+argument's edges, ends the line at a newline and starts a new command at a semicolon.
 
 ## Policy knobs (``DATA`*``)
 
@@ -57,8 +74,8 @@ There is intentionally **no `SceneOptions` config category** — every knob is p
 package ships sensible defaults; the most notable is **``DATA`DEFAULT_STATUS=active``**, so
 `+scene/create` yields an immediately-capturing scene (set it to `new`/`scheduled` to stage a
 scene that only logs after `+scene/start`). See the ``DATA`*`` block in `package.yaml` for the
-full set (`CAPTURE`, `DEFAULT_STATUS`, `DEFAULT_PUBLIC`, `MAX_RECENT`, `STATUSES`, `TEMP_*`,
-`SHARE_OWNER`) and its current defaults.
+full set — `CAPTURE`, `DEFAULT_STATUS`, `RECALL_ROUNDS`, and the three refusal strings
+`DENY_APPROVAL` / `DENY_NO_FOCUS` / `DENY_NOT_OWNER` — and its current defaults.
 
 ## Player commands
 
@@ -80,7 +97,8 @@ edit their own poses.
 | `+scene/as <persona>` | display persona for your future poses |
 | `+scene/pitch <text>` | set the scene blurb |
 | `+scene/public` · `/private` | visibility |
-| `+scene/recall [<n>]` | print the last `<n>` poses |
+| `+scene/pose <id>=<text>` · `/say` · `/semipose` · `/emit` | pose into a named scene (what the portal's compose box sends); joins and focuses you on it |
+| `+scene/recall [<n>]` | print the last `<n>` poses, each under a rule naming its poser and id; bare, ``DATA`RECALL_ROUNDS`` rounds of the cast (2 × its size) |
 | `+scene/edit <id>=<before>^^^<after>` | fix a typo in your pose |
 | `+scene/undo <id>` · `/redo <id>` · `/delete <id>` · `/move <id>=<after>` | pose management |
 | `+scene/info <id>` | the scene's card: pitch, where, status, cast, members with roles, who may watch (same as `+scene <id>`) |

@@ -271,17 +271,21 @@ else
 
     private async Task SendPoseAsync()
     {
-        var text = _composeText.Trim();
         // _liveUnavailable means this connection is not in the scene's group. Nothing renders a pose but the
         // round-trip event, so posting from here would look like the command vanished.
-        if (text.Length == 0 || !Terminal.IsConnected || _liveUnavailable) return;
+        if (string.IsNullOrWhiteSpace(_composeText) || !Terminal.IsConnected || _liveUnavailable) return;
 
+        // The text itself is NOT trimmed. A pose that opens on an indent or a blank line means it,
+        // and trimming here threw that away before the encoder could protect it — leading whitespace
+        // was the one kind that could never reach the archive.
+        //
         // The scene is named rather than inferred: the room-based verbs record through capture hooks
         // that only fire for the scene you are focused on, in the room you are standing in.
         //
-        // Newlines become %r because the channel is line-delimited and a raw one would end the
-        // command. The engine expands it back before matching the verb.
-        var command = $"+scene/{_mode} {Id}={text.Replace("\r\n", "\n").Replace("\n", "%r")}";
+        // MushComposeEncoder spells the whitespace out as substitutions (%b/%t/%r) and neutralises the
+        // command separator; without it the parser compressed every run of spaces, dropped the ones at
+        // a line's edges, and cut the pose short at the first semicolon.
+        var command = $"+scene/{_mode} {Id}={MushComposeEncoder.Encode(_composeText)}";
 
         _composeText = string.Empty;
 

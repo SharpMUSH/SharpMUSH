@@ -32,8 +32,14 @@ public class SceneVerbSurfaceIntegrationTests
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
-	private async Task<string> Eval(string expression) =>
-		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
+	private async Task<string> Eval(string expression) => (await EvalRaw(expression)).Trim();
+
+	/// <summary>
+	/// <see cref="Eval"/> without the trim, for the one thing whose leading and trailing whitespace is
+	/// the subject of the assertion rather than noise around it.
+	/// </summary>
+	private async Task<string> EvalRaw(string expression) =>
+		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 
 	private async Task<CallState> God1(string command) =>
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
@@ -337,5 +343,161 @@ public class SceneVerbSurfaceIntegrationTests
 
 		await Assert.That(linked).IsEqualTo($"<a href=\"{url}\">{url}</a>")
 			.Because("a Pueblo client is sent the anchor markup it knows how to render");
+	}
+
+	/// <summary>
+	/// The explicit <c>+scene/&lt;mode&gt; &lt;id&gt;=&lt;text&gt;</c> verbs — what the portal's compose
+	/// box sends — leave the poser focused on the scene they just posed into.
+	///
+	/// <para>Without it a pose composed on a scene's page landed in that scene and left the character's
+	/// focus wherever it had been, so the very next line they typed in a client went somewhere else, or
+	/// nowhere. Everything else about the portal says "you are in this scene"; the focus has to agree.</para>
+	/// </summary>
+	[Test]
+	[Arguments("pose", "waves once.")]
+	[Arguments("say", "Hello there.")]
+	[Arguments("semipose", "'s hand lifts.")]
+	[Arguments("emit", "A lantern gutters.")]
+	public async Task WebComposeVerb_FocusesTheSceneItPostsTo(string mode, string text)
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long ownerHandle = 9550;
+		const long guestHandle = 9551;
+		await CreatePlayerAsync($"Rue{Tag}{mode}", ownerHandle);
+		var guest = await CreatePlayerAsync($"Sabel{Tag}{mode}", guestHandle);
+
+		await RunAs(ownerHandle, $"+scene/create Rue Scene {Tag} {mode}");
+		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
+		await RunAs(ownerHandle, "+scene/public");
+
+		await Assert.That(await Eval($"scenefocus({Num(guest)})")).StartsWith("#-1")
+			.Because("the guest has not joined anything yet, which is the state the portal poses from");
+
+		await RunAs(guestHandle, $"+scene/{mode} {sceneId}={text}");
+
+		await Assert.That(await Eval($"scenefocus({Num(guest)})")).IsEqualTo(sceneId)
+			.Because($"+scene/{mode} <id>=<text> must leave the poser focused on <id>");
+	}
+
+	/// <summary>
+	/// The whole path a portal-composed pose takes, whitespace included: what the compose box puts on
+	/// the wire, through the verb, into the archive, and back out of <c>scenepose()</c> byte for byte.
+	///
+	/// <para>Three separate steps used to eat part of it — the compose box trimmed the text, the parser
+	/// compressed the runs of spaces that were left and dropped the ones at a line's edges, and
+	/// <c>@scene/addpose</c> trimmed the content field again on arrival. An indented pose could not be
+	/// written by any route. The literal here is what <c>MushComposeEncoder</c> produces for a pose that
+	/// opens on an indent, carries a blank line and indents again, so this fails if any one of the three
+	/// comes back.</para>
+	/// </summary>
+	[Test]
+	public async Task AWebComposedPose_ReachesTheArchiveWithItsWhitespaceIntact()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9570;
+		var who = await CreatePlayerAsync($"Yarrow{Tag}", handle);
+
+		await RunAs(handle, $"+scene/create Yarrow Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+
+		// MushComposeEncoder.Encode("  She waits;\n\n    \"Well?\"")
+		await RunAs(handle, $"+scene/emit {sceneId}=%b%bShe waits%;%r%r%b%b%b%b\"Well?\"");
+
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+		var content = await EvalRaw($"scenepose({sceneId},{poseId},content)");
+
+		await Assert.That(content).IsEqualTo("  She waits;\n\n    \"Well?\"")
+			.Because("every space, break and separator the author typed was spelled out; nothing on the way in may eat one");
+	}
+
+	/// <summary>
+	/// Bare <c>+scene/recall</c> answers with a default window rather than nothing: two rounds of the
+	/// room, which is <c>DATA`RECALL_ROUNDS</c> times the size of the cast. Someone arriving at a scene
+	/// wants what they missed without first having to guess a number.
+	/// </summary>
+	[Test]
+	public async Task BareRecall_ShowsTwoRoundsOfTheCast()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long ownerHandle = 9560;
+		const long castHandle = 9561;
+		var owner = await CreatePlayerAsync($"Tarn{Tag}", ownerHandle);
+		await CreatePlayerAsync($"Vell{Tag}", castHandle);
+
+		await RunAs(ownerHandle, $"+scene/create Tarn Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(owner)})");
+		await RunAs(ownerHandle, "+scene/public");
+		await RunAs(castHandle, $"+scene/join {sceneId}");
+
+		// Two members, so the default window is four. Six poses means the window has to cut something,
+		// which is what makes "four" observable rather than "all of them".
+		for (var i = 1; i <= 6; i++)
+		{
+			await RunAs(ownerHandle, $"+scene/emit {sceneId}=Beat number {i}.");
+		}
+
+		var recalled = string.Join("\n", await RunAs(ownerHandle, "+scene/recall"));
+
+		await Assert.That(recalled).Contains("Beat number 6.").Because("the default window ends at the newest pose");
+		await Assert.That(recalled).Contains("Beat number 3.").Because("two members × two rounds is four poses");
+		await Assert.That(recalled).DoesNotContain("Beat number 2.")
+			.Because("a default window that shows everything is not a window");
+		await Assert.That(recalled).DoesNotContain("#-1")
+			.Because("the sentinel must never reach a player-facing line");
+	}
+
+	/// <summary>
+	/// Every recalled pose is introduced by a rule naming who posed it and its id.
+	///
+	/// <para>Recall printed bare content lines, which ran together: an <c>@emit</c> carries no name of
+	/// its own, so four of them in a row were four anonymous paragraphs with nothing to say where one
+	/// ended and the next began, and no id on screen to hand to <c>+scene/edit</c> or
+	/// <c>+scene/undo</c>. The attribution is read off the pose, so it is the name the pose actually
+	/// went out under — <c>+scene/as</c> afterwards does not rewrite history.</para>
+	/// </summary>
+	[Test]
+	public async Task Recall_AttributesAndSeparatesEachPose()
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9563;
+		var who = await CreatePlayerAsync($"Zev{Tag}", handle);
+
+		await RunAs(handle, $"+scene/create Zev Scene {Tag}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		await RunAs(handle, "+scene/as The Ferryman");
+		await RunAs(handle, $"+scene/emit {sceneId}=The lamp swings.");
+		var poseId = await Eval($"last(sceneposes({sceneId}))");
+
+		var recalled = string.Join("\n", await RunAs(handle, "+scene/recall 1"));
+
+		await Assert.That(recalled).Contains("The Ferryman")
+			.Because("an emit carries no name of its own, so the rule above it is the only attribution there is");
+		await Assert.That(recalled).Contains($"pose {poseId}")
+			.Because("the id on screen is what +scene/edit and +scene/undo take");
+		await Assert.That(recalled).Contains("The lamp swings.");
+
+		// The rule is drawn, not just written: a separator that looks like prose separates nothing.
+		await Assert.That(recalled.Any(c => c is '-' or '=' or '─')).IsTrue()
+			.Because("each pose is introduced by a drawn rule, which is what makes the block readable");
+	}
+
+	/// <summary>
+	/// Bare <c>+scene/recall</c> without a focus says so, rather than printing the not-found sentinel
+	/// that <c>scenefocus()</c> answers with. Same guard the counted form now carries.
+	/// </summary>
+	[Test]
+	[Arguments("+scene/recall")]
+	[Arguments("+scene/recall 5")]
+	public async Task Recall_WithoutAFocus_SaysSo(string command)
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9562;
+		await CreatePlayerAsync($"Wren{Tag}{command.Length}", handle);
+
+		var said = await RunAs(handle, command);
+
+		await Assert.That(said).IsNotEmpty().Because("silence is indistinguishable from no such command");
+		await Assert.That(said.Any(m => m.Contains("#-1", StringComparison.Ordinal))).IsFalse()
+			.Because($"'{command}' leaked the not-found sentinel into a player-facing message");
 	}
 }

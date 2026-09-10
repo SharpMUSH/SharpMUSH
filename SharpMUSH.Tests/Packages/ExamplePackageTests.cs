@@ -118,4 +118,50 @@ public class ExamplePackageTests
 				.Because($"{entry.Path} has no browse blurb, which is half of what the index is for");
 		}
 	}
+
+	/// <summary>
+	/// A <c>REGEXP</c> <c>$</c>-command is matched against the command line after evaluation, so a
+	/// <c>%r</c> in it is a real line break by then. Without the <c>s</c> flag <c>.</c> stops at that
+	/// break, the pattern does not match, and the command falls through to the built-in — the text
+	/// still reaches its audience and is silently never captured. Nothing reports it, so the rule is
+	/// enforced here instead.
+	///
+	/// <para>Scoped to the patterns that use <c>.*</c> to take a remainder, which are the ones whose
+	/// argument can hold a line break. A pattern that only recognises a bare verb (plus-help's
+	/// <c>^\+help\s*$</c>) has no remainder to lose and needs nothing.</para>
+	/// </summary>
+	[Test]
+	public async Task EveryRegexpCommandPattern_ThatTakesARemainder_SpansNewlines()
+	{
+		var root = ExamplesRoot();
+
+		foreach (var path in Directory.GetFiles(root, "package.yaml", SearchOption.AllDirectories))
+		{
+			var manifest = _service.ParseManifest(await File.ReadAllTextAsync(path)).AsT0.Manifest;
+
+			foreach (var obj in manifest.Objects)
+			{
+				foreach (var (name, spec) in obj.Attributes)
+				{
+					if (!spec.Flags.Any(f => f.Equals("REGEXP", StringComparison.OrdinalIgnoreCase))) continue;
+					if (!spec.Value.StartsWith('$')) continue;
+					if (!spec.Value.Contains(".*", StringComparison.Ordinal)) continue;
+
+					var flags = InlineRegexFlags(spec.Value);
+					await Assert.That(flags).Contains('s')
+						.Because($"{Path.GetFileName(Path.GetDirectoryName(path))}/{obj.Ref}/{name} cannot match a multi-line command");
+				}
+			}
+		}
+	}
+
+	/// <summary>The letters of a leading <c>(?…)</c> inline flag group, or empty when there is none.</summary>
+	private static string InlineRegexFlags(string attributeValue)
+	{
+		var pattern = attributeValue.AsSpan(1);
+		if (!pattern.StartsWith("(?")) return string.Empty;
+
+		var close = pattern.IndexOf(')');
+		return close < 0 ? string.Empty : pattern[2..close].ToString();
+	}
 }

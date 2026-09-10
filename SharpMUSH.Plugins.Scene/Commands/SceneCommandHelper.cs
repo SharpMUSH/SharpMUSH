@@ -33,18 +33,23 @@ public static class SceneCommandHelper
 	/// fields, where the final field ("content") keeps any remaining commas intact.
 	/// Missing trailing fields come back as empty strings.
 	/// </summary>
-	public static string[] SplitFields(MString arg, int count)
+	/// <param name="trimLast">
+	/// Whether the final field is trimmed like the rest. True for the fields that are titles or
+	/// descriptions, where a space after the comma is typing and not text. False for a pose's
+	/// content, whose leading and trailing whitespace is the author's — see
+	/// <see cref="SplitFieldsKeepingMarkup"/>.
+	/// </param>
+	public static string[] SplitFields(MString arg, int count, bool trimLast = true)
 	{
 		var text = arg.ToPlainText();
 		var parts = text.Split(',', count, StringSplitOptions.None);
 		var result = new string[count];
 		for (var i = 0; i < count; i++)
 		{
-			result[i] = i < parts.Length ? parts[i].Trim() : string.Empty;
+			var part = i < parts.Length ? parts[i] : string.Empty;
+			result[i] = trimLast || i < count - 1 ? part.Trim() : part;
 		}
 
-		// The last field (content) preserves leading/trailing internal spacing but we
-		// only trim the boundaries above; commas inside it were already kept by the limit.
 		return result;
 	}
 
@@ -60,10 +65,15 @@ public static class SceneCommandHelper
 	///
 	/// <para>Only the last field is worth carrying: every earlier one is a dbref, a role or a keyword
 	/// that is compared as text.</para>
+	///
+	/// <para>The content's own leading and trailing whitespace is kept. It is the author's: an
+	/// indented pose, a line that opens on a blank one, a deliberate hanging break. Trimming it here
+	/// silently undid the <c>%b</c>/<c>%r</c> the poser (or the portal's compose box) used to get that
+	/// whitespace past the parser in the first place, so an indent could not be written at all.</para>
 	/// </summary>
 	public static (string[] Fields, MString Content) SplitFieldsKeepingMarkup(MString arg, int count)
 	{
-		var fields = SplitFields(arg, count);
+		var fields = SplitFields(arg, count, trimLast: false);
 		var plain = arg.ToPlainText();
 
 		// Walk to the character after the (count-1)th comma: where the last field starts.
@@ -79,13 +89,7 @@ public static class SceneCommandHelper
 			start = next + 1;
 		}
 
-		// Match SplitFields' boundary trim, so the two views agree on where the content begins and
-		// ends. Done by index rather than by trimming the MString, which would drop the markup again.
-		var end = plain.Length;
-		while (start < end && char.IsWhiteSpace(plain[start])) start++;
-		while (end > start && char.IsWhiteSpace(plain[end - 1])) end--;
-
-		return (fields, arg.Substring(start, end - start));
+		return (fields, arg.Substring(start, plain.Length - start));
 	}
 
 	/// <summary>Plain-text, trimmed view of an optional argument (null/empty → "").</summary>
