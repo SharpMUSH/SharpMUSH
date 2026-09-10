@@ -7251,6 +7251,7 @@ public partial class Commands
 		var conditionText = predicate.Message!;
 		var currentArgs = parentArgs;
 		var limit = 1000;
+		var hadErrors = false;
 
 		while (limit > 0)
 		{
@@ -7259,6 +7260,7 @@ public partial class Commands
 				state => state with { Arguments = currentArgs },
 				innerParser => innerParser.FunctionParse(conditionText));
 
+			hadErrors |= condResult?.HadErrors == true;
 			if (!(condResult?.Message.Truthy(parser) ?? false))
 				break;
 
@@ -7271,19 +7273,21 @@ public partial class Commands
 				var evaluated = await parser.With(
 					state => state with { Arguments = currentArgs },
 					innerParser => innerParser.FunctionParse(capturedText));
+				hadErrors |= evaluated?.HadErrors == true;
 				newArgValues[capturedIndex.ToString()] = evaluated!;
 			}
 
-			await parser.With(
+			var retryResult = await parser.With(
 				state => state with { Arguments = newArgValues },
 				async innerParser => await previousCommandInvoker(innerParser));
+			hadErrors |= retryResult.IsSome() && retryResult.AsValue().HadErrors;
 
 			// The new arg values become the context for the next condition check.
 			currentArgs = newArgValues;
 			limit--;
 		}
 
-		return new CallState(1000 - limit);
+		return new CallState(1000 - limit) { HadErrors = hadErrors };
 	}
 
 	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],
