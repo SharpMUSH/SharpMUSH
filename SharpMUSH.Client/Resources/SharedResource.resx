@@ -3706,6 +3706,63 @@
   <data name="EnumPermRealityAdminDesc" xml:space="preserve"><value>Administer reality definitions and assignments.</value></data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>Highest priority explicit Allow or Deny decides each scope; Deny wins ties. Inherit uses a granted parent scope only when no role explicitly decides the child. A child denial blocks even a higher priority parent grant. No grant means denied. Delegated managers can edit only lower priority grants they possess, and cannot change their own roles or restrictions.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Your current access: {0}; priority {1}; roles {2}; resolution {3}.</value></data>
+  <data name="DiagTitle" xml:space="preserve"><value>Queue diagnostics</value></data>
+  <data name="DiagDescription" xml:space="preserve"><value>Inspect authorized work and recent outcomes. History lasts 15 minutes; restarting clears it.</value></data>
+  <data name="DiagPid" xml:space="preserve"><value>PID</value></data>
+  <data name="DiagSource" xml:space="preserve"><value>Source / attribute</value></data>
+  <data name="DiagOwner" xml:space="preserve"><value>Owner</value></data>
+  <data name="DiagKind" xml:space="preserve"><value>Kind</value></data>
+  <data name="DiagStatus" xml:space="preserve"><value>Status</value></data>
+  <data name="DiagEnqueued" xml:space="preserve"><value>Enqueued (UTC)</value></data>
+  <data name="DiagStarted" xml:space="preserve"><value>Started (UTC)</value></data>
+  <data name="DiagEnded" xml:space="preserve"><value>Ended (UTC)</value></data>
+  <data name="DiagWait" xml:space="preserve"><value>Wait (ms)</value></data>
+  <data name="DiagElapsed" xml:space="preserve"><value>Elapsed execution (ms)</value></data>
+  <data name="DiagInvocations" xml:space="preserve"><value>Invocations</value></data>
+  <data name="DiagEmpty" xml:space="preserve"><value>No visible entries.</value></data>
+  <data name="DiagCharacter" xml:space="preserve"><value>Inspect as character</value></data>
+  <data name="DiagSelectCharacter" xml:space="preserve"><value>Select a linked character</value></data>
+  <data name="DiagLoading" xml:space="preserve"><value>Loading diagnostics…</value></data>
+  <data name="DiagActive" xml:space="preserve"><value>Active queue</value></data>
+  <data name="DiagHistory" xml:space="preserve"><value>Recent outcomes</value></data>
+  <data name="DiagActiveTruncated" xml:space="preserve"><value>Showing the first 100 visible active entries.</value></data>
+  <data name="DiagOlder" xml:space="preserve"><value>Older entries</value></data>
+  <data name="DiagProfile" xml:space="preserve"><value>Invocation profile</value></data>
+  <data name="DiagInclusiveHelp" xml:space="preserve"><value>Inclusive elapsed time includes nested calls and awaits. It is not CPU time and must not be added to queue execution time. Sampling is bounded to 256 keys and 4,096 pending samples.</value></data>
+  <data name="DiagSeconds" xml:space="preserve"><value>Duration (1–300 seconds)</value></data>
+  <data name="DiagStart" xml:space="preserve"><value>Start new profile</value></data>
+  <data name="DiagStop" xml:space="preserve"><value>Stop profile</value></data>
+  <data name="DiagRecording" xml:space="preserve"><value>Recording</value></data>
+  <data name="DiagStopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="DiagExpires" xml:space="preserve"><value>Recording deadline (UTC)</value></data>
+  <data name="DiagName" xml:space="preserve"><value>Function / command</value></data>
+  <data name="DiagFailures" xml:space="preserve"><value>Failures</value></data>
+  <data name="DiagInclusive" xml:space="preserve"><value>Inclusive total (ms)</value></data>
+  <data name="DiagMaximum" xml:space="preserve"><value>Longest call (ms)</value></data>
+  <data name="DiagDenied" xml:space="preserve"><value>This character cannot inspect these diagnostics.</value></data>
+  <data name="DiagError" xml:space="preserve"><value>Diagnostics could not be loaded. Refresh to retry.</value></data>
+  <data name="DiagDurationError" xml:space="preserve"><value>Choose a duration from 1 to 300 seconds.</value></data>
+  <data name="DiagKind_direct-input" xml:space="preserve"><value>Direct input</value></data>
+  <data name="DiagKind_enqueue" xml:space="preserve"><value>Queued command</value></data>
+  <data name="DiagKind_semaphore" xml:space="preserve"><value>Semaphore</value></data>
+  <data name="DiagKind_delay" xml:space="preserve"><value>Delayed command</value></data>
+  <data name="DiagKind_other" xml:space="preserve"><value>Other</value></data>
+  <data name="DiagKind_Function" xml:space="preserve"><value>Function</value></data>
+  <data name="DiagKind_Command" xml:space="preserve"><value>Command</value></data>
+  <data name="DiagStatus_Pending" xml:space="preserve"><value>Pending</value></data>
+  <data name="DiagStatus_Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="DiagStatus_Ready" xml:space="preserve"><value>Ready</value></data>
+  <data name="DiagStatus_Running" xml:space="preserve"><value>Running</value></data>
+  <data name="DiagStatus_Completed" xml:space="preserve"><value>Completed</value></data>
+  <data name="DiagStatus_InvocationFailure" xml:space="preserve"><value>Invocation failed</value></data>
+  <data name="DiagStatus_Failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="DiagStatus_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="DiagStatus_ExecutionLimit" xml:space="preserve"><value>Execution limit</value></data>
+  <data name="DiagStatus_GlobalLimit" xml:space="preserve"><value>Global queue limit</value></data>
+  <data name="DiagStatus_OwnerLimit" xml:space="preserve"><value>Owner queue limit</value></data>
+  <data name="DiagStatus_InvalidTarget" xml:space="preserve"><value>Invalid target</value></data>
+  <data name="DiagStatus_ShuttingDown" xml:space="preserve"><value>Shutting down</value></data>
+  <data name="DiagStatus_ScheduleFailed" xml:space="preserve"><value>Scheduling failed</value></data>
   <data name="JobsTitle" xml:space="preserve"><value>Recurring jobs</value></data>
   <data name="JobsIntro" xml:space="preserve"><value>Schedule attribute calls as the linked active player. Times below are UTC. Missed firings are skipped; edits and revocation apply before queued work starts.</value></data>
   <data name="JobsAll" xml:space="preserve"><value>Show all accounts (administrator)</value></data>
@@ -3761,4 +3818,5 @@
 <data name="SnapshotsResolve" xml:space="preserve"><value>Acknowledge current state</value></data>
 <data name="SnapshotsResolveHelp" xml:space="preserve"><value>If you cannot restore the recovery image, acknowledge the current object to clear its pending marker. This keeps the current object and retains the image; it does not undo partial changes.</value></data>
 <data name="SnapshotsResolved" xml:space="preserve"><value>Recovery marker acknowledged. The current object was kept.</value></data>
+  <data name="DiagUnsupported" xml:space="preserve"><value>This scheduler does not support queue diagnostics.</value></data>
 </root>

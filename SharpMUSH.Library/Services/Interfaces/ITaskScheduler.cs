@@ -218,4 +218,6 @@ public interface ITaskScheduler
 		=> throw new NotSupportedException("This scheduler does not support queue control.");
 	ValueTask<QueueControlResult> ResumePending(long pid)
 		=> throw new NotSupportedException("This scheduler does not support queue control.");
+	IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries()
+		=> throw new NotSupportedException("This scheduler does not support queue diagnostics.");
 }

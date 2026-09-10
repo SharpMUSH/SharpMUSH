@@ -72,7 +72,7 @@ public partial class TaskScheduler
 						else activation = Activate(entry.Pid);
 					}
 				}
-				removed?.Cts.Dispose();
+				if (removed is not null) DisposeEntry(removed);
 				if (activation is { } pending) await pending;
 			}
 		}

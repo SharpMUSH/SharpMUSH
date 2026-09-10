@@ -1,0 +1,14 @@
+.diag-controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; margin: 1rem 0; }
+.diag-controls label { display: flex; flex-direction: column; gap: .3rem; }
+.ph-card { display: block; margin: 1rem 0; padding: 1rem; }
+::deep .diagnostics-table { overflow-x: auto; }
+::deep table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+::deep th, ::deep td { padding: .5rem; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+button, select, input { color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: .5rem; }
+button:disabled { opacity: .5; }
+
+@container page (max-width: 48rem) {
+    .diag-controls { align-items: stretch; flex-direction: column; }
+    .diag-controls label { min-width: 0; }
+    .ph-card { padding: .75rem; }
+}

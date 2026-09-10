@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Quartz;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Diagnostics;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Utilities;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration;
@@ -19,7 +21,7 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, IConnectionService? connections = null, INotifyService? notifications = null)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
@@ -28,7 +30,7 @@ public class QueueAdmissionTests
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
 		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
-		 NullLogger<Scheduler>.Instance, options, notifications);
+		 NullLogger<Scheduler>.Instance, options, notifications, diagnostics: diagnostics);
 	}
 	internal static IMediator TargetMediator()
 	{
@@ -56,6 +58,61 @@ public class QueueAdmissionTests
 		});
 	}
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	[Test]
+	public async Task UncertainHaltCompletesItsObservationOnceAfterSettlement()
+	{
+		var count = 3;
+		var writes = 0;
+		var diagnostics = new QueueDiagnosticsRecorder();
+		var mediator = CountingMediator(() => count, value =>
+		{
+			count = value;
+			if (++writes == 1) throw new IOException("counter committed without acknowledgement");
+		});
+		await using var queue = Create(mediator: mediator, diagnostics: diagnostics, scheduler: Substitute.For<IScheduler>());
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0);
+		await Assert.ThrowsAsync<IOException>(async () => await queue.HaltByPid(admission.Pid!.Value));
+		await Assert.That(diagnostics.Recent().Count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await queue.HaltByPid(admission.Pid!.Value);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		var drained = Signal();
+		await queue.AdmitWork(() => { drained.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "sentinel", "test");
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(diagnostics.Recent().Count(row => row.Pid == admission.Pid)).IsEqualTo(1);
+		await Assert.That(count).IsEqualTo(2);
+		await Assert.That(writes).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AbandoningReservedCommandClosesTheDiagnosticObservation()
+	{
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(diagnostics: diagnostics);
+		using var reservation = await queue.ReserveCommandList(MarkupText.Plain("think unpublished"), ParserState.RootFor(new DBRef(10)));
+		await Assert.That(reservation.Admission.Accepted).IsTrue();
+		reservation.Dispose();
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(diagnostics.Recent().Count).IsEqualTo(1);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
+	}
+
+	[Test]
+	public async Task ManagedDrainCompletesTheDiagnosticObservation()
+	{
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(diagnostics: diagnostics, scheduler: Substitute.For<IScheduler>());
+		var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		await queue.AdmitCommandList(MarkupText.Plain("think pending"), ParserState.Empty, semaphore, 0);
+		using (await queue.EnterSemaphoreMutationAsync())
+			await Assert.That(await queue.ApplySemaphoreCommandAsync(semaphore, null, true,
+				_ => ValueTask.CompletedTask, () => ValueTask.FromResult(false))).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
+	}
 
 	[Test]
 	public async Task ExpiredCompoundLockDoesNotStartTheNextLegacyRead()
@@ -300,6 +357,7 @@ public class QueueAdmissionTests
 			cleanup.Cancel();
 			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
 		}
+
 	}
 
 	[Test]
@@ -347,6 +405,7 @@ public class QueueAdmissionTests
 			await Assert.That(reserved.Admission.Accepted).IsTrue();
 			await Assert.That((await queue.AdmitWork(() => { order.Add("row"); return ValueTask.FromResult<CallState?>(null); }, "row", "test")).Accepted).IsTrue();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(3);
+			await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 			await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "overflow", "test")).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
 			await Assert.That((await reserved.PublishAsync()).Accepted).IsTrue();
 			await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
@@ -370,6 +429,7 @@ public class QueueAdmissionTests
 		if (halt) await queue.HaltByPid(reserved.Admission.Pid!.Value);
 		else reserved.Dispose();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
 		using var next = await queue.ReserveCommandList(MarkupText.Plain("next"), ParserState.RootFor(new DBRef(10)));
 		await Assert.That(next.Admission.Accepted).IsTrue();
@@ -382,6 +442,7 @@ public class QueueAdmissionTests
 		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
 		await queue.DisposeAsync();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.ShuttingDown);
 	}
 
@@ -661,6 +722,31 @@ public class QueueAdmissionTests
 		}
 		finally { release.SetResult(); }
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task HaltedReadyTimeoutStillCompletesSemaphoreBookkeeping()
+	{
+		var count = 1;
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		await using var queue = Create(global: 3, parser: parser,
+			mediator: CountingMediator(() => count, value => count = value));
+		var blocked = Signal(); var release = Signal(); var drained = Signal();
+		await queue.AdmitWork(async () => { blocked.SetResult(); await release.Task; return null; }, "block", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var semaphore = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+			var pending = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think timeout"), ParserState.Empty, semaphore, 0);
+			await queue.ReleaseScheduledWork(pending.Pid!.Value, semaphoreTimeout: true);
+			await queue.HaltByPid(pending.Pid.Value);
+			await queue.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "drained", "test");
+		}
+		finally { release.SetResult(); }
+		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(count).IsEqualTo(0);
+		await parser.DidNotReceive().CommandListParse(Arg.Any<MarkupString.MarkupText>());
 	}
 
 	[Test]
@@ -1018,6 +1104,7 @@ public class QueueAdmissionTests
 	public async Task FailedAdmissionRollbackRetainsRepairUntilProviderRecovers(string failure)
 	{
 		var count = 0;
+		var diagnostics = new QueueDiagnosticsRecorder();
 		var broken = true;
 		var writes = 0;
 		var mediator = CountingMediator(() => count, value => count = value);
@@ -1036,11 +1123,12 @@ public class QueueAdmissionTests
 		var scheduler = Substitute.For<IScheduler>();
 		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
 			.Returns(_ => Task.FromException<DateTimeOffset>(new InvalidOperationException("schedule unavailable")));
-		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler);
+		await using var queue = Create(global: 1, mediator: mediator, scheduler: scheduler, diagnostics: diagnostics);
 		await Assert.That(async () => await queue.AdmitCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true)).Throws<AggregateException>();
 		await Assert.That(count).IsEqualTo(1);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await queue.ReleaseScheduledWork(1)).Accepted).IsFalse();
 		// No later counter transaction may run before the uncertain write is repaired.
 		using (var bounded = ExecutionBudget.FromMilliseconds(50))
@@ -1052,10 +1140,13 @@ public class QueueAdmissionTests
 		await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<InvalidOperationException>();
 		await Assert.That(count).IsEqualTo(7);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		count = 1;
 		await Assert.That(await queue.HaltByPid(1)).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ScheduleFailed);
 	}
 
 	[Test]
@@ -1361,7 +1452,8 @@ public class QueueAdmissionTests
 			exists = false;
 			return true;
 		});
-		await using var queue = Create(scheduler: scheduler);
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(scheduler: scheduler, diagnostics: diagnostics);
 		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
 			await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty, TimeSpan.FromDays(100)));
 		await Assert.That(exists).IsEqualTo(cleanupFails);
@@ -1374,6 +1466,7 @@ public class QueueAdmissionTests
 			await Assert.That(exists).IsFalse();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 		}
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ScheduleFailed);
 	}
 
 	[Test]
@@ -1492,10 +1585,12 @@ public class QueueAdmissionTests
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(
 			new[] { new SharpAttribute("id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
 			{ Value = MarkupText.Plain(value) } }.ToAsyncEnumerable());
-		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>());
+		var diagnostics = new QueueDiagnosticsRecorder();
+		await using var queue = Create(mediator: mediator, scheduler: Substitute.For<IScheduler>(), diagnostics: diagnostics);
 		var admission = await queue.AdmitCommandList(MarkupText.Plain("think rejected"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true);
 		await Assert.That(admission.Reason).IsEqualTo(QueueRejectionReason.InvalidTarget);
+		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.InvalidTarget);
 		await Assert.That(writes).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 	}

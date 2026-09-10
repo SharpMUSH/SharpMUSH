@@ -2549,6 +2549,13 @@
   <data name="QueueControlTruncated" xml:space="preserve"><value>Showing or processing at most 200 entries. Narrow the selection; repeat a batch operation for remaining eligible entries.</value></data>
   <data name="QueueControlEmpty" xml:space="preserve"><value>No accessible matching queue entries.</value></data>
   <data name="QueuePausedHint" xml:space="preserve"><value>Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.</value></data>
+  <data name="QueueProfileStarted" xml:space="preserve"><value>Profile recording for {0} seconds.</value></data>
+  <data name="QueueProfileStopped" xml:space="preserve"><value>Profile stopped.</value></data>
+  <data name="QueueProfileReport" xml:space="preserve"><value>Profile expires {0}. Columns: source/attribute kind name count failures inclusive-ms max-ms. Inclusive elapsed time includes nested calls and awaits; it is not CPU time. Sampling is limited to 256 keys and 4,096 pending samples; excess data may be omitted.
+{1}</value></data>
+  <data name="QueueHistoryReport" xml:space="preserve"><value>Recent queue outcomes (15-minute history). Columns: PID source owner kind outcome wait-ms execution-ms invocations.
+{0}</value></data>
+  <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostics unavailable: {0}.</value></data>
   <data name="LocalFunctionMessage" xml:space="preserve"><value>{0}</value></data>
   <data name="LocalFunctionHeader" xml:space="preserve"><value>Owner-local functions (call with localfun):</value></data>
   <data name="LocalFunctionReset" xml:space="preserve"><value>Removed {0} unpreserved owner-local functions.</value></data>

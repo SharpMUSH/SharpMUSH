@@ -435,6 +435,11 @@ public class Startup(
 		services.AddSingleton<SharpMUSH.Library.Reality.RealityAdministration>();
 		services.AddSingleton<SharpMUSH.Library.Reality.IRealityPolicy>(sp => sp.GetRequiredService<SharpMUSH.Library.Reality.RealityPolicy>());
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<QueueDiagnosticsRecorder>();
+		services.AddSingleton<IQueueDiagnosticsRecorder>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<ITelemetryInvocationObserver>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<IQueueDiagnosticsService, QueueDiagnosticsService>();
+		services.AddHostedService<Services.QueueProfileCollector>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
 		services.AddSingleton<IConnectionStateStore>(sp =>

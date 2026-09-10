@@ -55,4 +55,31 @@ public class QueueControlAuthorizationTests
 		await Assert.That(await service.ChangeAsync(Actor, 10, false)).IsEqualTo(QueueControlResult.NotFound);
 		await queue.DidNotReceiveWithAnyArgs().PausePending(default, default!);
 	}
+	[Test]
+	public async Task BoundedListingSkipsDeniedRowsAndStopsEnumeratingAfterVisibleLimit()
+	{
+		var queue = Substitute.For<ITaskScheduler>();
+		var caps = Substitute.For<IAdministrativeCapabilityService>();
+		var visits = 0;
+		IEnumerable<QueueEntrySnapshot> Entries()
+		{
+			for (var i = 0; i < 300; i++)
+			{
+				visits++;
+				if (visits > 201) throw new InvalidOperationException("Read past authorized row limit");
+				yield return Other with { Pid = i, Owner = i < 100 ? Actor.ActiveCharacter : Other.Owner };
+			}
+		}
+		queue.EnumerateQueueEntries().Returns(_ => Entries());
+		// The complete snapshot must never be consulted by bounded inspection.
+		queue.GetQueueEntries().Returns(_ => throw new InvalidOperationException("Materialized full ledger"));
+		caps.GetGameActorAsync(Actor.Executor!.Value, Arg.Any<CancellationToken>()).Returns(Actor);
+		caps.GetGrantedScopesAsync(Actor, Arg.Any<CancellationToken>()).Returns(new HashSet<string> { PortalPermission.QueueInspect });
+		var service = new QueueControlService(queue, caps, Substitute.For<IMediator>(), Substitute.For<IPermissionService>());
+		var rows = await service.ListAsync(Actor, 101);
+		await Assert.That(rows.Count).IsEqualTo(101);
+		await Assert.That(rows[0].Pid).IsEqualTo(100L);
+		await Assert.That(visits).IsEqualTo(201);
+	}
+
 }

@@ -31,6 +31,40 @@ public partial class TaskScheduler
 		return new(_deferredChanges);
 	}
 
+	/// <summary>Live metadata traversal with no full-ledger copy and no lock held across caller work.</summary>
+	public IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries()
+	{
+		const int pageSize = 128;
+		long upperPid;
+		lock (_admissionLock) upperPid = _nextPid;
+		var afterPid = 0L;
+		// Copy only one ordered page while holding the ledger lock. The index avoids
+		// rescanning the entire ledger for every page; caller work runs outside the lock.
+		var pids = new long[pageSize];
+		while (afterPid < upperPid)
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var count = 0;
+			lock (_admissionLock)
+			{
+				foreach (var pid in _orderedPids.GetViewBetween(afterPid + 1, upperPid))
+				{
+					ExecutionBudget.Current?.ThrowIfExceeded();
+					pids[count++] = pid;
+					if (count == pageSize) break;
+				}
+			}
+			if (count == 0) yield break;
+			for (var index = 0; index < count; index++)
+			{
+				ExecutionBudget.Current?.ThrowIfExceeded();
+				afterPid = pids[index];
+				// Re-read current metadata after caller work; released entries disappear.
+				if (GetQueueEntry(afterPid) is { } snapshot) yield return snapshot;
+			}
+		}
+	}
+
 	public IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
 	{
 		lock (_admissionLock)
@@ -54,7 +88,15 @@ public partial class TaskScheduler
 		return new(entry.Pid, entry.Executor, owner,
 			entry.Deferred?.Semaphore is not null ? "semaphore" : entry.Deferred is not null ? "delay"
 				: entry.Group is DirectInputGroup or EnqueueGroup ? entry.Group : "other",
-			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false);
+			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false)
+		{
+			EnqueuedAt = entry.Observation?.EnqueuedAt,
+			StartedAt = entry.Observation?.StartedAt,
+			WaitDuration = entry.Observation?.WaitDuration,
+			ExecutionDuration = entry.Observation?.ExecutionDuration,
+			InvocationCount = entry.Observation?.InvocationCount,
+			SourceAttribute = entry.Observation?.SourceAttribute
+		};
 	}
 
 	// Caller owns the admission lock. Every timer control uses the same repair exclusions.

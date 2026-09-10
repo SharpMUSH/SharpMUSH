@@ -11,6 +11,7 @@ namespace SharpMUSH.Library.Services;
 public class TelemetryService : ITelemetryService, IDisposable
 {
 	private readonly Meter _meter;
+	private readonly ITelemetryInvocationObserver[] _observers;
 	private bool _disposed;
 	private readonly Histogram<double> _functionInvocationDuration;
 	private readonly Histogram<double> _commandInvocationDuration;
@@ -26,8 +27,11 @@ public class TelemetryService : ITelemetryService, IDisposable
 	private bool _currentServerHealthState = true;
 	private bool _currentConnectionServerHealthState = true;
 
-	public TelemetryService()
+	public TelemetryService() : this([]) { }
+
+	public TelemetryService(IEnumerable<ITelemetryInvocationObserver> observers)
 	{
+		_observers = observers.ToArray();
 		_meter = new Meter("SharpMUSH", "1.0.0");
 
 		_functionInvocationDuration = _meter.CreateHistogram<double>(
@@ -75,6 +79,7 @@ public class TelemetryService : ITelemetryService, IDisposable
 		_functionInvocationDuration.Record(durationMs,
 			new KeyValuePair<string, object?>("function.name", functionName),
 			new KeyValuePair<string, object?>("success", success));
+		Observe(new(TelemetryInvocationKind.Function, functionName, durationMs, success));
 	}
 
 	public void RecordCommandInvocation(string commandName, double durationMs, bool success)
@@ -82,6 +87,16 @@ public class TelemetryService : ITelemetryService, IDisposable
 		_commandInvocationDuration.Record(durationMs,
 			new KeyValuePair<string, object?>("command.name", commandName),
 			new KeyValuePair<string, object?>("success", success));
+		Observe(new(TelemetryInvocationKind.Command, commandName, durationMs, success));
+	}
+
+	private void Observe(TelemetryInvocation invocation)
+	{
+		foreach (var observer in _observers)
+		{
+			try { observer.RecordInvocation(invocation); }
+			catch { /* Optional diagnostics must not alter command results or execution order. */ }
+		}
 	}
 
 	public void RecordNotificationSpeed(string notificationType, double durationMs, int recipientCount)

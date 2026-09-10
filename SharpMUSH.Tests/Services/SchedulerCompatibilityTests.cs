@@ -73,6 +73,36 @@ public class SchedulerCompatibilityTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task QueueBudgetAndDiagnosticsConstructorsDispatchCompiledCalls(bool withDiagnostics)
+	{
+		Type[] parameters = [typeof(IMUSHCodeParser), typeof(IConnectionService), typeof(ISchedulerFactory),
+			typeof(IAttributeService), typeof(IMediator), typeof(ILogger<Scheduler>),
+			typeof(IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>), typeof(INotifyService)];
+		if (withDiagnostics) parameters = [.. parameters, typeof(SharpMUSH.Library.Services.IQueueDiagnosticsRecorder)];
+		var constructor = typeof(Scheduler).GetConstructor(parameters);
+		await Assert.That(constructor).IsNotNull();
+		var caller = new DynamicMethod("PublishedSchedulerConstructor", typeof(Scheduler), [typeof(object[])]);
+		var il = caller.GetILGenerator();
+		for (var i = 0; i < parameters.Length; i++)
+		{
+			il.Emit(OpCodes.Ldarg_0);
+			il.Emit(OpCodes.Ldc_I4, i);
+			il.Emit(OpCodes.Ldelem_Ref);
+			il.Emit(OpCodes.Castclass, parameters[i]);
+		}
+		il.Emit(OpCodes.Newobj, constructor!);
+		il.Emit(OpCodes.Ret);
+		object?[] arguments = [Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+			Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(), Substitute.For<IMediator>(),
+			NullLogger<Scheduler>.Instance, null, null];
+		if (withDiagnostics) arguments = [.. arguments, null];
+		await using var scheduler = caller.CreateDelegate<Func<object?[], Scheduler>>()(arguments);
+		await Assert.That(scheduler).IsNotNull();
+	}
+
+	[Test]
 	public async Task LegacySchedulerImplementationLoadsAndDispatchesWithoutImplementingNewFeatures()
 	{
 		var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("LegacyScheduler" + Guid.NewGuid().ToString("N")), AssemblyBuilderAccess.Run);
