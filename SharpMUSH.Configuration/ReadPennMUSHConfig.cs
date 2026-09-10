@@ -183,7 +183,7 @@ public static partial class ReadPennMushConfig
 				UnsignedInteger(Get(nameof(LimitOptions.FunctionInvocationLimit)), 100000),
 				UnsignedInteger(Get(nameof(LimitOptions.CallLimit)), 1000),
 				UnsignedInteger(Get(nameof(LimitOptions.PlayerNameLen)), 21),
-				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), 1000),
+				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), LimitOptions.DefaultQueueEntryCpuTime),
 				Boolean(Get(nameof(LimitOptions.UseQuota)), true),
 				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), 150),
 				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), 8192))

@@ -11,7 +11,7 @@ internal class DelayedTask(ITaskScheduler taskScheduler, IOptionsWrapper<SharpMU
 	{
 		try
 		{
-			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
 			using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, context.CancellationToken);
 			using var scope = budget.Enter();
 			await taskScheduler.ReleaseScheduledWork(long.Parse(context.Trigger.Key.Name.Split('-').Last()),

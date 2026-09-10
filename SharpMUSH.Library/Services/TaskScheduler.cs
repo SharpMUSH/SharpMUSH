@@ -460,7 +460,7 @@ public partial class TaskScheduler(
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
-					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
 					lock (_admissionLock)
 					{
 						if (_stopping || entry.Cts.IsCancellationRequested) continue;
@@ -526,7 +526,7 @@ public partial class TaskScheduler(
 			recoveringTimeout = semaphoreTimeout && _semaphoreCommandReservations.Contains(pid);
 		}
 		using var releaseCancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
-		var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+		var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
 		using var releaseBudget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, releaseCancellation.Token);
 		using var releaseScope = releaseBudget.Enter();
 		releaseBudget.ThrowIfExceeded();

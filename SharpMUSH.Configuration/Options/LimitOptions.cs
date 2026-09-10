@@ -339,6 +339,9 @@ public record LimitOptions(
 		Max = 1000000)]
 	uint MaxAttributeValueLength)
 {
+	/// <summary>Default elapsed execution limit, in milliseconds, including asynchronous I/O.</summary>
+	public const uint DefaultQueueEntryCpuTime = 2000;
+
 	[SharpConfig(Name = "global_queue_limit", Category = "Limit", Description = "Maximum admitted jobs across all queues, including running jobs", Group = "Performance", Order = 9, Min = 1, Max = 1000000)]
 	public uint GlobalQueueLimit { get; init; } = 10000u;
 }

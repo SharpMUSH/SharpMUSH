@@ -54,7 +54,7 @@ The configuration interface exposes both queue limits in the Limit category.
 # execution budget
 
 `queue_entry_cpu_time` is the legacy configuration name for an **elapsed-time**
-limit in milliseconds. Its default remains 1000 milliseconds (one second).
+limit in milliseconds. Its default is 2000 milliseconds (two seconds).
 Zero disables the deadline while keeping halt and shutdown cancellation active. It is not a measurement of
 CPU consumed by the process or by a thread. The clock starts when execution
 starts, so waiting on a delay or semaphore does not spend execution time.
