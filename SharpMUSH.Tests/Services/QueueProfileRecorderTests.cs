@@ -10,6 +10,53 @@ public class QueueProfileRecorderTests
 	private static CapabilityActor Actor(string account = "account") => new(account, new DBRef(1, 100), new DBRef(1, 100));
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ReplacementImmediatelyFreesOnlyTheRetiredGeneration(bool anotherProfile)
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		var old = recorder.StartProfile(Actor(), TimeSpan.FromMinutes(1))!;
+		var other = anotherProfile ? recorder.StartProfile(Actor("other"), TimeSpan.FromMinutes(1)) : null;
+		var count = QueueDiagnosticsRecorder.ProfileMailboxCapacity / (anotherProfile ? 2 : 1);
+		for (var i = 0; i < count; i++) recorder.RecordInvocation(new(TelemetryInvocationKind.Function, $"F{i}", 1, true));
+		var current = recorder.StartProfile(Actor(), TimeSpan.FromMinutes(1))!;
+		recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "NEW", 1, true));
+		var samples = recorder.DrainProfileSamples();
+		await Assert.That(samples.Count(s => s.ProfileId == current.Id)).IsEqualTo(1);
+		await Assert.That(samples.Any(s => s.ProfileId == old.Id)).IsFalse();
+		await Assert.That(recorder.Profile(current.Id)!.DroppedSamples).IsEqualTo(0L);
+		if (other is not null)
+		{
+			await Assert.That(samples.Where(s => s.ProfileId == other.Id).Select(s => s.Invocation.Name).SequenceEqual(
+				Enumerable.Range(0, count).Select(i => $"F{i}").Append("NEW"))).IsTrue();
+			await Assert.That(recorder.Profile(other.Id)!.DroppedSamples).IsEqualTo(0L);
+		}
+	}
+
+	[Test]
+	public async Task ConcurrentWritersCannotRetainARetiredGeneration()
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		for (var attempt = 0; attempt < 32; attempt++)
+		{
+			var old = recorder.StartProfile(Actor(), TimeSpan.FromMinutes(1))!;
+			recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "BEFORE", 1, true));
+			using var start = new Barrier(2);
+			var writer = Task.Run(() =>
+			{
+				start.SignalAndWait();
+				for (var i = 0; i < 256; i++) recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "RACE", 1, true));
+			});
+			start.SignalAndWait();
+			var current = recorder.StartProfile(Actor(), TimeSpan.FromMinutes(1))!;
+			await writer;
+			var samples = recorder.DrainProfileSamples();
+			await Assert.That(samples.All(s => s.ProfileId == current.Id)).IsTrue();
+			await Assert.That(recorder.Profile(old.Id)).IsNull();
+		}
+	}
+
+	[Test]
 	public async Task MailboxAndAggregateCardinalityStayBounded()
 	{
 		var recorder = new QueueDiagnosticsRecorder();
@@ -78,7 +125,9 @@ public class QueueProfileRecorderTests
 		var profile = recorder.StartProfile(Actor(), TimeSpan.FromMinutes(1))!;
 		recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "private", 1, true));
 		recorder.StopProfile(profile.Id, discard: true);
-		recorder.ApplyProfileSamples(profile.Id, recorder.DrainProfileSamples());
+		var samples = recorder.DrainProfileSamples();
+		await Assert.That(samples.Count).IsEqualTo(0);
+		recorder.ApplyProfileSamples(profile.Id, samples);
 		await Assert.That(recorder.Profile(profile.Id)).IsNull();
 	}
 }
