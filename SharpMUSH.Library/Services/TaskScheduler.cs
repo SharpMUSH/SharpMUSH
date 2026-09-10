@@ -279,7 +279,6 @@ public partial class TaskScheduler(
 	// the existing command-repair barrier until its before/after value is reconciled.
 	private async ValueTask AdjustHaltSemaphoreCountCore(QueueEntry entry)
 	{
-		using var observation = entry.Observation?.Enter();
 		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
 		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
@@ -307,7 +306,6 @@ public partial class TaskScheduler(
 			}
 			_semaphoreCommandRepair = async () =>
 			{
-				using var repairObservation = entry.Observation?.Enter();
 				using var deferred = await LockDeferred();
 				var observed = await Read();
 				if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out var current)
@@ -330,11 +328,11 @@ public partial class TaskScheduler(
 		}
 	}
 
+	// Accounting remains queue wait; only the consumer starts body observation timing.
 	// Caller owns both transition leases. Counter confirmation and transport cleanup
 	// form one settlement; the existing command barrier retains failed settlements.
 	private async ValueTask<QueueAdmissionResult> SettleTimeout(QueueEntry entry)
 	{
-		using var observation = entry.Observation?.Enter();
 		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
 		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
@@ -381,7 +379,6 @@ public partial class TaskScheduler(
 			lock (_admissionLock) _semaphoreCommandReservations.Add(entry.Pid);
 			_semaphoreCommandRepair = async () =>
 			{
-				using var repairObservation = entry.Observation?.Enter();
 				await Complete(retry: true);
 			};
 			throw;
