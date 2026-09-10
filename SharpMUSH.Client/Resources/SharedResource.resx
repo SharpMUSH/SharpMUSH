@@ -3706,6 +3706,35 @@
   <data name="EnumPermRealityAdminDesc" xml:space="preserve"><value>Administer reality definitions and assignments.</value></data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>Highest priority explicit Allow or Deny decides each scope; Deny wins ties. Inherit uses a granted parent scope only when no role explicitly decides the child. A child denial blocks even a higher priority parent grant. No grant means denied. Delegated managers can edit only lower priority grants they possess, and cannot change their own roles or restrictions.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Your current access: {0}; priority {1}; roles {2}; resolution {3}.</value></data>
+  <data name="JobsTitle" xml:space="preserve"><value>Recurring jobs</value></data>
+  <data name="JobsIntro" xml:space="preserve"><value>Schedule attribute calls as the linked active player. Times below are UTC. Missed firings are skipped; edits and revocation apply before queued work starts.</value></data>
+  <data name="JobsAll" xml:space="preserve"><value>Show all accounts (administrator)</value></data>
+  <data name="JobsRefresh" xml:space="preserve"><value>Refresh jobs</value></data>
+  <data name="JobsCreate" xml:space="preserve"><value>Create job</value></data>
+  <data name="JobsTarget" xml:space="preserve"><value>Target full identity (#number:creation)</value></data>
+  <data name="JobsAttribute" xml:space="preserve"><value>Attribute name</value></data>
+  <data name="JobsDescription" xml:space="preserve"><value>Description</value></data>
+  <data name="JobsSchedule" xml:space="preserve"><value>Schedule (minute hour day month weekday)</value></data>
+  <data name="JobsTimeZone" xml:space="preserve"><value>Timezone (for example UTC or America/New_York)</value></data>
+  <data name="JobsScheduleHelp" xml:space="preserve"><value>Use numbers, *, lists, ranges and steps. Restricted day fields match either day. DST gaps skip; repeated times fire once at the earlier occurrence.</value></data>
+  <data name="JobsEmpty" xml:space="preserve"><value>No recurring jobs.</value></data>
+  <data name="JobsOwner" xml:space="preserve"><value>Owner</value></data>
+  <data name="JobsNext" xml:space="preserve"><value>Next firing</value></data>
+  <data name="JobsLast" xml:space="preserve"><value>Last firing attempt</value></data>
+  <data name="JobsDisable" xml:space="preserve"><value>Disable</value></data>
+  <data name="JobsEnable" xml:space="preserve"><value>Enable</value></data>
+  <data name="JobsEdit" xml:space="preserve"><value>Edit schedule</value></data>
+  <data name="JobsDelete" xml:space="preserve"><value>Delete job</value></data>
+  <data name="JobsSave" xml:space="preserve"><value>Save schedule</value></data>
+  <data name="JobsFailed" xml:space="preserve"><value>The recurring job request failed.</value></data>
+  <data name="JobsStatus_scheduled" xml:space="preserve"><value>Scheduled</value></data>
+  <data name="JobsStatus_disabled" xml:space="preserve"><value>Disabled</value></data>
+  <data name="JobsStatus_invalid" xml:space="preserve"><value>Invalid</value></data>
+  <data name="JobsStatus_queued" xml:space="preserve"><value>Queued</value></data>
+  <data name="JobsStatus_running" xml:space="preserve"><value>Running</value></data>
+  <data name="JobsStatus_rejected" xml:space="preserve"><value>Rejected</value></data>
+  <data name="JobsStatus_failed" xml:space="preserve"><value>Failed</value></data>
+  <data name="JobsStatus_completed" xml:space="preserve"><value>Completed</value></data>
 <data name="SnapshotsTitle" xml:space="preserve"><value>Object snapshots</value></data>
 <data name="SnapshotsIntro" xml:space="preserve"><value>Select an active character that controls the object. Capture a recovery point, select the fields to restore, then review the changes. Credentials and structural links are excluded.</value></data>
 <data name="SnapshotsObject" xml:space="preserve"><value>Object identity (#number:creation)</value></data>
