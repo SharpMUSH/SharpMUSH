@@ -422,7 +422,7 @@ public partial class Functions
 
 		var operation = (args["0"].Message ?? MarkupText.Empty).ToPlainText().ToLower();
 		var delimiter = args.Count == 3 ? args["2"].Message ?? MarkupText.Empty : MarkupText.Space;
-		var list = MushText.SplitList(delimiter, (args["1"].Message ?? MarkupText.Empty)).ToList();
+		var list = MushText.SplitList(delimiter, args["1"].Message ?? MarkupText.Empty);
 
 		// The integer operations are 64-bit, matching PennMUSH's IVAL and UIVAL, so they are
 		// folded before the list is reinterpreted as decimals for everything else.

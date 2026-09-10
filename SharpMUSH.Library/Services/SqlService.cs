@@ -106,10 +106,8 @@ public class SqlService : ISqlService, IAsyncDisposable
 			var colonIndex = host.IndexOf(':');
 			if (colonIndex > 0)
 			{
-				var serverPart = host.Substring(0, colonIndex);
-				var portPart = host.Substring(colonIndex + 1);
-				parts.Add($"Server={serverPart}");
-				parts.Add($"Port={portPart}");
+				parts.Add($"Server={host[..colonIndex]}");
+				parts.Add($"Port={host[(colonIndex + 1)..]}");
 			}
 			else
 			{
@@ -142,10 +140,8 @@ public class SqlService : ISqlService, IAsyncDisposable
 			var colonIndex = host.IndexOf(':');
 			if (colonIndex > 0)
 			{
-				var serverPart = host.Substring(0, colonIndex);
-				var portPart = host.Substring(colonIndex + 1);
-				parts.Add($"Host={serverPart}");
-				parts.Add($"Port={portPart}");
+				parts.Add($"Host={host[..colonIndex]}");
+				parts.Add($"Port={host[(colonIndex + 1)..]}");
 			}
 			else
 			{
@@ -349,28 +345,13 @@ public class SqlService : ISqlService, IAsyncDisposable
 	}
 
 	public async ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
-	{
-		var results = await ExecuteQueryAsync(query);
-
-		var output = results
-			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
-			.Select(values => string.Join(delimiter, values))
-			.ToArray();
-
-		return string.Join("\n", output);
-	}
+		=> JoinRows(await ExecuteQueryAsync(query), delimiter);
 
 	public async ValueTask<string> ExecutePreparedQueryAsStringAsync(string query, string delimiter = " ", params object?[] parameters)
-	{
-		var results = await ExecutePreparedQueryAsync(query, parameters);
+		=> JoinRows(await ExecutePreparedQueryAsync(query, parameters), delimiter);
 
-		var output = results
-			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
-			.Select(values => string.Join(delimiter, values))
-			.ToArray();
-
-		return string.Join("\n", output);
-	}
+	private static string JoinRows(IEnumerable<Dictionary<string, object?>> rows, string delimiter)
+		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(v => v?.ToString() ?? string.Empty))));
 
 	public string Escape(string value)
 	{

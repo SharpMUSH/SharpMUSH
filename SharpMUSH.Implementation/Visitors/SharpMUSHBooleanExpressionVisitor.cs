@@ -595,7 +595,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 				}
 
 				// Get the lock from the target object
-				var lockData = targetObj.Object().Locks.GetValueOrDefault(lockType, new SharpLockData("#TRUE"));
+				var lockData = targetObj.Object().Locks
+					.GetValueOrDefault(LockNames.Canonical(lockType), new SharpLockData("#TRUE"));
 
 				return await services.EvaluateLock(lockData.LockString, targetObj, unlockerObj);
 			}

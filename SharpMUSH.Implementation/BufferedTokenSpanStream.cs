@@ -294,7 +294,8 @@ namespace SharpMUSH.Implementation
 
 		protected internal virtual List<IToken>? FilterForChannel(int from, int to, int channel)
 		{
-			var span = Tokens[from..to];
+			// Both bounds are inclusive, as in every ANTLR token-stream range.
+			var span = Tokens[from..(to + 1)];
 			var list = new List<IToken>(span.Length);
 
 			if (channel != -1)
@@ -352,7 +353,13 @@ namespace SharpMUSH.Implementation
 				num = Tokens.Length - 1;
 			}
 
-			var span = Tokens[a..num];
+			if (a > num)
+			{
+				return string.Empty;
+			}
+
+			// An interval's stop is inclusive, as in every ANTLR token-stream range.
+			var span = Tokens[a..(num + 1)];
 			var stringBuilder = new StringBuilder();
 
 			foreach (var token in span)

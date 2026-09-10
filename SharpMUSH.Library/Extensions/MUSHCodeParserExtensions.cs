@@ -41,17 +41,7 @@ public static class MUSHCodeParserExtensions
 	/// <see cref="ParserStateFlags.None"/> if neither.
 	/// </returns>
 	private static ParserStateFlags GetAttributeDebugFlags(SharpAttribute attribute)
-	{
-		var flags = attribute.Flags.ToList();
-		var hasNoDebug = flags.Any(f => f.Name.Equals("no_debug", StringComparison.OrdinalIgnoreCase));
-		var hasDebug = flags.Any(f => f.Name.Equals("debug", StringComparison.OrdinalIgnoreCase));
-
-		// NODEBUG takes precedence over DEBUG (matching PennMUSH QUEUE_NODEBUG priority)
-		if (hasNoDebug)
-			return ParserStateFlags.NoDebug;
-		if (hasDebug)
-			return ParserStateFlags.Debug;
-
-		return ParserStateFlags.None;
-	}
+		=> attribute.IsNoDebug() ? ParserStateFlags.NoDebug
+			: attribute.IsDebug() ? ParserStateFlags.Debug
+			: ParserStateFlags.None;
 }

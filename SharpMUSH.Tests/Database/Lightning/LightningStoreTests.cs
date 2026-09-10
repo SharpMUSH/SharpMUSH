@@ -81,6 +81,34 @@ public class LightningStoreTests
 	}
 
 	[Test]
+	public async Task CountDupsAnswersFromTheKeyWithoutReadingTheValues()
+	{
+		using var store = Open();
+		await store.WriteAsync(tx =>
+		{
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(30));
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(20));
+			tx.Put(Tables.RevLocation, Keys.Dbref(1), Keys.Dbref(20));
+			tx.Put(Tables.RevLocation, Keys.Dbref(2), Keys.Dbref(10));
+			tx.Put(Tables.Meta, Keys.Str("one"), Keys.Dbref(7));
+			return 0;
+		});
+
+		var (under1, under2, absent, node, missingNode) = store.Read(tx => (
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(1, stackalloc byte[8])).AsT0,
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(2)).AsT0,
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(3)).AsT0,
+			tx.CountDups(Tables.Meta, Keys.Str("one")).AsT0,
+			tx.CountDups(Tables.Meta, Keys.Str("two")).AsT0));
+
+		await Assert.That(under1).IsEqualTo(2);
+		await Assert.That(under2).IsEqualTo(1);
+		await Assert.That(absent).IsEqualTo(0);
+		await Assert.That(node).IsEqualTo(1);
+		await Assert.That(missingNode).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task EmptyPrefixRangeScansTheWholeTable()
 	{
 		using var store = Open();

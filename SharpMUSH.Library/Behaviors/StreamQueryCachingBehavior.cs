@@ -31,10 +31,13 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 			var stored = await cache.GetOrSetAsync<CachedObjectRefs>(message.CacheKey,
 				async (ctx, ct) =>
 				{
-					var result = await MaterializeAsync(message, next, ct);
-					var refs = result.Select(ObjectShaped<TResponse>.RefOf).OfType<DBRef>().ToArray();
+					var refs = await next(message, ct)
+						.Select(ObjectShaped<TResponse>.RefOf)
+						.Where(reference => reference.HasValue)
+						.Select(reference => reference!.Value)
+						.ToArrayAsync(ct);
 					ctx.Options.Size = Math.Clamp(refs.Length, 1, CacheEntryProfiles.MaxEntrySize);
-					EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number).ToArray());
+					EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number));
 					return new CachedObjectRefs(refs);
 				},
 				options: CacheEntryProfiles.For(message.Profile),
@@ -58,7 +61,7 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 		var list = await cache.GetOrSetAsync<List<TResponse>>(message.CacheKey,
 			async (ctx, ct) =>
 			{
-				var result = await MaterializeAsync(message, next, ct);
+				var result = await next(message, ct).ToListAsync(ct);
 				// A list weighs what it holds against the memory cache's size limit: a room with three
 				// hundred things in it is not the same cost as an empty one. Capped so that a list larger
 				// than the cache is still cacheable rather than refused and recomputed on every read.
@@ -74,18 +77,5 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 		{
 			yield return item;
 		}
-	}
-
-	private static async ValueTask<List<TResponse>> MaterializeAsync(
-		TRequest message,
-		StreamHandlerDelegate<TRequest, TResponse> next,
-		CancellationToken cancellationToken)
-	{
-		var result = new List<TResponse>();
-		await foreach (var item in next(message, cancellationToken).WithCancellation(cancellationToken))
-		{
-			result.Add(item);
-		}
-		return result;
 	}
 }

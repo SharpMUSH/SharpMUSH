@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text.Json;
 using OneOf;
 using OneOf.Types;
@@ -444,15 +445,18 @@ public sealed class LightningSceneStorage : ISceneStorage
 				return new NotFound();
 			}
 
-			var author = DbrefNumber(authorDbref);
+			// Filtered on the projected, live-resolved author: a pose whose author has since been destroyed
+			// carries a null AuthorDbref and matches nobody, the same as the other providers.
+			var author = DbrefNumber(authorDbref) is { } number ? $"#{number}" : null;
 			var poses = ScenePoses(tx, id)
 				.Select(entry => ProjectPose(tx, entry.Pose))
-				.Where(p => author is null || p.AuthorDbref == $"#{author}")
+				.Where(p => author is null || p.AuthorDbref == author)
 				.ToList();
 
+			// The last `count` poses: drop the head in place rather than copying the tail out.
 			if (count is { } limit && limit >= 0 && poses.Count > limit)
 			{
-				poses = poses.Skip(poses.Count - limit).ToList();
+				poses.RemoveRange(0, poses.Count - limit);
 			}
 
 			return OneOf<IReadOnlyList<ScenePose>, NotFound>.FromT0(poses);
@@ -996,8 +1000,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 		value.Trim().ToLowerInvariant() is "1" or "true" or "yes" or "on";
 
 	/// <summary>The 4-byte big-endian sequence a <c>scene.pose</c>/<c>scene.log</c> key ends with.</summary>
-	private static uint SeqOf(byte[] key) =>
-		(uint)((key[^4] << 24) | (key[^3] << 16) | (key[^2] << 8) | key[^1]);
+	private static uint SeqOf(byte[] key) => BinaryPrimitives.ReadUInt32BigEndian(key.AsSpan(^4));
 
 	#endregion
 
@@ -1052,11 +1055,33 @@ public sealed class LightningSceneStorage : ISceneStorage
 			.Select(e => Decode<SceneMemberRecord>(e.Value))
 			.ToList();
 
+	private static byte[] PoseLogPrefix(string poseId) => Keys.Concat(Keys.Str(poseId), Keys.Sep, Keys.Sep);
+
 	/// <summary>A pose's content versions, oldest first.</summary>
 	private List<(byte[] Key, uint Seq, ScenePoseEditRecord Record)> PoseEdits(ITx tx, string poseId) =>
-		tx.Range(_log, Keys.Concat(Keys.Str(poseId), Keys.Sep, Keys.Sep))
+		tx.Range(_log, PoseLogPrefix(poseId))
 			.Select(e => (e.Key, SeqOf(e.Key), Decode<ScenePoseEditRecord>(e.Value)))
 			.ToList();
+
+	/// <summary>
+	/// The version a pose currently shows and how many it has, from one pass over its log — the sequence
+	/// sits in the key, so every version except the shown one is counted without being decoded.
+	/// </summary>
+	private (int Count, ScenePoseEditRecord? Current) CurrentEdit(ITx tx, string poseId, uint currentSeq)
+	{
+		var count = 0;
+		ScenePoseEditRecord? current = null;
+		foreach (var (key, value) in tx.Range(_log, PoseLogPrefix(poseId)))
+		{
+			count++;
+			if (SeqOf(key) == currentSeq)
+			{
+				current = Decode<ScenePoseEditRecord>(value);
+			}
+		}
+
+		return (count, current);
+	}
 
 	/// <summary>The live object's name at <paramref name="dbref"/>, or null when there is no such object.</summary>
 	private string? ObjectName(ITx tx, long? dbref) =>
@@ -1133,11 +1158,9 @@ public sealed class LightningSceneStorage : ISceneStorage
 
 	private ScenePose ProjectPose(ITx tx, ScenePoseRecord rec)
 	{
-		var edits = PoseEdits(tx, rec.Id);
-		var index = edits.FindIndex(e => e.Seq == rec.CurrentEditSeq);
-		ScenePoseEditRecord? current = index < 0 ? null : edits[index].Record;
+		var (versions, current) = CurrentEdit(tx, rec.Id, rec.CurrentEditSeq);
 		// "Edited" iff more than one version exists — an unedited pose reports no editor at all.
-		var edited = edits.Count > 1 && current is not null;
+		var edited = versions > 1 && current is not null;
 
 		return new ScenePose(
 			Id: rec.Id,
@@ -1154,7 +1177,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 			IsDeleted: rec.IsDeleted,
 			Content: current?.Content ?? "",
 			Markup: current?.Markup ?? "",
-			EditCount: Math.Max(1, edits.Count),
+			EditCount: Math.Max(1, versions),
 			LastEditedAt: edited ? current!.EditedAt : null,
 			LastEditorDbref: edited ? LiveDbref(tx, current!.EditorDbref) : null,
 			LastEditorName: edited ? current!.EditorName : null);

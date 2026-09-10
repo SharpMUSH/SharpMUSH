@@ -48,12 +48,9 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// Prepends secure mode (ESC[1z) on each non-empty line so SEND links are interpreted.
 	/// The markup renderer encodes plain text; only explicit markup spans emit tags.
 	/// </summary>
-	private static string ApplyMxpLinePrefix(string text)
-	{
-		var lines = text.Split('\n');
-		return string.Join('\n', lines.Select(line =>
+	private static string ApplyMxpLinePrefix(string text) =>
+		string.Join('\n', text.Split('\n').Select(line =>
 			line.Length == 0 || line == "\r" ? line : ProtocolConstants.MxpLineSecure + line));
-	}
 
 	/// <summary>
 	/// Normalizes line endings to \r\n and trims any trailing newline (mirrors the legacy
@@ -61,8 +58,15 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// </summary>
 	private static string NormalizeLineEnding(string text)
 	{
-		text = text.Replace("\r\n", "\n");
-		text = text.Replace("\n", "\r\n");
-		return text.TrimEnd('\r', '\n');
+		var trimmed = text.TrimEnd('\r', '\n');
+
+		if (!trimmed.Contains('\n'))
+		{
+			return trimmed;
+		}
+
+		// Each line gives up the \r a CRLF already left on it, so the join never doubles the pair. A \r
+		// that precedes anything else is ordinary text.
+		return string.Join("\r\n", trimmed.Split('\n').Select(line => line.EndsWith('\r') ? line[..^1] : line));
 	}
 }

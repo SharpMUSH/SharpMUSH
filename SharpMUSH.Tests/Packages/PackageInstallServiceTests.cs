@@ -3,10 +3,12 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -23,6 +25,7 @@ public class PackageInstallServiceTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IPackageRegistryService Registry => (IPackageRegistryService)Database;
 	private IApplicationRegistryService Applications => (IApplicationRegistryService)Database;
 	private IPackageInstallService Installer => WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
@@ -296,6 +299,57 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetManagedAttributesAsync(package)).Any(a => a.Attribute == removedRef)).IsFalse();
 		await Assert.That((await Installer.UninstallAsync(package)).IsT0).IsTrue();
 		await Assert.That((await Installer.UninstallAsync(other)).IsT0).IsTrue();
+	}
+
+	/// <summary>
+	/// A revision written before lock names were canonical names <see cref="LockType.TPort"/> the way
+	/// that world spelled it. Rolling back to it must leave the lock in place: the raw
+	/// <c>Teleport</c> add and the folded baseline's <c>TPort</c> removal both canonicalise in the
+	/// provider, and the removal is applied last, so the rollback used to delete the very lock the
+	/// revision asked it to keep — and an absent lock reads as "no lock", which passes everybody.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task LegacyRollback_KeepsALockTheOldWorldSpelledDifferently()
+	{
+		const string package = "legacy-lock-rollback";
+		var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+		var store = WebAppFactoryArg.Services.GetRequiredService<IObjectStore>();
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var player = (await store.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var target = await mediator.Send(new CreateRoomCommand("legacy-lock-rollback-" + Guid.NewGuid().ToString("N"), player));
+		var node = (await store.GetObjectNodeAsync(target)).Known;
+		var objid = node.Object().DBRef.ToString();
+		await store.SetLockAsync(node.Object(), nameof(LockType.TPort), new SharpLockData("=#1"));
+
+		await Registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(package, "1.1.0",
+			Source().Repo, Source().Path, "current", "main", DateTimeOffset.UtcNow, 2));
+		// What the package holds now: canonical, because every baseline is folded when it is read.
+		await Registry.UpsertManagedStructureAsync(new ManagedStructureRecord(package, objid,
+			JsonSerializer.Serialize(new PackageStructureBaseline([], [],
+				new Dictionary<string, string> { [nameof(LockType.TPort)] = "=#1" },
+				new Dictionary<string, IReadOnlyList<string>>()), json), "1.1.0"));
+		// What the revision holds: the pre-canonicalisation spelling of the same lock.
+		var snapshot = new PackageRevisionSnapshot("1.0.0", [], [],
+		[
+			new PackageRevisionSnapshotStructure(objid, [], [],
+				new Dictionary<string, string> { ["Teleport"] = "=#1" },
+				new Dictionary<string, IReadOnlyList<string>>())
+		]);
+		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(package, 1, PackageRevisionKind.Install,
+			"1.0.0", "old", JsonSerializer.Serialize(snapshot, json), "{}", "[]", DateTimeOffset.UtcNow));
+
+		var rolledBack = await Installer.RollbackAsync(package, 1);
+
+		await Assert.That(rolledBack.IsT0).IsTrue();
+		var locks = (await store.GetObjectNodeAsync(target)).Known.Object().Locks;
+		await Assert.That(locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+			.Because("rolling back to a revision that carries the lock must not remove it");
+		await Assert.That(locks[nameof(LockType.TPort)].LockString).IsEqualTo("=#1");
+		// And the baseline it persists is canonical, so the next rollback does not repeat the round trip.
+		var persisted = JsonSerializer.Deserialize<PackageStructureBaseline>(
+			(await Registry.GetManagedStructuresAsync(package)).Single(s => s.Objid == objid).StructureJson, json);
+		await Assert.That(persisted!.Locks.Keys.Single()).IsEqualTo(nameof(LockType.TPort));
+		await Assert.That((await Installer.UninstallAsync(package)).IsT0).IsTrue();
 	}
 
 	[Test, NotInParallel]
@@ -742,6 +796,93 @@ public class PackageInstallServiceTests
 	{
 		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
 		return node.Known().Object().Locks.ContainsKey(lockType);
+	}
+
+	/// <summary>
+	/// Every other assertion in this file reads the object back through <c>Database</c>, which is
+	/// the store and therefore never sees the cache at all. This one reads it the way the rest of
+	/// the engine does — <see cref="GetObjectNodeQuery"/>, the cached <c>object:#N</c> entry — and
+	/// so is the only test here that can observe an install writing around the cache.
+	/// </summary>
+	/// <remarks>
+	/// The upgrade changes exactly the three things the installer used to write straight at the
+	/// store: the name (<c>UpdateMetadata</c>), the parent, and a lock. The widget carries no
+	/// attributes, so no attribute command incidentally invalidates <c>object:#N</c> for it and
+	/// masks the bug. Engine data trunk §1: "a direct store write leaves the cache stale for the
+	/// entry's whole lifetime".
+	/// </remarks>
+	[Test, NotInParallel]
+	public async Task UpgradeRewiring_IsVisibleThroughTheCachedObjectRead()
+	{
+		var v1 = Parse(
+			"""
+			package: coherence-pkg
+			version: "1.0"
+			objects:
+			  - ref: hall_a
+			    type: room
+			    name: Coherence Hall A
+			  - ref: hall_b
+			    type: room
+			    name: Coherence Hall B
+			  - ref: widget
+			    type: thing
+			    name: Coherence Widget One
+			    location: "{{hall_a}}"
+			    parent: "{{hall_a}}"
+			    locks:
+			      use: "{{hall_a}}"
+			""");
+
+		var answers = new Dictionary<string, string>();
+		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), answers, []));
+		await Assert.That(install.IsT0).IsTrue();
+
+		var widget = PackageInstallService.ParseObjid(install.AsT0.CreatedObjects["widget"])!.Value;
+		var hallA = PackageInstallService.ParseObjid(install.AsT0.CreatedObjects["hall_a"])!.Value;
+		var hallB = PackageInstallService.ParseObjid(install.AsT0.CreatedObjects["hall_b"])!.Value;
+
+		// Prime object:#N. From here on every cached read serves this snapshot until a write
+		// declaring the key removes it.
+		var before = (await Mediator.Send(new GetObjectNodeQuery(widget))).Known;
+		await Assert.That(before.Object().Name).IsEqualTo("Coherence Widget One");
+		await Assert.That((await before.Object().Parent.WithCancellation(CancellationToken.None))
+			.Known.Object().DBRef.Number).IsEqualTo(hallA.Number);
+
+		var v2 = Parse(
+			"""
+			package: coherence-pkg
+			version: "1.1"
+			objects:
+			  - ref: hall_a
+			    type: room
+			    name: Coherence Hall A
+			  - ref: hall_b
+			    type: room
+			    name: Coherence Hall B
+			  - ref: widget
+			    type: thing
+			    name: Coherence Widget Two
+			    location: "{{hall_a}}"
+			    parent: "{{hall_b}}"
+			    locks:
+			      use: "{{hall_b}}"
+			""");
+
+		var upgrade = await Installer.ApplyAsync(v2, new PackageApplyRequest(Source("commit-2"), answers, []));
+		await Assert.That(upgrade.IsT0).IsTrue();
+
+		var after = (await Mediator.Send(new GetObjectNodeQuery(widget))).Known;
+		await Assert.That(after.Object().Name).IsEqualTo("Coherence Widget Two")
+			.Because("the rename must invalidate object:#N, not just land in the store");
+		await Assert.That((await after.Object().Parent.WithCancellation(CancellationToken.None))
+			.Known.Object().DBRef.Number).IsEqualTo(hallB.Number)
+			.Because("the re-parent must invalidate object:#N, not just land in the store");
+		await Assert.That(after.Object().Locks.TryGetValue("use", out var useLock)).IsTrue();
+		await Assert.That(useLock!.LockString).Contains($"#{hallB.Number}")
+			.Because("the lock rewrite must invalidate object:#N, not just land in the store");
+
+		await Assert.That((await Installer.UninstallAsync("coherence-pkg")).IsT0).IsTrue();
 	}
 
 	[Test, NotInParallel]

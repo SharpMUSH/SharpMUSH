@@ -41,10 +41,13 @@ public class HttpOutputCapture : IHttpOutputCapture
 		// Penn appends each queued write verbatim; our notify layer hands us whole messages,
 		// so terminate each with a newline to keep multi-think output line-shaped.
 		var remaining = MaxBodyLength - context.Body.Length;
-		if (remaining > 0)
+		if (remaining > text.Length)
 		{
-			var line = text + "\n";
-			context.Body.Append(remaining >= line.Length ? line : line[..remaining]);
+			context.Body.Append(text).Append('\n');
+		}
+		else if (remaining > 0)
+		{
+			context.Body.Append(text, 0, remaining);
 		}
 
 		// Even when the buffer is full we report captured: the output was directed at the

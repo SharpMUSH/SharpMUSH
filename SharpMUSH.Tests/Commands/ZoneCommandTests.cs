@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -109,6 +110,140 @@ public class ZoneCommandTests
 		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
+	}
+
+	/// <summary>Power names currently granted to an object.</summary>
+	private async Task<string[]> PowerNamesOf(DBRef dbref)
+	{
+		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
+		var powers = await node.Known.Object().Powers.Value.ToArrayAsync();
+		return powers.Select(p => p.Name).ToArray();
+	}
+
+	/// <summary>
+	/// PennMUSH src/wiz.c do_chzone: zoning a non-player strips its privileged flags and every
+	/// power, unless /preserve is given. @CHZONE gets this from the same
+	/// ManipulateSharpObjectService.ClearAllPowers that @CHZONEALL uses.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneStripsPowers()
+	{
+		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerStripZone");
+		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+
+		var objName = TestIsolationHelpers.GenerateUniqueName("PowerStripObject");
+		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder Boot"));
+		var granted = await PowerNamesOf(objDbRef);
+		await Assert.That(granted).Contains("Builder");
+		await Assert.That(granted).Contains("Boot");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
+
+		await Assert.That(await PowerNamesOf(objDbRef)).IsEmpty();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {objDbRef}"));
+	}
+
+	/// <summary>@CHZONE/PRESERVE keeps the powers the plain command strips.</summary>
+	[Test]
+	public async ValueTask ChzonePreserveKeepsPowers()
+	{
+		var zoneName = TestIsolationHelpers.GenerateUniqueName("PowerKeepZone");
+		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
+		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
+
+		var objName = TestIsolationHelpers.GenerateUniqueName("PowerKeepObject");
+		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
+		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {objDbRef}=Builder"));
+		await Assert.That(await PowerNamesOf(objDbRef)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone/preserve {objDbRef}={zoneDbRef}"));
+
+		await Assert.That(await PowerNamesOf(objDbRef)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {objDbRef}"));
+	}
+
+	/// <summary>Creates an object as <paramref name="player"/>, so that player owns it.</summary>
+	private async Task<DBRef> CreateOwnedBy(TestIsolationHelpers.TestPlayer player, string namePrefix)
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName(namePrefix);
+		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
+		return DBRef.Parse(result.Message!.ToPlainText()!);
+	}
+
+	/// <summary>
+	/// The executor's control over the object comes only from the zone the object is leaving, so the
+	/// zone change invalidates it. PennMUSH's do_chzone (src/set.c:373) strips with
+	/// clear_flag_internal() and destroy_flag_bitmask(), neither of which asks permission again: the
+	/// controls() it ran once, before "Zone(thing) = zone", is the whole authorization. Re-deriving
+	/// permission after the move drops the strip on the floor and still reports success, which is the
+	/// object changing hands with its powers intact.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneStripsPowersWhenControlCameOnlyFromTheOldZone()
+	{
+		// Zone Master Object control is what makes this scenario reachable, and the shipped config
+		// turns it off. Scoped to this test's async flow; every other test still sees the default.
+		using var zmoControl = TestOptionsOverride.Scope(options => options with
+		{
+			Database = options.Database with { ZoneControlZmpOnly = false }
+		});
+
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_ZmoOwner");
+		var mover = await CreateTestPlayerWithHandleAsync("ZT_ZmoMover");
+
+		var victim = await CreateOwnedBy(owner, "ZmoVictim");
+		var oldZone = await CreateOwnedBy(owner, "ZmoOldZone");
+		var newZone = await CreateOwnedBy(owner, "ZmoNewZone");
+
+		// The zone the object sits in is the only thing handing `mover` control of it.
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@lock/zone {oldZone}==#{mover.DbRef.Number}"));
+		// The destination admits the object through its ChZone lock, and denies `mover` the Zone lock
+		// that would have carried control across the move.
+		//
+		// Set through the Mediator rather than @lock/chzone: @LOCK canonicalises the switch against
+		// LockService.SystemLocks, which spells it "Chzone", while every LockType.ChZone read spells
+		// it "ChZone" against a case-sensitive lock dictionary. @CHZONE writes "ChZone", so that is
+		// the spelling the gate actually reads.
+		var newZoneNode = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Known;
+		await Mediator.Send(new SetLockCommand(newZoneNode.Object(), nameof(LockType.ChZone), $"=#{mover.DbRef.Number}"));
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@lock/zone {newZone}==#{owner.DbRef.Number}"));
+
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@chzone {victim}={oldZone}"));
+
+		// Granted after the object is already zoned: the @chzone above would have stripped them.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {victim}=Builder Boot"));
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		// The scenario stands on `mover` controlling the object through the old zone and not through
+		// the new one; assert that rather than trusting the setup.
+		var permissionService = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+		var moverObj = (await Mediator.Send(new GetObjectNodeQuery(mover.DbRef))).Known;
+		var victimObj = (await Mediator.Send(new GetObjectNodeQuery(victim))).Known;
+		var newZoneObj = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Known;
+		await Assert.That(await permissionService.Controls(moverObj, victimObj)).IsTrue();
+		await Assert.That(await permissionService.Controls(moverObj, newZoneObj)).IsFalse();
+
+		await Parser.CommandParse(mover.Handle, ConnectionService,
+			MarkupText.Plain($"@chzone {victim}={newZone}"));
+
+		var moved = await Mediator.Send(new GetObjectNodeQuery(victim));
+		var zone = await moved.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(zone.IsNone).IsFalse();
+		await Assert.That(zone.Known.Object().DBRef.Number).IsEqualTo(newZone.Number);
+
+		// The move went through, so the powers have to have gone with it.
+		await Assert.That(await PowerNamesOf(victim)).IsEmpty();
 	}
 
 	[Test]

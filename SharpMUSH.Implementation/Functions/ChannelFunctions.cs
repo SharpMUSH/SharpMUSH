@@ -384,8 +384,7 @@ public partial class Functions
 		var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
 
 		var messages = selection.AsT0.Lines
-			.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message)
-			.ToList();
+			.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message);
 
 		return new CallState(MarkupText.Join(separator, messages));
 	}
