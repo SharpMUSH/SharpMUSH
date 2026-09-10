@@ -24,6 +24,7 @@ public class LegacyNotifyCleanupTests
 	public async Task NotifyRetriesJobDeletionAfterTriggerIsGone(bool canceled, bool holdsSemaphoreLease)
 	{
 		var fail = true;
+		using var requestCancellation = new CancellationTokenSource();
 		var cleanupAttempts = 0;
 		var retryEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var finishRetry = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,10 +40,11 @@ public class LegacyNotifyCleanupTests
 		});
 		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyCollection<TriggerKey>>(stored is null ? Array.Empty<TriggerKey>() : new[] { stored.Key }));
 		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(stored));
-		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { stored = null; return Task.FromResult(true); });
+		scheduler.UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ => { stored = null; if (fail && canceled) requestCancellation.Cancel(); return Task.FromResult(true); });
 		scheduler.DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>()).Returns(async call =>
 		{
-			if (fail) throw canceled ? new OperationCanceledException() : new IOException("delete failed");
+			call.Arg<CancellationToken>().ThrowIfCancellationRequested();
+			if (fail) throw new IOException("delete failed");
 			if (Interlocked.Increment(ref cleanupAttempts) == 1)
 			{
 				retryEntered.TrySetResult();
@@ -58,8 +60,15 @@ public class LegacyNotifyCleanupTests
 		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
 		var admission = await queue.AdmitCommandList(MarkupText.Plain("think retained"), ParserState.Empty, target, 0);
 		using var heldLease = holdsSemaphoreLease ? await queue.EnterSemaphoreMutationAsync() : null;
-		if (canceled) await Assert.ThrowsAsync<OperationCanceledException>(async () => await queue.NotifyCounted(target, 1));
-		else await Assert.ThrowsAsync<IOException>(async () => await queue.NotifyCounted(target, 1));
+		async Task FirstAttempt()
+		{
+			using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, requestCancellation.Token);
+			using var scope = budget.Enter();
+			await queue.NotifyCounted(target, 1);
+		}
+		if (canceled) await Assert.ThrowsAsync<OperationCanceledException>(FirstAttempt);
+		else await Assert.ThrowsAsync<IOException>(FirstAttempt);
+		await Assert.That(requestCancellation.IsCancellationRequested).IsEqualTo(canceled);
 		await Assert.That(stored).IsNull();
 		await Assert.That(jobs.Count).IsEqualTo(1);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
