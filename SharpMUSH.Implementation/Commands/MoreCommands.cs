@@ -1706,11 +1706,17 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
-		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, LocateFlags.All);
+		// move.c:930-931: MAT_ABSOLUTE is added to the match flags only for Hasprivs — God, Wizard or
+		// Royalty, which is IsPriv here. Without it "#N" is not a name a mortal can enter by, so the
+		// only things they can name are the ones the remaining scopes already reach.
+		var hasPrivs = await executor.IsPriv();
+		var matchFlags = hasPrivs ? LocateFlags.All : LocateFlags.All & ~LocateFlags.AbsoluteMatch;
+
+		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectName, matchFlags);
 
 		if (!locateResult.IsValid())
 		{
-			await NotifyService.Notify(executor, "You can't see that here.", executor);
+			// LocateAndNotifyIfInvalid has already told the mover what went wrong.
 			return CallState.Empty;
 		}
 
@@ -1724,6 +1730,17 @@ public partial class Commands
 
 		var currentLocation = await executor.Where();
 
+		// move.c:946-948: only privileged players may enter something remotely. Paired with the
+		// absolute-match gate above, this is what keeps "enter #N" from being a free teleport for a
+		// mortal who learned the dbref of an ENTER_OK thing on the other side of the game.
+		var targetLocation = await objectToEnter.Where();
+
+		if (!hasPrivs && !targetLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			return CallState.Empty;
+		}
+
 		// move.c:952-955: one condition, one failure. The container must be ENTER_OK or controlled
 		// AND pass its enter lock; anything else is the same fail_lock, defaulting to
 		// "Permission denied.".
@@ -1735,6 +1752,14 @@ public partial class Commands
 		{
 			await DidItService.FailLock(parser, executor, objectToEnter, LockType.Enter,
 				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied));
+			return CallState.Empty;
+		}
+
+		// move.c:957-959: entering yourself is its own refusal, after the lock, with its own wording.
+		if (objectToEnter.Object().DBRef.Equals(executor.Object().DBRef))
+		{
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.MustRemainBesideYourself), executor);
 			return CallState.Empty;
 		}
 
@@ -2305,7 +2330,7 @@ public partial class Commands
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
-			await FollowerCommand(parser, executor, currentLocation, "LEAVE", toward: null);
+			await FollowerCommand(parser, executor, currentLocation, "leave", toward: null);
 		}
 
 		return new CallState(destinationLocation.Object().DBRef.ToString());

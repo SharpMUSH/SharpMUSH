@@ -1286,6 +1286,81 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// <c>do_enter</c> adds <c>MAT_ABSOLUTE</c> to its match flags only for <c>Hasprivs</c>
+	/// (<c>src/move.c:930-931</c>). Without that gate <c>enter #N</c> is a free teleport: any mortal
+	/// who learns the dbref of an <c>ENTER_OK</c> thing anywhere in the game walks into it.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async ValueTask OnlyAPrivilegedPlayerMayEnterARemoteThingByDbref(bool privileged)
+	{
+		var here = await Dig("RemoteEnterHere");
+		var elsewhere = await Dig("RemoteEnterElsewhere");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RemoteEnterMover");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "RemoteEnterBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={elsewhere}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={here}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+
+		if (privileged)
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mover.DbRef}=WIZARD"));
+		}
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService,
+				MarkupText.Plain($"enter #{box.Number}")));
+
+		if (privileged)
+		{
+			await Assert.That(await LocationOf(mover.DbRef.ToString()))
+				.IsEqualTo(BareDbref(box.ToString()))
+				.Because("Hasprivs carries MAT_ABSOLUTE and is exempt from the same-room test (move.c:930-931, 946-948)");
+		}
+		else
+		{
+			await Assert.That(seen.Any(m => m == ErrorMessages.Notifications.CantSeeThat)).IsTrue()
+				.Because("without MAT_ABSOLUTE the dbref is not a name a mortal can match at all");
+			await Assert.That(await LocationOf(mover.DbRef.ToString()))
+				.IsEqualTo(BareDbref(here))
+				.Because("a mortal naming a remote ENTER_OK thing by dbref must not move");
+		}
+	}
+
+	/// <summary>
+	/// <c>MAT_PLAYER</c> resolves <c>*Name</c> game-wide, so stripping <c>MAT_ABSOLUTE</c> is not on
+	/// its own enough: <c>src/move.c:946-948</c> refuses any non-<c>Hasprivs</c> enter whose target is
+	/// not in the mover's own location, whatever scope matched it.
+	/// </summary>
+	[Test]
+	public async ValueTask AMortalCannotEnterARemotePlayerMatchedByStarName()
+	{
+		var here = await Dig("StarEnterHere");
+		var elsewhere = await Dig("StarEnterElsewhere");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "StarEnterMover");
+		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "StarEnterHost");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={elsewhere}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={here}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {host.DbRef}=ENTER_OK"));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService,
+				MarkupText.Plain($"enter *{host.Name}")));
+
+		await Assert.That(seen.Any(m => m == ErrorMessages.Notifications.DontSeeThatHere)).IsTrue()
+			.Because("move.c:947 answers a remote enter with \"I don't see that here.\"");
+		await Assert.That(await LocationOf(mover.DbRef.ToString()))
+			.IsEqualTo(BareDbref(here))
+			.Because("only Hasprivs may enter something that is not in the mover's location");
+	}
+
+	/// <summary>
 	/// <c>do_leave</c> is <c>enter_room(player, Location(loc), …)</c> (<c>src/move.c:986</c>), whose
 	/// leave triad fires once and whose automatic look is the command's only look.
 	/// </summary>

@@ -797,6 +797,9 @@
   <data name="GoesHomeFormat" xml:space="preserve">
     <value>{0} goes home.</value>
   </data>
+  <data name="MustRemainBesideYourself" xml:space="preserve">
+    <value>Sorry, you must remain beside yourself!</value>
+  </data>
 
   <!-- General game operations -->
   <data name="DontYouHaveAnythingToSay" xml:space="preserve">

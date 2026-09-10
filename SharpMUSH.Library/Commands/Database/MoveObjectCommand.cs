@@ -32,12 +32,12 @@ public record MoveObjectCommand(
 	/// caches, via per-object tags that clear every depth), and both containers' contents.
 	/// </summary>
 	/// <remarks>
-	/// The contents keys above are not sufficient on their own, which is what this used to claim. A key
-	/// removal drops what is cached at that instant, so a contents read that began before the move stores
-	/// its pre-move list afterwards and the mover is missing from the destination until something else
-	/// clears the key. Only a tag invalidation is resolved against when the reading factory started.
-	/// Per container, because <see cref="Definitions.CacheTags.ObjectContents"/> would wipe every
-	/// container's contents on every step.
+	/// The contents keys are not sufficient on their own. A key removal drops what is cached at that
+	/// instant, so a contents read that began before the move stores its pre-move list afterwards and
+	/// the mover is missing from the destination until something else clears the key. Only a tag
+	/// invalidation is resolved against when the reading factory started, so both containers need a
+	/// tag as well. Per container, because <see cref="Definitions.CacheTags.ObjectContents"/> would
+	/// wipe every container's contents on every step.
 	/// </remarks>
 	public string[] CacheTags =>
 	[

@@ -981,6 +981,9 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GoesHomeFormat = "{0} goes home.";
 
+		/// <summary>PennMUSH <c>do_enter</c>'s self-entry refusal (<c>src/move.c:957-959</c>).</summary>
+		public const string MustRemainBesideYourself = "Sorry, you must remain beside yourself!";
+
 		// Emit-family sender echoes, suppressed by /silent (PennMUSH speech.c, bsd.c).
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouPemitToObjectFormat = "You pemit \"{0}\" to {1}.";
