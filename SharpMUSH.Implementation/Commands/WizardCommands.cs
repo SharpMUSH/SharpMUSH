@@ -668,7 +668,7 @@ public partial class Commands
 		await Mediator.Send(new SetPlayerQuotaCommand(player, 0));
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerSetToPoorFormat), executor, player.Object.Name);
-		await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToZeroByFormat), executor.Object().Name);
+		await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToZeroByFormat), executor, executor.Object().Name);
 
 		return CallState.Empty;
 	}
@@ -835,7 +835,7 @@ public partial class Commands
 
 			if (!isQuiet)
 			{
-				await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), amount, executor.Object().Name);
+				await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.AllQuotaSetForPlayerFormat), executor, amount, executor.Object().Name);
 			}
 		}
 
@@ -2367,7 +2367,7 @@ public partial class Commands
 			await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
-			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), amount, executor.Object().Name);
+			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), executor, amount, executor.Object().Name);
 
 			return CallState.Empty;
 		}

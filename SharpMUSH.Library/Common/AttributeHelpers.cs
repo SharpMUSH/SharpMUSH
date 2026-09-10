@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -167,7 +168,7 @@ public static class AttributeHelpers
 
 		var known = directObject.Known;
 
-		return await attributeService.EvaluateAttributeFunctionAsync(
+		return await attributeService.EvaluateAttributeFunctionResultAsync(
 			parser, executor, known, attr,
 			new Dictionary<string, CallState>
 			{

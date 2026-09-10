@@ -174,4 +174,15 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 			.Because("the DOM assertions above only matter if the stylesheet acts on that state");
 		await Assert.That(rule.Groups["body"].Value.Replace(" ", "")).Contains("display:none");
 	}
+	[Test]
+	[Arguments("queue.inspect")]
+	[Arguments("queue.inspect.own")]
+	public async Task DiagnosticsLinkIsAvailableForEitherInspectionScope(string policy)
+	{
+		Auth.SetAuthorized("inspector");
+		Auth.SetPolicies(policy);
+		var cut = RenderNav();
+		await Assert.That(cut.FindAll("a[href='/admin/diagnostics']").Count).IsEqualTo(1);
+	}
+
 }

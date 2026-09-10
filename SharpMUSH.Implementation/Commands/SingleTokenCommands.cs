@@ -88,13 +88,14 @@ public partial class Commands
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
 		// substitutions like %q1 resolve to their current values before the attribute is set.
 		var attrNameRaw = args["0"].Message ?? MarkupText.Empty;
-		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
+		var attrNameResult = await parser.FunctionParse(attrNameRaw);
+		var attrNameParsed = attrNameResult?.Message ?? attrNameRaw;
 		var attrName = attrNameParsed.ToPlainText();
 
 		// command_atrset() matches with match_controlled(executor, arg_left) (src/cmds.c:1784), so the
 		// executor is both the search origin and the permission subject: "me" in a queued or forced
 		// `&ATTR me=value` names the object running the command, not whoever set it going.
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
 			args["1"].Message!.ToPlainText(), LocateFlags.All, async realLocated =>
@@ -147,5 +148,6 @@ public partial class Commands
 					_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 					_ => string.Empty));
 			});
+		return result with { HadErrors = result.HadErrors || attrNameResult?.HadErrors == true };
 	}
 }

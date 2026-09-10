@@ -1,3 +1,6 @@
+using NSubstitute;
+using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library.Models.SchedulerModels;
 using System.Reflection;
 using System.Reflection.Emit;
 using Mediator;
@@ -38,10 +41,65 @@ public class SchedulerCompatibilityTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task PublishedTwoArgumentReleaseSlotDispatchesCompiledCalls(bool concrete)
+	{
+		var target = concrete ? typeof(Scheduler) : typeof(ITaskScheduler);
+		var method = target.GetMethod("ReleaseScheduledWork", [typeof(long), typeof(bool)]);
+		await Assert.That(method?.ReturnType).IsEqualTo(typeof(ValueTask<QueueAdmissionResult>));
+		var factory = Substitute.For<ISchedulerFactory>();
+		await using var scheduler = new Scheduler(Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+			factory, Substitute.For<IAttributeService>(), Substitute.For<IMediator>(), NullLogger<Scheduler>.Instance);
+		var caller = new DynamicMethod("PublishedReleaseCaller", typeof(ValueTask<QueueAdmissionResult>), [typeof(object)]);
+		var il = caller.GetILGenerator();
+		il.Emit(OpCodes.Ldarg_0);
+		il.Emit(OpCodes.Castclass, target);
+		il.Emit(OpCodes.Ldc_I8, 123L);
+		il.Emit(OpCodes.Ldc_I4_0);
+		il.Emit(OpCodes.Callvirt, method!);
+		il.Emit(OpCodes.Ret);
+		var result = await caller.CreateDelegate<Func<object, ValueTask<QueueAdmissionResult>>>()(scheduler);
+		await Assert.That(result.Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
+		var generated = target.GetMethod("ReleaseScheduledWork", [typeof(long), typeof(bool), typeof(long?)]);
+		await Assert.That(generated!.GetParameters()[2].IsOptional).IsFalse();
+	}
+
+	[Test]
 	public async Task PublishedSchedulerConstructorRemainsAvailable()
 	{
 		await Assert.That(typeof(Scheduler).GetConstructor([typeof(IMUSHCodeParser), typeof(IConnectionService),
 			typeof(ISchedulerFactory), typeof(IAttributeService), typeof(IMediator), typeof(ILogger<Scheduler>)])).IsNotNull();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task QueueBudgetAndDiagnosticsConstructorsDispatchCompiledCalls(bool withDiagnostics)
+	{
+		Type[] parameters = [typeof(IMUSHCodeParser), typeof(IConnectionService), typeof(ISchedulerFactory),
+			typeof(IAttributeService), typeof(IMediator), typeof(ILogger<Scheduler>),
+			typeof(IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>), typeof(INotifyService)];
+		if (withDiagnostics) parameters = [.. parameters, typeof(SharpMUSH.Library.Services.IQueueDiagnosticsRecorder)];
+		var constructor = typeof(Scheduler).GetConstructor(parameters);
+		await Assert.That(constructor).IsNotNull();
+		var caller = new DynamicMethod("PublishedSchedulerConstructor", typeof(Scheduler), [typeof(object[])]);
+		var il = caller.GetILGenerator();
+		for (var i = 0; i < parameters.Length; i++)
+		{
+			il.Emit(OpCodes.Ldarg_0);
+			il.Emit(OpCodes.Ldc_I4, i);
+			il.Emit(OpCodes.Ldelem_Ref);
+			il.Emit(OpCodes.Castclass, parameters[i]);
+		}
+		il.Emit(OpCodes.Newobj, constructor!);
+		il.Emit(OpCodes.Ret);
+		object?[] arguments = [Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
+			Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(), Substitute.For<IMediator>(),
+			NullLogger<Scheduler>.Instance, null, null];
+		if (withDiagnostics) arguments = [.. arguments, null];
+		await using var scheduler = caller.CreateDelegate<Func<object?[], Scheduler>>()(arguments);
+		await Assert.That(scheduler).IsNotNull();
 	}
 
 	[Test]

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
@@ -1134,10 +1134,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -1302,7 +1304,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.", executor);
 			}
 		}
 
@@ -1323,7 +1325,7 @@ public partial class Commands
 
 			foreach (var follower in dismissed)
 			{
-				await NotifyService.Notify(follower, $"{executor.Object().Name} dismisses you. You stop following.");
+				await NotifyService.Notify(follower, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 			}
 
 			await NotifyService.Notify(executor, $"You dismiss all your followers. ({dismissed.Length} dismissed)", executor);
@@ -1368,7 +1370,7 @@ public partial class Commands
 		}
 
 		await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 
 		return CallState.Empty;
 	}
@@ -1586,7 +1588,13 @@ public partial class Commands
 		}
 
 		var emptyingSelf = objectToEmpty.Object().DBRef.Equals(executor.Object().DBRef);
-		var contents = await objectToEmpty.AsContainer.Content(Mediator).ToListAsync();
+
+		// move.c:820 walks the contents with first_visible, which skips anything the emptier cannot
+		// interact with: can_interact(item, player, INTERACT_SEE) (predicat.c:306).
+		var contents = await objectToEmpty.AsContainer.Content(Mediator)
+			.Where(async (item, _) =>
+				await PermissionService.CanInteract(executor, item.WithRoomOption(), IPermissionService.InteractType.See))
+			.ToListAsync();
 		var count = 0;
 
 		foreach (var item in contents)
@@ -1595,6 +1603,17 @@ public partial class Commands
 
 			// move.c:822-823: exits are not dropped.
 			if (itemObject.IsExit)
+			{
+				continue;
+			}
+
+			// Deviation from PennMUSH: the reality layer. do_empty is two moves — into the emptier's
+			// hands (move.c:874) and back out to where the container stands (move.c:881-899) — so a
+			// destination the item cannot reach has to refuse the pair up front rather than leave the
+			// item stranded in the emptier's inventory.
+			if (!await CanMoveInReality(parser, itemObject.Object().DBRef, executor.Object().DBRef)
+					|| (!heldByEmptier
+							&& !await CanMoveInReality(parser, itemObject.Object().DBRef, containerLocation.Object().DBRef)))
 			{
 				continue;
 			}
@@ -1868,7 +1887,7 @@ public partial class Commands
 		await AddFollowerAsync(target, executor);
 
 		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.", executor);
 
 		return CallState.Empty;
 	}
@@ -2278,12 +2297,13 @@ public partial class Commands
 		}
 
 		var container = executor.AsContainer;
-		var contents = container.Content(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
+		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = await contents
 			.Select((AnySharpContent item, CancellationToken _) => MessageFormatting.FormatObjectWithDbref(item.Object()))
-			.ToListAsync();
+			.ToListAsync(ExecutionBudget.CurrentToken);
 
 		if (items.Count == 0)
 		{
@@ -2459,7 +2479,7 @@ public partial class Commands
 		foreach (var recipientName in recipientNames)
 		{
 			var recipientResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(
-				parser, executor, executor, recipientName, LocateFlags.All);
+				parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage);
 
 			if (!recipientResult.IsAnySharpObject)
 			{
@@ -2484,7 +2504,7 @@ public partial class Commands
 				// speech.c:924-925 is `eval_lock_with(executor, target, Page_Lock, pe_info)` alone, and
 				// only it reaches the fail_lock at :948.
 				if (!await PermissionService.CanInteract(executor, recipient,
-							IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page))
+							IPermissionService.InteractType.Page))
 				{
 					await NotifyService.Notify(executor,
 						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
@@ -2758,9 +2778,9 @@ public partial class Commands
 				_ => MarkupText.Plain($"{executor.Object().Name} types --> {actionList}"),
 				INotifyService.NotificationType.Emit);
 
-			await parser.CommandListParse(MarkupText.Plain(actionList));
+			var result = await parser.CommandListParse(MarkupText.Plain(actionList));
 
-			return CallState.Empty;
+			return CallState.Empty with { HadErrors = result?.HadErrors == true };
 		}
 
 		if (!args.ContainsKey("0"))
@@ -2776,9 +2796,9 @@ public partial class Commands
 			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
 			INotifyService.NotificationType.Emit);
 
-		await parser.CommandParse(MarkupText.Plain(command));
+		var commandResult = await parser.CommandParse(MarkupText.Plain(command));
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = commandResult.HadErrors };
 	}
 
 	[SharpCommand(Name = "UNFOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,
@@ -2869,10 +2889,12 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
+			var perceive = await ObserveRealityAsync(parser, executor);
 			var players = await executorLocation.Content(Mediator)
 				.Where(obj => obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
 				.Select(obj => obj.Object().Name)
-				.ToListAsync();
+				.ToListAsync(ExecutionBudget.CurrentToken);
 
 			if (players.Count == 0)
 			{
@@ -2996,7 +3018,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(obj.WithRoomOption(),
-					$"{executor.Object().Name} whispers to {targetList}.");
+					$"{executor.Object().Name} whispers to {targetList}.", executor);
 			}
 		}
 

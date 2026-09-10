@@ -59,8 +59,11 @@ public partial class Functions
 			return new CallState("[]");
 		}
 
-		var delimiter = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
-		var list = MushText.SplitList(delimiter, (await listArg.ParsedMessage())!);
+		var delimiterResult = parser.CurrentState.Arguments.TryGetValue("1", out var delimiterArg) && delimiterArg.Message!.Length > 0
+			? await delimiterArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
+		var delimiter = delimiterResult.Message ?? MarkupText.Empty;
+		var listResult = await listArg.GetParsedResultAsync();
+		var list = MushText.SplitList(delimiter, listResult.Message ?? MarkupText.Empty);
 
 		try
 		{
@@ -73,11 +76,11 @@ public partial class Functions
 				elements.Add(document.RootElement.Clone());
 			}
 
-			return new CallState(JsonSerializer.Serialize(elements, JsonHelpers.RelaxedJsonOptions));
+			return new CallState(JsonSerializer.Serialize(elements, JsonHelpers.RelaxedJsonOptions)) { HadErrors = listResult.HadErrors || delimiterResult.HadErrors };
 		}
 		catch (JsonException)
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_array"));
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_array")) { HadErrors = listResult.HadErrors || delimiterResult.HadErrors };
 		}
 	}
 
@@ -104,7 +107,9 @@ public partial class Functions
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
 		var jsonStr = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var separatorResult = parser.CurrentState.Arguments.TryGetValue("2", out var separatorArg) && separatorArg.Message!.Length > 0
+			? await separatorArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
+		var osep = separatorResult.Message ?? MarkupText.Empty;
 
 		var userArgs = new Dictionary<string, CallState>();
 		for (int i = 3; i < parser.CurrentState.Arguments.Count; i++)
@@ -114,6 +119,7 @@ public partial class Functions
 
 		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
 		MString attrValue = MarkupText.Empty;
+		var hadErrors = separatorResult.HadErrors;
 
 		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
 		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
@@ -122,7 +128,9 @@ public partial class Functions
 		{
 			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 			{
-				return await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, callArgs);
+				var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, callArgs);
+				hadErrors |= result.HadErrors;
+				return result.Message ?? MarkupText.Empty;
 			}
 
 			var callParser = parser.Push(parser.CurrentState with
@@ -130,7 +138,9 @@ public partial class Functions
 				Arguments = callArgs,
 				EnvironmentRegisters = callArgs
 			});
-			return (await callParser.FunctionParse(attrValue))!.Message!;
+			var parsed = await callParser.FunctionParse(attrValue);
+			hadErrors |= parsed?.HadErrors == true;
+			return parsed?.Message ?? MarkupText.Empty;
 		}
 
 		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -139,7 +149,7 @@ public partial class Functions
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return new CallState(ErrorMessages.Returns.ObjectAttributeString) { HadErrors = hadErrors };
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -148,7 +158,7 @@ public partial class Functions
 			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return CallState.Empty with { HadErrors = hadErrors };
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -157,12 +167,12 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return new CallState(ErrorMessages.Returns.NoSuchAttribute) { HadErrors = hadErrors };
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return new CallState(maybeAttr.AsError.Value) { HadErrors = hadErrors };
 			}
 
 			attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -225,11 +235,11 @@ public partial class Functions
 					throw new JsonException();
 			}
 
-			return new CallState(MarkupText.Join(osep, result));
+			return new CallState(MarkupText.Join(osep, result)) { HadErrors = hadErrors };
 		}
 		catch (JsonException ex)
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_map") + $": {ex.Message}");
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json_map") + $": {ex.Message}") { HadErrors = hadErrors };
 		}
 	}
 

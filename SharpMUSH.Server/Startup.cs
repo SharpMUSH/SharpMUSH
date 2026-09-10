@@ -431,7 +431,15 @@ public class Startup(
 		 */
 		);
 		services.AddSingleton<IPasswordService, PasswordService>();
+		services.AddSingleton<SharpMUSH.Library.Reality.RealityPolicy>();
+		services.AddSingleton<SharpMUSH.Library.Reality.RealityAdministration>();
+		services.AddSingleton<SharpMUSH.Library.Reality.IRealityPolicy>(sp => sp.GetRequiredService<SharpMUSH.Library.Reality.RealityPolicy>());
 		services.AddSingleton<IPermissionService, PermissionService>();
+		services.AddSingleton<QueueDiagnosticsRecorder>();
+		services.AddSingleton<IQueueDiagnosticsRecorder>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<ITelemetryInvocationObserver>(sp => sp.GetRequiredService<QueueDiagnosticsRecorder>());
+		services.AddSingleton<IQueueDiagnosticsService, QueueDiagnosticsService>();
+		services.AddHostedService<Services.QueueProfileCollector>();
 		services.AddSingleton<ITelemetryService, TelemetryService>();
 
 		services.AddSingleton<IConnectionStateStore>(sp =>
@@ -452,9 +460,14 @@ public class Startup(
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
 		services.AddSingleton<IManipulateSharpObjectService, ManipulateSharpObjectService>();
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
+		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IInputSessionService, InputSessionService>();
+		services.AddHostedService<Services.InputSessionTimeoutService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
+		services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
+		services.AddSingleton<IRoomEventDispatcher, RoomEventDispatcher>();
 		services.AddSingleton<IAccountSessionStore, DatabaseAccountSessionStore>();
 		services.AddSingleton<IAccountService, AccountService>();
 		// Unconditional (not gated on JWT config) — AuthController's account-login/register and
@@ -532,6 +545,7 @@ public class Startup(
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
+		services.AddSingleton<SharpMUSH.Library.Services.RecurringJobs.IRecurringJobService, SharpMUSH.Library.Services.RecurringJobs.RecurringJobService>();
 		services.AddSingleton<SharpMUSH.Library.Services.Snapshots.IObjectSnapshotService, SharpMUSH.Library.Services.Snapshots.ObjectSnapshotService>();
 		services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, FreshPermissionClaimsTransformation>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
@@ -778,6 +792,7 @@ public class Startup(
 		services.AddHostedService<Services.ScheduledTaskManagementService>();
 		services.AddHostedService<Services.WarningCheckService>();
 		services.AddHostedService<Services.WorldBackupScheduleService>();
+		services.AddHostedService<Services.RecurringJobRunner>();
 		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
 
 		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection

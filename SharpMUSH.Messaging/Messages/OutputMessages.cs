@@ -37,12 +37,20 @@ public record WebSocketPromptMessage(long Handle, string Data) : IHandleMessage;
 /// (portal) connections so the browser can render it natively. <see cref="Markup"/> is the output of
 /// <c>MarkupTextSerializer.Serialize</c>.
 /// </summary>
-public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage;
+public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage
+{
+	/// <summary>When present, delivery requires this exact transport incarnation.</summary>
+	public string? SessionId { get; init; }
+}
 
 /// <summary>
 /// Like <see cref="MarkupOutputMessage"/> but for prompt output (no trailing newline).
 /// </summary>
-public record MarkupPromptMessage(long Handle, string Markup) : IHandleMessage;
+public record MarkupPromptMessage(long Handle, string Markup) : IHandleMessage
+{
+	/// <summary>When present, delivery requires this exact transport incarnation.</summary>
+	public string? SessionId { get; init; }
+}
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to send GMCP data to a connection

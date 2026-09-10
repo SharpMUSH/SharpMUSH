@@ -22,19 +22,20 @@ public partial class Functions
 	[SharpFunction(Name = "filterq", MinArgs = 3, MaxArgs = 36, Flags = FunctionFlags.Regular, ParameterNames = ["register", "attribute", "list", "delimiter", "osep"])]
 	public async ValueTask<CallState> FilterQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var registerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		if (string.IsNullOrWhiteSpace(registerName))
 		{
-			return new CallState(ErrorMessages.Returns.BadRegName);
+			return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 
 		var rawAttrArg = parser.CurrentState.Arguments["1"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
 
 		var matches = new List<MString>();
@@ -42,7 +43,7 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
 			foreach (var (item, result) in list.Zip(lambdaResults, (item, result) => (item, result)))
 			{
 				if (result.ToPlainText() == "1")
@@ -60,7 +61,7 @@ public partial class Functions
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -70,7 +71,7 @@ public partial class Functions
 				parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return errors.Complete(CallState.Empty);
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -79,12 +80,12 @@ public partial class Functions
 				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return errors.Complete(new CallState(maybeAttr.AsError.Value));
 			}
 
 			var attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -108,7 +109,7 @@ public partial class Functions
 					}
 				});
 
-				if ((await newParser.FunctionParse(attrValue))!.Message!.ToPlainText() == "1")
+				if (errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText() == "1")
 				{
 					matches.Add(item);
 				}
@@ -121,9 +122,9 @@ public partial class Functions
 
 		if (!parser.CurrentState.AddRegister(registerName.ToUpper(), MarkupText.Join(sep, rejects)))
 		{
-			return new CallState(ErrorMessages.Returns.BadRegName);
+			return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 
-		return new CallState(MarkupText.Join(sep, matches));
+		return errors.Complete(new CallState(MarkupText.Join(sep, matches)));
 	}
 }

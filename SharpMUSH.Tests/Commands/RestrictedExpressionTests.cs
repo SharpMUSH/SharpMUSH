@@ -432,6 +432,138 @@ public class RestrictedExpressionTests
 		await Assert.That(await Eval("repeat(,2147483647)")).IsEqualTo("");
 	}
 
+	private sealed class ScanComparer : IEqualityComparer<string>
+	{
+		public Action? OnLookup { get; set; }
+		public bool Equals(string? x, string? y) => StringComparer.OrdinalIgnoreCase.Equals(x, y);
+		public int GetHashCode(string value)
+		{
+			var callback = OnLookup;
+			OnLookup = null;
+			callback?.Invoke();
+			return StringComparer.OrdinalIgnoreCase.GetHashCode(value);
+		}
+	}
+	private sealed class ScanLibrary(ScanComparer comparer) : LibraryService<string, FunctionDefinition>(comparer);
+	private sealed class ScanTimer : TimeProvider
+	{
+		private Action? _fire;
+		public void Fire() => _fire!();
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			_fire = () => callback(state);
+			return new Timer();
+		}
+		private sealed class Timer : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+			public void Dispose() { }
+			public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+		}
+	}
+
+	[Test]
+	[Arguments("function", true)]
+	[Arguments("command", true)]
+	[Arguments("visitor", true)]
+	[Arguments("function", false)]
+	[Arguments("command", false)]
+	[Arguments("visitor", false)]
+	public async Task RestrictedEntryScanKeepsDeadlineAndCallerCancellationDistinct(string mode, bool expiry)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var comparer = new ScanComparer();
+		var library = new ScanLibrary(comparer);
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var parser = original with
+		{
+			FunctionLibrary = library,
+			Configuration = new Options(original.Configuration.CurrentValue with
+			{ Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true } })
+		};
+		var timer = new ScanTimer();
+		using var caller = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), caller.Token, timer);
+		using var scope = budget.Enter();
+		var scanned = false;
+		comparer.OnLookup = () => { scanned = true; if (expiry) timer.Fire(); else caller.Cancel(); };
+		async Task<CallState?> Invoke() => mode switch
+		{
+			"function" => await parser.FunctionParse(MarkupText.Plain("fn(add,1,2)")),
+			"command" => await parser.CommandListParse(MarkupText.Plain("@pemit me=[fn(add,1,2)]")),
+			_ => await parser.CommandListParseVisitor(MarkupText.Plain("@pemit me=[fn(add,1,2)]"))()
+		};
+		if (expiry) await Assert.That((await Invoke())?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		else await Assert.ThrowsAsync<OperationCanceledException>(Invoke);
+		await Assert.That(scanned).IsTrue();
+	}
+
+	[Test]
+	[Arguments("restrictedexpr(add,private-input)")]
+	[Arguments("fn(restrictedexpr,add,private-input)")]
+	[Arguments("fn(fn,restricted_alias,add,private-input)")]
+	public async Task RestrictedEntryFailureAfterScopeUnwindsDoesNotExposeDiagnostics(string expression)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library["restrictedexpr"] = (library["restrictedexpr"].LibraryInformation with
+		{
+			Function = _ =>
+			{
+				using var restricted = new EvaluationRestrictions(["add"]).Enter();
+				throw new InvalidOperationException("private-input");
+			}
+		}, true);
+		library.Add("restricted_alias", library["restrictedexpr"]);
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new None()));
+		var notify = Substitute.For<INotifyService>();
+		var logger = Substitute.For<ILogger<MUSHCodeParser>>();
+		var services = Substitute.For<IServiceProvider>();
+		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IMediator) ? mediator
+			: call.Arg<Type>() == typeof(INotifyService) ? notify : original.ServiceProvider.GetService(call.Arg<Type>()));
+		var parser = new MUSHCodeParser(logger, library, original.CommandLibrary, original.Configuration, services)
+			.FromState(ParserState.RootFor(new DBRef(1, 1)));
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "Log")).IsFalse();
+		await Assert.That(notify.ReceivedCalls().Any()).IsFalse();
+		await Assert.That(mediator.ReceivedCalls().Any()).IsFalse();
+	}
+
+	[Test]
+	[Arguments("fn(add,1,2)")]
+	[Arguments("fn(fn,add,1,2)")]
+	[Arguments("fn_alias(add,1,2)")]
+	public async Task OrdinaryFnRetainsConfiguredParserTracing(string expression)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var library = new FunctionLibraryService();
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		library.Add("fn_alias", library["fn"]);
+		var parser = original with
+		{
+			FunctionLibrary = library,
+			Configuration = new Options(original.Configuration.CurrentValue with
+			{
+				Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true }
+			})
+		};
+#pragma warning disable TUnit0055
+		var previous = Console.Out;
+		using var output = new StringWriter();
+		try
+		{
+			Console.SetOut(output);
+			await parser.FunctionParse(MarkupText.Plain(expression));
+		}
+		finally { Console.SetOut(previous); }
+#pragma warning restore TUnit0055
+		await Assert.That(output.ToString()).Contains("LT(1)=" + expression[..(expression.IndexOf('(') + 1)]);
+	}
+
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -594,6 +726,9 @@ public class RestrictedExpressionTests
 	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input)")]
 	[Arguments("fn(restricted_alias,ucstr,ucstr(%0),private-input)")]
 	[Arguments("restricted_alias(ucstr,ucstr(%0),private-input")]
+	[Arguments("fn(fn,restricted_alias,ucstr,ucstr(%0),private-input)")]
+	[Arguments("fn(fn,restricted_alias,ucstr,ucstr(%0),private-input")]
+	[Arguments("fn(not_registered,private-input")]
 	public async Task InitialRestrictedWrapperParsingDoesNotTraceInputs(string expression)
 	{
 		var original = (MUSHCodeParser)Factory.FunctionParser;

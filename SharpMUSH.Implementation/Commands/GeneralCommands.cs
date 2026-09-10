@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
@@ -17,6 +17,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
@@ -333,6 +334,7 @@ public partial class Commands
 
 		var isInline = switches.Contains("INLINE");
 		var results = new List<string>();
+		var hadErrors = false;
 
 		if (isInline)
 		{
@@ -355,6 +357,7 @@ public partial class Commands
 						async p => await p.CommandListParse(attribute.Value));
 				});
 
+				hadErrors |= result?.HadErrors == true;
 				if (result != null && result.Message != null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
@@ -370,7 +373,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(string.Join(" ", results));
+			return new CallState(string.Join(" ", results)) { HadErrors = hadErrors };
 		}
 		else
 		{
@@ -468,6 +471,7 @@ public partial class Commands
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			var lastCallState = CallState.Empty;
+			var hadErrors = false;
 			var visitorFunc = parser.CommandListParseVisitor(command);
 			foreach (var item in list)
 			{
@@ -477,6 +481,7 @@ public partial class Commands
 				// Note: Command is parsed once (line above loop), then the visitor is called
 				// multiple times with different iteration register values. This is optimized.
 				lastCallState = await visitorFunc();
+				hadErrors |= lastCallState?.HadErrors == true;
 			}
 
 			parser.CurrentState.IterationRegisters.TryPop(out _);
@@ -498,7 +503,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return lastCallState!;
+			return (lastCallState ?? CallState.Empty) with { HadErrors = hadErrors };
 		}
 		else
 		{
@@ -706,10 +711,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -924,8 +931,9 @@ public partial class Commands
 
 			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
 			{
-				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer))
-					.ToArrayAsync();
+				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+					.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
+					.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 				if (exits.Length > 0)
 				{
@@ -1236,7 +1244,7 @@ public partial class Commands
 
 		var destination = resolved.AsT0;
 
-		if (!await PermissionService.CanGoto(executor, exitObj))
+		if (!await PermissionService.CanGoto(executor, exitObj, destination))
 		{
 			return await FailBasicLock(parser, executor, exitObject);
 		}
@@ -1670,7 +1678,20 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			var halted = await Mediator.Send(new HaltByPidRequest(pid));
+			if (!TryGetQueueEntry(scheduler, pid, out var entry)) return await QueueInspectionUnsupported(executor);
+			if (entry is null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), executor, pid);
+				return new CallState(ErrorMessages.Returns.NotFound);
+			}
+			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var halted = await Mediator.Send(new HaltByPidRequest(pid), ExecutionBudget.CurrentToken);
 			if (halted)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltTaskHaltedFormat), executor, pid);
@@ -1962,6 +1983,7 @@ public partial class Commands
 			? parser.CurrentState.Switches.ToArray()
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		List<string> runningOutput = [];
 
 		async Task<bool> CanScan(AnySharpObject obj)
@@ -1975,7 +1997,8 @@ public partial class Commands
 
 		async ValueTask ReportMatches(IAsyncEnumerable<AnySharpObject> candidates)
 		{
-			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, arg0);
+			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
 			if (!matched.IsSome())
 			{
 				return;
@@ -2124,6 +2147,7 @@ public partial class Commands
 		var testString = strArg.Message?.ToPlainText() ?? string.Empty;
 		Option<MString> defaultArg = new None();
 		var matched = false;
+		var hadErrors = false;
 
 		// Separate out the default action (last element when total arg count is even).
 		// args["0"] is the test expression; remaining args are (pattern, action) pairs plus optional default.
@@ -2193,7 +2217,7 @@ public partial class Commands
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
 					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
-					await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
+					hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
 						isInline, noBreak, hasLocalize, hasClearRegs);
 
 					if (isFirst) break;
@@ -2203,7 +2227,7 @@ public partial class Commands
 			if (defaultArg.IsSome() && !matched)
 			{
 				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
-				await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
+				hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
 					isInline, noBreak, hasLocalize, hasClearRegs);
 			}
 
@@ -2218,7 +2242,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(matched);
+			return new CallState(matched) { HadErrors = hadErrors };
 		}
 		finally
 		{
@@ -2400,7 +2424,7 @@ public partial class Commands
 	/// action instead gets its own copy of the registers from <see cref="QueuedActionState"/>, matching
 	/// <c>PE_INFO_CLONE</c>, so neither switch has anything to do there.</para>
 	/// </summary>
-	private async ValueTask RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
+	private async ValueTask<bool> RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
 		bool isInline, bool noBreak, bool localizeRegisters, bool clearRegisters)
 	{
 		if (!isInline)
@@ -2410,7 +2434,7 @@ public partial class Commands
 				QueuedActionState(parser),
 				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 				-1), ExecutionBudget.CurrentToken);
-			return;
+			return false;
 		}
 
 		// Save before Clear: the new Dictionary<> is an independent copy, so clearing the original
@@ -2433,7 +2457,7 @@ public partial class Commands
 		try
 		{
 			var propagation = new BreakPropagation { PreserveNext = true };
-			await parser.With(
+			var result = await parser.With(
 				state => state with { BreakPropagation = propagation },
 				p => p.CommandListParse(action));
 
@@ -2441,6 +2465,7 @@ public partial class Commands
 			{
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 			}
+			return result?.HadErrors == true;
 		}
 		finally
 		{
@@ -2513,7 +2538,7 @@ public partial class Commands
 		AnySharpObject executor, string? arg1,
 		string[] switches)
 	{
-		if (!int.TryParse(arg0, out var pid))
+		if (!long.TryParse(arg0, out var pid))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPid);
@@ -2525,58 +2550,49 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var exists = Mediator.CreateStream(new ScheduleSemaphoreQuery(pid));
-		var maybeFoundPid = await exists.FirstOrDefaultAsync();
+		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskScheduler>(), pid, out var maybeFoundPid))
+			return await QueueInspectionUnsupported(executor);
 
-		if (maybeFoundPid is null)
+		if (maybeFoundPid is null || maybeFoundPid.RemainingDelay is null || maybeFoundPid.ReleasePending)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidPidSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPid);
 		}
 
-		var timeArg = arg1;
-
-		if (switches.Contains("UNTIL"))
+		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
 		{
-			if (!DateTimeOffset.TryParse(timeArg, out var dateTimeOffset))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
-				return new CallState(ErrorMessages.Returns.InvalidTime);
-			}
-
-			var until = DateTimeOffset.UtcNow - dateTimeOffset;
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-
-			return new CallState(maybeFoundPid.Pid.ToString());
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (arg1.StartsWith('+') || arg1.StartsWith('-'))
-		{
-			timeArg = arg1.Skip(1).ToString();
-		}
-
-		if (!long.TryParse(timeArg, out var secs))
+		if (!long.TryParse(arg1, System.Globalization.NumberStyles.Integer,
+			System.Globalization.CultureInfo.InvariantCulture, out var seconds))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
 			return new CallState(ErrorMessages.Returns.InvalidTime);
 		}
 
-		if (arg1.StartsWith('+'))
+		TimeSpan delay;
+		try
 		{
-			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) + TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-			return new CallState(maybeFoundPid.Pid.ToString());
+			var now = DateTimeOffset.UtcNow;
+			delay = switches.Contains("UNTIL")
+				? DateTimeOffset.FromUnixTimeSeconds(seconds) - now
+				: arg1.StartsWith('+') || arg1.StartsWith('-')
+					? maybeFoundPid.RemainingDelay.Value + TimeSpan.FromSeconds(seconds)
+					: TimeSpan.FromSeconds(seconds);
+			if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
+			if (delay > DateTimeOffset.MaxValue - now) throw new ArgumentOutOfRangeException(nameof(seconds));
+		}
+		catch (Exception ex) when (ex is ArgumentOutOfRangeException or OverflowException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitInvalidTimeSpecified), executor);
+			return new CallState(ErrorMessages.Returns.InvalidTime);
 		}
 
-		if (arg1.StartsWith('-'))
-		{
-			var until = (maybeFoundPid.RunDelay ?? TimeSpan.Zero) - TimeSpan.FromSeconds(secs);
-			await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, until));
-			return new CallState(maybeFoundPid.Pid.ToString());
-		}
-
-		await Mediator.Send(new RescheduleSemaphoreRequest(maybeFoundPid.Pid, TimeSpan.FromSeconds(secs)));
-		return new CallState(maybeFoundPid.Pid.ToString());
+		await Mediator.Send(new RescheduleSemaphoreRequest(pid, delay));
+		return new CallState(pid.ToString());
 	}
 
 	[SharpCommand(Name = "@COMMAND",
@@ -2912,11 +2928,12 @@ public partial class Commands
 			}
 		}
 
+		CallState? nestedResult = null;
 		try
 		{
 			// Note: Queue infrastructure available via AdmitCommandListRequest if needed
 			// Currently executes inline for immediate response (default PennMUSH behavior)
-			await parser.With(
+			nestedResult = await parser.With(
 				state => state with
 				{
 					Executor = found.Object().DBRef,
@@ -2936,7 +2953,7 @@ public partial class Commands
 			}
 		}
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
@@ -2946,17 +2963,18 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var truthy = parsedIfElse!.Truthy(parser);
+		CallState? nestedResult = null;
 
 		if (truthy)
 		{
-			await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
+			nestedResult = await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
 		}
 		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
 		{
-			await parser.CommandListParse(arg2.Message!);
+			nestedResult = await parser.CommandListParse(arg2.Message!);
 		}
 
-		return new CallState(truthy);
+		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT"], Behavior = CB.Default | CB.NoGagged,
@@ -2976,7 +2994,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
+				await PermissionService.CanInteract(executor, obj.WithRoomOption(), InteractType.Hear, enactor));
 
 		if (isSpoof)
 		{
@@ -3141,7 +3159,7 @@ public partial class Commands
 				continue;
 			}
 
-			await NotifyService.Prompt(locateTarget, notification);
+			await NotifyService.Prompt(locateTarget, notification, executor);
 		}
 
 		return new None();
@@ -3182,9 +3200,10 @@ public partial class Commands
 			ownerFilter = maybeOwner.AsAnyObject.Object().DBRef;
 		}
 
-		var matches = await SearchSpecEngine.ExecuteAsync(
+		var search = await SearchSpecEngine.ExecuteResultAsync(
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, ownerFilter, pairs, useRegex: false);
+		var matches = search.Matches;
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor);
 
@@ -3202,7 +3221,7 @@ public partial class Commands
 		if (matches.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
-			return new CallState("0");
+			return new CallState("0") { HadErrors = search.HadErrors };
 		}
 
 		foreach (var obj in matches)
@@ -3212,7 +3231,7 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, matches.Count);
 
-		return new CallState(matches.Count.ToString());
+		return new CallState(matches.Count.ToString()) { HadErrors = search.HadErrors };
 	}
 
 	/// <summary>
@@ -3350,7 +3369,7 @@ public partial class Commands
 		if (isUnfindable)
 		{
 			await NotifyService.Notify(target,
-				$"{executor.Object().Name} tried to locate you, but was unable to.");
+				$"{executor.Object().Name} tried to locate you, but was unable to.", executor);
 			await NotifyService.Notify(executor,
 				$"{targetObject.Name} is UNFINDABLE.", executor);
 			return new CallState(ErrorMessages.Returns.Unfindable);
@@ -3360,7 +3379,7 @@ public partial class Commands
 		var locationName = targetLocation.Object().Name;
 
 		await NotifyService.Notify(target,
-			$"{executor.Object().Name} has just located your position.");
+			$"{executor.Object().Name} has just located your position.", executor);
 
 		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.", executor);
@@ -3380,6 +3399,7 @@ public partial class Commands
 		// Note: INLINE is default behavior (immediate execution)
 		// QUEUED switch queues the command for later execution via task scheduler
 		var useQueue = switches.Contains("QUEUED");
+		var hadErrors = false;
 
 		switch (nargs)
 		{
@@ -3392,7 +3412,7 @@ public partial class Commands
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Truthy(parser):
 				var command = await args["1"].ParsedMessage();
 
@@ -3408,14 +3428,14 @@ public partial class Commands
 				else
 				{
 					var commandList = parser.CommandListParseVisitor(command!);
-					await commandList();
+					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2:
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 		}
 
 		return CallState.Empty;
@@ -3590,6 +3610,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
+		var hadErrors = false;
 		int modifiedCount = 0;
 		int unchangedCount = 0;
 		var isRegexp = switches.Contains("REGEXP");
@@ -3608,7 +3629,9 @@ public partial class Commands
 
 			if (isRegexp)
 			{
-				newText = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				var edited = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				newText = edited.Message!.ToPlainText();
+				hadErrors |= edited.HadErrors;
 			}
 			else
 			{
@@ -3645,7 +3668,7 @@ public partial class Commands
 				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.", executor);
 		}
 
-		return new CallState(string.Empty);
+		return new CallState(string.Empty) { HadErrors = hadErrors };
 	}
 
 	/// <summary>
@@ -3728,9 +3751,10 @@ public partial class Commands
 	/// <summary>
 	/// Perform regex replacement with evaluation
 	/// </summary>
-	private async ValueTask<string> PerformRegexEdit(IMUSHCodeParser parser, string text,
+	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
+		var hadErrors = false;
 		try
 		{
 			var options = RegexOptions.None;
@@ -3747,7 +3771,8 @@ public partial class Commands
 				foreach (var match in regex.Matches(text).Reverse())
 				{
 					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
-					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+					hadErrors |= replacement.HadErrors;
+					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
 				}
 			}
 			else
@@ -3756,27 +3781,28 @@ public partial class Commands
 				if (match.Success)
 				{
 					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
-					text = text[..match.Index] + replacement + text[(match.Index + match.Length)..];
+					hadErrors |= replacement.HadErrors;
+					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
 				}
 			}
 
-			return text;
+			return new CallState(text) { HadErrors = hadErrors };
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
 			// Same answer as an unusable pattern: the text comes back as it went in.
-			return text;
+			return new CallState(text) { HadErrors = hadErrors };
 		}
 		catch (ArgumentException)
 		{
-			return text;
+			return new CallState(text) { HadErrors = hadErrors };
 		}
 	}
 
 	/// <summary>
 	/// Evaluate replacement template with captured groups
 	/// </summary>
-	private async ValueTask<string> EvaluateRegexReplacement(IMUSHCodeParser parser,
+	private async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
 		Regex regex, Match match, string template)
 	{
 		var replacement = template;
@@ -3796,7 +3822,8 @@ public partial class Commands
 		}
 
 		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
-		return evaluatedReplacement?.Message?.ToPlainText() ?? replacement;
+		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? replacement)
+		{ HadErrors = evaluatedReplacement?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
@@ -4378,10 +4405,24 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG"], Behavior = CB.Default,
-		MinArgs = 0, MaxArgs = 1, ParameterNames = ["player"])]
+	private static bool TryGetQueueEntry(ITaskScheduler scheduler, long pid,
+		out SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot? entry)
+	{
+		try { entry = scheduler.GetQueueEntry(pid); return true; }
+		catch (NotSupportedException) { entry = null; return false; }
+	}
+
+	private async ValueTask<Option<CallState>> QueueInspectionUnsupported(AnySharpObject executor)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
+		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
+	}
+
+	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG", "HISTORY"], Behavior = CB.Default,
+		MinArgs = 0, MaxArgs = 1, ParameterNames = ["player, pid, or history-limit"])]
 	public async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (parser.CurrentState.Switches.Contains("HISTORY")) return await QueueHistory(parser);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
@@ -4402,7 +4443,20 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).FirstOrDefaultAsync();
+			if (!TryGetQueueEntry(scheduler, pid, out var queued)) return await QueueInspectionUnsupported(executor);
+			if (queued is null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
+				return new CallState(ErrorMessages.Returns.NotFound);
+			}
+			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 			if (task is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
@@ -4410,7 +4464,7 @@ public partial class Commands
 			}
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugTaskFormat), executor, pid);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, task.Owner);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugOwnerFormat), executor, queued.Owner?.ToString() ?? "?");
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugSemaphoreFormat), executor, task.SemaphoreSource);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsDebugCommandFormat), executor, task.Command.ToPlainText());
 			if (task.RunDelay.HasValue)
@@ -4445,9 +4499,56 @@ public partial class Commands
 			target = executor;
 		}
 
+		if (!await PermissionService.Controls(executor, target) && !await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var targetDbRef = target.Object().DBRef;
 
-		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef)).ToArrayAsync();
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
+			// Usage is an optional extension; legacy schedulers still provide the queue listing.
+			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
+			try { usage = scheduler.GetQueueUsage(); }
+			catch (NotSupportedException) { usage = null; }
+			if (usage is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
+				foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
+			}
+
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
+			foreach (var (group, tasks) in allTasks)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), executor, group, tasks.Length);
+			}
+
+			return CallState.Empty;
+		}
+
+
+		SharpMUSH.Library.Models.SchedulerModels.SemaphoreTaskData[] semaphoreTasks;
+		try
+		{
+			semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef))
+				.Where(async (task, ct) => await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+					.CanAccessLegacyAsync(executor, task.Pid, mutate: false, ct)).ToArrayAsync();
+		}
+		catch (NotSupportedException)
+		{
+			// A legacy scheduler cannot prove source ownership for these command bodies.
+			return await QueueInspectionUnsupported(executor);
+		}
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
 		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 
@@ -4467,29 +4568,6 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
-			return CallState.Empty;
-		}
-
-		if (switches.Contains("ALL"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
-			var usage = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueUsage();
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
-			foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
-			foreach (var (group, tasks) in allTasks)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), executor, group, tasks.Length);
-			}
-
 			return CallState.Empty;
 		}
 
@@ -4531,7 +4609,15 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
 			}
 		}
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsQueueManagementNotImplemented), executor);
+		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot>? entries;
+		try { entries = scheduler.GetQueueEntries(); }
+		catch (NotSupportedException) { entries = null; }
+		if (entries is not null)
+		{
+			var paused = entries.Count(e => e.State == SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Paused
+				&& (e.Source == targetDbRef || e.Owner == targetDbRef));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueuePausedHint), executor, paused);
+		}
 
 		return CallState.Empty;
 	}
@@ -4574,6 +4660,7 @@ public partial class Commands
 			var hasDefault = (args.Count - 1) % 2 == 1;
 
 			var matchFound = false;
+			var hadErrors = false;
 			for (int i = 0; i < pairCount; i++)
 			{
 				var exprIndex = (i * 2) + 1;
@@ -4614,7 +4701,7 @@ public partial class Commands
 					var actionText = action.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
 						isInline, noBreak, localizeRegs, clearRegs);
 
 					break;
@@ -4631,7 +4718,7 @@ public partial class Commands
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
 						isInline, noBreak, localizeRegs, clearRegs);
 				}
 			}
@@ -4647,7 +4734,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(matchFound);
+			return new CallState(matchFound) { HadErrors = hadErrors };
 		}
 		finally
 		{
@@ -4811,10 +4898,10 @@ public partial class Commands
 				EnvironmentRegisters = envRegisters
 			};
 
-			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
+			var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
 				async p => await p.CommandListParseVisitor(attribute.Value)()));
 
-			return CallState.Empty;
+			return CallState.Empty with { HadErrors = result?.HadErrors == true };
 		});
 	}
 
@@ -5707,7 +5794,7 @@ public partial class Commands
 		var actorMessage = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, what, whatd, stackArgs);
 
-		await NotifyService.Notify(actor, actorMessage);
+		await NotifyService.Notify(actor, actorMessage, actor);
 
 		var actorLocation = await actor.Where();
 		var othersMessage = await GetAttributeOrDefault(
@@ -5720,6 +5807,7 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			excludeObjects: [actor]);
 
+		CallState? nestedResult = null;
 		if (!string.IsNullOrWhiteSpace(awhat))
 		{
 			var maybeAwhatAttr = await AttributeService.GetAttributeAsync(
@@ -5728,7 +5816,7 @@ public partial class Commands
 			if (!maybeAwhatAttr.IsError)
 			{
 				var attribute = maybeAwhatAttr.AsAttribute.Last();
-				await parser.With(
+				nestedResult = await parser.With(
 					state => state with
 					{
 						Executor = victim.Object().DBRef,
@@ -5741,7 +5829,7 @@ public partial class Commands
 			}
 		}
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	private async ValueTask<MString> GetAttributeOrDefault(
@@ -6198,7 +6286,7 @@ public partial class Commands
 		// its link and the chain carries on. A single target is just the ordinary @include.
 		try
 		{
-			Option<CallState> lastResult = CallState.Empty;
+			CallState lastResult = CallState.Empty;
 
 			if (!hasNoBreak && targets.Length > 1)
 			{
@@ -6261,13 +6349,13 @@ public partial class Commands
 				if (parts.Length < 2)
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
-					return new CallState(ErrorMessages.Returns.InvalidPath);
+					return new CallState(ErrorMessages.Returns.InvalidPath) { HadErrors = lastResult.HadErrors };
 				}
 
 				var (error, attribute, text) = await ReadTarget(parts[0], parts[1]);
 				if (error is not null)
 				{
-					return error;
+					return error with { HadErrors = error.HadErrors || lastResult.HadErrors };
 				}
 
 				if (text is null)
@@ -6275,7 +6363,8 @@ public partial class Commands
 					continue;
 				}
 
-				lastResult = await RunOne(attribute!, text);
+				var result = await RunOne(attribute!, text);
+				lastResult = result with { HadErrors = result.HadErrors || lastResult.HadErrors };
 			}
 
 			return lastResult;
@@ -6283,7 +6372,7 @@ public partial class Commands
 		catch (Exception ex)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeErrorExecutingFormat), executor, ex.Message);
-			return new CallState($"#-1 ERROR: {ex.Message}");
+			return new CallState($"#-1 ERROR: {ex.Message}") { HadErrors = true };
 		}
 		finally
 		{
@@ -6714,6 +6803,7 @@ public partial class Commands
 		var exitsFlag = switches.Contains("EXITS");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var location = await executor.Where();
 		var locationObj = location.Object();
 		var locationAnyObject = location.WithRoomOption();
@@ -6754,8 +6844,9 @@ public partial class Commands
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
 			}
 
-			var contents = location.Content(Mediator);
-			await foreach (var obj in contents)
+			var contents = location.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct));
+			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -6794,8 +6885,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
 			if (await locationAnyObject.IsAudible())
 			{
-				var exits = (location.Content(Mediator)).Where(x => x.IsExit);
-				await foreach (var exit in exits)
+				var exits = location.Content(Mediator).Where(x => x.IsExit)
+					.Where((item, ct) => perceive(item.Object().DBRef, ct));
+				await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
@@ -6808,7 +6900,8 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
-			await foreach (var obj in executor.AsContainer.Content(Mediator))
+			await foreach (var obj in executor.AsContainer.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -6927,6 +7020,7 @@ public partial class Commands
 		var conditionText = predicate.Message!;
 		var currentArgs = parentArgs;
 		var limit = 1000;
+		var hadErrors = false;
 
 		while (limit > 0)
 		{
@@ -6935,6 +7029,7 @@ public partial class Commands
 				state => state with { Arguments = currentArgs },
 				innerParser => innerParser.FunctionParse(conditionText));
 
+			hadErrors |= condResult?.HadErrors == true;
 			if (!(condResult?.Message.Truthy(parser) ?? false))
 				break;
 
@@ -6947,19 +7042,21 @@ public partial class Commands
 				var evaluated = await parser.With(
 					state => state with { Arguments = currentArgs },
 					innerParser => innerParser.FunctionParse(capturedText));
+				hadErrors |= evaluated?.HadErrors == true;
 				newArgValues[capturedIndex.ToString()] = evaluated!;
 			}
 
-			await parser.With(
+			var retryResult = await parser.With(
 				state => state with { Arguments = newArgValues },
 				async innerParser => await previousCommandInvoker(innerParser));
+			hadErrors |= retryResult.IsSome() && retryResult.AsValue().HadErrors;
 
 			// The new arg values become the context for the next condition check.
 			currentArgs = newArgValues;
 			limit--;
 		}
 
-		return new CallState(1000 - limit);
+		return new CallState(1000 - limit) { HadErrors = hadErrors };
 	}
 
 	[SharpCommand(Name = "@ASSERT", Switches = ["INLINE", "QUEUED"],
@@ -6973,6 +7070,7 @@ public partial class Commands
 		// Note: INLINE is default behavior (immediate execution)
 		// QUEUED switch queues the command for later execution via task scheduler
 		var useQueue = switches.Contains("QUEUED");
+		var hadErrors = false;
 
 		switch (nargs)
 		{
@@ -6986,7 +7084,7 @@ public partial class Commands
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Falsy(parser):
 				var command = await args["1"].ParsedMessage();
 
@@ -7002,14 +7100,14 @@ public partial class Commands
 				else
 				{
 					var commandList = parser.CommandListParseVisitor(command!);
-					await commandList();
+					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2:
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 		}
 
 		return CallState.Empty;
@@ -7312,13 +7410,14 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var falsey = parsedIfElse!.Falsy(parser);
+		CallState? nestedResult = null;
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			await parser.CommandListParse(arg1.Message!);
+			nestedResult = await parser.CommandListParse(arg1.Message!);
 		}
 
-		return new CallState(!falsey);
+		return new CallState(!falsey) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"],

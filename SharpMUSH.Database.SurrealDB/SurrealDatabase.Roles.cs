@@ -51,11 +51,12 @@ public partial class SurrealDatabase : IRoleRegistryService
 			["createdAt"] = role.CreatedAt,
 			["updatedAt"] = role.UpdatedAt
 		};
-		await ExecuteAsync("""
+		var response = await ExecuteAsync("""
 			UPSERT type::thing('role', $slug) SET slug = $slug, name = $name, color = $color,
 				priority = $priority, isSystem = $isSystem, permissionsJson = $permissionsJson,
 				createdAt = $createdAt, updatedAt = $updatedAt
 			""", parameters);
+		if (response.HasErrors) throw new InvalidOperationException("SurrealDB rejected the role write.");
 	}
 
 	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)

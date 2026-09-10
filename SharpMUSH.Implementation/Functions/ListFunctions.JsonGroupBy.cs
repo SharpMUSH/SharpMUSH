@@ -18,17 +18,18 @@ public partial class Functions
 	[SharpFunction(Name = "json_group_by", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
 	public async ValueTask<CallState> JsonGroupBy(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		// A blank list has nothing to group.
 		if (list.Length == 0 || (list.Length == 1 && string.IsNullOrEmpty(list[0].ToPlainText())))
 		{
-			return new CallState("{}");
+			return errors.Complete(new CallState("{}"));
 		}
 
 		// Keys appear in first-seen order (JsonObject preserves insertion order); each key maps to
@@ -37,19 +38,19 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
 			foreach (var (item, keyResult) in list.Zip(lambdaResults, (item, keyResult) => (item, keyResult)))
 			{
 				AddToJsonGroup(groups, keyResult.ToPlainText(), item.ToPlainText());
 			}
 
-			return new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions));
+			return errors.Complete(new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions)));
 		}
 
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -59,7 +60,7 @@ public partial class Functions
 			parser, executor, executor, dbref, LocateFlags.All);
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -68,12 +69,12 @@ public partial class Functions
 			executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -86,11 +87,11 @@ public partial class Functions
 				EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
 			});
 
-			var key = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
+			var key = errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText();
 			AddToJsonGroup(groups, key, item.ToPlainText());
 		}
 
-		return new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions));
+		return errors.Complete(new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions)));
 	}
 
 	private void AddToJsonGroup(JsonObject groups, string key, string element)

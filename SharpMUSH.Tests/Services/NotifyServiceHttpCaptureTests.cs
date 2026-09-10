@@ -24,7 +24,7 @@ public class NotifyServiceHttpCaptureTests
 			.Returns(AsyncEnumerable.Empty<IConnectionService.ConnectionData>());
 
 		var service = new NotifyService(
-			bus, connections, Substitute.For<ILocalizationService>(),
+			bus, connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance,
 			listenerRoutingService: null, mediator: null, httpOutputCapture: new HttpOutputCapture());
 		return (service, bus);
 	}

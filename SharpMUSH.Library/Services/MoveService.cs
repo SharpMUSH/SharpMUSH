@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.Options;
 using OneOf;
 using OneOf.Types;
@@ -8,6 +8,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -18,6 +19,7 @@ public class MoveService(
 	IMediator mediator,
 	IPermissionService permissionService,
 	INotifyService notifyService,
+	IRealityPolicy reality,
 	IDidItService didItService,
 	ILookService lookService,
 	IConnectionService connectionService,
@@ -245,6 +247,53 @@ public class MoveService(
 				What: "MOVE", OWhat: "OMOVE", AWhat: "AMOVE",
 				Loc: where, Env0: destination.ToString(), Env1: old.ToString(),
 				Interact: IPermissionService.InteractType.See));
+
+			if (!old.Equals(destination) && (what.IsPlayer || what.IsThing))
+			{
+				await NotifyContentsOfMove(mover, old, destination);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Deviation from PennMUSH, which has no such message: whoever is riding inside a container that
+	/// moved is told so. Each rider is answered in its own reality — a place it cannot perceive is
+	/// named "somewhere" rather than by name, and a rider that cannot perceive the vehicle it is in
+	/// is told nothing at all.
+	/// </summary>
+	private async ValueTask NotifyContentsOfMove(AnySharpObject container, DBRef oldLocation, DBRef newLocation)
+	{
+		var riders = await mediator
+			.CreateStream(new GetContentsQuery(container.Object().DBRef), ExecutionBudget.CurrentToken)
+			.ToArrayAsync(ExecutionBudget.CurrentToken);
+
+		if (riders.Length == 0)
+		{
+			return;
+		}
+
+		var oldLocationNode = await mediator.Send(new GetObjectNodeQuery(oldLocation), ExecutionBudget.CurrentToken);
+		var newLocationNode = await mediator.Send(new GetObjectNodeQuery(newLocation), ExecutionBudget.CurrentToken);
+
+		if (oldLocationNode.IsNone || newLocationNode.IsNone)
+		{
+			return;
+		}
+
+		var oldName = oldLocationNode.Known.Object().Name;
+		var newName = newLocationNode.Known.Object().Name;
+
+		foreach (var rider in riders)
+		{
+			var receiver = rider.Object().DBRef;
+
+			if (!await reality.CanPerceiveAsync(receiver, container.Object().DBRef)) continue;
+
+			var visibleOrigin = await reality.CanPerceiveAsync(receiver, oldLocation) ? oldName : "somewhere";
+			var visibleDestination = await reality.CanPerceiveAsync(receiver, newLocation) ? newName : "somewhere";
+
+			await notifyService.Notify(receiver,
+				$"You sense that you have moved from {visibleOrigin} to {visibleDestination}.", container);
 		}
 	}
 
@@ -342,6 +391,14 @@ public class MoveService(
 			if (await WouldCreateLoop(what, where))
 			{
 				return new Error<string>(ErrorMessages.Notifications.CantGoThatWayContainmentLoop);
+			}
+
+			// Deviation from PennMUSH: the reality layer has no Penn counterpart. A destination the
+			// mover cannot perceive is not one it can arrive in, so the gate sits with the other
+			// enter_room validity checks rather than inside a triad.
+			if (!await reality.CanPerceiveAsync(what.Object().DBRef, where.Object().DBRef))
+			{
+				return new Error<string>(ErrorMessages.Notifications.CantGoThatWay);
 			}
 
 			var oldContainer = await what.Location();

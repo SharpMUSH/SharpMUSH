@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -76,7 +76,9 @@ public class CommunicationService(
 					return false;
 				}
 
-				return await permissionService.CanInteract(executor, objWithRoom, interact);
+				return actualSender.Object().DBRef == executor.Object().DBRef
+					? await permissionService.CanInteract(executor, objWithRoom, interact)
+					: await permissionService.CanInteract(executor, objWithRoom, interact, actualSender);
 			});
 
 		await foreach (var obj in interactableContents)

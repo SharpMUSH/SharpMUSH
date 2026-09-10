@@ -110,6 +110,7 @@ public partial class Functions
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var speakerIsLiteral = speaker.ToPlainText().StartsWith('&');
+		var hadErrors = false;
 		var hasTransform = !string.IsNullOrWhiteSpace(transformObjAttr.ToPlainText());
 		var hasNull = !string.IsNullOrWhiteSpace(isNullObjAttr.ToPlainText());
 		var speakerObject = executor;
@@ -214,7 +215,7 @@ public partial class Functions
 
 		if (hasTransform && hasNull)
 		{
-			var splitNull = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
+			var splitNull = HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText());
 
 			if (splitNull.IsT1)
 			{
@@ -234,6 +235,7 @@ public partial class Functions
 			{
 				return nullObject.AsError;
 			}
+			actualNullObject = nullObject.AsSharpObject;
 		}
 
 		if (hasTransform)
@@ -254,7 +256,7 @@ public partial class Functions
 
 				if (actualNullAttribute is not null)
 				{
-					var nullEvaluated = await AttributeService.EvaluateAttributeFunctionAsync(
+					var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 						parser, executor, actualNullObject!, actualNullAttribute,
 						new Dictionary<string, CallState>
 						{
@@ -263,10 +265,11 @@ public partial class Functions
 							{ "2", new CallState(content) }
 						});
 
-					if (nullEvaluated.Truthy(parser)) continue;
+					hadErrors |= nullEvaluated.HadErrors;
+					if (nullEvaluated.Message.Truthy(parser)) continue;
 				}
 
-				var evaluated = await AttributeService.EvaluateAttributeFunctionAsync(
+				var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 					parser, executor, actualTransformationObject!, actualTransformAttribute ?? string.Empty,
 					new Dictionary<string, CallState>
 					{
@@ -275,7 +278,8 @@ public partial class Functions
 						{ "2", new CallState(content) }
 					});
 
-				speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated);
+				hadErrors |= evaluated.HadErrors;
+				speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message ?? MarkupText.Empty);
 			}
 		}
 		else
@@ -288,7 +292,7 @@ public partial class Functions
 			concat = MarkupText.Concat(concat, close);
 		}
 
-		return new CallState(concat);
+		return new CallState(concat) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "strinsert", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "insert"])]
@@ -697,28 +701,44 @@ public partial class Functions
 		ParameterNames = ["expression", "case...|result...", "default"])]
 	public async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
+		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 
 		foreach (var (expressionKv, listKv) in args)
 		{
-			var expression = await expressionKv.Value.ParsedMessage();
+			var expression = await EvaluateArgument(expressionKv.Value);
 
 			if (arg0!.ToPlainText() == expression!.ToPlainText())
 			{
-				return await listKv.Value.ParsedMessage();
+				return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
 			}
 		}
 
-		return await defaultValue.Value.ParsedMessage();
+		return new CallState(await EvaluateArgument(defaultValue.Value)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "caseall", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
+		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
 
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
@@ -726,17 +746,18 @@ public partial class Functions
 
 		foreach (var (expressionKv, listKv) in args)
 		{
-			var expression = await expressionKv.Value.ParsedMessage();
+			var expression = await EvaluateArgument(expressionKv.Value);
 
 			if (arg0!.ToPlainText() == expression!.ToPlainText())
 			{
-				list.Add(await listKv.Value.ParsedMessage() ?? MarkupText.Empty);
+				list.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
 			}
 		}
 
-		return list.Count != 0
+		return new CallState(list.Count != 0
 			? MarkupText.Concat(list)
-			: await defaultValue.Value.ParsedMessage();
+			: await EvaluateArgument(defaultValue.Value))
+		{ HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "center", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
@@ -819,21 +840,25 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var pairCount = args.Count / 2;
 		var results = new List<MString>();
+		var hadErrors = false;
 		for (var i = 0; i < pairCount; i++)
 		{
 			var condition = await parser.FunctionParse(args[(i * 2).ToString()].Message!);
+			hadErrors |= condition?.HadErrors == true;
 			if (condition?.Message.Truthy(parser) == !negate)
 			{
 				var result = await parser.FunctionParse(args[(i * 2 + 1).ToString()].Message!);
-				if (!all) return result ?? CallState.Empty;
+				hadErrors |= result?.HadErrors == true;
+				if (!all) return (result ?? CallState.Empty) with { HadErrors = hadErrors };
 				// Keep an empty selected result: the default runs only if no condition matched.
 				results.Add(result?.Message ?? MarkupText.Empty);
 			}
 		}
-		if (results.Count > 0) return MarkupText.Concat(results);
-		return args.Count % 2 == 1
+		if (results.Count > 0) return new CallState(MarkupText.Concat(results)) { HadErrors = hadErrors };
+		var fallback = args.Count % 2 == 1
 			? await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!) ?? CallState.Empty
 			: CallState.Empty;
+		return fallback with { HadErrors = hadErrors || fallback.HadErrors };
 	}
 
 	[SharpFunction(Name = "cond", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...|result...", "default"])]
@@ -971,10 +996,18 @@ public partial class Functions
 	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
 	public async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
+		var listResult = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var listArg = listResult.Message ?? MarkupText.Empty;
+		var hadErrors = listResult.HadErrors;
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var args = parser.CurrentState.Arguments;
+		var delimiterResult = args.TryGetValue("2", out var delimiterArg) && delimiterArg.Message!.Length > 0
+			? await delimiterArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
+		var delim = delimiterResult.Message ?? MarkupText.Empty;
+		var separatorResult = args.TryGetValue("3", out var separatorArg) && separatorArg.Message!.Length > 0
+			? await separatorArg.GetParsedResultAsync() : new CallState(delim);
+		var sep = separatorResult.Message ?? MarkupText.Empty;
+		hadErrors |= delimiterResult.HadErrors || separatorResult.HadErrors;
 		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
@@ -993,9 +1026,10 @@ public partial class Functions
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
 			var parsed = modifiedPattern != null
-				? (await parser.FunctionParse(modifiedPattern))?.Message
-				: await patternArg.ParsedMessage();
-			result.Add(parsed!);
+				? await parser.FunctionParse(modifiedPattern)
+				: await patternArg.GetParsedResultAsync();
+			hadErrors |= parsed?.HadErrors == true;
+			result.Add(parsed?.Message ?? MarkupText.Empty);
 
 			if (wrappedIteration.Break)
 			{
@@ -1005,7 +1039,7 @@ public partial class Functions
 
 		parser.CurrentState.IterationRegisters.TryPop(out _);
 
-		return new CallState(MarkupText.Join(sep, result));
+		return new CallState(MarkupText.Join(sep, result)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1369,8 +1403,8 @@ public partial class Functions
 	[SharpFunction(Name = "if", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["boolean", "true-value", "false-value"])]
 	public async ValueTask<CallState> If(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
-		var truthy = parsedIfElse!.Truthy(parser);
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var truthy = parsedIfElse.Message.Truthy(parser);
 		var result = CallState.Empty;
 
 		if (truthy)
@@ -1382,16 +1416,16 @@ public partial class Functions
 			result = await parser.FunctionParse(arg2.Message!);
 		}
 
-		return result!;
+		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
 	}
 
 	[SharpFunction(Name = "ifelse", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["expression"])]
 	public async ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var parsedIfElse = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
 		var ifCase = parser.CurrentState.Arguments["1"].Message!;
 		var elseCase = parser.CurrentState.Arguments["2"].Message!;
-		var truthy = parsedIfElse!.Truthy(parser);
+		var truthy = parsedIfElse.Message.Truthy(parser);
 		CallState? result;
 
 		if (truthy)
@@ -1403,7 +1437,7 @@ public partial class Functions
 			result = await parser.FunctionParse(elseCase);
 		}
 
-		return result!;
+		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
 	}
 
 	[SharpFunction(Name = "lcstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1747,7 +1781,15 @@ public partial class Functions
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
+		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 
@@ -1757,11 +1799,11 @@ public partial class Functions
 		{
 			foreach (var (expressionKv, listKv) in args)
 			{
-				var expression = await expressionKv.Value.ParsedMessage();
+				var expression = await EvaluateArgument(expressionKv.Value);
 
 				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
 				{
-					return await listKv.Value.ParsedMessage();
+					return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
 				}
 
 				if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
@@ -1781,11 +1823,11 @@ public partial class Functions
 					? decimalExpression > arg0AsDecimal
 					: decimalExpression < arg0AsDecimal)
 				{
-					return await listKv.Value.ParsedMessage();
+					return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
 				}
 			}
 
-			return await defaultValue.Value.ParsedMessage();
+			return new CallState(await EvaluateArgument(defaultValue.Value)) { HadErrors = hadErrors };
 		}
 		finally
 		{
@@ -1797,7 +1839,15 @@ public partial class Functions
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
 	public async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
+		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
 		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
 		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
 		var resultList = new List<MString>();
@@ -1808,11 +1858,11 @@ public partial class Functions
 		{
 			foreach (var (expressionKv, listKv) in args)
 			{
-				var expression = await expressionKv.Value.ParsedMessage();
+				var expression = await EvaluateArgument(expressionKv.Value);
 
 				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
 				{
-					resultList.Add(await listKv.Value.ParsedMessage() ?? MarkupText.Empty);
+					resultList.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
 					continue;
 				}
 
@@ -1833,13 +1883,14 @@ public partial class Functions
 					? decimalExpression > arg0AsDecimal
 					: decimalExpression < arg0AsDecimal)
 				{
-					resultList.Add(await listKv.Value.ParsedMessage() ?? MarkupText.Empty);
+					resultList.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
 				}
 			}
 
-			return resultList.Count != 0
+			return new CallState(resultList.Count != 0
 				? MarkupText.Concat(resultList)
-				: await defaultValue.Value.ParsedMessage();
+				: await EvaluateArgument(defaultValue.Value))
+			{ HadErrors = hadErrors };
 		}
 		finally
 		{

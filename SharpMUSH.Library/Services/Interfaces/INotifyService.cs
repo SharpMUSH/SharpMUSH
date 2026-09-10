@@ -34,6 +34,10 @@ public interface INotifyService
 
 	ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
+	/// <summary>Publishes a prompt only to the captured transport incarnation.</summary>
+	ValueTask PromptToSession(long handle, string sessionId, OneOf<MString, string> what)
+		=> throw new NotSupportedException("This notifier does not support incarnation-bound prompts.");
+
 	ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
 
 	ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender = null, NotificationType type = NotificationType.Announce);
@@ -76,6 +80,10 @@ public interface INotifyService
 	/// Sends a locale-aware notification to a single connection handle.
 	/// </summary>
 	ValueTask NotifyLocalized(long handle, string key, params object[] args);
+
+	/// <summary>Publishes a localized status only to the captured transport incarnation.</summary>
+	ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
+		=> throw new NotSupportedException("This notifier does not support incarnation-bound status output.");
 
 	/// <summary>
 	/// Sends a locale-aware notification to all connections for a DBRef, recording the sender.

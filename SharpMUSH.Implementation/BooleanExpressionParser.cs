@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Models;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Implementation;
@@ -114,7 +115,22 @@ public class BooleanExpressionParser(
 
 		SharpMUSHBooleanExpressionVisitor visitor = new(services, mediator);
 
-		return visitor.Visit(chatContext);
+		var predicate = visitor.Visit(chatContext);
+		// Cached delegates capture only the expression. A budget belongs to each invocation.
+		return (gated, unlocker) =>
+		{
+			var budget = ExecutionBudget.Current;
+			if (budget is null) return predicate(gated, unlocker);
+			budget.ThrowIfExceeded();
+			return EvaluateWithinBudget(predicate(gated, unlocker), budget);
+		};
+	}
+
+	private static async ValueTask<bool> EvaluateWithinBudget(ValueTask<bool> pending, ExecutionBudget budget)
+	{
+		var result = await pending;
+		budget.ThrowIfExceeded();
+		return result;
 	}
 
 	/// <summary>

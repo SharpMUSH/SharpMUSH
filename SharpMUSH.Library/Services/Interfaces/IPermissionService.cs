@@ -6,22 +6,20 @@ namespace SharpMUSH.Library.Services.Interfaces;
 public interface IPermissionService
 {
 	/// <summary>
-	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). Real bit values, because
-	/// <see cref="PermissionService.CanInteract"/> tests them with <c>HasFlag</c>.
+	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). <c>can_interact</c>
+	/// (<c>src/utils.c:832</c>) compares the type for equality, never as a bitmask, so these are
+	/// plain ordinals and not bit values.
 	/// </summary>
-	[Flags]
 	enum InteractType
 	{
 		/// <summary>
 		/// No interaction gate at all — PennMUSH's <c>flags = 0</c>, which several <c>did_it_with</c>
-		/// call sites pass deliberately (<c>src/move.c:634</c>, <c>:685</c>).
+		/// call sites pass deliberately (<c>src/move.c:634</c>, <c>:685</c>). Numbered outside the
+		/// published plugin ABI's ascending block so a future Penn type can take the next ordinal.
 		/// </summary>
-		None = 0x0,
-		See = 0x1,
-		Hear = 0x2,
-		Match = 0x4,
-		Presence = 0x8,
-		Page = 0x10
+		None = -1,
+		// Published plugin ABI: these ordinals are fixed and must not be renumbered.
+		See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4
 	}
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
@@ -60,6 +58,10 @@ public interface IPermissionService
 
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type);
 
+	/// <summary>Checks the executor's interaction permissions while hearing the effective message source.</summary>
+	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type,
+		AnySharpObject hearingSource) => CanInteract(interactor, interacted, type);
+
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
 	/// <summary>
@@ -85,7 +87,12 @@ public interface IPermissionService
 
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
-	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit);
+	/// <summary>
+	/// PennMUSH <c>could_doit</c> (<c>src/predicat.c:75</c>) as <c>do_move</c> uses it
+	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover, plus the
+	/// reality gate on both the exit and where it leads.
+	/// </summary>
+	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination);
 
 	/// <summary>
 	/// PennMUSH <c>Can_Locate</c> (<c>hdrs/mushdb.h:75</c>): may <paramref name="who"/> tell where

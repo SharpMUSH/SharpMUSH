@@ -1,3 +1,5 @@
+﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Definitions;
 using DotNext;
@@ -315,16 +317,18 @@ public partial class Functions
 		var delimArg = args[(args.Count - 1).ToString()];
 		var delimParsed = await parser.FunctionParse(delimArg.Message!);
 		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
+		var hadErrors = delimParsed?.HadErrors == true;
 
 		var truthyValues = new List<MString>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
 			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
+			hadErrors |= parsed?.HadErrors == true;
 			var value = parsed?.Message ?? MarkupText.Empty;
 			if (value.Truthy(parser)) truthyValues.Add(value);
 		}
 
-		return new CallState(MarkupText.Join(delimiter, truthyValues));
+		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -408,21 +412,22 @@ public partial class Functions
 			outputFormat = (formatArg.Message ?? MarkupText.Empty).ToPlainText().ToLower();
 		}
 
+		var hadErrors = false;
 		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		for (int i = 0; i < iterations; i++)
 		{
-			await parser.FunctionParse(code);
+			hadErrors |= (await parser.FunctionParse(code))?.HadErrors == true;
 		}
 		stopwatch.Stop();
 
 		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
 		if (outputFormat == "s" || outputFormat == "seconds")
 		{
-			return new CallState((elapsed / 1000.0).ToString("F6"));
+			return new CallState((elapsed / 1000.0).ToString("F6")) { HadErrors = hadErrors };
 		}
 		else
 		{
-			return new CallState(elapsed.ToString("F3"));
+			return new CallState(elapsed.ToString("F3")) { HadErrors = hadErrors };
 		}
 	}
 
@@ -702,7 +707,7 @@ public partial class Functions
 		// Fall back to user-defined attribute function only when object-data access is allowed.
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var result2 = await AttributeService.EvaluateAttributeFunctionAsync(
+		var result2 = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			executor,
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
@@ -712,12 +717,12 @@ public partial class Functions
 			ignoreLambda: true);
 
 		// If attribute lookup returned nothing, report function not found
-		if (result2 == null || result2.ToPlainText().Length == 0)
+		if (result2.Message is null || result2.Message.ToPlainText().Length == 0)
 		{
-			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND");
+			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND") { HadErrors = result2.HadErrors };
 		}
 
-		return new CallState(result2);
+		return result2;
 	}
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1383,7 +1388,7 @@ public partial class Functions
 				}
 
 				// Evaluates the code from the perspective of the target object
-				var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 					parser,
 					obj, // executor is the target object
 					code,
@@ -1392,13 +1397,22 @@ public partial class Functions
 					ignorePermissions: false,
 					ignoreLambda: true);
 
-				return new CallState(result);
+				return result;
 			});
 	}
 
 	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
+
+	private static async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveProjectionRealityAsync(
+		IMUSHCodeParser parser, DBRef receiver)
+	{
+		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		return reality is IRealityObservationProvider observations
+			? await observations.ObserveAsync(receiver, ExecutionBudget.CurrentToken)
+			: (target, token) => reality.CanPerceiveAsync(receiver, target, token);
+	}
 
 	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1491,9 +1505,11 @@ public partial class Functions
 			}
 		}
 
+		var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
 		var uniqueObjects = objectsToScan
 			.Distinct()
-			.ToAsyncEnumerable();
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) => await perceive(obj.Object().DBRef, ExecutionBudget.CurrentToken));
 
 		var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,

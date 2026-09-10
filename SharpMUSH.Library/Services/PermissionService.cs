@@ -3,6 +3,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -11,9 +12,23 @@ namespace SharpMUSH.Library.Services;
 public class PermissionService(
 	ILockService lockService,
 	IOptionsMonitor<SharpMUSHOptions> options,
+	IRealityPolicy reality,
 	IConnectionService connectionService,
 	Lazy<IAttributeService> attributeService) : IPermissionService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options)
+		: this(lockService, options, DisabledRealityPolicy.Instance) { }
+
+	/// <summary>
+	/// Retains the published reality-aware constructor for legacy callers. <see cref="IsHearer"/> is
+	/// the only member that needs the two remaining dependencies, and it postdates this signature, so
+	/// nothing bound to it can reach them.
+	/// </summary>
+	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
+		IRealityPolicy reality)
+		: this(lockService, options, reality, null!, null!) { }
+
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 
@@ -232,6 +247,7 @@ public class PermissionService(
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target)
 	{
+		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -242,6 +258,7 @@ public class PermissionService(
 
 	public async ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target)
 	{
+		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -319,6 +336,7 @@ public class PermissionService(
 
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
 	{
+		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
 		{
 			return true;
@@ -446,11 +464,21 @@ public class PermissionService(
 			 || ((await target.IsVisual() || lockFlags.HasFlag(LockService.LockFlags.Visual))
 				 && await lockService.Evaluate(LockType.Examine, target, viewer));
 
-	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+	public ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to, IPermissionService.InteractType type)
+		=> CanInteract(from, to, type, from);
+
+	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to,
+		IPermissionService.InteractType type, AnySharpObject hearingSource)
 	{
+		// can_interact (src/utils.c:832) compares the type, so the routing does too: only Hear
+		// (and SharpMUSH's Page, which is a directed hearing) look from the receiver back at the
+		// source. Presence, See and Match run in the sender's direction.
+		var hear = type is IPermissionService.InteractType.Hear or IPermissionService.InteractType.Page;
+		if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? hearingSource : to).Object().DBRef)) return false;
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
-		if (type.HasFlag(IPermissionService.InteractType.Hear) && !await lockService.Evaluate(LockType.Interact, to, from))
+		// src/utils.c:855 — `(type == INTERACT_HEAR)`, an equality test, not a bitmask.
+		if (type == IPermissionService.InteractType.Hear && !await lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
 		return true;
@@ -500,15 +528,15 @@ public class PermissionService(
 
 	/// <summary>
 	/// PennMUSH <c>could_doit</c> (<c>src/predicat.c:75</c>) as <c>do_move</c> uses it
-	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover.
+	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover, gated by the
+	/// reality policy on both the exit itself and the room it leads to.
 	/// </summary>
-	/// <remarks>
-	/// The destination takes no part in the decision, and is not asked for: Penn resolves it only
-	/// after <c>could_doit</c> has passed, so nothing about where the exit leads can influence
-	/// whether it may be walked.
-	/// </remarks>
-	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit)
-		=> PassesLock(who, new AnySharpObject(exit), LockType.Basic);
+	public async ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	{
+		if (!await reality.CanPerceiveAsync(who.Object().DBRef, exit.Object.DBRef)
+				|| !await reality.CanPerceiveAsync(who.Object().DBRef, destination.Object().DBRef)) return false;
+		return await lockService.Evaluate(LockType.Basic, exit, who);
+	}
 
 	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>
 	public bool ChannelOkType(AnySharpObject target, SharpChannel channel)

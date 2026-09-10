@@ -1,0 +1,97 @@
+@page "/admin/jobs"
+@using System.Net.Http.Json
+@using System.Text.Json
+@using SharpMUSH.Library.Models.RecurringJobs
+@attribute [Authorize]
+@implements IDisposable
+@inject IHttpClientFactory ClientFactory
+@inject AuthenticationStateProvider Authentication
+@inject IAuthorizationService Authorization
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["JobsTitle"]</PageTitle>
+<section class="jobs">
+    <MudText Typo="Typo.h4">@Loc["JobsTitle"]</MudText>
+    <MudText>@Loc["JobsIntro"]</MudText>
+    @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
+    <AuthorizeView Policy="jobs.manage"><Authorized><MudCheckBox @bind-Value="_all" Label="@Loc["JobsAll"]" /></Authorized></AuthorizeView>
+    <MudButton OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</MudButton>
+    <AuthorizeView Policy="jobs.manage.own"><Authorized>
+        <div class="jobs-form">
+            <MudText Typo="Typo.h6">@Loc["JobsCreate"]</MudText>
+            <MudTextField @bind-Value="_target" Label="@Loc["JobsTarget"]" />
+            <MudTextField @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
+            <MudTextField @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
+            <MudTextField @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
+            <MudTextField @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
+            <MudText Typo="Typo.caption">@Loc["JobsScheduleHelp"]</MudText>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
+        </div>
+    </Authorized></AuthorizeView>
+    @if (_jobs.Length == 0) { <MudText>@Loc["JobsEmpty"]</MudText> }
+    @foreach (var job in _jobs)
+    {
+        <article class="jobs-entry" @key="job.Id">
+            <MudText Typo="Typo.h6">@job.Description</MudText>
+            <code>@job.Id</code>
+            <MudText>@job.Target/@job.Attribute</MudText>
+            <MudText>@Loc["JobsOwner"]: @job.OwnerAccount · @job.Character</MudText>
+            <MudText>@job.Schedule · @job.TimeZone · @Loc["JobsStatus_" + job.Status]</MudText>
+            <MudText>@Loc["JobsNext"]: @Time(job.NextRun) · @Loc["JobsLast"]: @Time(job.LastRun)</MudText>
+            @if (job.LastError is not null) { <MudAlert Severity="Severity.Warning">@job.LastError</MudAlert> }
+            <div class="jobs-actions">
+                <MudButton OnClick="@(() => Toggle(job))" Disabled="_busy">@Loc[job.Enabled ? "JobsDisable" : "JobsEnable"]</MudButton>
+                <MudButton OnClick="@(() => Select(job))" Disabled="_busy">@Loc["JobsEdit"]</MudButton>
+                <MudButton Color="Color.Error" OnClick="@(() => Delete(job))" Disabled="_busy">@Loc["JobsDelete"]</MudButton>
+            </div>
+            @if (_selected == job.Id)
+            {
+                <MudTextField @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
+                <MudTextField @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
+                <MudButton Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
+            }
+        </article>
+    }
+</section>
+
+@code {
+    private HttpClient? _api;
+    private HttpClient Api => _api ??= ClientFactory.CreateClient("api");
+    public void Dispose() => _api?.Dispose();
+    private RecurringJob[] _jobs = [];
+    private string _target = "", _attribute = "", _description = "", _schedule = "0 9 * * *", _zone = "UTC";
+    private string _editSchedule = "", _editZone = "";
+    private string? _error, _selected;
+    private bool _all, _busy;
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await Authentication.GetAuthenticationStateAsync()).User;
+        _all = !(await Authorization.AuthorizeAsync(user, "jobs.manage.own")).Succeeded
+            && (await Authorization.AuthorizeAsync(user, "jobs.manage")).Succeeded;
+        await Load();
+    }
+    private static string Time(long? value) => value is { } time ? DateTimeOffset.FromUnixTimeMilliseconds(time).ToString("u") : "—";
+    private async Task Refresh() => _jobs = await Read<RecurringJob[]>(await Api.GetAsync("api/recurring-jobs?all=" + _all.ToString().ToLowerInvariant())) ?? [];
+    private Task Load() => Run(Refresh);
+    private Task Create() => Run(async () => { if (await Read<RecurringJob>(await Api.PostAsJsonAsync("api/recurring-jobs", new RecurringJobRequest(_target, _attribute, _schedule, _zone, _description))) is not null) await Refresh(); });
+    private Task Delete(RecurringJob job) => Run(async () => { if (await Read<bool>(await Api.DeleteAsync("api/recurring-jobs/" + job.Id))) await Refresh(); });
+    private Task Toggle(RecurringJob job) => Run(async () => { if (await Read<RecurringJob>(await Api.PutAsJsonAsync("api/recurring-jobs/" + job.Id, new { job.Schedule, job.TimeZone, Enabled = !job.Enabled })) is not null) await Refresh(); });
+    private void Select(RecurringJob job) { _selected = job.Id; _editSchedule = job.Schedule; _editZone = job.TimeZone; }
+    private Task Save(RecurringJob job) => Run(async () => { if (await Read<RecurringJob>(await Api.PutAsJsonAsync("api/recurring-jobs/" + job.Id, new { Schedule = _editSchedule, TimeZone = _editZone, job.Enabled })) is not null) { _selected = null; await Refresh(); } });
+    private async Task<T?> Read<T>(HttpResponseMessage response)
+    {
+        using var responseLifetime = response;
+        if (response.IsSuccessStatusCode) return await response.Content.ReadFromJsonAsync<T>();
+        var body = await response.Content.ReadAsStringAsync();
+        try { using var document = JsonDocument.Parse(body); _error = document.RootElement.TryGetProperty("error", out var error) ? error.GetString() : Loc["JobsFailed"]; }
+        catch (JsonException) { _error = Loc["JobsFailed"]; }
+        return default;
+    }
+    private async Task Run(Func<Task> action)
+    {
+        _busy = true; _error = null;
+        try { await action(); }
+        catch (HttpRequestException) { _error = Loc["JobsFailed"]; }
+        finally { _busy = false; }
+    }
+}

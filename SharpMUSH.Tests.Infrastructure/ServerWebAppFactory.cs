@@ -38,6 +38,9 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
+	/// <summary>Integration fixtures can retain the production sender/perception pipeline.</summary>
+	protected virtual bool UseRealNotifications => false;
+
 	public new IServiceProvider Services => _server!.Services;
 
 	/// <summary>
@@ -244,7 +247,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			TestHelpers.CreateNotifyServiceSubstitute(Notifications),
+			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications),
 			_sqlPlatform);
 
 		var provider = _server.Services;

@@ -860,13 +860,13 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		var matches = await SearchSpecEngine.ExecuteAsync(
+		var search = await SearchSpecEngine.ExecuteResultAsync(
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, classObj?.Object().DBRef, pairs, useRegex);
 
-		var finalResults = matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
+		var finalResults = search.Matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
 
-		return new CallState(string.Join(" ", finalResults));
+		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
@@ -916,6 +916,7 @@ public partial class Functions
 		}
 
 		var resultList = new List<string>();
+		var hadErrors = false;
 
 		foreach (var item in namelist)
 		{
@@ -982,18 +983,19 @@ public partial class Functions
 
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
-					await AttributeService.EvaluateAttributeFunctionAsync(
+					var callbackResult = await AttributeService.EvaluateAttributeFunctionResultAsync(
 						parser, executor, callbackObject, string.Join("`", callbackAttribute),
 						new Dictionary<string, CallState>
 						{
 							["0"] = new(MarkupText.Plain(originalName)),
 							["1"] = new(MarkupText.Plain($"#{errorCode}"))
 						});
+					hadErrors |= callbackResult.HadErrors;
 				}
 			}
 		}
 
-		return string.Join(" ", resultList);
+		return new CallState(string.Join(" ", resultList)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

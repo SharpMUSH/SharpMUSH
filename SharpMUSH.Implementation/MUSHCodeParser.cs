@@ -204,12 +204,41 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private static bool ContainsRestrictedEntryPoint(BufferedTokenSpanStream tokens,
 		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
 	{
-		foreach (var token in tokens.tokens)
+		for (var index = 0; index < tokens.tokens.Count; index++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var token = tokens.tokens[index];
 			if (token.Type != SharpMUSHLexer.FUNCHAR) continue;
 			var name = token.Text.TrimEnd()[..^1];
-			if (functions.TryGetValue(name, out var definition)
-				&& definition.LibraryInformation.RestrictedOperation is "restrictedexpr" or "fn") return true;
+			if (!functions.TryGetValue(name, out var definition)) continue;
+			if (definition.LibraryInformation.RestrictedOperation == "restrictedexpr") return true;
+			if (definition.LibraryInformation.RestrictedOperation != "fn") continue;
+
+			// Resolve only literal target names, using the same audited operation identities as
+			// dispatch. Unknown or dynamic targets remain conservative; no evaluation or object
+			// lookup is permitted before deciding whether the input may be traced.
+			var uncertain = false;
+			IEnumerable<string> LiteralTargets()
+			{
+				for (var targetIndex = index + 1; targetIndex < tokens.tokens.Count; targetIndex += 2)
+				{
+					ExecutionBudget.Current?.ThrowIfExceeded();
+					var target = tokens.tokens[targetIndex];
+					var nextType = targetIndex + 1 < tokens.tokens.Count ? tokens.tokens[targetIndex + 1].Type : TokenConstants.EOF;
+					if (target.Type != SharpMUSHLexer.OTHER
+						|| nextType is not (SharpMUSHLexer.COMMAWS or SharpMUSHLexer.CPAREN or TokenConstants.EOF)
+						|| !functions.ContainsKey(target.Text))
+					{
+						uncertain = true;
+						yield break;
+					}
+					yield return target.Text;
+					if (nextType != SharpMUSHLexer.COMMAWS) break;
+				}
+				uncertain = true;
+			}
+			if (EvaluationRestrictions.BeginsRestrictedEvaluation(definition.LibraryInformation, LiteralTargets(), functions)
+				|| uncertain) return true;
 		}
 		return false;
 	}
@@ -238,7 +267,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		// Token inspection precedes ANTLR tracing, including malformed input with no visitor.
-		// Indirect calls may select the restricted wrapper, so suppress their parser diagnostics too.
+		// Literal indirect chains use the same restricted-entry classification as dispatch.
 		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
 			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
@@ -362,8 +391,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
-		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+		TContext context;
+		ParserErrorListener errorListener;
+		try
+		{
+			(context, errorListener) = ParseTwoStage(
+				bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+		}
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{
+			// Parsing and diagnostic classification share the visitor's deadline contract.
+			return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
+		}
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
@@ -531,7 +570,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
 			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
+			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"), executorObj);
 		}
 	}
 
@@ -607,16 +646,25 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)));
+			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true });
 		}
 
-		var (chatContext, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
+		SharpMUSHParser.StartCommandStringContext chatContext;
+		ParserErrorListener errorListener;
+		try
+		{
+			(chatContext, errorListener) = ParseTwoStage(
+				bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
+		}
+		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExpired == true)
+		{
+			return () => ValueTask.FromResult<CallState?>(new CallState(ExecutionBudget.Error) { HadErrors = true });
+		}
 
 		if (errorListener.HasErrors)
 		{
 			var failureText = MarkupText.Plain(errorListener.Errors[0].ToMushFailureString());
-			return () => ValueTask.FromResult<CallState?>(new CallState(failureText));
+			return () => ValueTask.FromResult<CallState?>(new CallState(failureText) { HadErrors = true });
 		}
 
 		// Clear DirectInput for the same reason as CommandListParse: this visitor is always

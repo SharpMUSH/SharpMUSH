@@ -45,7 +45,7 @@ public partial class Functions
 		if (readable.IsError) return new CallState(readable.AsError.Value);
 		if (readable.IsNone) return new CallState(ErrorMessages.Returns.NoSuchAttribute);
 		var arguments = Enumerable.Range(0, argumentCount).ToDictionary(i => i.ToString(), i => parser.CurrentState.Arguments[(i + 1).ToString()]);
-		return new CallState(await AttributeService.EvaluateAttributeFunctionAsync(parser, caller, target.Known,
-			entry.Attribute, arguments, evalParent: false));
+		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, caller, target.Known,
+			entry.Attribute, arguments, evalParent: false);
 	}
 }

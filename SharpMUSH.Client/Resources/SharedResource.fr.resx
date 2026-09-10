@@ -3739,4 +3739,62 @@
   </data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>La règle explicite de priorité la plus élevée décide ; le refus gagne en cas d’égalité. L’héritage s’applique uniquement en l’absence de règle explicite. Sans autorisation, l’accès est refusé. Les administrateurs délégués ne peuvent gérer que leurs autorisations de priorité inférieure, sans modifier leurs propres rôles ni restrictions.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Accès actuel : {0} ; priorité {1} ; rôles {2} ; décision {3}.</value></data>
+  <data name="DiagTitle" xml:space="preserve"><value>Diagnostic des files</value></data>
+  <data name="DiagDescription" xml:space="preserve"><value>Consultez les tâches autorisées et leurs résultats récents. Historique de 15 minutes, effacé au redémarrage.</value></data>
+  <data name="DiagPid" xml:space="preserve"><value>PID</value></data>
+  <data name="DiagSource" xml:space="preserve"><value>Source / attribut</value></data>
+  <data name="DiagOwner" xml:space="preserve"><value>Propriétaire</value></data>
+  <data name="DiagKind" xml:space="preserve"><value>Type</value></data>
+  <data name="DiagStatus" xml:space="preserve"><value>État</value></data>
+  <data name="DiagEnqueued" xml:space="preserve"><value>En file (UTC)</value></data>
+  <data name="DiagStarted" xml:space="preserve"><value>Début (UTC)</value></data>
+  <data name="DiagEnded" xml:space="preserve"><value>Fin (UTC)</value></data>
+  <data name="DiagWait" xml:space="preserve"><value>Attente (ms)</value></data>
+  <data name="DiagElapsed" xml:space="preserve"><value>Exécution écoulée (ms)</value></data>
+  <data name="DiagInvocations" xml:space="preserve"><value>Appels</value></data>
+  <data name="DiagEmpty" xml:space="preserve"><value>Aucune entrée visible.</value></data>
+  <data name="DiagCharacter" xml:space="preserve"><value>Consulter avec le personnage</value></data>
+  <data name="DiagSelectCharacter" xml:space="preserve"><value>Choisir un personnage lié</value></data>
+  <data name="DiagLoading" xml:space="preserve"><value>Chargement du diagnostic…</value></data>
+  <data name="DiagActive" xml:space="preserve"><value>File active</value></data>
+  <data name="DiagHistory" xml:space="preserve"><value>Résultats récents</value></data>
+  <data name="DiagActiveTruncated" xml:space="preserve"><value>Affichage des 100 premières entrées actives visibles.</value></data>
+  <data name="DiagOlder" xml:space="preserve"><value>Entrées précédentes</value></data>
+  <data name="DiagProfile" xml:space="preserve"><value>Profil des appels</value></data>
+  <data name="DiagInclusiveHelp" xml:space="preserve"><value>Le temps inclusif comprend les appels imbriqués et les attentes. Ce n’est pas du temps processeur et il ne doit pas être ajouté au temps d’exécution de la file. Limites : 256 clés et 4 096 échantillons en attente.</value></data>
+  <data name="DiagSeconds" xml:space="preserve"><value>Durée (1–300 secondes)</value></data>
+  <data name="DiagStart" xml:space="preserve"><value>Démarrer un profil</value></data>
+  <data name="DiagStop" xml:space="preserve"><value>Arrêter le profil</value></data>
+  <data name="DiagRecording" xml:space="preserve"><value>Enregistrement</value></data>
+  <data name="DiagStopped" xml:space="preserve"><value>Arrêté</value></data>
+  <data name="DiagExpires" xml:space="preserve"><value>Fin prévue de l’enregistrement (UTC)</value></data>
+  <data name="DiagName" xml:space="preserve"><value>Fonction / commande</value></data>
+  <data name="DiagFailures" xml:space="preserve"><value>Échecs</value></data>
+  <data name="DiagInclusive" xml:space="preserve"><value>Total inclusif (ms)</value></data>
+  <data name="DiagMaximum" xml:space="preserve"><value>Appel maximal (ms)</value></data>
+  <data name="DiagDenied" xml:space="preserve"><value>Ce personnage ne peut pas consulter ce diagnostic.</value></data>
+  <data name="DiagError" xml:space="preserve"><value>Impossible de charger le diagnostic. Actualisez pour réessayer.</value></data>
+  <data name="DiagDurationError" xml:space="preserve"><value>Choisissez une durée de 1 à 300 secondes.</value></data>
+  <data name="DiagKind_direct-input" xml:space="preserve"><value>Saisie directe</value></data>
+  <data name="DiagKind_enqueue" xml:space="preserve"><value>Commande en file</value></data>
+  <data name="DiagKind_semaphore" xml:space="preserve"><value>Sémaphore</value></data>
+  <data name="DiagKind_delay" xml:space="preserve"><value>Commande différée</value></data>
+  <data name="DiagKind_other" xml:space="preserve"><value>Autre</value></data>
+  <data name="DiagKind_Function" xml:space="preserve"><value>Fonction</value></data>
+  <data name="DiagKind_Command" xml:space="preserve"><value>Commande</value></data>
+  <data name="DiagStatus_Pending" xml:space="preserve"><value>En attente</value></data>
+  <data name="DiagStatus_Paused" xml:space="preserve"><value>En pause</value></data>
+  <data name="DiagStatus_Ready" xml:space="preserve"><value>Prêt</value></data>
+  <data name="DiagStatus_Running" xml:space="preserve"><value>En cours</value></data>
+  <data name="DiagStatus_Completed" xml:space="preserve"><value>Terminé</value></data>
+  <data name="DiagStatus_InvocationFailure" xml:space="preserve"><value>Échec d’appel</value></data>
+  <data name="DiagStatus_Failed" xml:space="preserve"><value>Échec</value></data>
+  <data name="DiagStatus_Cancelled" xml:space="preserve"><value>Annulé</value></data>
+  <data name="DiagStatus_ExecutionLimit" xml:space="preserve"><value>Limite d’exécution</value></data>
+  <data name="DiagStatus_GlobalLimit" xml:space="preserve"><value>Limite globale</value></data>
+  <data name="DiagStatus_OwnerLimit" xml:space="preserve"><value>Limite du propriétaire</value></data>
+  <data name="DiagStatus_InvalidTarget" xml:space="preserve"><value>Cible invalide</value></data>
+  <data name="DiagStatus_ShuttingDown" xml:space="preserve"><value>Arrêt en cours</value></data>
+  <data name="DiagStatus_ScheduleFailed" xml:space="preserve"><value>Échec de planification</value></data>
+  <data name="DiagUnsupported" xml:space="preserve"><value>Cet ordonnanceur ne prend pas en charge le diagnostic de la file.</value></data>
 </root>

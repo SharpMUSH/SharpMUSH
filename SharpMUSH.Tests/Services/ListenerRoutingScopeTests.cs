@@ -55,7 +55,7 @@ public class ListenerRoutingScopeTests
 			lockService,
 			Substitute.For<IConnectionService>(),
 			serviceProvider,
-			Substitute.For<IMessageBus>());
+			Substitute.For<IMessageBus>(), DisabledRealityPolicy.Instance);
 	}
 
 	/// <summary>Resolves any object this test made, so the service can look its target up.</summary>

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Mediator;
 using MarkupString;
 using MarkupString.Html;
@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -23,6 +24,7 @@ public class LookService(
 	IPermissionService permissionService,
 	IDidItService didItService,
 	IConnectionService connectionService,
+	IRealityPolicy reality,
 	ILocalizationService localizationService) : ILookService
 {
 	public async ValueTask<CallState> LookRoom(
@@ -39,6 +41,14 @@ public class LookService(
 		}
 
 		var realViewing = viewing.Known;
+
+		// Deviation from PennMUSH: the reality layer has no Penn counterpart. A room the looker
+		// cannot perceive answers as no match rather than as a room with nothing in it.
+		if (!await reality.CanPerceiveAsync(looker.Object().DBRef, realViewing.Object().DBRef))
+		{
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
 		var viewingObject = realViewing.Object();
 
 		// LOOK_CLOUDYTRANS (externs.h:248) is the mask of both transparent-exit bits, and look.c:458
@@ -74,9 +84,26 @@ public class LookService(
 			&& (realViewing.IsPlayer || realViewing.IsThing);
 		var usedIdesc = false;
 
+		// Deviation from PennMUSH: a reality layer may name its own description attribute, which
+		// takes precedence over @idescribe and @describe alike. Unlike those it is read as the
+		// looker, so the attribute's own permissions still apply.
+		var customDescription = false;
+		var layerDescription = await reality.DescriptionAttributeAsync(looker.Object().DBRef, viewingObject.DBRef);
+		if (layerDescription is not null)
+		{
+			var layerAttribute = await attributeService.GetAttributeAsync(looker, realViewing, layerDescription,
+				IAttributeService.AttributeMode.Read, true);
+			if (layerAttribute.IsAttribute
+					&& await permissionService.CanExecuteAttribute(looker, realViewing, layerAttribute.AsAttribute))
+			{
+				customDescription = true;
+				descriptionAttributeName = layerDescription;
+			}
+		}
+
 		if (showDescription)
 		{
-			if (tryIdesc)
+			if (tryIdesc && !customDescription)
 			{
 				var idescResult = await attributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
 					IAttributeService.AttributeMode.Read, true);
@@ -90,7 +117,7 @@ public class LookService(
 				}
 			}
 
-			if (!usedIdesc)
+			if (!usedIdesc && !customDescription)
 			{
 				var descResult = await attributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
 					IAttributeService.AttributeMode.Read, true);
@@ -111,7 +138,7 @@ public class LookService(
 					state => state with { Enactor = lookerEnactor },
 					lookParser => attributeService.EvaluateAttributeFunctionAsync(
 						lookParser, looker, realViewing, descriptionAttributeName,
-						new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true));
+						new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !customDescription));
 			}
 		}
 
@@ -241,54 +268,20 @@ public class LookService(
 
 		if (realViewing.IsContainer && (showInventory || showExits))
 		{
-			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer));
+			var allContents = mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
 
-			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
-			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
 			var canSeeAll = await looker.IsSee_All();
 
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
 
-			await foreach (var item in allContents)
+			var canSeeContent = await WorldVisibility.CreateScanAsync(
+				looker, realViewing, reality, connectionService, ExecutionBudget.CurrentToken);
+			await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
-				var itemObj = item.WithRoomOption();
-				var isDark = await itemObj.IsDarkLegal();
-				var isLight = await itemObj.IsLight();
-
-				bool visible;
-				if (isRoomLight)
-				{
-					visible = true;
-				}
-				else if (isRoomDark)
-				{
-					visible = canSeeAll || isLight;
-				}
-				else
-				{
-					visible = !isDark || canSeeAll;
-				}
-
-				if (visible)
-				{
-					if (item.IsExit)
-					{
-						if (!isDark || canSeeAll)
-						{
-							visibleExits.Add(item);
-						}
-					}
-					else
-					{
-						// Disconnected / portal-only players are "asleep" — omitted from contents (PennMUSH).
-						// Objects always show.
-						if (!item.IsPlayer || await connectionService.IsOnline(itemObj))
-						{
-							visibleContents.Add(item);
-						}
-					}
-				}
+				if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
+				if (item.IsExit) visibleExits.Add(item);
+				else visibleContents.Add(item);
 			}
 
 			if (showInventory && visibleContents.Count > 0)

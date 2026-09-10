@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -164,6 +165,10 @@ public interface ITaskScheduler
 	ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 
+	/// <summary>Whether work admitted with this original trigger name and group still owns a queued, running, or canceled reservation.</summary>
+	bool HasPendingWork(string triggerName, string group)
+		=> throw new NotSupportedException("This scheduler does not support pending-work inspection.");
+
 	// Additive admission and control APIs. Legacy implementations remain loadable and fail explicitly
 	// if a caller requests a feature they have not implemented.
 	ValueTask<IDisposable> EnterSemaphoreMutationAsync()
@@ -213,5 +218,20 @@ public interface ITaskScheduler
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 
 	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+	/// <summary>Admit an expired input callback under its initiating executor and normal queue budget.</summary>
+	ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session)
+		=> throw new NotSupportedException("This scheduler does not support guided input callbacks.");
+	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
+		=> throw new NotSupportedException("This scheduler does not support queue control.");
+	QueueEntrySnapshot? GetQueueEntry(long pid)
+		=> throw new NotSupportedException("This scheduler does not support queue control.");
+	ValueTask<QueueControlResult> PausePending(long pid, string reason)
+		=> throw new NotSupportedException("This scheduler does not support queue control.");
+	ValueTask<QueueControlResult> ResumePending(long pid)
+		=> throw new NotSupportedException("This scheduler does not support queue control.");
+	IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries()
+		=> throw new NotSupportedException("This scheduler does not support queue diagnostics.");
 }
