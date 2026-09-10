@@ -359,25 +359,21 @@ public partial class Commands
 			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
 		}
 
-		var aliases = allAliases.AsAttributes.ToList();
+		var aliases = allAliases.AsAttributes;
 
-		if (aliases.Count == 0)
+		if (aliases.Length == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor);
 			return new CallState(string.Empty);
 		}
 
-		var outputLines = new List<MString>();
-		foreach (var attr in aliases)
+		var outputLines = aliases.Select(attr =>
 		{
-			var attrName = attr.Name;
-			var aliasName = attrName.StartsWith("CHANALIAS`") ? attrName.AsSpan(10).ToString() : attrName;
-			var channelName = attr.Value;
+			var aliasName = attr.Name.StartsWith("CHANALIAS`") ? attr.Name[10..] : attr.Name;
+			return MarkupText.Concat(MarkupText.Plain($"{aliasName.ToLower()} : "), attr.Value);
+		});
 
-			outputLines.Add(MarkupText.Concat(MarkupText.Plain($"{aliasName.ToLower()} : "), channelName));
-		}
-
-		await NotifyService.Notify(executor, MarkupText.Concat(outputLines.ToArray()), executor);
+		await NotifyService.Notify(executor, MarkupText.Concat(outputLines), executor);
 		return new CallState(string.Empty);
 	}
 }

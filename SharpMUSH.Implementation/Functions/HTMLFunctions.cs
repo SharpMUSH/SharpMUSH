@@ -16,10 +16,8 @@ public partial class Functions
 	[SharpFunction(Name = "html", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly, ParameterNames = ["tag", "text..."])]
 	public ValueTask<CallState> HTML(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		return new ValueTask<CallState>(new CallState(
-			MarkupText.Concat(
-				MarkupText.Concat(MarkupText.Plain("<"), parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty),
-				MarkupText.Plain(">"))));
+		return new ValueTask<CallState>(new CallState(MarkupText.Concat(
+			[MarkupText.Plain("<"), parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty, MarkupText.Plain(">")])));
 	}
 
 	[SharpFunction(Name = "tag", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["tagname", "content", "attributes"])]

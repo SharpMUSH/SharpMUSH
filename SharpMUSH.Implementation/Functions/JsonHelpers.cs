@@ -81,16 +81,26 @@ public static class JsonHelpers
 
 		try
 		{
-			var sortedArgs = args
+			var elements = args
 				.Skip(1)
-				.Select(x => JsonDocument.Parse(x.Value.Message!.ToPlainText()).RootElement);
+				.Select(x => ParseElement(x.Value.Message!.ToPlainText()));
 
-			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(sortedArgs)));
+			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(elements)));
 		}
 		catch (JsonException)
 		{
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json")));
 		}
+	}
+
+	/// <summary>
+	/// One JSON value, cloned out of its document so the document and its pooled buffer are returned
+	/// as soon as it is read rather than when the finalizer gets to it.
+	/// </summary>
+	private static JsonElement ParseElement(string json)
+	{
+		using var document = JsonDocument.Parse(json);
+		return document.RootElement.Clone();
 	}
 
 	public static ValueTask<CallState> ObjectJSON(ImmutableSortedDictionary<string, CallState> args)
@@ -105,18 +115,17 @@ public static class JsonHelpers
 			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, "json")));
 		}
 
-		var sortedArgs = args.Select(x => x.Value.Message!).Skip(1);
-		var chunkedArgs = sortedArgs.Chunk(2).ToList();
-		var duplicateKeys = chunkedArgs.Select(x => x[0].ToPlainText()).Duplicates().ToList();
+		var pairs = args.Values.Select(x => x.Message!).Skip(1).Chunk(2).ToList();
+		var duplicateKeys = pairs.Select(x => x[0].ToPlainText()).Duplicates().ToList();
 
-		if (duplicateKeys.Any())
+		if (duplicateKeys.Count > 0)
 		{
 			return ValueTask.FromResult(new CallState($"#-1 DUPLICATE KEYS: {string.Join(", ", duplicateKeys)}"));
 		}
 
 		try
 		{
-			var dictionary = chunkedArgs.ToDictionary(x => x[0].ToPlainText(), x => JsonDocument.Parse(x[1].ToString()).RootElement);
+			var dictionary = pairs.ToDictionary(x => x[0].ToPlainText(), x => ParseElement(x[1].ToString()));
 			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
 		}
 		catch (JsonException)

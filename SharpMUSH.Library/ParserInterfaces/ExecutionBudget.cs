@@ -46,6 +46,39 @@ public sealed class ExecutionBudget : IDisposable
 		Ambient.Value = this;
 		return new Scope(previous);
 	}
+	/// <summary>Links a request lifetime to the current deadline without extending it.
+	/// The scope must remain active until awaited work or stream enumeration settles.</summary>
+	public static IDisposable EnterLinked(CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		Current?.ThrowIfExceeded();
+		if (!cancellationToken.CanBeCanceled || cancellationToken == CurrentToken)
+			return new Scope(Current);
+		return new LinkedScope(cancellationToken);
+	}
+
+	private sealed class LinkedScope : IDisposable
+	{
+		private readonly CancellationTokenSource _cancellation;
+		private readonly ExecutionBudget _budget;
+		private readonly IDisposable _scope;
+
+		public LinkedScope(CancellationToken token)
+		{
+			var remaining = Current?.Remaining ?? TimeSpan.MaxValue;
+			_cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, CurrentToken);
+			_budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, _cancellation.Token);
+			_scope = _budget.Enter();
+		}
+
+		public void Dispose()
+		{
+			_scope.Dispose();
+			_budget.Dispose();
+			_cancellation.Dispose();
+		}
+	}
+
 	private sealed class Scope(ExecutionBudget? previous) : IDisposable
 	{
 		public void Dispose() => Ambient.Value = previous;

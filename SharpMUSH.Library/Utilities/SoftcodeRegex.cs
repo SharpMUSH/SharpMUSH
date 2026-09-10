@@ -159,18 +159,7 @@ public static class SoftcodeRegex
 	}
 
 	/// <summary>How many <c>*</c> the pattern turned into, counted on the translated form.</summary>
-	private static int GlobGroups(string pattern)
-	{
-		var count = 0;
-		var at = pattern.IndexOf(GlobGroup, StringComparison.Ordinal);
-		while (at >= 0)
-		{
-			count++;
-			at = pattern.IndexOf(GlobGroup, at + GlobGroup.Length, StringComparison.Ordinal);
-		}
-
-		return count;
-	}
+	private static int GlobGroups(string pattern) => pattern.AsSpan().Count(GlobGroup);
 
 	private const string GlobGroup = "(.*?)";
 }

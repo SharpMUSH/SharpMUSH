@@ -7,33 +7,24 @@ namespace SharpMUSH.Implementation.Common;
 
 public static class CryptoHelpers
 {
-	public static readonly Dictionary<string, HashAlgorithm> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase)
+	// The one-shot static hashers, not shared HashAlgorithm instances: an instance is stateful, so two
+	// digest() calls hashing on it at once corrupt each other's result.
+	public static readonly Dictionary<string, Func<byte[], byte[]>> hashAlgorithms = new(StringComparer.InvariantCultureIgnoreCase)
 	{
-		{"MD5", MD5.Create()},
-		{"SHA1", SHA1.Create()},
-		{"SHA256", SHA256.Create()},
-		{"SHA384", SHA384.Create()},
-		{"SHA512", SHA512.Create()}
+		{"MD5", MD5.HashData},
+		{"SHA1", SHA1.HashData},
+		{"SHA256", SHA256.HashData},
+		{"SHA384", SHA384.HashData},
+		{"SHA512", SHA512.HashData}
 	};
 
 	public static OneOf<string, None> Digest(string type, MString str)
 	{
-		if (!hashAlgorithms.TryGetValue(type, out var hashAlgorithm))
+		if (!hashAlgorithms.TryGetValue(type, out var hash))
 		{
 			return new None();
 		}
 
-		hashAlgorithm.Initialize();
-
-		var data = hashAlgorithm.ComputeHash(Encoding.UTF8.GetBytes(str.ToPlainText()));
-
-		var sBuilder = new StringBuilder();
-
-		foreach (var bt in data)
-		{
-			sBuilder.Append(bt.ToString("x2"));
-		}
-
-		return sBuilder.ToString();
+		return Convert.ToHexStringLower(hash(Encoding.UTF8.GetBytes(str.ToPlainText())));
 	}
 }

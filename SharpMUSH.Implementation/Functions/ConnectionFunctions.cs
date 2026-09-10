@@ -601,32 +601,18 @@ public partial class Functions
 			}
 		}
 
-		var allConnections = ConnectionService.GetAll()
+		var viewerSeesAll = await viewer.IsSee_All();
+
+		var visibleConnections = ConnectionService.GetAll()
 			.Where(x => status == "all" ||
 									(status == "online" && x.State == IConnectionService.ConnectionState.LoggedIn) ||
-									(status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn));
+									(status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn))
+			.Where(async (conn, _) => conn.Ref is null
+				? viewerSeesAll
+				: await PermissionService.CanSee(viewer, (await Mediator.Send(new GetObjectNodeQuery(conn.Ref.Value))).Known))
+			.Select(conn => conn.Handle);
 
-		var visibleConnections = new List<long>();
-		await foreach (var conn in allConnections)
-		{
-			if (conn.Ref is null)
-			{
-				if (await viewer.IsSee_All())
-				{
-					visibleConnections.Add(conn.Handle);
-				}
-			}
-			else
-			{
-				var connectedPlayer = await Mediator.Send(new GetObjectNodeQuery(conn.Ref.Value));
-				if (await PermissionService.CanSee(viewer, connectedPlayer.Known))
-				{
-					visibleConnections.Add(conn.Handle);
-				}
-			}
-		}
-
-		return new CallState(string.Join(" ", visibleConnections));
+		return new CallState(string.Join(" ", await visibleConnections.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "lwho", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["flag"])]
@@ -669,8 +655,8 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
 
-		var status = arg1.First();
-		if (!((string[])["online", "offline", "all"]).Contains(status))
+		var status = arg1[0];
+		if (status is not ("online" or "offline" or "all"))
 		{
 			return ErrorMessages.Returns.InvalidSecondArgument;
 		}
@@ -699,30 +685,18 @@ public partial class Functions
 		// paths and a full #N:creation objid on others, and those two compare unequal - so a player
 		// bound the objid way counted as not connected, and "offline" listed them (see the same note on
 		// MortalWhoPlayers).
-		var connectedDbRefs = new HashSet<int>(await ConnectionService
+		var connectedDbRefs = await ConnectionService
 			.GetAll()
 			.Where(x => x.Ref is not null)
 			.Select(x => x.Ref!.Value.Number)
-			.ToListAsync());
+			.ToHashSetAsync();
 
-		var result = new List<string>();
+		var result = Mediator.CreateStream(new GetAllPlayersQuery())
+			.Where(player => status != "offline" || !connectedDbRefs.Contains(player.Object.DBRef.Number))
+			.Where(async (player, _) => await PermissionService.CanSee(looker, player))
+			.Select(player => objectIds ? player.Object.DBRef.ToString() : $"#{player.Object.DBRef.Number}");
 
-		await foreach (var player in Mediator.CreateStream(new GetAllPlayersQuery())!)
-		{
-			var dbref = player.Object.DBRef;
-			if (status == "offline" && connectedDbRefs.Contains(dbref.Number))
-			{
-				continue;
-			}
-
-			AnySharpObject playerObj = player;
-			if (await PermissionService.CanSee(looker, playerObj))
-			{
-				result.Add(objectIds ? dbref.ToString() : $"#{dbref.Number}");
-			}
-		}
-
-		return new CallState(string.Join(" ", result));
+		return new CallState(string.Join(" ", await result.ToArrayAsync()));
 	}
 
 	/// <summary>
@@ -1266,20 +1240,17 @@ public partial class Functions
 		}
 
 		var zoneNumber = zone.Object().DBRef.Number;
-		var playersInZone = new List<string>();
 
-		await foreach (var player in VisibleWhoPlayers(viewer, powered))
-		{
-			var location = await player.Where();
-			var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
-
-			if (!locationZone.IsNone && locationZone.Known.Object().DBRef.Number == zoneNumber)
+		var playersInZone = VisibleWhoPlayers(viewer, powered)
+			.Where(async (player, _) =>
 			{
-				playersInZone.Add($"#{player.Object().DBRef.Number}");
-			}
-		}
+				var location = await player.Where();
+				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
+				return !locationZone.IsNone && locationZone.Known.Object().DBRef.Number == zoneNumber;
+			})
+			.Select(player => $"#{player.Object().DBRef.Number}");
 
-		return new CallState(string.Join(" ", playersInZone));
+		return new CallState(string.Join(" ", await playersInZone.ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone", "flags"])]
@@ -1306,33 +1277,21 @@ public partial class Functions
 			}
 		}
 
-		var zoneObjects = Mediator.CreateStream(new GetObjectsByZoneQuery(zone));
-		var objectList = new List<string>();
-
-		await foreach (var obj in zoneObjects)
-		{
-			var fullObj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
-			if (fullObj.IsNone)
+		var objectList = await Mediator.CreateStream(new GetObjectsByZoneQuery(zone))
+			.Where(async (obj, _) =>
 			{
-				continue;
-			}
+				var fullObj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
+				return !fullObj.IsNone && (hasSeeAll || await PermissionService.CanExamine(executor, fullObj.Known));
+			})
+			.Select(obj => $"#{obj.Key}")
+			.ToArrayAsync();
 
-			if (hasSeeAll || await PermissionService.CanExamine(executor, fullObj.Known))
-			{
-				objectList.Add($"#{obj.Key}");
-			}
-		}
+		var separator = args.TryGetValue("1", out var arg1Value) && arg1Value.Message!.ToPlainText() is { } format
+			&& !string.IsNullOrWhiteSpace(format)
+				? format
+				: " ";
 
-		if (args.TryGetValue("1", out var arg1Value))
-		{
-			var format = arg1Value.Message!.ToPlainText();
-			if (!string.IsNullOrWhiteSpace(format))
-			{
-				return new CallState(string.Join(format, objectList));
-			}
-		}
-
-		return new CallState(string.Join(" ", objectList));
+		return new CallState(string.Join(separator, objectList));
 	}
 
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
@@ -1462,20 +1421,8 @@ public partial class Functions
 	/// and the rest about the one they are actually using, which taking whichever connection came out
 	/// of the dictionary first did only by luck.
 	/// </summary>
-	private async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(DBRef who)
-	{
-		IConnectionService.ConnectionData? best = null;
-
-		await foreach (var connection in ConnectionService.Get(who))
-		{
-			if (best is null || (connection.Idle ?? TimeSpan.MaxValue) < (best.Idle ?? TimeSpan.MaxValue))
-			{
-				best = connection;
-			}
-		}
-
-		return best;
-	}
+	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(DBRef who)
+		=> ConnectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
 
 	/// <summary>
 	/// Checks if the executor has permission to access connection data for another player.

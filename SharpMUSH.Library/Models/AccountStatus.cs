@@ -42,20 +42,20 @@ public static class AccountStatusParser
 	/// </remarks>
 	public static bool TryParseName(string? value, out AccountStatus status)
 	{
-		if (!string.IsNullOrWhiteSpace(value))
+		var trimmed = value.AsSpan().Trim();
+		foreach (var (name, candidate) in Names)
 		{
-			var trimmed = value.Trim();
-			foreach (var candidate in Enum.GetValues<AccountStatus>())
+			if (trimmed.Equals(name, StringComparison.OrdinalIgnoreCase))
 			{
-				if (string.Equals(candidate.ToString(), trimmed, StringComparison.OrdinalIgnoreCase))
-				{
-					status = candidate;
-					return true;
-				}
+				status = candidate;
+				return true;
 			}
 		}
 
 		status = AccountStatus.Disabled;
 		return false;
 	}
+
+	private static readonly (string Name, AccountStatus Status)[] Names =
+		Enum.GetValues<AccountStatus>().Select(status => (status.ToString(), status)).ToArray();
 }

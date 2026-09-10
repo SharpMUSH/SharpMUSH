@@ -51,11 +51,10 @@ public partial class SurrealDatabase
 		// dozen rows, and matching inside an array case-insensitively is not worth a query that has to
 		// be right across SurrealDB versions.
 		var all = await ExecuteAsync("SELECT * FROM object_flag", cancellationToken);
-		return all.GetValue<List<FlagRecord>>(0)!
-			.Where(record => record.aliases is not null)
-			.Select(MapRecordToFlag)
-			.FirstOrDefault(flag => flag.Aliases?.Any(
+		var byAlias = all.GetValue<List<FlagRecord>>(0)!
+			.FirstOrDefault(record => record.aliases?.Any(
 				alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)) == true);
+		return byAlias is null ? null : MapRecordToFlag(byAlias);
 	}
 
 	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)

@@ -17,14 +17,16 @@ public static class ReviewMail
 
 		var target = executor.AsPlayer;
 
-		if (string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
+		if (!string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
 		{
+			// extmail.c's lookup_player resolves "#1" as readily as a name, so a dbref must match too.
 			var actualPlayer = await locateService.LocateAndNotifyIfInvalid(parser,
 				executor, executor, name,
 				LocateFlags.PlayersPreference |
 				LocateFlags.MatchWildCardForPlayerName |
 				LocateFlags.MatchOptionalWildCardForPlayerName |
-				LocateFlags.OnlyMatchTypePreference);
+				LocateFlags.OnlyMatchTypePreference |
+				LocateFlags.AbsoluteMatch);
 
 			if (!actualPlayer.IsPlayer)
 			{
@@ -37,7 +39,7 @@ public static class ReviewMail
 
 		var maybeMailList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgListArg, target);
 
-		if (!maybeMailList.IsError)
+		if (maybeMailList.IsError)
 		{
 			return MarkupText.Plain(maybeMailList.AsError);
 		}

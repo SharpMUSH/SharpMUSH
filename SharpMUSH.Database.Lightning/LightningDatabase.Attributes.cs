@@ -254,9 +254,10 @@ public partial class LightningDatabase
 				return false;
 			}
 
+			var longName = string.Empty;
 			for (var level = 0; level < path.Length; level++)
 			{
-				var longName = string.Join('`', path.Take(level + 1));
+				longName = level == 0 ? path[0] : $"{longName}`{path[level]}";
 				var key = Keys.Attr(n, longName);
 				var isLeaf = level == path.Length - 1;
 				var existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? Codec.Deserialize<AttrMetaRecord>(bytes) : null;
@@ -546,9 +547,11 @@ public partial class LightningDatabase
 	internal IReadOnlyList<(string LongName, AttrMetaRecord Meta)> ReadPathPrefixes(ITx tx, long dbref, string[] path)
 	{
 		var resolved = new List<(string, AttrMetaRecord)>(path.Length);
+		var longName = string.Empty;
 		for (var level = 0; level < path.Length; level++)
 		{
-			var longName = string.Join('`', path.Take(level + 1)).ToUpperInvariant();
+			var segment = path[level].ToUpperInvariant();
+			longName = level == 0 ? segment : $"{longName}`{segment}";
 			if (!tx.TryGet(Tables.AttrMeta, Keys.Attr(dbref, longName), out var bytes))
 			{
 				break;
@@ -737,7 +740,7 @@ public partial class LightningDatabase
 			return;
 		}
 
-		var parentLongName = string.Join('`', path.Take(path.Length - 1));
+		var parentLongName = string.Join('`', path.AsSpan(..^1));
 		if (HasChildren(tx, dbref, parentLongName))
 		{
 			return;

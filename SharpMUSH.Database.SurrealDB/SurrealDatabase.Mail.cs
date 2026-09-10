@@ -106,14 +106,7 @@ public partial class SurrealDatabase
 	}
 
 	public async ValueTask<SharpMail?> GetSentMailAsync(SharpObject sender, SharpPlayer recipient, int mail, CancellationToken cancellationToken = default)
-	{
-		var sentMails = new List<SharpMail>();
-		await foreach (var m in GetSentMailsAsync(sender, recipient, cancellationToken))
-			sentMails.Add(m);
-
-		if (mail >= sentMails.Count) return null;
-		return sentMails[mail];
-	}
+		=> await GetSentMailsAsync(sender, recipient, cancellationToken).ElementAtOrDefaultAsync(mail, cancellationToken);
 
 	public async ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default)
 	{

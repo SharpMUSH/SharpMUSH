@@ -59,7 +59,8 @@ public partial class TaskScheduler(
 		string Owner,
 		DBRef? Executor,
 		DBRef? SemaphoreTarget = null,
-		bool ManagesSemaphoreCount = false
+		bool ManagesSemaphoreCount = false,
+		JobKey? NotificationJob = null
 	);
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -626,20 +627,51 @@ public partial class TaskScheduler(
 				&& !_semaphoreRepairs.ContainsKey(pid) && !_semaphoreCommandReservations.Contains(pid);
 	}
 
+	// This lease never acquires the semaphore mutation lease: compatibility callers may
+	// already own that lease. The ready claim fences other release paths during cleanup.
+	private readonly SemaphoreSlim _notifications = new(1, 1);
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
-		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals($"{SemaphoreGroup}:{dbAttribute}"), ExecutionBudget.CurrentToken);
-		var outcomes = new List<QueueAdmissionResult>();
-		foreach (var key in keys.OrderBy(k => long.Parse(k.Name.Split('-').Last()))
-			.Where(key => CanReleasePendingSemaphore(long.Parse(key.Name.Split('-').Last()))).Take(Math.Max(0, count)))
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
+		using var scope = budget.Enter();
+		await _notifications.WaitAsync(ExecutionBudget.CurrentToken);
+		try
 		{
-			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
-			if (trigger is null) continue;
-			await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
-			await _scheduler.DeleteJob(trigger.JobKey, ExecutionBudget.CurrentToken);
-			outcomes.Add(await Activate(long.Parse(key.Name.Split('-').Last())));
+			var group = $"{SemaphoreGroup}:{dbAttribute}";
+			var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(group), ExecutionBudget.CurrentToken);
+			TriggerKey[] candidates;
+			lock (_admissionLock)
+				candidates = keys.Concat(_pendingEntries.Values.Where(e => e.Group == group && e.NotificationJob is not null)
+					.Select(e => new TriggerKey(e.TriggerName, e.Group))).Distinct().OrderBy(k => long.Parse(k.Name.Split('-').Last())).ToArray();
+			var outcomes = new List<QueueAdmissionResult>();
+			foreach (var key in candidates)
+			{
+				if (outcomes.Count >= Math.Max(0, count)) break;
+				var pid = long.Parse(key.Name.Split('-').Last());
+				QueueEntry? entry;
+				lock (_admissionLock)
+				{
+					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+				}
+				var job = entry.NotificationJob ?? (await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken))?.JobKey;
+				if (job is null) continue;
+				lock (_admissionLock)
+				{
+					if (_stopping) throw new OperationCanceledException(_shutdownCts.Token);
+					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+					_pendingEntries[pid] = entry with { NotificationJob = job };
+					_ready.Add(pid);
+				}
+				await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+				await _scheduler.DeleteJob(job, ExecutionBudget.CurrentToken);
+				lock (_admissionLock)
+					if (_pendingEntries.TryGetValue(pid, out entry)) _pendingEntries[pid] = entry with { NotificationJob = null };
+				outcomes.Add(await Activate(pid, readyReserved: true));
+			}
+			return outcomes;
 		}
-		return outcomes;
+		finally { _notifications.Release(); }
 	}
 
 	public ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
@@ -834,10 +866,6 @@ public partial class TaskScheduler(
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
 		var token = cancellation.Token;
 		token.ThrowIfCancellationRequested();
-		var translate = new Func<string, string>(x =>
-			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-				.TakeWhile(c => c != '-').ToArray()));
-
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
@@ -845,12 +873,7 @@ public partial class TaskScheduler(
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
-			yield return (key.Key, key.Select(x => (
-				x.Value,
-				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(x.Name)
-			)).ToArray());
+			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
@@ -858,11 +881,49 @@ public partial class TaskScheduler(
 			token.ThrowIfCancellationRequested();
 			yield return (group.Key, group.Select(e => (
 				DateTimeOffset.UtcNow,
-				DBRef.TryParse(translate(e.TriggerName), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(e.TriggerName)
+				DescribeTrigger(e.TriggerName)
 			)).ToArray());
 		}
+	}
+
+	/// <summary>
+	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
+	/// or the raw name when it does not carry one.
+	/// </summary>
+	private static OneOf<string, DBRef> DescribeTrigger(string triggerName)
+	{
+		var identity = triggerName.AsSpan();
+		if (identity.StartsWith("dbref:"))
+		{
+			identity = identity["dbref:".Length..];
+		}
+		else if (identity.StartsWith("handle:"))
+		{
+			identity = identity["handle:".Length..];
+		}
+
+		Span<System.Range> parts = stackalloc System.Range[2];
+		identity.Split(parts, '-');
+
+		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
+			? OneOf<string, DBRef>.FromT1(dbref!.Value)
+			: OneOf<string, DBRef>.FromT0(triggerName);
+	}
+
+	/// <summary>
+	/// The PID from a trigger name shaped <c>prefix-pid</c>: exactly one dash, followed by the number.
+	/// </summary>
+	private static bool TryParsePid(string triggerName, out long pid)
+	{
+		var name = triggerName.AsSpan();
+		Span<System.Range> parts = stackalloc System.Range[3];
+		if (name.Split(parts, '-') != 2)
+		{
+			pid = 0;
+			return false;
+		}
+
+		return long.TryParse(name[parts[1]], out pid);
 	}
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
@@ -905,12 +966,12 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"), token);
 
+		// Extract PID from identity: "dbref:{executor}-{pid}"
 		foreach (var key in keys)
 		{
 			token.ThrowIfCancellationRequested();
 			// Extract PID from identity: "dbref:{executor}-{pid}"
-			var parts = key.Name.Split('-');
-			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
+			if (TryParsePid(key.Name, out var pid))
 			{
 				yield return pid;
 			}
@@ -938,7 +999,7 @@ public partial class TaskScheduler(
 		var fireDelay = trigger.FinalFireTimeUtc is null
 			? null
 			: DateTimeOffset.UtcNow - trigger.FinalFireTimeUtc;
-		var semaphoreSourceString = string.Join(':', triggerKey.Group.Split(':').Skip(1));
+		var semaphoreSourceString = triggerKey.Group[(triggerKey.Group.IndexOf(':') + 1)..];
 		var semaphoreSource = DbRefAttribute.Parse(semaphoreSourceString);
 		var pid = long.Parse(triggerKey.Name.Split('-').Last());
 
@@ -948,9 +1009,10 @@ public partial class TaskScheduler(
 	public async ValueTask RescheduleSemaphoreTask(long pid, TimeSpan delay)
 	{
 		var allKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupStartsWith($"{SemaphoreGroup}"), ExecutionBudget.CurrentToken);
+		var pidSuffix = $"-{pid}";
 
 		// This should return just one or zero, but using it as an iterator simplifies the code.
-		foreach (var key in allKeys.Where(x => x.Name.EndsWith($"-{pid}")))
+		foreach (var key in allKeys.Where(x => x.Name.EndsWith(pidSuffix)))
 		{
 			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
 			if (trigger is null) continue;
@@ -979,6 +1041,8 @@ public partial class TaskScheduler(
 		// before shutdown disposes the reservation. Release callbacks run after this gate.
 		await _semaphoreMutations.WaitAsync();
 		_semaphoreMutations.Release();
+		await _notifications.WaitAsync();
+		_notifications.Release();
 		await _delayedChanges.WaitAsync();
 		_delayedChanges.Release();
 		lock (_admissionLock)
