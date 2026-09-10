@@ -52,10 +52,10 @@ public class ManipulateSharpObjectService(
 				return obj.Object().DBRef;
 
 			case { IsPlayer: true }:
-				var tryFindPlayerByName = await (mediator.CreateStream(new GetPlayerQuery(name.ToPlainText())))
-					.ToArrayAsync();
-				if (tryFindPlayerByName.Any(x =>
-							x.Object.Name.Equals(name.ToPlainText(), StringComparison.InvariantCultureIgnoreCase)))
+				var plainName = name.ToPlainText();
+				// Materialized: consulted again below for the alias collision check.
+				var tryFindPlayerByName = await mediator.CreateStream(new GetPlayerQuery(plainName)).ToArrayAsync();
+				if (tryFindPlayerByName.Any(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase)))
 				{
 					if (notify)
 					{
@@ -67,14 +67,14 @@ public class ManipulateSharpObjectService(
 
 				var playerSplit = name.Split(";");
 
-				await mediator.Send(new SetNameCommand(obj, playerSplit.First()));
+				await mediator.Send(new SetNameCommand(obj, playerSplit[0]));
 
 				if (playerSplit.Length <= 1)
 				{
 					return obj.Object().DBRef;
 				}
 
-				var aliases = playerSplit.Skip(1).Select(x => x.ToPlainText()).ToArray();
+				var aliases = Array.ConvertAll(playerSplit[1..], x => x.ToPlainText());
 
 				if (tryFindPlayerByName
 						.SelectMany(x => x.Aliases ?? [])
@@ -96,11 +96,11 @@ public class ManipulateSharpObjectService(
 
 			default:
 				var split = name.Split(";");
-				await mediator.Send(new SetNameCommand(obj, split.First()));
+				await mediator.Send(new SetNameCommand(obj, split[0]));
 				if (split.Length > 1)
 				{
 					await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-						MarkupText.Join(MarkupText.Plain(";"), split.Skip(1)));
+						MarkupText.Join(MarkupText.Plain(";"), split[1..]));
 				}
 
 				return obj.Object().DBRef;
@@ -182,10 +182,7 @@ public class ManipulateSharpObjectService(
 		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
 		if (requiredPermissions is not null && requiredPermissions.Length > 0)
 		{
-			var hasPermission = await requiredPermissions.ToAsyncEnumerable()
-				.AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
-
-			if (!hasPermission)
+			if (!await HasAnyFlagPermission(executor, obj, requiredPermissions))
 			{
 				if (notify)
 				{
@@ -495,14 +492,12 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		if (!await obj.Object().Powers.Value.AnyAsync())
+		// Materialized: the loop below removes powers from the collection being read.
+		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
+		if (objectPowers.Length == 0)
 		{
 			return true;
 		}
-
-		// Materialize the powers collection to avoid modification during iteration
-		var objectPowers = await obj.Object().Powers.Value.ToArrayAsync();
-		var powersCleared = 0;
 
 		foreach (var power in objectPowers)
 		{
@@ -514,13 +509,11 @@ public class ManipulateSharpObjectService(
 				"POWER",
 				false,
 				executor.Object().DBRef));
-
-			powersCleared++;
 		}
 
-		if (notify && powersCleared > 0)
+		if (notify)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat), executor, powersCleared, obj.Object().Name);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ClearedPowersFromFormat), executor, objectPowers.Length, obj.Object().Name);
 		}
 
 		return true;
@@ -674,6 +667,10 @@ public class ManipulateSharpObjectService(
 
 		return true;
 	}
+
+	/// <summary>Whether <paramref name="executor"/> holds at least one of <paramref name="permissions"/>.</summary>
+	private static ValueTask<bool> HasAnyFlagPermission(AnySharpObject executor, AnySharpObject obj, string[] permissions)
+		=> permissions.ToAsyncEnumerable().AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
 
 	/// <summary>
 	/// Resolves a named flag permission level to the appropriate privilege check.

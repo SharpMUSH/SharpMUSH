@@ -110,7 +110,7 @@ public static class SendMail
 				var attributeValue = attributeOpportunity.Value;
 				if (attributeValue.Length > 0)
 				{
-					message = MarkupText.Concat(new[] { message, MarkupText.NewLine, attributeValue });
+					message = MarkupText.Concat([message, MarkupText.NewLine, attributeValue]);
 				}
 			}
 		}
@@ -193,9 +193,6 @@ public static class SendMail
 				: ErrorMessages.Returns.RecipientDoesNotAcceptMail);
 		}
 
-		return MarkupText.Join(MarkupText.Space, delivered
-				.Select(x => x.Object.DBRef)
-				.Select(x => x.ToString())
-				.Select(MarkupText.Plain));
+		return MarkupText.Join(MarkupText.Space, delivered.Select(x => MarkupText.Plain(x.Object.DBRef.ToString())));
 	}
 }

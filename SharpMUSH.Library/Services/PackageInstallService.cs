@@ -1,7 +1,5 @@
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using OneOf;
 using OneOf.Types;
@@ -13,7 +11,9 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
@@ -102,7 +102,9 @@ public class PackageInstallService(
 				? PackageStructureBaseline.Empty
 				: parsed with
 				{
-					Locks = new Dictionary<string, string>(parsed.Locks, StringComparer.OrdinalIgnoreCase),
+					// Fold rather than copy: a baseline written before lock names were canonical can
+					// hold two spellings of one lock, which a case-insensitive copy would throw on.
+					Locks = LockNames.Fold(parsed.Locks),
 					AttributeFlags = parsed.AttributeFlags.ToDictionary(
 						kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase)
 				};
@@ -463,7 +465,7 @@ public class PackageInstallService(
 			if (change.Kind == PackageStructureKind.Lock
 				&& change.Action is PackageStructureAction.Add or PackageStructureAction.Conflict
 				&& manifestByRef.TryGetValue(change.TargetRef, out var lockSpec)
-				&& lockSpec.Locks.TryGetValue(change.Element, out var rawLock))
+				&& LockNames.Fold(lockSpec.Locks).TryGetValue(change.Element, out var rawLock))
 			{
 				var resolvedLock = PackageRefSubstitution.Substitute(rawLock, Resolve, out var unresolved);
 				if (unresolved.Count > 0)
@@ -694,16 +696,25 @@ public class PackageInstallService(
 	{
 		var pmContainer = ToContainer(pmWizard);
 		DBRef createdDbref;
+
+		// Through the Mediator, not straight at the store: the create commands are what carry the
+		// cache policy, and the one that matters here is the destination's ContentsTag. A package
+		// whose object lands in the master room and is created behind the cache's back is inert —
+		// command matching reads a contents list that predates it — until the entry expires or the
+		// game restarts, which is exactly the "+wiki does nothing after install" report.
+		//
+		// ApplyDefaultFlags stays off: the manifest is the whole truth about a package object's
+		// flags, and the stock thing_flags is no_command.
 		switch (spec.Type)
 		{
 			case PackageObjectType.Room:
-				createdDbref = await database.CreateRoomAsync(PrimaryName(spec.Name), pmWizard, cancellationToken: cancellationToken);
+				createdDbref = await mediator.Send(new CreateRoomCommand(PrimaryName(spec.Name), pmWizard, ApplyDefaultFlags: false), cancellationToken);
 				break;
 			case PackageObjectType.Thing:
 				{
 					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
-					createdDbref = await database.CreateThingAsync(
-						PrimaryName(spec.Name), location, pmWizard, location, cancellationToken: cancellationToken);
+					createdDbref = await mediator.Send(
+						new CreateThingCommand(PrimaryName(spec.Name), location, pmWizard, location, ApplyDefaultFlags: false), cancellationToken);
 					break;
 				}
 			case PackageObjectType.Exit:
@@ -715,8 +726,8 @@ public class PackageInstallService(
 					}
 
 					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-					createdDbref = await database.CreateExitAsync(
-						parts[0], parts.Skip(1).ToArray(), location, pmWizard, cancellationToken: cancellationToken);
+					createdDbref = await mediator.Send(
+						new CreateExitCommand(parts[0], parts.Skip(1).ToArray(), location, pmWizard, ApplyDefaultFlags: false), cancellationToken);
 					break;
 				}
 			default:
@@ -752,8 +763,8 @@ public class PackageInstallService(
 				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
 			}
 
-			await database.LinkExitAsync(node.Match(_ => null!, _ => null!, exit => exit, _ => null!),
-				destination, cancellationToken);
+			await mediator.Send(new LinkExitCommand(
+				node.Match(_ => null!, _ => null!, exit => exit, _ => null!), destination), cancellationToken);
 		}
 
 		// Name updates for metadata drift.
@@ -761,7 +772,13 @@ public class PackageInstallService(
 			c.Ref == spec.Ref && c.Action == PackageObjectAction.UpdateMetadata);
 		if (metadataChange is not null)
 		{
-			await database.SetObjectName(node, MarkupText.Plain(spec.Name), cancellationToken);
+			// Through the Mediator for the same reason as the create commands above: the object
+			// entry is the cache unit, and only the command declares the key that expires it.
+			// PrimaryName, as the create path uses: a manifest name carries its aliases
+			// ("Out;out;o"), and nothing on the write path splits them, so passing the whole string
+			// here would rename an object the install itself created as "Out" to "Out;out;o" on the
+			// next run.
+			await mediator.Send(new SetNameCommand(node, MarkupText.Plain(PrimaryName(spec.Name))), cancellationToken);
 		}
 
 		// Parent.
@@ -774,7 +791,7 @@ public class PackageInstallService(
 				return $"Object {{{{{spec.Ref}}}}}: parent {spec.Parent} is not resolvable.";
 			}
 
-			await database.SetObjectParent(node, parentNode, cancellationToken);
+			await mediator.Send(new SetObjectParentCommand(node, parentNode), cancellationToken);
 		}
 
 		// Object flags, powers, locks, and attribute flags are applied in the
@@ -817,7 +834,7 @@ public class PackageInstallService(
 		{
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				manifest.Name, objid, change.Attribute.ToUpperInvariant(),
-				packageValue, Hash(packageValue), manifest.Version.ToString()));
+				packageValue, ContentHash.Sha256Hex(packageValue), manifest.Version.ToString()));
 			if (effectiveValue is not null)
 			{
 				// Null = the attribute does not exist live (a preserved local
@@ -912,8 +929,9 @@ public class PackageInstallService(
 	/// <summary>The resolved structure a package declares on one object — the baseline it writes on apply.</summary>
 	private static PackageStructureBaseline? BuildResolvedStructure(PackageObjectSpec spec, Func<PackageRef, string?> resolve)
 	{
+		// Canonical keys, matching the plan and the live object — see PackagePlanService.
 		var locks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		foreach (var (lockType, raw) in spec.Locks)
+		foreach (var (lockType, raw) in LockNames.Fold(spec.Locks))
 		{
 			locks[lockType] = PackageRefSubstitution.Substitute(raw, resolve, out _);
 		}
@@ -1006,13 +1024,12 @@ public class PackageInstallService(
 						// Only flag an attribute that actually exists after apply — a
 						// flag the package adds to an attribute the admin deleted locally
 						// has nothing to land on.
-						var dbref = ParseObjid(objid);
-						var exists = dbref is not null && await attributeStore
-							.GetAttributeAsync(dbref.Value, path, cancellationToken)
-							.AnyAsync(cancellationToken);
-						if (exists)
+						var leaf = await ResolveAttributeLeafAsync(objid, path, cancellationToken);
+						if (leaf is not null)
 						{
-							await attributeStore.SetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+							// The flag commands carry the attribute cache keys and the
+							// inheritance tag; the store call carried neither.
+							await mediator.Send(new SetAttributeFlagCommand(ParseObjid(objid)!.Value, leaf, flag), cancellationToken);
 						}
 						else
 						{
@@ -1021,7 +1038,13 @@ public class PackageInstallService(
 					}
 					else
 					{
-						await attributeStore.UnsetAttributeFlagAsync(node.Object(), path, flag, cancellationToken);
+						// An attribute that no longer resolves has no flag to remove; the store
+						// call was a no-op in that case too.
+						var leaf = await ResolveAttributeLeafAsync(objid, path, cancellationToken);
+						if (leaf is not null)
+						{
+							await mediator.Send(new UnsetAttributeFlagCommand(ParseObjid(objid)!.Value, leaf, flag), cancellationToken);
+						}
 					}
 				}
 
@@ -1039,8 +1062,11 @@ public class PackageInstallService(
 		AnySharpObject node, PackageStructureChange change,
 		Dictionary<string, PackageConflictDecision> decisions, CancellationToken cancellationToken)
 	{
+		// Both through the Mediator: locks load with the object node, so a direct store write
+		// leaves object:#N stale, and only the commands drop the compiled boolean expression the
+		// lock parser cached for the text being replaced.
 		async Task SetAsync(string value) =>
-			await database.SetLockAsync(node.Object(), change.Element, new SharpLockData { LockString = value }, cancellationToken);
+			await mediator.Send(new SetLockCommand(node.Object(), change.Element, value), cancellationToken);
 
 		switch (change.Action)
 		{
@@ -1049,7 +1075,7 @@ public class PackageInstallService(
 				return null;
 
 			case PackageStructureAction.Remove:
-				await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
+				await mediator.Send(new UnsetLockCommand(node.Object(), change.Element), cancellationToken);
 				return null;
 
 			case PackageStructureAction.Conflict:
@@ -1058,7 +1084,7 @@ public class PackageInstallService(
 					switch (decision.Resolution)
 					{
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
-							await database.UnsetLockAsync(node.Object(), change.Element, cancellationToken);
+							await mediator.Send(new UnsetLockCommand(node.Object(), change.Element), cancellationToken);
 							return null;
 						case PackageConflictResolution.TakeTheirs:
 							await SetAsync(change.NewValue ?? "");
@@ -1248,7 +1274,7 @@ public class PackageInstallService(
 				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
-				attribute.Value, Hash(attribute.Value), snapshot.Version));
+				attribute.Value, ContentHash.Sha256Hex(attribute.Value), snapshot.Version));
 			restoredKeys.Add((attribute.Objid, attribute.Attribute.ToUpperInvariant()));
 		}
 
@@ -1299,10 +1325,15 @@ public class PackageInstallService(
 		string packageId, PackageRevisionSnapshot snapshot, List<string> notes, CancellationToken cancellationToken)
 	{
 		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
-		var target = (snapshot.Structure ?? []).ToDictionary(s => s.Objid, StringComparer.Ordinal);
+		// Fold once, here, so the whole rollback speaks canonical: a revision written before lock
+		// names were canonical spells a lock the way that world did. Left raw, its `Teleport` add and
+		// the folded baseline's `TPort` removal both canonicalise to TPort in the provider, the
+		// removal is applied last, and the rollback deletes the lock the revision asked it to keep.
+		var target = (snapshot.Structure ?? [])
+			.ToDictionary(s => s.Objid, s => s with { Locks = LockNames.Fold(s.Locks) }, StringComparer.Ordinal);
 		var current = DeserializeStructureBaselines(await registry.GetManagedStructuresAsync(packageId));
 
-		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal).ToList())
+		foreach (var objid in target.Keys.Union(current.Keys, StringComparer.Ordinal))
 		{
 			if (await GetKnownAsync(objid, cancellationToken) is null)
 			{
@@ -1427,6 +1458,27 @@ public class PackageInstallService(
 		return node.IsNone() ? null : node.Known();
 	}
 
+	/// <summary>
+	/// The leaf attribute at <paramref name="path"/> on <paramref name="objid"/>, or null when the
+	/// path does not fully resolve. The attribute-flag commands are keyed on a
+	/// <see cref="SharpAttribute"/>, so this is both the existence check and the value they need.
+	/// </summary>
+	private async Task<SharpAttribute?> ResolveAttributeLeafAsync(
+		string objid, string[] path, CancellationToken cancellationToken)
+	{
+		var dbref = ParseObjid(objid);
+		if (dbref is null)
+		{
+			return null;
+		}
+
+		var chain = await mediator.CreateStream(new GetAttributeQuery(dbref.Value, path))
+			.ToArrayAsync(cancellationToken);
+
+		// A partial chain is not a hit: the leaf named by the last segment does not exist.
+		return chain.Length == path.Length ? chain[^1] : null;
+	}
+
 	private async Task<AnySharpContainer?> ResolveContainerAsync(
 		PackageRef? reference, Func<PackageRef, string?> resolve, CancellationToken cancellationToken)
 	{
@@ -1480,22 +1532,26 @@ public class PackageInstallService(
 			return null;
 		}
 
-		var parts = objid[1..].Split(':', 2);
-		if (!int.TryParse(parts[0], out var number))
+		var body = objid.AsSpan(1);
+		Span<System.Range> fields = stackalloc System.Range[2];
+		var fieldCount = body.Split(fields, ':');
+		if (!int.TryParse(body[fields[0]], out var number))
 		{
 			return null;
 		}
 
-		return parts.Length == 2 && long.TryParse(parts[1], out var milliseconds)
+		return fieldCount == 2 && long.TryParse(body[fields[1]], out var milliseconds)
 			? new DBRef(number, milliseconds)
 			: new DBRef(number);
 	}
 
-	private static string Hash(string value) =>
-		Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-	private static string PrimaryName(string name) =>
-		name.Split(';', 2, StringSplitOptions.TrimEntries)[0];
+	private static string PrimaryName(string name)
+	{
+		Span<System.Range> aliases = stackalloc System.Range[2];
+		name.AsSpan().Split(aliases, ';', StringSplitOptions.TrimEntries);
+		return name[aliases[0]];
+	}
 
 	private static string DecisionKey(string targetRef, string attribute) =>
 		$"{targetRef}\0{attribute.ToUpperInvariant()}";

@@ -50,21 +50,10 @@ public class GameBroadcastService(
 
 				var player = playerResult.Known;
 
-				if (anyOfFlags is not null)
+				if (anyOfFlags is not null
+						&& !await anyOfFlags.ToAsyncEnumerable().AnyAsync(async (flag, _) => await player.HasFlag(flag)))
 				{
-					var hasAny = false;
-					foreach (var flag in anyOfFlags)
-					{
-						if (await player.HasFlag(flag))
-						{
-							hasAny = true;
-							break;
-						}
-					}
-					if (!hasAny)
-					{
-						continue;
-					}
+					continue;
 				}
 
 				if (await player.HasFlag(requiredFlag))

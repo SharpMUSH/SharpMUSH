@@ -28,6 +28,9 @@ public static class SitelockMatcher
 	/// </summary>
 	public static bool IsBlocked(IReadOnlyDictionary<string, string[]> rules, string ip, string host, string surfaceFlag)
 	{
+		// Parsed once per call rather than once per rule.
+		var ipAddress = ParseAddress(ip);
+
 		foreach (var (pattern, flags) in rules)
 		{
 			if (Array.IndexOf(flags, surfaceFlag) < 0)
@@ -35,7 +38,7 @@ public static class SitelockMatcher
 				continue;
 			}
 
-			if (Matches(pattern, ip, host))
+			if (Matches(pattern, ip, ipAddress, host))
 			{
 				return true;
 			}
@@ -54,6 +57,9 @@ public static class SitelockMatcher
 	/// empty arguments never match rather than throwing.
 	/// </summary>
 	public static bool Matches(string rulePattern, string ip, string host)
+		=> Matches(rulePattern, ip, ParseAddress(ip), host);
+
+	private static bool Matches(string rulePattern, string ip, IPAddress? ipAddress, string host)
 	{
 		if (string.IsNullOrEmpty(rulePattern))
 		{
@@ -72,18 +78,42 @@ public static class SitelockMatcher
 
 		// Try CIDR/bare-IP first — a pattern like "10.0.0.0/8" must never fall through to the glob
 		// branch below (its "." and "/" would be escaped literally and never match anything).
-		if (IPNetwork.TryParse(rulePattern, out var network))
+		var shape = RuleCache.GetOrAdd(rulePattern, static p => RuleShape.Parse(p));
+		if (shape.Network is { } network)
 		{
-			return IPAddress.TryParse(ip, out var ipAddress) && network.Contains(ipAddress);
+			return ipAddress is not null && network.Contains(ipAddress);
 		}
 
-		if (IPAddress.TryParse(rulePattern, out var ruleAddress))
+		if (shape.Address is { } ruleAddress)
 		{
-			return IPAddress.TryParse(ip, out var ipAddress) && ruleAddress.Equals(ipAddress);
+			return ipAddress is not null && ruleAddress.Equals(ipAddress);
 		}
 
 		return WildcardMatch(ip, rulePattern);
 	}
+
+	private static IPAddress? ParseAddress(string ip)
+		=> !string.IsNullOrEmpty(ip) && IPAddress.TryParse(ip, out var address) ? address : null;
+
+	/// <summary>
+	/// What a rule's text parses as: a CIDR block, a bare address, or (both null) a glob. Cached per rule
+	/// for the same reason as <see cref="GlobCache"/> — the rule set is admin-authored and small, and the
+	/// parse would otherwise repeat for every rule on every authenticated request.
+	/// </summary>
+	private sealed record RuleShape(IPNetwork? Network, IPAddress? Address)
+	{
+		public static RuleShape Parse(string rulePattern)
+		{
+			if (IPNetwork.TryParse(rulePattern, out var network))
+			{
+				return new RuleShape(network, null);
+			}
+
+			return new RuleShape(null, IPAddress.TryParse(rulePattern, out var address) ? address : null);
+		}
+	}
+
+	private static readonly ConcurrentDictionary<string, RuleShape> RuleCache = new();
 
 	/// <summary>
 	/// Compiled glob patterns, keyed by the rule text they came from. Matching runs on the

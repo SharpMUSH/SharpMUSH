@@ -155,7 +155,7 @@ public class GalleryController(
 		// If we removed the icon, promote the new first image.
 		if (entries.Count > 0 && entries.All(e => !e.IsIcon))
 		{
-			var first = entries.OrderBy(e => e.Order).First();
+			var first = entries.MinBy(e => e.Order)!;
 			entries[entries.IndexOf(first)] = first with { IsIcon = true };
 		}
 

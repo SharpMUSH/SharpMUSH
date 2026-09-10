@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -325,6 +326,13 @@ public class PackagePlanService : IPackagePlanService
 			}
 		}
 
+		// Reverse of objidByRef; the first ref to claim an objid wins, as it did in the dictionary walk.
+		var refByObjid = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var (reference, objid) in objidByRef)
+		{
+			refByObjid.TryAdd(objid, reference);
+		}
+
 		// Baselines whose attribute vanished from the manifest: delete / conflict / cleanup.
 		foreach (var baseline in inputs.Baselines)
 		{
@@ -342,7 +350,7 @@ public class PackagePlanService : IPackagePlanService
 				liveValue = lv;
 			}
 
-			var targetRef = objidByRef.FirstOrDefault(kv => kv.Value == baseline.Objid).Key ?? baseline.Objid;
+			var targetRef = refByObjid.GetValueOrDefault(baseline.Objid) ?? baseline.Objid;
 
 			var isLegacyRef = baseline.Attribute.StartsWith($"{PackageRefIndirection.RefsBranch}`", StringComparison.OrdinalIgnoreCase);
 			// A removed attachment has no incoming spec to establish provenance. Its
@@ -492,13 +500,17 @@ public class PackagePlanService : IPackagePlanService
 			var baseLocks = baseline?.Locks ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			var liveLocks = (existing ? live!.Locks : null)
 				?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+			// The manifest may spell a standard lock any way PennMUSH does; the live object's keys are
+			// LockType's spelling, so both sides are canonicalised or "teleport" reads as drift
+			// against the TPort it just wrote.
+			var specLocks = LockNames.Fold(obj.Locks);
 			var lockTypes = new HashSet<string>(baseLocks.Keys, StringComparer.OrdinalIgnoreCase);
-			lockTypes.UnionWith(obj.Locks.Keys);
+			lockTypes.UnionWith(specLocks.Keys);
 			foreach (var lockType in lockTypes.OrderBy(t => t, StringComparer.Ordinal))
 			{
 				string? newValue = null;
 				var requiresApply = false;
-				if (obj.Locks.TryGetValue(lockType, out var rawNew))
+				if (specLocks.TryGetValue(lockType, out var rawNew))
 				{
 					newValue = PackageRefSubstitution.Substitute(rawNew, Resolve, out var unresolved);
 					if (unresolved.Count > 0)
@@ -681,8 +693,7 @@ public class PackagePlanService : IPackagePlanService
 		}
 
 		var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-		var collapsed = string.Join(' ',
-			pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
-		return collapsed.ToLowerInvariant();
+		var words = pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return string.Join(' ', words).ToLowerInvariant();
 	}
 }

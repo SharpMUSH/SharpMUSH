@@ -23,49 +23,11 @@ public partial class SurrealDatabase
 {
 	#region Attributes
 
+	/// <summary>All-or-nothing: a path that resolves only partway is not a hit, and yields nothing.</summary>
 	public async IAsyncEnumerable<SharpAttribute> GetAttributeAsync(DBRef dbref, string[] attribute, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		var objKey = dbref.Number;
-
-		var existResult = await ExecuteAsync(
-			"SELECT key FROM object:$key",
-			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
-
-		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
-		if (existRecords.Count == 0) yield break;
-
-		var attrs = new List<AttributeRecord>();
-		string? currentParentKey = null;
-		var isFirst = true;
-
-		foreach (var attrName in attribute)
-		{
-			SurrealDbResponse stepResult;
-			if (isFirst)
-			{
-				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
-				stepResult = await ExecuteAsync(
-					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute) WHERE name = $attrName",
-					parameters, cancellationToken);
-				isFirst = false;
-			}
-			else
-			{
-				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
-				stepResult = await ExecuteAsync(
-					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM attribute:⟨$key⟩->has_attribute->attribute WHERE name = $attrName",
-					parameters, cancellationToken);
-			}
-
-			var records = stepResult.GetValue<List<AttributeRecord>>(0)!;
-			if (records.Count == 0) yield break;
-
-			var childNode = records[0];
-			attrs.Add(childNode);
-			currentParentKey = childNode.key;
-		}
-
+		var attrs = await WalkAttributeRecordsAsync(dbref, attribute, cancellationToken);
 		if (attrs.Count != attribute.Length) yield break;
 
 		foreach (var node in attrs)
@@ -131,48 +93,12 @@ public partial class SurrealDatabase
 		}
 	}
 
+	/// <inheritdoc cref="GetAttributeAsync"/>
 	public async IAsyncEnumerable<LazySharpAttribute> GetLazyAttributeAsync(DBRef dbref, string[] attribute, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		var objKey = dbref.Number;
-
-		var existResult = await ExecuteAsync(
-			"SELECT key FROM object:$key",
-			new Dictionary<string, object?> { ["key"] = objKey }, cancellationToken);
-
-		var existRecords = existResult.GetValue<List<ObjectRecord>>(0)!;
-		if (existRecords.Count == 0) yield break;
-
-		var attrs = new List<AttributeRecord>();
-		string? currentParentKey = null;
-		var isFirst = true;
-
-		foreach (var attrName in attribute)
-		{
-			SurrealDbResponse stepResult;
-			if (isFirst)
-			{
-				var parameters = new Dictionary<string, object?> { ["key"] = objKey, ["attrName"] = attrName };
-				stepResult = await ExecuteAsync(
-					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM array::flatten([player:$key, room:$key, thing:$key, exit:$key]->has_attribute->attribute) WHERE name = $attrName",
-					parameters, cancellationToken);
-				isFirst = false;
-			}
-			else
-			{
-				var parameters = new Dictionary<string, object?> { ["key"] = currentParentKey!, ["attrName"] = attrName };
-				stepResult = await ExecuteAsync(
-					"SELECT *, ->has_attribute_flag->attribute_flag.* AS flags FROM attribute:⟨$key⟩->has_attribute->attribute WHERE name = $attrName",
-					parameters, cancellationToken);
-			}
-
-			var records = stepResult.GetValue<List<AttributeRecord>>(0)!;
-			if (records.Count == 0) yield break;
-
-			var childNode = records[0];
-			attrs.Add(childNode);
-			currentParentKey = childNode.key;
-		}
+		var attrs = await WalkAttributeRecordsAsync(dbref, attribute, cancellationToken);
+		if (attrs.Count != attribute.Length) yield break;
 
 		foreach (var node in attrs)
 		{
@@ -601,7 +527,6 @@ public partial class SurrealDatabase
 		if (!checkParent) yield break;
 
 		var objKey = dbref.Number;
-		var parentParams = new Dictionary<string, object?> { ["key"] = objKey };
 		var parentChain = await GetParentChainAsync(objKey, cancellationToken);
 
 		// Penn's atr_get_with_parent (attrib.c:1232-1252) tests every branch-prefix segment for
@@ -627,10 +552,7 @@ public partial class SurrealDatabase
 			}
 		}
 
-		var allKeys = new List<int> { objKey };
-		allKeys.AddRange(parentChain);
-
-		foreach (var chainKey in allKeys)
+		foreach (var chainKey in parentChain.Prepend(objKey))
 		{
 			var zoneParams = new Dictionary<string, object?> { ["key"] = chainKey };
 			var zoneResult = await ExecuteAsync(
@@ -777,10 +699,7 @@ public partial class SurrealDatabase
 			}
 		}
 
-		var allKeys = new List<int> { objKey };
-		allKeys.AddRange(parentChain);
-
-		foreach (var chainKey in allKeys)
+		foreach (var chainKey in parentChain.Prepend(objKey))
 		{
 			var zoneParams = new Dictionary<string, object?> { ["key"] = chainKey };
 			var zoneResult = await ExecuteAsync(

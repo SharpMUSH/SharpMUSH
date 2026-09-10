@@ -23,6 +23,12 @@ public partial class ValidateService(
 {
 	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
+
+	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
+	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
+
+	private static readonly HashSet<string> MagicCookiesIgnoreCase = new(MagicCookies, StringComparer.OrdinalIgnoreCase);
+
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
 		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
 		=> type switch
@@ -100,9 +106,7 @@ public partial class ValidateService(
 			var colonIndex = lockTypeName.IndexOf(':');
 			if (colonIndex >= 0 && colonIndex < lockTypeName.Length - 1)
 			{
-				var attributeName = lockTypeName.Substring(colonIndex + 1).ToUpper();
-
-				return ValidAttributeNameRegex().IsMatch(attributeName);
+				return ValidAttributeNameRegex().IsMatch(lockTypeName.AsSpan(colonIndex + 1));
 			}
 
 			return false;
@@ -237,13 +241,12 @@ public partial class ValidateService(
 		}
 
 		// Aliases cannot be magic cookies
-		var magicCookie = new HashSet<string>((string[])["me", "here", "!", "home"]);
-		if (magicCookie.Contains(plainAlias.ToLower()))
+		if (MagicCookiesIgnoreCase.Contains(plainAlias))
 		{
 			return false;
 		}
 
-		if (plainAlias.Any(c => char.IsControl(c)))
+		if (plainAlias.Any(char.IsControl))
 		{
 			return false;
 		}
@@ -304,14 +307,13 @@ public partial class ValidateService(
 	private bool ValidateName(MString value)
 	{
 		var plain = value.ToPlainText();
-		var magicCookie = new HashSet<string>((string[])["me", "here", "!", "home"]);
 
 		if (!NameRegex().IsMatch(plain))
 		{
 			return false;
 		}
 
-		if (magicCookie.Contains(plain))
+		if (MagicCookies.Contains(plain))
 		{
 			return false;
 		}

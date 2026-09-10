@@ -9,10 +9,7 @@ public static class SharpObjectExtensions
 	/// Check if an object has the NO_WARN flag set
 	/// </summary>
 	public static async Task<bool> HasNoWarnFlagAsync(this SharpObject obj)
-	{
-		var flags = await obj.Flags.Value.ToListAsync();
-		return flags.Any(x => x.Name == "NO_WARN");
-	}
+		=> await obj.Flags.Value.AnyAsync(x => x.Name == "NO_WARN");
 
 	/// <summary>
 	/// PennMUSH's <c>AreQuiet(&lt;player&gt;, &lt;thing&gt;)</c> (<c>hdrs/dbdefs.h:198</c>): the player
@@ -31,19 +28,13 @@ public static class SharpObjectExtensions
 
 	/// <summary>Check if an object has the QUIET flag set.</summary>
 	public static async Task<bool> HasQuietFlagAsync(this SharpObject obj)
-	{
-		var flags = await obj.Flags.Value.ToListAsync();
-		return flags.Any(x => x.Name == "QUIET");
-	}
+		=> await obj.Flags.Value.AnyAsync(x => x.Name == "QUIET");
 
 	/// <summary>
 	/// Check if an object is marked as GOING (being destroyed)
 	/// </summary>
 	public static async Task<bool> IsGoingAsync(this SharpObject obj)
-	{
-		var flags = await obj.Flags.Value.ToListAsync();
-		return flags.Any(x => x.Name == "GOING");
-	}
+		=> await obj.Flags.Value.AnyAsync(x => x.Name == "GOING");
 
 	/// <summary>
 	/// Get the zone chain for an object, walking up the zone hierarchy
@@ -79,16 +70,11 @@ public static class SharpObjectExtensions
 	/// <summary>
 	/// Get the zone chain for an AnySharpObject, walking up the zone hierarchy
 	/// </summary>
-	public static async IAsyncEnumerable<AnySharpObject> GetZoneChain(
+	public static IAsyncEnumerable<AnySharpObject> GetZoneChain(
 		this AnySharpObject obj,
 		int maxDepth = 10,
-		[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
-	{
-		await foreach (var zone in obj.Object().GetZoneChain(maxDepth, ct))
-		{
-			yield return zone;
-		}
-	}
+		CancellationToken ct = default)
+		=> obj.Object().GetZoneChain(maxDepth, ct);
 
 	/// <summary>
 	/// Check if an object is in a zone or any of its parent zones

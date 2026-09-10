@@ -3,6 +3,7 @@ using MarkupString;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Database.Seed;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -177,6 +178,8 @@ public partial class SurrealDatabase
 			await CreateInitialAttributeFlags(cancellationToken);
 
 			await CreateInitialPowers(cancellationToken);
+
+			await MergeRenamedPower("Pueblo_Send", "Send_OOB", cancellationToken);
 
 			await CreateInitialAttributeEntries(cancellationToken);
 
@@ -402,80 +405,14 @@ public partial class SurrealDatabase
 		}
 	}
 
+	/// <summary>
+	/// The built-in flag table is <see cref="FlagSeed.Flags"/>, shared with every provider. The UPSERT sets
+	/// every field unconditionally on each Migrate(), so a changed definition (MYOPIC splitting off MISTRUST,
+	/// say) lands on an existing row the next time the game boots — no separate repair migration.
+	/// </summary>
 	private async Task CreateInitialFlags(CancellationToken ct)
 	{
-		var flags = new (string Name, string Symbol, string[]? Aliases, string[] SetPerms, string[] UnsetPerms, string[] TypeRestrictions)[]
-		{
-			("WIZARD", "W", null, ["trusted","wizard","log"], ["trusted","wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-			("ABODE", "A", null, [], [], ["ROOM"]),
-			("APPROVED", "+", null, ["royalty"], ["royalty"], ["PLAYER"]),
-			("ANSI", "A", null, [], [], ["PLAYER"]),
-			("CHOWN_OK", "C", null, [], [], ["ROOM","PLAYER","THING"]),
-			("COLOR", "C", ["COLOUR"], [], [], ["PLAYER"]),
-			("DARK", "D", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("FIXED", "F", null, ["wizard"], ["wizard"], ["PLAYER"]),
-			("FLOATING", "F", null, [], [], ["ROOM"]),
-			("HAVEN", "H", null, [], [], ["PLAYER"]),
-			("TRUST", "I", ["INHERIT"], ["trusted"], ["trusted"], ["ROOM","PLAYER","EXIT","THING"]),
-			("JUDGE", "J", null, ["royalty"], ["royalty"], ["PLAYER"]),
-			("JUMP_OK", "J", ["TEL-OK","TEL_OK","TELOK"], [], [], ["ROOM"]),
-			("LINK_OK", "L", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("MONITOR", "M", ["LISTENER","WATCHER"], [], [], ["ROOM","PLAYER","THING"]),
-			("NO_LEAVE", "N", ["NOLEAVE"], [], [], ["THING"]),
-			("NO_TEL", "N", null, [], [], ["ROOM"]),
-			("OPAQUE", "O", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("QUIET", "Q", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("UNFINDABLE", "U", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("VISUAL", "V", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("SAFE", "X", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("SHARED", "Z", ["ZONE"], [], [], ["PLAYER"]),
-			("Z_TEL", "Z", null, [], [], ["ROOM"]),
-			("LISTEN_PARENT", "^", ["^"], [], [], ["PLAYER"]),
-			("NOACCENTS", "~", null, [], [], ["PLAYER"]),
-			("UNREGISTERED", "?", null, ["royalty"], ["royalty"], ["PLAYER"]),
-			("NOSPOOF", "\"", null, ["odark"], ["odark"], ["ROOM","PLAYER","EXIT","THING"]),
-			("AUDIBLE", "a", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("DEBUG", "b", ["TRACE"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("DESTROY_OK", "d", ["DEST_OK"], [], [], ["THING"]),
-			("ENTER_OK", "e", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("GAGGED", "g", null, ["wizard"], ["wizard"], ["PLAYER"]),
-			("HALT", "h", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("ORPHAN", "i", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("JURY_OK", "j", ["JURYOK"], ["royalty"], ["royalty"], ["PLAYER"]),
-			("KEEPALIVE", "k", null, [], [], ["PLAYER"]),
-			("LIGHT", "l", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("MISTRUST", "m", null, ["trusted"], ["trusted"], ["THING","EXIT","ROOM"]),
-			// MYOPIC shares MISTRUST's letter and is told apart from it by object type, as in PennMUSH
-			// (hdrs/flag_tab.h:51, src/flags.c:778). Symbols are not unique here — see ABODE/ANSI on 'A'.
-			// No separate repair migration is needed on this provider: the UPSERT below sets every field
-			// unconditionally on each Migrate(), so an existing MISTRUST row loses the MYOPIC alias and
-			// gains the right types, and MYOPIC is created, the next time the game boots.
-			("MYOPIC", "m", null, [], [], ["PLAYER"]),
-			("NO_COMMAND", "n", ["NOCOMMAND"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("ON_VACATION", "o", ["ONVACATION","ON-VACATION"], [], [], ["PLAYER"]),
-			("PUPPET", "P", null, [], [], ["THING"]),
-			("ROYALTY", "r", null, ["trusted","royalty","log"], ["trusted","royalty"], ["ROOM","PLAYER","EXIT","THING"]),
-			("SUSPECT", "s", null, ["wizard","mdark","log"], ["wizard","mdark"], ["ROOM","PLAYER","EXIT","THING"]),
-			("TRANSPARENT", "t", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("VERBOSE", "v", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("NO_WARN", "w", ["NOWARN"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("CLOUDY", "x", ["TERSE"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("CHAN_USEFIRSTMATCH", "", ["CHAN_FIRSTMATCH","CHAN_MATCHFIRST"], ["trusted"], ["trusted"], ["ROOM","PLAYER","EXIT","THING"]),
-			("HEAR_CONNECT", "", null, ["royalty"], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("HEAVY", "", null, ["royalty"], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("LOUD", "", null, ["royalty"], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("NO_LOG", "", null, ["wizard","mdark","log"], ["wizard","mdark"], ["ROOM","PLAYER","EXIT","THING"]),
-			("PARANOID", "", null, ["odark"], ["odark"], ["ROOM","PLAYER","EXIT","THING"]),
-			("TRACK_MONEY", "", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
-			("XTERM256", "", ["XTERM","COLOR256"], [], [], ["PLAYER"]),
-			("TRUECOLOR", "", ["TRUECOLOUR","RGB","24BIT"], [], [], ["PLAYER"]),
-			("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
-			("OPEN_OK", "", null, [], [], ["ROOM"]),
-			("GOING", "g", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-			("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-		};
-
-		foreach (var f in flags)
+		foreach (var f in FlagSeed.Flags)
 		{
 			var parameters = new Dictionary<string, object?>
 			{
@@ -555,37 +492,7 @@ public partial class SurrealDatabase
 
 	private async Task CreateInitialAttributeFlags(CancellationToken ct)
 	{
-		var attrFlags = new (string Name, string Symbol, bool Inheritable)[]
-		{
-			("no_command", "$", true),
-			("no_inherit", "i", true),
-			("no_clone", "c", true),
-			("mortal_dark", "m", true),
-			("wizard", "w", true),
-			("veiled", "V", true),
-			("nearby", "n", true),
-			("locked", "+", true),
-			("safe", "S", true),
-			("visual", "v", false),
-			("public", "p", false),
-			("debug", "b", true),
-			("no_debug", "B", true),
-			("regexp", "R", false),
-			("case", "C", false),
-			("nospace", "s", true),
-			("noname", "N", true),
-			("aahear", "A", false),
-			("amhear", "M", false),
-			("quiet", "Q", false),
-			("branch", "`", false),
-			("prefixmatch", "", false),
-			("cmdsyntax", "x", true),
-			("funsyntax", "f", true),
-			("internal", "", true),
-			("nodump", "", true),
-		};
-
-		foreach (var af in attrFlags)
+		foreach (var af in AttributeFlagSeed.Flags)
 		{
 			var parameters = new Dictionary<string, object?>
 			{
@@ -602,47 +509,7 @@ public partial class SurrealDatabase
 
 	private async Task CreateInitialPowers(CancellationToken ct)
 	{
-		var powers = new (string Name, string Alias, string[] SetPerms, string[] UnsetPerms)[]
-		{
-			("Announce", "", ["wizard","log"], ["wizard"]),
-			("Boot", "", ["wizard","log"], ["wizard"]),
-			("Builder", "", ["wizard","log"], ["wizard"]),
-			("Can_Dark", "", ["wizard","log"], []),
-			("Can_HTTP", "", ["wizard","log"], []),
-			("Can_Spoof", "", ["wizard","log"], ["wizard"]),
-			("Chat_Privs", "", ["wizard","log"], ["wizard"]),
-			("Debit", "", ["wizard","log"], []),
-			("Functions", "", ["wizard","log"], ["wizard"]),
-			("Guest", "", ["wizard","log"], ["wizard"]),
-			("Halt", "", ["wizard","log"], ["wizard"]),
-			("Hide", "", ["wizard","log"], ["wizard"]),
-			("Hook", "", ["wizard","log"], []),
-			("Idle", "", ["wizard","log"], ["wizard"]),
-			("Immortal", "", ["wizard","log"], ["wizard"]),
-			("Link_Anywhere", "", ["wizard","log"], ["wizard"]),
-			("Login", "", ["wizard","log"], ["wizard"]),
-			("Long_Fingers", "", ["wizard","log"], ["wizard"]),
-			("Many_Attribs", "", ["wizard","log"], []),
-			("No_Pay", "", ["wizard","log"], ["wizard"]),
-			("No_Quota", "", ["wizard","log"], ["wizard"]),
-			("Open_Anywhere", "", ["wizard","log"], ["wizard"]),
-			("Pemit_All", "", ["wizard","log"], ["wizard"]),
-			("Pick_DBRefs", "", ["wizard","log"], ["wizard"]),
-			("Player_Create", "", ["wizard","log"], ["wizard"]),
-			("Poll", "", ["wizard","log"], ["wizard"]),
-			("Pueblo_Send", "", ["wizard","log"], ["wizard"]),
-			("Queue", "", ["wizard","log"], ["wizard"]),
-			("Search", "", ["wizard","log"], ["wizard"]),
-			("See_All", "", ["wizard","log"], ["wizard"]),
-			("See_Queue", "", ["wizard","log"], ["wizard"]),
-			("See_OOB", "", ["wizard","log"], ["wizard"]),
-			("SQL_OK", "", ["wizard","log"], ["wizard"]),
-			("Tport_Anything", "", ["wizard","log"], ["wizard"]),
-			("Tport_Anywhere", "", ["wizard","log"], ["wizard"]),
-			("Unkillable", "", ["wizard","log"], ["wizard"]),
-		};
-
-		foreach (var p in powers)
+		foreach (var p in PowerSeed.Powers)
 		{
 			var parameters = new Dictionary<string, object?>
 			{
@@ -662,164 +529,7 @@ public partial class SurrealDatabase
 
 	private async Task CreateInitialAttributeEntries(CancellationToken ct)
 	{
-		var entries = new (string Name, string[] DefaultFlags)[]
-		{
-			("AAHEAR", ["no_command","prefixmatch"]),
-			("ABUY", ["no_command","prefixmatch"]),
-			("ACLONE", ["no_command","prefixmatch"]),
-			("ACONNECT", ["no_command","prefixmatch"]),
-			("ADEATH", ["no_command","prefixmatch"]),
-			("ADESCRIBE", ["no_command","prefixmatch"]),
-			("ADESTROY", ["no_inherit","no_clone","wizard","prefixmatch"]),
-			("ADISCONNECT", ["no_command","prefixmatch"]),
-			("ADROP", ["no_command","prefixmatch"]),
-			("AEFAIL", ["no_command","prefixmatch"]),
-			("AENTER", ["no_command","prefixmatch"]),
-			("AFAILURE", ["no_command","prefixmatch"]),
-			("AFOLLOW", ["no_command","prefixmatch"]),
-			("AGIVE", ["no_command","prefixmatch"]),
-			("AHEAR", ["no_command","prefixmatch"]),
-			("AIDESCRIBE", ["no_command","prefixmatch"]),
-			("ALEAVE", ["no_command","prefixmatch"]),
-			("ALFAIL", ["no_command","prefixmatch"]),
-			("ALIAS", ["no_command","visual","prefixmatch"]),
-			("AMAIL", ["wizard","prefixmatch"]),
-			("AMHEAR", ["no_command","prefixmatch"]),
-			("AMOVE", ["no_command","prefixmatch"]),
-			("ANAME", ["no_command","prefixmatch"]),
-			("APAYMENT", ["no_command","prefixmatch"]),
-			("ARECEIVE", ["no_command","prefixmatch"]),
-			("ASUCCESS", ["no_command","prefixmatch"]),
-			("ATPORT", ["no_command","prefixmatch"]),
-			("AUFAIL", ["no_command","prefixmatch"]),
-			("AUNFOLLOW", ["no_command","prefixmatch"]),
-			("AUSE", ["no_command","prefixmatch"]),
-			("AWAY", ["no_command","prefixmatch"]),
-			("AZENTER", ["no_command","prefixmatch"]),
-			("AZLEAVE", ["no_command","prefixmatch"]),
-			("BUY", ["no_command","prefixmatch"]),
-			("CHANALIAS", ["no_command"]),
-			("CHARGES", ["no_command","prefixmatch"]),
-			("CHATFORMAT", ["no_command","prefixmatch"]),
-			("COMMENT", ["no_command","no_clone","wizard","mortal_dark","prefixmatch"]),
-			("CONFORMAT", ["no_command","prefixmatch"]),
-			("COST", ["no_command","prefixmatch"]),
-			("DEATH", ["no_command","prefixmatch"]),
-			("DEBUGFORWARDLIST", ["no_command","no_inherit","prefixmatch"]),
-			("DESCFORMAT", ["no_command","prefixmatch"]),
-			("DESCRIBE", ["no_command","visual","prefixmatch","public","nearby"]),
-			("DESTINATION", ["no_command"]),
-			("DOING", ["no_command","no_inherit","visual","public"]),
-			("DROP", ["no_command","prefixmatch"]),
-			("EALIAS", ["no_command","prefixmatch"]),
-			("EFAIL", ["no_command","prefixmatch"]),
-			("ENTER", ["no_command","prefixmatch"]),
-			("EXITFORMAT", ["no_command","prefixmatch"]),
-			("EXITTO", ["no_command","prefixmatch"]),
-			("FAILURE", ["no_command","prefixmatch"]),
-			("FILTER", ["no_command","prefixmatch"]),
-			("FOLLOW", ["no_command","prefixmatch"]),
-			("FOLLOWERS", ["no_command","no_inherit","no_clone","wizard","prefixmatch"]),
-			("FOLLOWING", ["no_command","no_inherit","no_clone","wizard","prefixmatch"]),
-			("FORWARDLIST", ["no_command","no_inherit","prefixmatch"]),
-			("GIVE", ["no_command","prefixmatch"]),
-			("HAVEN", ["no_command","prefixmatch"]),
-			("IDESCFORMAT", ["no_command","prefixmatch"]),
-			("IDESCRIBE", ["no_command","prefixmatch"]),
-			("IDLE", ["no_command","prefixmatch"]),
-			("INFILTER", ["no_command","prefixmatch"]),
-			("INPREFIX", ["no_command","prefixmatch"]),
-			("INVFORMAT", ["no_command","prefixmatch"]),
-			("LALIAS", ["no_command","prefixmatch"]),
-			("LAST", ["no_clone","wizard","visual","locked","prefixmatch"]),
-			("LASTFAILED", ["no_clone","wizard","locked","prefixmatch"]),
-			("LASTIP", ["no_clone","wizard","locked","prefixmatch"]),
-			("LASTLOGOUT", ["no_clone","wizard","locked","prefixmatch"]),
-			("LASTPAGED", ["no_clone","wizard","locked","prefixmatch"]),
-			("LASTSITE", ["no_clone","wizard","locked","prefixmatch"]),
-			("LEAVE", ["no_command","prefixmatch"]),
-			("LFAIL", ["no_command","prefixmatch"]),
-			("LISTEN", ["no_command","prefixmatch"]),
-			("MAILCURF", ["no_command","no_clone","wizard","locked","prefixmatch"]),
-			("MAILFILTER", ["no_command","prefixmatch"]),
-			("MAILFILTERS", ["no_command","no_clone","wizard","locked","prefixmatch"]),
-			("MAILFOLDERS", ["no_command","no_clone","wizard","locked","prefixmatch"]),
-			("MAILFORWARDLIST", ["no_command","prefixmatch"]),
-			("MAILQUOTA", ["no_command","no_clone","wizard","locked"]),
-			("MAILSIGNATURE", ["no_command","prefixmatch"]),
-			("MONIKER", ["no_command","wizard","visual","locked"]),
-			("MOVE", ["no_command","prefixmatch"]),
-			("NAMEACCENT", ["no_command","visual","prefixmatch"]),
-			("NAMEFORMAT", ["no_command","prefixmatch"]),
-			("OBUY", ["no_command","prefixmatch"]),
-			("ODEATH", ["no_command","prefixmatch"]),
-			("ODESCRIBE", ["no_command","prefixmatch"]),
-			("ODROP", ["no_command","prefixmatch"]),
-			("OEFAIL", ["no_command","prefixmatch"]),
-			("OENTER", ["no_command","prefixmatch"]),
-			("OFAILURE", ["no_command","prefixmatch"]),
-			("OFOLLOW", ["no_command","prefixmatch"]),
-			("OGIVE", ["no_command","prefixmatch"]),
-			("OIDESCRIBE", ["no_command","prefixmatch"]),
-			("OLEAVE", ["no_command","prefixmatch"]),
-			("OLFAIL", ["no_command","prefixmatch"]),
-			("OMOVE", ["no_command","prefixmatch"]),
-			("ONAME", ["no_command","prefixmatch"]),
-			("OPAYMENT", ["no_command","prefixmatch"]),
-			("ORECEIVE", ["no_command","prefixmatch"]),
-			("OSUCCESS", ["no_command","prefixmatch"]),
-			("OTPORT", ["no_command","prefixmatch"]),
-			("OUFAIL", ["no_command","prefixmatch"]),
-			("OUNFOLLOW", ["no_command","prefixmatch"]),
-			("OUSE", ["no_command","prefixmatch"]),
-			("OUTPAGEFORMAT", ["no_command","prefixmatch"]),
-			("OXENTER", ["no_command","prefixmatch"]),
-			("OXLEAVE", ["no_command","prefixmatch"]),
-			("OXMOVE", ["no_command","prefixmatch"]),
-			("OXTPORT", ["no_command","prefixmatch"]),
-			("OZENTER", ["no_command","prefixmatch"]),
-			("OZLEAVE", ["no_command","prefixmatch"]),
-			("PAGEFORMAT", ["no_command","prefixmatch"]),
-			("PAYMENT", ["no_command","prefixmatch"]),
-			("PREFIX", ["no_command","prefixmatch"]),
-			("PRICELIST", ["no_command","prefixmatch"]),
-			("QUEUE", ["no_inherit","no_clone","wizard"]),
-			("RECEIVE", ["no_command","prefixmatch"]),
-			("REGISTERED_EMAIL", ["no_inherit","no_clone","wizard","locked"]),
-			("RQUOTA", ["mortal_dark","locked"]),
-			("RUNOUT", ["no_command","prefixmatch"]),
-			("SEMAPHORE", ["no_inherit","no_clone","locked"]),
-			("SEX", ["no_command","visual","prefixmatch"]),
-			("SPEECHMOD", ["no_command","prefixmatch"]),
-			("STARTUP", ["no_command","prefixmatch"]),
-			("SUCCESS", ["no_command","prefixmatch"]),
-			("TFPREFIX", ["no_command","no_inherit","no_clone","prefixmatch"]),
-			("TPORT", ["no_command","prefixmatch"]),
-			("TZ", ["no_command","visual"]),
-			("UFAIL", ["no_command","prefixmatch"]),
-			("UNFOLLOW", ["no_command","prefixmatch"]),
-			("USE", ["no_command","prefixmatch"]),
-			("VA", []), ("VB", []), ("VC", []), ("VD", []), ("VE", []), ("VF", []),
-			("VG", []), ("VH", []), ("VI", []), ("VJ", []), ("VK", []), ("VL", []),
-			("VM", []), ("VN", []), ("VO", []), ("VP", []), ("VQ", []), ("VR", []),
-			("VRML_URL", ["no_command","prefixmatch"]),
-			("VS", []), ("VT", []), ("VU", []), ("VV", []), ("VW", []), ("VX", []),
-			("VY", []), ("VZ", []),
-			("WA", []), ("WB", []), ("WC", []), ("WD", []), ("WE", []), ("WF", []),
-			("WG", []), ("WH", []), ("WI", []), ("WJ", []), ("WK", []), ("WL", []),
-			("WM", []), ("WN", []), ("WO", []), ("WP", []), ("WQ", []), ("WR", []),
-			("WS", []), ("WT", []), ("WU", []), ("WV", []), ("WW", []), ("WX", []),
-			("WY", []), ("WZ", []),
-			("XA", []), ("XB", []), ("XC", []), ("XD", []), ("XE", []), ("XF", []),
-			("XG", []), ("XH", []), ("XI", []), ("XJ", []), ("XK", []), ("XL", []),
-			("XM", []), ("XN", []), ("XO", []), ("XP", []), ("XQ", []), ("XR", []),
-			("XS", []), ("XT", []), ("XU", []), ("XV", []), ("XW", []), ("XX", []),
-			("XY", []), ("XZ", []),
-			("ZENTER", ["no_command","prefixmatch"]),
-			("_", ["veiled"]),
-		};
-
-		foreach (var e in entries)
+		foreach (var e in AttributeEntrySeed.Entries)
 		{
 			var parameters = new Dictionary<string, object?>
 			{
@@ -837,6 +547,42 @@ public partial class SurrealDatabase
 	/// Sanitizes a name for use as a SurrealDB record ID segment.
 	/// Wraps names containing special characters in backticks.
 	/// </summary>
+	/// <summary>
+	/// PennMUSH renames Pueblo_Send to Send_OOB at load (<c>src/flags.c:850-855</c>) by rewriting the
+	/// FLAG struct's name in place, so the struct keeps its identity and every object already holding
+	/// the power follows the rename for free. Grants here are edges keyed by the power's name, so the
+	/// equivalent is to move the edges onto the new record and drop the superseded one.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private async Task MergeRenamedPower(string oldName, string newName, CancellationToken ct)
+	{
+		var oldId = $"power:{SanitizeRecordId(oldName)}";
+		var newId = $"power:{SanitizeRecordId(newName)}";
+
+		// Delete-then-relate rather than UPDATE ... SET out: `out` on an existing graph edge does not
+		// move, and ExecuteAsync only logs SurrealQL errors, so an UPDATE here fails silently and
+		// strands the grant. Holders that somehow already hold the new power are excluded so the
+		// has_powers_in_out unique index is not violated by the RELATE.
+		// One transaction, as DeletePowerAsync does for the same shape of destructive pair: without
+		// it each statement commits on its own, so a RELATE that failed after the DELETE would leave
+		// the legacy holders with neither grant while the old record was already gone.
+		var response = await ExecuteAsync(
+			"BEGIN TRANSACTION;"
+			+ $"LET $holders = (SELECT VALUE in FROM has_powers WHERE out = {oldId} "
+			+ $"AND in NOT IN (SELECT VALUE in FROM has_powers WHERE out = {newId}));"
+			+ $"DELETE has_powers WHERE out = {oldId};"
+			+ $"FOR $holder IN $holders {{ RELATE $holder->has_powers->{newId}; }};"
+			+ $"DELETE {oldId};"
+			+ "COMMIT TRANSACTION", ct);
+
+		if (response.HasErrors)
+		{
+			logger.LogWarning("Renaming power {Old} to {New} reported errors; existing grants may not have moved.",
+				oldName, newName);
+		}
+	}
+
+
 	private static string SanitizeRecordId(string name)
 	{
 		// SurrealDB record IDs with special characters need to be wrapped in backticks

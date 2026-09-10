@@ -26,32 +26,52 @@ public class NotifyService(
 	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
 {
 	/// <summary>
+	/// One message on its way out. The serialized form is computed once and shared by every
+	/// recipient whose connection wraps nothing around it, so a message to a player with several
+	/// connections, or to a whole room, is serialized once rather than once per handle.
+	/// </summary>
+	private sealed class Outgoing(MString text)
+	{
+		private string? _serialized;
+
+		public MString Text => text;
+
+		public string Serialized => _serialized ??= MarkupTextSerializer.Serialize(text);
+	}
+
+	private static Outgoing Prepare(OneOf<MString, string> what)
+		=> new(what.Match(markup => markup, MarkupText.Plain));
+
+	private static bool IsEmpty(OneOf<MString, string> what)
+		=> what.Match(markup => markup.Length == 0, str => str.Length == 0);
+
+	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
 	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
 	/// so the markup is kept as an <see cref="MString"/> here and only serialized for transport.
 	/// </summary>
-	private async ValueTask PublishMarkup(long handle, OneOf<MString, string> what)
+	private ValueTask PublishMarkup(long handle, Outgoing outgoing)
 	{
-		var ms = what.Match(markup => markup, MarkupText.Plain);
-		ms = ApplyOutputPrefixSuffix(handle, ms);
-		await publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, MarkupTextSerializer.Serialize(ms)), ExecutionBudget.CurrentToken);
+		var wrapped = ApplyOutputPrefixSuffix(handle, outgoing.Text);
+		var serialized = ReferenceEquals(wrapped, outgoing.Text)
+			? outgoing.Serialized
+			: MarkupTextSerializer.Serialize(wrapped);
+		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized), ExecutionBudget.CurrentToken));
 	}
 
 	/// <summary>
 	/// Publishes prompt output to a single connection as serialized markup. Prompts are not wrapped
 	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline.
 	/// </summary>
-	private async ValueTask PublishMarkupPrompt(long handle, OneOf<MString, string> what)
-	{
-		var ms = what.Match(markup => markup, MarkupText.Plain);
-		await publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, MarkupTextSerializer.Serialize(ms)), ExecutionBudget.CurrentToken);
-	}
+	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing)
+		=> new(publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, outgoing.Serialized), ExecutionBudget.CurrentToken));
 
 	/// <summary>
 	/// Wraps markup with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection, keeping everything as
 	/// an <see cref="MString"/>. Mirrors PennMUSH's per-command output wrapping (src/bsd.c): the
 	/// prefix is emitted as a separate line before the output and the suffix as a separate line
 	/// after. Line-ending normalization is the ConnectionServer's responsibility at render time.
+	/// Returns <paramref name="text"/> itself when the connection wraps nothing.
 	/// </summary>
 	private MString ApplyOutputPrefixSuffix(long handle, MString text)
 	{
@@ -61,35 +81,32 @@ public class NotifyService(
 			return text;
 		}
 
-		var hasPrefix = conn.Metadata.TryGetValue("OutputPrefix", out var prefix);
-		var hasSuffix = conn.Metadata.TryGetValue("OutputSuffix", out var suffix);
+		var hasPrefix = conn.Metadata.TryGetValue("OutputPrefix", out var prefix) && !string.IsNullOrEmpty(prefix);
+		var hasSuffix = conn.Metadata.TryGetValue("OutputSuffix", out var suffix) && !string.IsNullOrEmpty(suffix);
 
 		if (!hasPrefix && !hasSuffix)
 		{
 			return text;
 		}
 
-		var parts = new List<MString>();
-		if (hasPrefix && !string.IsNullOrEmpty(prefix))
+		var parts = new List<MString>(5);
+		if (hasPrefix)
 		{
-			parts.Add(MarkupText.Plain(prefix));
+			parts.Add(MarkupText.Plain(prefix!));
 			parts.Add(MarkupText.Plain("\n"));
 		}
 		parts.Add(text);
-		if (hasSuffix && !string.IsNullOrEmpty(suffix))
+		if (hasSuffix)
 		{
 			parts.Add(MarkupText.Plain("\n"));
-			parts.Add(MarkupText.Plain(suffix));
+			parts.Add(MarkupText.Plain(suffix!));
 		}
 		return MarkupText.Concat(parts);
 	}
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
+		if (IsEmpty(what))
 		{
 			return;
 		}
@@ -131,112 +148,94 @@ public class NotifyService(
 			}
 		}
 
+		var outgoing = Prepare(what);
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkup(conn.Handle, what);
+			await PublishMarkup(conn.Handle, outgoing);
 		}
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
-		{
-			return;
-		}
-
-		await PublishMarkup(handle, what);
-	}
+	public ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+		=> IsEmpty(what) ? ValueTask.CompletedTask : PublishMarkup(handle, Prepare(what));
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
+		if (IsEmpty(what))
 		{
 			return;
 		}
 
+		var outgoing = Prepare(what);
 		foreach (var handle in handles)
 		{
-			await PublishMarkup(handle, what);
+			await PublishMarkup(handle, outgoing);
 		}
 	}
 
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
+		if (IsEmpty(what))
 		{
 			return;
 		}
 
+		var outgoing = Prepare(what);
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkupPrompt(conn.Handle, what);
+			await PublishMarkupPrompt(conn.Handle, outgoing);
 		}
 	}
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> await Prompt([handle], what, sender, type);
+	public ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+		=> IsEmpty(what) ? ValueTask.CompletedTask : PublishMarkupPrompt(handle, Prepare(what));
 
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
+		if (IsEmpty(what))
 		{
 			return;
 		}
 
+		var outgoing = Prepare(what);
 		foreach (var handle in handles)
 		{
-			await PublishMarkupPrompt(handle, what);
+			await PublishMarkupPrompt(handle, outgoing);
 		}
 	}
 
 	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (what.Match(
-			markupString => markupString.Length == 0,
-			str => str.Length == 0
-		))
+		if (IsEmpty(what))
 		{
 			return;
 		}
-
-		var targetHandles = await connections.Get(who).Select(x => x.Handle).ToArrayAsync();
 
 		var excludeHandles = await except.ToAsyncEnumerable()
 			.SelectMany(dbRef => connections.Get(dbRef))
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
-		var notifyHandles = targetHandles.Where(h => !excludeHandles.Contains(h)).ToArray();
-
-		if (notifyHandles.Length > 0)
+		var outgoing = Prepare(what);
+		await foreach (var conn in connections.Get(who))
 		{
-			await Notify(notifyHandles, what, sender, type);
+			if (!excludeHandles.Contains(conn.Handle))
+			{
+				await PublishMarkup(conn.Handle, outgoing);
+			}
 		}
 	}
 
 	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> NotifyExcept(who.Object().DBRef, what, except, sender, type);
 
-	public async ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> await NotifyExcept(who.Object().DBRef, what, except.Select(x => x.Object().DBRef).ToArray(), sender, type);
+	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+		=> NotifyExcept(who.Object().DBRef, what, Array.ConvertAll(except, x => x.Object().DBRef), sender, type);
 
 	/// <summary>
 	/// Unified error handling: optionally notify user, then return error.

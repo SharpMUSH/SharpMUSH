@@ -57,16 +57,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 	}
 
 	public async ValueTask<string> ExecuteQueryAsStringAsync(string query, string delimiter = " ")
-	{
-		var results = await ExecuteQueryAsync(query);
-
-		var output = results
-			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
-			.Select(values => string.Join(delimiter, values))
-			.ToArray();
-
-		return string.Join("\n", output);
-	}
+		=> JoinRows(await ExecuteQueryAsync(query), delimiter);
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecutePreparedQueryAsync(string query, params object?[] parameters)
 	{
@@ -125,16 +116,10 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 	}
 
 	public async ValueTask<string> ExecutePreparedQueryAsStringAsync(string query, string delimiter = " ", params object?[] parameters)
-	{
-		var results = await ExecutePreparedQueryAsync(query, parameters);
+		=> JoinRows(await ExecutePreparedQueryAsync(query, parameters), delimiter);
 
-		var output = results
-			.Select(row => row.Values.Select(v => v?.ToString() ?? string.Empty))
-			.Select(values => string.Join(delimiter, values))
-			.ToArray();
-
-		return string.Join("\n", output);
-	}
+	private static string JoinRows(IEnumerable<Dictionary<string, object?>> rows, string delimiter)
+		=> string.Join('\n', rows.Select(row => string.Join(delimiter, row.Values.Select(v => v?.ToString() ?? string.Empty))));
 
 	public string Escape(string value)
 		=> MySqlHelper.EscapeString(value);

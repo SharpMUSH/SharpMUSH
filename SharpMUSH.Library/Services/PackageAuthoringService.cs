@@ -207,9 +207,10 @@ public partial class PackageAuthoringService(
 					else
 					{
 						body.AppendLine("        value: |-");
-						foreach (var line in tokenized.Split('\n'))
+						var text = tokenized.AsSpan();
+						foreach (var line in text.Split('\n'))
 						{
-							body.AppendLine($"          {line}");
+							body.Append("          ").Append(text[line]).AppendLine();
 						}
 					}
 				}

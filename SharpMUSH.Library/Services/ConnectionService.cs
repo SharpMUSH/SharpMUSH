@@ -40,7 +40,7 @@ public class ConnectionService(
 			if (!_sessionState.TryRemove(new KeyValuePair<long, IConnectionService.ConnectionData>(handle, get))) return;
 
 			remainingConnections = get.Ref is { } playerRef
-				? _sessionState.Values.Count(x => x.Ref.HasValue && x.Ref.Value.Equals(playerRef))
+				? _sessionState.Values.Count(x => x.Ref == playerRef)
 				: null;
 		}
 
@@ -67,9 +67,8 @@ public class ConnectionService(
 
 	public IAsyncEnumerable<IConnectionService.ConnectionData> Get(DBRef reference) =>
 		_sessionState.Values
-			.ToAsyncEnumerable()
-			.Where(x => x.Ref.HasValue)
-			.Where(x => x.Ref!.Value.Equals(reference));
+			.Where(x => x.Ref == reference)
+			.ToAsyncEnumerable();
 
 	public IAsyncEnumerable<IConnectionService.ConnectionData> GetAll() =>
 		_sessionState.Values

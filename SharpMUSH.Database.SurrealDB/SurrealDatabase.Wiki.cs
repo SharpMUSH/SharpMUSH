@@ -120,7 +120,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiPageFields} FROM wiki_page ORDER BY updatedAt DESC LIMIT $count",
 				parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
-		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
 	public async Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50)
@@ -134,7 +134,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiPageFields} FROM wiki_page WHERE namespace = $ns ORDER BY slug ASC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
-		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
 	public async Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
@@ -151,7 +151,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiPageFields} FROM wiki_page {where}ORDER BY namespace ASC, slug ASC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
-		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
 	public async Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
@@ -191,7 +191,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiPageFields} FROM wiki_page WHERE category = $cat ORDER BY title ASC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
-		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
 	public async Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
@@ -207,7 +207,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiPageFields} FROM wiki_page WHERE $tag IN (tags ?? []) ORDER BY title ASC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiPageDbRecord>>(0);
-		return (results?.Select(MapToWikiPage).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
 	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
@@ -420,7 +420,7 @@ public partial class SurrealDatabase : IWikiService
 				$"ORDER BY revisionNumber DESC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
-		return (results?.Select(MapToWikiRevision).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiRevision).ToList() ?? [];
 	}
 
 	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
@@ -558,11 +558,10 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiTranslationFields} FROM wiki_translation WHERE pageId = $pageId ORDER BY locale ASC",
 				parameters);
 		var results = response.GetValue<List<WikiTranslationDbRecord>>(0);
-		return (results?
+		return results?
 				.Select(MapToWikiTranslation)
 				.Select(t => new WikiTranslationSummary(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber))
-				.ToList() ?? [])
-			.AsReadOnly();
+				.ToList() ?? [];
 	}
 
 	public async Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
@@ -572,7 +571,7 @@ public partial class SurrealDatabase : IWikiService
 				$"SELECT {WikiTranslationFields} FROM wiki_translation ORDER BY pageId ASC, locale ASC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiTranslationDbRecord>>(0);
-		return (results?.Select(MapToWikiTranslation).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiTranslation).ToList() ?? [];
 	}
 
 	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
@@ -775,7 +774,7 @@ public partial class SurrealDatabase : IWikiService
 				"ORDER BY revisionNumber DESC LIMIT $take START $skip",
 				parameters);
 		var results = response.GetValue<List<WikiRevisionDbRecord>>(0);
-		return (results?.Select(MapToWikiRevision).ToList() ?? []).AsReadOnly();
+		return results?.Select(MapToWikiRevision).ToList() ?? [];
 	}
 
 	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
