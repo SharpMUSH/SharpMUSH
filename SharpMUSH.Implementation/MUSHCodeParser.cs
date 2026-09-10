@@ -529,7 +529,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (shouldDebug && executorObj is not null)
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
-			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
 		}
 	}
@@ -556,16 +556,29 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser();
+		// Completion diagnostics belong to the same operation as parsing. Keep its original
+		// deadline alive through the final awaited read/notification, including standalone calls.
+		using var ownedBudget = ExecutionBudget.Current is null && (State.IsEmpty || CurrentState.ExecutionBudget is null)
+			? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
+		var budget = ExecutionBudget.Current ?? (State.IsEmpty ? null : CurrentState.ExecutionBudget) ?? ownedBudget!;
+		using var budgetScope = budget.Enter();
+		try
+		{
+			budget.ThrowIfExceeded();
+			var parser = ResolveTrackingParser();
+			var rawText = text.ToPlainText();
+			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+			budget.ThrowIfExceeded();
 
-		// Capture raw text BEFORE evaluation for substitution-only debug
-		var rawText = text.ToPlainText();
-		var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
-
-		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
-			suppressSubstitutionDebug);
-
-		return result;
+			await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+				rawText, result?.Message, suppressSubstitutionDebug);
+			budget.ThrowIfExceeded();
+			return result;
+		}
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{
+			return new CallState(ExecutionBudget.Error) { HadErrors = true };
+		}
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)

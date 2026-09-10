@@ -317,7 +317,7 @@ public class SharpMUSHParserVisitor(
 	{
 		if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
 			return;
-		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		await NotifyService.Notify(owner, MarkupText.Plain(message));
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
