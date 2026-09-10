@@ -57,11 +57,62 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -p:SkipFormatVerification=true
 
+      - name: Package test build outputs
+        run: bash .github/scripts/pack-test-build.sh "$RUNNER_TEMP/test-build"
+
+      - name: Upload unit test build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: SharpMUSH.Tests
+          path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload BUnit test build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: SharpMUSH.Tests.BUnit
+          path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.BUnit.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload scene plugin test build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: SharpMUSH.Tests.ScenePlugin
+          path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.ScenePlugin.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload integration test build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: SharpMUSH.Tests.Integration
+          path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.Integration.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload shared test build output
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build/test-build-support.tar.gz
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
   test:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
     # Backstop only. It must clear the retry budget below (2 x 30 minutes) plus ~3 minutes of
-    # checkout, restore and build, or it would truncate the second attempt — reintroducing the
+    # checkout and artifact download, or it would truncate the second attempt — reintroducing the
     # killed-mid-run failure this timeout exists to prevent.
     timeout-minutes: 70
     strategy:
@@ -79,11 +130,23 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Download test build output
+        uses: actions/download-artifact@v8
+        with:
+          name: SharpMUSH.Tests
+          path: ${{ runner.temp }}/test-build
 
-      - name: Build
-        run: dotnet build --no-restore -p:SkipFormatVerification=true
+      - name: Download shared test build support
+        uses: actions/download-artifact@v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
 
       - name: Test (${{ matrix.database }})
         uses: nick-fields/retry@v4
@@ -97,7 +160,16 @@ jobs:
           max_attempts: 2
           # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
           # Keep the existing concurrency and execution deadlines.
-          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
+          command: dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --parallelism-strategy fixed --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-unit-${{ matrix.database }}
+          path: TestResults/unit/**/*.trx
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Publish Telemetry to Summary
         if: always()
@@ -121,6 +193,9 @@ jobs:
   test-bunit:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
 
     steps:
       - uses: actions/checkout@v6
@@ -132,22 +207,46 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Download test build output
+        uses: actions/download-artifact@v8
+        with:
+          name: SharpMUSH.Tests.BUnit
+          path: ${{ runner.temp }}/test-build
 
-      - name: Build
-        run: dotnet build --no-restore -p:SkipFormatVerification=true
+      - name: Download shared test build support
+        uses: actions/download-artifact@v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.BUnit.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
 
       - name: BUnit Tests
         uses: nick-fields/retry@v4
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.BUnit --no-build --verbosity normal -- --output Detailed
+          command: dotnet run --project SharpMUSH.Tests.BUnit --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/bunit"
+
+      - name: Upload bunit test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-bunit
+          path: TestResults/bunit/**/*.trx
+          retention-days: 7
+          if-no-files-found: warn
 
   test-scene-plugin:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -161,13 +260,43 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
+      - name: Download test build output
+        uses: actions/download-artifact@v8
+        with:
+          name: SharpMUSH.Tests.ScenePlugin
+          path: ${{ runner.temp }}/test-build
+
+      - name: Download shared test build support
+        uses: actions/download-artifact@v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.ScenePlugin.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
+
       # Keep provider-independent scene coverage; the membership fixture boots embedded SurrealDB.
       - name: Scene plugin tests (without SurrealDB)
-        run: dotnet run --project SharpMUSH.Tests.ScenePlugin -p:SkipFormatVerification=true -- --output Detailed --treenode-filter '/*/*/(*)&(!SurrealSceneMembershipTests)/*'
+        run: dotnet run --project SharpMUSH.Tests.ScenePlugin --no-build --no-restore -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/scene-plugin" --treenode-filter '/*/*/(*)&(!SurrealSceneMembershipTests)/*'
+
+      - name: Upload scene-plugin test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-scene-plugin
+          path: TestResults/scene-plugin/**/*.trx
+          retention-days: 7
+          if-no-files-found: warn
 
   test-integration:
     needs: [build]
     runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
     strategy:
       matrix:
         # SurrealDB execution is paused while provider cost and test isolation are addressed.
@@ -183,11 +312,23 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Download test build output
+        uses: actions/download-artifact@v8
+        with:
+          name: SharpMUSH.Tests.Integration
+          path: ${{ runner.temp }}/test-build
 
-      - name: Build
-        run: dotnet build --no-restore -p:SkipFormatVerification=true
+      - name: Download shared test build support
+        uses: actions/download-artifact@v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.Integration.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
 
       - name: Integration Test (${{ matrix.database }})
         uses: nick-fields/retry@v4
@@ -198,7 +339,16 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
+          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8 --parallelism-strategy fixed
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-integration-${{ matrix.database }}
+          path: TestResults/integration/**/*.trx
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Publish Integration Telemetry to Summary
         if: always()
