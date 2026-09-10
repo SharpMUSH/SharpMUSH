@@ -63,7 +63,7 @@ pagination after filtering, game/provider parity, actual portal rendering,
 cancellation and unchanged telemetry exporters. Scheduler regressions verify
 FIFO side effects and semaphore bookkeeping after a ready timeout is halted.
 
-`QueueDiagnosticsSchedulerTests.RepresentativeQueueOverheadPreservesEveryInvocationAndSideEffect`
+The explicit `QueueDiagnosticsSchedulerTests.MeasureRepresentativeQueueOverhead` benchmark
 compares disabled observation, history recording and an active profile. Each mode
 executes 5,000 FIFO entries with three existing telemetry invocations per entry.
 It verifies every admission, execution order and side effect, plus each retained
@@ -71,11 +71,13 @@ entry's invocation count and outcome. Each mode has a warm-up and the first full
 round is excluded from reported comparisons. Subsequent rounds report elapsed
 milliseconds and process-wide managed allocation deltas.
 
-Run it in an otherwise idle test process with the pinned SDK:
+The default correctness suite checks the same three modes with 16 entries each and
+does not report timing or allocation measurements. Run the explicit benchmark in
+an otherwise idle test process with the pinned SDK:
 
 ```sh
 SHARPMUSH_DATABASE_PROVIDER=lightning dotnet run --project SharpMUSH.Tests --no-build -- \
-  --treenode-filter '/*/*/QueueDiagnosticsSchedulerTests/RepresentativeQueueOverheadPreservesEveryInvocationAndSideEffect' \
+  --treenode-filter '/*/*/QueueDiagnosticsSchedulerTests/MeasureRepresentativeQueueOverhead' \
   --output Detailed
 ```
 

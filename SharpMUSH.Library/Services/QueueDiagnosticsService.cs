@@ -88,6 +88,9 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 	{
 		if (seconds is < 1 or > 300) return DiagnosticsError.InvalidDuration;
 		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
+		// A capture must have a usable reporting path before it consumes bounded recorder capacity.
+		try { await queues.ListAsync(actor, 1, ct); }
+		catch (NotSupportedException) { return DiagnosticsError.Unsupported; }
 		var profile = recorder.StartProfile(actor, TimeSpan.FromSeconds(seconds));
 		return profile is null ? DiagnosticsError.CapacityExceeded : profile.Id;
 	}

@@ -37,20 +37,25 @@ public class QueueDiagnosticsSchedulerTests
 	}
 
 	[Test]
-	[NotInParallel]
-	public async Task RepresentativeQueueOverheadPreservesEveryInvocationAndSideEffect()
+	public Task RepresentativeQueueOverheadPreservesEveryInvocationAndSideEffect()
+		=> RunRepresentativeQueue(16, 1, measure: false);
+
+	[Test, Explicit, NotInParallel]
+	public Task MeasureRepresentativeQueueOverhead()
+		=> RunRepresentativeQueue(5000, 4, measure: true);
+
+	private static async Task RunRepresentativeQueue(int count, int rounds, bool measure)
 	{
-		const int count = 5000;
-		// Discard round zero when reporting measurements: it includes process/JIT warm-up.
-		for (var round = 0; round < 4; round++)
+		// Explicit measurements discard round zero, which includes process/JIT warm-up.
+		for (var round = 0; round < rounds; round++)
 			foreach (var mode in new[] { "disabled", "history", "profile" })
 			{
 				var recorder = mode == "disabled" ? null : new QueueDiagnosticsRecorder();
 				if (mode == "profile") recorder!.StartProfile(new("benchmark", new DBRef(1, 1), new DBRef(1, 1)), TimeSpan.FromSeconds(60));
 				using var telemetry = new TelemetryService(recorder is null ? [] : [recorder]);
-				await using var queue = Create(recorder, capacity: count + 1);
+				await using var queue = Create(recorder, capacity: (uint)count + 1);
 				// Warm the queue and each observer mode before comparing their steady-state hot paths.
-				for (var warmup = 0; warmup < 300; warmup++)
+				for (var warmup = 0; warmup < (measure ? 300 : 0); warmup++)
 					await queue.AdmitWork(() =>
 					{
 						telemetry.RecordFunctionInvocation("add", .01, true);
@@ -63,8 +68,8 @@ public class QueueDiagnosticsSchedulerTests
 				recorder?.DrainProfileSamples();
 				var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 				var observed = 0;
-				var allocatedBefore = GC.GetTotalAllocatedBytes();
-				var elapsed = System.Diagnostics.Stopwatch.StartNew();
+				var allocatedBefore = measure ? GC.GetTotalAllocatedBytes() : 0;
+				var elapsed = measure ? System.Diagnostics.Stopwatch.StartNew() : null;
 				for (var i = 0; i < count; i++)
 				{
 					var expected = i;
@@ -82,8 +87,8 @@ public class QueueDiagnosticsSchedulerTests
 				await completed.Task.WaitAsync(TimeSpan.FromSeconds(30));
 				using var drainedTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 				while (queue.GetQueueUsage().Total != 0) await Task.Delay(1, drainedTimeout.Token);
-				elapsed.Stop();
-				Console.WriteLine($"Queue diagnostics benchmark: round={round}, mode={mode}, entries={count}, elapsed_ms={elapsed.Elapsed.TotalMilliseconds:F2}, allocated_bytes={GC.GetTotalAllocatedBytes() - allocatedBefore}");
+				elapsed?.Stop();
+				if (measure) Console.WriteLine($"Queue diagnostics benchmark: round={round}, mode={mode}, entries={count}, elapsed_ms={elapsed!.Elapsed.TotalMilliseconds:F2}, allocated_bytes={GC.GetTotalAllocatedBytes() - allocatedBefore}");
 				await Assert.That(observed).IsEqualTo(count);
 				if (recorder is not null)
 					await Assert.That(recorder.Recent().All(row => row.InvocationCount == 3 && row.Outcome == QueueOutcome.Completed)).IsTrue();

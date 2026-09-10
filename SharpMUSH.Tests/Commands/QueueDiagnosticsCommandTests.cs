@@ -27,6 +27,9 @@ public class QueueDiagnosticsCommandTests
 	[Arguments("@profile", true)]
 	[Arguments("http", true)]
 	[Arguments("http", false)]
+	[Arguments("@profile/start", true)]
+	[Arguments("http-start", true)]
+	[Arguments("http-start", false)]
 	public async Task UnsupportedSchedulerDiagnosticsRemainAuthorized(string path, bool allowed)
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
@@ -39,8 +42,9 @@ public class QueueDiagnosticsCommandTests
 		var scheduler = Substitute.For<ITaskScheduler>();
 		scheduler.EnumerateQueueEntries().Returns(_ => throw new NotSupportedException("legacy scheduler"));
 		var queues = new QueueControlService(scheduler, capabilities, mediator, Factory.Services.GetRequiredService<IPermissionService>());
-		var diagnostics = new QueueDiagnosticsService(new QueueDiagnosticsRecorder(), queues, NullLogger<QueueDiagnosticsService>.Instance);
-		if (path == "http")
+		var recorder = new QueueDiagnosticsRecorder();
+		var diagnostics = new QueueDiagnosticsService(recorder, queues, NullLogger<QueueDiagnosticsService>.Instance);
+		if (path.StartsWith("http", StringComparison.Ordinal))
 		{
 			var controller = new QueueDiagnosticsController(diagnostics)
 			{
@@ -50,9 +54,10 @@ public class QueueDiagnosticsCommandTests
 					{ User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "diagnostics")], "test")) }
 				}
 			};
-			var response = await controller.Inspect(full.ToString());
+			var response = path == "http-start" ? await controller.Start(new(full.ToString())) : await controller.Inspect(full.ToString());
 			var status = response is ObjectResult obj ? obj.StatusCode : ((StatusCodeResult)response).StatusCode;
 			await Assert.That(status).IsEqualTo(allowed ? 501 : 403);
+			await Assert.That(recorder.ProfileRegistrations().Count).IsEqualTo(0);
 			if (!allowed) scheduler.DidNotReceive().EnumerateQueueEntries();
 			return;
 		}
@@ -64,6 +69,7 @@ public class QueueDiagnosticsCommandTests
 			original.CommandLibrary, original.Configuration, provider);
 		var result = await parser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(path));
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 DIAGNOSTICS UNSUPPORTED");
+		await Assert.That(recorder.ProfileRegistrations().Count).IsEqualTo(0);
 	}
 
 	[Test]
