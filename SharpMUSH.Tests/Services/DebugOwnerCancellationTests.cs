@@ -35,6 +35,7 @@ public class DebugOwnerCancellationTests
 		var notify = Substitute.For<INotifyService>();
 		var parser = Substitute.For<IMUSHCodeParser>();
 		var state = ParserState.RootFor(executor.AsPlayer.Object.DBRef) with { Flags = ParserStateFlags.Debug };
+		parser.CurrentState.Returns(state);
 		using var request = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, request.Token);
 		using var scope = budget.Enter();
