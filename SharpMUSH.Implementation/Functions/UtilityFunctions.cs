@@ -674,8 +674,22 @@ public partial class Functions
 			return new CallState("#-1 FUNCTION (No function name given)");
 		}
 
-		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out _))
+		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
 		{
+			EvaluationRestrictions.Demand(targetFunction.LibraryInformation, parser.CurrentState.Restrictions);
+			using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState);
+			if (retainedSource is not null)
+			{
+				// Reserve before ToPlainText/Join allocate; the recursive parse keeps
+				// this source live until it returns, including chains of fn targets.
+				retainedSource.Add(functionName.Length + 2L);
+				var first = true;
+				foreach (var argument in parser.CurrentState.ArgumentsOrdered.Skip(1))
+				{
+					retainedSource.Add((argument.Value.Message?.Length ?? 0) + (first ? 0L : 1L));
+					first = false;
+				}
+			}
 			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
 			var fnArgs = parser.CurrentState.ArgumentsOrdered
 				.Skip(1)
@@ -685,7 +699,8 @@ public partial class Functions
 			return result ?? CallState.Empty;
 		}
 
-		// Fall back to user-defined attribute function
+		// Fall back to user-defined attribute function only when object-data access is allowed.
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var result2 = await AttributeService.EvaluateAttributeFunctionAsync(
 			parser,
