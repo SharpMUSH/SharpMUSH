@@ -188,7 +188,7 @@ public sealed class RecurringJobService(
 				var actor = new CapabilityActor(job.OwnerAccount, active, active);
 				var executor = await Authorize(actor, PortalPermission.JobsManageOwn, ct);
 				var target = Identity(job.Target);
-				var code = await Executable(executor, target, job.Attribute, ct);
+				var attribute = await Executable(executor, target, job.Attribute, ct);
 				ExecutionBudget.Current?.ThrowIfExceeded();
 				// Starting evaluation is the dispatch boundary. Do not hold the gate while awaiting
 				// softcode, which may itself disable or delete this job through normal commands.
@@ -196,7 +196,7 @@ public sealed class RecurringJobService(
 				{
 					CurrentEvaluation = new DBAttribute(target, job.Attribute),
 					ExecutionBudget = ExecutionBudget.Current
-				}).CommandListParse(code);
+				}).WithAttributeDebug(attribute, child => child.CommandListParse(attribute.Value));
 			}
 			finally { _gate.Release(); }
 			result = await evaluation;
@@ -237,7 +237,7 @@ public sealed class RecurringJobService(
 		if (!executor.IsPlayer || executor.AsPlayer.Object.DBRef != active || (await executor.AsPlayer.Object.Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The executing player no longer exists.");
 		return executor.Known;
 	}
-	private async Task<MarkupText> Executable(AnySharpObject executor, DBRef target, string attribute, CancellationToken ct)
+	private async Task<SharpAttribute> Executable(AnySharpObject executor, DBRef target, string attribute, CancellationToken ct)
 	{
 		var obj = await objects.GetObjectNodeAsync(target, ct);
 		if (obj.IsNone || obj.Known.Object().DBRef != target || (await obj.Known.Object().Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The target identity no longer exists.");
@@ -251,7 +251,7 @@ public sealed class RecurringJobService(
 		var value = await attributes.GetAttributeAsync(executor, obj.Known, attribute, IAttributeService.AttributeMode.Execute, false)
 			.AsTask().WaitAsync(readBudget.Token);
 		if (!value.IsAttribute || value.AsAttribute.Length == 0) throw Error("denied", "The target attribute is missing or not executable.");
-		return value.AsAttribute.Last().Value;
+		return value.AsAttribute.Last();
 	}
 	private async Task<RecurringJob[]> Read(CancellationToken ct)
 	{

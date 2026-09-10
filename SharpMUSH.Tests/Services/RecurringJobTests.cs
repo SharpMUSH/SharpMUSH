@@ -300,6 +300,38 @@ public class RecurringJobTests
 	}
 
 	[Test, NotInParallel]
+	[Arguments("DEBUG", false, true)]
+	[Arguments("NO_DEBUG", true, false)]
+	public async Task ScheduledAttributeRetainsItsDebugFlags(string attributeFlag, bool executorDebug, bool expectedTrace)
+	{
+		var context = await Setup();
+		var mediator = Get<IMediator>();
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var marker = "job-debug-" + Guid.NewGuid().ToString("N");
+		await mediator.Send(new SetAttributeCommand(context.Target, ["RUN"],
+			MarkupText.Plain($"@pemit me=[strcat({marker},add(13,17))]"), player));
+		var attribute = await mediator.CreateStream(new GetAttributeQuery(context.Target, ["RUN"])).LastAsync();
+		var flag = await mediator.CreateStream(new GetAttributeFlagsQuery()).SingleAsync(f => f.Name.Equals(attributeFlag, StringComparison.OrdinalIgnoreCase));
+		await mediator.Send(new SetAttributeFlagCommand(context.Target, attribute, flag));
+		var debug = (await mediator.Send(new GetObjectFlagQuery("DEBUG")))!;
+		var previouslyDebug = await player.Object.Flags.Value.AnyAsync(f => f.Name == "DEBUG");
+		if (executorDebug && !previouslyDebug) await mediator.Send(new SetObjectFlagCommand(player, debug));
+		try
+		{
+			await Create(context);
+			context.Clock.Now = context.Clock.Now.AddMinutes(1);
+			await context.Service.RunDueAsync();
+			await context.Callbacks.Single()();
+			await Assert.That(Factory.Notifications.For(player.Object.DBRef)
+				.Any(message => message.Contains("! ") && message.Contains(marker))).IsEqualTo(expectedTrace);
+		}
+		finally
+		{
+			if (executorDebug && !previouslyDebug) await mediator.Send(new UnsetObjectFlagCommand(player, debug));
+		}
+	}
+
+	[Test, NotInParallel]
 	public async Task ScheduledAttributeHasRootQRegisters()
 	{
 		var context = await Setup();
@@ -443,6 +475,8 @@ public class RecurringJobTests
 		var parser = Substitute.For<IMUSHCodeParser>();
 		ParserState? state = null;
 		parser.FromState(Arg.Any<ParserState>()).Returns(call => { state = call.ArgAt<ParserState>(0); return parser; });
+		parser.CurrentState.Returns(_ => state!);
+		parser.Push(Arg.Any<ParserState>()).Returns(call => { state = call.ArgAt<ParserState>(0); return parser; });
 		var observed = new TaskCompletionSource<ExecutionBudget?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => { observed.TrySetResult(ExecutionBudget.Current); return ValueTask.FromResult<CallState?>(CallState.Empty); });
 		var service = new RecurringJobService(Get<IExpandedDataStore>(), Get<IObjectStore>(), context.Capabilities,
