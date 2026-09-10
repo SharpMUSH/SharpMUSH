@@ -66,7 +66,8 @@ jobs:
     timeout-minutes: 70
     strategy:
       matrix:
-        database: [surrealdb, lightning]
+        # SurrealDB execution is paused while provider cost and test isolation are addressed.
+        database: [lightning]
 
     steps:
       - uses: actions/checkout@v6
@@ -91,16 +92,12 @@ jobs:
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         with:
-          # The 9,320-case SurrealDB suite passed on the reviewed R7 tree in 16m31s.
-          # Main and image runs then reached the 20-minute cutoff with 9,058 and
-          # 9,124 passing tests respectively. The image run's final ten tests failed
-          # only after the timeout disposed the shared IServiceProvider underneath them.
-          # Give each attempt room to finish without extending the total retry budget:
-          # two 30-minute attempts retain the previous three x 20-minute maximum.
+          # Retain the retry budget while test isolation is repaired.
           timeout_minutes: 30
           max_attempts: 2
-          # Bound shared-provider contention without changing per-entry execution deadlines.
-          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
+          # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
+          # Keep the existing concurrency and execution deadlines.
+          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
 
       - name: Publish Telemetry to Summary
         if: always()
@@ -164,15 +161,17 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Scene plugin tests (embedded SurrealDB)
-        run: dotnet run --project SharpMUSH.Tests.ScenePlugin -p:SkipFormatVerification=true -- --output Detailed
+      # Keep provider-independent scene coverage; the membership fixture boots embedded SurrealDB.
+      - name: Scene plugin tests (without SurrealDB)
+        run: dotnet run --project SharpMUSH.Tests.ScenePlugin -p:SkipFormatVerification=true -- --output Detailed --treenode-filter '/*/*/(*)&(!SurrealSceneMembershipTests)/*'
 
   test-integration:
     needs: [build]
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        database: [surrealdb, lightning]
+        # SurrealDB execution is paused while provider cost and test isolation are addressed.
+        database: [lightning]
 
     steps:
       - uses: actions/checkout@v6
