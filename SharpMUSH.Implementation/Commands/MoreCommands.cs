@@ -1387,7 +1387,7 @@ public partial class Commands
 
 		var currentRoom = executorLocation;
 
-		// The drop lock fails on the object being dropped (move.c:735-737) and again on the room, when
+		// The drop lock fails on the object being dropped (move.c:736-738) and again on the room, when
 		// the location is one (move.c:740-744); both return. The drop-in lock is the room's
 		// (move.c:745-747), and its branch is the one `else if` in the chain with no `return` — the
 		// object stays put, but do_drop still falls through to the DROP triad at move.c:768.
@@ -1979,7 +1979,7 @@ public partial class Commands
 			executor.Object().DBRef, "get");
 
 		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, …)
-		// (move.c:634-636 possessive, :681-683 plain). The 8th argument is `loc` and the 9th is
+		// (move.c:634-636 possessive, :685-686 plain). The 8th argument is `loc` and the 9th is
 		// `env0`: `loc` is NOTHING, which real_did_it resolves to Location(player) (predicat.c:230),
 		// so the o-message audience is the taker's own room; the source container rides in %0.
 		await DidItService.DidIt(parser, new DidItRequest(
@@ -1996,7 +1996,7 @@ public partial class Commands
 			Env0: objectLocation.Object().DBRef.ToString()));
 
 		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
-		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :684-686): the taker's own receive triad.
+		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :687-689): the taker's own receive triad.
 		// `loc` is NOTHING — the room the taker is in — and the taken object is %0.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: executor,

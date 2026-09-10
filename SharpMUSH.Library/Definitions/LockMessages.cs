@@ -6,7 +6,7 @@ namespace SharpMUSH.Library.Definitions;
 /// Which attributes a failed lock triggers. PennMUSH's <c>lock_msgs</c> table
 /// (<c>src/lock.c:102</c>) names four locks explicitly; every other lock type derives its
 /// attributes as <c>&lt;LOCK&gt;_LOCK`FAILURE</c> and siblings, upper-cased by <c>fail_lock</c>
-/// (<c>src/lock.c:873-875</c>) before use.
+/// (<c>src/lock.c:874-876</c>) before use.
 /// </summary>
 public static class LockMessages
 {

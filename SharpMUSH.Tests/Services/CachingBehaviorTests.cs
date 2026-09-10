@@ -299,10 +299,8 @@ public class CachingBehaviorTests
 		}
 
 		// Verify cache key exists. The room is unique to this test so no other test can invalidate
-		// this specific key via a targeted CacheKey. Multiple retries guard against the
-		// MoveObjectCommand fallback ObjectContents tag sweep, which fires for all callers that
-		// don't supply OldContainer (GeneralCommands, MoreCommands, UtilityFunctions) and is
-		// common under parallel CI load.
+		// this specific key via a targeted CacheKey. Multiple retries guard against the whole-tag
+		// sweeps other commands still carry, which are common under parallel CI load.
 		var cacheKey = SharpMUSH.Library.Definitions.CacheKeys.Contents(dbRef);
 		var cached = await Cache.TryGetAsync<CachedObjectRefs>(cacheKey);
 		for (var retry = 0; !cached.HasValue && retry < 10; retry++)

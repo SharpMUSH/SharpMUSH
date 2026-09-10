@@ -87,7 +87,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>did_it_with(player, thing, "SUCCESS", …, "ASUCCESS", NOTHING, oldloc, …)</c>
-	/// (<c>src/move.c:681-683</c>).
+	/// (<c>src/move.c:685-686</c>).
 	/// </summary>
 	[Test]
 	public async ValueTask GetFiresTheItemsSuccessTriad()
@@ -108,7 +108,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
-	/// NOTHING, NA_INTER_HEAR, AN_MOVE)</c> (<c>src/move.c:684-686</c>). The eighth argument is
+	/// NOTHING, NA_INTER_HEAR, AN_MOVE)</c> (<c>src/move.c:687-689</c>). The eighth argument is
 	/// <c>loc</c> and the ninth is <c>env0</c>, so the o-message goes to the taker's room — which
 	/// <c>NOTHING</c> resolves to (<c>src/predicat.c:230</c>) — and the taken item rides in
 	/// <c>%0</c>.
@@ -228,7 +228,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>fail_lock(player, thing, Drop_Lock, T("You can't seem to get rid of that."), NOTHING)</c>
-	/// (<c>src/move.c:735-737</c>): the drop lock fails on the object being dropped.
+	/// (<c>src/move.c:736-738</c>): the drop lock fails on the object being dropped.
 	/// </summary>
 	[Test]
 	public async ValueTask DropsDropLockFailsOnTheObject()

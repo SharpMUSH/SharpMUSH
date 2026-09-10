@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -840,36 +841,31 @@ public class MovementParityTests
 	/// </summary>
 	/// <remarks>
 	/// This has to observe the INVALIDATION, not the value. <c>CacheTags.ObjectContents</c> is
-	/// over-invalidation, never wrong answers: an <c>lcon()</c> either side of the walk re-reads and
-	/// returns the identical list whether or not the entry survived, so an assertion on the text
-	/// cannot fail and does not guard anything. The bystander room's cache entry itself is the
-	/// observable — present afterwards under the per-container tags, gone under the global one.
+	/// over-invalidation, never wrong answers, so nothing observable downstream distinguishes the two:
+	/// an <c>lcon()</c> re-reads and returns the identical list either way, and a bystander's cache
+	/// entry is repopulated on the next read regardless. The declared tag set is the observable, and
+	/// <c>engine-data-trunk.md</c> makes it the contract — caching policy is data on the request.
 	/// </remarks>
 	[Test]
-	public async ValueTask WalkingThroughAnExitDoesNotWipeUnrelatedContentsCaches()
+	public async ValueTask AMoveExpiresOnlyTheTwoContainersItNames()
 	{
-		var bystanderRoom = await Dig("CacheBystander");
-		var bystander = await TestIsolationHelpers.CreateTestThingAsync(
-			GodParser, ConnectionService, "CacheThing");
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {bystander}={bystanderRoom}"));
+		var origin = DBRef.Parse(await Dig("TagOrigin"));
+		var destination = DBRef.Parse(await Dig("TagDest"));
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "TagThing");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={origin}"));
 
-		// The corridor is built first: @dig/@open/@teleport are writes of their own, and warming
-		// after them means only the walk can have expired what the assertion reads.
-		var (mover, _, _, _) = await Corridor("CacheWalk");
+		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known.AsContent;
+		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
 
-		var cache = WebAppFactoryArg.Services.GetRequiredService<IFusionCache>();
-		var contentsKey = CacheKeys.Contents(DBRef.Parse(bystanderRoom).Number);
+		var move = new MoveObjectCommand(mover, into, origin);
 
-		await GodParser.FunctionParse(MarkupText.Plain($"[lcon({bystanderRoom})]"));
-		await Assert.That((await cache.TryGetAsync<CachedObjectRefs>(contentsKey)).HasValue)
-			.IsTrue()
-			.Because("the read must have cached the bystander room's contents for the walk to threaten");
-
-		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out"));
-
-		await Assert.That((await cache.TryGetAsync<CachedObjectRefs>(contentsKey)).HasValue)
-			.IsTrue()
-			.Because("a step through an exit must expire only the two containers it names");
+		await Assert.That(move.CacheTags).Contains(CacheKeys.ContentsTag(origin.Number))
+			.Because("the origin's contents list is what the move actually changes");
+		await Assert.That(move.CacheTags).Contains(CacheKeys.ContentsTag(destination.Number));
+		await Assert.That(move.CacheTags).DoesNotContain(CacheTags.ObjectContents)
+			.Because("expiring every container in the game is what naming the origin exists to avoid");
+		await Assert.That(move.CacheKeys).Contains(CacheKeys.Contents(origin));
+		await Assert.That(move.CacheKeys).Contains(CacheKeys.Contents(destination));
 	}
 
 	/// <summary>

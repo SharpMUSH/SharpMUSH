@@ -1914,17 +1914,15 @@ public partial class Functions
 							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
-						// OldContainer is not optional in practice: without it MoveObjectCommand falls back to
-						// the global CacheTags.ObjectContents tag, wiping every container's contents list.
 						var oldContainer = await targetContent.Location();
 
 						await Mediator.Send(new MoveObjectCommand(
 							targetContent,
 							destinationContainer,
-							executor.Object().DBRef,
-							true, // silent
-							"tel()",
-							OldContainer: oldContainer.Object().DBRef));
+							OldContainer: oldContainer.Object().DBRef,
+							Enactor: executor.Object().DBRef,
+							IsSilent: true,
+							Cause: "tel()"));
 
 						return "1";
 					});

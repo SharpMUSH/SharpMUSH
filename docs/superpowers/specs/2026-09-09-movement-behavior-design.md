@@ -1,6 +1,6 @@
 # Movement and Automatic Behavior — PennMUSH Parity
 
-Status: design approved, implementation pending.
+Status: implemented.
 Reference: PennMUSH 1.8.8 — `src/move.c`, `src/predicat.c`, `src/lock.c`, `src/look.c`, `src/wiz.c`.
 
 ## 1. Problem
@@ -336,5 +336,30 @@ harness. Each divergence in §1–§7 gets a test written before its fix:
 - Making `GetExitsQuery` cacheable (§5).
 - `@dolist`-style follower edge cases beyond `follower_command` on a successful move.
 - Multi-node cache coherence, which the trunk doc already defers to a FusionCache backplane.
+
+## Known gaps
+
+Deliberately not closed, each verified against PennMUSH and recorded rather than fixed:
+
+- **`BUY` has no economy.** The command is a stub; its triad needs `PRICELIST`, `@cost`, the Pay
+  lock and a penny transfer before it means anything.
+- **`AUSE` always runs.** PennMUSH gates it on `CHARGES` via `charge_action` (`predicat.c:88`);
+  SharpMUSH has neither `CHARGES` nor `RUNOUT`.
+- **Connect and disconnect hooks run inline** where PennMUSH queues them (`bsd.c:5987`, `:6073`
+  call `queue_attribute_base`). `DidIt` cannot be used there: `QueueAction` reads
+  `parser.CurrentState`, and that path runs on an empty stack. Closing it rewrites
+  `ConnectionAnnounceServiceTests`' per-hook isolation contract.
+- **`DBRef.ToString()` emits `#N:creation`** where PennMUSH's `unparse_dbref` emits `#N`, so
+  softcode reading a triad's `%0` gets a stamped dbref. Tests strip the stamp rather than the code
+  matching Penn.
+- **`EMPTY`'s lock placement differs** — PennMUSH puts the drop-in lock on the held branch and
+  checks the room's `Drop_Lock` too (`move.c:828-831` against `:849-851`).
+- **Possessive `GET` does not honour PennMUSH's `controls()` bypass.**
+- **`GetExitsQuery` is not `ICacheable`**, so the automatic look's exit listing is an uncached store
+  read on every move. Making it cacheable needs its own invalidation design spanning `@open`,
+  `@dig`, `@link`, `@unlink`, `@destroy`, `@firstexit` and exit teleport.
+- **Fair cross-owner queue admission.** Per-owner quotas bound one owner's share; they do not stop
+  many owners collectively filling the single channel. PennMUSH has no design to copy — its queue is
+  a single-threaded list with no admission control.
 - Replacing `TaskScheduler`'s single process-wide channel with per-owner queues; §6.3 adds the
   quota and the runaway halt to the existing structure without restructuring it.

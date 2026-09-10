@@ -161,7 +161,7 @@ public class MoveService(
 		var absOld = await AbsoluteRoom(mover);
 
 		await mediator.Send(new MoveObjectCommand(
-			what, where, enactor, noMoveMsgs, cause, OldContainer: old));
+			what, where, old, enactor, noMoveMsgs, cause));
 
 		var absNew = await AbsoluteRoom(mover);
 		var oldZone = absOld is null ? null : await ZoneOf(absOld);
@@ -517,7 +517,11 @@ public class MoveService(
 
 		// Carried to every MoveObjectCommand below: without it the command falls back to the global
 		// ObjectContents tag and wipes every container's cached contents list.
-		DBRef? oldContainer = null;
+		// A player in the void may have no resolvable location at all, which is the condition this
+		// method exists to repair. The move still has to name an origin container, so an unresolvable
+		// one becomes #-1: expiring a contents list nothing holds is a no-op, and it keeps the write
+		// off the tag that would expire every container in the game.
+		var oldContainer = new DBRef(-1);
 
 		try
 		{
@@ -549,10 +553,10 @@ public class MoveService(
 				await mediator.Send(new MoveObjectCommand(
 					player.AsContent,
 					home,
+					oldContainer,
 					Enactor: null,
 					IsSilent: true,
-					Cause: "void_rescue",
-					OldContainer: oldContainer));
+					Cause: "void_rescue"));
 				return true;
 			}
 		}
@@ -574,10 +578,10 @@ public class MoveService(
 					await mediator.Send(new MoveObjectCommand(
 						player.AsContent,
 						fallbackContainer,
+						oldContainer,
 						Enactor: null,
 						IsSilent: true,
-						Cause: "void_rescue",
-						OldContainer: oldContainer));
+						Cause: "void_rescue"));
 					return true;
 				}
 			}
