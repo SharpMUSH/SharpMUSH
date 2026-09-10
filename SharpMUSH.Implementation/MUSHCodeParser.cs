@@ -201,6 +201,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		};
 	}
 
+	private static bool ContainsRestrictedEntryPoint(BufferedTokenSpanStream tokens,
+		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
+	{
+		foreach (var token in tokens.tokens)
+		{
+			if (token.Type != SharpMUSHLexer.FUNCHAR) continue;
+			var name = token.Text.TrimEnd()[..^1];
+			if (functions.TryGetValue(name, out var definition)
+				&& definition.LibraryInformation.RestrictedOperation is "restrictedexpr" or "fn") return true;
+		}
+		return false;
+	}
+
 	/// <summary>
 	/// Parses <paramref name="entryPoint"/> over an already-lexed token stream, applying the
 	/// configured prediction strategy.
@@ -220,10 +233,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		BufferedTokenSpanStream tokens,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string inputText,
-		bool lenient)
+		bool lenient,
+		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)>? functions = null)
 		where TContext : ParserRuleContext
 	{
-		var debug = Configuration.CurrentValue.Debug.DebugSharpParser;
+		// Token inspection precedes ANTLR tracing, including malformed input with no visitor.
+		// Indirect calls may select the restricted wrapper, so suppress their parser diagnostics too.
+		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
+			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
 		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
@@ -306,7 +323,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <summary>
 	/// Core parse implementation that returns both the result and visitor metadata.
 	/// </summary>
-	private async ValueTask<(CallState? Result, bool DidEmitFunctionDebug)> ParseInternalCore<TContext>(
+	private async ValueTask<(CallState? Result, bool SuppressSubstitutionOnlyDebugTrace)> ParseInternalCore<TContext>(
 		MString text,
 		Func<SharpMUSHParser, TContext> entryPoint,
 		string methodName,
@@ -315,6 +332,16 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		parser ??= this;
+		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
+		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
+			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, true);
+		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
+		 ? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
+		var budget = ExecutionBudget.Current ?? (parser.State.IsEmpty ? null : parser.CurrentState.ExecutionBudget) ?? ownedBudget!;
+		using var budgetScope = budget.Enter();
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
+		budget.ThrowIfExceeded();
+		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		var plainText = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plainText, methodName);
@@ -329,22 +356,23 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// call_limit, which is the same guard against the same crash.
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true }, true);
 		}
 
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
 		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, plainText, lenient);
+			bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
+		// No visitor can classify private wrapper inputs on this path, so never forward raw failure text.
 		// In lenient mode (command argument parsing), proceed to visit ANTLR's
 		// error-recovery tree so the best-effort split is returned to the caller.
 		if (errorListener.HasErrors && !lenient)
 		{
-			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, false);
+			return (new CallState(MarkupText.Plain(errorListener.Errors[0].ToMushFailureString())) { HadErrors = true }, true);
 		}
 
 		SharpMUSHParserVisitor visitor = new(Logger, parser,
@@ -359,7 +387,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_lockService,
 			text);
 
-		var result = await visitor.Visit(context);
+		CallState? result;
+		try { result = await visitor.Visit(context); }
+		catch (RestrictedExpressionException ex)
+		{ return (new CallState(ex.Message) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace); }
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace); }
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, visitor.SuppressSubstitutionOnlyDebugTrace);
+		budget.ThrowIfExceeded();
 
 		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
 		// recovers and lets the visitor walk a best-effort tree instead of throwing, so
@@ -373,7 +408,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			result = result with { HadErrors = true };
 		}
 
-		return (result, visitor.DidEmitFunctionDebug);
+		return (result, visitor.SuppressSubstitutionOnlyDebugTrace);
 	}
 
 	/// <summary>
@@ -430,15 +465,19 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag(),
-			MoveDepth: new InvocationCounter()));
+			LimitExceeded: new LimitExceededFlag())
+		{
+			MoveDepth = new InvocationCounter(),
+			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
+			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null
+		});
 	}
 
 	/// <summary>
 	/// PennMUSH substitution-only debug: when a function-position argument contains only
 	/// substitutions (no function calls), emit a single-line debug trace: "#dbref! raw => evaluated".
-	/// Only fires when function-level debug did NOT already emit for this same parse (<paramref
-	/// name="didEmitFunctionDebug"/>), and when the raw and evaluated text actually differ.
+	/// Only fires when the parse neither emitted function traces nor contains a restricted wrapper
+	/// (<paramref name="suppressSubstitutionDebug"/>), and raw and evaluated text differ.
 	/// <para>
 	/// Extracted from <see cref="FunctionParse(MString, bool)"/> so
 	/// <c>SharpMUSHParserVisitor.EvaluateArgumentSubtree</c> can reuse the identical trace logic
@@ -458,9 +497,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		ParserState callerState,
 		string rawText,
 		MString? resultMessage,
-		bool didEmitFunctionDebug)
+		bool suppressSubstitutionDebug)
 	{
-		if (didEmitFunctionDebug || resultMessage is null)
+		if (EvaluationRestrictions.Current is not null || callerState.Restrictions is not null
+			|| suppressSubstitutionDebug || resultMessage is null)
 		{
 			return;
 		}
@@ -490,7 +530,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (shouldDebug && executorObj is not null)
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
-			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
 		}
 	}
@@ -517,16 +557,29 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser();
+		// Completion diagnostics belong to the same operation as parsing. Keep its original
+		// deadline alive through the final awaited read/notification, including standalone calls.
+		using var ownedBudget = ExecutionBudget.Current is null && (State.IsEmpty || CurrentState.ExecutionBudget is null)
+			? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
+		var budget = ExecutionBudget.Current ?? (State.IsEmpty ? null : CurrentState.ExecutionBudget) ?? ownedBudget!;
+		using var budgetScope = budget.Enter();
+		try
+		{
+			budget.ThrowIfExceeded();
+			var parser = ResolveTrackingParser();
+			var rawText = text.ToPlainText();
+			var (result, suppressSubstitutionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+			budget.ThrowIfExceeded();
 
-		// Capture raw text BEFORE evaluation for substitution-only debug
-		var rawText = text.ToPlainText();
-		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
-
-		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
-			didEmitFunctionDebug);
-
-		return result;
+			await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+				rawText, result?.Message, suppressSubstitutionDebug);
+			budget.ThrowIfExceeded();
+			return result;
+		}
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{
+			return new CallState(ExecutionBudget.Error) { HadErrors = true };
+		}
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)
@@ -619,9 +672,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag(),
-			MoveDepth: new InvocationCounter(),
 			Flags: ParserStateFlags.DirectInput,
-			ConnectionSessionId: expectedSession));
+			ConnectionSessionId: expectedSession)
+		{
+			MoveDepth = new InvocationCounter()
+		});
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

@@ -94,12 +94,12 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 		                    };
 		                }
 		                
-		                /// <summary>The default declared on the property's primary-constructor parameter, or null when it declares none.</summary>
+		                /// <summary>The constant default declared on the property's constructor parameter or initializer, or null when it declares none.</summary>
 		                public static object? GetDeclaredDefault(string propertyName)
 		                {
 		                    return propertyName switch
 		                    {
-		                        {{string.Join("\n                ", allProperties.Select(p => $"\"{p.Property.Name}\" => {DeclaredDefault(p.Category, p.Property)},"))}}
+		                        {{string.Join("\n                ", allProperties.Select(p => $"\"{p.Property.Name}\" => {DeclaredDefault(p.Category, p.Property, compilation)},"))}}
 		                        _ => null
 		                    };
 		                }
@@ -163,13 +163,21 @@ public class ConfigAccessorGenerator : IIncrementalGenerator
 				?.Parameters
 				.FirstOrDefault(param => param.Name == property.Name);
 
-	private static string DeclaredDefault(IPropertySymbol category, IPropertySymbol property)
+	private static string DeclaredDefault(IPropertySymbol category, IPropertySymbol property, Compilation compilation)
 	{
 		var parameter = PrimaryConstructorParameter(category, property);
 
-		return parameter is { HasExplicitDefaultValue: true }
-			? Emit.Literal(parameter.ExplicitDefaultValue)
-			: "null";
+		if (parameter is { HasExplicitDefaultValue: true })
+			return Emit.Literal(parameter.ExplicitDefaultValue);
+
+		foreach (var declaration in property.DeclaringSyntaxReferences)
+		{
+			if (declaration.GetSyntax() is not PropertyDeclarationSyntax { Initializer.Value: { } initializer }) continue;
+			var constant = compilation.GetSemanticModel(initializer.SyntaxTree).GetConstantValue(initializer);
+			if (constant.HasValue)
+				return $"({GetTypeName(property.Type)})({Emit.Literal(constant.Value)})";
+		}
+		return "null";
 	}
 
 

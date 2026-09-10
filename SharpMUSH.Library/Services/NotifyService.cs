@@ -56,7 +56,7 @@ public class NotifyService(
 		var serialized = ReferenceEquals(wrapped, outgoing.Text)
 			? outgoing.Serialized
 			: MarkupTextSerializer.Serialize(wrapped);
-		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized)));
+		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized), ExecutionBudget.CurrentToken));
 	}
 
 	/// <summary>
@@ -64,7 +64,7 @@ public class NotifyService(
 	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline.
 	/// </summary>
 	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing)
-		=> new(publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, outgoing.Serialized)));
+		=> new(publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, outgoing.Serialized), ExecutionBudget.CurrentToken));
 
 	/// <summary>
 	/// Wraps markup with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection, keeping everything as
@@ -125,10 +125,10 @@ public class NotifyService(
 			try
 			{
 				var location = await sender.Match<ValueTask<DBRef>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+					async player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
 					room => ValueTask.FromResult(room.Object.DBRef),
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+					async exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					async thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
 				);
 
 				var notificationContext = new NotificationContext(

@@ -3,6 +3,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -362,7 +363,9 @@ public class PermissionService(
 
 	public async ValueTask<bool> Controls(AnySharpObject who, AnySharpObject target)
 	{
-		if (await who.HasPower("guest"))
+		var token = ExecutionBudget.CurrentToken;
+		token.ThrowIfCancellationRequested();
+		if (await who.HasPower("guest", token))
 			return false;
 
 		if (who.Id() == target.Id())
@@ -374,18 +377,18 @@ public class PermissionService(
 		if (target.IsGod())
 			return false;
 
-		if (await who.IsWizard())
+		if (await who.IsWizard(token))
 			return true;
 
-		if (await target.IsWizard() || (await target.IsPriv() && !await who.IsPriv()))
+		if (await target.IsWizard(token) || (await target.IsPriv(token) && !await who.IsPriv(token)))
 			return false;
 
-		if (await who.IsMistrust())
+		if (await who.IsMistrust(token))
 			return false;
 
-		var targetInheritable = await target.Inheritable();
+		var targetInheritable = await target.Inheritable(token);
 
-		if (await who.Owns(target) && (!targetInheritable || await who.Inheritable()))
+		if (await who.Owns(target, token) && (!targetInheritable || await who.Inheritable(token)))
 			return true;
 
 		if (targetInheritable || target.IsPlayer)
@@ -395,7 +398,7 @@ public class PermissionService(
 		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
 		{
-			var targetZone = await target.Object().Zone.WithCancellation(CancellationToken.None);
+			var targetZone = await target.Object().Zone.WithCancellation(token);
 			if (!targetZone.IsNone && await lockService.Evaluate(LockType.Zone, targetZone.Known, who))
 			{
 				return true;
@@ -406,9 +409,9 @@ public class PermissionService(
 		// If target's owner has SHARED flag and who passes the owner's Zone_Lock
 		if (!target.IsPlayer)
 		{
-			var targetOwner = await target.Object().Owner.WithCancellation(CancellationToken.None);
+			var targetOwner = await target.Object().Owner.WithCancellation(token);
 			var ownerObject = new AnySharpObject(targetOwner);
-			if (await ownerObject.HasFlag("SHARED"))
+			if (await ownerObject.HasFlag("SHARED", token))
 			{
 				if (await lockService.Evaluate(LockType.Zone, ownerObject, who))
 				{

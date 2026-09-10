@@ -54,9 +54,10 @@ public class FunctionPermissionTests
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(),
 				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag(),
-				MoveDepth: new InvocationCounter()
-			));
+				LimitExceeded: new LimitExceededFlag())
+			{
+				MoveDepth = new InvocationCounter()
+			});
 	}
 
 	[Test]

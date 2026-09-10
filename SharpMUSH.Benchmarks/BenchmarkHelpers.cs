@@ -117,6 +117,8 @@ internal static class BenchmarkHelpers
 		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		TotalInvocations: new InvocationCounter(),
 		LimitExceeded: new LimitExceededFlag(),
-		MoveDepth: new InvocationCounter(),
-		Flags: ParserStateFlags.DirectInput);
+		Flags: ParserStateFlags.DirectInput)
+	{
+		MoveDepth = new InvocationCounter()
+	};
 }

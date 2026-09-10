@@ -22,8 +22,7 @@ public class ListFunctionUnitTests
 	/// </summary>
 	private async Task<int> CreateObjectWithAttribute(string objectName, string attrName, string attrValue)
 	{
-		var createResult = await CommandParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@create {objectName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService, objectName);
 		var dbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&{attrName} #{dbRef.Number}={attrValue}"));

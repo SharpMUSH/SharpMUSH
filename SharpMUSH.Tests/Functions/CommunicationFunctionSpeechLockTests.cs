@@ -51,7 +51,7 @@ public class CommunicationFunctionSpeechLockTests
 		string Room);
 
 	/// <summary>
-	/// A fresh room holding a speaker and a witness. /QUIET keeps the arrival autolook from
+	/// A fresh room holding a speaker and a witness. /SILENT keeps the arrival autolook from
 	/// queueing output into some other test's capture window, as the shared NotifyService
 	/// substitute is session-wide.
 	/// </summary>

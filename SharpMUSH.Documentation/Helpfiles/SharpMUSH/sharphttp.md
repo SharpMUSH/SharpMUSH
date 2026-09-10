@@ -35,11 +35,13 @@ To use SharpMUSH HTTP Handler:
 
 You will very likely want to set the http_handler option in your mush.cnf file to ensure it survives over reboots and is actively receiving events even during startup.
 
-By default, SharpMUSH will respond with a **404 NOT FOUND**. You will need to use `@respond` to control what is sent to the client.
+A missing method handler returns **404 NOT FOUND**. An executed handler defaults to **200 OK** and `text/plain`; use `@respond` to choose another response.
+
+Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time limit, including asynchronous I/O. Zero disables this deadline. If the deadline expires, SharpMUSH returns **503 Service Unavailable** with `#-1 EXECUTION TIME LIMIT EXCEEDED`, discarding partial response output, headers, and status. World changes already performed are not rolled back. Request cancellation also cancels handler evaluation. The ``HTTP`COMMAND`` completion event shares the remaining request lifetime and is omitted after expiry. Expiry during the event also returns 503.
 
 
 **See Also:**
-- [- [http examples]
+- [http examples]
 - [http sitelock]
 - [event http]
 
@@ -58,7 +60,7 @@ HTTP Responses are limited to BUFFER_LEN in response size. Anything sent to the 
 
 
 **See Also:**
-- [- [@respond]
+- [@respond]
 - [formdecode()]
 - [json_query()]
 - [urlencode()]
@@ -86,7 +88,7 @@ If `@respond` is run outside of an HTTP Context, the enactor will see "(HTTP): .
 
 
 **See Also:**
-- [- [@respond2]
+- [@respond2]
 - [@respond3]
 
 # @RESPOND2
@@ -250,7 +252,7 @@ Examples all assume the following dedicated handler:
 
 
 **See Also:**
-- [- [http simple]
+- [http simple]
 - [http get]
 - [http post]
 

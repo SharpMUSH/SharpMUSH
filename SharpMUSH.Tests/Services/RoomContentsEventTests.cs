@@ -4,6 +4,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using System.Text;
 
@@ -166,8 +167,12 @@ public class RoomContentsEventTests
 			() => Encoding.UTF8);
 
 		// Issue "connect God" — God has no password, so an empty password is accepted.
-		await WebAppFactoryArg.CommandParser.CommandParse(
-			connectHandle, ConnectionService, MarkupText.Plain("connect God"));
+		using (var budget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+		using (budget.Enter())
+		{
+			await WebAppFactoryArg.CommandParser.CommandParse(
+				connectHandle, ConnectionService, MarkupText.Plain("connect God"));
+		}
 
 		// ROOM`CONTENTS should have fired with %1="connect" and %0=godRoom.
 		var recorded = await Eval("get(#9/LAST_CONN_connect)");

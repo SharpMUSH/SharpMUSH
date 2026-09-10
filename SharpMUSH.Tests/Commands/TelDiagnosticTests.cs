@@ -137,6 +137,12 @@ public class TelDiagnosticTests
 
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
 
+		// Put God back before asserting. ServerWebAppFactory is shared for the whole session, and this
+		// is the one test that moves God and does not open by undoing it: an @emit later in the session
+		// speaks into the emitter's outermost room, which is this container for as long as God carries
+		// nothing else, so the audience a room-scoped assertion expects is simply not there.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
+
 		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel self into a container should work without errors");

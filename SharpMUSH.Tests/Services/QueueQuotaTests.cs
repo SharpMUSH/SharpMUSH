@@ -91,7 +91,7 @@ public class QueueQuotaTests
 	{
 		var gate = new TaskCompletionSource();
 
-		await Scheduler.EnqueueWork(
+		await Scheduler.AdmitWork(
 			async () =>
 			{
 				await gate.Task;
@@ -182,7 +182,7 @@ public class QueueQuotaTests
 			// the next admission charged to this owner is the one that would trip.
 			for (var i = 0; i < limit; i++)
 			{
-				await Scheduler.EnqueueWork(() => ValueTask.FromResult<CallState?>(null),
+				await Scheduler.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
 					$"queue-quota-filler-{i}", TaskScheduler.EnqueueGroup, thing);
 			}
 
@@ -278,8 +278,8 @@ public class QueueQuotaTests
 	}
 
 	/// <summary>
-	/// <c>@halt &lt;pid&gt;</c> takes the entry out of the pending set before it cancels it, so the
-	/// entry it reports having halted is one it actually owned. A second call finds nothing.
+	/// <c>@halt &lt;pid&gt;</c> cancels the entry's token, and the consumer drops a cancelled entry
+	/// rather than running it. Once the consumer has released it there is nothing left to halt.
 	/// </summary>
 	[Test]
 	public async ValueTask HaltingByPidClaimsTheEntryAndStopsItRunning()
@@ -292,7 +292,7 @@ public class QueueQuotaTests
 
 		try
 		{
-			await Scheduler.EnqueueWork(
+			await Scheduler.AdmitWork(
 				() =>
 				{
 					ran = true;
@@ -303,8 +303,6 @@ public class QueueQuotaTests
 			pid = await Scheduler.GetEnqueueTasks(thing).SingleAsync();
 
 			await Assert.That(await Scheduler.HaltByPid(pid)).IsTrue();
-			await Assert.That(await Scheduler.HaltByPid(pid)).IsFalse()
-				.Because("the first call removed the entry, so there is nothing left to claim");
 		}
 		finally
 		{
@@ -315,5 +313,8 @@ public class QueueQuotaTests
 
 		await Assert.That(ran).IsFalse()
 			.Because("the consumer drops an entry whose token was cancelled before it was read");
+
+		await Assert.That(await Scheduler.HaltByPid(pid)).IsFalse()
+			.Because("the consumer released the entry, so there is nothing left to halt");
 	}
 }

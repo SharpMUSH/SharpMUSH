@@ -134,9 +134,11 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag(),
-				MoveDepth: new InvocationCounter(),
 				Flags: ParserStateFlags.DirectInput
-			));
+			)
+			{
+				MoveDepth = new InvocationCounter()
+			});
 	}
 
 	/// <summary>Evaluates functions as God.</summary>
@@ -188,6 +190,12 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
 		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
 													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
+
+		if (!isConsoleEnabled)
+		{
+			// Per-query SQL traces can exhaust the test report while parallel fixtures initialize.
+			logConfig.MinimumLevel.Override("SharpMUSH.Database.SurrealDB", LogEventLevel.Warning);
+		}
 
 		if (isConsoleEnabled)
 		{

@@ -18,6 +18,14 @@ public interface IRoleRegistryService
 	/// <summary>Fetches one role by slug.</summary>
 	Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug);
 
+	/// <summary>Token-aware read. Existing plugin providers retain their original method slot;
+	/// built-in providers override this overload to cancel their underlying database operation.</summary>
+	async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return await GetRoleAsync(slug).WaitAsync(cancellationToken);
+	}
+
 	/// <summary>Lists all roles, ordered by <see cref="SharpRole.Priority"/> descending then slug.</summary>
 	Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default);
 

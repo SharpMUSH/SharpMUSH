@@ -75,8 +75,10 @@ public class UserDefinedFunctionTests
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(),
 				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag(),
-				MoveDepth: new InvocationCounter()));
+				LimitExceeded: new LimitExceededFlag())
+			{
+				MoveDepth = new InvocationCounter()
+			});
 
 		return (await parser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText();
 	}

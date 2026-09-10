@@ -356,8 +356,10 @@ public class ConnectionAnnounceService(
 					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
 					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag(),
-				MoveDepth: isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter()));
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag())
+			{
+				MoveDepth = isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter()
+			});
 
 			var attributeText = attrResult.AsAttribute.Last().Value.ToPlainText();
 			await evalParser.CommandListParse(MarkupText.Plain(attributeText));

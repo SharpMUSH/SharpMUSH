@@ -186,8 +186,10 @@ public static partial class ReadPennMushConfig
 				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), 1000),
 				Boolean(Get(nameof(LimitOptions.UseQuota)), true),
 				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), 150),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), 8192)
-			),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), 8192))
+			{
+				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), 10000)
+			},
 			Log = new LogOptions(
 				Boolean(Get(nameof(LogOptions.UseSyslog)), false),
 				Boolean(Get(nameof(LogOptions.LogCommands)), false),
@@ -259,7 +261,6 @@ public static partial class ReadPennMushConfig
 					{ "atrlock", ["attrlock"] },
 					{ "iter", ["parse"] },
 					{ "lsearch", ["search"] },
-					{ "linsert", ["insert"] },
 					{ "lstats", ["stats"] },
 					{ "lthings", ["lobjects"] },
 					{ "lvthings", ["lvobjects"] },

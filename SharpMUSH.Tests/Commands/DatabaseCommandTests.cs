@@ -1,3 +1,8 @@
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Requests;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
@@ -99,6 +104,325 @@ public class DatabaseCommandTests
 		                                        """, connection))
 		{
 			await cmd.ExecuteNonQueryAsync();
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MapSqlDoesNotReportRejectedRowsOrSkipARejectedHeader(bool columnNames)
+	{
+		// Exercise the ordinary owner ceiling; Wizards have an additional database-sized allowance.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCapacity");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think callback"));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var pids = new List<long>();
+		try
+		{
+			for (var i = 0; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+			{
+				var admitted = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				await Assert.That(admitted.Accepted).IsTrue();
+				pids.Add(admitted.Pid!.Value);
+			}
+			await testParser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain($"@mapsql{(columnNames ? "/colnames" : "")} me/MAPCAPACITY=SELECT col1 FROM test_mapsql_data_cmd"));
+			await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+				TestHelpers.MatchingMessage("0 rows queued for execution."), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		}
+		finally { foreach (var pid in pids) await scheduler.HaltByPid(pid); }
+	}
+
+	[Test]
+	[Arguments(QueueRejectionReason.OwnerLimit)]
+	[Arguments(QueueRejectionReason.GlobalLimit)]
+	[Arguments(QueueRejectionReason.ShuttingDown)]
+	public async Task MapSqlCompletionReservationReportsOneRealSchedulerRejection(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlSingleRejection");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPSINGLE me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPSINGLE"), ["1"] = new CallState("SELECT 1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var baseline = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with
+		{
+			Limit = baseline.Limit with
+			{
+				PlayerQueueLimit = reason == QueueRejectionReason.OwnerLimit ? 0u : 100u,
+				GlobalQueueLimit = reason == QueueRejectionReason.GlobalLimit ? 0u : 100u
+			}
+		});
+		var scheduler = new SharpMUSH.Library.Services.TaskScheduler(Parser, ConnectionService,
+			Substitute.For<Quartz.ISchedulerFactory>(), SqlWebAppFactoryArg.Services.GetRequiredService<IAttributeService>(),
+			Mediator, Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance,
+			options, NotifyService);
+		var stopped = reason == QueueRejectionReason.ShuttingDown;
+		try
+		{
+			if (stopped) await scheduler.DisposeAsync();
+			var admission = Substitute.For<IMediator>();
+			admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>())
+				.Returns(call => scheduler.ReserveCommandList(call.Arg<ReserveCommandListRequest>().Command, call.Arg<ReserveCommandListRequest>().State));
+			var sql = Substitute.For<ISqlService>();
+			sql.IsAvailable.Returns(true);
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, sql);
+			await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+			await NotifyService.Received(1).NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
+			await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(player.DbRef),
+				TestHelpers.MatchingMessage(new QueueAdmissionResult(null, reason).Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+			sql.DidNotReceive().ExecuteStreamQueryAsync(Arg.Any<string>());
+			await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally { if (!stopped) await scheduler.DisposeAsync(); }
+	}
+
+	[Test]
+	[Arguments(QueueRejectionReason.InvalidTarget)]
+	[Arguments(QueueRejectionReason.AlreadyReleased)]
+	public async Task MapSqlNotifyDoesNotBypassNonCapacityAdmissionFailures(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlRejectedCompletion");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPREJECTION me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPREJECTION"), ["1"] = new CallState("SELECT 1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		parser.CommandParse(Arg.Any<MString>()).Returns(CallState.Empty);
+		var admission = Substitute.For<IMediator>();
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
+		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(QueueCommandReservation.Rejected(reason));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+		await parser.DidNotReceive().CommandParse(Arg.Any<MString>());
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+			TestHelpers.MatchingMessage(new QueueAdmissionResult(null, reason).Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MapSqlNotifyReleasesAnExistingWaiterAtOwnerCapacity(bool saturated)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNotifyCapacity");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "mapsql-completed-" + Guid.NewGuid().ToString("N");
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think row-" + marker));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var blocker = await scheduler.AdmitWork(async () =>
+		{
+			started.TrySetResult();
+			await release.Task;
+			return null;
+		}, "mapsql-completion-test", "test");
+		await Assert.That(blocker.Accepted).IsTrue();
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			if (saturated)
+			{
+				for (var i = 3; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+				{
+					var admission = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"),
+						ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+					await Assert.That(admission.Accepted).IsTrue();
+				}
+			}
+			await parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain("@mapsql/notify me/MAPCAPACITY=SELECT 1 AS col1"));
+			release.TrySetResult();
+			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
+			var messages = SqlWebAppFactoryArg.Notifications.For(player.DbRef)
+				.Where(text => text == marker || text == "row-" + marker).ToArray();
+			await Assert.That(messages).IsEquivalentTo(new[] { "row-" + marker, marker });
+			await Assert.That(messages[0]).IsEqualTo("row-" + marker);
+		}
+		finally
+		{
+			release.TrySetResult();
+			await scheduler.Halt(player.DbRef);
+			await scheduler.HaltByPid(blocker.Pid!.Value);
+		}
+	}
+
+	[Test]
+	public async Task MapSqlNotifyDoesNotCreateACreditBeforeQueuedRowsRun()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlOrderedCompletion");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "ordered-map-" + Guid.NewGuid().ToString("N");
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPORDER me=think row-" + marker));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var options = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var blocker = await scheduler.AdmitWork(async () => { started.TrySetResult(); await release.Task; return null; }, "mapsql-order-test", "test");
+		var reservations = new List<long>();
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			for (var i = 2; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+			{
+				var admission = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
+				await Assert.That(admission.Accepted).IsTrue();
+				reservations.Add(admission.Pid!.Value);
+			}
+			await parser.CommandParse(player.Handle, ConnectionService,
+				MarkupText.Plain("@mapsql/notify me/MAPORDER=SELECT 1 AS col1 UNION ALL SELECT 2 AS col1"));
+			var counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
+			await Assert.That(counter?.Value.ToPlainText() ?? "0").IsEqualTo("0");
+			await scheduler.HaltByPid(reservations[0]);
+			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
+			counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
+			await Assert.That(counter!.Value.ToPlainText()).IsEqualTo("1");
+			release.TrySetResult();
+			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
+			var messages = SqlWebAppFactoryArg.Notifications.For(player.DbRef)
+				.Where(text => text == marker || text == "row-" + marker).ToArray();
+			await Assert.That(messages[0]).IsEqualTo("row-" + marker);
+			await Assert.That(messages[^1]).IsEqualTo(marker);
+		}
+		finally
+		{
+			release.TrySetResult();
+			await scheduler.Halt(player.DbRef);
+			await scheduler.HaltByPid(blocker.Pid!.Value);
+		}
+	}
+
+	[Test]
+	public async Task MapSqlNotifyQueryErrorDoesNotLeakCompletionReservation()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCompletionError");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPERROR me=think unreachable"));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var before = scheduler.GetQueueUsage().Total;
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPERROR=SELECT missing_column FROM test_mapsql_data_cmd"));
+		await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(before);
+		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).AnyAsync()).IsFalse();
+	}
+
+	[Test]
+	public async Task MapSqlNotifyWithZeroRowsStillPublishesCompletion()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlEmptyCompletion");
+		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "empty-map-" + Guid.NewGuid().ToString("N");
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPEMPTY me=think unexpected-row"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wait me=think " + marker));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPEMPTY=SELECT 1 WHERE 0"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
+	}
+
+	[Test]
+	[Arguments(false, QueueRejectionReason.InvalidTarget)]
+	[Arguments(true, QueueRejectionReason.InvalidTarget)]
+	[Arguments(false, QueueRejectionReason.OwnerLimit)]
+	[Arguments(true, QueueRejectionReason.OwnerLimit)]
+	public async Task MapSqlReportsInvalidTargetAdmission(bool header, QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlInvalidAdmission");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPINVALID me=think unreachable"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = header ? ["COLNAMES"] : [],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPINVALID"), ["1"] = new CallState("SELECT 1 AS col1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var admission = Substitute.For<IMediator>();
+		var rejected = new QueueAdmissionResult(null, reason);
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(rejected);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).Count(message => message == rejected.Error))
+			.IsEqualTo(reason == QueueRejectionReason.InvalidTarget ? 1 : 0);
+	}
+
+	[Test]
+	[Arguments("reservation")]
+	[Arguments("header")]
+	[Arguments("row")]
+	public async Task MapSqlAdmissionPipelineReceivesExecutionCancellation(string boundary)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlPipelineCancellation");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPPIPELINE me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = boundary == "header" ? ["NOTIFY", "COLNAMES"] : ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPPIPELINE"), ["1"] = new CallState("SELECT 1 AS col1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		using var cancel = new CancellationTokenSource();
+		using var cleanup = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
+		using var scope = budget.Enter();
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		async Task<T> Block<T>(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+			throw new InvalidOperationException("Unreachable blocked pipeline continuation");
+		}
+		var admission = Substitute.For<IMediator>();
+		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+			boundary == "reservation" ? new ValueTask<QueueCommandReservation>(Block<QueueCommandReservation>(call.Arg<CancellationToken>()))
+				: Mediator.Send(call.Arg<ReserveCommandListRequest>(), call.Arg<CancellationToken>()));
+		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
+			new ValueTask<QueueAdmissionResult>(Block<QueueAdmissionResult>(call.Arg<CancellationToken>())));
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		var operation = commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" }).AsTask();
+		try
+		{
+			await Assert.That(await entered.Task.WaitAsync(TimeSpan.FromSeconds(3))).IsEqualTo(budget.Token);
+			cancel.Cancel();
+			OperationCanceledException? cancellation = null;
+			try { await operation.WaitAsync(TimeSpan.FromSeconds(3)); }
+			catch (OperationCanceledException ex) { cancellation = ex; }
+			await Assert.That(cancellation).IsNotNull();
+			await Assert.That(cancellation!.CancellationToken).IsEqualTo(budget.Token);
+		}
+		finally
+		{
+			cleanup.Cancel();
+			try { await operation; } catch (OperationCanceledException) { }
 		}
 	}
 
@@ -245,7 +569,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_Basic"));
 
 		await NotifyService
 			.Received(1)
@@ -265,7 +589,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
 
 		await NotifyService
 			.DidNotReceive()
@@ -305,7 +629,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
 
 		await NotifyService
 			.Received(1)
@@ -420,7 +744,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
 
 		await NotifyService
 			.Received(1)
@@ -440,7 +764,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(NotifyService, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
 
 		await NotifyService
 			.Received(1)
@@ -485,32 +809,21 @@ public class DatabaseCommandTests
 	}
 
 	/// <summary>
-	/// Polls <see cref="INotifyService.ReceivedCalls"/> until a notification whose plain-text message
-	/// satisfies <paramref name="messagePredicate"/> arrives, avoiding a fixed-duration sleep.
-	/// Only new calls since the previous iteration are examined to avoid redundant work.
+	/// Polls the thread-safe recipient queue until the expected message arrives.
 	/// </summary>
 	private static async Task WaitForNotificationAsync(
-		INotifyService notifyService,
+		TestHelpers.NotificationRecorder notifications,
+		DBRef recipient,
 		Func<string, bool> messagePredicate,
 		int timeoutMs = 15000,
 		int pollIntervalMs = 50)
 	{
-		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-		var scannedCount = 0;
-		while (DateTime.UtcNow < deadline)
+		var started = System.Diagnostics.Stopwatch.GetTimestamp();
+		while (System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds < timeoutMs)
 		{
-			var calls = notifyService.ReceivedCalls().ToList();
-			var found = calls.Skip(scannedCount).Any(call =>
-			{
-				var args = call.GetArguments();
-				if (args.Length < 2) return false;
-				return args[1] is OneOf<MString, string> msg &&
-					msg.Match(m => messagePredicate(m.ToString()), s => messagePredicate(s));
-			});
-			if (found) return;
-			scannedCount = calls.Count;
+			if (notifications.For(recipient).Any(messagePredicate)) return;
 			await Task.Delay(pollIntervalMs);
 		}
-		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification.");
+		throw new TimeoutException($"Timed out after {timeoutMs}ms waiting for expected notification for {recipient}.");
 	}
 }

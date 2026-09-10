@@ -284,7 +284,7 @@ public partial class Commands
 			// as a semantic leak — the leader pops its register frame and its SwitchStack entry long
 			// before the consumer drains this, and a shared ExecutionStack would let the follower's
 			// @break stop the leader's list. It is not direct input either, so it carries no handle.
-			await Mediator.Send(new QueueCommandListRequest(
+			await Mediator.Send(new AdmitCommandListRequest(
 				MarkupText.Plain(line),
 				parser.CurrentState with
 				{
@@ -311,7 +311,7 @@ public partial class Commands
 					HttpResponse = null
 				},
 				new DbRefAttribute(follower.Object().DBRef, DefaultSemaphoreAttributeArray),
-				-1));
+				-1), ExecutionBudget.CurrentToken);
 		}
 	}
 

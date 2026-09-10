@@ -62,8 +62,10 @@ public sealed class LockEvaluationServices(
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag(),
-				MoveDepth: new InvocationCounter()));
+				LimitExceeded: new LimitExceededFlag())
+			{
+				MoveDepth = new InvocationCounter()
+			});
 
 			var result = await attributes.Value.EvaluateAttributeFunctionAsync(
 				evalParser,

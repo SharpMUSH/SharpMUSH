@@ -237,7 +237,7 @@ public class DidItService(
 		// such frame: @retry in the action would replay the triggering command, an @break would be
 		// re-raised by an @include the action never ran under, and @respond would edit an HTTP
 		// response that was assembled and sent long before the queue drained.
-		await mediator.Send(new QueueCommandListRequest(
+		await mediator.Send(new AdmitCommandListRequest(
 			command,
 			baseState with
 			{
@@ -261,7 +261,7 @@ public class DidItService(
 				HttpResponse = null
 			},
 			new DbRefAttribute(executor, attributePath),
-			-1));
+			-1), ExecutionBudget.CurrentToken);
 
 		return true;
 	}

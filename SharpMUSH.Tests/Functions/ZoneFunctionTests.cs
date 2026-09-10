@@ -21,10 +21,21 @@ public class ZoneFunctionTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
+	private async ValueTask<CallState> CreateFixtureAsync(string name)
+	{
+		// Graph behavior is independent of the production per-command deadline.
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		await Assert.That(result.Message).IsNotNull();
+		await Assert.That(DBRef.TryParse(result.Message!.ToPlainText(), out _)).IsTrue();
+		return result;
+	}
+
 	[Test]
 	public async Task ZoneGetNoZone()
 	{
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncTest1"));
+		var objResult = await CreateFixtureAsync("ZoneFuncTest1");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any zone the object may have inherited from the creator, ensuring isolation
@@ -39,10 +50,10 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneGetNoZone))]
 	public async Task ZoneGetWithZone()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncMaster"));
+		var zoneResult = await CreateFixtureAsync("ZoneFuncMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncTest2"));
+		var objResult = await CreateFixtureAsync("ZoneFuncTest2");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
@@ -57,11 +68,11 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncSetMaster"));
+		var zoneResult = await CreateFixtureAsync("ZoneFuncSetMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
 		// clearing any inherited zone for clean isolation
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncSetTest"));
+		var objResult = await CreateFixtureAsync("ZoneFuncSetTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
@@ -82,10 +93,10 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneSetWithFunction))]
 	public async Task ZoneClearWithFunction()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncClearMaster"));
+		var zoneResult = await CreateFixtureAsync("ZoneFuncClearMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneFuncClearTest"));
+		var objResult = await CreateFixtureAsync("ZoneFuncClearTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})"));
@@ -112,7 +123,7 @@ public class ZoneFunctionTests
 	public async Task ZoneNoPermissionToExamine()
 	{
 		// Create an object that player can examine (they created it)
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZonePermTest"));
+		var objResult = await CreateFixtureAsync("ZonePermTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any inherited zone for clean isolation
@@ -151,10 +162,10 @@ public class ZoneFunctionTests
 	public async Task ZoneChainTest()
 	{
 		// Create a hierarchy: Zone -> Object
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ChainZoneMaster"));
+		var zoneResult = await CreateFixtureAsync("ChainZoneMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ChainZonedObj"));
+		var objResult = await CreateFixtureAsync("ChainZonedObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any inherited zones on both objects for clean isolation
@@ -179,19 +190,19 @@ public class ZoneFunctionTests
 	public async Task ZfindListsObjectsInZone()
 	{
 		// Create a zone master and clear any inherited zone
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZfindTestZone"));
+		var zoneResult = await CreateFixtureAsync("ZfindTestZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 		var zoneObj = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj.Known));
 
 		// Create multiple objects in the zone, clearing inherited zones first
-		var obj1Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZfindObj1"));
+		var obj1Result = await CreateFixtureAsync("ZfindObj1");
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(obj1.Known));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {obj1DbRef}={zoneDbRef}"));
 
-		var obj2Result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZfindObj2"));
+		var obj2Result = await CreateFixtureAsync("ZfindObj2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(obj2.Known));
@@ -212,13 +223,13 @@ public class ZoneFunctionTests
 		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
 		// where ZoneB has ZoneA as its zone, and Object has ZoneB as its zone
 
-		var zoneAResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneHierarchyA"));
+		var zoneAResult = await CreateFixtureAsync("ZoneHierarchyA");
 		var zoneADbRef = DBRef.Parse(zoneAResult.Message!.ToPlainText()!);
 
-		var zoneBResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneHierarchyB"));
+		var zoneBResult = await CreateFixtureAsync("ZoneHierarchyB");
 		var zoneBDbRef = DBRef.Parse(zoneBResult.Message!.ToPlainText()!);
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneHierarchyObj"));
+		var objResult = await CreateFixtureAsync("ZoneHierarchyObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {zoneBDbRef}={zoneADbRef}"));
@@ -245,12 +256,12 @@ public class ZoneFunctionTests
 	[DependsOn(nameof(ZoneHierarchyTraversal))]
 	public async Task ZoneAttributeInheritance()
 	{
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneAttrMaster"));
+		var zoneResult = await CreateFixtureAsync("ZoneAttrMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TEST_ZONE_ATTR {zoneDbRef}=Zone Master Value"));
 
-		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneAttrObj"));
+		var objResult = await CreateFixtureAsync("ZoneAttrObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
@@ -280,17 +291,17 @@ public class ZoneFunctionTests
 	{
 		// parent attributes take precedence over zone attributes
 
-		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneParentPrecedenceZone"));
+		var zoneResult = await CreateFixtureAsync("ZoneParentPrecedenceZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {zoneDbRef}=From Zone"));
 
-		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneParentPrecedenceParent"));
+		var parentResult = await CreateFixtureAsync("ZoneParentPrecedenceParent");
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {parentDbRef}=From Parent"));
 
-		var childResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ZoneParentPrecedenceChild"));
+		var childResult = await CreateFixtureAsync("ZoneParentPrecedenceChild");
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
 		var setParentResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
@@ -322,19 +333,19 @@ public class ZoneFunctionTests
 		// Test that each parent can have a different zone
 		// Lookup order: child -> child's zone -> parent -> parent's zone
 
-		var childZoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ChildZoneMaster"));
+		var childZoneResult = await CreateFixtureAsync("ChildZoneMaster");
 		var childZoneDbRef = DBRef.Parse(childZoneResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
 
-		var parentZoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create ParentZoneMaster"));
+		var parentZoneResult = await CreateFixtureAsync("ParentZoneMaster");
 		var parentZoneDbRef = DBRef.Parse(parentZoneResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PARENT_ZONE_ATTR {parentZoneDbRef}=From Parent Zone"));
 
-		var parentResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MultiZoneParent"));
+		var parentResult = await CreateFixtureAsync("MultiZoneParent");
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {parentDbRef}={parentZoneDbRef}"));
 
-		var childResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create MultiZoneChild"));
+		var childResult = await CreateFixtureAsync("MultiZoneChild");
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={childZoneDbRef}"));

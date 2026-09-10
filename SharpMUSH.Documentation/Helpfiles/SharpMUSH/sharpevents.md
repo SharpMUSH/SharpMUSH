@@ -186,7 +186,7 @@ To mimic old behaviour:
 - **http\`fail** (*former descriptor*, *ip*, *reason*)
 - Triggered when an HTTP connection fails for poor formatting, malformed requests, or similar parsing errors. This can occur before method, path, etc are obtained, so is limited in information.
 
-- **http\`command** (*IP*, *method*, *path*, *resp_code*, *resp_content_type*, *resp_content_len*)
-- Triggered after an HTTP command is executed.
+- **http\`command** (*IP*, *method*, *path*, *resp_code*, *resp_content_type*, *request_content_len*, *resp_content_len*)
+- Triggered after an HTTP command is executed, using the same remaining request lifetime. It is omitted if that lifetime has already expired. If the event exhausts the deadline, the HTTP response is 503; request cancellation also cancels the event.
 
 **Note**: A sitelock rule with deny_silent will not trigger http\`blocked

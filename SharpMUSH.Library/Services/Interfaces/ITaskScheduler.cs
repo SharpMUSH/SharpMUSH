@@ -126,7 +126,7 @@ public interface ITaskScheduler
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 
 	/// <summary>
-	/// Removes all non-Semaphore jobs related to a DBRef from executing immediately.
+	/// Halts queued jobs related to a DBRef, including semaphore waits.
 	/// </summary>
 	/// <param name="dbRef">DbRef</param>
 	ValueTask Halt(DBRef dbRef);
@@ -152,12 +152,7 @@ public interface ITaskScheduler
 	/// <param name="action">The action to execute</param>
 	/// <param name="triggerName">Trigger identifier for tracking</param>
 	/// <param name="group">Group identifier for categorization</param>
-	/// <param name="executor">
-	/// The object the work runs as, whose owner the entry is charged to for the per-owner queue
-	/// quota, and whose <c>@halt</c> reaches it. Omit it only for work that belongs to no object.
-	/// </param>
-	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group,
-		DBRef? executor = null);
+	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
 	/// <summary>
 	/// Waits until the immediate-execution queue has no entries left to run, so a test can assert on
@@ -166,5 +161,57 @@ public interface ITaskScheduler
 	/// </summary>
 	/// <param name="timeout">How long to wait before giving up; defaults to five seconds.</param>
 	/// <exception cref="TimeoutException">The queue was still busy when the timeout elapsed.</exception>
-	ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null);
+	ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	// Additive admission and control APIs. Legacy implementations remain loadable and fail explicitly
+	// if a caller requests a feature they have not implemented.
+	ValueTask<IDisposable> EnterSemaphoreMutationAsync()
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<int> ApplySemaphoreCommandAsync(DbRefAttribute target, int? count, bool drain,
+		Func<int, ValueTask> persist, Func<ValueTask<bool>> reconcile, Dictionary<string, MString>? registers = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	QueueUsage GetQueueUsage()
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueCommandReservation> ReserveCommandList(MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, bool manageSemaphoreCount = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, TimeSpan delay)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyAllCounted(DbRefAttribute dbAttribute)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<int> DrainCounted(DbRefAttribute dbAttribute, int? count = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
+	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 }
