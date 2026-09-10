@@ -2568,4 +2568,8 @@
   <data name="QueueHistoryReport" xml:space="preserve"><value>Recent queue outcomes (15-minute history). Columns: PID source owner kind outcome wait-ms execution-ms invocations.
 {0}</value></data>
   <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostics unavailable: {0}.</value></data>
+  <data name="LocalFunctionMessage" xml:space="preserve"><value>{0}</value></data>
+  <data name="LocalFunctionHeader" xml:space="preserve"><value>Owner-local functions (call with localfun):</value></data>
+  <data name="LocalFunctionReset" xml:space="preserve"><value>Removed {0} unpreserved owner-local functions.</value></data>
+  <data name="LocalFunctionChanged" xml:space="preserve"><value>Owner-local function {0}: {1}.</value></data>
 </root>

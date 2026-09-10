@@ -44,6 +44,11 @@ public class LegacyQueueCommandBoundaryTests
 		if (commandSwitch == "ALL") expectedKey = nameof(ErrorMessages.Notifications.PsAllHeader);
 		await Assert.That(parser.ServiceProvider.GetRequiredService<INotifyService>().ReceivedCalls()
 			.Any(call => call.GetMethodInfo().Name == "NotifyLocalized" && Equals(call.GetArguments()[1], expectedKey))).IsTrue();
+		if (commandSwitch == "ALL")
+		{
+			mediator.DidNotReceive().CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>());
+			scheduler.DidNotReceive().GetQueueEntry(Arg.Any<long>());
+		}
 		if (commandSwitch == "SEMAPHORE")
 			await Assert.That(parser.ServiceProvider.GetRequiredService<INotifyService>().ReceivedCalls()
 				.Any(call => call.GetMethodInfo().Name == "NotifyLocalized"
@@ -81,7 +86,7 @@ public class LegacyQueueCommandBoundaryTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor.AsPlayer));
-		mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>()).Returns(commandSwitch == "SEMAPHORE"
+		mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>()).Returns(commandSwitch is "SEMAPHORE" or "ALL"
 			? new[] { new SemaphoreTaskData(42, MarkupText.Plain("private command"), actor.Object().DBRef,
 				new DbRefAttribute(actor.Object().DBRef, ["SEMAPHORE"]), null) }.ToAsyncEnumerable()
 			: AsyncEnumerable.Empty<SemaphoreTaskData>());

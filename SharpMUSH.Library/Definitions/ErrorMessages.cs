@@ -376,6 +376,11 @@ public static class ErrorMessages
 	/// </summary>
 	public static class Notifications
 	{
+		public const string LocalFunctionMessage = "{0}";
+		public const string LocalFunctionHeader = "Owner-local functions (call with localfun):";
+		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
+		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
+
 		public const string QueueControlSyntax = "Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.";
 		public const string QueueControlBadReason = "Pause reasons must contain at most 160 characters and no control characters.";
 		public const string QueueControlOutcome = "PID {0}: {1}.";
