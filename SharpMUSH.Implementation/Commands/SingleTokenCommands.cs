@@ -89,10 +89,11 @@ public partial class Commands
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register
 		// substitutions like %q1 resolve to their current values before the attribute is set.
 		var attrNameRaw = args["0"].Message ?? MarkupText.Empty;
-		var attrNameParsed = (await parser.FunctionParse(attrNameRaw))?.Message ?? attrNameRaw;
+		var attrNameResult = await parser.FunctionParse(attrNameRaw);
+		var attrNameParsed = attrNameResult?.Message ?? attrNameRaw;
 		var attrName = attrNameParsed.ToPlainText();
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			enactor,
 			executor,
 			args["1"].Message!.ToPlainText(), LocateFlags.All, async realLocated =>
@@ -145,5 +146,6 @@ public partial class Commands
 					_ => $"{realLocated.Object().Name}/{attrNameParsed}",
 					_ => string.Empty));
 			});
+		return result with { HadErrors = result.HadErrors || attrNameResult?.HadErrors == true };
 	}
 }
