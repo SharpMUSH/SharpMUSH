@@ -66,7 +66,7 @@ public class CommunicationCommandTests
 	public async ValueTask PemitBasic(string command, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -130,7 +130,7 @@ public class CommunicationCommandTests
 	public async ValueTask EmitBasic(string command, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// @emit broadcasts to room via CommunicationService.SendToRoomAsync which calls
@@ -146,7 +146,7 @@ public class CommunicationCommandTests
 	public async ValueTask LemitBasic(string command, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -161,7 +161,7 @@ public class CommunicationCommandTests
 	public async ValueTask RemitBasic(string command, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -175,7 +175,7 @@ public class CommunicationCommandTests
 	public async ValueTask OemitBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: @oemit");
+		TestDiagnostics.WriteLine("Testing: @oemit");
 
 		// Create a unique thing to omit so that the executor (player #1) still receives the emit.
 		var excludeName = TestIsolationHelpers.GenerateUniqueName("OemitExclude");
@@ -227,7 +227,7 @@ public class CommunicationCommandTests
 	public async ValueTask ZemitBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: @zemit");
+		TestDiagnostics.WriteLine("Testing: @zemit");
 
 		var expectedMsg = "Test zone emit";
 
@@ -257,7 +257,7 @@ public class CommunicationCommandTests
 	public async ValueTask NsemitBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -273,7 +273,7 @@ public class CommunicationCommandTests
 	public async ValueTask NslemitBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -289,7 +289,7 @@ public class CommunicationCommandTests
 	public async ValueTask NsremitBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -304,7 +304,7 @@ public class CommunicationCommandTests
 	public async ValueTask NsoemitBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: @nsoemit");
+		TestDiagnostics.WriteLine("Testing: @nsoemit");
 
 		// The first argument is the exclusion list, so omit a freshly-created thing to leave the
 		// executor (player #1) among the recipients.
@@ -447,7 +447,7 @@ public class CommunicationCommandTests
 	public async ValueTask NspemitBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await NotifyService
@@ -462,7 +462,7 @@ public class CommunicationCommandTests
 	public async ValueTask NszemitBasic()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: @nszemit");
+		TestDiagnostics.WriteLine("Testing: @nszemit");
 
 		var expectedMsg = "Test nospoof zone";
 
@@ -493,7 +493,7 @@ public class CommunicationCommandTests
 	public async ValueTask AddComBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
@@ -534,7 +534,7 @@ public class CommunicationCommandTests
 	public async ValueTask DelComBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"addcom {alias}=Public"));
 
@@ -549,7 +549,7 @@ public class CommunicationCommandTests
 	public async ValueTask DelComNotFound(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = command.Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
@@ -562,7 +562,7 @@ public class CommunicationCommandTests
 	public async ValueTask CListBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		// @clist is @channel/list, which prints PennMUSH's column table (src/extchat.c:2622): the channel
@@ -580,7 +580,7 @@ public class CommunicationCommandTests
 	public async ValueTask ComTitleBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var parts = command.Split('=');
 		var alias = parts[0].Split(' ')[1];
 		var title = parts[1];
@@ -599,7 +599,7 @@ public class CommunicationCommandTests
 	public async ValueTask ComTitleNotFound(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		var alias = command.Split('=')[0].Split(' ')[1];
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
@@ -611,7 +611,7 @@ public class CommunicationCommandTests
 	public async ValueTask ComListBasic(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST1=Public"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("addcom test_alias_COMLIST2=Public"));
 
@@ -632,7 +632,7 @@ public class CommunicationCommandTests
 	public async ValueTask ComListEmpty(string command)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", command);
+		TestDiagnostics.WriteLine("Testing: {0}", command);
 		// Wipe all channel aliases for the executor to ensure an empty state
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@wipe me/CHANALIAS*"));
 

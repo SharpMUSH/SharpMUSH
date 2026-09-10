@@ -318,7 +318,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xattr(#0,attr)", "")]
 	public async Task Xattr(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -516,7 +516,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xattrp(#0,attr)", "0")]
 	public async Task Xattrp(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -525,7 +525,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xcon(#0)", "")]
 	public async Task Xcon(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -534,7 +534,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xexits(#0)", "")]
 	public async Task Xexits(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -543,7 +543,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xmwhoid()", "")]
 	public async Task Xmwhoid(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -552,7 +552,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xplayers(#0)", "")]
 	public async Task Xplayers(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -561,7 +561,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xthings(#0)", "")]
 	public async Task Xthings(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -570,7 +570,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xvcon(#0)", "")]
 	public async Task Xvcon(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -579,7 +579,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xvexits(#0)", "")]
 	public async Task Xvexits(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -588,7 +588,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xvplayers(#0)", "")]
 	public async Task Xvplayers(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -597,7 +597,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xvthings(#0)", "")]
 	public async Task Xvthings(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -606,7 +606,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xwho()", "")]
 	public async Task Xwho(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -615,7 +615,7 @@ public class AttributeFunctionUnitTests
 	[Arguments("xwhoid()", "")]
 	public async Task Xwhoid(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

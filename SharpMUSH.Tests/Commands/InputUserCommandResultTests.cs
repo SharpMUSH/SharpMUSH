@@ -11,7 +11,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class InputUserCommandResultTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -51,7 +50,12 @@ public class InputUserCommandResultTests
 		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command room", god)))).AsRoom;
 		await mediator.Send(new MoveObjectCommand(actor, room, IsSilent: true));
 		actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
-		var master = (await objects.GetObjectNodeAsync(new DBRef((int)Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom))).Known;
+		var masterId = await mediator.Send(new CreateRoomCommand("input command master", god));
+		var master = (await objects.GetObjectNodeAsync(masterId)).Known;
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Database = options.Database with { MasterRoom = (uint)masterId.Number }
+		});
 		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Known;
 		if (scope == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (scope == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));
@@ -86,7 +90,7 @@ public class InputUserCommandResultTests
 			CallState? result;
 			using (Get<IHttpOutputCapture>().BeginCapture(host.Object().Key, output))
 				result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));
-			Console.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, output={output.Body}, capture={sessions.GetCapturing(player.Handle)?.Id}");
+			TestDiagnostics.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, output={output.Body}, capture={sessions.GetCapturing(player.Handle)?.Id}");
 			await Assert.That(output.Body.ToString().Contains(marker)).IsEqualTo(scope != "unmatched");
 			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");
 			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(mode == "syntax" ? null : session.Id);

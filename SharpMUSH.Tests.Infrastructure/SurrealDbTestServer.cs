@@ -31,6 +31,7 @@ public class SurrealDbTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithCommand("start", "--unauthenticated", "memory")
 		.WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Started web server on"))
 		.WithReuse(false)
+		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
 	public string Endpoint => $"ws://localhost:{Instance.GetMappedPublicPort(HttpPort)}/rpc";

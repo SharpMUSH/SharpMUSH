@@ -138,7 +138,7 @@ public class SceneApprovalIntegrationTests
 	[Test]
 	public async Task ApprovalBoundary_FullMatrix()
 	{
-		static void Log(string m) => Console.WriteLine(m);
+		static void Log(string m) => TestDiagnostics.WriteLine(m);
 
 		await God1("@set #1=WIZARD");
 

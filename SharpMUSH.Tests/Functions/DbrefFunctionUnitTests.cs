@@ -198,7 +198,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("rloc(#1,0)", "#0")]
 	public async Task Rloc(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -207,7 +207,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("slev()", "")]
 	public async Task Slev(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -216,7 +216,7 @@ public class DbrefFunctionUnitTests
 	[Arguments("stext()", "")]
 	public async Task Stext(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

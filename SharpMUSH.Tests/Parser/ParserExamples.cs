@@ -16,7 +16,7 @@ public class ParserExamples
 	[Test]
 	public async Task Example_ValidateInput_WithErrors()
 	{
-		Console.WriteLine("\n=== Parser Error Explanation Example ===\n");
+		TestDiagnostics.WriteLine("\n=== Parser Error Explanation Example ===\n");
 
 		var testCases = new[]
 		{
@@ -29,21 +29,21 @@ public class ParserExamples
 
 		foreach (var testCase in testCases)
 		{
-			Console.WriteLine($"Input: '{testCase}'");
+			TestDiagnostics.WriteLine($"Input: '{testCase}'");
 			var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(testCase), ParseType.Function);
 
 			if (errors.Count == 0)
 			{
-				Console.WriteLine("  ✓ Valid - No errors\n");
+				TestDiagnostics.WriteLine("  ✓ Valid - No errors\n");
 			}
 			else
 			{
-				Console.WriteLine($"  ✗ {errors.Count} error(s) found:");
+				TestDiagnostics.WriteLine($"  ✗ {errors.Count} error(s) found:");
 				foreach (var error in errors)
 				{
-					Console.WriteLine($"    {error}");
+					TestDiagnostics.WriteLine($"    {error}");
 				}
-				Console.WriteLine();
+				TestDiagnostics.WriteLine();
 			}
 		}
 
@@ -53,11 +53,11 @@ public class ParserExamples
 	[Test]
 	public async Task Example_TokenizeForSyntaxHighlighting()
 	{
-		Console.WriteLine("\n=== Syntax Highlighting Example ===\n");
+		TestDiagnostics.WriteLine("\n=== Syntax Highlighting Example ===\n");
 
 		var input = "add(1,2)[sub(5,3)]{test}%0";
-		Console.WriteLine($"Input: '{input}'\n");
-		Console.WriteLine("Tokens:");
+		TestDiagnostics.WriteLine($"Input: '{input}'\n");
+		TestDiagnostics.WriteLine("Tokens:");
 
 		var tokens = Parser.Tokenize(MarkupText.Plain(input));
 
@@ -68,10 +68,10 @@ public class ParserExamples
 				? token.Text[..17] + "..."
 				: token.Text;
 
-			Console.WriteLine($"  [{displayType}] '{displayText}' at position {token.StartIndex}-{token.EndIndex}");
+			TestDiagnostics.WriteLine($"  [{displayType}] '{displayText}' at position {token.StartIndex}-{token.EndIndex}");
 		}
 
-		Console.WriteLine($"\nTotal tokens: {tokens.Count}");
+		TestDiagnostics.WriteLine($"\nTotal tokens: {tokens.Count}");
 
 		await Assert.That(tokens.Count).IsGreaterThan(0);
 	}
@@ -79,7 +79,7 @@ public class ParserExamples
 	[Test]
 	public async Task Example_CompareTokenTypes()
 	{
-		Console.WriteLine("\n=== Token Type Comparison ===\n");
+		TestDiagnostics.WriteLine("\n=== Token Type Comparison ===\n");
 
 		var examples = new Dictionary<string, string>
 		{
@@ -93,10 +93,10 @@ public class ParserExamples
 
 		foreach (var (description, input) in examples)
 		{
-			Console.WriteLine($"{description}: '{input}'");
+			TestDiagnostics.WriteLine($"{description}: '{input}'");
 			var tokens = Parser.Tokenize(MarkupText.Plain(input));
 			var tokenTypes = tokens.Select(t => t.Type).Distinct().ToList();
-			Console.WriteLine($"  Token types: {string.Join(", ", tokenTypes)}\n");
+			TestDiagnostics.WriteLine($"  Token types: {string.Join(", ", tokenTypes)}\n");
 		}
 
 		await Assert.That(examples.Count).IsGreaterThan(0);

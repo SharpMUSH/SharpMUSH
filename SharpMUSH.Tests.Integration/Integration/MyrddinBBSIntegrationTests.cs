@@ -127,7 +127,7 @@ public class MyrddinBBSIntegrationTests
 		void Log(string message)
 		{
 			output.AppendLine(message);
-			Console.WriteLine(message);
+			TestDiagnostics.WriteLine(message);
 		}
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=WIZARD"));
@@ -427,7 +427,7 @@ public class MyrddinBBSIntegrationTests
 		var outputFileRelative = Path.Combine(TestDataDir, OutputFileName);
 		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS INSTALL] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS INSTALL] Full test output written to: {outputPath}");
 
 		await Assert.That(executedLines).IsGreaterThan(0)
 			.Because("at least some commands from the BBS script should have been executed");
@@ -451,8 +451,8 @@ public class MyrddinBBSIntegrationTests
 		if (installErrorMessages.Count > 0 || bbreadErrorMessages.Count > 0
 			|| missingCparenMessages.Count > 0)
 		{
-			Console.WriteLine($"\n[BBS INSTALL] WARNING: Found {installErrorMessages.Count} install #-1 errors, {bbreadErrorMessages.Count} +bbread #-1 errors, {missingCparenMessages.Count} missing CPAREN.");
-			Console.WriteLine("[BBS INSTALL] These are documented above for future investigation.");
+			TestDiagnostics.WriteLine($"\n[BBS INSTALL] WARNING: Found {installErrorMessages.Count} install #-1 errors, {bbreadErrorMessages.Count} +bbread #-1 errors, {missingCparenMessages.Count} missing CPAREN.");
+			TestDiagnostics.WriteLine("[BBS INSTALL] These are documented above for future investigation.");
 		}
 	}
 
@@ -471,7 +471,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_CanBeTurnedIntoPackage()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("MYRDDIN BBS -> @package");
@@ -523,8 +523,8 @@ public class MyrddinBBSIntegrationTests
 		var manifestPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_GeneratedPackage.yaml");
 		await File.WriteAllTextAsync(logPath, output.ToString());
 		await File.WriteAllTextAsync(manifestPath, manifestYaml);
-		Console.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
-		Console.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
+		TestDiagnostics.WriteLine($"[BBS PACKAGE] Run log: {logPath}");
+		TestDiagnostics.WriteLine($"[BBS PACKAGE] Generated manifest: {manifestPath}");
 
 		await Assert.That(manifestYaml).Contains("format: 1")
 			.Because("the generated artifact should be a complete package manifest");
@@ -667,7 +667,7 @@ public class MyrddinBBSIntegrationTests
 		void Log(string message)
 		{
 			output.AppendLine(message);
-			Console.WriteLine(message);
+			TestDiagnostics.WriteLine(message);
 		}
 
 		var groupName = $"TestGrp_{Guid.NewGuid():N}"[..20]; // Keep name short for BBS
@@ -821,7 +821,7 @@ public class MyrddinBBSIntegrationTests
 		var outputFileRelative = Path.Combine(TestDataDir, "MyrddinBBS_NewGroup_TestOutput.txt");
 		var outputPath = Path.Combine(AppContext.BaseDirectory, outputFileRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS NEWGROUP] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS NEWGROUP] Full test output written to: {outputPath}");
 
 		var bbreadOutput = string.Join("\n", bbreadMessages.Select(m => m.Message));
 		await Assert.That(bbreadOutput).Contains(groupName)
@@ -851,7 +851,7 @@ public class MyrddinBBSIntegrationTests
 		void Log(string message)
 		{
 			output.AppendLine(message);
-			Console.WriteLine(message);
+			TestDiagnostics.WriteLine(message);
 		}
 
 		Log(new string('=', 78));
@@ -1076,7 +1076,7 @@ public class MyrddinBBSIntegrationTests
 		var postReadOutputRelative = Path.Combine(TestDataDir, "MyrddinBBS_PostRead_TestOutput.txt");
 		var outputPath = Path.Combine(AppContext.BaseDirectory, postReadOutputRelative);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS POST/READ] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS POST/READ] Full test output written to: {outputPath}");
 
 		await Assert.That(postMessages.Count).IsGreaterThan(0)
 			.Because("+bbpost should produce at least one notification");
@@ -1126,7 +1126,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBRead_GroupScan()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBREAD_GROUPSCAN");
@@ -1143,7 +1143,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBReadGroupScan_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBREAD GROUPSCAN] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBREAD GROUPSCAN] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Count).IsGreaterThanOrEqualTo(2)
 			.Because("+bbread 1 should produce at least header + one message row");
@@ -1169,7 +1169,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBList_ShowsGroups()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBLIST_SHOWSGROUPS");
@@ -1188,7 +1188,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBList_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBLIST] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBLIST] Full test output written to: {outputPath}");
 
 		await Assert.That(combinedOutput).Contains("Available Bulletin Board Groups");
 		await Assert.That(combinedOutput).Contains("Member?");
@@ -1207,7 +1207,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBNotify_Toggle()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBNOTIFY_TOGGLE");
@@ -1228,7 +1228,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBNotify_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBNOTIFY] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBNOTIFY] Full test output written to: {outputPath}");
 
 		var expectedOff = $"Post notification for BB Group '{group1Name}' turned off. You will no longer be notified of new postings to that Group.";
 		await Assert.That(offMsgs.Any(m => m == expectedOff)).IsTrue()
@@ -1247,7 +1247,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_StagedPost_WriteProofToss()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_STAGEDPOST_WRITEPROOFTOSS");
@@ -1280,7 +1280,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_StagedWriteProofToss_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS STAGED POST] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS STAGED POST] Full test output written to: {outputPath}");
 
 		await Assert.That(startMsgs.Any(m => m.Contains("You start your posting to Group #1"))).IsTrue()
 			.Because("+bbpost 1/Proof Test Title should confirm start of posting");
@@ -1311,7 +1311,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_StagedPost_WriteAndPost()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_STAGEDPOST_WRITEANDPOST");
@@ -1340,7 +1340,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_StagedWriteAndPost_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS STAGED POST AND READ] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS STAGED POST AND READ] Full test output written to: {outputPath}");
 
 		await Assert.That(startMsgs.Any(m => m.Contains("You start your posting"))).IsTrue()
 			.Because("+bbpost 1/Staged Test Post should confirm start of posting");
@@ -1367,7 +1367,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBScan_ShowsUnread()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBSCAN_SHOWSUNREAD");
@@ -1388,7 +1388,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBScanUnread_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBSCAN UNREAD] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBSCAN UNREAD] Full test output written to: {outputPath}");
 
 		await Assert.That(combinedOutput).Contains("Unread Postings on the Global Bulletin Board");
 		await Assert.That(combinedOutput).Contains(group1Name);
@@ -1403,7 +1403,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBRead_UnreadFilter()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBREAD_UNREADFILTER");
@@ -1416,7 +1416,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBReadUnread_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBREAD UNREAD] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBREAD UNREAD] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains("Title Goes Here"))).IsTrue()
 			.Because("+bbread 1/u should include unread message 1 'Title Goes Here'");
@@ -1433,7 +1433,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBCatchup_All()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBCATCHUP_ALL");
@@ -1446,7 +1446,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBCatchupAll_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBCATCHUP ALL] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBCATCHUP ALL] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m == "All postings on all boards marked as read.")).IsTrue()
 			.Because("+bbcatchup all should confirm all postings marked as read");
@@ -1460,7 +1460,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBScan_NoUnread()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBSCAN_NOUNREAD");
@@ -1475,7 +1475,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBScanNoUnread_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBSCAN NO UNREAD] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBSCAN NO UNREAD] Full test output written to: {outputPath}");
 
 		await Assert.That(combinedOutput).Contains("There are no unread postings on the Global Bulletin Board.");
 	}
@@ -1488,7 +1488,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBEdit_EditsMessage()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBEDIT_EDITSMESSAGE");
@@ -1504,7 +1504,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBEdit_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBEDIT] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBEDIT] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains("Message 1/2 (") && m.Contains(group1Name) && m.Contains("/2) now reads:"))).IsTrue()
 			.Because("+bbedit should show the 'Message X/Y now reads:' header");
@@ -1524,7 +1524,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBSearch_FindsMessages()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBSEARCH_FINDSMESSAGES");
@@ -1540,7 +1540,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBSearch_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBSEARCH] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBSEARCH] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains($"**** {group1Name} ****"))).IsTrue()
 			.Because("+bbsearch should show group name in header");
@@ -1560,7 +1560,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBTimeout_SetsTimeout()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBTIMEOUT_SETSTIMEOUT");
@@ -1576,7 +1576,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBTimeout_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBTIMEOUT] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBTIMEOUT] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains("Message 2 in group") && m.Contains("30 day timeout"))).IsTrue()
 			.Because("+bbtimeout should confirm the 30-day timeout was set");
@@ -1590,7 +1590,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBRemove_RemovesMessage()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBREMOVE_REMOVESMESSAGE");
@@ -1606,7 +1606,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBRemove_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBREMOVE] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBREMOVE] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains("Message 2 removed from group") && m.Contains(group1Name))).IsTrue()
 			.Because("+bbremove should confirm message 2 was removed from the group");
@@ -1620,7 +1620,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBNewGroup_Second()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBNEWGROUP_SECOND");
@@ -1633,7 +1633,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBNewGroupSecond_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBNEWGROUP SECOND] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBNEWGROUP SECOND] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m => m.Contains("Group number 2 added as 'BBTestGroup2'"))).IsTrue()
 			.Because("+bbnewgroup should confirm BBTestGroup2 was created as group 2");
@@ -1647,7 +1647,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBMove_MovesMessage()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBMOVE_MOVESMESSAGE");
@@ -1660,7 +1660,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBMove_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBMOVE] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBMOVE] Full test output written to: {outputPath}");
 
 		await Assert.That(msgs.Any(m =>
 			m.Contains("removed from group '1'") && m.Contains("added to group '2' as message #1") ||
@@ -1678,7 +1678,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBLeaveAndJoin()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBLEAVE_AND_JOIN");
@@ -1702,7 +1702,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBLeaveAndJoin_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBLEAVE/BBJOIN] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBLEAVE/BBJOIN] Full test output written to: {outputPath}");
 
 		await Assert.That(leaveMsgs.Any(m => m == "You have removed yourself from the BBTestGroup2 board.")).IsTrue()
 			.Because("+bbleave 2 should confirm leaving BBTestGroup2");
@@ -1719,7 +1719,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBConfig_ShowsAndSets()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBCONFIG_SHOWSANDSETS");
@@ -1742,7 +1742,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBConfig_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBCONFIG] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBCONFIG] Full test output written to: {outputPath}");
 
 		var showOutput = string.Join("\n", showMsgs);
 		await Assert.That(showOutput).Contains("Myrddin's Global BBS");
@@ -1764,7 +1764,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBLock_RestrictsGroup()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBLOCK_RESTRICTSGROUP");
@@ -1782,7 +1782,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBLock_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBLOCK] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBLOCK] Full test output written to: {outputPath}");
 
 		await Assert.That(lockMsgs.Any(m => m.Contains("locked") && m.Contains("flag=wizard"))).IsTrue()
 			.Because("+bblock should confirm group 2 was locked for flag=wizard");
@@ -1799,7 +1799,7 @@ public class MyrddinBBSIntegrationTests
 	public async Task BBS_BBClearGroup_DeletesGroup()
 	{
 		var output = new StringBuilder();
-		void Log(string message) { output.AppendLine(message); Console.WriteLine(message); }
+		void Log(string message) { output.AppendLine(message); TestDiagnostics.WriteLine(message); }
 
 		Log(new string('=', 78));
 		Log("BBS_BBCLEARGROUP_DELETESGROUP");
@@ -1822,7 +1822,7 @@ public class MyrddinBBSIntegrationTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, "MyrddinBBS_BBClearGroup_TestOutput.txt");
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"[BBS BBCLEARGROUP] Full test output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"[BBS BBCLEARGROUP] Full test output written to: {outputPath}");
 
 		await Assert.That(newGroupMsgs.Any(m => m.Contains("Group number 3 added as 'TempGroupForDeletion'"))).IsTrue()
 			.Because("+bbnewgroup should confirm TempGroupForDeletion was created as group 3");

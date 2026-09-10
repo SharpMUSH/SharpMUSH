@@ -46,7 +46,7 @@ public class MessageFormatResultTests
 		var result = command
 			? await Factory.CommandParser.CommandListParse(MarkupText.Plain($"@message/silent {reference}=fallback,{format}"))
 			: await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"message({reference},fallback,{format})"));
-		Console.WriteLine($"command={command}, pinned={pinned}, mode={mode}: errors={result!.HadErrors}, output={result.Message}");
+		TestDiagnostics.WriteLine($"command={command}, pinned={pinned}, mode={mode}: errors={result!.HadErrors}, output={result.Message}");
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("");
 		var delivered = Factory.Notifications.For(reference);

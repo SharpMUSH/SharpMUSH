@@ -9,7 +9,6 @@ using MySqlConnector;
 using NSubstitute;
 using Quartz;
 using Serilog;
-using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
@@ -65,18 +64,8 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		var logConfig = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose();
-
-		var enableConsole = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		if (!string.IsNullOrEmpty(enableConsole) &&
-				(enableConsole.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsole == "1"))
-		{
-			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
-		}
-
-		Log.Logger = logConfig.CreateLogger();
+		Log.Logger = TestDiagnostics.CreateLogger();
+		TestDiagnostics.ConfigureHost(builder);
 
 		// Point the Server at the shared NATS instance.
 		// Setting the env var here (inside ConfigureWebHost) mirrors the approach used by
@@ -180,7 +169,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		TelnetPort = FindFreePort();
 		var httpPort = FindFreePort();
 		var renderingSocket = Path.Combine(_renderingDirectory, "render.sock");
-		_renderingWorkerApp = SharpMUSH.RenderingWorker.Program.CreateApplication([], renderingSocket);
+		_renderingWorkerApp = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, renderingSocket);
 		await _renderingWorkerApp.StartAsync();
 
 		var csArgs = new[]
@@ -193,7 +182,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		};
 
 		// Integration tests exercise the production Unix-socket rendering path, including Pueblo/MXP.
-		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(csArgs, natsUrl);
+		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync([.. csArgs, .. TestDiagnostics.HostArguments], natsUrl);
 
 		_connectionServerApp.UseWebSockets();
 		var wsHandler = _connectionServerApp.Services.GetRequiredService<WebSocketServer>();

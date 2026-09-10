@@ -144,7 +144,7 @@ public class ListAttributeResultTests
 			_ => $"{function}({attribute},a b)"
 		};
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-		Console.WriteLine($"{function}/{route}/{mode}: errors={result!.HadErrors}; text={result.Message}");
+		TestDiagnostics.WriteLine($"{function}/{route}/{mode}: errors={result!.HadErrors}; text={result.Message}");
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
 		if (mode != "syntax")
 		{

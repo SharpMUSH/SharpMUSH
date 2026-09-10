@@ -1,3 +1,5 @@
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf;
@@ -21,7 +23,6 @@ namespace SharpMUSH.Tests.Commands;
 /// where the loss happened. An escape character in a notification is the defect regardless of what
 /// any particular client does with it.</para>
 /// </summary>
-[NotInParallel]
 public class MarkupSurvivesNotificationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -52,6 +53,12 @@ public class MarkupSurvivesNotificationTests
 
 		try
 		{
+			var objects = WebAppFactoryArg.Services.GetRequiredService<IObjectStore>();
+			var actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
+			var roomId = await Mediator.Send(new CreateRoomCommand(
+				TestIsolationHelpers.GenerateUniqueName("MarkupRoom"), actor));
+			var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
+			await Mediator.Send(new MoveObjectCommand(actor, room, IsSilent: true));
 			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 			var before = Notifications.RawCountFor(player.DbRef);
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));

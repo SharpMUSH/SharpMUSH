@@ -52,21 +52,21 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			var fileSize = new FileInfo(databaseFilePath).Length;
 			var fileSizeMB = fileSize / (1024.0 * 1024.0);
 
-			Console.WriteLine($"=== Performance Metrics ===");
-			Console.WriteLine($"Database file size: {fileSizeMB:F2} MB");
-			Console.WriteLine($"Total objects: {result.TotalObjects}");
-			Console.WriteLine($"Players: {result.PlayersConverted}");
-			Console.WriteLine($"Rooms: {result.RoomsConverted}");
-			Console.WriteLine($"Things: {result.ThingsConverted}");
-			Console.WriteLine($"Exits: {result.ExitsConverted}");
-			Console.WriteLine($"Attributes: {result.AttributesConverted}");
-			Console.WriteLine($"Locks: {result.LocksConverted}");
-			Console.WriteLine($"Parse time: {parseStopwatch.Elapsed.TotalSeconds:F3} seconds");
-			Console.WriteLine($"Convert time: {convertStopwatch.Elapsed.TotalSeconds:F3} seconds");
-			Console.WriteLine($"Total time: {(parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F3} seconds");
-			Console.WriteLine($"Objects/second: {result.TotalObjects / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
-			Console.WriteLine($"MB/second: {fileSizeMB / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
-			Console.WriteLine($"===========================");
+			TestDiagnostics.WriteLine($"=== Performance Metrics ===");
+			TestDiagnostics.WriteLine($"Database file size: {fileSizeMB:F2} MB");
+			TestDiagnostics.WriteLine($"Total objects: {result.TotalObjects}");
+			TestDiagnostics.WriteLine($"Players: {result.PlayersConverted}");
+			TestDiagnostics.WriteLine($"Rooms: {result.RoomsConverted}");
+			TestDiagnostics.WriteLine($"Things: {result.ThingsConverted}");
+			TestDiagnostics.WriteLine($"Exits: {result.ExitsConverted}");
+			TestDiagnostics.WriteLine($"Attributes: {result.AttributesConverted}");
+			TestDiagnostics.WriteLine($"Locks: {result.LocksConverted}");
+			TestDiagnostics.WriteLine($"Parse time: {parseStopwatch.Elapsed.TotalSeconds:F3} seconds");
+			TestDiagnostics.WriteLine($"Convert time: {convertStopwatch.Elapsed.TotalSeconds:F3} seconds");
+			TestDiagnostics.WriteLine($"Total time: {(parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F3} seconds");
+			TestDiagnostics.WriteLine($"Objects/second: {result.TotalObjects / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
+			TestDiagnostics.WriteLine($"MB/second: {fileSizeMB / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
+			TestDiagnostics.WriteLine($"===========================");
 
 			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
 			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
@@ -109,14 +109,14 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			await Assert.That(result.IsSuccessful).IsTrue();
 			await Assert.That(result.TotalObjects).IsEqualTo(1000);
 
-			Console.WriteLine($"1000-object conversion completed in {stopwatch.Elapsed.TotalSeconds:F3} seconds");
-			Console.WriteLine($"  - Players: {result.PlayersConverted}");
-			Console.WriteLine($"  - Rooms: {result.RoomsConverted}");
-			Console.WriteLine($"  - Things: {result.ThingsConverted}");
-			Console.WriteLine($"  - Exits: {result.ExitsConverted}");
-			Console.WriteLine($"  - Attributes: {result.AttributesConverted}");
-			Console.WriteLine($"  - Locks: {result.LocksConverted}");
-			Console.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
+			TestDiagnostics.WriteLine($"1000-object conversion completed in {stopwatch.Elapsed.TotalSeconds:F3} seconds");
+			TestDiagnostics.WriteLine($"  - Players: {result.PlayersConverted}");
+			TestDiagnostics.WriteLine($"  - Rooms: {result.RoomsConverted}");
+			TestDiagnostics.WriteLine($"  - Things: {result.ThingsConverted}");
+			TestDiagnostics.WriteLine($"  - Exits: {result.ExitsConverted}");
+			TestDiagnostics.WriteLine($"  - Attributes: {result.AttributesConverted}");
+			TestDiagnostics.WriteLine($"  - Locks: {result.LocksConverted}");
+			TestDiagnostics.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
 
 			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(10.0)
 				.Because("1000 objects should convert in under 10 seconds");
@@ -163,7 +163,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 				var objPerSec = count / stopwatch.Elapsed.TotalSeconds;
 				results.Add((count, stopwatch.Elapsed.TotalSeconds, objPerSec));
 
-				Console.WriteLine($"{count} objects: {stopwatch.Elapsed.TotalSeconds:F3}s ({objPerSec:F2} obj/s)");
+				TestDiagnostics.WriteLine($"{count} objects: {stopwatch.Elapsed.TotalSeconds:F3}s ({objPerSec:F2} obj/s)");
 			}
 			finally
 			{
@@ -174,12 +174,12 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			}
 		}
 
-		Console.WriteLine("\n=== Scalability Summary ===");
-		Console.WriteLine("Objects | Time (s) | Obj/s");
-		Console.WriteLine("--------|----------|-------");
+		TestDiagnostics.WriteLine("\n=== Scalability Summary ===");
+		TestDiagnostics.WriteLine("Objects | Time (s) | Obj/s");
+		TestDiagnostics.WriteLine("--------|----------|-------");
 		foreach (var (objects, seconds, objPerSec) in results)
 		{
-			Console.WriteLine($"{objects,7} | {seconds,8:F3} | {objPerSec,6:F2}");
+			TestDiagnostics.WriteLine($"{objects,7} | {seconds,8:F3} | {objPerSec,6:F2}");
 		}
 
 		var time1000 = results.First(r => r.Objects == 1000).Seconds;

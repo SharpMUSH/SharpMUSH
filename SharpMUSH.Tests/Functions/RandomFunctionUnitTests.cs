@@ -27,11 +27,11 @@ public class RandomFunctionUnitTests
 	[Arguments("rand(5,10)", "")]
 	public async Task Rand(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var parsed = await Parser.FunctionParse(MarkupText.Plain(str));
 		var result = parsed?.Message?.ToPlainText();
-		Console.WriteLine($"Result value: '{result}'");
-		Console.WriteLine($"Result length: {result?.Length}");
+		TestDiagnostics.WriteLine($"Result value: '{result}'");
+		TestDiagnostics.WriteLine($"Result length: {result?.Length}");
 		await Assert.That(result).IsNotNull();
 		await Assert.That(int.TryParse(result, out _)).IsTrue();
 	}
@@ -43,7 +43,7 @@ public class RandomFunctionUnitTests
 	[Arguments("rand(1)", "0")]
 	public async Task RandOne(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -54,7 +54,7 @@ public class RandomFunctionUnitTests
 	[Arguments("rand(1,1)", "1")]
 	public async Task RandDeterministic(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}
@@ -64,7 +64,7 @@ public class RandomFunctionUnitTests
 	[Arguments("randword(foo)", "foo")]
 	public async Task RandwordSingle(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToPlainText();
 		await Assert.That(result).IsEqualTo(expected);
 	}

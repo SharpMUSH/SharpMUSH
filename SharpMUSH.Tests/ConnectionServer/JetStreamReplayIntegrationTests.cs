@@ -21,7 +21,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Replay_and_resume_survive_a_simulated_restart()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		var session = Guid.NewGuid().ToString("N");
 		string token;
@@ -51,7 +51,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Legacy_tokens_and_frames_cannot_enter_v2_replay()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		var session = Guid.NewGuid().ToString("N");
 		await using var connection = new NatsConnection(new NatsOpts { Url = url });
@@ -72,7 +72,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Token_consumption_has_one_CAS_winner()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		await using var first = await Tokens(url);
 		await using var second = await Tokens(url);
@@ -85,7 +85,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Replay_paginates_across_fetch_batches_after_restart()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		var session = Guid.NewGuid().ToString("N");
 		var sequences = new List<long>();
@@ -102,7 +102,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Session_revocation_is_visible_to_other_instances()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		var session = Guid.NewGuid().ToString("N");
 		await using var first = await Tokens(url);
@@ -116,7 +116,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Dropping_replay_preserves_other_sessions()
 	{
-		await using var strategy = new NatsTestContainerStrategy();
+		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var url = await strategy.GetUrlAsync();
 		await using var replay = await Replay(url);
 		var session = Guid.NewGuid().ToString("N");

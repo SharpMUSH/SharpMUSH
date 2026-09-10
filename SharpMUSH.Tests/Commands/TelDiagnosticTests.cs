@@ -92,7 +92,7 @@ public class TelDiagnosticTests
 
 		var errors = await ExecAndCollectErrors($"@tel {objName}={destName}");
 
-		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel of one thing into another thing by name should work without errors");
 	}
@@ -112,7 +112,7 @@ public class TelDiagnosticTests
 
 		var errors = await ExecAndCollectErrors($"@tel {obj}={dest}");
 
-		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel of one thing into another thing by dbref should work without errors");
 	}
@@ -131,7 +131,7 @@ public class TelDiagnosticTests
 
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
 
-		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel self into a container should work without errors");
 	}
@@ -149,13 +149,13 @@ public class TelDiagnosticTests
 		var dbref = r.Message!.ToPlainText()!.Trim();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&last_mod {dbref}=2024-01-01"));
 
-		Console.WriteLine($"Created {objName} = {dbref}");
+		TestDiagnostics.WriteLine($"Created {objName} = {dbref}");
 
 		var nameResult = await Eval($"name({dbref})");
-		Console.WriteLine($"name({dbref}) = {nameResult}");
+		TestDiagnostics.WriteLine($"name({dbref}) = {nameResult}");
 
 		var getResult = await Eval($"get({dbref}/last_mod)");
-		Console.WriteLine($"get({dbref}/last_mod) = {getResult}");
+		TestDiagnostics.WriteLine($"get({dbref}/last_mod) = {getResult}");
 
 		await WaitUntilAsync(async () =>
 			(await Eval($"name({objName})")) == objName &&
@@ -163,10 +163,10 @@ public class TelDiagnosticTests
 			"name() and get() by object name never became visible after object creation");
 
 		var nameResult2 = await Eval($"name({objName})");
-		Console.WriteLine($"name({objName}) = {nameResult2}");
+		TestDiagnostics.WriteLine($"name({objName}) = {nameResult2}");
 
 		var getResult2 = await Eval($"get({objName}/last_mod)");
-		Console.WriteLine($"get({objName}/last_mod) = {getResult2}");
+		TestDiagnostics.WriteLine($"get({objName}/last_mod) = {getResult2}");
 
 		await Assert.That(nameResult).IsEqualTo(objName)
 			.Because("name() should return the object name");
@@ -198,10 +198,10 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={containerDbref}"));
 
 		var nameResult = await Eval($"name({innerDbref})");
-		Console.WriteLine($"name({innerDbref}) [inside container] = {nameResult}");
+		TestDiagnostics.WriteLine($"name({innerDbref}) [inside container] = {nameResult}");
 
 		var getResult = await Eval($"get({innerDbref}/test_attr)");
-		Console.WriteLine($"get({innerDbref}/test_attr) [inside container] = {getResult}");
+		TestDiagnostics.WriteLine($"get({innerDbref}/test_attr) [inside container] = {getResult}");
 
 		await Assert.That(nameResult).IsEqualTo(innerName)
 			.Because("name() by dbref should work even when object is inside a container");
@@ -230,22 +230,22 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {innerDbref}={outerDbref}"));
 
 		var nameResult = await Eval($"name({innerName})");
-		Console.WriteLine($"name({innerName}) [inside container, by name] = {nameResult}");
+		TestDiagnostics.WriteLine($"name({innerName}) [inside container, by name] = {nameResult}");
 
 		var getResult = await Eval($"get({innerName}/test_attr)");
-		Console.WriteLine($"get({innerName}/test_attr) [inside container, by name] = {getResult}");
+		TestDiagnostics.WriteLine($"get({innerName}/test_attr) [inside container, by name] = {getResult}");
 
-		Console.WriteLine($"[DIAGNOSTIC] name() by name inside container: '{nameResult}'");
-		Console.WriteLine($"[DIAGNOSTIC] get() by name inside container: '{getResult}'");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] name() by name inside container: '{nameResult}'");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] get() by name inside container: '{getResult}'");
 
 		// In PennMUSH: objects inside containers can't be found by name
 		var nameContainsError = nameResult.Contains("#-1") || nameResult.Contains("can't see");
 		var getContainsError = getResult.Contains("#-1") || getResult.Contains("BAD ARGUMENT");
-		Console.WriteLine($"[DIAGNOSTIC] name() returned error: {nameContainsError}");
-		Console.WriteLine($"[DIAGNOSTIC] get() returned error: {getContainsError}");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] name() returned error: {nameContainsError}");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] get() returned error: {getContainsError}");
 
 		var containerNameResult = await Eval($"name({outerName})");
-		Console.WriteLine($"name({outerName}) [container, by name] = {containerNameResult}");
+		TestDiagnostics.WriteLine($"name({outerName}) [container, by name] = {containerNameResult}");
 		await Assert.That(containerNameResult).IsEqualTo(outerName)
 			.Because("the container should still be findable by name");
 	}
@@ -265,22 +265,22 @@ public class TelDiagnosticTests
 		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {dstName}"));
 		var dstDbref = r2.Message!.ToPlainText()!.Trim();
 
-		Console.WriteLine($"Created {srcName} = {srcDbref}");
-		Console.WriteLine($"Created {dstName} = {dstDbref}");
+		TestDiagnostics.WriteLine($"Created {srcName} = {srcDbref}");
+		TestDiagnostics.WriteLine($"Created {dstName} = {dstDbref}");
 
 		var numSrc = await Eval($"num({srcName})");
 		var numDst = await Eval($"num({dstName})");
-		Console.WriteLine($"num({srcName}) = {numSrc}");
-		Console.WriteLine($"num({dstName}) = {numDst}");
+		TestDiagnostics.WriteLine($"num({srcName}) = {numSrc}");
+		TestDiagnostics.WriteLine($"num({dstName}) = {numDst}");
 
 		var errors = await ExecAndCollectErrors($"@tel {srcName}={dstName}");
-		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"@tel ERROR: {e}");
 
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel by name should succeed when both objects are in player's inventory");
 
 		var srcLoc = await Eval($"loc({srcDbref})");
-		Console.WriteLine($"loc({srcDbref}) after @tel = {srcLoc}");
+		TestDiagnostics.WriteLine($"loc({srcDbref}) after @tel = {srcLoc}");
 		await Assert.That(srcLoc).IsEqualTo(dstDbref)
 			.Because("source should now be located inside destination after @tel");
 	}
@@ -301,8 +301,8 @@ public class TelDiagnosticTests
 		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
-		Console.WriteLine($"Created {pocketName} = {pocketDbref}");
-		Console.WriteLine($"Created {boardName} = {boardDbref}");
+		TestDiagnostics.WriteLine($"Created {pocketName} = {pocketDbref}");
+		TestDiagnostics.WriteLine($"Created {boardName} = {boardDbref}");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&test_ref {pocketDbref}=Object is #222"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
@@ -313,8 +313,8 @@ public class TelDiagnosticTests
 
 		var numPocket = await Eval($"num({pocketName})");
 		var numBoard = await Eval($"num({boardName})");
-		Console.WriteLine($"num({pocketName}) = {numPocket}");
-		Console.WriteLine($"num({boardName}) = {numBoard}");
+		TestDiagnostics.WriteLine($"num({pocketName}) = {numPocket}");
+		TestDiagnostics.WriteLine($"num({boardName}) = {numBoard}");
 
 		await Assert.That(numPocket).IsEqualTo(pocketBareDbref)
 			.Because("num() should find the pocket object by name and return bare #N format");
@@ -325,20 +325,20 @@ public class TelDiagnosticTests
 			MarkupText.Plain($"@edit {pocketDbref}/*=#222,{pocketDbref}"));
 
 		var testRef = await Eval($"get({pocketDbref}/test_ref)");
-		Console.WriteLine($"get({pocketDbref}/test_ref) after @edit = {testRef}");
+		TestDiagnostics.WriteLine($"get({pocketDbref}/test_ref) after @edit = {testRef}");
 		await Assert.That(testRef).IsEqualTo($"Object is {pocketDbref}")
 			.Because("@edit should have replaced #222 with the actual dbref");
 
 		var errors = await ExecAndCollectErrors($"@tel {pocketName}={boardName}");
-		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"@tel ERROR: {e}");
 
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel by name should work after @edit, even without @wait");
 
 		var nameAfter = await Eval($"name({pocketDbref})");
 		var getAfter = await Eval($"get({pocketDbref}/test_ref)");
-		Console.WriteLine($"name({pocketDbref}) after @tel = {nameAfter}");
-		Console.WriteLine($"get({pocketDbref}/test_ref) after @tel = {getAfter}");
+		TestDiagnostics.WriteLine($"name({pocketDbref}) after @tel = {nameAfter}");
+		TestDiagnostics.WriteLine($"get({pocketDbref}/test_ref) after @tel = {getAfter}");
 
 		await Assert.That(nameAfter).IsEqualTo(pocketName)
 			.Because("name() by dbref should work after @tel moved the object into a container");
@@ -354,19 +354,19 @@ public class TelDiagnosticTests
 	public async ValueTask GetWithInvalidPatterns()
 	{
 		var r1 = await Eval("get(/LAST_MOD)");
-		Console.WriteLine($"get(/LAST_MOD) = {r1}");
+		TestDiagnostics.WriteLine($"get(/LAST_MOD) = {r1}");
 		await Assert.That(r1).Contains("BAD ARGUMENT FORMAT")
 			.Because("get() with empty object should return BAD ARGUMENT FORMAT");
 
 		var r2 = await Eval("get(#-1/LAST_MOD)");
-		Console.WriteLine($"get(#-1/LAST_MOD) = {r2}");
+		TestDiagnostics.WriteLine($"get(#-1/LAST_MOD) = {r2}");
 
 		var r3 = await Eval("get(noobject)");
-		Console.WriteLine($"get(noobject) = {r3}");
+		TestDiagnostics.WriteLine($"get(noobject) = {r3}");
 		await Assert.That(r3).Contains("BAD ARGUMENT FORMAT")
 			.Because("get() without slash should return BAD ARGUMENT FORMAT");
 
-		Console.WriteLine($"[DIAGNOSTIC] get(#-1/LAST_MOD) returned: '{r2}'");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] get(#-1/LAST_MOD) returned: '{r2}'");
 	}
 
 	/// <summary>
@@ -378,22 +378,22 @@ public class TelDiagnosticTests
 	public async ValueTask IterOnEmptyString()
 	{
 		var r1 = await Eval("iter(,name(##))");
-		Console.WriteLine($"iter(,name(##)) = '{r1}'");
+		TestDiagnostics.WriteLine($"iter(,name(##)) = '{r1}'");
 
 		// Create a unique object and set an empty attribute on it to avoid mutating shared state
 		var emptyAttrObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "IterEmpty");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&empty_attr {emptyAttrObj}="));
 		var r2 = await Eval($"iter(get({emptyAttrObj}/empty_attr),name(##))");
-		Console.WriteLine($"iter(get({emptyAttrObj}/empty_attr),name(##)) = '{r2}'");
+		TestDiagnostics.WriteLine($"iter(get({emptyAttrObj}/empty_attr),name(##)) = '{r2}'");
 
 		var r3 = await Eval("iter( ,name(##))");
-		Console.WriteLine($"iter( ,name(##)) = '{r3}'");
+		TestDiagnostics.WriteLine($"iter( ,name(##)) = '{r3}'");
 
 		var r4 = await Eval("iter(#0 #1,name(##))");
-		Console.WriteLine($"iter(#0 #1,name(##)) = '{r4}'");
+		TestDiagnostics.WriteLine($"iter(#0 #1,name(##)) = '{r4}'");
 
 		var hasPhantomIter = !string.IsNullOrEmpty(r1) || !string.IsNullOrEmpty(r2);
-		Console.WriteLine($"[DIAGNOSTIC] iter() phantom iteration on empty string: {hasPhantomIter}");
+		TestDiagnostics.WriteLine($"[DIAGNOSTIC] iter() phantom iteration on empty string: {hasPhantomIter}");
 
 		// In PennMUSH, iter(,name(##)) returns empty string
 		await Assert.That(r1).IsEqualTo("")
@@ -414,8 +414,8 @@ public class TelDiagnosticTests
 		var r2 = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {boardName}"));
 		var boardDbref = r2.Message!.ToPlainText()!.Trim();
 
-		Console.WriteLine($"pocket = {pocketDbref}");
-		Console.WriteLine($"board = {boardDbref}");
+		TestDiagnostics.WriteLine($"pocket = {pocketDbref}");
+		TestDiagnostics.WriteLine($"board = {boardDbref}");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&groups {pocketDbref}="));
 		await Parser.CommandParse(1, ConnectionService,
@@ -424,21 +424,21 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {pocketDbref}={boardDbref}"));
 
 		var validGroups = await Eval($"u({pocketDbref}/valid_groups)");
-		Console.WriteLine($"u({pocketDbref}/valid_groups) = '{validGroups}'");
-		Console.WriteLine($"words of valid_groups = {validGroups.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length}");
+		TestDiagnostics.WriteLine($"u({pocketDbref}/valid_groups) = '{validGroups}'");
+		TestDiagnostics.WriteLine($"words of valid_groups = {validGroups.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length}");
 
 		var groups = await Eval($"get({pocketDbref}/groups)");
-		Console.WriteLine($"get({pocketDbref}/groups) = '{groups}'");
+		TestDiagnostics.WriteLine($"get({pocketDbref}/groups) = '{groups}'");
 
 		var iterResult = await Eval($"iter(get({pocketDbref}/groups),name(##))");
-		Console.WriteLine($"iter(get({pocketDbref}/groups),name(##)) = '{iterResult}'");
+		TestDiagnostics.WriteLine($"iter(get({pocketDbref}/groups),name(##)) = '{iterResult}'");
 
 		if (!string.IsNullOrEmpty(iterResult))
 		{
-			Console.WriteLine($"[DIAGNOSTIC] PHANTOM ITERATION DETECTED: iter on empty groups produced '{iterResult}'");
-			Console.WriteLine("[DIAGNOSTIC] This explains the BBS +bbread error:");
-			Console.WriteLine("[DIAGNOSTIC]   name(empty_string) -> #-1 CAN'T SEE THAT HERE");
-			Console.WriteLine("[DIAGNOSTIC]   get(empty_string/LAST_MOD) -> #-1 BAD ARGUMENT FORMAT TO GET");
+			TestDiagnostics.WriteLine($"[DIAGNOSTIC] PHANTOM ITERATION DETECTED: iter on empty groups produced '{iterResult}'");
+			TestDiagnostics.WriteLine("[DIAGNOSTIC] This explains the BBS +bbread error:");
+			TestDiagnostics.WriteLine("[DIAGNOSTIC]   name(empty_string) -> #-1 CAN'T SEE THAT HERE");
+			TestDiagnostics.WriteLine("[DIAGNOSTIC]   get(empty_string/LAST_MOD) -> #-1 BAD ARGUMENT FORMAT TO GET");
 		}
 
 		await Assert.That(iterResult).IsEqualTo("")
@@ -453,13 +453,13 @@ public class TelDiagnosticTests
 	public async ValueTask WordsOnErrorStrings()
 	{
 		var r1 = await Eval("words(#-1 NO SUCH OBJECT VISIBLE)");
-		Console.WriteLine($"words(#-1 NO SUCH OBJECT VISIBLE) = {r1}");
+		TestDiagnostics.WriteLine($"words(#-1 NO SUCH OBJECT VISIBLE) = {r1}");
 
 		var r2 = await Eval("words(#-1 BAD ARGUMENT FORMAT TO GET)");
-		Console.WriteLine($"words(#-1 BAD ARGUMENT FORMAT TO GET) = {r2}");
+		TestDiagnostics.WriteLine($"words(#-1 BAD ARGUMENT FORMAT TO GET) = {r2}");
 
 		var r3 = await Eval("words(#-1 CAN'T SEE THAT HERE)");
-		Console.WriteLine($"words(#-1 CAN'T SEE THAT HERE) = {r3}");
+		TestDiagnostics.WriteLine($"words(#-1 CAN'T SEE THAT HERE) = {r3}");
 
 		await Assert.That(r1).IsEqualTo("5")
 			.Because("words() on '#-1 NO SUCH OBJECT VISIBLE' should count 5 words");
@@ -470,7 +470,7 @@ public class TelDiagnosticTests
 		var emptyObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WordsEmpty");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&wordstest_empty {emptyObj}="));
 		var r4 = await Eval($"words(get({emptyObj}/wordstest_empty))");
-		Console.WriteLine($"words(get({emptyObj}/wordstest_empty)) = {r4}");
+		TestDiagnostics.WriteLine($"words(get({emptyObj}/wordstest_empty)) = {r4}");
 		await Assert.That(r4).IsEqualTo("0")
 			.Because("words() on empty string should return 0 (PennMUSH behavior)");
 	}
@@ -497,7 +497,7 @@ public class TelDiagnosticTests
 			MarkupText.Plain($"@force me=@edit {aDbref}/*=#222,{aDbref}"));
 
 		var refVal = await Eval($"get({aDbref}/ref)");
-		Console.WriteLine($"After @force @edit: get({aDbref}/ref) = {refVal}");
+		TestDiagnostics.WriteLine($"After @force @edit: get({aDbref}/ref) = {refVal}");
 		await Assert.That(refVal).IsEqualTo(aDbref)
 			.Because("@force @edit should have replaced #222 with actual dbref");
 
@@ -507,7 +507,7 @@ public class TelDiagnosticTests
 			"@tel source/destination objects never became locatable by name after @force @edit");
 
 		var errors = await ExecAndCollectErrors($"@tel {aName}={bName}");
-		foreach (var e in errors) Console.WriteLine($"@tel ERROR: {e}");
+		foreach (var e in errors) TestDiagnostics.WriteLine($"@tel ERROR: {e}");
 
 		await Assert.That(errors).IsEmpty()
 			.Because("@tel by name should work after @force @edit");

@@ -1,5 +1,6 @@
 using System.Text;
 using DotNet.Testcontainers.Builders;
+using Microsoft.Extensions.Logging;
 using Testcontainers.Nats;
 
 namespace SharpMUSH.Messaging.NATS.Strategy;
@@ -27,12 +28,17 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		$"max_payload: {MaxPayloadBytes}\njetstream: true\n");
 
 	private NatsContainer? _container;
+	private readonly ILogger? _logger;
+
+	public NatsTestContainerStrategy() { }
+
+	public NatsTestContainerStrategy(ILogger logger) => _logger = logger;
 
 	public override async ValueTask<string> GetUrlAsync()
 	{
 		if (_container is null)
 		{
-			_container = new NatsBuilder(NatsImage)
+			var builder = new NatsBuilder(NatsImage)
 				.WithResourceMapping(NatsConfig, NatsConfigPath)
 				.WithCommand("-c", NatsConfigPath)
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
@@ -41,8 +47,9 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 													 // container's startup log has already scrolled past, so replaying a log wait hangs
 													 // forever (notably under rootless podman); checking the client port is open succeeds
 													 // immediately whether the container is fresh or reused.
-				.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(4222))
-				.Build();
+				.WithWaitStrategy(Wait.ForUnixContainer().UntilInternalTcpPortIsAvailable(4222));
+			if (_logger is not null) builder = builder.WithLogger(_logger);
+			_container = builder.Build();
 
 			await _container.StartAsync();
 		}

@@ -174,7 +174,7 @@ public class ParserPerformanceDiagnosticTests
 		void Log(string message)
 		{
 			output.AppendLine(message);
-			Console.WriteLine(message);
+			TestDiagnostics.WriteLine(message);
 		}
 
 		var scriptLines = ReadBBSInstallScript();
@@ -449,7 +449,7 @@ public class ParserPerformanceDiagnosticTests
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, DiagnosticsOutputFileName);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"\n[DIAGNOSTICS] Full output written to: {outputPath}");
 
 		// Assertions — 2 syntax errors expected from BBS lines 74 and 96
 		// (orphaned CBRACK after escaped brackets — Fix A reverted to prevent AdaptivePredict hang)

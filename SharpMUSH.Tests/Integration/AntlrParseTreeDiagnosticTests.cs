@@ -275,19 +275,19 @@ public class AntlrParseTreeDiagnosticTests
 	{
 		var input = "ulambda(lit(#lambda/add(1,2)))";
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  PARSE TREE ANALYSIS: ulambda(lit(#lambda/add(1,2)))                ║");
-		Console.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  PARSE TREE ANALYSIS: ulambda(lit(#lambda/add(1,2)))                ║");
+		TestDiagnostics.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
-		Console.WriteLine("═══════════════════ LL MODE ═══════════════════");
+		TestDiagnostics.WriteLine("═══════════════════ LL MODE ═══════════════════");
 		var llResult = ParseAndDiagnose(input, PredictionMode.LL);
-		Console.WriteLine(llResult.FullOutput);
+		TestDiagnostics.WriteLine(llResult.FullOutput);
 
-		Console.WriteLine("═══════════════════ SLL MODE ═══════════════════");
+		TestDiagnostics.WriteLine("═══════════════════ SLL MODE ═══════════════════");
 		var sllResult = ParseAndDiagnose(input, PredictionMode.SLL);
-		Console.WriteLine(sllResult.FullOutput);
+		TestDiagnostics.WriteLine(sllResult.FullOutput);
 
 		await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
 			.Because("Should parse without syntax errors - extra ) becomes generic text");
@@ -313,13 +313,13 @@ public class AntlrParseTreeDiagnosticTests
 	{
 		var input = "#lambda/add(1,2)";
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  FIX C INNER EXPRESSION: #lambda/add(1,2)                          ║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  FIX C INNER EXPRESSION: #lambda/add(1,2)                          ║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
 		var result = ParseAndDiagnose(input, PredictionMode.LL);
-		Console.WriteLine(result.FullOutput);
+		TestDiagnostics.WriteLine(result.FullOutput);
 
 		await Assert.That(result.RealSyntaxErrorCount).IsEqualTo(0)
 			.Because("This expression should parse cleanly");
@@ -342,14 +342,14 @@ public class AntlrParseTreeDiagnosticTests
 	{
 		var input = "lit((text))";
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  BARE PARENS IN FUNCTION: lit((text))                               ║");
-		Console.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  BARE PARENS IN FUNCTION: lit((text))                               ║");
+		TestDiagnostics.WriteLine("║  PennMUSH-compatible: ) always closes innermost function            ║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
 		var result = ParseAndDiagnose(input, PredictionMode.LL);
-		Console.WriteLine(result.FullOutput);
+		TestDiagnostics.WriteLine(result.FullOutput);
 
 		// With PennMUSH-compatible behavior:
 		// The ) after "text" closes lit(), the final ) is extra generic text.
@@ -389,10 +389,10 @@ public class AntlrParseTreeDiagnosticTests
 			("ulambda(lit(#lambda/add(1,2)))))", "Two extra trailing parens"),
 		};
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  FULL CONTEXT SCAN ANALYSIS: Common MUSH Patterns                  ║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  FULL CONTEXT SCAN ANALYSIS: Common MUSH Patterns                  ║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
 		var syntaxErrorInputs = new List<string>();
 		var fullContextScanInputs = new List<(string Input, string Description, int Count)>();
@@ -400,55 +400,55 @@ public class AntlrParseTreeDiagnosticTests
 		foreach (var (input, description) in testCases)
 		{
 			var result = ParseAndDiagnose(input, PredictionMode.LL);
-			Console.WriteLine($"─── {description}: {input} ───");
+			TestDiagnostics.WriteLine($"─── {description}: {input} ───");
 
 			if (result.RealSyntaxErrorCount > 0)
 			{
-				Console.WriteLine($"  ❌ {result.RealSyntaxErrorCount} SYNTAX ERROR(S)");
+				TestDiagnostics.WriteLine($"  ❌ {result.RealSyntaxErrorCount} SYNTAX ERROR(S)");
 				syntaxErrorInputs.Add(input);
 			}
 			else
 			{
-				Console.WriteLine("  ✅ No syntax errors");
+				TestDiagnostics.WriteLine("  ✅ No syntax errors");
 			}
 
 			if (result.FullContextScanCount > 0)
 			{
-				Console.WriteLine($"  ⚠️ {result.FullContextScanCount} Full Context Scan(s)");
+				TestDiagnostics.WriteLine($"  ⚠️ {result.FullContextScanCount} Full Context Scan(s)");
 				fullContextScanInputs.Add((input, description, result.FullContextScanCount));
 			}
 			else
 			{
-				Console.WriteLine("  ✅ No Full Context Scans");
+				TestDiagnostics.WriteLine("  ✅ No Full Context Scans");
 			}
 
 			if (result.AmbiguityCount > 0)
 			{
-				Console.WriteLine($"  ℹ️ {result.AmbiguityCount} Ambiguity report(s)");
+				TestDiagnostics.WriteLine($"  ℹ️ {result.AmbiguityCount} Ambiguity report(s)");
 			}
 
-			Console.WriteLine();
+			TestDiagnostics.WriteLine();
 		}
 
-		Console.WriteLine(new string('═', 70));
-		Console.WriteLine("SUMMARY");
-		Console.WriteLine(new string('═', 70));
-		Console.WriteLine($"Total patterns tested: {testCases.Length}");
-		Console.WriteLine($"Patterns with syntax errors: {syntaxErrorInputs.Count}");
-		Console.WriteLine($"Patterns with Full Context Scans: {fullContextScanInputs.Count}");
+		TestDiagnostics.WriteLine(new string('═', 70));
+		TestDiagnostics.WriteLine("SUMMARY");
+		TestDiagnostics.WriteLine(new string('═', 70));
+		TestDiagnostics.WriteLine($"Total patterns tested: {testCases.Length}");
+		TestDiagnostics.WriteLine($"Patterns with syntax errors: {syntaxErrorInputs.Count}");
+		TestDiagnostics.WriteLine($"Patterns with Full Context Scans: {fullContextScanInputs.Count}");
 		if (fullContextScanInputs.Count > 0)
 		{
-			Console.WriteLine("\nFull Context Scan details:");
+			TestDiagnostics.WriteLine("\nFull Context Scan details:");
 			foreach (var (input, description, count) in fullContextScanInputs)
 			{
-				Console.WriteLine($"  {description}: \"{input}\" ({count} scan(s))");
+				TestDiagnostics.WriteLine($"  {description}: \"{input}\" ({count} scan(s))");
 			}
 
-			Console.WriteLine("\nNOTE: Full Context Scans with semantic predicates are expected behavior.");
-			Console.WriteLine("They occur because ANTLR4's LL prediction must evaluate predicates");
-			Console.WriteLine("in full parser context to determine which alternative to choose.");
-			Console.WriteLine("This is NOT a performance bug - it's how predicate-based");
-			Console.WriteLine("context-sensitive parsing works.");
+			TestDiagnostics.WriteLine("\nNOTE: Full Context Scans with semantic predicates are expected behavior.");
+			TestDiagnostics.WriteLine("They occur because ANTLR4's LL prediction must evaluate predicates");
+			TestDiagnostics.WriteLine("in full parser context to determine which alternative to choose.");
+			TestDiagnostics.WriteLine("This is NOT a performance bug - it's how predicate-based");
+			TestDiagnostics.WriteLine("context-sensitive parsing works.");
 		}
 
 		await Assert.That(syntaxErrorInputs).IsEmpty()
@@ -475,18 +475,18 @@ public class AntlrParseTreeDiagnosticTests
 
 		foreach (var (input, description) in testCases)
 		{
-			Console.WriteLine($"╔══════════════════════════════════════════════════════════════════════╗");
-			Console.WriteLine($"║  EXTRA TRAILING PARENS: {description,-44} ║");
-			Console.WriteLine($"╚══════════════════════════════════════════════════════════════════════╝");
-			Console.WriteLine();
+			TestDiagnostics.WriteLine($"╔══════════════════════════════════════════════════════════════════════╗");
+			TestDiagnostics.WriteLine($"║  EXTRA TRAILING PARENS: {description,-44} ║");
+			TestDiagnostics.WriteLine($"╚══════════════════════════════════════════════════════════════════════╝");
+			TestDiagnostics.WriteLine();
 
-			Console.WriteLine("═══════════════════ LL MODE ═══════════════════");
+			TestDiagnostics.WriteLine("═══════════════════ LL MODE ═══════════════════");
 			var llResult = ParseAndDiagnose(input, PredictionMode.LL);
-			Console.WriteLine(llResult.FullOutput);
+			TestDiagnostics.WriteLine(llResult.FullOutput);
 
-			Console.WriteLine("═══════════════════ SLL MODE ═══════════════════");
+			TestDiagnostics.WriteLine("═══════════════════ SLL MODE ═══════════════════");
 			var sllResult = ParseAndDiagnose(input, PredictionMode.SLL);
-			Console.WriteLine(sllResult.FullOutput);
+			TestDiagnostics.WriteLine(sllResult.FullOutput);
 
 			await Assert.That(llResult.RealSyntaxErrorCount).IsEqualTo(0)
 				.Because($"'{input}' should parse without syntax errors - extra ) become generic text");
@@ -533,44 +533,44 @@ public class AntlrParseTreeDiagnosticTests
 				"BBS line 57 paren section"),
 		};
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  LINE 57 ANALYSIS: Bare Parens Before Brackets (PennMUSH-compatible)║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  LINE 57 ANALYSIS: Bare Parens Before Brackets (PennMUSH-compatible)║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
 		var results = new List<(string Input, string Desc, DiagnosticResult Result)>();
 
 		foreach (var (input, description) in testCases)
 		{
-			Console.WriteLine($"═══════════════════════════════════════════════════════════════");
-			Console.WriteLine($"  TEST: {description}");
-			Console.WriteLine($"  INPUT: {input}");
-			Console.WriteLine($"═══════════════════════════════════════════════════════════════");
-			Console.WriteLine();
+			TestDiagnostics.WriteLine($"═══════════════════════════════════════════════════════════════");
+			TestDiagnostics.WriteLine($"  TEST: {description}");
+			TestDiagnostics.WriteLine($"  INPUT: {input}");
+			TestDiagnostics.WriteLine($"═══════════════════════════════════════════════════════════════");
+			TestDiagnostics.WriteLine();
 
 			var result = ParseAndDiagnose(input, PredictionMode.LL);
-			Console.WriteLine(result.FullOutput);
+			TestDiagnostics.WriteLine(result.FullOutput);
 			results.Add((input, description, result));
 
-			Console.WriteLine();
+			TestDiagnostics.WriteLine();
 		}
 
-		Console.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
-		Console.WriteLine("║  SUMMARY                                                           ║");
-		Console.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine("╔══════════════════════════════════════════════════════════════════════╗");
+		TestDiagnostics.WriteLine("║  SUMMARY                                                           ║");
+		TestDiagnostics.WriteLine("╚══════════════════════════════════════════════════════════════════════╝");
+		TestDiagnostics.WriteLine();
 
 		foreach (var (input, desc, result) in results)
 		{
 			var status = result.RealSyntaxErrorCount == 0 ? "✅ OK" : $"❌ {result.RealSyntaxErrorCount} error(s)";
-			Console.WriteLine($"  {status} | {desc}");
-			Console.WriteLine($"         | Input: {input}");
-			Console.WriteLine();
+			TestDiagnostics.WriteLine($"  {status} | {desc}");
+			TestDiagnostics.WriteLine($"         | Input: {input}");
+			TestDiagnostics.WriteLine();
 		}
 
 		var failingCount = results.Count(r => r.Result.RealSyntaxErrorCount > 0);
-		Console.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine($"Patterns with errors: {failingCount}/{results.Count}");
+		TestDiagnostics.WriteLine();
 
 		// Without inParenDepth, there's no scope leakage possible.
 		// The { inFunction == 0 }? predicate is purely based on function nesting,

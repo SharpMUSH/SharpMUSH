@@ -41,7 +41,7 @@ public class CommandUnitTests
 	public async Task Test_NoEval(string str, string expected)
 	{
 		var executor = _player.DbRef;
-		Console.WriteLine("Testing NoEval: {0}", str);
+		TestDiagnostics.WriteLine("Testing NoEval: {0}", str);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
@@ -59,7 +59,7 @@ public class CommandUnitTests
 	public async Task Test(string str, string expected)
 	{
 		var executor = _player.DbRef;
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
@@ -85,7 +85,7 @@ public class CommandUnitTests
 		"Command4 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService

@@ -32,62 +32,62 @@ public class ActualPerformanceValidation
 		writer.AutoFlush = true;
 
 		var welcome = await ReadUntilPrompt(reader);
-		Console.WriteLine("Server welcome:");
-		Console.WriteLine(welcome);
+		TestDiagnostics.WriteLine("Server welcome:");
+		TestDiagnostics.WriteLine(welcome);
 
 		await writer.WriteLineAsync("connect #1");
 		var loginResponse = await ReadUntilPrompt(reader);
-		Console.WriteLine("Login response:");
-		Console.WriteLine(loginResponse);
+		TestDiagnostics.WriteLine("Login response:");
+		TestDiagnostics.WriteLine(loginResponse);
 
-		Console.WriteLine("\n=== Test 1: @dolist lnum(100)=@pemit %#=%i0 ===");
+		TestDiagnostics.WriteLine("\n=== Test 1: @dolist lnum(100)=@pemit %#=%i0 ===");
 		var sw1 = Stopwatch.StartNew();
 		await writer.WriteLineAsync("@dolist lnum(100)=@pemit %#=%i0");
 		var dolistPemitOutput = await ReadUntilPrompt(reader);
 		sw1.Stop();
-		Console.WriteLine($"Time: {sw1.ElapsedMilliseconds}ms");
-		Console.WriteLine($"Lines received: {dolistPemitOutput.Split('\n').Length}");
-		Console.WriteLine($"First few lines:\n{string.Join("\n", dolistPemitOutput.Split('\n').Take(5))}");
+		TestDiagnostics.WriteLine($"Time: {sw1.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"Lines received: {dolistPemitOutput.Split('\n').Length}");
+		TestDiagnostics.WriteLine($"First few lines:\n{string.Join("\n", dolistPemitOutput.Split('\n').Take(5))}");
 
-		Console.WriteLine("\n=== Test 2: @dolist lnum(100)=think %i0 ===");
+		TestDiagnostics.WriteLine("\n=== Test 2: @dolist lnum(100)=think %i0 ===");
 		var sw2 = Stopwatch.StartNew();
 		await writer.WriteLineAsync("@dolist lnum(100)=think %i0");
 		var dolistThinkOutput = await ReadUntilPrompt(reader);
 		sw2.Stop();
-		Console.WriteLine($"Time: {sw2.ElapsedMilliseconds}ms");
-		Console.WriteLine($"Lines received: {dolistThinkOutput.Split('\n').Length}");
+		TestDiagnostics.WriteLine($"Time: {sw2.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"Lines received: {dolistThinkOutput.Split('\n').Length}");
 
-		Console.WriteLine("\n=== Test 3: think iter(lnum(100),%i0,,%r) ===");
+		TestDiagnostics.WriteLine("\n=== Test 3: think iter(lnum(100),%i0,,%r) ===");
 		var sw3 = Stopwatch.StartNew();
 		await writer.WriteLineAsync("think iter(lnum(100),%i0,,%r)");
 		var iterOutput = await ReadUntilPrompt(reader);
 		sw3.Stop();
-		Console.WriteLine($"Time: {sw3.ElapsedMilliseconds}ms");
-		Console.WriteLine($"Lines received: {iterOutput.Split('\n').Length}");
+		TestDiagnostics.WriteLine($"Time: {sw3.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"Lines received: {iterOutput.Split('\n').Length}");
 
-		Console.WriteLine("\n=== Test 4: @dolist lnum(1000)=@pemit %#=%i0 ===");
+		TestDiagnostics.WriteLine("\n=== Test 4: @dolist lnum(1000)=@pemit %#=%i0 ===");
 		var sw4 = Stopwatch.StartNew();
 		await writer.WriteLineAsync("@dolist lnum(1000)=@pemit %#=%i0");
 		var dolistPemit1000Output = await ReadUntilPrompt(reader);
 		sw4.Stop();
-		Console.WriteLine($"Time: {sw4.ElapsedMilliseconds}ms");
-		Console.WriteLine($"Lines received: {dolistPemit1000Output.Split('\n').Length}");
+		TestDiagnostics.WriteLine($"Time: {sw4.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"Lines received: {dolistPemit1000Output.Split('\n').Length}");
 
-		Console.WriteLine("\n=== Test 5: think iter(lnum(1000),%i0,,%r) ===");
+		TestDiagnostics.WriteLine("\n=== Test 5: think iter(lnum(1000),%i0,,%r) ===");
 		var sw5 = Stopwatch.StartNew();
 		await writer.WriteLineAsync("think iter(lnum(1000),%i0,,%r)");
 		var iter1000Output = await ReadUntilPrompt(reader);
 		sw5.Stop();
-		Console.WriteLine($"Time: {sw5.ElapsedMilliseconds}ms");
-		Console.WriteLine($"Lines received: {iter1000Output.Split('\n').Length}");
+		TestDiagnostics.WriteLine($"Time: {sw5.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"Lines received: {iter1000Output.Split('\n').Length}");
 
-		Console.WriteLine("\n=== SUMMARY ===");
-		Console.WriteLine($"@dolist 100 with @pemit: {sw1.ElapsedMilliseconds}ms");
-		Console.WriteLine($"@dolist 100 with think:  {sw2.ElapsedMilliseconds}ms");
-		Console.WriteLine($"iter 100:                 {sw3.ElapsedMilliseconds}ms");
-		Console.WriteLine($"@dolist 1000 with @pemit: {sw4.ElapsedMilliseconds}ms");
-		Console.WriteLine($"iter 1000:                {sw5.ElapsedMilliseconds}ms");
-		Console.WriteLine($"\nRatio (dolist/iter 1000): {(double)sw4.ElapsedMilliseconds / sw5.ElapsedMilliseconds:F2}x");
+		TestDiagnostics.WriteLine("\n=== SUMMARY ===");
+		TestDiagnostics.WriteLine($"@dolist 100 with @pemit: {sw1.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"@dolist 100 with think:  {sw2.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"iter 100:                 {sw3.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"@dolist 1000 with @pemit: {sw4.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"iter 1000:                {sw5.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"\nRatio (dolist/iter 1000): {(double)sw4.ElapsedMilliseconds / sw5.ElapsedMilliseconds:F2}x");
 
 		client.Close();
 	}

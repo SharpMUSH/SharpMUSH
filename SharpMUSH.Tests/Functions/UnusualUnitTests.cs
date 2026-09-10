@@ -13,11 +13,11 @@ public class UnusualUnitTests
 	[Arguments(@"s(ansi\(rG\,ansi(D\,[ansi(y,foo)]\)\))", "foo")]
 	public async Task S(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message;
 
-		Console.WriteLine("Result: {0}", result);
+		TestDiagnostics.WriteLine("Result: {0}", result);
 		await Assert.That(result!.ToPlainText()).IsEqualTo(expected);
 	}
 }

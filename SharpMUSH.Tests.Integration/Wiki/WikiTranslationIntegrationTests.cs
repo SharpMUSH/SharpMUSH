@@ -19,7 +19,6 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 ///
 /// The session database is shared and never reset, so every page title is uniquified.
 /// </summary>
-[NotInParallel]
 public class WikiTranslationIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -29,10 +28,10 @@ public class WikiTranslationIntegrationTests
 		?? throw new InvalidOperationException("ISharpDatabase does not implement IWikiService in this configuration.");
 
 	/// <summary>Creates a uniquely-named English source page and returns it.</summary>
-	private async Task<WikiPage> CreateSourcePageAsync(string label, string sourceLocale = "en")
+	private async Task<WikiPage> CreateSourcePageAsync(string label, string sourceLocale = "en", IWikiService? wiki = null)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
-		var result = await Wiki.CreateAsync(
+		var result = await (wiki ?? Wiki).CreateAsync(
 			$"{label} {uid}", "en **body**", "#1", WikiNamespace.Main, "general", sourceLocale);
 		await Assert.That(result.IsT0).IsTrue();
 		return result.AsT0;
@@ -166,13 +165,13 @@ public class WikiTranslationIntegrationTests
 	/// have to be exercised, because a provider whose LIMIT/START (or SKIP/LIMIT) is transposed returns a
 	/// plausible-looking answer that a single unpaged fetch would never catch.
 	/// </summary>
-	private async Task<List<WikiTranslation>> ScanTranslationsAsync(string pageId)
+	private async Task<List<WikiTranslation>> ScanTranslationsAsync(IWikiService wiki, string pageId)
 	{
 		var found = new List<WikiTranslation>();
 		const int window = 5;
 		for (var skip = 0; ; skip += window)
 		{
-			var batch = await Wiki.GetAllTranslationsAsync(skip, window);
+			var batch = await wiki.GetAllTranslationsAsync(skip, window);
 			if (batch.Count == 0) break;
 			found.AddRange(batch.Where(t => t.PageId == pageId));
 			if (batch.Count < window) break;
@@ -184,15 +183,23 @@ public class WikiTranslationIntegrationTests
 	[Test]
 	public async Task GetAllTranslationsAsync_PagesTheWholeStreamWithBodies()
 	{
-		var page = await CreateSourcePageAsync("BulkScan");
-		await Wiki.UpsertTranslationAsync(
+		await using var database = await IsolatedWikiDatabase.CreateAsync();
+		var wiki = database.Wiki;
+
+		var page = await CreateSourcePageAsync("BulkScan", wiki: wiki);
+		await wiki.UpsertTranslationAsync(
 			page.Id, "fr", "Titre fr", "corps bulk fr", "#2", null, true, expectedRevisionNumber: null);
-		await Wiki.UpsertTranslationAsync(
+		await wiki.UpsertTranslationAsync(
 			page.Id, "de", "Titel de", "korpus bulk de", "#2", null, true, expectedRevisionNumber: null);
 
-		var mine = await ScanTranslationsAsync(page.Id);
+		// Keep more rows than the five-row scan window even in this private database.
+		foreach (var locale in new[] { "es", "it", "pt", "nl", "ja", "ko" })
+			await wiki.UpsertTranslationAsync(page.Id, locale, locale, "body", "#2", null,
+				published: true, expectedRevisionNumber: null);
 
-		await Assert.That(mine.Select(t => t.Locale).Order()).IsEquivalentTo(new[] { "de", "fr" });
+		var mine = await ScanTranslationsAsync(wiki, page.Id);
+
+		await Assert.That(mine.Select(t => t.Locale).Order()).IsEquivalentTo(new[] { "de", "es", "fr", "it", "ja", "ko", "nl", "pt" });
 		await Assert.That(mine.Single(t => t.Locale == "fr").MarkdownSource).IsEqualTo("corps bulk fr");
 		await Assert.That(mine.Single(t => t.Locale == "de").PlainText)
 			.Contains("korpus")
@@ -203,11 +210,14 @@ public class WikiTranslationIntegrationTests
 	[Test]
 	public async Task GetAllTranslationsAsync_IncludesUnpublishedDrafts()
 	{
-		var page = await CreateSourcePageAsync("BulkDraft");
-		await Wiki.UpsertTranslationAsync(
+		await using var database = await IsolatedWikiDatabase.CreateAsync();
+		var wiki = database.Wiki;
+
+		var page = await CreateSourcePageAsync("BulkDraft", wiki: wiki);
+		await wiki.UpsertTranslationAsync(
 			page.Id, "de", "Entwurf", "korpus entwurf", "#2", null, published: false, expectedRevisionNumber: null);
 
-		var mine = await ScanTranslationsAsync(page.Id);
+		var mine = await ScanTranslationsAsync(wiki, page.Id);
 
 		await Assert.That(mine.Single().Published)
 			.IsFalse()

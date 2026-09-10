@@ -23,83 +23,83 @@ public class InProcessPerformanceMeasurement
 	[Test, Explicit]
 	public async Task MeasureDoListVsIterPerformance()
 	{
-		Console.WriteLine("=== Performance Measurement: @dolist vs iter() ===\n");
+		TestDiagnostics.WriteLine("=== Performance Measurement: @dolist vs iter() ===\n");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think test"));
 
-		Console.WriteLine("Test 1: @dolist lnum(100)=think %i0");
+		TestDiagnostics.WriteLine("Test 1: @dolist lnum(100)=think %i0");
 		var sw1 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(100)=think %i0"));
 		sw1.Stop();
-		Console.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms");
-		Console.WriteLine($"  Notify calls: Check if buffering was used");
+		TestDiagnostics.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Notify calls: Check if buffering was used");
 
-		Console.WriteLine("\nTest 2: think iter(lnum(100),%i0,,%r)");
+		TestDiagnostics.WriteLine("\nTest 2: think iter(lnum(100),%i0,,%r)");
 		var sw2 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think iter(lnum(100),%i0,,%r)"));
 		sw2.Stop();
-		Console.WriteLine($"  Time: {sw2.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw2.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\nTest 3: @dolist lnum(1000)=think %i0");
+		TestDiagnostics.WriteLine("\nTest 3: @dolist lnum(1000)=think %i0");
 		var sw3 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(1000)=think %i0"));
 		sw3.Stop();
-		Console.WriteLine($"  Time: {sw3.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw3.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\nTest 4: think iter(lnum(1000),%i0,,%r)");
+		TestDiagnostics.WriteLine("\nTest 4: think iter(lnum(1000),%i0,,%r)");
 		var sw4 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("think iter(lnum(1000),%i0,,%r)"));
 		sw4.Stop();
-		Console.WriteLine($"  Time: {sw4.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw4.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\nTest 5: @dolist lnum(100)=@pemit %#=%i0");
+		TestDiagnostics.WriteLine("\nTest 5: @dolist lnum(100)=@pemit %#=%i0");
 		var sw5 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(100)=@pemit %#=%i0"));
 		sw5.Stop();
-		Console.WriteLine($"  Time: {sw5.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw5.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\nTest 6: @dolist lnum(1000)=@pemit %#=%i0");
+		TestDiagnostics.WriteLine("\nTest 6: @dolist lnum(1000)=@pemit %#=%i0");
 		var sw6 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(1000)=@pemit %#=%i0"));
 		sw6.Stop();
-		Console.WriteLine($"  Time: {sw6.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw6.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\nTest 7: Nested @dolist (outer 10, inner 10)");
+		TestDiagnostics.WriteLine("\nTest 7: Nested @dolist (outer 10, inner 10)");
 		var sw7 = Stopwatch.StartNew();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@dolist lnum(10)={@dolist lnum(10)=think %i0}"));
 		sw7.Stop();
-		Console.WriteLine($"  Time: {sw7.ElapsedMilliseconds}ms");
+		TestDiagnostics.WriteLine($"  Time: {sw7.ElapsedMilliseconds}ms");
 
-		Console.WriteLine("\n=== SUMMARY ===");
-		Console.WriteLine($"@dolist 100 think:     {sw1.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"iter 100:              {sw2.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"@dolist 1000 think:    {sw3.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"iter 1000:             {sw4.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"@dolist 100 @pemit:    {sw5.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"@dolist 1000 @pemit:   {sw6.ElapsedMilliseconds,5}ms");
-		Console.WriteLine($"Nested @dolist (10x10): {sw7.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine("\n=== SUMMARY ===");
+		TestDiagnostics.WriteLine($"@dolist 100 think:     {sw1.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"iter 100:              {sw2.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"@dolist 1000 think:    {sw3.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"iter 1000:             {sw4.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"@dolist 100 @pemit:    {sw5.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"@dolist 1000 @pemit:   {sw6.ElapsedMilliseconds,5}ms");
+		TestDiagnostics.WriteLine($"Nested @dolist (10x10): {sw7.ElapsedMilliseconds,5}ms");
 
-		Console.WriteLine("\n=== ANALYSIS ===");
+		TestDiagnostics.WriteLine("\n=== ANALYSIS ===");
 		if (sw1.ElapsedMilliseconds > 0 && sw2.ElapsedMilliseconds > 0)
 		{
 			var ratio1 = (double)sw1.ElapsedMilliseconds / sw2.ElapsedMilliseconds;
-			Console.WriteLine($"@dolist vs iter (100):  {ratio1:F2}x");
+			TestDiagnostics.WriteLine($"@dolist vs iter (100):  {ratio1:F2}x");
 		}
 		if (sw3.ElapsedMilliseconds > 0 && sw4.ElapsedMilliseconds > 0)
 		{
 			var ratio2 = (double)sw3.ElapsedMilliseconds / sw4.ElapsedMilliseconds;
-			Console.WriteLine($"@dolist vs iter (1000): {ratio2:F2}x");
+			TestDiagnostics.WriteLine($"@dolist vs iter (1000): {ratio2:F2}x");
 		}
 
-		Console.WriteLine("\n=== CURRENT STATE ===");
-		Console.WriteLine("In the current implementation:");
-		Console.WriteLine("- @dolist calls Notify() for each iteration separately");
-		Console.WriteLine("- iter() accumulates results and calls Notify() once");
-		Console.WriteLine("- This difference likely explains the performance gap");
-		Console.WriteLine("\nIf @dolist is significantly slower, the bottleneck is likely:");
-		Console.WriteLine("1. Kafka message publishing overhead (1000 vs 1 publish)");
-		Console.WriteLine("2. Message serialization overhead");
-		Console.WriteLine("3. NOT the parsing or execution time");
+		TestDiagnostics.WriteLine("\n=== CURRENT STATE ===");
+		TestDiagnostics.WriteLine("In the current implementation:");
+		TestDiagnostics.WriteLine("- @dolist calls Notify() for each iteration separately");
+		TestDiagnostics.WriteLine("- iter() accumulates results and calls Notify() once");
+		TestDiagnostics.WriteLine("- This difference likely explains the performance gap");
+		TestDiagnostics.WriteLine("\nIf @dolist is significantly slower, the bottleneck is likely:");
+		TestDiagnostics.WriteLine("1. Kafka message publishing overhead (1000 vs 1 publish)");
+		TestDiagnostics.WriteLine("2. Message serialization overhead");
+		TestDiagnostics.WriteLine("3. NOT the parsing or execution time");
 
 		// via reflection to avoid assembly reference
 		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
@@ -122,18 +122,18 @@ public class InProcessPerformanceMeasurement
 						var flushesFromTimeout = (long)metricsType.GetField("Item5")!.GetValue(metricsResult)!;
 						var totalTcpWriteTimeMs = (long)metricsType.GetField("Item6")!.GetValue(metricsResult)!;
 
-						Console.WriteLine("\n=== BATCHING SERVICE METRICS ===");
-						Console.WriteLine($"Messages received:   {messagesReceived}");
-						Console.WriteLine($"Batches flushed:     {batchesFlushed}");
-						Console.WriteLine($"Avg batch size:      {avgBatchSize:F2}");
-						Console.WriteLine($"Flush from size:     {flushesFromSize}");
-						Console.WriteLine($"Flush from timeout:  {flushesFromTimeout}");
-						Console.WriteLine($"TCP write time:      {totalTcpWriteTimeMs}ms");
+						TestDiagnostics.WriteLine("\n=== BATCHING SERVICE METRICS ===");
+						TestDiagnostics.WriteLine($"Messages received:   {messagesReceived}");
+						TestDiagnostics.WriteLine($"Batches flushed:     {batchesFlushed}");
+						TestDiagnostics.WriteLine($"Avg batch size:      {avgBatchSize:F2}");
+						TestDiagnostics.WriteLine($"Flush from size:     {flushesFromSize}");
+						TestDiagnostics.WriteLine($"Flush from timeout:  {flushesFromTimeout}");
+						TestDiagnostics.WriteLine($"TCP write time:      {totalTcpWriteTimeMs}ms");
 
 						if (avgBatchSize < 2.0 && messagesReceived > 100)
 						{
-							Console.WriteLine("\nWARNING: Batching is NOT working effectively!");
-							Console.WriteLine("Average batch size < 2 means messages arrive too slowly to batch.");
+							TestDiagnostics.WriteLine("\nWARNING: Batching is NOT working effectively!");
+							TestDiagnostics.WriteLine("Average batch size < 2 means messages arrive too slowly to batch.");
 						}
 					}
 				}
@@ -144,22 +144,22 @@ public class InProcessPerformanceMeasurement
 	[Test, Explicit]
 	public async Task MeasureNotifyServiceOverhead()
 	{
-		Console.WriteLine("=== Measuring NotifyService Call Overhead ===\n");
+		TestDiagnostics.WriteLine("=== Measuring NotifyService Call Overhead ===\n");
 
 		var handle = 1L;
 		var testMessage = "Test message";
 
-		Console.WriteLine("Test: 1000 direct Notify calls");
+		TestDiagnostics.WriteLine("Test: 1000 direct Notify calls");
 		var sw1 = Stopwatch.StartNew();
 		for (int i = 0; i < 1000; i++)
 		{
 			await NotifyService.Notify(handle, testMessage, null);
 		}
 		sw1.Stop();
-		Console.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms ({sw1.ElapsedMilliseconds / 1000.0:F3}ms per call)");
+		TestDiagnostics.WriteLine($"  Time: {sw1.ElapsedMilliseconds}ms ({sw1.ElapsedMilliseconds / 1000.0:F3}ms per call)");
 
-		Console.WriteLine("\nNOTE: This measures the overhead of 1000 individual Notify calls.");
-		Console.WriteLine("In the current implementation, each call publishes to Kafka immediately.");
-		Console.WriteLine("This is likely the bottleneck causing @dolist to be slower than iter().");
+		TestDiagnostics.WriteLine("\nNOTE: This measures the overhead of 1000 individual Notify calls.");
+		TestDiagnostics.WriteLine("In the current implementation, each call publishes to Kafka immediately.");
+		TestDiagnostics.WriteLine("This is likely the bottleneck causing @dolist to be slower than iter().");
 	}
 }
