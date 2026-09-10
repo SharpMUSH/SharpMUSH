@@ -75,6 +75,10 @@ public sealed class LockEvaluationServices(
 
 			return result.ToPlainText();
 		}
+		catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+		{
+			throw;
+		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Failed to evaluate attribute {Attribute} on {Object} for lock evaluation", attributeName, gated);

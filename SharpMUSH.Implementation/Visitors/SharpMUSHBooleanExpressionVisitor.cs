@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -42,13 +43,24 @@ public class SharpMUSHBooleanExpressionVisitor(
 	protected override LockPredicate AggregateResult(LockPredicate aggregate, LockPredicate nextResult)
 		=> aggregate ?? nextResult ?? False;
 
+	// Legacy service slots have no token parameter. Bound their read-only waits without changing
+	// the interface; eval locks can execute code and must remain directly awaited instead.
+	private static ValueTask<T> Read<T>(Func<ValueTask<T>> readFactory)
+	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		var read = readFactory();
+		return read.IsCompletedSuccessfully || !ExecutionBudget.CurrentToken.CanBeCanceled
+			? read
+			: new ValueTask<T>(read.AsTask().WaitAsync(ExecutionBudget.CurrentToken));
+	}
+
 	private static ValueTask<bool> HasFlag(AnySharpObject dbRef, string flag)
 		=> dbRef.Object().Flags.Value
-			.AnyAsync(x => x.Name == flag || x.Symbol == flag, CancellationToken.None);
+			.AnyAsync(x => x.Name == flag || x.Symbol == flag, ExecutionBudget.CurrentToken);
 
 	private static ValueTask<bool> HasPower(AnySharpObject dbRef, string power)
 		=> dbRef.Object().Powers.Value
-			.AnyAsync(x => x.Name == power || x.Alias == power, CancellationToken.None);
+			.AnyAsync(x => x.Name == power || x.Alias == power, ExecutionBudget.CurrentToken);
 
 	/// <summary>
 	/// A lock's operands are fixed the moment it is compiled, so the work of reading them is too.
@@ -186,13 +198,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 		{
 			try
 			{
-				var unlockerOwner = await unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var unlockerOwner = await unlockerObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
 
 				// If target is "me", check if unlocker is owned by gated object's owner
 				if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 				{
-					var gatedOwner = await gatedObj.Object().Owner.WithCancellation(CancellationToken.None);
+					var gatedOwner = await gatedObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
 				}
 
@@ -202,12 +214,12 @@ public class SharpMUSHBooleanExpressionVisitor(
 					// Get the target object by DBRef (validates creation timestamp if objid format)
 					var targetObjResult = await med.Send(
 						new GetObjectNodeQuery(targetDbRef.Value),
-						CancellationToken.None);
+						ExecutionBudget.CurrentToken);
 
 					if (targetObjResult.IsNone())
 						return false;
 
-					var targetOwner = await targetObjResult.Known().Object().Owner.WithCancellation(CancellationToken.None);
+					var targetOwner = await targetObjResult.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
 
@@ -215,14 +227,18 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// Note: Parser is null as substitutions should have been pre-evaluated
 				// A name, not a dbref — the dbref case returned above. AbsoluteMatch names no scope, so on
 				// its own it could only ever resolve "#N", which is the branch that already ran.
-				var locateResult = await services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All);
+				var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
 
 				if (!locateResult.IsValid())
 					return false;
 
 				var located = locateResult.WithoutError().WithoutNone();
-				var locatedOwner = await located.Object().Owner.WithCancellation(CancellationToken.None);
+				var locatedOwner = await located.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 				return unlockerOwnerDbRef == locatedOwner.Object.DBRef;
+			}
+			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+			{
+				throw;
 			}
 			catch (Exception)
 			{
@@ -248,9 +264,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 					if (unlockerObj.IsContainer)
 					{
 						var searchDbRef = targetDbRef.Value;
-						return await unlockerObj.AsContainer.Content(med)
-							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), CancellationToken.None);
+						return await med.CreateStream(new GetContentsQuery(unlockerObj.AsContainer), ExecutionBudget.CurrentToken)
+							.AnyAsync(item => item.Object().DBRef.Matches(searchDbRef), ExecutionBudget.CurrentToken);
 					}
+				}
+				catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+				{
+					throw;
 				}
 				catch (Exception)
 				{
@@ -264,10 +284,14 @@ public class SharpMUSHBooleanExpressionVisitor(
 			{
 				// MAT_POSSESSION | MAT_CONTENTS — PennMUSH's MAT_OBJ_CONTENTS shape. MAT_CONTENTS on its own
 				// is a filter over whatever the scopes turn up, not a scope, so it names nowhere to look.
-				var locateResult = await services.LocateAsync(unlockerObj, unlockerObj, target,
-					LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory);
+				var locateResult = await Read(() => services.LocateAsync(unlockerObj, unlockerObj, target,
+					LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory));
 
 				return locateResult.IsValid();
+			}
+			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+			{
+				throw;
 			}
 			catch (Exception)
 			{
@@ -312,7 +336,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 			try
 			{
 				// This checks if the unlocker (or their owner if they're an object) is on the channel
-				return await med.Send(new IsOnChannelQuery(unlockerObj, channel), CancellationToken.None);
+				return await med.Send(new IsOnChannelQuery(unlockerObj, channel), ExecutionBudget.CurrentToken);
+			}
+			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+			{
+				throw;
 			}
 			catch (Exception)
 			{
@@ -329,8 +357,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
 		return async (gatedObj, unlockerObj) =>
 		{
-			var attrResult = await services.GetAttributeAsync(gatedObj, gatedObj, attrName,
-				IAttributeService.AttributeMode.Execute, true);
+			var attrResult = await Read(() => services.GetAttributeAsync(gatedObj, gatedObj, attrName,
+				IAttributeService.AttributeMode.Execute, true));
 
 			return attrResult.Match(
 				attributes =>
@@ -393,10 +421,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 		{
 			try
 			{
-				var owner = await unlockerObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await unlockerObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 
-				var attrResult = await services.GetAttributeAsync(owner, owner, attributeName,
-					IAttributeService.AttributeMode.Execute, true);
+				var attrResult = await Read(() => services.GetAttributeAsync(owner, owner, attributeName,
+					IAttributeService.AttributeMode.Execute, true));
 
 				return attrResult.Match(
 					attributes =>
@@ -411,6 +439,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 					none => false,
 					error => false
 				);
+			}
+			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+			{
+				throw;
 			}
 			catch (Exception)
 			{
@@ -447,7 +479,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 			// If target is "me", it refers to the gated object's owner
 			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
 			{
-				var owner = await gatedObj.Object().Owner.WithCancellation(CancellationToken.None);
+				var owner = await gatedObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 				return unlockerObj.Object().DBRef == owner.Object.DBRef;
 			}
 
@@ -470,9 +502,13 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					if (unlockerObj.IsContainer)
 					{
-						return await unlockerObj.AsContainer.Content(med)
-							.AnyAsync(item => item.Object().DBRef.Matches(lockDbRef), CancellationToken.None);
+						return await med.CreateStream(new GetContentsQuery(unlockerObj.AsContainer), ExecutionBudget.CurrentToken)
+							.AnyAsync(item => item.Object().DBRef.Matches(lockDbRef), ExecutionBudget.CurrentToken);
 					}
+				}
+				catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+				{
+					throw;
 				}
 				catch (Exception)
 				{
@@ -497,8 +533,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 		return async (_, unlockerObj) =>
 		{
-			var attrResult = await services.GetAttributeAsync(unlockerObj, unlockerObj, attrName,
-				IAttributeService.AttributeMode.Execute, true);
+			var attrResult = await Read(() => services.GetAttributeAsync(unlockerObj, unlockerObj, attrName,
+				IAttributeService.AttributeMode.Execute, true));
 
 			return attrResult.Match(
 				attributes =>
@@ -575,7 +611,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					// Validates creation timestamp if objid format
 					var targetObjResult = await med.Send(
 						new GetObjectNodeQuery(targetDbRef.Value),
-						CancellationToken.None);
+						ExecutionBudget.CurrentToken);
 
 					if (targetObjResult.IsNone())
 						return false;
@@ -586,7 +622,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				{
 					// Name-based lookup using mediator query — again, the dbref case is handled above, so
 					// AbsoluteMatch on its own would leave this branch with nowhere to search.
-					var locateResult = await services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All);
+					var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
 
 					if (!locateResult.IsValid())
 						return false;
@@ -599,6 +635,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 					.GetValueOrDefault(LockNames.Canonical(lockType), new SharpLockData("#TRUE"));
 
 				return await services.EvaluateLock(lockData.LockString, targetObj, unlockerObj);
+			}
+			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
+			{
+				throw;
 			}
 			catch (Exception)
 			{
