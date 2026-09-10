@@ -425,6 +425,8 @@ public static class ErrorMessages
 		public const string MustBePlayer = "New owner must be a player.";
 		public const string InvalidDestinationExit = "Invalid destination for exit.";
 		public const string HomeMustBeRoom = "Home must be a room.";
+		public const string HomeIsAnExit = "That is an exit.";
+		public const string CannotLinkToItself = "You may not link something to itself.";
 		public const string DropToMustBeRoom = "Drop-to must be a room.";
 		public const string InvalidObjectTypeForLinking = "Invalid object type for linking.";
 		public const string InvalidObjectTypeGeneric = "Invalid object type.";
@@ -538,6 +540,10 @@ public static class ErrorMessages
 			"The floor disappears under your feet, you fall through NOTHINGness and then:";
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
+		// These reach the game as literal text, not through the resx. That is the settled convention
+		// for every triad default; the reasoning — a multi-connection, per-recipient locale problem
+		// with no broadcast seam to carry a key through, not a missing resx entry — is written out
+		// once, on DidItRequest.
 		public const string DefaultOLeave = "has left.";
 		public const string DefaultOEnter = "has arrived.";
 		public const string HomeNoPlaceLikeHome = "There's no place like home...";
@@ -561,6 +567,15 @@ public static class ErrorMessages
 		// --- Admin / Wizard guardrails (PennMUSH src/wiz.c, src/flags.c) ---
 		public const string CantBootOtherPeople = "You can't boot other people!";
 		public const string CantTeleportRooms = "You can't teleport rooms.";
+
+		/// <summary>
+		/// PennMUSH <c>src/wiz.c:440</c>: the destination is inside the thing being moved, or is the
+		/// thing itself. Refused before the move is announced anywhere.
+		/// </summary>
+		public const string BadDestination = "Bad destination.";
+
+		/// <summary>PennMUSH <c>src/wiz.c:588</c>: told to the teleporter, not to the teleported.</summary>
+		public const string Teleported = "Teleported.";
 		public const string TeleportsNotAllowed = "Teleports are not allowed in this room.";
 		public const string NoZoneTeleport = "You may not teleport out of the zone from this room.";
 		public const string InTheVoid = "You're in the Void. This is not a good thing.";
@@ -639,6 +654,73 @@ public static class ErrorMessages
 		public const string CantSeemToDropThingsHere = "You can't seem to drop things here.";
 		public const string CantEmptyThatFromHere = "You can't empty that from here.";
 		public const string DontHaveThat = "You don't have that!";
+
+		// --- get / drop / give / use triad and lock defaults (src/move.c, src/rob.c, src/set.c) ---
+		// Literal text on the same terms as the movement defaults above: they reach the game through
+		// DidItRequest.Def / DidItRequest.ODef, which have no per-recipient key seam.
+		/// <summary>PennMUSH <c>src/move.c:736</c>: the object's drop lock refused.</summary>
+		public const string CantSeemToGetRidOfThat = "You can't seem to get rid of that.";
+		/// <summary>PennMUSH <c>src/move.c:671</c>: the source container's take lock refused.</summary>
+		public const string CantTakeThatFromThere = "You can't take that from there.";
+		/// <summary>PennMUSH <c>src/move.c:689</c>: the object's own basic lock refused.</summary>
+		public const string CantPickThatUp = "You can't pick that up.";
+		/// <summary>PennMUSH <c>src/rob.c:323</c>: the object's give lock refused.</summary>
+		public const string CantGiveThatAway = "You can't give that away.";
+		/// <summary>PennMUSH <c>src/rob.c:329</c>: the recipient's from lock refused.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DoesntWantAnythingFromYou = "{0} doesn't want anything from you.";
+		/// <summary>PennMUSH <c>src/rob.c:335</c>: the recipient's receive lock refused the object.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DoesntWantThat = "{0} doesn't want that.";
+		/// <summary>PennMUSH <c>src/move.c:632</c>, the possessive-get actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouTakeFrom = "You take {0} from {1}.";
+		/// <summary>PennMUSH <c>src/move.c:635</c>, the possessive-get o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TakesFrom = "takes {0} from {1}.";
+		/// <summary>PennMUSH <c>src/move.c:682</c>, the plain-get actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouTake = "You take {0}.";
+		/// <summary>PennMUSH <c>src/move.c:686</c>, the plain-get o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string Takes = "takes {0}.";
+		/// <summary>PennMUSH <c>src/move.c:628</c> and <c>:678</c>: what the object itself is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TookYou = "{0} took you.";
+		/// <summary>PennMUSH <c>src/move.c:627</c>: what the robbed container is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string WasTakenFromYou = "{0} was taken from you.";
+		/// <summary>PennMUSH <c>src/move.c:763</c>, the drop actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouDrop = "You drop {0}.";
+		/// <summary>PennMUSH <c>src/move.c:766</c>, the drop o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string Drops = "drops {0}.";
+		/// <summary>PennMUSH <c>src/move.c:752</c> and <c>:757</c>: what the dropped object is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DropsYou = "{0} drops you.";
+		/// <summary>PennMUSH <c>src/move.c:749</c>: what a STICKY object sent home is told instead.</summary>
+		public const string Dropped = "Dropped.";
+		/// <summary>PennMUSH <c>src/move.c:906</c>: what EMPTY tells the emptier when one item moved.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RemovedOneObjectFrom = "You remove 1 object from {0}.";
+		/// <summary>PennMUSH <c>src/move.c:909</c>: the same, for any other count.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RemovedObjectsFrom = "You remove {0} objects from {1}.";
+		/// <summary>PennMUSH <c>src/rob.c:412</c>, the give actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouGaveTo = "You gave {0} to {1}.";
+		/// <summary>PennMUSH <c>src/rob.c:420</c>: what the given object is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GaveYouTo = "{0} gave you to {1}.";
+		/// <summary>PennMUSH <c>src/rob.c:427</c>, the recipient's receive message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GaveYou = "{0} gave you {1}.";
+		/// <summary>PennMUSH <c>src/set.c:1417</c>: the use triad's actor default.</summary>
+		public const string Used = "Used.";
+		/// <summary>PennMUSH <c>src/speech.c:945</c>: the target's page lock refused the pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotAcceptingYourPages = "{0} is not accepting your pages.";
 
 		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
 		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>
@@ -971,6 +1053,19 @@ public static class ErrorMessages
 		public const string CantGoThatWayContainmentLoop = "You can't go that way - it would create a containment loop.";
 		public const string YouHaveBeenTeleported = "You have been teleported.";
 
+		/// <summary>PennMUSH <c>do_leave</c>'s <c>fail_lock</c> default (<c>src/move.c:983</c>).</summary>
+		public const string CantLeave = "You can't leave.";
+
+		/// <summary>PennMUSH <c>do_move</c>'s home branch (<c>src/move.c:415-417</c>), sent three times.</summary>
+		public const string NoPlaceLikeHome = "There's no place like home...";
+
+		/// <summary>PennMUSH <c>do_move</c>'s home broadcast (<c>src/move.c:409-412</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GoesHomeFormat = "{0} goes home.";
+
+		/// <summary>PennMUSH <c>do_enter</c>'s self-entry refusal (<c>src/move.c:957-959</c>).</summary>
+		public const string MustRemainBesideYourself = "Sorry, you must remain beside yourself!";
+
 		// Emit-family sender echoes, suppressed by /silent (PennMUSH speech.c, bsd.c).
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouPemitToObjectFormat = "You pemit \"{0}\" to {1}.";
@@ -1215,7 +1310,10 @@ public static class ErrorMessages
 		public const string ExitNoValidLocationDetail = "That exit doesn't go to a valid location.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ExitNameToDestFormat = "{0} to {1}";
-		public const string TeleportedPlayerNotified = "You have been teleported.";
+
+		/// <summary>PennMUSH <c>follower_command</c> — src/move.c:1485.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouFollowFormat = "You follow {0}.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FindSearchingFormat = "@find: Searching for objects{0}...";
@@ -1241,6 +1339,9 @@ public static class ErrorMessages
 		public const string HaltedObjectWithActionsFormat = "Halted {0} with replacement actions.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string HaltedObjectFormat = "Halted {0}.";
+		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
 
 		public const string NotifyMustSpecifySemaphoreObject = "You must specify an object to use for the semaphore.";
 		public const string NotifyMustSpecifyValidObjectAttribute = "You must specify a valid object with an optional valid attribute to use for the semaphore.";

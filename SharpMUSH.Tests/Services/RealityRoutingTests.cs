@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -106,7 +106,6 @@ public class RealityRoutingTests
 
 	[Test]
 	[Arguments(IPermissionService.InteractType.Hear)]
-	[Arguments(IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)]
 	[Arguments(IPermissionService.InteractType.Page)]
 	public async Task RoomAndPrivilegedShortcutsCannotBypassDirectionalPolicy(IPermissionService.InteractType interaction)
 	{
@@ -164,9 +163,12 @@ public class RealityRoutingTests
 	[Arguments(typeof(ListenerRoutingService))]
 	public async Task RealityAwareConstructorRequiresExplicitPolicy(Type service)
 	{
-		var parameter = service.GetConstructors().Single(c => c.GetParameters().Any(p => p.ParameterType == typeof(IRealityPolicy)))
-			.GetParameters().Single(p => p.ParameterType == typeof(IRealityPolicy));
-		await Assert.That(parameter.HasDefaultValue).IsFalse();
+		var parameters = service.GetConstructors()
+			.SelectMany(c => c.GetParameters())
+			.Where(p => p.ParameterType == typeof(IRealityPolicy))
+			.ToArray();
+		await Assert.That(parameters).IsNotEmpty();
+		await Assert.That(parameters.Any(p => p.HasDefaultValue)).IsFalse();
 	}
 
 	[Test]

@@ -4,6 +4,7 @@ using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -347,6 +348,22 @@ public static class TestHelpers
 			.Do(call => DeliverToHandle(
 				call.ArgAt<long>(0),
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3))));
+
+		// NotifyAndReturn both delivers and produces the command's return value. A substitute with no
+		// configuration for it answers default(CallState) — a null the visitor reads as "no command
+		// ran", so a refusal reached the player as its own command line echoed back and the message
+		// never arrived. Mirror the real service: deliver, then hand back the error string.
+		notifier
+			.NotifyAndReturn(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>())
+			.Returns(call =>
+			{
+				if (call.ArgAt<bool>(3))
+				{
+					Deliver(call.ArgAt<DBRef>(0), call.ArgAt<string>(2));
+				}
+
+				return ValueTask.FromResult(new CallState(call.ArgAt<string>(1)));
+			});
 
 		return notifier;
 	}

@@ -26,7 +26,7 @@ public class LockNameCanonicalisationTests
 
 	[Test]
 	[Arguments("chzone", LockType.ChZone)]
-	[Arguments("teleport", LockType.TPort)]
+	[Arguments("teleport", LockType.Teleport)]
 	[Arguments("dropto", LockType.DropTo)]
 	[Arguments("chown", LockType.ChOwn)]
 	public async ValueTask LockSetThroughItsSwitchIsTheLockTheGateReads(string switchName, LockType lockType)
@@ -34,12 +34,15 @@ public class LockNameCanonicalisationTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService,
 			$"LockCanon{switchName}");
 
-		var result = await Parser.CommandParse(1, ConnectionService,
+		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@lock/{switchName} #{obj.Number}=#FALSE"));
-		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).DoesNotContain("#-1");
 
 		var found = await Mediator.Send(new GetObjectNodeQuery(obj));
 		await Assert.That(found.IsNone).IsFalse();
+
+		// @lock answers CallState.Empty on success, so its response text proves nothing either way —
+		// the stored lock is the only evidence the setup took before the gate is asked about it.
+		await Assert.That(found.Known.Object().Locks.Keys).Contains(lockType.ToString());
 
 		var player = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
 
@@ -50,7 +53,7 @@ public class LockNameCanonicalisationTests
 
 	[Test]
 	[Arguments("chzone", LockType.ChZone)]
-	[Arguments("teleport", LockType.TPort)]
+	[Arguments("teleport", LockType.Teleport)]
 	[Arguments("dropto", LockType.DropTo)]
 	[Arguments("chown", LockType.ChOwn)]
 	public async ValueTask LockSetThroughItsSwitchIsStoredUnderTheEnumSpelling(string switchName, LockType lockType)

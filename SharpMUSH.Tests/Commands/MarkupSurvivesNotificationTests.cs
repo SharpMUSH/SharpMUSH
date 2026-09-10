@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using Mediator;
@@ -58,7 +59,8 @@ public class MarkupSurvivesNotificationTests
 			var roomId = await Mediator.Send(new CreateRoomCommand(
 				TestIsolationHelpers.GenerateUniqueName("MarkupRoom"), actor));
 			var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
-			await Mediator.Send(new MoveObjectCommand(actor, room, IsSilent: true));
+			var origin = await actor.Location.WithCancellation(default);
+			await Mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 			var before = Notifications.RawCountFor(player.DbRef);
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));

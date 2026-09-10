@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.DiscriminatedUnions;

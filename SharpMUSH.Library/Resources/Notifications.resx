@@ -82,6 +82,12 @@
   <data name="HomeMustBeRoom" xml:space="preserve">
     <value>Home must be a room.</value>
   </data>
+  <data name="HomeIsAnExit" xml:space="preserve">
+    <value>That is an exit.</value>
+  </data>
+  <data name="CannotLinkToItself" xml:space="preserve">
+    <value>You may not link something to itself.</value>
+  </data>
   <data name="DropToMustBeRoom" xml:space="preserve">
     <value>Drop-to must be a room.</value>
   </data>
@@ -339,6 +345,12 @@
   <data name="CantTeleportRooms" xml:space="preserve">
     <value>You can't teleport rooms.</value>
   </data>
+  <data name="BadDestination" xml:space="preserve">
+    <value>Bad destination.</value>
+  </data>
+  <data name="Teleported" xml:space="preserve">
+    <value>Teleported.</value>
+  </data>
   <data name="TeleportsNotAllowed" xml:space="preserve">
     <value>Teleports are not allowed in this room.</value>
   </data>
@@ -456,6 +468,77 @@
   </data>
   <data name="DontHaveThat" xml:space="preserve">
     <value>You don't have that!</value>
+  </data>
+
+  <!-- get / drop / give / use triad and lock defaults -->
+  <data name="CantSeemToGetRidOfThat" xml:space="preserve">
+    <value>You can't seem to get rid of that.</value>
+  </data>
+  <data name="CantTakeThatFromThere" xml:space="preserve">
+    <value>You can't take that from there.</value>
+  </data>
+  <data name="CantPickThatUp" xml:space="preserve">
+    <value>You can't pick that up.</value>
+  </data>
+  <data name="CantGiveThatAway" xml:space="preserve">
+    <value>You can't give that away.</value>
+  </data>
+  <data name="DoesntWantAnythingFromYou" xml:space="preserve">
+    <value>{0} doesn't want anything from you.</value>
+  </data>
+  <data name="DoesntWantThat" xml:space="preserve">
+    <value>{0} doesn't want that.</value>
+  </data>
+  <data name="YouTakeFrom" xml:space="preserve">
+    <value>You take {0} from {1}.</value>
+  </data>
+  <data name="TakesFrom" xml:space="preserve">
+    <value>takes {0} from {1}.</value>
+  </data>
+  <data name="YouTake" xml:space="preserve">
+    <value>You take {0}.</value>
+  </data>
+  <data name="Takes" xml:space="preserve">
+    <value>takes {0}.</value>
+  </data>
+  <data name="TookYou" xml:space="preserve">
+    <value>{0} took you.</value>
+  </data>
+  <data name="WasTakenFromYou" xml:space="preserve">
+    <value>{0} was taken from you.</value>
+  </data>
+  <data name="YouDrop" xml:space="preserve">
+    <value>You drop {0}.</value>
+  </data>
+  <data name="Drops" xml:space="preserve">
+    <value>drops {0}.</value>
+  </data>
+  <data name="DropsYou" xml:space="preserve">
+    <value>{0} drops you.</value>
+  </data>
+  <data name="Dropped" xml:space="preserve">
+    <value>Dropped.</value>
+  </data>
+  <data name="RemovedOneObjectFrom" xml:space="preserve">
+    <value>You remove 1 object from {0}.</value>
+  </data>
+  <data name="RemovedObjectsFrom" xml:space="preserve">
+    <value>You remove {0} objects from {1}.</value>
+  </data>
+  <data name="YouGaveTo" xml:space="preserve">
+    <value>You gave {0} to {1}.</value>
+  </data>
+  <data name="GaveYouTo" xml:space="preserve">
+    <value>{0} gave you to {1}.</value>
+  </data>
+  <data name="GaveYou" xml:space="preserve">
+    <value>{0} gave you {1}.</value>
+  </data>
+  <data name="Used" xml:space="preserve">
+    <value>Used.</value>
+  </data>
+  <data name="NotAcceptingYourPages" xml:space="preserve">
+    <value>{0} is not accepting your pages.</value>
   </data>
 
   <!-- Destruction SAFE messages -->
@@ -775,6 +858,18 @@
   </data>
   <data name="YouHaveBeenTeleported" xml:space="preserve">
     <value>You have been teleported.</value>
+  </data>
+  <data name="CantLeave" xml:space="preserve">
+    <value>You can't leave.</value>
+  </data>
+  <data name="NoPlaceLikeHome" xml:space="preserve">
+    <value>There's no place like home...</value>
+  </data>
+  <data name="GoesHomeFormat" xml:space="preserve">
+    <value>{0} goes home.</value>
+  </data>
+  <data name="MustRemainBesideYourself" xml:space="preserve">
+    <value>Sorry, you must remain beside yourself!</value>
   </data>
 
   <!-- General game operations -->
@@ -1227,8 +1322,8 @@
   <data name="ExitNameToDestFormat" xml:space="preserve">
     <value>{0} to {1}</value>
   </data>
-  <data name="TeleportedPlayerNotified" xml:space="preserve">
-    <value>You have been teleported.</value>
+  <data name="YouFollowFormat" xml:space="preserve">
+    <value>You follow {0}.</value>
   </data>
 
   <!-- @find command -->
@@ -1272,6 +1367,9 @@
   </data>
   <data name="HaltedObjectFormat" xml:space="preserve">
     <value>Halted {0}.</value>
+  </data>
+  <data name="RunawayObjectFormat" xml:space="preserve">
+    <value>Runaway object: {0}({1}). Commands halted.</value>
   </data>
 
   <!-- @notify command (semaphore) -->

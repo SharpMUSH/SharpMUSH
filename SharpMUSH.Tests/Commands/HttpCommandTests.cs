@@ -168,7 +168,10 @@ public class HttpCommandTests
 			CallDepth: new InvocationCounter(),
 			FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 			TotalInvocations: new InvocationCounter(),
-			LimitExceeded: new LimitExceededFlag()));
+			LimitExceeded: new LimitExceededFlag())
+		{
+			MoveDepth = new InvocationCounter()
+		});
 
 		await httpParser.CommandListParse(MarkupText.Plain(commandList));
 		return context;

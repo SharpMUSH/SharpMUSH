@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -36,7 +37,8 @@ public class SceneLocateArgumentTests
 			TestIsolationHelpers.GenerateUniqueName("SceneReferenceRoom"), actor));
 		_roomId = roomId;
 		var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
-		await mediator.Send(new MoveObjectCommand(actor, room, IsSilent: true));
+		var origin = await actor.Location.WithCancellation(default);
+		await mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 		await WebAppFactory.CommandParser.CommandParse(1, Connections,
 			MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
 	}

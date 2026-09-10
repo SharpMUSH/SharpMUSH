@@ -21,7 +21,24 @@ public class SharpObject : IObjectShaped<SharpObject>
 
 	public required string Type { get; set; }
 
+	/// <summary>
+	/// Keyed by lock name. PennMUSH matches a lock name with <c>strcasecmp</c>
+	/// (<c>src/lock.c:364</c>, <c>getlockstruct</c>), so every provider builds this dictionary with
+	/// <see cref="LockNameComparer"/>: <c>@lock/dropto</c> stores the canonical <c>Dropto</c> and a
+	/// reader asking for <see cref="LockType.DropTo"/> must still find it.
+	/// </summary>
 	public required IImmutableDictionary<string, SharpLockData> Locks { get; set; }
+
+	/// <summary>
+	/// How lock names compare — case-insensitively, per <c>src/lock.c:364</c>.
+	/// </summary>
+	public static StringComparer LockNameComparer => StringComparer.OrdinalIgnoreCase;
+
+	/// <summary>
+	/// An empty lock dictionary that compares its keys the way <see cref="Locks"/> must.
+	/// </summary>
+	public static IImmutableDictionary<string, SharpLockData> EmptyLocks { get; }
+		= ImmutableDictionary.Create<string, SharpLockData>(LockNameComparer);
 
 	public long CreationTime { get; set; } = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 

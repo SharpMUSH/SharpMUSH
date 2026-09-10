@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using Quartz;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -11,6 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Consumers;
+using SharpMUSH.Tests.Server;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -161,9 +164,12 @@ public class ConnectionIncarnationTests
 		var service = new ConnectionService(Substitute.For<IPublisher>());
 		await Register(service, "old", 100);
 		var parser = Substitute.For<IMUSHCodeParser>();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(TestSharpMushOptions.Create());
 		await using var scheduler = new SharpMUSH.Library.Services.TaskScheduler(parser, service,
 			Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(), Substitute.For<IMediator>(),
-			NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance);
+			NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance, options,
+			Substitute.For<INotifyService>());
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -501,8 +501,8 @@ public class PackagePlanService : IPackagePlanService
 			var liveLocks = (existing ? live!.Locks : null)
 				?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 			// The manifest may spell a standard lock any way PennMUSH does; the live object's keys are
-			// LockType's spelling, so both sides are canonicalised or "teleport" reads as drift
-			// against the TPort it just wrote.
+			// LockType's spelling, so both sides are canonicalised or "tport" reads as drift
+			// against the Teleport it just wrote.
 			var specLocks = LockNames.Fold(obj.Locks);
 			var lockTypes = new HashSet<string>(baseLocks.Keys, StringComparer.OrdinalIgnoreCase);
 			lockTypes.UnionWith(specLocks.Keys);

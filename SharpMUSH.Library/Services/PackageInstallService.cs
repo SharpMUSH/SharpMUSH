@@ -1327,7 +1327,7 @@ public class PackageInstallService(
 		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
 		// Fold once, here, so the whole rollback speaks canonical: a revision written before lock
 		// names were canonical spells a lock the way that world did. Left raw, its `Teleport` add and
-		// the folded baseline's `TPort` removal both canonicalise to TPort in the provider, the
+		// the folded baseline's `tport` removal both canonicalise to Teleport in the provider, the
 		// removal is applied last, and the rollback deletes the lock the revision asked it to keep.
 		var target = (snapshot.Structure ?? [])
 			.ToDictionary(s => s.Objid, s => s with { Locks = LockNames.Fold(s.Locks) }, StringComparer.Ordinal);

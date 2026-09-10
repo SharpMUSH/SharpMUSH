@@ -900,7 +900,7 @@ public class BuildingCommandTests
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomND_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 		// Keep the teleport's queued auto-look out of the explicit look's notification window.
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/quiet me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/silent me={roomDbRef}"));
 		await parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&DESCFORMAT here=formatted_{token}:%+:%0:end"));
 
@@ -927,7 +927,7 @@ public class BuildingCommandTests
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDefault_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 		// Keep the teleport's queued auto-look out of the explicit look's notification window.
-		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/quiet me={roomDbRef}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/silent me={roomDbRef}"));
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
@@ -1274,5 +1274,94 @@ public class BuildingCommandTests
 		var output = result.Message!.ToPlainText()!.Trim();
 		// SharpMUSH returns "#-1 NO MATCH" for failed locate
 		await Assert.That(output).StartsWith("#-1");
+	}
+
+	/// <summary>
+	/// The number half of a reference that may have been rendered as a full objid
+	/// (<c>#N:creation</c>). <c>home()</c> answers with an objid; a dbref written into the command
+	/// is bare, so both sides of a comparison go through this.
+	/// </summary>
+	private static string BareDbref(string reference)
+	{
+		var colon = reference.IndexOf(':');
+		return colon < 0 ? reference : reference[..colon];
+	}
+
+	private async Task<string> HomeOf(DBRef reference)
+	{
+		var home = await Parser.FunctionParse(MarkupText.Plain($"[home(#{reference.Number})]"));
+		return BareDbref(home!.Message!.ToPlainText().Trim());
+	}
+
+	/// <summary>
+	/// <c>do_link</c> gates the home destination as well as the object (<c>src/create.c:404</c>):
+	/// <c>!controls(player, room) &amp;&amp; !Abode(room)</c>. Any non-exit can be a home, so without
+	/// this gate controlling the object alone would be enough to park it in a stranger's inventory.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkingAHomeNeedsControlOfTheDestinationOrAbode()
+	{
+		var linker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LinkGateOwner");
+		var stranger = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LinkGateStranger");
+
+		var item = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LinkGateItem");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown #{item.Number}=#{linker.DbRef.Number}"));
+
+		var abode = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("LinkGateAbode")}"));
+		var abodeRoom = BareDbref(abode.Message!.ToPlainText().Trim());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {abodeRoom}=ABODE"));
+
+		var before = await HomeOf(item);
+
+		// Neither controlled nor ABODE: refused, and the home is untouched.
+		var recorder = WebAppFactoryArg.Notifications;
+		var seen = recorder.CountFor(linker.DbRef);
+		var refusal = await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"@link #{item.Number}=#{stranger.DbRef.Number}"));
+		await Assert.That(refusal.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+
+		await Assert.That(await HomeOf(item)).IsEqualTo(before);
+		await Assert.That(recorder.For(linker.DbRef).Skip(seen).Any(m => m == ErrorMessages.Notifications.PermissionDenied))
+			.IsTrue();
+
+		// ABODE without control is enough.
+		await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"@link #{item.Number}={abodeRoom}"));
+		await Assert.That(await HomeOf(item)).IsEqualTo(abodeRoom);
+
+		// So is control without ABODE — a player is never ABODE, the flag is ROOM-only.
+		await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"@link #{item.Number}=#{linker.DbRef.Number}"));
+		await Assert.That(await HomeOf(item)).IsEqualTo($"#{linker.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>link()</c> carries <c>do_link</c>'s destination gate too (<c>src/create.c:404</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask LinkFunctionHomeNeedsControlOfTheDestinationOrAbode()
+	{
+		var linker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LinkFnOwner");
+		var stranger = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LinkFnStranger");
+
+		var item = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "LinkFnItem");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown #{item.Number}=#{linker.DbRef.Number}"));
+
+		var before = await HomeOf(item);
+
+		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{item.Number}, #{stranger.DbRef.Number})"));
+		await Assert.That(refused.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await HomeOf(item)).IsEqualTo(before);
+
+		var allowed = await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{item.Number}, #{linker.DbRef.Number})"));
+		await Assert.That(allowed.Message!.ToPlainText().Trim()).IsEqualTo("1");
+		await Assert.That(await HomeOf(item)).IsEqualTo($"#{linker.DbRef.Number}");
 	}
 }

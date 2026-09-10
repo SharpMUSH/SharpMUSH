@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -59,7 +59,8 @@ public class CommunicationService(
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
-		IEnumerable<AnySharpObject>? excludeObjects = null)
+		IEnumerable<AnySharpObject>? excludeObjects = null,
+		IPermissionService.InteractType interact = InteractType.Hear)
 	{
 		var contents = room.Content(mediator);
 		var actualSender = sender ?? executor;
@@ -76,8 +77,8 @@ public class CommunicationService(
 				}
 
 				return actualSender.Object().DBRef == executor.Object().DBRef
-					? await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear)
-					: await permissionService.CanInteract(executor, objWithRoom, InteractType.Hear, actualSender);
+					? await permissionService.CanInteract(executor, objWithRoom, interact)
+					: await permissionService.CanInteract(executor, objWithRoom, interact, actualSender);
 			});
 
 		await foreach (var obj in interactableContents)

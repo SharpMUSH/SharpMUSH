@@ -35,7 +35,7 @@ public class LegacyLockNameLoadTests
 		{
 			["ChZone"] = Stored("=#11"),
 			["Chzone"] = Stored("=#12"),
-			["Teleport"] = Stored("=#13"),
+			["tport"] = Stored("=#13"),
 			["Basic"] = Stored("=#14")
 		});
 
@@ -48,7 +48,7 @@ public class LegacyLockNameLoadTests
 		var loaded = SurrealProvider.DeserializeLocks(SurrealJson(
 			("ChZone", "=#11"),
 			("Chzone", "=#12"),
-			("Teleport", "=#13"),
+			("tport", "=#13"),
 			("Basic", "=#14")));
 
 		await AssertFoldedTheLegacyRow(loaded);
@@ -66,14 +66,14 @@ public class LegacyLockNameLoadTests
 
 		// A lock stored only under the legacy spelling moves to the canonical one, which is the
 		// whole point of the fix — it was invisible to the gate before.
-		await Assert.That(loaded[nameof(LockType.TPort)].LockString).IsEqualTo("=#13");
+		await Assert.That(loaded[nameof(LockType.Teleport)].LockString).IsEqualTo("=#13");
 		await Assert.That(loaded[nameof(LockType.Basic)].LockString).IsEqualTo("=#14");
 
 		// Case-insensitive from here on, so the old spelling still resolves for a reader.
 		await Assert.That(loaded.ContainsKey("Chzone")).IsTrue();
 		await Assert.That(loaded.ContainsKey("CHZONE")).IsTrue();
-		// "Teleport" is a different word, not a case variation, so it is gone as a key.
-		await Assert.That(loaded.ContainsKey("Teleport")).IsFalse();
+		// "tport" is a different word, not a case variation, so it is gone as a key.
+		await Assert.That(loaded.ContainsKey("tport")).IsFalse();
 	}
 
 	[Test]
@@ -123,8 +123,8 @@ public class LegacyLockNameLoadTests
 	[Test]
 	[Arguments("chzone", nameof(LockType.ChZone))]
 	[Arguments("CHZONE", nameof(LockType.ChZone))]
-	[Arguments("Teleport", nameof(LockType.TPort))]
-	[Arguments("tport", nameof(LockType.TPort))]
+	[Arguments("Teleport", nameof(LockType.Teleport))]
+	[Arguments("tport", nameof(LockType.Teleport))]
 	[Arguments("dropto", nameof(LockType.DropTo))]
 	[Arguments("chown", nameof(LockType.ChOwn))]
 	[Arguments("use", nameof(LockType.Use))]

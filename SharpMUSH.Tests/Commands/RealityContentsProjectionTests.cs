@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -83,7 +83,7 @@ public class RealityContentsProjectionTests
 		}
 		if (projection == "examine-format")
 			await mediator.Send(new SetAttributeCommand(room.Object.DBRef, ["CONFORMAT"], MarkupText.Plain("strcat(%0,|,%1)"), actor));
-		await mediator.Send(new MoveObjectCommand(actor, room));
+		await mediator.Send(new MoveObjectCommand(actor, room, home.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, enabled, ["normal", "ghost"]), default);
@@ -102,7 +102,7 @@ public class RealityContentsProjectionTests
 		finally
 		{
 			await policy.SaveConfigurationAsync(original, default);
-			await mediator.Send(new MoveObjectCommand(actor, home));
+			await mediator.Send(new MoveObjectCommand(actor, home, room.Object.DBRef));
 		}
 	}
 }

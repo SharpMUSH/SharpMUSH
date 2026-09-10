@@ -199,13 +199,10 @@ public class AttributeTreePatternVisibilityTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName("PatNearRoom");
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
-		// /QUIET: a plain @teleport queues a "look" command for the target (GeneralCommands.cs's
-		// Teleport, AdmitCommandListRequest) rather than running it inline, so its arrival autolook
-		// can land at an unpredictable later tick - inside some OTHER, unrelated test's notification
-		// capture window, since the shared NotifyService substitute is session-wide. /QUIET skips
-		// that queued look entirely.
+		// /SILENT so the arrival produces no movement messages inside another test's assertion
+		// window. The automatic look still runs, but it runs inline, so it cannot land later.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@teleport/quiet {viewer.DbRef}={roomDbRef}"));
+			MarkupText.Plain($"@teleport/silent {viewer.DbRef}={roomDbRef}"));
 
 		// The room dbref is scraped out of @dig's message text: if that wording ever changes,
 		// the @teleport above silently does nothing and the negative assertion below passes

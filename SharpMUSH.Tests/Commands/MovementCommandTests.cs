@@ -5,6 +5,7 @@ using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -35,6 +36,29 @@ public class MovementCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, namePrefix);
 
 	/// <summary>
+	/// Whether <paramref name="receiver"/> was sent a message containing <paramref name="expected"/>
+	/// and attributed to <paramref name="speaker"/>.
+	/// </summary>
+	/// <remarks>
+	/// A triad's messages are spoken by the object that HOLDS the attribute, not by the actor:
+	/// <c>notify_by(thing, player, buff)</c> (<c>src/predicat.c:255</c>). Walking a locked exit is
+	/// the exit talking. The speaker is asserted here rather than left open, because re-attributing a
+	/// <c>fail_lock</c> message back to the mover is exactly the regression this shape exists to
+	/// catch, and an open assertion would pass through it.
+	/// Compared by dbref number: the speaker is named here from an <c>@open</c> result, which carries
+	/// no creation stamp.
+	/// </remarks>
+	private bool ReceivedNotifyContaining(DBRef receiver, string expected, DBRef speaker) =>
+		NotifyService.ReceivedCalls()
+			.Any(c => c.GetMethodInfo().Name == "Notify"
+								&& c.GetArguments().Length >= 3
+								&& c.GetArguments()[0] is AnySharpObject who && who.Object().DBRef == receiver
+								&& c.GetArguments()[1] is OneOf<MString, string> msg
+								&& TestHelpers.MessagePlainTextContains(msg, expected)
+								&& c.GetArguments()[2] is AnySharpObject said
+								&& said.Object().DBRef.Number == speaker.Number);
+
+	/// <summary>
 	/// PennMUSH <c>do_move</c> (<c>move.c:435</c>): when nothing matches as an exit the answer is
 	/// "You can't go that way.", not a generic "I don't see that here."
 	/// </summary>
@@ -50,10 +74,16 @@ public class MovementCommandTests
 	}
 
 	/// <summary>
-	/// PennMUSH <c>move.c:449</c> → <c>predicat.c:75</c>: <c>could_doit</c> fails when an exit has no
+	/// PennMUSH <c>move.c:449</c> → <c>predicat.c:77</c>: <c>could_doit</c> fails when an exit has no
 	/// destination, so <c>do_move</c> falls through to
 	/// <c>fail_lock(..., "You can't go that way.")</c>.
 	/// </summary>
+	/// <remarks>
+	/// <c>fail_lock</c> runs the whole failure triad, and <c>real_did_it</c> attributes both the
+	/// <c>@fail</c> message and the default to the EXIT rather than to the mover
+	/// (<c>notify_by(thing, player, buff)</c>, <c>src/predicat.c:255</c>). Its default is a plain
+	/// string handed to <c>did_it</c>, not a localized key, which is why this asserts on the text.
+	/// </remarks>
 	[Test]
 	public async ValueTask WalkingAnExitWithNoDestinationReportsCantGoThatWay()
 	{
@@ -65,12 +95,13 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("NoDestExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(ReceivedNotifyContaining(
+			player.DbRef, ErrorMessages.Notifications.CantGoThatWay, exitDbRef)).IsTrue();
 	}
 
 	/// <summary>
@@ -88,17 +119,14 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={roomDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("FailAttrExit");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"&FAILURE {exitName}=The door is bricked up."));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-					TestHelpers.MessagePlainTextContains(msg, "The door is bricked up.")),
-				TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(ReceivedNotifyContaining(player.DbRef, "The door is bricked up.", exitDbRef)).IsTrue();
 	}
 
 	/// <summary>
@@ -121,13 +149,15 @@ public class MovementCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {player.DbRef}={sourceDbRef}"));
 
 		var exitName = TestIsolationHelpers.GenerateUniqueName("UnlinkExitWalk");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}={destDbRef}"));
+		var openResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@open {exitName}={destDbRef}"));
+		var exitDbRef = DBRef.Parse(openResult.Message!.ToPlainText().Trim());
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(exitName));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.CantGoThatWay), player.DbRef, player.DbRef)).IsTrue();
+		await Assert.That(ReceivedNotifyContaining(
+			player.DbRef, ErrorMessages.Notifications.CantGoThatWay, exitDbRef)).IsTrue();
 	}
 
 	/// <summary>

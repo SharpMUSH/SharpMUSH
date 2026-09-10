@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -47,7 +47,8 @@ public class RealityGameTests
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(occupant.Object.Key, output))
 			{
-				var moved = await Get<IMoveService>().ExecuteMoveAsync(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)), vehicle, destination, actor.Object.DBRef);
+				var moved = await Get<IMoveService>().EnterRoom(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)),
+					vehicle, destination, noMoveMsgs: false, actor.Object.DBRef, "move");
 				await Assert.That(moved.IsT0).IsTrue();
 			}
 			await Assert.That(output.Body.ToString().Contains("You sense that you have moved")).IsEqualTo(containerVisible);
@@ -104,7 +105,8 @@ public class RealityGameTests
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(observer.Object.Key, output))
 			{
-				var moved = await Get<IMoveService>().ExecuteMoveAsync(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)), mover, destination, actor.Object.DBRef);
+				var moved = await Get<IMoveService>().EnterRoom(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)),
+					mover, destination, noMoveMsgs: false, actor.Object.DBRef, "move");
 				await Assert.That(moved.IsT0).IsTrue();
 			}
 			await Assert.That(output.Body.ToString()).IsEmpty();
@@ -239,7 +241,7 @@ public class RealityGameTests
 		var visible = await mediator.Send(new CreateThingCommand(name, room, player, room));
 		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).Known;
 		await policy.SaveObjectAsync(hidden.Object().Id!, ObjectReality.Default(hidden.Object().DBRef) with { Transmit = ["ghost"] }, default);
-		await mediator.Send(new MoveObjectCommand(player, room));
+		await mediator.Send(new MoveObjectCommand(player, room, originalLocation.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -253,12 +255,17 @@ public class RealityGameTests
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"look {room.Object.DBRef}"));
 			await Assert.That(output.Body.ToString().Split(name).Length - 1).IsEqualTo(1);
 			await policy.SaveObjectAsync(room.Object.Id!, ObjectReality.Default(room.Object.DBRef) with { Transmit = ["ghost"] }, default);
-			await Assert.That(await Get<IMoveService>().CanMoveAsync(player, player, room)).IsFalse();
+			// enter_room now owns the reality gate: an unperceivable destination refuses the move
+			// rather than being reported by a separate predicate.
+			var blocked = await Get<IMoveService>().EnterRoom(
+				Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)),
+				player, room, noMoveMsgs: true, player.Object.DBRef, "move");
+			await Assert.That(blocked.IsT1).IsTrue();
 		}
 		finally
 		{
 			await policy.SaveConfigurationAsync(originalConfiguration, default);
-			await mediator.Send(new MoveObjectCommand(player, originalLocation));
+			await mediator.Send(new MoveObjectCommand(player, originalLocation, room.Object.DBRef));
 		}
 	}
 	[Test, NotInParallel]
@@ -367,7 +374,7 @@ public class RealityGameTests
 		await mediator.Send(new LinkExitCommand(exit, destination));
 		if (hiddenDestination) await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		else await mediator.Send(new SetLockCommand(exit.Object, "Basic", "#FALSE", player));
-		await mediator.Send(new MoveObjectCommand(player, start));
+		await mediator.Send(new MoveObjectCommand(player, start, originalLocation.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, hiddenDestination, ["normal", "ghost"]), default);
@@ -378,7 +385,7 @@ public class RealityGameTests
 		finally
 		{
 			await policy.SaveConfigurationAsync(original, default);
-			await mediator.Send(new MoveObjectCommand(player, originalLocation));
+			await mediator.Send(new MoveObjectCommand(player, originalLocation, start.Object.DBRef));
 		}
 	}
 
@@ -403,7 +410,9 @@ public class RealityGameTests
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"empty {bagName}"));
 			var current = (await objects.GetObjectNodeAsync(hidden.Object.DBRef)).AsThing;
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(bag.Object.DBRef);
-			await Assert.That(output.Body.ToString()).Contains("already empty");
+			// do_empty always prints the tally and has no "already empty" form (move.c:906-911), so a
+			// bag whose only item is hidden reports removing none of them.
+			await Assert.That(output.Body.ToString()).Contains($"You remove 0 objects from {bagName}");
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
@@ -424,7 +433,7 @@ public class RealityGameTests
 		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, player, player, start)))).AsThing;
 		await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		await policy.SaveObjectAsync(item.Object.Id!, ObjectReality.Default(item.Object.DBRef) with { Receive = ["normal", "ghost"] }, default);
-		await mediator.Send(new MoveObjectCommand(player, start));
+		await mediator.Send(new MoveObjectCommand(player, start, originalLocation.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -438,7 +447,7 @@ public class RealityGameTests
 		finally
 		{
 			await policy.SaveConfigurationAsync(original, default);
-			await mediator.Send(new MoveObjectCommand(player, originalLocation));
+			await mediator.Send(new MoveObjectCommand(player, originalLocation, start.Object.DBRef));
 		}
 	}
 
@@ -456,7 +465,7 @@ public class RealityGameTests
 		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).AsThing;
 		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("item", bag, player, room)))).AsThing;
 		await policy.SaveObjectAsync(room.Object.Id!, ObjectReality.Default(room.Object.DBRef) with { Transmit = ["ghost"] }, default);
-		await mediator.Send(new MoveObjectCommand(player, room));
+		await mediator.Send(new MoveObjectCommand(player, room, originalLocation.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -467,7 +476,7 @@ public class RealityGameTests
 		finally
 		{
 			await policy.SaveConfigurationAsync(original, default);
-			await mediator.Send(new MoveObjectCommand(player, originalLocation));
+			await mediator.Send(new MoveObjectCommand(player, originalLocation, room.Object.DBRef));
 		}
 	}
 

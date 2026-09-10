@@ -1,10 +1,18 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using OneOf;
+using OneOf.Types;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -362,5 +370,98 @@ public class ObjectDestructionTests
 
 		var survivor = await Mediator.Send(new GetObjectNodeQuery(thing));
 		await Assert.That(survivor.IsNone).IsFalse();
+	}
+
+	/// <summary>
+	/// Builds the service over a substituted <see cref="IMoveService"/> so evacuation can be made to
+	/// fail; everything else is the live session's wiring.
+	/// </summary>
+	private ObjectDestructionService DestructionServiceWith(IMoveService moves)
+		=> new(
+			Mediator,
+			WebAppFactoryArg.Services.GetRequiredService<INotifyService>(),
+			moves,
+			WebAppFactoryArg.Services.GetRequiredService<IEventService>(),
+			WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
+			NullLogger<ObjectDestructionService>.Instance);
+
+	private static IMoveService MoveServiceAnswering(
+		Func<AnySharpContainer, OneOf<Success, Error<string>>> answer, List<int> destinations)
+	{
+		var moves = Substitute.For<IMoveService>();
+		moves.EnterRoom(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpContent>(), Arg.Any<AnySharpContainer>(),
+				Arg.Any<bool>(), Arg.Any<DBRef>(), Arg.Any<string>())
+			.Returns(call =>
+			{
+				var destination = call.ArgAt<AnySharpContainer>(2);
+				destinations.Add(destination.Object().DBRef.Number);
+				return ValueTask.FromResult(answer(destination));
+			});
+		return moves;
+	}
+
+	/// <summary>
+	/// DEVIATION from PennMUSH, which cannot hit this: <c>empty_contents</c>'s <c>moveto</c> is a
+	/// pointer rewrite over an in-memory database and never fails. Here evacuating is a move that can
+	/// be refused, and <c>DeleteObjectCommand</c> would then take the location edge of content still
+	/// standing inside — every later read of that content reads a dangling location.
+	/// </summary>
+	[Test]
+	public async Task FreeObject_WhoseContentsCannotBeEvacuated_LeavesTheContainerStanding()
+	{
+		var container = await CreateThingAsync("EvacFailContainer");
+		var occupant = await CreateThingAsync("EvacFailOccupant");
+		var home = await DigRoomAsync("EvacFailHome");
+
+		await RunAsync($"@link {occupant}={home}");
+		await RunAsync($"@tel {occupant}={container}");
+
+		var attempted = new List<int>();
+		var service = DestructionServiceWith(
+			MoveServiceAnswering(_ => new Error<string>("Injected evacuation failure"), attempted));
+
+		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Known;
+		var freed = await service.FreeObjectAsync(Parser, target);
+
+		await Assert.That(freed).IsFalse();
+		await Assert.That(await Database.GetBaseObjectNodeAsync(container)).IsNotNull()
+			.Because("deleting it would strand the occupant without a location");
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(occupant))).IsNone).IsFalse();
+
+		// Both the home and the default_home retry were tried before it gave up.
+		await Assert.That(attempted.Count).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// <c>empty_contents</c> already falls back to <c>default_home</c> when a content's own home is
+	/// unusable (<c>src/destroy.c</c>); a home that refuses the move is the same situation one step
+	/// later, so it takes the same fallback rather than aborting the destruction.
+	/// </summary>
+	[Test]
+	public async Task FreeObject_WhoseContentsHomeRefusesThem_RetriesToDefaultHome()
+	{
+		var container = await CreateThingAsync("EvacRetryContainer");
+		var occupant = await CreateThingAsync("EvacRetryOccupant");
+		var home = await DigRoomAsync("EvacRetryHome");
+
+		await RunAsync($"@link {occupant}={home}");
+		await RunAsync($"@tel {occupant}={container}");
+
+		var defaultHome = (int)WebAppFactoryArg.Services
+			.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>().CurrentValue.Database.DefaultHome;
+
+		var attempted = new List<int>();
+		var service = DestructionServiceWith(MoveServiceAnswering(
+			destination => destination.Object().DBRef.Number == home.Number
+				? new Error<string>("Injected home refusal")
+				: new Success(),
+			attempted));
+
+		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Known;
+		var freed = await service.FreeObjectAsync(Parser, target);
+
+		await Assert.That(freed).IsTrue();
+		await Assert.That(attempted).IsEquivalentTo(new[] { home.Number, defaultHome });
+		await Assert.That(await Database.GetBaseObjectNodeAsync(container)).IsNull();
 	}
 }

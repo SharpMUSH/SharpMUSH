@@ -1,5 +1,5 @@
 using Mediator;
-using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -60,7 +60,7 @@ public static class ChannelWho
 			MarkupText.Plain(string.Format(ErrorMessages.Notifications.ChatMembersOfChannelAre,
 				channel.Name.ToPlainText())),
 			MarkupText.NewLine,
-			MessageHelpers.FormatMStringsWithOxfordComma(names)
+			MessageFormatting.FormatMStringsWithOxfordComma(names)
 		]);
 
 		await notifyService.Notify(executor, memberOutput);

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Definitions;
@@ -957,13 +957,24 @@ public partial class Functions
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							// create.c:395-399: a home is anything that is not an exit, and not the object itself.
+							if (!destObj.IsContainer || destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
 							{
 								return ErrorMessages.Returns.InvalidDestination;
 							}
 
+							// create.c:404. ABODE is ROOM-only in the flag seed, as in PennMUSH, so a
+							// player or thing destination is gated on control alone. Penn's following
+							// room == HOME guard (create.c:412) is unreachable: this branch matches
+							// with MAT_EVERYTHING, which has no home entry, and only
+							// parse_linkable_room ever yields HOME.
+							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("ABODE"))
+							{
+								return ErrorMessages.Returns.PermissionDenied;
+							}
+
 							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
 							return "1";
 						}
 					);
@@ -1901,7 +1912,10 @@ public partial class Functions
 		var objectName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
 
-		// Optional quiet flag (arg 2) and force flag (arg 3) - for now we ignore these
+		// fundb.c:2321-2322: the third argument is TEL_SILENT, which safe_tel passes through as
+		// nomovemsgs. TEL_DEFAULT carries no silence, so an unqualified tel() announces the move.
+		// The fourth, TEL_INSIDE, only decides the player-into-player case, which this does not model.
+		var quiet = args.TryGetValue("2", out var quietArg) && quietArg.Message!.Truthy();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
@@ -1929,22 +1943,21 @@ public partial class Functions
 						var destinationContainer = destObj.AsContainer;
 						var targetContent = targetObj.AsContent;
 
-						if (!await MoveService.CanMoveAsync(executor, targetContent, destinationContainer))
-							return ErrorMessages.Returns.CannotTeleport;
-
 						if (await MoveService.WouldCreateLoop(targetContent, destinationContainer))
 						{
 							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
-						await Mediator.Send(new MoveObjectCommand(
-							targetContent,
-							destinationContainer,
-							executor.Object().DBRef,
-							true, // silent
-							"tel()"));
+						// fundb.c:2326 hands the whole thing to do_teleport, whose move is safe_tel
+						// (wiz.c:578): the move triads fire, and STICKY luggage is stripped on a
+						// cross-owner hop.
+						var moveResult = await MoveService.SafeTel(
+							parser, targetContent, destinationContainer, quiet,
+							executor.Object().DBRef, "tel()");
 
-						return "1";
+						return moveResult.IsT1
+							? ErrorMessages.Returns.CannotTeleport
+							: "1";
 					});
 			});
 	}

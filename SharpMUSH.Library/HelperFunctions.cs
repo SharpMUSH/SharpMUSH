@@ -232,6 +232,13 @@ public static partial class HelperFunctions
 			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
 									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false), cancellationToken);
 
+	/// <summary>
+	/// PennMUSH's <c>Hearer</c> (<c>src/game.c:1564</c>) walks <c>ATTR_FOR_EACH(thing, ptr)</c>,
+	/// which expands to <c>for (var = List(obj); AL_NAME(var); var++)</c> (<c>hdrs/attrib.h:189</c>)
+	/// — the object's own attribute list only, with no parent traversal. The FORWARDLIST and LISTEN
+	/// lookups here are deliberately own-attribute-only (<c>parent: false</c>) to match: a child of a
+	/// parent carrying <c>@listen</c> is not a hearer in PennMUSH.
+	/// </summary>
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
 	{
@@ -241,13 +248,13 @@ public static partial class HelperFunctions
 		}
 
 		if (await obj.IsAudible() &&
-				(await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, true))
+				(await attributes.GetAttributeAsync(obj, obj, "FORWARDLIST", IAttributeService.AttributeMode.Read, false))
 				.IsAttribute)
 		{
 			return true;
 		}
 
-		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, true))
+		if ((await attributes.GetAttributeAsync(obj, obj, "LISTEN", IAttributeService.AttributeMode.Read, false))
 				.IsAttribute)
 		{
 			return true;

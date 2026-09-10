@@ -18,6 +18,16 @@ namespace SharpMUSH.Tests.Commands;
 /// swallowed command exceptions. These tests pin the enforcement: a bare invocation of a command
 /// that requires arguments answers with an arity error rather than a crash.
 /// </summary>
+/// <remarks>
+/// <c>[NotInParallel]</c> because these assertions are the only ones in the suite that check for the
+/// ABSENCE of a message. Several classes use <c>#-1 EXCEPTION: ordinary text</c> as a fixture value
+/// (<c>CommandArgumentResultTests</c>, <c>InputSessionCommandTests</c>, <c>InputHookFailureTests</c>,
+/// <c>SearchPredicateResultTests</c>), and one of those reaches this class's recipient while it is
+/// running — so between two and eleven of these thirteen cases failed per run, with different
+/// members each time, while all thirteen passed alone. The unkeyed non-parallel bucket runs as one
+/// sequential loop after the whole parallel bucket, so nothing else is in flight during these.
+/// </remarks>
+[NotInParallel]
 public class CommandArityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -98,17 +108,18 @@ public class CommandArityTests
 		await Assert.That(messages).Contains("What do you want to do with the channel?");
 	}
 
-	private string[] NotificationsTo(DBRef target) =>
-		NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(call => call.GetArguments() is [AnySharpObject obj, ..] && obj.Object().DBRef == target)
-			.Select(TextOf)
-			.Where(text => text is not null)
-			.Select(text => text!)
-			.ToArray();
-
-	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, OneOf<MString, string> msg, ..]
-			? msg.Match(ms => ms.ToPlainText(), s => s)
-			: null;
+	/// <summary>
+	/// Every notification <paramref name="target"/> has had, read from the per-recipient recorder
+	/// rather than from the notify substitute's received-call list.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TestHelpers.NotificationRecorder"/> is written from the substitute's delivery
+	/// callback, on the calling thread, keyed by recipient. <c>ReceivedCalls()</c> is not: the
+	/// substitute is a singleton shared by every test in the session, TUnit runs tests in parallel,
+	/// so enumerating it reads a collection other tests are still writing to — which NSubstitute's
+	/// threading contract forbids, and which surfaced here as another class's fixture string
+	/// appearing in this one's assertions.
+	/// </remarks>
+	private string[] NotificationsTo(DBRef target)
+		=> [.. WebAppFactoryArg.Notifications.For(target)];
 }

@@ -82,7 +82,6 @@ public partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
@@ -93,8 +92,11 @@ public partial class Commands
 		var attrNameParsed = attrNameResult?.Message ?? attrNameRaw;
 		var attrName = attrNameParsed.ToPlainText();
 
+		// command_atrset() matches with match_controlled(executor, arg_left) (src/cmds.c:1784), so the
+		// executor is both the search origin and the permission subject: "me" in a queued or forced
+		// `&ATTR me=value` names the object running the command, not whoever set it going.
 		var result = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			enactor,
+			executor,
 			executor,
 			args["1"].Message!.ToPlainText(), LocateFlags.All, async realLocated =>
 			{
