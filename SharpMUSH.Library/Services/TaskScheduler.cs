@@ -100,6 +100,10 @@ public partial class TaskScheduler(
 		 _pendingEntries.Values.GroupBy(e => e.Owner).ToDictionary(g => g.Key, g => g.Count()),
 		 new Dictionary<QueueRejectionReason, long>(_rejections));
 	}
+	public bool HasPendingWork(string triggerName, string group)
+	{
+		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == $"{triggerName}-{entry.Pid}" && entry.Group == group);
+	}
 	private QueueAdmissionResult Reject(QueueRejectionReason reason)
 	{
 		lock (_admissionLock) _rejections[reason] = _rejections.GetValueOrDefault(reason) + 1;
@@ -211,11 +215,18 @@ public partial class TaskScheduler(
 			DBRef? owner = null;
 			if (executor is { } reference)
 			{
-				var source = await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken);
-				if (!source.IsNone)
+				try
 				{
-					executor = source.Known().Object().DBRef;
-					owner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+					var source = await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken);
+					if (!source.IsNone)
+					{
+						executor = source.Known().Object().DBRef;
+						owner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+					}
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
+				{
+					logger.LogDebug(ex, "Could not attribute an invalid-target rejection");
 				}
 			}
 			diagnostics.Rejected(executor, owner, kind, QueueOutcome.InvalidTarget);
@@ -444,9 +455,10 @@ public partial class TaskScheduler(
 					{
 						budget.ThrowIfExceeded();
 						await entry.Action();
-						if (budget.IsExpired) await NotifyExpired(entry);
-						entry.Observation?.Complete(budget.IsExpired ? QueueOutcome.ExecutionLimit
-							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed);
+						var outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
+							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed;
+						entry.Observation?.Complete(outcome);
+						if (outcome == QueueOutcome.ExecutionLimit) await NotifyExpired(entry);
 					}
 					catch (OperationCanceledException) when (budget.IsExpired) { entry.Observation?.Complete(QueueOutcome.ExecutionLimit); await NotifyExpired(entry); }
 					catch (OperationCanceledException) when (budget.IsCancelled) { entry.Observation?.Complete(QueueOutcome.Cancelled); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
@@ -519,6 +531,7 @@ public partial class TaskScheduler(
 		await RemoveDeferredTrigger(entry);
 		return await Activate(pid);
 	}
+
 
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
 	public const string DirectInputGroup = "direct-input";

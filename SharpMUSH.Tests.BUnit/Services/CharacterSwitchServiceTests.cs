@@ -16,6 +16,9 @@ file sealed class SwitchApiHandler(bool succeed = true) : HttpMessageHandler
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		if (request.RequestUri?.AbsolutePath == "/api/account/session")
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{ Content = JsonContent.Create(new { username = "current", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() }) });
 		Calls++;
 		if (!succeed)
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
