@@ -57,6 +57,35 @@ public class LegacyQueueCommandBoundaryTests
 	}
 
 	[Test]
+	[Arguments("unsupported", ErrorMessages.Returns.ErrorNotSupported)]
+	[Arguments("absent", ErrorMessages.Returns.NoSuchPid)]
+	[Arguments("denied", ErrorMessages.Returns.PermissionDenied)]
+	public async Task PidInfoPreservesLegacyInspectionBoundaries(string behavior, string expected)
+	{
+		var (_, parser, scheduler, mediator) = Create("PIDInfo", "SEMAPHORE");
+		if (behavior == "absent") mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>())
+			.Returns(AsyncEnumerable.Empty<SemaphoreTaskData>());
+		scheduler.GetQueueEntry(42).Returns(_ => behavior == "unsupported" ? throw new NotSupportedException() : null);
+		var functions = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Functions.Functions>(Factory.Services, mediator);
+		var result = await functions.PIDInfo(parser, new SharpFunctionAttribute { Name = "pidinfo", Flags = FunctionFlags.Regular });
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("LIST")]
+	[Arguments("PAUSE")]
+	[Arguments("RESUME")]
+	public async Task QueueControlReportsUnsupportedInspection(string commandSwitch)
+	{
+		var (commands, parser, scheduler, _) = Create("QueueControl", commandSwitch);
+		scheduler.GetQueueEntries().Returns(_ => throw new NotSupportedException());
+		var metadata = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("QueueControl")!
+			.GetCustomAttributes(typeof(SharpCommandAttribute), false).Cast<SharpCommandAttribute>().Single();
+		var result = await commands.QueueControl(parser, metadata);
+		await Assert.That(result.AsValue().Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+	}
+
+	[Test]
 	public async Task AbsentPidCannotBecomeAnUnauthorizedHaltAfterTheLookup()
 	{
 		var (commands, parser, scheduler, mediator) = Create("Halt", "PID");
@@ -97,20 +126,24 @@ public class LegacyQueueCommandBoundaryTests
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		var scheduler = Substitute.For<ITaskScheduler>();
-		var controls = ActivatorUtilities.CreateInstance<QueueControlService>(Factory.Services, scheduler, mediator, permissions);
+		var capabilities = Substitute.For<SharpMUSH.Library.Authorization.IAdministrativeCapabilityService>();
+		var capabilityActor = new SharpMUSH.Library.Authorization.CapabilityActor("legacy-test", actor.Object().DBRef, actor.Object().DBRef);
+		capabilities.GetGameActorAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(capabilityActor);
+		capabilities.GetGrantedScopesAsync(capabilityActor, Arg.Any<CancellationToken>()).Returns(new HashSet<string>());
+		var controls = new QueueControlService(scheduler, capabilities, mediator, permissions);
 		var notifications = Substitute.For<INotifyService>();
 		var provider = Substitute.For<IServiceProvider>();
 		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ITaskScheduler)
-			? scheduler : call.Arg<Type>() == typeof(INotifyService) ? notifications
+			? scheduler : call.Arg<Type>() == typeof(SharpMUSH.Library.Authorization.IAdministrativeCapabilityService) ? capabilities : call.Arg<Type>() == typeof(INotifyService) ? notifications
 			: call.Arg<Type>() == typeof(IQueueControlService) ? controls : Factory.Services.GetService(call.Arg<Type>()));
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.ServiceProvider.Returns(provider);
 		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
 		{
 			Switches = string.IsNullOrEmpty(commandSwitch) ? [] : [commandSwitch],
-			Arguments = method == "ProcessStatus" && commandSwitch != "DEBUG" ? new() : new()
+			Arguments = method == "QueueControl" ? commandSwitch == "LIST" ? new() : new() { ["0"] = new("42") } : method == "ProcessStatus" && commandSwitch != "DEBUG" ? new() : new()
 			{
-				["0"] = new("42"), ["1"] = new("30")
+				["0"] = new("42"), ["1"] = new(method == "QueueControl" ? "" : "30")
 			}
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services,
