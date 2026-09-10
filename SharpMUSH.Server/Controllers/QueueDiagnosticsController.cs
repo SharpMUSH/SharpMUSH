@@ -54,6 +54,7 @@ public sealed class QueueDiagnosticsController(IQueueDiagnosticsService diagnost
 	{
 		DiagnosticsError.PermissionDenied => StatusCode(403),
 		DiagnosticsError.NotFound => NotFound(),
+		DiagnosticsError.Unsupported => StatusCode(501, new { error = error.ToString() }),
 		DiagnosticsError.CapacityExceeded => StatusCode(429, new { error = error.ToString() }),
 		_ => BadRequest(new { error = error.ToString() })
 	};

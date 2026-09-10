@@ -34,7 +34,9 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		if (limit is < 1 or > 100 || beforeCursor == Guid.Empty) return DiagnosticsError.InvalidRequest;
 		var scope = await queues.GetInspectionScopeAsync(actor, ct);
 		if (!CanInspect(scope)) return DiagnosticsError.PermissionDenied;
-		var active = await queues.ListAsync(actor, 101, ct);
+		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot> active;
+		try { active = await queues.ListAsync(actor, 101, ct); }
+		catch (NotSupportedException) { return DiagnosticsError.Unsupported; }
 		var current = active.Take(100).Select(entry => new DiagnosticQueueRow(entry.Pid,
 			entry.Source?.ToString(), entry.Owner?.ToString(), entry.Kind, entry.State.ToString(), entry.SourceAttribute,
 			entry.EnqueuedAt, entry.StartedAt, null, entry.WaitDuration, entry.ExecutionDuration, entry.InvocationCount, null)).ToArray();

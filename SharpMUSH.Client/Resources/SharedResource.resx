@@ -3789,4 +3789,5 @@
 <data name="SnapshotsResolve" xml:space="preserve"><value>Acknowledge current state</value></data>
 <data name="SnapshotsResolveHelp" xml:space="preserve"><value>If you cannot restore the recovery image, acknowledge the current object to clear its pending marker. This keeps the current object and retains the image; it does not undo partial changes.</value></data>
 <data name="SnapshotsResolved" xml:space="preserve"><value>Recovery marker acknowledged. The current object was kept.</value></data>
+  <data name="DiagUnsupported" xml:space="preserve"><value>This scheduler does not support queue diagnostics.</value></data>
 </root>

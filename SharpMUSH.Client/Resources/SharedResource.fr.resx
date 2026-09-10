@@ -3796,4 +3796,5 @@
   <data name="DiagStatus_InvalidTarget" xml:space="preserve"><value>Cible invalide</value></data>
   <data name="DiagStatus_ShuttingDown" xml:space="preserve"><value>Arrêt en cours</value></data>
   <data name="DiagStatus_ScheduleFailed" xml:space="preserve"><value>Échec de planification</value></data>
+  <data name="DiagUnsupported" xml:space="preserve"><value>Cet ordonnanceur ne prend pas en charge le diagnostic de la file.</value></data>
 </root>
