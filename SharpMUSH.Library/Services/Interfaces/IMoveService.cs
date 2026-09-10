@@ -93,23 +93,6 @@ public interface IMoveService
 		string cause);
 
 	/// <summary>
-	/// Checks if a move is permitted based on locks and permissions.
-	/// </summary>
-	/// <param name="who">The object attempting the move</param>
-	/// <param name="objectToMove">The object being moved</param>
-	/// <param name="destination">The destination container</param>
-	/// <returns>True if the move is permitted</returns>
-	ValueTask<bool> CanMoveAsync(AnySharpObject who, AnySharpContent objectToMove, AnySharpContainer destination);
-
-	/// <summary>
-	/// Calculates the cost of moving an object.
-	/// </summary>
-	/// <param name="objectToMove">The object being moved</param>
-	/// <param name="destination">The destination container</param>
-	/// <returns>The cost in pennies/quota</returns>
-	ValueTask<int> CalculateMoveCostAsync(AnySharpContent objectToMove, AnySharpContainer destination);
-
-	/// <summary>
 	/// Checks if a player is "in the void" (location has DBRef &lt; 0 or is unresolvable).
 	/// If so, moves the player to their home location, or the fallback if home is also invalid.
 	/// Mirrors PennMUSH's void detection in process_command() (src/bsd.c).
