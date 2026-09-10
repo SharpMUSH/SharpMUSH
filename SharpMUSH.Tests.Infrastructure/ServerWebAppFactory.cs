@@ -378,7 +378,8 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		}
 		catch (Exception ex)
 		{
-			TestDiagnostics.WriteLine($"[Telemetry] Error writing summary to '{outputPath}': {ex.Message}");
+			using var logger = TestDiagnostics.CreateLogger();
+			logger.Fatal(ex, "Failed to write requested test telemetry summary to {OutputPath}", outputPath);
 		}
 	}
 }

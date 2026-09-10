@@ -38,20 +38,26 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_NoSwitch_DisplaysHelpMessage()
 	{
+		var notifications = WebAppFactoryArg.Notifications;
+		var before = notifications.DeliveryCountFor(_player.DbRef);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood), _player.DbRef, _player.DbRef)).IsTrue();
+		await Assert.That(notifications.DeliveriesFor(_player.DbRef).Skip(before).Any(delivery =>
+			delivery.Sender == _player.DbRef
+			&& delivery.Message == ErrorMessages.Notifications.ListNotUnderstood)).IsTrue();
 	}
 
 	// PennMUSH src/cmds.c do_list: an unrecognised type gets the same message as no type at all.
 	[Test]
 	public async ValueTask List_UnknownArgument_DisplaysHelpMessage()
 	{
+		var notifications = WebAppFactoryArg.Notifications;
+		var before = notifications.DeliveryCountFor(_player.DbRef);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list zorblatt"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood), _player.DbRef, _player.DbRef)).IsTrue();
+		await Assert.That(notifications.DeliveriesFor(_player.DbRef).Skip(before).Any(delivery =>
+			delivery.Sender == _player.DbRef
+			&& delivery.Message == ErrorMessages.Notifications.ListNotUnderstood)).IsTrue();
 	}
 
 	// PennMUSH src/cmds.c cmd_list falls through to do_list(executor, arg_left, ...) when no
@@ -100,10 +106,13 @@ public class AtListCommandTests
 	[Test]
 	public async ValueTask List_AbbreviatedFlags_IsNotAccepted()
 	{
+		var notifications = WebAppFactoryArg.Notifications;
+		var before = notifications.DeliveryCountFor(_player.DbRef);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list flag"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.ListNotUnderstood), _player.DbRef, _player.DbRef)).IsTrue();
+		await Assert.That(notifications.DeliveriesFor(_player.DbRef).Skip(before).Any(delivery =>
+			delivery.Sender == _player.DbRef
+			&& delivery.Message == ErrorMessages.Notifications.ListNotUnderstood)).IsTrue();
 	}
 
 	// The /lowercase modifier is orthogonal to how the type was spelled.

@@ -61,7 +61,7 @@ jobs:
         run: bash .github/scripts/pack-test-build.sh "$RUNNER_TEMP/test-build"
 
       - name: Upload unit test build output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: SharpMUSH.Tests
           path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.tar.gz
@@ -70,7 +70,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload BUnit test build output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: SharpMUSH.Tests.BUnit
           path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.BUnit.tar.gz
@@ -79,7 +79,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload scene plugin test build output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: SharpMUSH.Tests.ScenePlugin
           path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.ScenePlugin.tar.gz
@@ -88,7 +88,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload integration test build output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: SharpMUSH.Tests.Integration
           path: ${{ runner.temp }}/test-build/SharpMUSH.Tests.Integration.tar.gz
@@ -97,7 +97,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload shared test build output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-build-support
           path: ${{ runner.temp }}/test-build/test-build-support.tar.gz
@@ -131,13 +131,13 @@ jobs:
           cache-dependency-path: '**/*.csproj'
 
       - name: Download test build output
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: SharpMUSH.Tests
           path: ${{ runner.temp }}/test-build
 
       - name: Download shared test build support
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-build-support
           path: ${{ runner.temp }}/test-build
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload unit test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results-unit-${{ matrix.database }}
           path: TestResults/unit/**/*.trx
@@ -184,7 +184,7 @@ jobs:
 
       - name: Upload Telemetry Report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-telemetry-${{ matrix.database }}
           path: test-telemetry.md
@@ -208,13 +208,13 @@ jobs:
           cache-dependency-path: '**/*.csproj'
 
       - name: Download test build output
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: SharpMUSH.Tests.BUnit
           path: ${{ runner.temp }}/test-build
 
       - name: Download shared test build support
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-build-support
           path: ${{ runner.temp }}/test-build
@@ -234,7 +234,7 @@ jobs:
 
       - name: Upload bunit test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results-bunit
           path: TestResults/bunit/**/*.trx
@@ -261,13 +261,13 @@ jobs:
           cache-dependency-path: '**/*.csproj'
 
       - name: Download test build output
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: SharpMUSH.Tests.ScenePlugin
           path: ${{ runner.temp }}/test-build
 
       - name: Download shared test build support
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-build-support
           path: ${{ runner.temp }}/test-build
@@ -284,7 +284,7 @@ jobs:
 
       - name: Upload scene-plugin test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results-scene-plugin
           path: TestResults/scene-plugin/**/*.trx
@@ -313,13 +313,13 @@ jobs:
           cache-dependency-path: '**/*.csproj'
 
       - name: Download test build output
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: SharpMUSH.Tests.Integration
           path: ${{ runner.temp }}/test-build
 
       - name: Download shared test build support
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: test-build-support
           path: ${{ runner.temp }}/test-build
@@ -343,7 +343,7 @@ jobs:
 
       - name: Upload integration test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-results-integration-${{ matrix.database }}
           path: TestResults/integration/**/*.trx
@@ -363,7 +363,7 @@ jobs:
 
       - name: Upload Integration Telemetry Report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: test-telemetry-integration-${{ matrix.database }}
           path: test-telemetry-integration.md
@@ -371,7 +371,7 @@ jobs:
 
       - name: Upload Generated Myrddin BBS Package Manifest
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: myrddin-bbs-package-${{ matrix.database }}
           path: '**/MyrddinBBS_GeneratedPackage.yaml'

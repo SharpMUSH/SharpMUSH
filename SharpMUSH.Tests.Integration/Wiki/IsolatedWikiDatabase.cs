@@ -44,7 +44,7 @@ internal sealed class IsolatedWikiDatabase(IWikiService wiki, IAsyncDisposable o
 			}
 		}
 
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-wiki-isolated-{Guid.NewGuid():N}");
+		var path = Path.Join(Path.GetTempPath(), $"sharpmush-wiki-isolated-{Guid.NewGuid():N}");
 		var lightning = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = path, MapSize = 256L << 20 },
 			Substitute.For<IPasswordService>(), relations: null);

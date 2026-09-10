@@ -149,7 +149,7 @@ public class PluginUnloadTests
 
 	private static async Task RunCollectionProbeAsync()
 	{
-		var directory = Path.Combine(Path.GetTempPath(), "sm-unload-" + Guid.NewGuid().ToString("N"));
+		var directory = Path.Join(Path.GetTempPath(), "sm-unload-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(directory);
 		var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
 		{
@@ -160,7 +160,8 @@ public class PluginUnloadTests
 		foreach (var argument in new[]
 		{
 			typeof(PluginUnloadTests).Assembly.Location,
-			"--treenode-filter", "/*/*/*PluginUnloadTests*/UnloadAsync_CommandOnlyPlugin_CollectibleContextIsReclaimed",
+			"--treenode-filter",
+			$"/*/*/*{nameof(PluginUnloadTests)}*/{nameof(UnloadAsync_CommandOnlyPlugin_CollectibleContextIsReclaimed)}",
 			"--output", "Detailed", "--report-trx", "--report-trx-filename", "probe.trx",
 			"--results-directory", directory
 		}) start.ArgumentList.Add(argument);
@@ -169,6 +170,7 @@ public class PluginUnloadTests
 		start.Environment["TUNIT_DISABLE_GITHUB_REPORTER"] = "true";
 		start.Environment["TUNIT_DISABLE_ARTIFACT_UPLOAD"] = "true";
 		using var process = new Process { StartInfo = start };
+		var succeeded = false;
 		try
 		{
 			process.Start();
@@ -187,15 +189,19 @@ public class PluginUnloadTests
 			}
 			await Assert.That(process.ExitCode).IsEqualTo(0)
 				.Because($"Plugin collection probe failed.\n{await output}\n{await error}");
-			var report = XDocument.Load(Path.Combine(directory, "probe.trx"));
+			var report = XDocument.Load(Path.Join(directory, "probe.trx"));
 			XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
 			var results = report.Descendants(ns + "UnitTestResult").ToArray();
 			await Assert.That(results.Length).IsEqualTo(1);
 			await Assert.That((string?)results[0].Attribute("outcome")).IsEqualTo("Passed");
+			succeeded = true;
 		}
 		finally
 		{
-			Directory.Delete(directory, recursive: true);
+			// Preserve the primary probe failure; cleanup failures still fail an otherwise successful test.
+			try { Directory.Delete(directory, recursive: true); }
+			catch (IOException) when (!succeeded) { }
+			catch (UnauthorizedAccessException) when (!succeeded) { }
 		}
 	}
 
