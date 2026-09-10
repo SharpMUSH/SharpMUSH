@@ -10,9 +10,11 @@ namespace SharpMUSH.Tests.Services;
 public class RealityPolicyTests
 {
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task MalformedProfilesDenyGameplayPerceptionButRemainAdministrativeErrors(bool malformedReceiver)
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task MalformedProfilesDenyGameplayPerceptionButRemainAdministrativeErrors(bool malformedReceiver, bool collidingKeys)
 	{
 		var factory = new TestObjectFactory();
 		var receiver = factory.CreatePlayer(50, "receiver");
@@ -27,13 +29,16 @@ public class RealityPolicyTests
 			.Returns(new RealityConfiguration(1, true, ["normal"]));
 		var malformed = malformedReceiver ? receiver : target;
 		store.GetExpandedObjectData<ObjectReality>(malformed.Object().Id!, RealityPolicy.ObjectKey, Arg.Any<CancellationToken>())
-			.Returns(ObjectReality.Default(malformed.Object().DBRef) with { Version = 2 });
+			.Returns(collidingKeys
+				? ObjectReality.Default(malformed.Object().DBRef) with
+				{ Descriptions = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>("{\"ghost\":\"DESC_ONE\",\"GHOST\":\"DESC_TWO\"}")! }
+				: ObjectReality.Default(malformed.Object().DBRef) with { Version = 2 });
 		var policy = new RealityPolicy(store, objects);
-		await Assert.ThrowsAsync<InvalidDataException>(async () => await policy.ReadObjectAsync(malformed.Object().DBRef));
 		await Assert.That(await policy.CanPerceiveAsync(receiver.Object().DBRef, target.Object().DBRef)).IsFalse();
 		var scan = await policy.ObserveAsync(receiver.Object().DBRef);
 		await Assert.That(await scan(target.Object().DBRef, default)).IsFalse();
 		await Assert.That(await policy.DescriptionAttributeAsync(receiver.Object().DBRef, target.Object().DBRef)).IsNull();
+		await Assert.ThrowsAsync<InvalidDataException>(async () => await policy.ReadObjectAsync(malformed.Object().DBRef));
 	}
 
 	[Test]

@@ -94,7 +94,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		if (!obj.DBRef.Matches(reference) || obj.Id is null) return null;
 		var value = await store.GetExpandedObjectData<ObjectReality>(obj.Id, ObjectKey, ct);
 		if (value is null || !value.Object.Equals(obj.DBRef)) return ObjectReality.Default(obj.DBRef);
-		if (value.Version != 1 || value.Receive is null || value.Transmit is null || value.Descriptions is null)
+		if (value.Version != 1 || value.Receive is null || value.Transmit is null || value.Descriptions is null
+			|| value.Descriptions.Keys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != value.Descriptions.Count)
 		{
 			if (rejectMalformed) throw new InvalidDataException("Invalid object reality data.");
 			// A malformed participant must not reveal itself or interrupt unrelated gameplay.
