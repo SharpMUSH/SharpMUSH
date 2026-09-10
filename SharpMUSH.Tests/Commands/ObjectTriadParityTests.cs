@@ -152,8 +152,7 @@ public class ObjectTriadParityTests
 
 		await God($"@lock/take {room}=#0");
 		await God($"&TAKE_LOCK`AFAILURE {room}=&REFUSED me=%#");
-		// The same attributes on the item must stay untouched — that is the half of this the
-		// pre-fix code got wrong.
+		// The same attributes on the item must stay untouched: fail_lock names oldloc, not thing.
 		await God($"&TAKE_LOCK`AFAILURE {item}=&REFUSED me=wrong-object");
 
 		await GodParser.CommandParse(taker.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
@@ -306,6 +305,63 @@ public class ObjectTriadParityTests
 			.Because("the room's own drop lock is evaluated after the thing's");
 		await Assert.That(await Read(item, "DROPPED")).IsEmpty()
 			.Because("the room's drop-lock branch returns before the DROP triad");
+	}
+
+	/// <summary>
+	/// <c>eval_lock_with(player, loc, DropIn_Lock, pe_info)</c> (<c>src/move.c:745</c>): the drop-in
+	/// lock is evaluated against the DROPPER, not against the object being dropped, so a
+	/// <c>@lock/dropin</c> keyed on a player matches when that player drops something.
+	/// </summary>
+	[Test]
+	public async ValueTask DropInLockIsEvaluatedAgainstTheDropper()
+	{
+		var dropper = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropInActorLock");
+		var item = await Thing("DropInActorItem");
+		var room = await Room("DropInActorRoom", dropper.DbRef, item);
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
+		await God($"@lock/dropin {room}=#{dropper.DbRef.Number}");
+		await God($"&DROPIN_LOCK`AFAILURE {room}=&BOUNCED me=%#");
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(room, "BOUNCED")).IsEmpty()
+			.Because("the lock names the dropper, and the dropper is who it is evaluated against");
+
+		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim()))
+			.IsEqualTo(BareDbrefs(room))
+			.Because("the drop-in lock passed, so the item reached the room");
+	}
+
+	// --- EMPTY ----------------------------------------------------------------------------------
+
+	/// <summary>
+	/// <c>eval_lock_with(player, thing_loc, DropIn_Lock, pe_info)</c> (<c>src/move.c:829</c>):
+	/// <c>@empty</c> evaluates the destination's drop-in lock against the PLAYER emptying the
+	/// container, not against each item being moved.
+	/// </summary>
+	[Test]
+	public async ValueTask EmptyEvaluatesTheDropInLockAgainstThePlayer()
+	{
+		var emptier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EmptyActor");
+		var box = await Thing("EmptyBox");
+		var item = await Thing("EmptyItem");
+		var room = await Room("EmptyRoom", emptier.DbRef, box);
+
+		await God($"@set {box}=ENTER_OK");
+		await God($"@teleport/silent {item}={box}");
+		await God($"@lock/dropin {room}=#{emptier.DbRef.Number}");
+
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+			.Because("the drop-in lock names the emptier, who is who it is evaluated against");
 	}
 
 	// --- GIVE -----------------------------------------------------------------------------------
