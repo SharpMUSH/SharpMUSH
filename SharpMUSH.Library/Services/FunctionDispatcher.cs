@@ -56,7 +56,7 @@ public static class FunctionDispatcher
 		var suppressDiagnostics = isolated;
 		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.Deprecated))
 		{
-			var owner = await executor!.Object().Owner.WithCancellation(CancellationToken.None);
+			var owner = await executor!.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 			await notify.Notify(owner.Object.DBRef, $"Deprecated function {name} being used on object {executor!.Object().DBRef}.");
 		}
 		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogArgs))
@@ -112,7 +112,7 @@ public static class FunctionDispatcher
 			return ErrorMessages.Returns.PermissionDenied;
 		if ((flags & (FunctionFlags.NoGagged | FunctionFlags.NoFixed)) != 0)
 		{
-			AnySharpObject owner = await executor!.Object().Owner.WithCancellation(CancellationToken.None);
+			AnySharpObject owner = await executor!.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 			if ((flags.HasFlag(FunctionFlags.NoGagged) && await owner.HasFlag("GAGGED"))
 				|| (flags.HasFlag(FunctionFlags.NoFixed) && await owner.HasFlag("FIXED")))
 				return ErrorMessages.Returns.PermissionDenied;

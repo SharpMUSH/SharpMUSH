@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -163,11 +164,20 @@ public partial class Functions
 			? delimArg.Message!.ToPlainText()
 			: " ";
 
-		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid)).FirstOrDefaultAsync();
-
-		return task is null
-			? new CallState(ErrorMessages.Returns.NoSuchPid)
-			: FormatTaskInfo(task, field, delimiter);
+		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
+		if (task is null) return new CallState(ErrorMessages.Returns.NoSuchPid);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		try
+		{
+			if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+		catch (NotSupportedException)
+		{
+			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
+		}
+		return FormatTaskInfo(task, field, delimiter);
 	}
 
 	private CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)

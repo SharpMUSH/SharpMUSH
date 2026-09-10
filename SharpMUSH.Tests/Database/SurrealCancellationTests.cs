@@ -87,11 +87,11 @@ public class SurrealCancellationTests
 		});
 		using var cancellation = new CancellationTokenSource();
 		var write = database.SetExpandedServerData("active", new { Value = 1 }, cancellation.Token).AsTask();
-		using var registrationLifetime = registration;
 		cancellation.Cancel();
 		var cancelled = false;
 		try { await write; }
 		catch (OperationCanceledException) { cancelled = true; }
+		finally { registration.Dispose(); }
 		await Assert.That(cancelled).IsTrue();
 		await Assert.That(forwarded.IsCancellationRequested).IsTrue();
 	}
@@ -123,11 +123,11 @@ public class SurrealCancellationTests
 			if (importing) await client.Import("CREATE test:1;", token);
 			else await client.Export(cancellationToken: token);
 		}, cancellation.Token);
-		using var registrationLifetime = registration;
 		cancellation.Cancel();
 		var cancelled = false;
 		try { await operation; }
 		catch (OperationCanceledException) { cancelled = true; }
+		finally { registration.Dispose(); }
 		await Assert.That(cancelled).IsTrue();
 		await Assert.That(forwarded.IsCancellationRequested).IsTrue();
 	}

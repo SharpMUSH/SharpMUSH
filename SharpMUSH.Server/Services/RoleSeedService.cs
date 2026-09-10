@@ -42,10 +42,10 @@ public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService
 				if (upgrade && current.IsSystem)
 				{
 					var permissions = new Dictionary<string, PermissionState>(current.Permissions);
-					foreach (var scope in AddedCapabilities.Where(scope =>
-						template.Permissions.ContainsKey(scope) &&
-						!permissions.Keys.Contains(scope, StringComparer.OrdinalIgnoreCase)))
-						permissions.Add(scope, template.Permissions[scope]);
+					foreach (var scope in AddedCapabilities)
+						if (template.Permissions.TryGetValue(scope, out var grant) &&
+							!permissions.Keys.Contains(scope, StringComparer.OrdinalIgnoreCase))
+							permissions.Add(scope, grant);
 					if (permissions.Count != current.Permissions.Count)
 						await roles.UpsertRoleAsync(new SharpRole
 						{
