@@ -1426,11 +1426,14 @@ public partial class Commands
 			}
 
 			// Every check from here to the end of the command is gated on Tel_Anywhere in PennMUSH
-			// (wiz.c:446, 483, 541, 549, 563). DEVIATION: SharpMUSH has no Tel_Anywhere power, so
-			// wizardry stands in for it, as it already did for the NO_TEL and zone checks below.
-			var telAnywhere = await executor.IsWizard();
+			// (wiz.c:442, 487, 541, 549, 563): Hasprivs(x) || has_power_by_name(x, "TPORT_ANYWHERE")
+			// (hdrs/mushdb.h:17-18), where Hasprivs is Wizard or Royalty. SharpMUSH seeds the matching
+			// power as Tport_Anywhere (SharpMUSH.Database/Seed/PowerSeed.cs:48).
+			var telAnywhere = await executor.IsWizard()
+				|| await executor.IsRoyalty()
+				|| await executor.HasPower("Tport_Anywhere");
 
-			// wiz.c:446: without Tel_Anywhere, another player is not a destination at all — the
+			// wiz.c:442: without Tel_Anywhere, another player is not a destination at all — the
 			// /INSIDE question below only arises for someone who could have gone there.
 			if (!telAnywhere && target.IsPlayer && destinationContainer.IsPlayer)
 			{
@@ -1438,8 +1441,11 @@ public partial class Commands
 				continue;
 			}
 
-			// wiz.c:483: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
+			// wiz.c:487: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
 			// player rather than inside them. /INSIDE is what asks for the containment instead.
+			// DEVIATION: Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns
+			// before wiz.c:585, so it never prints "Teleported." here. This falls through to the shared
+			// path below instead, which does print it.
 			if (telAnywhere
 					&& target.IsPlayer
 					&& destinationContainer.IsPlayer

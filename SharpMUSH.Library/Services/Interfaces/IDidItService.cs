@@ -24,13 +24,18 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="Interact">Interaction gate applied to the o-message audience.</param>
 /// <remarks>
 /// <b>Triad defaults are deliberately not localized.</b> PennMUSH wraps each of them in <c>T()</c>,
-/// which resolves once against the server's locale; SharpMUSH resolves per connection instead, and a
-/// triad has two audiences at once. <paramref name="ODef"/> is broadcast to a whole room through a
-/// single rendered <c>MString</c>, so it cannot be per-recipient without changing what
-/// <c>ICommunicationService.SendToRoomAsync</c> is handed — and localizing only
-/// <paramref name="Def"/> would make the two halves of one triad speak different languages to people
-/// standing next to each other. Both stay literal until the broadcast side can carry a key.
-/// Callers pass <c>ErrorMessages.Notifications.*</c> constants so the wording still has one home.
+/// which resolves once against the server's locale; SharpMUSH resolves per connection instead
+/// (<c>NotifyService.NotifyLocalized</c> reads a <c>Locale</c> from each connection's own metadata),
+/// and a single player can hold several connections with different locales at once. The
+/// evaluated-attribute half of the triad genuinely must render once regardless — running softcode
+/// per recipient would be wrong — but even the literal-default half has no seam to fix this through:
+/// <paramref name="Def"/> and <paramref name="ODef"/> reach players as rendered
+/// <c>MString</c>/<c>string</c> values, and <c>ICommunicationService.SendToRoomAsync</c>'s broadcast callback
+/// (<c>Func&lt;AnySharpObject, OneOf&lt;MString, string&gt;&gt;</c>) has no way to hand back a
+/// resource key instead and let the send resolve it per recipient the way <c>NotifyLocalized</c>
+/// does for a single target. Both stay literal until <c>INotifyService</c>/<c>ICommunicationService</c>
+/// grow a key-carrying broadcast path. Callers pass <c>ErrorMessages.Notifications.*</c> constants so
+/// the wording still has one home.
 /// </remarks>
 public record DidItRequest(
 	AnySharpObject Player,

@@ -526,7 +526,9 @@ public static class ErrorMessages
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
 		// These reach the game as literal text, not through the resx. That is the settled convention
-		// for every triad default; the reasoning is written out once, on DidItRequest.
+		// for every triad default; the reasoning — a multi-connection, per-recipient locale problem
+		// with no broadcast seam to carry a key through, not a missing resx entry — is written out
+		// once, on DidItRequest.
 		public const string DefaultOLeave = "has left.";
 		public const string DefaultOEnter = "has arrived.";
 		public const string HomeNoPlaceLikeHome = "There's no place like home...";

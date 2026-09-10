@@ -1130,4 +1130,73 @@ public class MovementParityTests
 		await Assert.That(await LocationOf(guest.DbRef.ToString()))
 			.IsEqualTo(BareDbref(host.DbRef.ToString()));
 	}
+
+	/// <summary>
+	/// <c>Tel_Anywhere(x) = Hasprivs(x) || has_power_by_name(x, "TPORT_ANYWHERE")</c>
+	/// (<c>hdrs/mushdb.h:17-18</c>), where <c>Hasprivs</c> is God, Wizard <b>or Royalty</b>
+	/// (<c>hdrs/dbdefs.h:195</c>). The refusal at <c>wiz.c:446</c> — a mortal cannot make a player a
+	/// destination for another player at all — must therefore let Royalty and a
+	/// <c>Tport_Anywhere</c>-power holder through exactly as it lets a Wizard through, even though
+	/// neither is a Wizard.
+	/// </summary>
+	[Test]
+	[Arguments("ROYALTY", null)]
+	[Arguments(null, "Tport_Anywhere")]
+	public async ValueTask ARoyaltyOrTportAnywherePlayerPassesTheSamePlayerToPlayerCheckAsAWizard(
+		string? flag, string? power)
+	{
+		var room = await Dig("TelAnywhereRoom");
+		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelAnywhereHost");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelAnywhereMover");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={room}"));
+
+		if (flag is not null)
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mover.DbRef}={flag}"));
+		}
+
+		if (power is not null)
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {mover.DbRef}={power}"));
+		}
+
+		// wiz.c:446 fires on a plain mortal self-teleporting onto another player: neither flag nor
+		// power is Wizard, so a predicate that only tested IsWizard() would refuse this exactly as it
+		// would refuse a mortal.
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService,
+				MarkupText.Plain($"@teleport me={host.DbRef}")));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.BadDestination))
+			.IsFalse()
+			.Because("Royalty and a Tport_Anywhere holder are Tel_Anywhere just like a Wizard");
+		await Assert.That(await LocationOf(mover.DbRef.ToString()))
+			.IsEqualTo(BareDbref(room))
+			.Because("without /inside the mover lands beside the host, in the host's room");
+	}
+
+	/// <summary>
+	/// The mortal control for <see cref="ARoyaltyOrTportAnywherePlayerPassesTheSamePlayerToPlayerCheckAsAWizard"/>:
+	/// without Wizard, Royalty or <c>Tport_Anywhere</c>, <c>wiz.c:446</c> refuses before the move.
+	/// </summary>
+	[Test]
+	public async ValueTask AMortalCannotTeleportSelfOntoAnotherPlayer()
+	{
+		var room = await Dig("TelAnywhereMortalRoom");
+		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelAnywhereMortalHost");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelAnywhereMortalMover");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={room}"));
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService,
+				MarkupText.Plain($"@teleport me={host.DbRef}")));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.BadDestination)).IsTrue();
+	}
 }
