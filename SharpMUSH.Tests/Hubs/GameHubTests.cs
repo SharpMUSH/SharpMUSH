@@ -9,6 +9,8 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Tests.Hubs;
 
@@ -36,7 +38,7 @@ public class GameHubTests
 	}
 
 	private static (GameHub hub, IGroupManager groups, IMessageBus bus) BuildHubWithBus(
-		string? characterDbref = "#42:1700000000", SitelockGuard? sitelockGuard = null)
+		string? characterDbref = "#42:1700000000", SitelockGuard? sitelockGuard = null, IVisibleWorldProjection? projection = null)
 	{
 		var groups = Substitute.For<IGroupManager>();
 		groups.AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -51,7 +53,7 @@ public class GameHubTests
 		if (characterDbref is not null)
 		{
 			var identity = new ClaimsIdentity(
-				new[] { new Claim(GameHub.CharacterDbrefClaim, characterDbref) },
+				new[] { new Claim(GameHub.CharacterDbrefClaim, characterDbref), new Claim(ClaimTypes.NameIdentifier, "account") },
 				"TestAuth");
 			context.User.Returns(new ClaimsPrincipal(identity));
 		}
@@ -65,9 +67,24 @@ public class GameHubTests
 			.Returns(Task.CompletedTask);
 
 		var registry = new HubConnectionRegistry();
+		registry.Add("conn-001", "account", "127.0.0.1", () => { });
 		var guard = sitelockGuard ?? BuildSitelockGuard(blocked: false);
 
-		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry, guard)
+		if (projection is null)
+		{
+			projection = Substitute.For<IVisibleWorldProjection>();
+			projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>()).Returns(call =>
+			{
+				var actor = call.Arg<CapabilityActor>();
+				if (actor.ActiveCharacter is not { IsObjid: true } identity) return ValueTask.FromResult<SharpPlayer?>(null);
+				var player = new SharpMUSH.Tests.Services.TestObjectFactory().CreatePlayer(identity.Number, "Player").AsPlayer;
+				player.Object.CreationTime = identity.CreationMilliseconds!.Value;
+				return ValueTask.FromResult<SharpPlayer?>(player);
+			});
+			projection.CanSubscribeRoomAsync(Arg.Any<CapabilityActor>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		}
+
+		var hub = new GameHub(bus, NullLogger<GameHub>.Instance, registry, guard, projection)
 		{
 			Groups = groups,
 			Clients = clients,
@@ -75,6 +92,25 @@ public class GameHubTests
 		};
 
 		return (hub, groups, bus);
+	}
+
+	[Test]
+	public async Task RevokedCharacterCannotJoinOutputGroupOrSendCommands()
+	{
+		var projection = Substitute.For<IVisibleWorldProjection>();
+		var (hub, groups, bus) = BuildHubWithBus(projection: projection);
+		await hub.OnConnectedAsync();
+		await groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+		await Assert.That(async () => await hub.SendCommand("look")).Throws<HubException>();
+		await bus.DidNotReceive().Publish(Arg.Any<GameCommandMessage>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task CannotSubscribeWithoutCurrentPhysicalRoomAuthorization()
+	{
+		var (hub, groups, _) = BuildHubWithBus(projection: Substitute.For<IVisibleWorldProjection>());
+		await Assert.That(async () => await hub.JoinRoom("#99:1")).Throws<HubException>();
+		await groups.DidNotReceive().AddToGroupAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]

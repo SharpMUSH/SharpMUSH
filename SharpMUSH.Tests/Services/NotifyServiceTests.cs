@@ -26,7 +26,7 @@ public class NotifyServiceTests
 		var messageBus = Substitute.For<IMessageBus>();
 		var connections = new ConnectionService(publisher);
 		var localization = new LocalizationService();
-		var notify = new NotifyService(messageBus, connections, localization);
+		var notify = new NotifyService(messageBus, connections, localization, DisabledRealityPolicy.Instance);
 
 		await connections.Register(
 			1,
@@ -61,7 +61,7 @@ public class NotifyServiceTests
 		var messageBus = Substitute.For<IMessageBus>();
 		var connections = new ConnectionService(publisher);
 		var localization = new LocalizationService();
-		var notify = new NotifyService(messageBus, connections, localization);
+		var notify = new NotifyService(messageBus, connections, localization, DisabledRealityPolicy.Instance);
 
 		await connections.Register(
 			7,

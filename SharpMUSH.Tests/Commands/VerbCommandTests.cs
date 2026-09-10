@@ -32,7 +32,7 @@ public class VerbCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbActorDefault_Value_52830")),
-				Arg.Is<AnySharpObject?>(s => s == null),
+				TestHelpers.MatchingObject(verbObj),
 				INotifyService.NotificationType.Announce);
 	}
 
@@ -53,7 +53,7 @@ public class VerbCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbAction_Value_74102")),
-				Arg.Is<AnySharpObject?>(s => s == null),
+				TestHelpers.MatchingObject(verbObj),
 				INotifyService.NotificationType.Announce);
 	}
 
@@ -73,7 +73,7 @@ public class VerbCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(verbObj),
 				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
-				Arg.Is<AnySharpObject?>(s => s == null),
+				TestHelpers.MatchingObject(verbObj),
 				INotifyService.NotificationType.Announce);
 	}
 

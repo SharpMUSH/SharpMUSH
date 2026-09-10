@@ -8,7 +8,8 @@ public interface IPermissionService
 	[Flags]
 	enum InteractType
 	{
-		See, Hear, Match, Presence, Page
+		// Published plugin ABI: Presence historically occupies the combined value 3.
+		See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4
 	}
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
@@ -46,6 +47,10 @@ public interface IPermissionService
 	ValueTask<bool> CanExecuteAttribute(AnySharpObject viewer, AnySharpObject target, params LazySharpAttribute[] attribute);
 
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type);
+
+	/// <summary>Checks the executor's interaction permissions while hearing the effective message source.</summary>
+	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpObject interacted, InteractType type,
+		AnySharpObject hearingSource) => CanInteract(interactor, interacted, type);
 
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
