@@ -232,12 +232,16 @@ public class AccountAuthService(
 		Permissions = [];
 		try
 		{
+			// Authentication-state queries share this bootstrap task; a stalled refresh must not
+			// hold public rendering for the named client's much longer default timeout.
+			using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 			var token = AccountSessionToken;
 			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
 			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
 			// recursively waiting on this same initialization task.
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-			using var response = await httpClientFactory.CreateClient("api").SendAsync(request);
+			using var response = await httpClientFactory.CreateClient("api")
+				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
 			if (AccountSessionToken != token || ExplicitlyLoggedOut) return;
 			if (response.StatusCode == HttpStatusCode.Unauthorized)
 			{
@@ -245,7 +249,8 @@ public class AccountAuthService(
 				return;
 			}
 			if (!response.IsSuccessStatusCode) return;
-			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>();
+			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
+			refresh.Token.ThrowIfCancellationRequested();
 			if (current is null || AccountSessionToken != token || ExplicitlyLoggedOut) return;
 			Username = current.Username;
 			MustChangePassword = current.MustChangePassword;
