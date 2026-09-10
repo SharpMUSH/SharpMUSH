@@ -152,6 +152,13 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
 	{
 		var parts = new MString[context.ChildCount];
+		var hadErrors = false;
+		async ValueTask<MString> EvaluateArgument(EvaluationStringContext argument)
+		{
+			var result = await visitor.Visit(argument);
+			hadErrors |= result?.HadErrors == true;
+			return result?.Message ?? MarkupText.Empty;
+		}
 		using var retainedText = RestrictedTextRetention.Enter(parser.CurrentState);
 
 		visitor._suppressFunctionEval++;
@@ -161,7 +168,7 @@ public class SharpMUSHParserVisitor(
 			{
 				var part = context.GetChild(i) switch
 				{
-					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MarkupText.Empty,
+					EvaluationStringContext argument => await EvaluateArgument(argument),
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
 					_ => MarkupText.Empty
 				};
@@ -174,7 +181,7 @@ public class SharpMUSHParserVisitor(
 			visitor._suppressFunctionEval--;
 		}
 
-		return new CallState(MarkupText.Concat(parts), context.Depth());
+		return new CallState(MarkupText.Concat(parts), context.Depth()) { HadErrors = hadErrors };
 	}
 
 	/// <summary>
