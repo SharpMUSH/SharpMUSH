@@ -820,6 +820,22 @@ public class GeneralCommandTests
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Empty);
 	}
 
+	[Test]
+	public async ValueTask ThinkDescendingLnumNotifiesTheExecutor()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ThinkLnum");
+
+		var result = await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("think lnum(10,1)"));
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("10 9 8 7 6 5 4 3 2 1");
+		await NotifyService.Received(1).Notify(TestHelpers.MatchingObject(player.DbRef),
+			Arg.Is<OneOf<MString, string>>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, "10 9 8 7 6 5 4 3 2 1")),
+			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+	}
+
 	/// <summary>
 	/// PennMUSH <c>do_open</c> hands the destination to <c>do_link</c>, which reports a destination it
 	/// cannot link to instead of quietly leaving the exit unlinked. An exit is the one thing you cannot

@@ -594,6 +594,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
+		// The endpoints determine direction; the supplied step is a magnitude (PennMUSH).
+		step = start > end ? -Math.Abs(step) : Math.Abs(step);
+
 		var useIntegers = Math.Abs(start - Math.Floor(start)) < 1e-10
 			&& Math.Abs(end - Math.Floor(end)) < 1e-10
 			&& Math.Abs(step - Math.Floor(step)) < 1e-10;
