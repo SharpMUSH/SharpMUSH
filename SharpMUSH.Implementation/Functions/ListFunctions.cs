@@ -134,21 +134,22 @@ public partial class Functions
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
 	public async ValueTask<CallState> Filter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.ToPlainText() == "1")
 				.Select(pair => pair.item);
-			return new CallState(MarkupText.Join(sep, filteredItems));
+			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -156,7 +157,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -171,7 +172,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -185,12 +186,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -214,13 +215,13 @@ public partial class Functions
 				}
 			});
 
-			if ((await newParser.FunctionParse(attrValue))!.Message!.ToPlainText() == "1")
+			if (errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText() == "1")
 			{
 				result.Add(item);
 			}
 		}
 
-		return new CallState(MarkupText.Join(sep, result));
+		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 	}
 
 	// (attribute, list, delimiter, outsep) — arg 0 is the boolean predicate attribute, read below
@@ -229,22 +230,23 @@ public partial class Functions
 	[SharpFunction(Name = "filterbool", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public async ValueTask<CallState> FilterBool(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
 			var filteredItems = list.Zip(lambdaResults, (item, boolResult) => (item, boolResult))
 				.Where(pair => pair.boolResult.Truthy(parser))
 				.Select(pair => pair.item);
 
-			return new CallState(MarkupText.Join(sep, filteredItems));
+			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -252,7 +254,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -267,7 +269,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -281,12 +283,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -310,13 +312,13 @@ public partial class Functions
 				}
 			});
 
-			if ((await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser))
+			if (errors.Record(await newParser.FunctionParse(attrValue)).Truthy(parser))
 			{
 				result.Add(item);
 			}
 		}
 
-		return new CallState(MarkupText.Join(sep, result));
+		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 	}
 
 	[SharpFunction(Name = "first", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -334,6 +336,7 @@ public partial class Functions
 	[SharpFunction(Name = "firstof", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object..."])]
 	public async ValueTask<CallState> FirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var args = parser.CurrentState.ArgumentsOrdered;
 
 		// PennMUSH: evaluate each arg in order, return the first truthy one.
@@ -341,15 +344,15 @@ public partial class Functions
 		CallState lastValue = CallState.Empty;
 		foreach (var arg in args)
 		{
-			var parsed = await arg.Value.ParsedMessage();
+			var parsed = errors.Record(await arg.Value.GetParsedResultAsync());
 			lastValue = parsed;
 			if (parsed.Truthy(parser))
 			{
-				return parsed;
+				return errors.Complete(new CallState(parsed));
 			}
 		}
 
-		return lastValue;
+		return errors.Complete(lastValue);
 	}
 
 	// Argument order is (attr, list, base, delimiter) — matching the helpfile and the indices read
@@ -357,6 +360,7 @@ public partial class Functions
 	[SharpFunction(Name = "fold", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "base", "delimiter"])]
 	public async ValueTask<CallState> Fold(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
@@ -364,7 +368,7 @@ public partial class Functions
 		var baseCase = parser.CurrentState.ArgumentsOrdered.TryGetValue("2", out var baseCaseArg)
 			? baseCaseArg.Message
 			: null;
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
+		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (list.Length == 0)
@@ -376,7 +380,7 @@ public partial class Functions
 			// genuinely nothing to return.
 			// PennMUSH's fun_fold has no empty-list guard: it calls <attr> once with %1 read
 			// from an unset slot. That is a defect, not a contract, and is not reproduced.
-			return baseCase is null ? CallState.Empty : new CallState(baseCase);
+			return errors.Complete(baseCase is null ? CallState.Empty : new CallState(baseCase));
 		}
 
 		MString accumulator;
@@ -391,7 +395,7 @@ public partial class Functions
 		{
 			if (list.Length < 2)
 			{
-				return new CallState(list[0]);
+				return errors.Complete(new CallState(list[0]));
 			}
 			accumulator = list[0];
 			startIndex = 1;
@@ -401,7 +405,7 @@ public partial class Functions
 		{
 			for (var i = startIndex; i < list.Length; i++)
 			{
-				accumulator = await AttributeService.EvaluateAttributeFunctionAsync(
+				accumulator = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
 					parser,
 					executor,
 					rawAttrArg,
@@ -410,10 +414,10 @@ public partial class Functions
 						{ "0", new CallState(accumulator) },
 						{ "1", new CallState(list[i]) },
 						{ "2", new CallState(iteration) }
-					});
+					}));
 				iteration++;
 			}
-			return new CallState(accumulator);
+			return errors.Complete(new CallState(accumulator));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -421,7 +425,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -436,7 +440,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -450,12 +454,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -478,11 +482,11 @@ public partial class Functions
 					["2"] = new CallState(iteration)
 				}
 			});
-			accumulator = (await newParser.FunctionParse(attrValue))!.Message!;
+			accumulator = errors.Record(await newParser.FunctionParse(attrValue));
 			iteration++;
 		}
 
-		return new CallState(accumulator);
+		return errors.Complete(new CallState(accumulator));
 	}
 
 	/// <summary>
@@ -567,10 +571,11 @@ public partial class Functions
 	[SharpFunction(Name = "iter", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
 	public async ValueTask<CallState> Iter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var listArg = (await parser.CurrentState.Arguments["0"].ParsedMessage())!;
+		var errors = new ListEvaluationErrors();
+		var listArg = errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync());
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, listArg);
 		var wrappedIteration = new IterationWrapper<MString>
 		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
@@ -589,8 +594,8 @@ public partial class Functions
 			wrappedIteration.Value = item!;
 			wrappedIteration.Iteration++;
 			var parsed = modifiedPattern != null
-				? (await parser.FunctionParse(modifiedPattern))?.Message
-				: await patternArg.ParsedMessage();
+				? errors.Record(await parser.FunctionParse(modifiedPattern))
+				: errors.Record(await patternArg.GetParsedResultAsync());
 			result.Add(parsed!);
 
 			if (wrappedIteration.Break)
@@ -601,7 +606,7 @@ public partial class Functions
 
 		parser.CurrentState.IterationRegisters.TryPop(out _);
 
-		return new CallState(MarkupText.Join(sep, result));
+		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 	}
 
 	[SharpFunction(Name = "items", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "delimiter"])]
@@ -741,25 +746,26 @@ public partial class Functions
 	[SharpFunction(Name = "map", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public async ValueTask<CallState> Map(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list);
-			return new CallState(MarkupText.Join(sep, lambdaResults));
+			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
 		var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -774,7 +780,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -788,12 +794,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -807,10 +813,10 @@ public partial class Functions
 				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
 				EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
 			});
-			mapResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
+			mapResult.Add(errors.Record(await newParser.FunctionParse(attrValue)));
 		}
 
-		return new CallState(MarkupText.Join(sep, mapResult));
+		return errors.Complete(new CallState(MarkupText.Join(sep, mapResult)));
 	}
 
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
@@ -876,6 +882,7 @@ public partial class Functions
 	[SharpFunction(Name = "mix", MinArgs = 3, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "delimiter", "outsep"])]
 	public async ValueTask<CallState> Mix(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
@@ -914,9 +921,9 @@ public partial class Functions
 				{
 					args[j.ToString()] = new CallState(i < lists[j].Length ? lists[j][i] : MarkupText.Empty);
 				}
-				result.Add(await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, args));
+				result.Add(errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, args)));
 			}
-			return new CallState(MarkupText.Join(delimiter, result));
+			return errors.Complete(new CallState(MarkupText.Join(delimiter, result)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -924,7 +931,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -939,7 +946,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -953,12 +960,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -982,21 +989,22 @@ public partial class Functions
 				Arguments = args,
 				EnvironmentRegisters = envRegs
 			});
-			attrResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
+			attrResult.Add(errors.Record(await newParser.FunctionParse(attrValue)));
 		}
 
-		return new CallState(MarkupText.Join(delimiter, attrResult));
+		return errors.Complete(new CallState(MarkupText.Join(delimiter, attrResult)));
 	}
 
 	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
 	public async ValueTask<CallState> Munge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 
 		var list1 = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 		var list2 = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
@@ -1012,8 +1020,8 @@ public partial class Functions
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			transformedList1Str = await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, rawAttrArg, mungeArgs);
+			transformedList1Str = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
+				parser, executor, rawAttrArg, mungeArgs));
 		}
 		else
 		{
@@ -1022,7 +1030,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1037,7 +1045,7 @@ public partial class Functions
 
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return errors.Complete(CallState.Empty);
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -1051,12 +1059,12 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return errors.Complete(new CallState(maybeAttr.AsError.Value));
 			}
 
 			var attr = maybeAttr.AsAttribute;
@@ -1067,7 +1075,7 @@ public partial class Functions
 				Arguments = mungeArgs,
 				EnvironmentRegisters = new Dictionary<string, CallState>(mungeArgs)
 			});
-			transformedList1Str = (await newParser.FunctionParse(attrValue))!.Message!;
+			transformedList1Str = errors.Record(await newParser.FunctionParse(attrValue));
 		}
 
 		var transformedList1 = MushText.SplitList(delim, transformedList1Str);
@@ -1089,7 +1097,7 @@ public partial class Functions
 			}
 		}
 
-		return new CallState(MarkupText.Join(sep, result));
+		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 	}
 
 	/// <summary>One entry of a namegrab() list: the dbref as the caller spelled it, and the object's name.</summary>
@@ -1273,14 +1281,15 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(MarkupText.Join(delim, list.Skip(1))));
 	}
 
-	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
+	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "output-separator"])]
 	public async ValueTask<CallState> ReverseList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, " ");
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
-		var list = MushText.SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var errors = new ListEvaluationErrors();
+		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 2, delim);
+		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
 
-		return new CallState(MarkupText.Join(sep, list.Reverse()));
+		return errors.Complete(new CallState(MarkupText.Join(sep, list.Reverse())));
 	}
 
 	[SharpFunction(Name = "shuffle", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1317,17 +1326,18 @@ public partial class Functions
 	[SharpFunction(Name = "sortby", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter", "outsep"])]
 	public async ValueTask<CallState> SortBy(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 3, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		async Task<int> CompareViaLambda(MString a, MString b)
 		{
-			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+			var result = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser,
 				executor,
 				rawAttrArg,
@@ -1335,13 +1345,13 @@ public partial class Functions
 				{
 					{ "0", new CallState(a) },
 					{ "1", new CallState(b) }
-				});
+				}));
 			return int.TryParse(result.ToPlainText(), out var cmp) ? (cmp > 0 ? 1 : cmp < 0 ? -1 : 0) : 0;
 		}
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda)));
+			return errors.Complete(new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda))));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1349,7 +1359,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1364,7 +1374,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -1378,12 +1388,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -1404,11 +1414,11 @@ public partial class Functions
 					["1"] = new CallState(b)
 				}
 			});
-			var result = (await newParser.FunctionParse(attrValue))!.Message!.ToPlainText();
+			var result = errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText();
 			return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
 		}
 
-		return new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaAttribute)));
+		return errors.Complete(new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaAttribute))));
 	}
 
 	/// <summary>
@@ -1436,13 +1446,14 @@ public partial class Functions
 	[SharpFunction(Name = "sortkey", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "attribute", "delimiter"])]
 	public async ValueTask<CallState> SortKey(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var sortType = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Plain(""));
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
+		var sortType = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Plain(""));
+		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 		var keys = new List<string>(list.Length);
@@ -1451,11 +1462,11 @@ public partial class Functions
 		{
 			foreach (var item in list)
 			{
-				var keyResult = await AttributeService.EvaluateAttributeFunctionAsync(
+				var keyResult = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
 					parser,
 					executor,
 					rawAttrArg,
-					new Dictionary<string, CallState> { { "0", new CallState(item) } });
+					new Dictionary<string, CallState> { { "0", new CallState(item) } }));
 				keys.Add(keyResult.ToPlainText());
 			}
 		}
@@ -1466,7 +1477,7 @@ public partial class Functions
 				HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -1481,7 +1492,7 @@ public partial class Functions
 
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return errors.Complete(CallState.Empty);
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -1495,12 +1506,12 @@ public partial class Functions
 
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return errors.Complete(new CallState(maybeAttr.AsError.Value));
 			}
 
 			var attr = maybeAttr.AsAttribute;
@@ -1513,7 +1524,7 @@ public partial class Functions
 					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
 					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
 				});
-				keys.Add((await newParser.FunctionParse(attrValue))!.Message!.ToPlainText());
+				keys.Add(errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText());
 			}
 		}
 
@@ -1526,7 +1537,7 @@ public partial class Functions
 			_ => indexes.OrderBy(i => keys[i])
 		};
 
-		return new CallState(MarkupText.Join(sep, sortedIndexes.Select(i => list[i])));
+		return errors.Complete(new CallState(MarkupText.Join(sep, sortedIndexes.Select(i => list[i]))));
 	}
 
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
@@ -1563,6 +1574,7 @@ public partial class Functions
 	[SharpFunction(Name = "step", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "step", "delimiter", "outsep"])]
 	public async ValueTask<CallState> Step(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
@@ -1570,11 +1582,11 @@ public partial class Functions
 		var stepArg = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
 		if (!int.TryParse(stepArg, out var step) || step < 1 || step > 30)
 		{
-			return new CallState(ErrorMessages.Returns.Integer);
+			return errors.Complete(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 3, MarkupText.Space);
-		var sep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 4, delim);
+		var delim = await errors.DefaultArgumentAsync(parser, 3, MarkupText.Space);
+		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -1587,9 +1599,9 @@ public partial class Functions
 				{
 					args[j.ToString()] = new CallState(list[i + j]);
 				}
-				result.Add(await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, rawAttrArg, args));
+				result.Add(errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, args)));
 			}
-			return new CallState(MarkupText.Join(sep, result));
+			return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
@@ -1597,7 +1609,7 @@ public partial class Functions
 			HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 		if (objAttr is { IsT1: true, AsT1: false })
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 		}
 
 		var (dbref, attrName) = objAttr.AsT0;
@@ -1612,7 +1624,7 @@ public partial class Functions
 
 		if (!locate.IsValid())
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var located = locate.WithoutError().WithoutNone();
@@ -1626,12 +1638,12 @@ public partial class Functions
 
 		if (maybeAttr.IsNone)
 		{
-			return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+			return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 		}
 
 		if (maybeAttr.IsError)
 		{
-			return new CallState(maybeAttr.AsError.Value);
+			return errors.Complete(new CallState(maybeAttr.AsError.Value));
 		}
 
 		var attr = maybeAttr.AsAttribute;
@@ -1654,10 +1666,10 @@ public partial class Functions
 				Arguments = args,
 				EnvironmentRegisters = envRegs
 			});
-			attrResult.Add((await newParser.FunctionParse(attrValue))!.Message!);
+			attrResult.Add(errors.Record(await newParser.FunctionParse(attrValue)));
 		}
 
-		return new CallState(MarkupText.Join(sep, attrResult));
+		return errors.Complete(new CallState(MarkupText.Join(sep, attrResult)));
 	}
 
 	/// <summary>
@@ -1672,18 +1684,19 @@ public partial class Functions
 	[SharpFunction(Name = "strfirstof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression...", "default"])]
 	public async ValueTask<CallState> StringFirstOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var argsArray = parser.CurrentState.ArgumentsOrdered.ToArray();
 
 		for (var i = 0; i < argsArray.Length - 1; i++)
 		{
-			var parsed = await argsArray[i].Value.ParsedMessage();
+			var parsed = errors.Record(await argsArray[i].Value.GetParsedResultAsync());
 			if (!string.IsNullOrEmpty(parsed?.ToPlainText()))
 			{
-				return new CallState(parsed);
+				return errors.Complete(new CallState(parsed));
 			}
 		}
 
-		return new CallState(await argsArray[^1].Value.ParsedMessage() ?? MarkupText.Empty);
+		return errors.Complete(new CallState(errors.Record(await argsArray[^1].Value.GetParsedResultAsync())));
 	}
 
 	[SharpFunction(Name = "strallof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
@@ -1826,13 +1839,14 @@ public partial class Functions
 	[SharpFunction(Name = "words", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string", "delimiter"])]
 	public async ValueTask<CallState> ListCount(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		// Argument indexes are 0-based, and words() takes two arguments: the delimiter is 1. Reading
 		// it from 2 meant a delimiter was never seen and words(a|b|c,|) always counted space-separated
 		// words.
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 1, " ");
-		var list = MushText.SplitList(delim, (await parser.CurrentState.Arguments["0"].ParsedMessage())!);
+		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
+		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
 
-		return new CallState(list.Length.ToString());
+		return errors.Complete(new CallState(list.Length.ToString()));
 	}
 
 	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
@@ -2024,17 +2038,18 @@ public partial class Functions
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		MString rawAttrArg,
-		MString[] list)
+		MString[] list,
+		ListEvaluationErrors errors)
 	{
 		var results = new List<MString>(list.Length);
 		foreach (var item in list)
 		{
-			var evaluated = await AttributeService.EvaluateAttributeFunctionAsync(
+			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser,
 				executor,
 				rawAttrArg,
 				new Dictionary<string, CallState> { { "0", new CallState(item) } });
-			results.Add(evaluated);
+			results.Add(errors.Record(evaluated));
 		}
 
 		return results;

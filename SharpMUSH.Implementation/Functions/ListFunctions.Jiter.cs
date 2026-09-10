@@ -16,6 +16,7 @@ public partial class Functions
 	[SharpFunction(Name = "jiter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "input", "osep"])]
 	public async ValueTask<CallState> JuxtaposedIteration(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -24,11 +25,11 @@ public partial class Functions
 		// jiter fans ONE input across every attribute: each is evaluated with the same %0,
 		// side by side (contrast chain(), which threads each result into the next step).
 		var input = parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty;
-		var osep = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var osep = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 
 		if (tokens.Length == 0)
 		{
-			return CallState.Empty;
+			return errors.Complete(CallState.Empty);
 		}
 
 		var results = new List<MString>(tokens.Length);
@@ -37,7 +38,7 @@ public partial class Functions
 		{
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -47,7 +48,7 @@ public partial class Functions
 				parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return errors.Complete(CallState.Empty);
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -56,12 +57,12 @@ public partial class Functions
 				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return errors.Complete(new CallState(maybeAttr.AsError.Value));
 			}
 
 			var attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -74,9 +75,9 @@ public partial class Functions
 				EnvironmentRegisters = env
 			});
 
-			results.Add((await stepParser.FunctionParse(attrValue))!.Message!);
+			results.Add(errors.Record(await stepParser.FunctionParse(attrValue)));
 		}
 
-		return new CallState(MarkupText.Join(osep, results));
+		return errors.Complete(new CallState(MarkupText.Join(osep, results)));
 	}
 }
