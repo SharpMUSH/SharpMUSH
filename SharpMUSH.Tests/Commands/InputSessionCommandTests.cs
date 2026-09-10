@@ -74,6 +74,25 @@ public class InputSessionCommandTests
 	[Arguments("nested-throw", true)]
 	[Arguments("nested-multiple", true)]
 	[Arguments("speech", true)]
+	[Arguments("ifelse-true", true)]
+	[Arguments("ifelse-false", true)]
+	[Arguments("ifelse-syntax", true)]
+	[Arguments("skip", true)]
+	[Arguments("switch", true)]
+	[Arguments("select", true)]
+	[Arguments("force", true)]
+	[Arguments("break", true)]
+	[Arguments("assert", true)]
+	[Arguments("teach", true)]
+	[Arguments("teach-list", true)]
+	[Arguments("dolist-multiple", true)]
+	[Arguments("map-multiple", true)]
+	[Arguments("include-multiple", true)]
+	[Arguments("include-invalid", true)]
+	[Arguments("trigger", true)]
+	[Arguments("verb", true)]
+	[Arguments("ifelse-literal", false)]
+	[Arguments("ifelse-skipped", false)]
 	public async Task ParsedCallbackFailureRetiresCapture(string mode, bool failed)
 	{
 		var player = await Player();
@@ -87,8 +106,8 @@ public class InputSessionCommandTests
 			_ =>
 			{
 				invocations++;
-				if (mode == "literal") return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"));
-				if (mode == "nested-multiple" && invocations > 1) return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(CallState.Empty);
+				if (mode == "literal" || mode == "ifelse-literal") return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"));
+				if (mode.EndsWith("multiple", StringComparison.Ordinal) && invocations > 1) return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(CallState.Empty);
 				throw new InvalidOperationException("input callback failed");
 			}), true));
 		if (mode == "speech") commands["SAY"] = (new SharpMUSH.Library.Definitions.CommandDefinition(
@@ -116,6 +135,30 @@ public class InputSessionCommandTests
 				matches = Enumerable.Range(0, mode == "nested-multiple" ? 2 : 1)
 					.Select(_ => (actor.Known(), attribute, new Dictionary<string, CallState>()));
 			}
+			callback = mode switch
+			{
+				"ifelse-true" or "ifelse-literal" => $"@ifelse 1={name},think clean",
+				"ifelse-false" => $"@ifelse 0=think clean,{name}",
+				"ifelse-syntax" => "@ifelse 1={think [},think clean",
+				"ifelse-skipped" => $"@ifelse 0={name},think clean",
+				"skip" => $"@skip 0={name}",
+				"switch" => $"@switch/inline 1=1,{name}",
+				"select" => $"@select/inline 1=1,{name}",
+				"force" => $"@force me={{{name}}}",
+				"break" => $"@break 1={name}",
+				"assert" => $"@assert 0={name}",
+				"teach" => $"teach {name}",
+				"teach-list" => $"teach/list {name}",
+				"dolist-multiple" => $"@dolist/inline a b={name}",
+				"map-multiple" => "@map/inline me/NESTEDBODY=a b",
+				"include-multiple" => "@include/chain/nobreak me/NESTEDBODY me/NESTEDBODY",
+				"include-invalid" => "@include/chain/nobreak me/NESTEDBODY invalid",
+				"trigger" => "@trigger/inline me/NESTEDBODY",
+				"verb" => "@verb me=me,,,,,NESTEDBODY",
+				_ => callback
+			};
+			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
+				actor.Known(), actor.Known(), "NESTEDBODY", MarkupText.Plain(name));
 			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
 				actor.Known(), actor.Known(), "CALLBACK", MarkupText.Plain(callback));
 			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
@@ -124,6 +167,8 @@ public class InputSessionCommandTests
 			var result = await Sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
 			await Assert.That(result).IsNotNull();
 			if (mode == "nested-throw" || mode == "nested-multiple") await Assert.That(invocations).IsEqualTo(mode == "nested-multiple" ? 2 : 1);
+			if (mode is "ifelse-true" or "ifelse-false" or "skip" or "switch" or "select" or "force" or "break" or "assert" or "teach" or "teach-list" or "trigger" or "verb" or "include-invalid") await Assert.That(invocations).IsEqualTo(1);
+			if (mode is "dolist-multiple" or "map-multiple" or "include-multiple") await Assert.That(invocations).IsEqualTo(2);
 			await Assert.That(Sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
 			if (failed) await Assert.That(result!.HadErrors).IsTrue();
 		}

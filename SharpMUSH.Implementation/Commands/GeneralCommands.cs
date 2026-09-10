@@ -359,6 +359,7 @@ public partial class Commands
 
 		var isInline = switches.Contains("INLINE");
 		var results = new List<string>();
+		var hadErrors = false;
 
 		if (isInline)
 		{
@@ -381,6 +382,7 @@ public partial class Commands
 						async p => await p.CommandListParse(attribute.Value));
 				});
 
+				hadErrors |= result?.HadErrors == true;
 				if (result != null && result.Message != null)
 				{
 					results.Add(result.Message.ToPlainText() ?? string.Empty);
@@ -396,7 +398,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(string.Join(" ", results));
+			return new CallState(string.Join(" ", results)) { HadErrors = hadErrors };
 		}
 		else
 		{
@@ -494,6 +496,7 @@ public partial class Commands
 			parser.CurrentState.IterationRegisters.Push(wrappedIteration);
 
 			var lastCallState = CallState.Empty;
+			var hadErrors = false;
 			var visitorFunc = parser.CommandListParseVisitor(command);
 			foreach (var item in list)
 			{
@@ -503,6 +506,7 @@ public partial class Commands
 				// Note: Command is parsed once (line above loop), then the visitor is called
 				// multiple times with different iteration register values. This is optimized.
 				lastCallState = await visitorFunc();
+				hadErrors |= lastCallState?.HadErrors == true;
 			}
 
 			parser.CurrentState.IterationRegisters.TryPop(out _);
@@ -524,7 +528,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return lastCallState!;
+			return (lastCallState ?? CallState.Empty) with { HadErrors = hadErrors };
 		}
 		else
 		{
@@ -2390,6 +2394,7 @@ public partial class Commands
 		var testString = strArg.Message?.ToPlainText() ?? string.Empty;
 		Option<MString> defaultArg = new None();
 		var matched = false;
+		var hadErrors = false;
 
 		// Separate out the default action (last element when total arg count is even).
 		// args["0"] is the test expression; remaining args are (pattern, action) pairs plus optional default.
@@ -2459,7 +2464,7 @@ public partial class Commands
 					matched = true;
 					// Substitute #$ with the test string in the action, matching PennMUSH behavior.
 					var actionText = actionArg.Message!.ToPlainText().Replace("#$", testString);
-					await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
+					hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(actionText),
 						isInline, noBreak, hasLocalize, hasClearRegs);
 
 					if (isFirst) break;
@@ -2469,7 +2474,7 @@ public partial class Commands
 			if (defaultArg.IsSome() && !matched)
 			{
 				var defaultText = defaultArg.AsValue().ToPlainText().Replace("#$", testString);
-				await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
+				hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
 					isInline, noBreak, hasLocalize, hasClearRegs);
 			}
 
@@ -2484,7 +2489,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(matched);
+			return new CallState(matched) { HadErrors = hadErrors };
 		}
 		finally
 		{
@@ -2666,7 +2671,7 @@ public partial class Commands
 	/// action instead gets its own copy of the registers from <see cref="QueuedActionState"/>, matching
 	/// <c>PE_INFO_CLONE</c>, so neither switch has anything to do there.</para>
 	/// </summary>
-	private async ValueTask RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
+	private async ValueTask<bool> RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
 		bool isInline, bool noBreak, bool localizeRegisters, bool clearRegisters)
 	{
 		if (!isInline)
@@ -2676,7 +2681,7 @@ public partial class Commands
 				QueuedActionState(parser),
 				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 				-1), ExecutionBudget.CurrentToken);
-			return;
+			return false;
 		}
 
 		// Save before Clear: the new Dictionary<> is an independent copy, so clearing the original
@@ -2699,7 +2704,7 @@ public partial class Commands
 		try
 		{
 			var propagation = new BreakPropagation { PreserveNext = true };
-			await parser.With(
+			var result = await parser.With(
 				state => state with { BreakPropagation = propagation },
 				p => p.CommandListParse(action));
 
@@ -2707,6 +2712,7 @@ public partial class Commands
 			{
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 			}
+			return result?.HadErrors == true;
 		}
 		finally
 		{
@@ -3169,11 +3175,12 @@ public partial class Commands
 			}
 		}
 
+		CallState? nestedResult = null;
 		try
 		{
 			// Note: Queue infrastructure available via AdmitCommandListRequest if needed
 			// Currently executes inline for immediate response (default PennMUSH behavior)
-			await parser.With(
+			nestedResult = await parser.With(
 				state => state with
 				{
 					Executor = found.Object().DBRef,
@@ -3193,7 +3200,7 @@ public partial class Commands
 			}
 		}
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@IFELSE", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse,
@@ -3203,17 +3210,18 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var truthy = parsedIfElse!.Truthy(parser);
+		CallState? nestedResult = null;
 
 		if (truthy)
 		{
-			await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
+			nestedResult = await parser.CommandListParse(parser.CurrentState.Arguments["1"].Message!);
 		}
 		else if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2))
 		{
-			await parser.CommandListParse(arg2.Message!);
+			nestedResult = await parser.CommandListParse(arg2.Message!);
 		}
 
-		return new CallState(truthy);
+		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT"], Behavior = CB.Default | CB.NoGagged,
@@ -3637,6 +3645,7 @@ public partial class Commands
 		// Note: INLINE is default behavior (immediate execution)
 		// QUEUED switch queues the command for later execution via task scheduler
 		var useQueue = switches.Contains("QUEUED");
+		var hadErrors = false;
 
 		switch (nargs)
 		{
@@ -3649,7 +3658,7 @@ public partial class Commands
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Truthy(parser):
 				var command = await args["1"].ParsedMessage();
 
@@ -3665,14 +3674,14 @@ public partial class Commands
 				else
 				{
 					var commandList = parser.CommandListParseVisitor(command!);
-					await commandList();
+					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2:
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 		}
 
 		return CallState.Empty;
@@ -4890,6 +4899,7 @@ public partial class Commands
 			var hasDefault = (args.Count - 1) % 2 == 1;
 
 			var matchFound = false;
+			var hadErrors = false;
 			for (int i = 0; i < pairCount; i++)
 			{
 				var exprIndex = (i * 2) + 1;
@@ -4930,7 +4940,7 @@ public partial class Commands
 					var actionText = action.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
 						isInline, noBreak, localizeRegs, clearRegs);
 
 					break;
@@ -4947,7 +4957,7 @@ public partial class Commands
 					var actionText = defaultAction.ToPlainText().Replace("#$", testString);
 					var actionMString = MarkupText.Plain(actionText);
 
-					await RunControlFlowAction(parser, executor, actionMString,
+					hadErrors |= await RunControlFlowAction(parser, executor, actionMString,
 						isInline, noBreak, localizeRegs, clearRegs);
 				}
 			}
@@ -4963,7 +4973,7 @@ public partial class Commands
 					-1), ExecutionBudget.CurrentToken);
 			}
 
-			return new CallState(matchFound);
+			return new CallState(matchFound) { HadErrors = hadErrors };
 		}
 		finally
 		{
@@ -5127,10 +5137,10 @@ public partial class Commands
 				EnvironmentRegisters = envRegisters
 			};
 
-			await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
+			var result = await parser.With(state => stateWithRegisters, newParser => newParser.WithAttributeDebug(attribute,
 				async p => await p.CommandListParseVisitor(attribute.Value)()));
 
-			return CallState.Empty;
+			return CallState.Empty with { HadErrors = result?.HadErrors == true };
 		});
 	}
 
@@ -6036,6 +6046,7 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			excludeObjects: [actor]);
 
+		CallState? nestedResult = null;
 		if (!string.IsNullOrWhiteSpace(awhat))
 		{
 			var maybeAwhatAttr = await AttributeService.GetAttributeAsync(
@@ -6044,7 +6055,7 @@ public partial class Commands
 			if (!maybeAwhatAttr.IsError)
 			{
 				var attribute = maybeAwhatAttr.AsAttribute.Last();
-				await parser.With(
+				nestedResult = await parser.With(
 					state => state with
 					{
 						Executor = victim.Object().DBRef,
@@ -6057,7 +6068,7 @@ public partial class Commands
 			}
 		}
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	private async ValueTask<MString> GetAttributeOrDefault(
@@ -6514,7 +6525,7 @@ public partial class Commands
 		// its link and the chain carries on. A single target is just the ordinary @include.
 		try
 		{
-			Option<CallState> lastResult = CallState.Empty;
+			CallState lastResult = CallState.Empty;
 
 			if (!hasNoBreak && targets.Length > 1)
 			{
@@ -6577,13 +6588,13 @@ public partial class Commands
 				if (parts.Length < 2)
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeMustSpecifyObjectAttributePath), executor);
-					return new CallState(ErrorMessages.Returns.InvalidPath);
+					return new CallState(ErrorMessages.Returns.InvalidPath) { HadErrors = lastResult.HadErrors };
 				}
 
 				var (error, attribute, text) = await ReadTarget(parts[0], parts[1]);
 				if (error is not null)
 				{
-					return error;
+					return error with { HadErrors = error.HadErrors || lastResult.HadErrors };
 				}
 
 				if (text is null)
@@ -6591,7 +6602,8 @@ public partial class Commands
 					continue;
 				}
 
-				lastResult = await RunOne(attribute!, text);
+				var result = await RunOne(attribute!, text);
+				lastResult = result with { HadErrors = result.HadErrors || lastResult.HadErrors };
 			}
 
 			return lastResult;
@@ -6599,7 +6611,7 @@ public partial class Commands
 		catch (Exception ex)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.IncludeErrorExecutingFormat), executor, ex.Message);
-			return new CallState($"#-1 ERROR: {ex.Message}");
+			return new CallState($"#-1 ERROR: {ex.Message}") { HadErrors = true };
 		}
 		finally
 		{
@@ -7289,6 +7301,7 @@ public partial class Commands
 		// Note: INLINE is default behavior (immediate execution)
 		// QUEUED switch queues the command for later execution via task scheduler
 		var useQueue = switches.Contains("QUEUED");
+		var hadErrors = false;
 
 		switch (nargs)
 		{
@@ -7302,7 +7315,7 @@ public partial class Commands
 					parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 				}
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2 when args["0"].Message.Falsy(parser):
 				var command = await args["1"].ParsedMessage();
 
@@ -7318,14 +7331,14 @@ public partial class Commands
 				else
 				{
 					var commandList = parser.CommandListParseVisitor(command!);
-					await commandList();
+					hadErrors |= (await commandList())?.HadErrors == true;
 				}
 
 				parser.CurrentState.ExecutionStack.Push(new Execution(CommandListBreak: true));
 
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 			case 2:
-				return args["0"];
+				return args["0"] with { HadErrors = args["0"].HadErrors || hadErrors };
 		}
 
 		return CallState.Empty;
@@ -7628,13 +7641,14 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var parsedIfElse = await parser.CurrentState.Arguments["0"].ParsedMessage();
 		var falsey = parsedIfElse!.Falsy(parser);
+		CallState? nestedResult = null;
 
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1))
 		{
-			await parser.CommandListParse(arg1.Message!);
+			nestedResult = await parser.CommandListParse(arg1.Message!);
 		}
 
-		return new CallState(!falsey);
+		return new CallState(!falsey) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
 	[SharpCommand(Name = "@MESSAGE", Switches = ["NOEVAL", "SPOOF", "NOSPOOF", "REMIT", "OEMIT", "SILENT", "NOISY"],
