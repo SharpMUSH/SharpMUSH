@@ -242,7 +242,7 @@ public class AccountAuthService(
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 			using var response = await httpClientFactory.CreateClient("api")
 				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
-			if (AccountSessionToken != token || ExplicitlyLoggedOut) return;
+			if (AccountSessionToken != token) return;
 			if (response.StatusCode == HttpStatusCode.Unauthorized)
 			{
 				ClearSessionState();
@@ -251,7 +251,7 @@ public class AccountAuthService(
 			if (!response.IsSuccessStatusCode) return;
 			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
 			refresh.Token.ThrowIfCancellationRequested();
-			if (current is null || AccountSessionToken != token || ExplicitlyLoggedOut) return;
+			if (current is null || AccountSessionToken != token) return;
 			Username = current.Username;
 			MustChangePassword = current.MustChangePassword;
 			Role = current.Role;
@@ -283,7 +283,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/account-login",
+			using var response = await http.PostAsJsonAsync("api/auth/account-login",
 				new AccountLoginRequest(identifier, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -309,7 +309,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/account-register",
+			using var response = await http.PostAsJsonAsync("api/auth/account-register",
 				new AccountRegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -345,7 +345,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync("api/setup/status");
+			using var response = await http.GetAsync("api/setup/status");
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogError("Setup status check returned {Status}", response.StatusCode);
@@ -373,7 +373,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/setup/complete",
+			using var response = await http.PostAsJsonAsync("api/setup/complete",
 				new SetupCompleteRequest(username, password));
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync(), false);
@@ -460,7 +460,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync("api/auth/debug-ott");
+			using var response = await http.GetAsync("api/auth/debug-ott");
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
@@ -502,7 +502,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
 				new MushTokenWithAccountRequest(AccountSessionToken, character.DbrefNumber, character.CreationTime));
 
 			if (!response.IsSuccessStatusCode)
@@ -539,7 +539,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PostAsJsonAsync("api/auth/switch-character",
+			using var response = await http.PostAsJsonAsync("api/auth/switch-character",
 				new SwitchCharacterRequest(character.DbrefNumber, character.CreationTime));
 
 			if (!response.IsSuccessStatusCode)
@@ -611,7 +611,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PostAsJsonAsync("api/account/characters",
+			using var response = await http.PostAsJsonAsync("api/account/characters",
 				new CreateCharacterRequest(name, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -641,7 +641,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
+			using var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 
@@ -725,7 +725,7 @@ public class AccountAuthService(
 				var http = httpClientFactory.CreateClient("api");
 				http.DefaultRequestHeaders.Authorization =
 					new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-				await http.PostAsync("api/account/logout", null);
+				using var response = await http.PostAsync("api/account/logout", null);
 			}
 			catch { /* best-effort */ }
 		}
@@ -849,7 +849,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PutAsJsonAsync(path, body);
+			using var response = await http.PutAsJsonAsync(path, body);
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 			return (true, null);
