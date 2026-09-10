@@ -51,7 +51,8 @@ Apply the desired sets to rooms and exits too: ordinary movement requires the mo
 object to perceive its destination.
 
 Layer checks apply to looking, object matching (including explicit references), contents
-and exits, movement, sender-bearing notifications and listeners. Wizard flags and ownership
+and exits, movement, sender-bearing notifications and listeners, including debug traces and
+puppet relays. Wizard flags and ownership
 do not bypass this check. Internal database maintenance remains unfiltered; the scoped
 administration commands are the explicit repair path.
 

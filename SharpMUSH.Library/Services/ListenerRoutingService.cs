@@ -238,14 +238,14 @@ public class ListenerRoutingService(
 		AnySharpObject speaker,
 		NotificationType type)
 	{
-		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET");
+		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET", ExecutionBudget.CurrentToken);
 		if (!hasPuppet)
 			return;
 
-		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await puppet.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		if (owner is null) return;
-		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
-			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef)) return;
+		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef, ExecutionBudget.CurrentToken)
+			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef, ExecutionBudget.CurrentToken)) return;
 
 		// Snapshot immutable binding values before the remaining awaited relay reads. Metadata is
 		// mutable, so retaining ConnectionData itself would not retain its original session.
@@ -256,11 +256,11 @@ public class ListenerRoutingService(
 		if (bindings.Length == 0) return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
-		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
+		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE", ExecutionBudget.CurrentToken);
 		if (!hasVerbose)
 		{
-			var puppetLocation = await LocateService.FriendlyWhereIs(puppet);
-			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
+			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);
+			var ownerLocation = await owner.Location.WithCancellation(ExecutionBudget.CurrentToken);
 
 			if (puppetLocation.Object().DBRef == ownerLocation.Object().DBRef)
 				return;

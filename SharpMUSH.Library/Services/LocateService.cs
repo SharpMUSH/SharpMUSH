@@ -812,11 +812,15 @@ public partial class LocateService(
 	// (cached) Task, which a ValueTask wraps for free. The state machine this used to allocate was paid
 	// once per candidate under MAT_CONTENTS, twice per Nearby, and once per hop in Room.
 	public static ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj)
+		=> FriendlyWhereIs(obj, CancellationToken.None);
+
+	/// <summary>Resolves the containing location within an explicit read lifetime.</summary>
+	public static ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj, CancellationToken cancellationToken)
 		=> obj.Match<ValueTask<AnySharpContainer>>(
-			player => new(player.Location.WithCancellation(CancellationToken.None)),
+			player => new(player.Location.WithCancellation(cancellationToken)),
 			room => ValueTask.FromResult<AnySharpContainer>(room),
-			exit => new(exit.Location.WithCancellation(CancellationToken.None)),
-			thing => new(thing.Location.WithCancellation(CancellationToken.None))
+			exit => new(exit.Location.WithCancellation(cancellationToken)),
+			thing => new(thing.Location.WithCancellation(cancellationToken))
 		);
 
 	/// <summary>
