@@ -1,4 +1,4 @@
-using DotNext.Collections.Generic;
+using System.Collections.Concurrent;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
@@ -30,7 +30,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private static readonly Dictionary<(string, string), Regex> SpeechPatternCache = new();
+	private static readonly ConcurrentDictionary<(string Open, string Close), Regex> SpeechPatternCache = new();
 
 	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "substring"])]
 	public ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -243,7 +243,7 @@ public partial class Functions
 			var safeOpen = Regex.Escape(open.ToPlainText());
 			var safeClose = Regex.Escape(close.ToPlainText());
 			var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
-				_ => SoftcodeRegex.Create($"{safeOpen}(?<Content>[^{safeClose}]){safeClose}", RegexOptions.None)
+				static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
 			);
 
 			var contents = pattern.Matches(speakString.ToPlainText());
