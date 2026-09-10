@@ -8,10 +8,11 @@ public partial class Functions
 	// Failed predicates still follow the existing text/truthiness and short-circuit rules.
 	private sealed class ListEvaluationErrors
 	{
-		private bool _hadErrors;
+		private int _hadErrors;
 		public MString Record(CallState? result)
 		{
-			_hadErrors |= result?.HadErrors == true;
+			// SortBy records comparator results concurrently; failure is monotonic.
+			if (result?.HadErrors == true) Interlocked.Exchange(ref _hadErrors, 1);
 			return result?.Message ?? MarkupText.Empty;
 		}
 		public async ValueTask<MString> DefaultArgumentAsync(IMUSHCodeParser parser, int index, MString fallback)
@@ -20,6 +21,6 @@ public partial class Functions
 			if (arguments.Count - 1 < index || arguments[index.ToString()].Message!.Length == 0) return fallback;
 			return Record(await arguments[index.ToString()].GetParsedResultAsync());
 		}
-		public CallState Complete(CallState result) => _hadErrors ? result with { HadErrors = true } : result;
+		public CallState Complete(CallState result) => Volatile.Read(ref _hadErrors) != 0 ? result with { HadErrors = true } : result;
 	}
 }
