@@ -1923,14 +1923,20 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			if (scheduler.GetQueueEntry(pid) is not null && !await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+			if (!TryGetQueueEntry(scheduler, pid, out var entry)) return await QueueInspectionUnsupported(executor);
+			if (entry is null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltNoTaskWithPidFormat), executor, pid);
+				return new CallState(ErrorMessages.Returns.NotFound);
+			}
+			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
 				.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			var halted = await Mediator.Send(new HaltByPidRequest(pid));
+			var halted = await Mediator.Send(new HaltByPidRequest(pid), ExecutionBudget.CurrentToken);
 			if (halted)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HaltTaskHaltedFormat), executor, pid);
@@ -2785,7 +2791,8 @@ public partial class Commands
 			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
 		}
 
-		var maybeFoundPid = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueEntry(pid);
+		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskScheduler>(), pid, out var maybeFoundPid))
+			return await QueueInspectionUnsupported(executor);
 
 		if (maybeFoundPid is null || maybeFoundPid.RemainingDelay is null || maybeFoundPid.ReleasePending)
 		{
@@ -4626,6 +4633,19 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	private static bool TryGetQueueEntry(ITaskScheduler scheduler, long pid,
+		out SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot? entry)
+	{
+		try { entry = scheduler.GetQueueEntry(pid); return true; }
+		catch (NotSupportedException) { entry = null; return false; }
+	}
+
+	private async ValueTask<Option<CallState>> QueueInspectionUnsupported(AnySharpObject executor)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
+		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
+	}
+
 	[SharpCommand(Name = "@PS", Switches = ["ALL", "SUMMARY", "COUNT", "QUICK", "DEBUG"], Behavior = CB.Default,
 		MinArgs = 0, MaxArgs = 1, ParameterNames = ["player"])]
 	public async ValueTask<Option<CallState>> ProcessStatus(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -4650,7 +4670,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidPid);
 			}
 
-			var queued = scheduler.GetQueueEntry(pid);
+			if (!TryGetQueueEntry(scheduler, pid, out var queued)) return await QueueInspectionUnsupported(executor);
 			if (queued is null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsNoTaskWithPidFormat), executor, pid);
@@ -4748,10 +4768,16 @@ public partial class Commands
 			}
 
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
-			var usage = parser.ServiceProvider.GetRequiredService<ITaskScheduler>().GetQueueUsage();
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
-			foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
+			// Usage is an optional extension; legacy schedulers still provide the queue listing.
+			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
+			try { usage = scheduler.GetQueueUsage(); }
+			catch (NotSupportedException) { usage = null; }
+			if (usage is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
+				foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
+			}
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
 			foreach (var (group, tasks) in allTasks)
@@ -4800,9 +4826,15 @@ public partial class Commands
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAndMoreFormat), executor, delayTasks.Length - 10);
 			}
 		}
-		var paused = scheduler.GetQueueEntries().Count(e => e.State == SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Paused
-			&& (e.Source == targetDbRef || e.Owner == targetDbRef));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueuePausedHint), executor, paused);
+		IReadOnlyList<SharpMUSH.Library.Models.SchedulerModels.QueueEntrySnapshot>? entries;
+		try { entries = scheduler.GetQueueEntries(); }
+		catch (NotSupportedException) { entries = null; }
+		if (entries is not null)
+		{
+			var paused = entries.Count(e => e.State == SharpMUSH.Library.Models.SchedulerModels.QueueEntryState.Paused
+				&& (e.Source == targetDbRef || e.Owner == targetDbRef));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueuePausedHint), executor, paused);
+		}
 
 		return CallState.Empty;
 	}
