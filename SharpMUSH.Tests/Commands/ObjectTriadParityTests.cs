@@ -379,6 +379,83 @@ public class ObjectTriadParityTests
 			.Because("the drop-in lock names the emptier, who is who it is evaluated against");
 	}
 
+	/// <summary>
+	/// <c>did_it_with(player, item, "SUCCESS", …, NOTHING, thing_loc, NOTHING, NA_INTER_HEAR)</c>
+	/// (<c>src/move.c:874-876</c>): emptying a container you are not is the get half of
+	/// <c>do_empty</c>, so each item fires its own SUCCESS triad with the CONTAINER'S LOCATION in
+	/// <c>%0</c> — not the container — and the action attribute is queued on the item.
+	/// </summary>
+	/// <remarks>
+	/// The container branch (<c>move.c:836-878</c>) is the half <c>empty me</c> never reaches: a
+	/// different gate, a different lock set, and the triads fire per item rather than once.
+	/// </remarks>
+	[Test]
+	public async ValueTask EmptyingAContainerFiresEachItemsSuccessTriadWithTheContainersLocationInEnvZero()
+	{
+		var emptier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EmptyBoxActor");
+		var room = await Room("EmptyBoxRoom", emptier.DbRef);
+		var box = await Thing("EmptyBoxContainer");
+		var item = await Thing("EmptyBoxItem");
+
+		await God($"@teleport/silent {emptier.DbRef}={room}");
+		await God($"@teleport/silent {box}={room}");
+		await God($"@teleport/silent {item}={box}");
+		// move.c:836-838: the emptier neither owns nor controls a Thing()-made box, so ENTER_OK plus
+		// an unset enter lock is the half of the gate that admits them.
+		await God($"@set {box}=ENTER_OK");
+		await God($"&SUCCESS {item}=You lift it clear.");
+		await God($"&ASUCCESS {item}=&TOOK me=%0");
+
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		// move.c:865-903 runs both halves: the get puts the item in the emptier's hands, and the
+		// drop that follows (thing_loc != player) puts it down where the container stands.
+		var landed = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(landed!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+			.Because("the drop half leaves the item where the container stands, not in the emptier's hands");
+
+		await Assert.That(BareDbrefs(await Read(item, "TOOK"))).IsEqualTo(BareDbrefs(room))
+			.Because("env0 is the container's location, which is where do_get puts the source container");
+	}
+
+	/// <summary>
+	/// <c>could_doit(player, item)</c> reported as <c>fail_lock(player, thing, Basic_Lock, NULL, …)</c>
+	/// (<c>src/move.c:838-843</c>): the item's basic lock decides, and the refusal is attributed to
+	/// the CONTAINER with no default message, so it is silent unless the container carries a
+	/// <c>@failure</c> of its own.
+	/// </summary>
+	[Test]
+	public async ValueTask EmptyingAContainerFailsTheItemsBasicLockOnTheContainer()
+	{
+		var emptier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EmptyLockActor");
+		var room = await Room("EmptyLockRoom", emptier.DbRef);
+		var box = await Thing("EmptyLockContainer");
+		var item = await Thing("EmptyLockItem");
+
+		await God($"@teleport/silent {emptier.DbRef}={room}");
+		await God($"@teleport/silent {box}={room}");
+		await God($"@teleport/silent {item}={box}");
+
+		await God($"@set {box}=ENTER_OK");
+
+		// The ITEM is locked against everyone; the FAILURE attribute lives on the CONTAINER.
+		await God($"@lock {item}=#0");
+		await God($"&AFAILURE {box}=&REFUSED me=yes");
+
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var stayed = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(stayed!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
+			.Because("the item's basic lock refuses, so it does not leave the container");
+
+		await Assert.That(await Read(box, "REFUSED")).IsEqualTo("yes")
+			.Because("the refusal is attributed to the container, so the container's @afailure runs");
+	}
+
 	// --- GIVE -----------------------------------------------------------------------------------
 
 	/// <summary>
