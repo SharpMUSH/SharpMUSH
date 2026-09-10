@@ -23,7 +23,7 @@ public class AttributeService(
 	INotifyService notifyService,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration,
 	IServiceProvider serviceProvider)
-	: IAttributeService
+	: IAttributeService, IAttributeFunctionResultService
 {
 	private readonly NaturalSortComparer _attributeSort = new NaturalSortComparer(StringComparison.CurrentCulture);
 
@@ -398,13 +398,18 @@ public class AttributeService(
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject obj, string attribute, Dictionary<string, CallState> args,
+		bool evalParent = true, bool ignorePermissions = false)
+		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, obj, attribute, args, evalParent, ignorePermissions)).Message ?? MarkupText.Empty;
+
+	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
 		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
-			return MarkupText.Plain(ErrorMessages.Returns.ObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -419,12 +424,12 @@ public class AttributeService(
 			evalParent);
 		if (attr.IsError)
 		{
-			return MarkupText.Plain(attr.AsError.Value);
+			return new CallState(attr.AsError.Value);
 		}
 
 		if (attr.IsNone)
 		{
-			return MarkupText.Empty;
+			return CallState.Empty;
 		}
 
 		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns
@@ -435,7 +440,7 @@ public class AttributeService(
 		// flag is the one that matters.
 		if (await obj.HasFlag("HALT", ExecutionBudget.CurrentToken))
 		{
-			return attr.AsAttribute.Last().Value;
+			return new CallState(attr.AsAttribute.Last().Value);
 		}
 
 		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
@@ -460,7 +465,7 @@ public class AttributeService(
 		{
 			limitExceeded.IsExceeded = true;
 			limitExceeded.ErrorMessage ??= ErrorMessages.Returns.Recursion;
-			return MarkupText.Plain(ErrorMessages.Returns.Recursion);
+			return new CallState(ErrorMessages.Returns.Recursion);
 		}
 
 		try
@@ -478,7 +483,7 @@ public class AttributeService(
 				async newParser =>
 					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
 
-			return result!.Message!;
+			return result ?? CallState.Empty;
 		}
 		finally
 		{

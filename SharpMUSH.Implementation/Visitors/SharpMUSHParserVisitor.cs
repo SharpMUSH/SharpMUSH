@@ -1058,7 +1058,7 @@ public class SharpMUSHParserVisitor(
 					string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
 			}
 
-			return CallState.Empty;
+			return CallState.Empty with { HadErrors = true };
 		}
 		finally
 		{
@@ -1960,16 +1960,29 @@ public class SharpMUSHParserVisitor(
 			},
 			async newParser =>
 			{
+				var hookHadErrors = false;
+				async ValueTask<Option<CallState>> EvaluateHook(CommandHook hook, Option<MString> input = null!)
+				{
+					var result = await ExecuteHookCode(newParser, executor, hook, input);
+					hookHadErrors |= result.IsSome() && result.AsValue().HadErrors;
+					return result;
+				}
+				Option<CallState> PreserveHookErrors(Option<CallState> result)
+				{
+					if (!hookHadErrors) return result;
+					return (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true };
+				}
+
 				// 1. Check for /ignore hook
 				var ignoreHook = await HookService.GetHookAsync(rootCommand, "IGNORE");
 				if (ignoreHook.IsSome())
 				{
-					var ignoreResult = await ExecuteHookCode(newParser, executor, ignoreHook.AsValue());
+					var ignoreResult = await EvaluateHook(ignoreHook.AsValue());
 					if (ignoreResult.IsSome())
 					{
 						if (ignoreResult.AsValue().Message.Falsy(newParser))
 						{
-							return CallState.Empty;
+							return PreserveHookErrors(CallState.Empty);
 						}
 					}
 				}
@@ -1978,8 +1991,8 @@ public class SharpMUSHParserVisitor(
 				var beforeHook = await HookService.GetHookAsync(rootCommand, "BEFORE");
 				if (beforeHook.IsSome())
 				{
-					await ExecuteHookCode(newParser, executor, beforeHook.AsValue());
-					// Result is discarded
+					await EvaluateHook(beforeHook.AsValue());
+					// Hook text is ignored, but failure state is retained.
 				}
 
 				// Phase 2b: C# command interceptors run alongside the softcode @hook flow. The dispatcher
@@ -1994,7 +2007,7 @@ public class SharpMUSHParserVisitor(
 					if (!await pluginHooks.CommandBeforeAsync(newParser, pluginCommandText))
 					{
 						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-						return CallState.Empty;
+						return PreserveHookErrors(CallState.Empty);
 					}
 				}
 
@@ -2007,19 +2020,21 @@ public class SharpMUSHParserVisitor(
 					// the way the real command would (e.g. `@emit payload=hello`, not the raw `@emit payload=%0`).
 					// Evaluate against prs, not newParser: newParser's %0 is the command's OWN argument, whereas
 					// prs still holds the caller's numbered registers (the surrounding $-command's %0).
-					Option<MString> overrideInput = (await prs.FunctionParse(commandWithSwitches))?.Message ?? commandWithSwitches;
-					var overrideResult = await ExecuteHookCode(newParser, executor, overrideHook.AsValue(), overrideInput);
+					var overrideEvaluation = await prs.FunctionParse(commandWithSwitches);
+					hookHadErrors |= overrideEvaluation?.HadErrors ?? false;
+					Option<MString> overrideInput = overrideEvaluation?.Message ?? commandWithSwitches;
+					var overrideResult = await EvaluateHook(overrideHook.AsValue(), overrideInput);
 					if (overrideResult.IsSome())
 					{
 						// 5. Check for /after hook before returning
 						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
 						if (afterHook.IsSome())
 						{
-							await ExecuteHookCode(newParser, executor, afterHook.AsValue());
-							// Result is discarded
+							await EvaluateHook(afterHook.AsValue());
+							// Hook text is ignored, but failure state is retained.
 						}
 
-						return overrideResult.AsValue();
+						return PreserveHookErrors(overrideResult.AsValue());
 					}
 				}
 
@@ -2033,11 +2048,11 @@ public class SharpMUSHParserVisitor(
 						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
 						if (afterHook.IsSome())
 						{
-							await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+							await EvaluateHook(afterHook.AsValue());
 						}
 
 						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
-						return pluginOverride;
+						return PreserveHookErrors(pluginOverride);
 					}
 				}
 
@@ -2055,18 +2070,20 @@ public class SharpMUSHParserVisitor(
 					{
 						// Same as the override path: match against the command line evaluated in the caller's
 						// context (prs) so substitutions are applied before the extend $-command sees it.
-						Option<MString> extendInput = (await prs.FunctionParse(commandWithSwitches))?.Message ?? commandWithSwitches;
-						var extendResult = await ExecuteHookCode(newParser, executor, extendHook.AsValue(), extendInput);
+						var extendEvaluation = await prs.FunctionParse(commandWithSwitches);
+						hookHadErrors |= extendEvaluation?.HadErrors ?? false;
+						Option<MString> extendInput = extendEvaluation?.Message ?? commandWithSwitches;
+						var extendResult = await EvaluateHook(extendHook.AsValue(), extendInput);
 						if (extendResult.IsSome())
 						{
 							// Execute /after hook before returning
 							var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
 							if (afterHook.IsSome())
 							{
-								await ExecuteHookCode(newParser, executor, afterHook.AsValue());
+								await EvaluateHook(afterHook.AsValue());
 							}
 
-							return extendResult.AsValue();
+							return PreserveHookErrors(extendResult.AsValue());
 						}
 					}
 
@@ -2088,7 +2105,7 @@ public class SharpMUSHParserVisitor(
 					}
 
 					var invalidSwitchList = string.Join(", ", invalidSwitches);
-					return new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}");
+					return PreserveHookErrors(new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}"));
 				}
 
 				// 4. Check CommandLock before executing
@@ -2099,7 +2116,7 @@ public class SharpMUSHParserVisitor(
 					if (!await LockService.Evaluate(commandLockStr, executorObj, executorObj))
 					{
 						await NotifyService.NotifyLocalized(executorObj, nameof(ErrorMessages.Notifications.PermissionDenied));
-						return new CallState(ErrorMessages.Returns.PermissionDenied);
+						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 					}
 				}
 
@@ -2140,8 +2157,8 @@ public class SharpMUSHParserVisitor(
 				var afterHookFinal = await HookService.GetHookAsync(rootCommand, "AFTER");
 				if (afterHookFinal.IsSome())
 				{
-					await ExecuteHookCode(newParser, executor, afterHookFinal.AsValue());
-					// Result is discarded
+					await EvaluateHook(afterHookFinal.AsValue());
+					// Hook text is ignored, but failure state is retained.
 				}
 
 				// after → near the softcode AFTER: C# interceptors observe the completed command. Result discarded.
@@ -2150,7 +2167,7 @@ public class SharpMUSHParserVisitor(
 					await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
 				}
 
-				return commandResult;
+				return PreserveHookErrors(commandResult);
 			});
 	}
 
@@ -2213,17 +2230,12 @@ public class SharpMUSHParserVisitor(
 				return await HandleUserDefinedCommand(localParser, matchResult.AsValue());
 			}
 
-			// For other hook types (IGNORE, BEFORE, AFTER), execute the attribute directly
-			var result = await AttributeService.EvaluateAttributeFunctionAsync(
-				localParser,
-				executorObj,
-				targetObj,
-				hook.AttributeName,
-				new Dictionary<string, CallState>(),
-				evalParent: true,
-				ignorePermissions: false);
-
-			return new CallState(result);
+			// Older attribute services expose text only; preserve their published contract.
+			if (AttributeService is IAttributeFunctionResultService results)
+				return await results.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
+					hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false);
+			return new CallState(await AttributeService.EvaluateAttributeFunctionAsync(localParser, executorObj, targetObj,
+				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false));
 		}
 		finally
 		{
