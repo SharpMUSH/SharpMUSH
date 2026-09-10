@@ -17,6 +17,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -318,7 +319,7 @@ public class SharpMUSHParserVisitor(
 		if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
 			return;
 		var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-		await NotifyService.Notify(owner, MarkupText.Plain(message));
+		await NotifyService.Notify(owner, MarkupText.Plain(message), executor);
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST",
@@ -338,10 +339,12 @@ public class SharpMUSHParserVisitor(
 
 		foreach (var targetStr in forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
-			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch);
+			// Forwarding is receiver-directed, like a page; the sender need not see the recipient.
+			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr,
+				LocateFlags.AbsoluteMatch | LocateFlags.MatchForPage);
 			if (locateResult.IsValid())
 			{
-				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message));
+				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message), executor);
 			}
 		}
 	}
@@ -1432,11 +1435,20 @@ public class SharpMUSHParserVisitor(
 			// (Steps 1-8 above), so a built-in never pays for this evaluation.
 			var evaluatedCommandText = (await parser.FunctionParse(commandText))?.Message ?? commandText;
 
+			// Live discovery uses the invoking executor's perception before handlers can match.
+			// Explicit configured hooks keep their separate administrative dispatch path.
+			var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+			Func<DBRef, CancellationToken, ValueTask<bool>> perceive = reality is IRealityObservationProvider observations
+				? await observations.ObserveAsync(executorObject.Object().DBRef, ExecutionBudget.CurrentToken)
+				: (target, ct) => reality.CanPerceiveAsync(executorObject.Object().DBRef, target, ct);
+			IAsyncEnumerable<AnySharpObject> PerceivedCandidates(IAsyncEnumerable<AnySharpObject> candidates)
+				=> candidates.Where((candidate, _) => perceive(candidate.Object().DBRef, ExecutionBudget.CurrentToken));
+
 			var nearbyObjects = Mediator.CreateStream(new GetNearbyObjectsQuery(executorObject.Object().DBRef));
 
 			var userDefinedCommandMatches = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
-				nearbyObjects,
+				PerceivedCandidates(nearbyObjects),
 				evaluatedCommandText);
 
 			if (userDefinedCommandMatches.IsSome())
@@ -1462,7 +1474,7 @@ public class SharpMUSHParserVisitor(
 
 					var userDefinedCommandMatchesOnZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 						parser,
-						zmrContents,
+						PerceivedCandidates(zmrContents),
 						evaluatedCommandText);
 
 					if (userDefinedCommandMatchesOnZMR.IsSome())
@@ -1478,7 +1490,7 @@ public class SharpMUSHParserVisitor(
 				AnySharpObject[] item = [(await executorObject.AsContent.Location()).WithExitOption()];
 				var userDefinedCommandMatchesOnLocation = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
-					item.ToAsyncEnumerable(),
+					PerceivedCandidates(item.ToAsyncEnumerable()),
 					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
@@ -1499,7 +1511,7 @@ public class SharpMUSHParserVisitor(
 
 				var userDefinedCommandMatchesOnPersonalZMR = await CommandDiscoveryService.MatchUserDefinedCommand(
 					parser,
-					personalZMRContents,
+					PerceivedCandidates(personalZMRContents),
 					evaluatedCommandText);
 
 				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
@@ -1520,7 +1532,7 @@ public class SharpMUSHParserVisitor(
 
 			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
 				parser,
-				globalObjects.ToAsyncEnumerable().Union(globalObjectContent),
+				PerceivedCandidates(globalObjects.ToAsyncEnumerable().Union(globalObjectContent)),
 				evaluatedCommandText);
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())

@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -16,8 +17,14 @@ public class MoveService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IPermissionService permissionService,
-	INotifyService notifyService) : IMoveService
+	INotifyService notifyService,
+	IRealityPolicy reality) : IMoveService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public MoveService(IMediator mediator, IAttributeService attributeService,
+		IPermissionService permissionService, INotifyService notifyService)
+		: this(mediator, attributeService, permissionService, notifyService, DisabledRealityPolicy.Instance) { }
+
 	/// <summary>
 	/// Standard attribute names for move hooks
 	/// </summary>
@@ -189,6 +196,8 @@ public class MoveService(
 			room => room,
 			thing => thing);
 
+		if (!await reality.CanPerceiveAsync(target.Object().DBRef, dest.Object().DBRef)) return false;
+
 		if (!await permissionService.Controls(who, target))
 		{
 			return false;
@@ -312,7 +321,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -324,7 +333,7 @@ public class MoveService(
 			{
 				if (!content.Object().DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object().DBRef, defaultMsg, targetObj);
 				}
 			}
 		}
@@ -347,7 +356,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}
@@ -419,7 +428,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -431,7 +440,7 @@ public class MoveService(
 			{
 				if (!content.Object().DBRef.Equals(targetDBRef))
 				{
-					await notifyService.Notify(content.Object().DBRef, defaultMsg);
+					await notifyService.Notify(content.Object().DBRef, defaultMsg, targetObj);
 				}
 			}
 		}
@@ -454,7 +463,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}
@@ -508,7 +517,7 @@ public class MoveService(
 
 				if (!string.IsNullOrEmpty(message.ToPlainText()))
 				{
-					await notifyService.Notify(content.Object().DBRef, message);
+					await notifyService.Notify(content.Object().DBRef, message, targetObj);
 				}
 			}
 		}
@@ -531,7 +540,7 @@ public class MoveService(
 
 			if (!string.IsNullOrEmpty(message.ToPlainText()))
 			{
-				await notifyService.Notify(targetDBRef, message);
+				await notifyService.Notify(targetDBRef, message, targetObj);
 			}
 		}
 	}
@@ -566,10 +575,15 @@ public class MoveService(
 
 			foreach (var content in contents)
 			{
-				// This is typically used for players inside vehicles or containers
+				// This is typically used for players inside vehicles or containers.
+				var receiver = content.Object().DBRef;
+				if (!await reality.CanPerceiveAsync(receiver, container.Object().DBRef)) continue;
+				var visibleOrigin = await reality.CanPerceiveAsync(receiver, oldLocation) ? oldLocName : "somewhere";
+				var visibleDestination = await reality.CanPerceiveAsync(receiver, newLocation) ? newLocName : "somewhere";
 				await notifyService.Notify(
-					content.Object().DBRef,
-					$"You sense that you have moved from {oldLocName} to {newLocName}.");
+					receiver,
+					$"You sense that you have moved from {visibleOrigin} to {visibleDestination}.",
+					container.WithRoomOption());
 			}
 		}
 	}

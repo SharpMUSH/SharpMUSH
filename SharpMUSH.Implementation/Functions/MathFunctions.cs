@@ -1369,9 +1369,11 @@ public partial class Functions
 					return new CallState("#-1");
 				}
 
+				var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
 				var matches = new List<AnySharpContent>();
 				await foreach (var item in container.AsContainer.Content(Mediator))
 				{
+					if (!await perceive(item.Object().DBRef, ExecutionBudget.CurrentToken)) continue;
 					var name = item.Object().Name;
 					if (name.Equals(objectArg, StringComparison.OrdinalIgnoreCase) ||
 						name.StartsWith(objectArg, StringComparison.OrdinalIgnoreCase))

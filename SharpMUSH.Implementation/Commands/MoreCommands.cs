@@ -893,10 +893,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -1076,7 +1078,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.");
+				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.", executor);
 			}
 		}
 
@@ -1112,7 +1114,7 @@ public partial class Commands
 								continue;
 							}
 
-							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.");
+							await NotifyService.Notify(objAny, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 							dismissedCount++;
 						}
 						break;
@@ -1161,7 +1163,7 @@ public partial class Commands
 		}
 
 		await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} dismisses you. You stop following.", executor);
 
 		return CallState.Empty;
 	}
@@ -1288,9 +1290,18 @@ public partial class Commands
 						return CallState.Empty;
 					}
 
+					if (!await CanMoveInReality(parser, contentToDrop.Object().DBRef, dropToContainer.Object().DBRef))
+					{
+						await NotifyService.Notify(executor, "Dropped.", executor);
+						return CallState.Empty;
+					}
+
 					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
 
-					await NotifyService.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
+					var dropMessage = await CanMoveInReality(parser, executor.Object().DBRef, dropToContainer.Object().DBRef)
+						? $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}."
+						: "Dropped.";
+					await NotifyService.Notify(executor, dropMessage, executor);
 					return CallState.Empty;
 				}
 			}
@@ -1358,7 +1369,10 @@ public partial class Commands
 		}
 
 		var container = objectToEmpty.AsContainer;
-		var contents = await container.Content(Mediator).ToListAsync();
+		var contents = new List<AnySharpContent>();
+		await foreach (var item in container.Content(Mediator))
+			if (await PermissionService.CanInteract(executor, item.WithRoomOption(), IPermissionService.InteractType.Match))
+				contents.Add(item);
 
 		if (contents.Count == 0)
 		{
@@ -1409,6 +1423,12 @@ public partial class Commands
 					continue;
 				}
 
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
+				{
+					failedCount++;
+					continue;
+				}
+
 				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
@@ -1445,6 +1465,13 @@ public partial class Commands
 					continue;
 				}
 
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, executor.Object().DBRef)
+					|| !await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
+				{
+					failedCount++;
+					continue;
+				}
+
 				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
@@ -1470,6 +1497,12 @@ public partial class Commands
 				}
 
 				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
+				{
+					failedCount++;
+					continue;
+				}
+
+				if (!await CanMoveInReality(parser, itemObj.Object().DBRef, destination.Object().DBRef))
 				{
 					failedCount++;
 					continue;
@@ -1726,7 +1759,7 @@ public partial class Commands
 		}
 
 		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.");
+		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.", executor);
 
 		return CallState.Empty;
 	}
@@ -1983,6 +2016,12 @@ public partial class Commands
 		}
 
 		var contentToGive = objectToGive.AsContent;
+		if (!await CanMoveInReality(parser, contentToGive.Object().DBRef, recipientContainer.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You can't give that there.", executor);
+			return CallState.Empty;
+		}
+
 		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer));
 
 		var giveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
@@ -2031,12 +2070,12 @@ public partial class Commands
 			var receiveMsg = receiveAttr.AsT0[0].Value;
 			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
 			{
-				await NotifyService.Notify(recipient, receiveMsg);
+				await NotifyService.Notify(recipient, receiveMsg, executor);
 			}
 		}
 		else if (!isSilent)
 		{
-			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
+			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.", executor);
 		}
 
 		var oreceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
@@ -2119,6 +2158,12 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		if (!await CanMoveInReality(parser, executor.Object().DBRef, homeLocation.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You can't go home.", executor);
+			return CallState.Empty;
+		}
+
 		await Mediator.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
 
 		await NotifyService.Notify(executor, "There's no place like home...", executor);
@@ -2143,12 +2188,13 @@ public partial class Commands
 		}
 
 		var container = executor.AsContainer;
-		var contents = container.Content(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
+		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = await contents
 			.Select((AnySharpContent item, CancellationToken _) => MessageHelpers.FormatObjectWithDbref(item.Object()))
-			.ToListAsync();
+			.ToListAsync(ExecutionBudget.CurrentToken);
 
 		if (items.Count == 0)
 		{
@@ -2414,7 +2460,7 @@ public partial class Commands
 		foreach (var recipientName in recipientNames)
 		{
 			var recipientResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(
-				parser, executor, executor, recipientName, LocateFlags.All);
+				parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage);
 
 			if (!recipientResult.IsAnySharpObject)
 			{
@@ -2913,10 +2959,12 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
+			var perceive = await ObserveRealityAsync(parser, executor);
 			var players = await executorLocation.Content(Mediator)
 				.Where(obj => obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
 				.Select(obj => obj.Object().Name)
-				.ToListAsync();
+				.ToListAsync(ExecutionBudget.CurrentToken);
 
 			if (players.Count == 0)
 			{
@@ -3040,7 +3088,7 @@ public partial class Commands
 				}
 
 				await NotifyService.Notify(obj.WithRoomOption(),
-					$"{executor.Object().Name} whispers to {targetList}.");
+					$"{executor.Object().Name} whispers to {targetList}.", executor);
 			}
 		}
 

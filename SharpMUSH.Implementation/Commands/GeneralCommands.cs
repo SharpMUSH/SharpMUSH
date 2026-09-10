@@ -17,6 +17,7 @@ using System.Net;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
@@ -649,6 +650,9 @@ public partial class Commands
 		}
 
 		var realViewing = viewing.Known;
+		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		if (!await reality.CanPerceiveAsync(executor.Object().DBRef, realViewing.Object().DBRef))
+			return new CallState("#-1 NO MATCH");
 		var viewingObject = realViewing.Object();
 
 		var executorLocation = executor.IsContent
@@ -669,8 +673,20 @@ public partial class Commands
 		var tryIdesc = viewingFromInside && !lookOutside
 			&& (realViewing.IsPlayer || realViewing.IsThing);
 		var usedIdesc = false;
+		var customDescription = false;
+		var layerDescription = await reality.DescriptionAttributeAsync(executor.Object().DBRef, viewingObject.DBRef);
+		if (layerDescription is not null)
+		{
+			var layerAttribute = await AttributeService.GetAttributeAsync(executor, realViewing, layerDescription,
+				IAttributeService.AttributeMode.Read, true);
+			if (layerAttribute.IsAttribute && await PermissionService.CanExecuteAttribute(executor, realViewing, layerAttribute.AsAttribute))
+			{
+				customDescription = true;
+				descriptionAttributeName = layerDescription;
+			}
+		}
 
-		if (tryIdesc)
+		if (tryIdesc && !customDescription)
 		{
 			var idescResult = await AttributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
 				IAttributeService.AttributeMode.Read, true);
@@ -684,7 +700,7 @@ public partial class Commands
 			}
 		}
 
-		if (!usedIdesc)
+		if (!usedIdesc && !customDescription)
 		{
 			var descResult = await AttributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, true);
@@ -705,7 +721,7 @@ public partial class Commands
 				state => state with { Enactor = lookerEnactor },
 				lookParser => AttributeService.EvaluateAttributeFunctionAsync(
 					lookParser, executor, realViewing, descriptionAttributeName,
-					new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true));
+					new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !customDescription));
 		}
 
 		var flags = await viewingObject.Flags.Value.ToArrayAsync();
@@ -793,54 +809,17 @@ public partial class Commands
 
 		if (showInventory)
 		{
-			var allContents = Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer));
+			var allContents = Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
 
-			var isRoomLight = realViewing.IsRoom && await realViewing.IsLight();
-			var isRoomDark = realViewing.IsRoom && await realViewing.IsDarkLegal();
 			var canSeeAll = await executor.IsSee_All();
-
 			var visibleContents = new List<AnySharpContent>();
 			var visibleExits = new List<AnySharpContent>();
-
-			await foreach (var item in allContents)
+			var canSeeContent = await WorldVisibility.CreateScanAsync(executor, realViewing, reality, ConnectionService, ExecutionBudget.CurrentToken);
+			await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
-				var itemObj = item.WithRoomOption();
-				var isDark = await itemObj.IsDarkLegal();
-				var isLight = await itemObj.IsLight();
-
-				bool visible = false;
-				if (isRoomLight)
-				{
-					visible = true;
-				}
-				else if (isRoomDark)
-				{
-					visible = canSeeAll || isLight;
-				}
-				else
-				{
-					visible = !isDark || canSeeAll;
-				}
-
-				if (visible)
-				{
-					if (item.IsExit)
-					{
-						if (!isDark || canSeeAll)
-						{
-							visibleExits.Add(item);
-						}
-					}
-					else
-					{
-						// Disconnected / portal-only players are "asleep" — omitted from contents (PennMUSH).
-						// Objects always show.
-						if (!item.IsPlayer || await ConnectionService.IsOnline(itemObj))
-						{
-							visibleContents.Add(item);
-						}
-					}
-				}
+				if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
+				if (item.IsExit) visibleExits.Add(item);
+				else visibleContents.Add(item);
 			}
 
 			if (visibleContents.Count > 0)
@@ -1044,10 +1023,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -1262,8 +1243,9 @@ public partial class Commands
 
 			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
 			{
-				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer))
-					.ToArrayAsync();
+				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+					.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
+					.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 				if (exits.Length > 0)
 				{
@@ -2232,6 +2214,7 @@ public partial class Commands
 			? parser.CurrentState.Switches.ToArray()
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		List<string> runningOutput = [];
 
 		async Task<bool> CanScan(AnySharpObject obj)
@@ -2245,7 +2228,8 @@ public partial class Commands
 
 		async ValueTask ReportMatches(IAsyncEnumerable<AnySharpObject> candidates)
 		{
-			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, arg0);
+			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
 			if (!matched.IsSome())
 			{
 				return;
@@ -3241,7 +3225,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
+				await PermissionService.CanInteract(executor, obj.WithRoomOption(), InteractType.Hear, enactor));
 
 		if (isSpoof)
 		{
@@ -3406,7 +3390,7 @@ public partial class Commands
 				continue;
 			}
 
-			await NotifyService.Prompt(locateTarget, notification);
+			await NotifyService.Prompt(locateTarget, notification, executor);
 		}
 
 		return new None();
@@ -3615,7 +3599,7 @@ public partial class Commands
 		if (isUnfindable)
 		{
 			await NotifyService.Notify(target,
-				$"{executor.Object().Name} tried to locate you, but was unable to.");
+				$"{executor.Object().Name} tried to locate you, but was unable to.", executor);
 			await NotifyService.Notify(executor,
 				$"{targetObject.Name} is UNFINDABLE.", executor);
 			return new CallState(ErrorMessages.Returns.Unfindable);
@@ -3625,7 +3609,7 @@ public partial class Commands
 		var locationName = targetLocation.Object().Name;
 
 		await NotifyService.Notify(target,
-			$"{executor.Object().Name} has just located your position.");
+			$"{executor.Object().Name} has just located your position.", executor);
 
 		await NotifyService.Notify(executor,
 			$"{targetObject.Name} is in {locationName}.", executor);
@@ -6033,7 +6017,7 @@ public partial class Commands
 		var actorMessage = await GetAttributeOrDefault(
 			parser, AttributeService, executor, victim, actor, what, whatd, stackArgs);
 
-		await NotifyService.Notify(actor, actorMessage);
+		await NotifyService.Notify(actor, actorMessage, actor);
 
 		var actorLocation = await actor.Where();
 		var othersMessage = await GetAttributeOrDefault(
@@ -7042,6 +7026,7 @@ public partial class Commands
 		var exitsFlag = switches.Contains("EXITS");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var location = await executor.Where();
 		var locationObj = location.Object();
 		var locationAnyObject = location.WithRoomOption();
@@ -7082,8 +7067,9 @@ public partial class Commands
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
 			}
 
-			var contents = location.Content(Mediator);
-			await foreach (var obj in contents)
+			var contents = location.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct));
+			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -7122,8 +7108,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
 			if (await locationAnyObject.IsAudible())
 			{
-				var exits = (location.Content(Mediator)).Where(x => x.IsExit);
-				await foreach (var exit in exits)
+				var exits = location.Content(Mediator).Where(x => x.IsExit)
+					.Where((item, ct) => perceive(item.Object().DBRef, ct));
+				await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
@@ -7136,7 +7123,8 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
-			await foreach (var obj in executor.AsContainer.Content(Mediator))
+			await foreach (var obj in executor.AsContainer.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);

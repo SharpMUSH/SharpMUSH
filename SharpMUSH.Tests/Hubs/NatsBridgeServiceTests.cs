@@ -32,7 +32,7 @@ public class NatsBridgeServiceTests
 		var options = new NatsOptions { Url = natsUrl };
 		var service = new NatsBridgeService(
 			hubContext, pluginHubContext, options, SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
-			NullLogger<NatsBridgeService>.Instance);
+			NullLogger<NatsBridgeService>.Instance, Substitute.For<IRoomEventDispatcher>());
 
 		return (service, hubContext);
 	}
@@ -65,20 +65,18 @@ public class NatsBridgeServiceTests
 	}
 
 	[Test]
-	public async Task ForwardRoomEventMessage_RoutesToCorrectRoomGroup()
+	public async Task ForwardRoomEventUsesSharedRecipientDispatcher()
 	{
-		var (_, hubContext) = BuildService();
-		var clients = hubContext.Clients;
-		var room = new DBRef(42, 1700000000);
-		var roomDbref = room.ToString();
-		var expectedGroup = GameHub.RoomGroupName(room);
-		var message = new RoomEventMessage(roomDbref, RoomEventType.Say, "Wizard", "Hello all!");
-
-		var proxy = hubContext.Clients.Group(expectedGroup);
-		await proxy.ReceiveRoomEvent(message);
-
-		clients.Received(1).Group(expectedGroup);
-		await proxy.Received(1).ReceiveRoomEvent(message);
+		var hub = Substitute.For<IHubContext<GameHub, IGameHubClient>>();
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var clients = Substitute.For<IHubClients<IGameHubClient>>();
+		hub.Clients.Returns(clients);
+		var service = new NatsBridgeService(hub, Substitute.For<IHubContext<GameHub>>(), new NatsOptions { Url = "nats://localhost:4222" },
+			SharpMUSH.Implementation.Services.PluginCatalog.Empty(), NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var message = new RoomEventMessage("#42:1", RoomEventType.Say, "Actor", "Hello", "#7:1");
+		await service.ForwardRoomEventAsync(message);
+		await dispatcher.Received(1).DispatchAsync(message, Arg.Any<CancellationToken>());
+		clients.DidNotReceive().Group(Arg.Any<string>());
 	}
 
 	[Test]
@@ -130,4 +128,94 @@ public class NatsBridgeServiceTests
 
 		await Assert.That(caught).IsNull();
 	}
+	[Test]
+	public async Task RoomStreamsPreserveOrderingWithoutBlockingUnrelatedRooms()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var other = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var order = new System.Collections.Concurrent.ConcurrentQueue<string>();
+		dispatcher.DispatchAsync(Arg.Any<RoomEventMessage>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			var message = call.ArgAt<RoomEventMessage>(0);
+			if (message.Content == "first") await release.Task;
+			order.Enqueue(message.Content);
+			if (message.Content == "other") other.TrySetResult();
+		});
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			yield return new("#1:1", RoomEventType.Say, "actor", "first", "#3:1");
+			yield return new("#1:1", RoomEventType.Say, "actor", "second", "#3:1");
+			yield return new("#2:1", RoomEventType.Say, "actor", "other", "#3:1");
+			await Task.CompletedTask;
+		}
+		var forwarding = service.ForwardRoomEventsAsync(Messages());
+		try
+		{
+			await other.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(order.Contains("second")).IsFalse();
+		}
+		finally { release.TrySetResult(); await forwarding; }
+		await Assert.That(string.Join(",", order.Where(x => x != "other"))).IsEqualTo("first,second");
+	}
+
+	[Test]
+	public async Task FullRoomLaneAppliesBackpressureAndCancelsPendingDelivery()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		dispatcher.DispatchAsync(Arg.Any<RoomEventMessage>(), Arg.Any<CancellationToken>())
+			.Returns(call => release.Task.WaitAsync(call.ArgAt<CancellationToken>(1)));
+		var full = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var produced = 0;
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			for (var index = 0; index < 1000; index++)
+			{
+				if (Interlocked.Increment(ref produced) == 34) full.TrySetResult();
+				yield return new("#1:1", RoomEventType.Say, "actor", "words", "#3:1");
+			}
+			await Task.CompletedTask;
+		}
+		using var cancellation = new CancellationTokenSource();
+		var forwarding = service.ForwardRoomEventsAsync(Messages(), cancellation.Token);
+		try
+		{
+			await full.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(Volatile.Read(ref produced)).IsEqualTo(34);
+		}
+		finally
+		{
+			cancellation.Cancel();
+			try { await forwarding; }
+			catch (OperationCanceledException ex)
+			{
+				await Assert.That(ex.CancellationToken.IsCancellationRequested).IsTrue();
+			}
+		}
+		await Assert.That(forwarding.IsCanceled).IsTrue();
+	}
+
+	[Test]
+	public async Task RoomStreamPreservesIngressFailuresAfterStoppingWorkers()
+	{
+		var dispatcher = Substitute.For<IRoomEventDispatcher>();
+		var service = new NatsBridgeService(Substitute.For<IHubContext<GameHub, IGameHubClient>>(),
+			Substitute.For<IHubContext<GameHub>>(), new NatsOptions(), SharpMUSH.Implementation.Services.PluginCatalog.Empty(),
+			NullLogger<NatsBridgeService>.Instance, dispatcher);
+		async IAsyncEnumerable<RoomEventMessage> Messages()
+		{
+			yield return new("#1:1", RoomEventType.Say, "actor", "first", "#3:1");
+			await Task.Yield();
+			throw new IOException("NATS ingress disconnected");
+		}
+		await Assert.That(async () => await service.ForwardRoomEventsAsync(Messages())).Throws<IOException>();
+	}
+
 }

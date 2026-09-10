@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -33,8 +34,17 @@ public class ListenerRoutingService(
 	ILockService lockService,
 	IConnectionService connectionService,
 	IServiceProvider serviceProvider,
-	IMessageBus publishEndpoint) : IListenerRoutingService
+	IMessageBus publishEndpoint,
+	IRealityPolicy reality) : IListenerRoutingService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
+		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
+		IServiceProvider serviceProvider, IMessageBus publishEndpoint)
+		: this(mediator, patternMatcher, permissionService, lockService, connectionService,
+			serviceProvider, publishEndpoint, DisabledRealityPolicy.Instance)
+	{ }
+
 	private IAttributeService? _attributeService;
 	private IAttributeService AttributeService => _attributeService ??= serviceProvider.GetRequiredService<IAttributeService>();
 	/// <summary>
@@ -228,24 +238,29 @@ public class ListenerRoutingService(
 		AnySharpObject speaker,
 		NotificationType type)
 	{
-		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET");
+		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET", ExecutionBudget.CurrentToken);
 		if (!hasPuppet)
 			return;
 
-		var owner = await puppet.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await puppet.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		if (owner is null) return;
+		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef, ExecutionBudget.CurrentToken)
+			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef, ExecutionBudget.CurrentToken)) return;
 
-		// A filter over the in-memory connection table, so asking it twice — once to gate, once to
-		// deliver — is cheaper than holding a list across the checks between.
-		var connections = connectionService.Get(owner.Object.DBRef);
-		if (!await connections.AnyAsync())
-			return;
+		// Snapshot immutable binding values before the remaining awaited relay reads. Metadata is
+		// mutable, so retaining ConnectionData itself would not retain its original session.
+		var bindings = await connectionService.Get(owner.Object.DBRef)
+			.Select(connection => (connection.Handle, connection.Ref,
+				Session: connection.Metadata.GetValueOrDefault("SessionId")))
+			.ToArrayAsync(ExecutionBudget.CurrentToken);
+		if (bindings.Length == 0) return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
-		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
+		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE", ExecutionBudget.CurrentToken);
 		if (!hasVerbose)
 		{
-			var puppetLocation = await LocateService.FriendlyWhereIs(puppet);
-			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
+			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);
+			var ownerLocation = await owner.Location.WithCancellation(ExecutionBudget.CurrentToken);
 
 			if (puppetLocation.Object().DBRef == ownerLocation.Object().DBRef)
 				return;
@@ -272,9 +287,15 @@ public class ListenerRoutingService(
 			message.Match(markupString => markupString, MarkupText.Plain));
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
-		await foreach (var conn in connections)
+		foreach (var binding in bindings)
 		{
-			await publishEndpoint.HandlePublish(new MarkupOutputMessage(conn.Handle, serialized));
+			var current = connectionService.Get(binding.Handle);
+			if (current is null || current.State != IConnectionService.ConnectionState.LoggedIn
+				|| !Nullable.Equals(binding.Ref, owner.Object.DBRef)
+				|| !Nullable.Equals(current.Ref, binding.Ref)
+				|| !string.Equals(binding.Session, current.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal))
+				continue;
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized), ExecutionBudget.CurrentToken);
 		}
 	}
 

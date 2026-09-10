@@ -3,6 +3,7 @@ using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -41,7 +42,9 @@ public class NotifyLocationCancellationTests
 		else sender.AsExit.Location = location;
 		var bus = Substitute.For<IMessageBus>();
 		var listeners = Substitute.For<IListenerRoutingService>();
-		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(), Substitute.For<ILocalizationService>(), listeners, Substitute.For<IMediator>());
+		var reality = Substitute.For<IRealityPolicy>();
+		reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(), Substitute.For<ILocalizationService>(), reality, listeners, Substitute.For<IMediator>());
 		var operation = notify.Notify(new DBRef(2), "output", sender).AsTask();
 		try
 		{

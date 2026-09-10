@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Server;
@@ -40,7 +41,7 @@ public class ControlAuthorizationCancellationTests
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		var baseline = TestSharpMushOptions.Create();
 		options.CurrentValue.Returns(baseline with { Database = baseline.Database with { ZoneControlZmpOnly = false } });
-		var service = new PermissionService(Substitute.For<ILockService>(), options);
+		var service = new PermissionService(Substitute.For<ILockService>(), options, Substitute.For<IRealityPolicy>());
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
 		async Task<T> Block<T>(CancellationToken token)
