@@ -12,6 +12,7 @@ using SharpMUSH.Library.Queries;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Tests.Services;
 
 namespace SharpMUSH.Tests.Commands;
@@ -25,6 +26,7 @@ public class LegacyQueueCommandBoundaryTests
 	[Arguments("ProcessStatus", "")]
 	[Arguments("ProcessStatus", "DEBUG")]
 	[Arguments("ProcessStatus", "ALL")]
+	[Arguments("ProcessStatus", "SEMAPHORE")]
 	[Arguments("Halt", "PID")]
 	[Arguments("Wait", "PID")]
 	public async Task UnsupportedSnapshotsDoNotBreakLegacyCommandBoundaries(string method, string commandSwitch)
@@ -35,7 +37,17 @@ public class LegacyQueueCommandBoundaryTests
 		scheduler.GetQueueUsage().Returns(_ => throw new NotSupportedException());
 		var result = await Invoke(commands, parser, method);
 		await Assert.That(result.AsValue().Message?.ToPlainText() ?? "").IsEqualTo(
-			method == "ProcessStatus" && commandSwitch != "DEBUG" ? "" : ErrorMessages.Returns.ErrorNotSupported);
+			method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE") ? "" : ErrorMessages.Returns.ErrorNotSupported);
+		var expectedKey = method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE")
+			? nameof(ErrorMessages.Notifications.PsQueueForTargetFormat)
+			: nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH);
+		if (commandSwitch == "ALL") expectedKey = nameof(ErrorMessages.Notifications.PsAllHeader);
+		await Assert.That(parser.ServiceProvider.GetRequiredService<INotifyService>().ReceivedCalls()
+			.Any(call => call.GetMethodInfo().Name == "NotifyLocalized" && Equals(call.GetArguments()[1], expectedKey))).IsTrue();
+		if (commandSwitch == "SEMAPHORE")
+			await Assert.That(parser.ServiceProvider.GetRequiredService<INotifyService>().ReceivedCalls()
+				.Any(call => call.GetMethodInfo().Name == "NotifyLocalized"
+					&& Equals(call.GetArguments()[1], nameof(ErrorMessages.Notifications.PsSemaphoreTaskEntryFormat)))).IsFalse();
 		await mediator.DidNotReceive().Send(Arg.Any<HaltByPidRequest>(), Arg.Any<CancellationToken>());
 	}
 
@@ -65,11 +77,14 @@ public class LegacyQueueCommandBoundaryTests
 	private (SharpMUSH.Implementation.Commands.Commands Commands, IMUSHCodeParser Parser, ITaskScheduler Scheduler, IMediator Mediator)
 		Create(string method, string commandSwitch)
 	{
-		var actor = new TestObjectFactory().CreatePlayer(1, "God");
+		var actor = new TestObjectFactory().CreatePlayer(commandSwitch == "ALL" ? 1 : 40, "Queue actor");
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor.AsPlayer));
-		mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<SemaphoreTaskData>());
+		mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>()).Returns(commandSwitch == "SEMAPHORE"
+			? new[] { new SemaphoreTaskData(42, MarkupText.Plain("private command"), actor.Object().DBRef,
+				new DbRefAttribute(actor.Object().DBRef, ["SEMAPHORE"]), null) }.ToAsyncEnumerable()
+			: AsyncEnumerable.Empty<SemaphoreTaskData>());
 		mediator.CreateStream(Arg.Any<ScheduleDelayQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleEnqueueQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleAllTasksQuery>(), Arg.Any<CancellationToken>())
@@ -77,9 +92,12 @@ public class LegacyQueueCommandBoundaryTests
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		var scheduler = Substitute.For<ITaskScheduler>();
+		var controls = ActivatorUtilities.CreateInstance<QueueControlService>(Factory.Services, scheduler, mediator, permissions);
+		var notifications = Substitute.For<INotifyService>();
 		var provider = Substitute.For<IServiceProvider>();
 		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ITaskScheduler)
-			? scheduler : Factory.Services.GetService(call.Arg<Type>()));
+			? scheduler : call.Arg<Type>() == typeof(INotifyService) ? notifications
+			: call.Arg<Type>() == typeof(IQueueControlService) ? controls : Factory.Services.GetService(call.Arg<Type>()));
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.ServiceProvider.Returns(provider);
 		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
@@ -91,7 +109,7 @@ public class LegacyQueueCommandBoundaryTests
 			}
 		});
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services,
-			mediator, permissions, Substitute.For<INotifyService>());
+			mediator, permissions, notifications);
 		return (commands, parser, scheduler, mediator);
 	}
 

@@ -4734,9 +4734,18 @@ public partial class Commands
 
 		var targetDbRef = target.Object().DBRef;
 
-		var semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef))
-			.Where(async (task, ct) => await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
-				.CanAccessLegacyAsync(executor, task.Pid, mutate: false, ct)).ToArrayAsync();
+		SharpMUSH.Library.Models.SchedulerModels.SemaphoreTaskData[] semaphoreTasks;
+		try
+		{
+			semaphoreTasks = await Mediator.CreateStream(new ScheduleSemaphoreQuery(targetDbRef))
+				.Where(async (task, ct) => await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
+					.CanAccessLegacyAsync(executor, task.Pid, mutate: false, ct)).ToArrayAsync();
+		}
+		catch (NotSupportedException)
+		{
+			// A legacy scheduler cannot prove source ownership for these command bodies.
+			return await QueueInspectionUnsupported(executor);
+		}
 		var delayTasks = await Mediator.CreateStream(new ScheduleDelayQuery(targetDbRef)).ToArrayAsync();
 		var enqueueTasks = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).ToArrayAsync();
 
