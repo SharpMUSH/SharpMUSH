@@ -209,7 +209,7 @@ public class OptionsService(
 				PlayerNameLen: 21,
 				PlayerQueueLimit: 100,
 				QueueChunk: 3,
-				QueueEntryCpuTime: 1000,
+				QueueEntryCpuTime: LimitOptions.DefaultQueueEntryCpuTime,
 				QueueLoss: 63,
 				StartingMoney: 150,
 				StartingQuota: 20,

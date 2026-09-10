@@ -13,7 +13,7 @@ internal class SemaphoreTask(ITaskScheduler taskScheduler, IOptionsWrapper<Sharp
 		try
 		{
 			// Quartz runs outside the parser: give persistence its own finite deadline and shutdown token.
-			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
 			using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, context.CancellationToken);
 			using var scope = budget.Enter();
 			await taskScheduler.ReleaseScheduledWork(long.Parse(context.Trigger.Key.Name.Split('-').Last()), semaphoreTimeout: true, generation: generation);
