@@ -29,7 +29,7 @@ public partial class Commands
 			return await InputResult(parser, await sessions.PromptAsync(parser, arguments.GetValueOrDefault("0")?.Message ?? MString.Empty));
 		var path = arguments.GetValueOrDefault("0")?.Message?.Text ?? "";
 		var separator = path.IndexOf('/');
-		if (separator < 1 || separator == path.Length - 1 || !arguments.ContainsKey("1"))
+		if (separator < 1 || separator == path.Length - 1 || !arguments.TryGetValue("1", out var prompt))
 			return await InputError(parser, InputSessionService.InvalidCallback);
 		var seconds = 60;
 		if (arguments.TryGetValue("2", out var timeout)
@@ -39,7 +39,7 @@ public partial class Commands
 		var target = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, path[..separator], LocateFlags.All);
 		if (target.IsError) return target.AsError;
 		return await InputResult(parser, await sessions.StartAsync(parser, target.AsSharpObject.Object().DBRef,
-			path[(separator + 1)..], arguments["1"].Message ?? MString.Empty, TimeSpan.FromSeconds(seconds)));
+			path[(separator + 1)..], prompt.Message ?? MString.Empty, TimeSpan.FromSeconds(seconds)));
 	}
 
 	private async ValueTask<Option<CallState>> InputResult(IMUSHCodeParser parser, string? error)
