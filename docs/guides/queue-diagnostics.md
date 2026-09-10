@@ -42,7 +42,8 @@ History holds at most 1,024 completed/rejected entries for 15 minutes. It is
 process-local and clears on restart. A profile has at most 256 aggregation keys;
 all profiles share a 4,096-sample mailbox. Extra samples or keys are omitted.
 There is one profile per account and at most eight per process. Starting a new
-profile replaces that account's previous profile. Recording stops automatically
+profile replaces that account's previous profile and immediately retires its queued samples,
+preserving other profiles' sample order. Recording stops automatically
 at its deadline; stopped results expire after 15 minutes and may be evicted sooner
 to admit another profile. Stopping waits for pending samples to be authorized and
 included in the final report. These bounds also apply under sustained input.

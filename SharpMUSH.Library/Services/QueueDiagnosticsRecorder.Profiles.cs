@@ -1,4 +1,3 @@
-using System.Threading.Channels;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,8 +20,8 @@ public sealed partial class QueueDiagnosticsRecorder
 	private readonly object _profileGate = new();
 	private readonly Dictionary<Guid, ProfileCapture> _profiles = new();
 	private ProfileCapture[] _recording = [];
-	private readonly Channel<QueueProfileSample> _samples = Channel.CreateBounded<QueueProfileSample>(
-		new BoundedChannelOptions(ProfileMailboxCapacity) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
+	private readonly object _samplesGate = new();
+	private readonly Queue<QueueProfileSample> _samples = new(ProfileMailboxCapacity);
 	private readonly record struct AggregateKey(DBRef? Source, DBRef? Owner, string? Attribute, TelemetryInvocationKind Kind, string Name);
 	private sealed class ProfileCapture(QueueProfileRegistration registration, long startStamp, TimeSpan duration)
 	{
@@ -43,15 +42,12 @@ public sealed partial class QueueDiagnosticsRecorder
 		{
 			PruneProfiles();
 			foreach (var prior in _profiles.Values.Where(p => p.Registration.Actor.AccountId == actor.AccountId).ToArray())
-			{
-				Volatile.Write(ref prior.Recording, 0);
-				_profiles.Remove(prior.Registration.Id);
-			}
+				RetireProfile(prior);
 			if (_profiles.Count >= ProfileCapacity)
 			{
 				var stopped = _profiles.Values.Where(p => p.StopStamp is not null).MinBy(p => p.StopStamp);
 				if (stopped is null) return null;
-				_profiles.Remove(stopped.Registration.Id);
+				RetireProfile(stopped);
 			}
 			var now = _clock.GetUtcNow();
 			var registration = new QueueProfileRegistration(Guid.NewGuid(), actor, now, now + duration);
@@ -59,6 +55,25 @@ public sealed partial class QueueDiagnosticsRecorder
 			RefreshRecording();
 			return registration;
 		}
+	}
+	// Caller owns _profileGate. Writers use capture -> mailbox; the collector takes mailbox only.
+	private void RetireProfile(ProfileCapture capture)
+	{
+		lock (capture)
+		{
+			Volatile.Write(ref capture.Recording, 0);
+			lock (_samplesGate)
+			{
+				// One bounded pass preserves unrelated samples in their original FIFO order.
+				var count = _samples.Count;
+				for (var i = 0; i < count; i++)
+				{
+					var sample = _samples.Dequeue();
+					if (sample.ProfileId != capture.Registration.Id) _samples.Enqueue(sample);
+				}
+			}
+		}
+		_profiles.Remove(capture.Registration.Id);
 	}
 	private void RefreshRecording() => Volatile.Write(ref _recording, _profiles.Values.Where(p => p.Recording == 1).ToArray());
 	private void PruneProfiles()
@@ -72,7 +87,7 @@ public sealed partial class QueueDiagnosticsRecorder
 				capture.StopStamp = capture.StartStamp + (long)(capture.Duration.TotalSeconds * _clock.TimestampFrequency);
 			}
 			if (capture.StopStamp is { } stopped && _clock.GetElapsedTime(stopped, now) >= Retention)
-				_profiles.Remove(capture.Registration.Id);
+				RetireProfile(capture);
 		}
 		RefreshRecording();
 	}
@@ -90,7 +105,7 @@ public sealed partial class QueueDiagnosticsRecorder
 				Volatile.Write(ref capture.Recording, 0);
 				capture.StopStamp ??= _clock.GetTimestamp();
 			}
-			if (discard) _profiles.Remove(id);
+			if (discard) RetireProfile(capture);
 			RefreshRecording();
 		}
 	}
@@ -121,20 +136,27 @@ public sealed partial class QueueDiagnosticsRecorder
 		foreach (var capture in captures)
 		{
 			// A stop response must include every write accepted before its stop boundary.
-			// This per-capture gate covers only the nonblocking mailbox write, never authorization.
+			// This per-capture gate covers only bounded mailbox work, never authorization.
 			lock (capture)
 			{
 				if (Volatile.Read(ref capture.Recording) == 0 || _clock.GetElapsedTime(capture.StartStamp, now) >= capture.Duration) continue;
-				if (!_samples.Writer.TryWrite(new(capture.Registration.Id, observation?.Source, observation?.Owner,
-					observation?.SourceAttribute, invocation))) Interlocked.Increment(ref capture.Dropped);
+				lock (_samplesGate)
+				{
+					if (_samples.Count == ProfileMailboxCapacity) Interlocked.Increment(ref capture.Dropped);
+					else _samples.Enqueue(new(capture.Registration.Id, observation?.Source, observation?.Owner,
+						observation?.SourceAttribute, invocation));
+				}
 			}
 		}
 	}
 	public IReadOnlyList<QueueProfileSample> DrainProfileSamples()
 	{
-		var result = new List<QueueProfileSample>();
-		while (result.Count < ProfileMailboxCapacity && _samples.Reader.TryRead(out var sample)) result.Add(sample);
-		return result;
+		lock (_samplesGate)
+		{
+			var result = new List<QueueProfileSample>(_samples.Count);
+			while (_samples.TryDequeue(out var sample)) result.Add(sample);
+			return result;
+		}
 	}
 	/// <summary>Accepts a bounded batch only after fresh capability and resource inspection checks.</summary>
 	public void ApplyProfileSamples(Guid id, IReadOnlyList<QueueProfileSample> samples)
