@@ -640,6 +640,65 @@ public static class ErrorMessages
 		public const string CantEmptyThatFromHere = "You can't empty that from here.";
 		public const string DontHaveThat = "You don't have that!";
 
+		// --- get / drop / give / use triad and lock defaults (src/move.c, src/rob.c, src/set.c) ---
+		// Literal text on the same terms as the movement defaults above: they reach the game through
+		// DidItRequest.Def / DidItRequest.ODef, which have no per-recipient key seam.
+		/// <summary>PennMUSH <c>src/move.c:736</c>: the object's drop lock refused.</summary>
+		public const string CantSeemToGetRidOfThat = "You can't seem to get rid of that.";
+		/// <summary>PennMUSH <c>src/move.c:671</c>: the source container's take lock refused.</summary>
+		public const string CantTakeThatFromThere = "You can't take that from there.";
+		/// <summary>PennMUSH <c>src/move.c:689</c>: the object's own basic lock refused.</summary>
+		public const string CantPickThatUp = "You can't pick that up.";
+		/// <summary>PennMUSH <c>src/rob.c:323</c>: the object's give lock refused.</summary>
+		public const string CantGiveThatAway = "You can't give that away.";
+		/// <summary>PennMUSH <c>src/rob.c:329</c>: the recipient's from lock refused.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DoesntWantAnythingFromYou = "{0} doesn't want anything from you.";
+		/// <summary>PennMUSH <c>src/rob.c:335</c>: the recipient's receive lock refused the object.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DoesntWantThat = "{0} doesn't want that.";
+		/// <summary>PennMUSH <c>src/move.c:632</c>, the possessive-get actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouTakeFrom = "You take {0} from {1}.";
+		/// <summary>PennMUSH <c>src/move.c:635</c>, the possessive-get o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TakesFrom = "takes {0} from {1}.";
+		/// <summary>PennMUSH <c>src/move.c:682</c>, the plain-get actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouTake = "You take {0}.";
+		/// <summary>PennMUSH <c>src/move.c:686</c>, the plain-get o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string Takes = "takes {0}.";
+		/// <summary>PennMUSH <c>src/move.c:628</c> and <c>:678</c>: what the object itself is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TookYou = "{0} took you.";
+		/// <summary>PennMUSH <c>src/move.c:627</c>: what the robbed container is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string WasTakenFromYou = "{0} was taken from you.";
+		/// <summary>PennMUSH <c>src/move.c:763</c>, the drop actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouDrop = "You drop {0}.";
+		/// <summary>PennMUSH <c>src/move.c:766</c>, the drop o-message, name-prefixed.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string Drops = "drops {0}.";
+		/// <summary>PennMUSH <c>src/move.c:751</c> and <c>:757</c>: what the dropped object is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DropsYou = "{0} drops you.";
+		/// <summary>PennMUSH <c>src/rob.c:412</c>, the give actor message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string YouGaveTo = "You gave {0} to {1}.";
+		/// <summary>PennMUSH <c>src/rob.c:420</c>: what the given object is told.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GaveYouTo = "{0} gave you to {1}.";
+		/// <summary>PennMUSH <c>src/rob.c:427</c>, the recipient's receive message.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GaveYou = "{0} gave you {1}.";
+		/// <summary>PennMUSH <c>src/set.c:1417</c>: the use triad's actor default.</summary>
+		public const string Used = "Used.";
+		/// <summary>PennMUSH <c>src/speech.c:945</c>: the target's page lock refused the pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotAcceptingYourPages = "{0} is not accepting your pages.";
+
 		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
 		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>
 		public const string SafeObjectMustUnset = "That object is set SAFE. You must set it !SAFE before destroying it.";

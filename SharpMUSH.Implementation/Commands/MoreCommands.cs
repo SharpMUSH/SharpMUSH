@@ -1387,59 +1387,30 @@ public partial class Commands
 
 		var currentRoom = executorLocation;
 
+		// The drop lock fails on the object being dropped (move.c:735-737), the drop-in lock on the
+		// room being dropped into (move.c:745-746).
 		if (!await LockService.Evaluate(LockType.Drop, objectToDrop, executor))
 		{
-			await NotifyService.Notify(executor, "You can't drop that.", executor);
+			await DidItService.FailLock(parser, executor, objectToDrop, LockType.Drop,
+				MarkupText.Plain(ErrorMessages.Notifications.CantSeemToGetRidOfThat));
 			return CallState.Empty;
 		}
 
 		if (!await LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeemToDropThingsHere), executor);
+			await DidItService.FailLock(parser, executor, currentRoom.WithExitOption(), LockType.DropIn,
+				MarkupText.Plain(ErrorMessages.Notifications.CantSeemToDropThingsHere));
 			return CallState.Empty;
 		}
 
 		var contentToDrop = objectToDrop.AsContent;
+
+		// move.c:757 — the dropped object is told who dropped it, before the move.
+		await NotifyService.Notify(objectToDrop,
+			string.Format(ErrorMessages.Notifications.DropsYou, executor.Object().Name));
+
 		await MoveService.MoveIt(parser, contentToDrop, currentRoom, noMoveMsgs: false,
 			executor.Object().DBRef, "drop");
-
-		var dropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrDrop, IAttributeService.AttributeMode.Read, true);
-		if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
-		{
-			var dropMsg = dropAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, dropMsg, executor);
-			}
-		}
-
-		var odropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrODrop, IAttributeService.AttributeMode.Read, true);
-		if (odropAttr.IsAttribute && odropAttr.AsT0.Length > 0)
-		{
-			var odropMsg = odropAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(odropMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					currentRoom,
-					_ => odropMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor });
-			}
-		}
-
-		// Executor = the dropped object; enactor = the player who dropped it (PennMUSH @a* semantics)
-		var adropAttr = await AttributeService.GetAttributeAsync(executor, objectToDrop, AttrADrop, IAttributeService.AttributeMode.Read, true);
-		if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
-		{
-			var adropActions = adropAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = objectToDrop.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(adropActions));
-			}
-		}
 
 		if (currentRoom.IsRoom)
 		{
@@ -1464,14 +1435,23 @@ public partial class Commands
 
 					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer,
 						OldContainer: currentRoom.Object().DBRef));
-
-					await NotifyService.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
-					return CallState.Empty;
 				}
 			}
 		}
 
-		await NotifyService.Notify(executor, "Dropped.", executor);
+		// did_it(player, thing, "DROP", "You drop X.", "ODROP", "drops X.", "ADROP", NOTHING)
+		// (move.c:768-769). It is the tail of do_drop and runs whichever branch the object took —
+		// the room, the drop-to, or home — so it sits after the drop-to handling rather than
+		// inside it, and it is the dropper's only success message.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: objectToDrop,
+			What: AttrDrop,
+			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouDrop, objectToDrop.Object().Name)),
+			OWhat: AttrODrop,
+			ODef: string.Format(ErrorMessages.Notifications.Drops, objectToDrop.Object().Name),
+			AWhat: AttrADrop,
+			Loc: currentRoom));
+
 		return CallState.Empty;
 	}
 
@@ -1924,64 +1904,70 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
+		// The take lock is evaluated and failed against the object's own location, not against the
+		// item and not against whatever container the player named: `box = Location(thing)`
+		// (move.c:615) on the possessive path and `oldloc = Location(thing)` (move.c:649) on the
+		// plain one, then `eval_lock_with(player, oldloc, Take_Lock, pe_info)` and
+		// `fail_lock(player, oldloc, Take_Lock, ...)` (move.c:670-673). Aiming it at the item would
+		// look for TAKE_LOCK`FAILURE on the item, so a container's own take-failure message and
+		// action would never run. It is also checked BEFORE the item's own basic lock (move.c:675).
+		var takeSource = objectLocation.WithExitOption();
+
+		if (!await LockService.Evaluate(LockType.Take, takeSource, executor))
 		{
-			await NotifyService.Notify(executor, "You can't pick that up.", executor);
+			await DidItService.FailLock(parser, executor, takeSource, LockType.Take,
+				MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
 			return CallState.Empty;
 		}
 
-		if (!await LockService.Evaluate(LockType.Take, sourceLocation.WithExitOption(), executor))
+		if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
 		{
-			await NotifyService.Notify(executor, "You can't take that from there.", executor);
+			await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
+				MarkupText.Plain(ErrorMessages.Notifications.CantPickThatUp));
 			return CallState.Empty;
 		}
 
 		var executorContainer = executor.AsContainer;
 		var contentToGet = objectToGet.AsContent;
+		var takenName = objectToGet.Object().Name;
+		var isPossessiveGet = possessiveIndex > 0;
+
+		if (isPossessiveGet)
+		{
+			// move.c:627 — the robbed container hears about it too.
+			await NotifyService.Notify(objectLocation.WithExitOption(),
+				string.Format(ErrorMessages.Notifications.WasTakenFromYou, takenName));
+		}
+
+		await NotifyService.Notify(objectToGet,
+			string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
+
 		await MoveService.MoveIt(parser, contentToGet, executorContainer, noMoveMsgs: false,
 			executor.Object().DBRef, "get");
 
-		var successAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
-		{
-			var successMsg = successAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, successMsg, executor);
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "Taken.", executor);
-		}
+		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, …)
+		// (move.c:634-636 possessive, :681-683 plain): the o-message audience is the location the
+		// object came out of, which is not the taker's room on the possessive path.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: objectToGet,
+			What: AttrSuccess,
+			Def: MarkupText.Plain(isPossessiveGet
+				? string.Format(ErrorMessages.Notifications.YouTakeFrom, takenName, objectLocation.Object().Name)
+				: string.Format(ErrorMessages.Notifications.YouTake, takenName)),
+			OWhat: AttrOSuccess,
+			ODef: isPossessiveGet
+				? string.Format(ErrorMessages.Notifications.TakesFrom, takenName, objectLocation.Object().Name)
+				: string.Format(ErrorMessages.Notifications.Takes, takenName),
+			AWhat: AttrASuccess,
+			Loc: objectLocation));
 
-		var osuccessAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrOSuccess, IAttributeService.AttributeMode.Read, true);
-		if (osuccessAttr.IsAttribute && osuccessAttr.AsT0.Length > 0)
-		{
-			var osuccessMsg = osuccessAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(osuccessMsg.ToPlainText()))
-			{
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					sourceLocation,
-					_ => osuccessMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor });
-			}
-		}
-
-		// Executor = the object being gotten; enactor = player (PennMUSH @a* semantics)
-		var asuccessAttr = await AttributeService.GetAttributeAsync(executor, objectToGet, AttrASuccess, IAttributeService.AttributeMode.Read, true);
-		if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
-		{
-			var asuccessActions = asuccessAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = objectToGet.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(asuccessActions));
-			}
-		}
+		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
+		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :684-686): the taker's own receive triad,
+		// with the taken object standing in as the o-message's location.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: executor,
+			What: AttrReceive, OWhat: AttrOReceive, AWhat: AttrAReceive,
+			Loc: objectToGet.AsContainer));
 
 		return CallState.Empty;
 	}
@@ -1993,7 +1979,6 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var isSilent = parser.CurrentState.Switches.Contains("SILENT");
 
 		var recipientName = args["0"].Message!.ToPlainText();
 		var thingToGive = args["1"].Message!.ToPlainText();
@@ -2026,7 +2011,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (int.TryParse(thingToGive, out var amount))
+		// /SILENT belongs to this branch alone: it hushes the recipient's penny message
+		// (rob.c:483) and has no bearing on the object form's triads, which rob.c fires
+		// unconditionally.
+		if (int.TryParse(thingToGive, out _))
 		{
 			await NotifyService.Notify(executor, "Money transfer will not be implemented.", executor);
 			return CallState.Empty;
@@ -2055,28 +2043,35 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!await recipient.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, recipient))
+		// rob.c:322-341 orders these give lock, from lock, receive lock, and only then the
+		// ENTER_OK/controls gate. Of the three, only the give lock is a fail_lock — the other two
+		// report a plain message and trigger nothing on the recipient.
+		if (!await LockService.Evaluate(LockType.Give, objectToGive, executor))
 		{
-			await NotifyService.Notify(executor, $"{recipient.Object().Name} is not accepting things.", executor);
+			await DidItService.FailLock(parser, executor, objectToGive, LockType.Give,
+				MarkupText.Plain(ErrorMessages.Notifications.CantGiveThatAway));
 			return CallState.Empty;
 		}
 
 		if (!await LockService.Evaluate(LockType.From, recipient, executor))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.Notify(executor,
+				string.Format(ErrorMessages.Notifications.DoesntWantAnythingFromYou, recipient.Object().Name), executor);
 			return CallState.Empty;
 		}
 
-		if (!await LockService.Evaluate(LockType.Give, objectToGive, executor))
-		{
-			await NotifyService.Notify(executor, "You can't give that away.", executor);
-			return CallState.Empty;
-		}
-
-		// Check @lock/receive on recipient (object must pass this)
+		// The receive lock is evaluated with the OBJECT as the one being tested, not the giver
+		// (rob.c:335).
 		if (!await LockService.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
-			await NotifyService.Notify(executor, $"{recipient.Object().Name} doesn't want that.", executor);
+			await NotifyService.Notify(executor,
+				string.Format(ErrorMessages.Notifications.DoesntWantThat, recipient.Object().Name), executor);
+			return CallState.Empty;
+		}
+
+		if (!await recipient.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, recipient))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
@@ -2091,101 +2086,43 @@ public partial class Commands
 		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer,
 			OldContainer: objectLocation.Object().DBRef));
 
-		var giveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
-		if (giveAttr.IsAttribute && giveAttr.AsT0.Length > 0)
-		{
-			var giveMsg = giveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(giveMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, giveMsg, executor);
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, "Given.", executor);
-		}
+		var giverName = executor.Object().Name;
+		var giftName = objectToGive.Object().Name;
+		var recipientDisplayName = recipient.Object().Name;
 
-		var ogiveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrOGive, IAttributeService.AttributeMode.Read, true);
-		if (ogiveAttr.IsAttribute && ogiveAttr.AsT0.Length > 0)
-		{
-			var ogiveMsg = ogiveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(ogiveMsg.ToPlainText()))
-			{
-				var executorLocation = await executor.Where();
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					executorLocation,
-					_ => ogiveMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor, recipient });
-			}
-		}
+		// rob.c:415-417. GIVE/OGIVE/AGIVE live on the GIVER, not on the gift: did_it_with's `thing`
+		// argument here is `player`. %0 is the gift and %1 the recipient.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: executor,
+			What: AttrGive,
+			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouGaveTo, giftName, recipientDisplayName)),
+			OWhat: AttrOGive,
+			AWhat: AttrAGive,
+			Env0: objectToGive.Object().DBRef.ToString(),
+			Env1: recipient.Object().DBRef.ToString(),
+			Interact: IPermissionService.InteractType.See));
 
-		var agiveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrAGive, IAttributeService.AttributeMode.Read, true);
-		if (agiveAttr.IsAttribute && agiveAttr.AsT0.Length > 0)
-		{
-			var agiveActions = agiveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(agiveActions.ToPlainText()))
-			{
-				await parser.CommandParse(agiveActions);
-			}
-		}
+		// rob.c:420 — the gift is told what happened to it.
+		await NotifyService.Notify(objectToGive,
+			string.Format(ErrorMessages.Notifications.GaveYouTo, giverName, recipientDisplayName));
 
-		var receiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrReceive, IAttributeService.AttributeMode.Read, true);
-		if (receiveAttr.IsAttribute && receiveAttr.AsT0.Length > 0)
-		{
-			var receiveMsg = receiveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(receiveMsg.ToPlainText()) && !isSilent)
-			{
-				await NotifyService.Notify(recipient, receiveMsg);
-			}
-		}
-		else if (!isSilent)
-		{
-			await NotifyService.Notify(recipient, $"{executor.Object().Name} gave you {objectToGive.Object().Name}.");
-		}
+		// rob.c:423-424: the GIFT's success triad, fired with the RECIPIENT as the enactor.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: recipient, Thing: objectToGive,
+			What: AttrSuccess, OWhat: AttrOSuccess, AWhat: AttrASuccess));
 
-		var oreceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrOReceive, IAttributeService.AttributeMode.Read, true);
-		if (oreceiveAttr.IsAttribute && oreceiveAttr.AsT0.Length > 0)
-		{
-			var oreceiveMsg = oreceiveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(oreceiveMsg.ToPlainText()))
-			{
-				var recipientLocation = await recipient.Where();
-				await CommunicationService.SendToRoomAsync(
-					executor,
-					recipientLocation,
-					_ => oreceiveMsg,
-					INotifyService.NotificationType.Emit,
-					excludeObjects: new[] { executor, recipient });
-			}
-		}
-
-		// Executor = the recipient; enactor = player who gave (PennMUSH @a* semantics)
-		var areceiveAttr = await AttributeService.GetAttributeAsync(executor, recipient, AttrAReceive, IAttributeService.AttributeMode.Read, true);
-		if (areceiveAttr.IsAttribute && areceiveAttr.AsT0.Length > 0)
-		{
-			var areceiveActions = areceiveAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(areceiveActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(areceiveActions));
-			}
-		}
-
-		// Executor = the object being given; enactor = player who gave (PennMUSH @a* semantics)
-		var successAttr = await AttributeService.GetAttributeAsync(executor, objectToGive, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-		if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
-		{
-			var successActions = successAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(successActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = objectToGive.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(successActions));
-			}
-		}
+		// rob.c:428-429: RECEIVE/ORECEIVE/ARECEIVE live on the RECIPIENT and run with the recipient
+		// as the enactor, so a recipient who cannot see the giver still gets their own message.
+		// %0 is the gift and %1 the giver.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: recipient, Thing: recipient,
+			What: AttrReceive,
+			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.GaveYou, giverName, giftName)),
+			OWhat: AttrOReceive,
+			AWhat: AttrAReceive,
+			Env0: objectToGive.Object().DBRef.ToString(),
+			Env1: executor.Object().DBRef.ToString(),
+			Interact: IPermissionService.InteractType.See));
 
 		return CallState.Empty;
 	}
@@ -2464,60 +2401,27 @@ public partial class Commands
 
 			if (!isOverride)
 			{
-				var lockResult = await PermissionService.CanInteract(executor, recipient, IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
-				if (!lockResult)
+				// `fails_lock = !(override || eval_lock_with(executor, target, Page_Lock, pe_info))`
+				// (speech.c:924-925). The page lock itself had never been read here — the gate was
+				// the Interact lock alone, so @lock/page did nothing and the failure attributes below
+				// were unreachable.
+				var failsLock = !await LockService.Evaluate(LockType.Page, recipient, executor)
+					|| !await PermissionService.CanInteract(executor, recipient,
+						IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
+
+				if (failsLock)
 				{
-					var failureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`FAILURE", IAttributeService.AttributeMode.Read);
+					// speech.c:944-948: the pager is told, and then
+					// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
+					// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
+					// `OFAILURE / `AFAILURE (lock.c:865-875) that LockMessages.FailureAttributes
+					// builds — and unlike the hand-rolled reads this replaces, they are evaluated
+					// rather than shown raw. No default: Penn passes NULL.
+					await NotifyService.Notify(executor,
+						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
+						executor);
 
-					switch (failureAttr)
-					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								await NotifyService.Notify(executor, attr.Last().Value, executor);
-								break;
-							}
-					}
-
-					var oFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`OFAILURE", IAttributeService.AttributeMode.Read);
-
-					switch (oFailureAttr)
-					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								await CommunicationService.SendToRoomAsync(executor, await executor.Where(), _ => attr.Last().Value,
-									INotifyService.NotificationType.Emit, excludeObjects: [executor, recipient]);
-								break;
-							}
-					}
-
-					var aFailureAttr = await AttributeService.GetAttributeAsync(executor, recipient, "PAGE_LOCK`AFAILURE", IAttributeService.AttributeMode.Read);
-
-					switch (aFailureAttr)
-					{
-						case { IsError: true }:
-						case { IsNone: true }:
-							{
-								break;
-							}
-						case { IsAttribute: true, AsAttribute: var attr }:
-							{
-								// Executor = the recipient (PAGE_LOCK`AFAILURE is on the recipient); enactor = pager
-								await parser.With(
-									state => state with { Executor = recipient.Object().DBRef, Caller = state.Executor },
-									async p => await p.CommandParse(attr.Last().Value));
-								break;
-							}
-					}
+					await DidItService.FailLock(parser, executor, recipient, LockType.Page);
 
 					continue;
 				}
@@ -2845,88 +2749,26 @@ public partial class Commands
 
 		var objectToUse = locateResult.WithoutError().WithoutNone();
 
+		// fail_lock(player, thing, Use_Lock, T("Permission denied."), NOTHING) (set.c:1415): the use
+		// lock fails on the thing being used, and its failure attributes are UFAIL/OUFAIL/AUFAIL
+		// through lock_msgs (lock.c:102).
 		if (!await LockService.Evaluate(LockType.Use, objectToUse, executor))
 		{
-			var ufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "UFAIL", IAttributeService.AttributeMode.Read, true);
-			if (ufailAttr.IsAttribute && ufailAttr.AsT0.Length > 0)
-			{
-				var ufailMsg = ufailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(ufailMsg.ToPlainText()))
-				{
-					await NotifyService.Notify(executor, ufailMsg, executor);
-				}
-			}
-			else
-			{
-				await NotifyService.Notify(executor, "You can't use that.", executor);
-			}
-
-			var oufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "OUFAIL", IAttributeService.AttributeMode.Read, true);
-			if (oufailAttr.IsAttribute && oufailAttr.AsT0.Length > 0)
-			{
-				var oufailMsg = oufailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(oufailMsg.ToPlainText()))
-				{
-					var executorLocation = await executor.Where();
-					await CommunicationService.SendToRoomAsync(executor, executorLocation, _ => oufailMsg,
-						INotifyService.NotificationType.Emit, excludeObjects: [executor]);
-				}
-			}
-
-			// Executor = the object with @AUFAIL; enactor = player (PennMUSH @a* semantics)
-			var aufailAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "AUFAIL", IAttributeService.AttributeMode.Read, true);
-			if (aufailAttr.IsAttribute && aufailAttr.AsT0.Length > 0)
-			{
-				var aufailActions = aufailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(aufailActions.ToPlainText()))
-				{
-					await parser.With(
-						state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
-						async p => await p.CommandParse(aufailActions));
-				}
-			}
-
+			await DidItService.FailLock(parser, executor, objectToUse, LockType.Use,
+				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied));
 			return CallState.Empty;
 		}
 
-		var useAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "USE", IAttributeService.AttributeMode.Read, true);
-		if (useAttr.IsAttribute && useAttr.AsT0.Length > 0)
-		{
-			var useMsg = useAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(useMsg.ToPlainText()))
-			{
-				await NotifyService.Notify(executor, useMsg, executor);
-			}
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"You use {objectToUse.Object().Name}.", executor);
-		}
-
-		var ouseAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "OUSE", IAttributeService.AttributeMode.Read, true);
-		if (ouseAttr.IsAttribute && ouseAttr.AsT0.Length > 0)
-		{
-			var ouseMsg = ouseAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(ouseMsg.ToPlainText()))
-			{
-				var executorLocation = await executor.Where();
-				await CommunicationService.SendToRoomAsync(executor, executorLocation, _ => ouseMsg,
-					INotifyService.NotificationType.Emit, excludeObjects: [executor]);
-			}
-		}
-
-		// Executor = the object used; enactor = player (PennMUSH @a* semantics)
-		var auseAttr = await AttributeService.GetAttributeAsync(executor, objectToUse, "AUSE", IAttributeService.AttributeMode.Read, true);
-		if (auseAttr.IsAttribute && auseAttr.AsT0.Length > 0)
-		{
-			var auseActions = auseAttr.AsT0[0].Value;
-			if (!string.IsNullOrEmpty(auseActions.ToPlainText()))
-			{
-				await parser.With(
-					state => state with { Executor = objectToUse.Object().DBRef, Caller = state.Executor },
-					async p => await p.CommandParse(auseActions));
-			}
-		}
+		// did_it(player, thing, "USE", T("Used."), "OUSE", NULL, "AUSE", NOTHING, AN_SYS)
+		// (set.c:1417-1418). PennMUSH picks AUSE or RUNOUT there by charge_action (predicat.c:88),
+		// which decrements a CHARGES attribute; SharpMUSH has no CHARGES at all, so there is nothing
+		// yet to switch on and AUSE always runs.
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: objectToUse,
+			What: "USE",
+			Def: MarkupText.Plain(ErrorMessages.Notifications.Used),
+			OWhat: "OUSE",
+			AWhat: "AUSE"));
 
 		return CallState.Empty;
 	}

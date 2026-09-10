@@ -19,8 +19,14 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="ODef">Fallback for <paramref name="OWhat"/>, rendered as "&lt;Name&gt; &lt;ODef&gt;".</param>
 /// <param name="AWhat">Action attribute queued on <paramref name="Thing"/> with <paramref name="Player"/> as enactor.</param>
 /// <param name="Loc">Audience for <paramref name="OWhat"/>. Defaults to the player's location.</param>
-/// <param name="Env0"><c>%0</c> for every evaluation and for the queued action.</param>
-/// <param name="Env1"><c>%1</c> for every evaluation and for the queued action.</param>
+/// <param name="Env0">
+/// <c>%0</c> for every evaluation and for the queued action. Text, because
+/// <c>real_did_it</c>'s <c>PE_REGS</c> is text: <c>did_it_with</c> is only the dbref-flavoured
+/// wrapper and stores <c>unparse_dbref(env0)</c> (<c>src/predicat.c:159</c>), while
+/// <c>do_name</c> puts the old and new names straight in (<c>src/set.c:155-157</c>). A dbref
+/// caller writes <c>.ToString()</c>.
+/// </param>
+/// <param name="Env1"><c>%1</c>, on the same terms as <paramref name="Env0"/>.</param>
 /// <param name="Interact">Interaction gate applied to the o-message audience.</param>
 /// <remarks>
 /// <b>Triad defaults are deliberately not localized.</b> PennMUSH wraps each of them in <c>T()</c>,
@@ -46,8 +52,8 @@ public record DidItRequest(
 	string? ODef = null,
 	string? AWhat = null,
 	AnySharpContainer? Loc = null,
-	DBRef? Env0 = null,
-	DBRef? Env1 = null,
+	string? Env0 = null,
+	string? Env1 = null,
 	IPermissionService.InteractType Interact = IPermissionService.InteractType.Hear);
 
 public interface IDidItService

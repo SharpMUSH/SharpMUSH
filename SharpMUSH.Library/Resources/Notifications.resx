@@ -470,6 +470,68 @@
     <value>You don't have that!</value>
   </data>
 
+  <!-- get / drop / give / use triad and lock defaults -->
+  <data name="CantSeemToGetRidOfThat" xml:space="preserve">
+    <value>You can't seem to get rid of that.</value>
+  </data>
+  <data name="CantTakeThatFromThere" xml:space="preserve">
+    <value>You can't take that from there.</value>
+  </data>
+  <data name="CantPickThatUp" xml:space="preserve">
+    <value>You can't pick that up.</value>
+  </data>
+  <data name="CantGiveThatAway" xml:space="preserve">
+    <value>You can't give that away.</value>
+  </data>
+  <data name="DoesntWantAnythingFromYou" xml:space="preserve">
+    <value>{0} doesn't want anything from you.</value>
+  </data>
+  <data name="DoesntWantThat" xml:space="preserve">
+    <value>{0} doesn't want that.</value>
+  </data>
+  <data name="YouTakeFrom" xml:space="preserve">
+    <value>You take {0} from {1}.</value>
+  </data>
+  <data name="TakesFrom" xml:space="preserve">
+    <value>takes {0} from {1}.</value>
+  </data>
+  <data name="YouTake" xml:space="preserve">
+    <value>You take {0}.</value>
+  </data>
+  <data name="Takes" xml:space="preserve">
+    <value>takes {0}.</value>
+  </data>
+  <data name="TookYou" xml:space="preserve">
+    <value>{0} took you.</value>
+  </data>
+  <data name="WasTakenFromYou" xml:space="preserve">
+    <value>{0} was taken from you.</value>
+  </data>
+  <data name="YouDrop" xml:space="preserve">
+    <value>You drop {0}.</value>
+  </data>
+  <data name="Drops" xml:space="preserve">
+    <value>drops {0}.</value>
+  </data>
+  <data name="DropsYou" xml:space="preserve">
+    <value>{0} drops you.</value>
+  </data>
+  <data name="YouGaveTo" xml:space="preserve">
+    <value>You gave {0} to {1}.</value>
+  </data>
+  <data name="GaveYouTo" xml:space="preserve">
+    <value>{0} gave you to {1}.</value>
+  </data>
+  <data name="GaveYou" xml:space="preserve">
+    <value>{0} gave you {1}.</value>
+  </data>
+  <data name="Used" xml:space="preserve">
+    <value>Used.</value>
+  </data>
+  <data name="NotAcceptingYourPages" xml:space="preserve">
+    <value>{0} is not accepting your pages.</value>
+  </data>
+
   <!-- Destruction SAFE messages -->
   <data name="SafeObjectMustUnset" xml:space="preserve">
     <value>That object is set SAFE. You must set it !SAFE before destroying it.</value>

@@ -1253,7 +1253,7 @@ public partial class Commands
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: exitObject,
 			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
-			Loc: currentLocation, Env0: currentLocation.Object().DBRef));
+			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString()));
 
 		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
 		// is var_dest, not the room being left (move.c:483).
@@ -1525,7 +1525,7 @@ public partial class Commands
 			{
 				await DidItService.DidIt(parser, new DidItRequest(
 					Player: target, Thing: target, OWhat: "OXTPORT",
-					Loc: currentLocation, Env0: executor.Object().DBRef));
+					Loc: currentLocation, Env0: executor.Object().DBRef.ToString()));
 			}
 
 			var moveResult = await MoveService.SafeTel(
@@ -1543,7 +1543,7 @@ public partial class Commands
 					Player: target, Thing: target,
 					What: "TPORT", OWhat: "OTPORT", AWhat: "ATPORT",
 					Loc: destinationContainer,
-					Env0: executor.Object().DBRef, Env1: currentLocation.Object().DBRef));
+					Env0: executor.Object().DBRef.ToString(), Env1: currentLocation.Object().DBRef.ToString()));
 			}
 
 			// wiz.c:585-588: the teleporter is told the move happened, unless they were the one moved,

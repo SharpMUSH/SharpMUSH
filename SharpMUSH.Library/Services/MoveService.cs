@@ -176,7 +176,7 @@ public class MoveService(
 		{
 			await didItService.DidIt(parser, new DidItRequest(
 				Player: mover, Thing: mover, OWhat: "OXMOVE",
-				Loc: oldContainer, Env0: destination, Env1: old,
+				Loc: oldContainer, Env0: destination.ToString(), Env1: old.ToString(),
 				Interact: IPermissionService.InteractType.Hear));
 
 			if (await permissionService.IsHearer(mover))
@@ -184,7 +184,7 @@ public class MoveService(
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: oldObject,
 					What: "LEAVE", OWhat: "OLEAVE", ODef: ErrorMessages.Notifications.DefaultOLeave,
-					AWhat: "ALEAVE", Loc: oldContainer, Env0: destination,
+					AWhat: "ALEAVE", Loc: oldContainer, Env0: destination.ToString(),
 					Interact: IPermissionService.InteractType.Presence));
 
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer);
@@ -211,7 +211,7 @@ public class MoveService(
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: destinationObject,
 					What: "ENTER", OWhat: "OENTER", ODef: ErrorMessages.Notifications.DefaultOEnter,
-					AWhat: "AENTER", Loc: where, Env0: old,
+					AWhat: "AENTER", Loc: where, Env0: old.ToString(),
 					Interact: IPermissionService.InteractType.Presence));
 			}
 			else
@@ -231,7 +231,7 @@ public class MoveService(
 			await didItService.DidIt(parser, new DidItRequest(
 				Player: mover, Thing: mover,
 				What: "MOVE", OWhat: "OMOVE", AWhat: "AMOVE",
-				Loc: where, Env0: destination, Env1: old,
+				Loc: where, Env0: destination.ToString(), Env1: old.ToString(),
 				Interact: IPermissionService.InteractType.See));
 		}
 	}

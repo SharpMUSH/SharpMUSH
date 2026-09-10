@@ -163,12 +163,12 @@ public class DidItService(
 
 		if (request.Env0 is not null)
 		{
-			args["0"] = new CallState(request.Env0.Value.ToString());
+			args["0"] = new CallState(request.Env0);
 		}
 
 		if (request.Env1 is not null)
 		{
-			args["1"] = new CallState(request.Env1.Value.ToString());
+			args["1"] = new CallState(request.Env1);
 		}
 
 		return args;
