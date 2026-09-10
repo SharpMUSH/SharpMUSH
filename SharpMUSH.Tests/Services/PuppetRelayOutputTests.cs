@@ -6,6 +6,7 @@ using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -103,7 +104,7 @@ public class PuppetRelayOutputTests
 			Preferences: null,
 			ConnectionType: "telnet");
 
-	private static (IListenerRoutingService Service, IMessageBus Bus) BuildRelay()
+	private static (IListenerRoutingService Service, IMessageBus Bus) BuildRelay(string? change = null)
 	{
 		var owner = OwnerPlayer();
 		var puppet = Puppet(owner);
@@ -119,16 +120,30 @@ public class PuppetRelayOutputTests
 
 		// No PREFIX and no LISTEN: the relay falls back to "<name>> " and the LISTEN pass returns early.
 		var attributes = Substitute.For<IAttributeService>();
+		var current = Connection();
 		attributes.GetAttributeAsync(
 			Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
 			Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
-			.Returns(new OptionalSharpAttributeOrError(new None()));
+			.Returns(call =>
+			{
+				if (call.Arg<string>() == "PREFIX" && change is not null)
+					current = change switch
+					{
+						"character" => current with { Ref = Speaker.Object().DBRef },
+						"stamp" => current with { Ref = new DBRef(OwnerRef.Number, 999) },
+						"session" => current with { Metadata = new(new[] { KeyValuePair.Create("SessionId", "new-session") }) },
+						"logout" => current with { State = IConnectionService.ConnectionState.Connected, Ref = null },
+						_ => current
+					};
+				return new OptionalSharpAttributeOrError(new None());
+			});
 
 		var services = Substitute.For<IServiceProvider>();
 		services.GetService(typeof(IAttributeService)).Returns(attributes);
 
 		var connections = Substitute.For<IConnectionService>();
 		connections.Get(OwnerRef).Returns(_ => Connected());
+		connections.Get(OwnerHandle).Returns(_ => current);
 
 		var bus = Substitute.For<IMessageBus>();
 
@@ -144,17 +159,31 @@ public class PuppetRelayOutputTests
 		return (service, bus);
 	}
 
+	private static IConnectionService.ConnectionData Connection() => new(
+		OwnerHandle, OwnerRef, IConnectionService.ConnectionState.LoggedIn,
+		_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+		new ConcurrentDictionary<string, string>(new[] { KeyValuePair.Create("SessionId", "original") }));
+
 	private static async IAsyncEnumerable<IConnectionService.ConnectionData> Connected()
 	{
-		yield return new IConnectionService.ConnectionData(
-			OwnerHandle,
-			OwnerRef,
-			IConnectionService.ConnectionState.LoggedIn,
-			_ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask,
-			() => Encoding.UTF8,
-			new ConcurrentDictionary<string, string>());
+		yield return Connection();
 		await Task.CompletedTask;
+	}
+
+	[Test]
+	[Arguments("character")]
+	[Arguments("stamp")]
+	[Arguments("session")]
+	[Arguments("logout")]
+	[Arguments("unchanged")]
+	public async Task PuppetRelayRechecksBindingAfterPrefixRead(string change)
+	{
+		var (service, bus) = BuildRelay(change);
+		await service.ProcessNotificationAsync(
+			new NotificationContext(PuppetRef, RoomRef, []), MarkupText.Plain(Heard), Speaker,
+			INotifyService.NotificationType.Say);
+		var published = bus.ReceivedCalls().Count(call => call.GetArguments().FirstOrDefault() is MarkupOutputMessage);
+		await Assert.That(published).IsEqualTo(change == "unchanged" ? 1 : 0);
 	}
 
 	private static SharpPlayer OwnerPlayer()

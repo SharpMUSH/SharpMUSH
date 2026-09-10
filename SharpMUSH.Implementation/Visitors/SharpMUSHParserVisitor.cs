@@ -311,7 +311,7 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-		await NotifyService.Notify(owner, MarkupText.Plain(message));
+		await NotifyService.Notify(owner, MarkupText.Plain(message), executor);
 
 		var debugForwardAttr = await AttributeService.GetAttributeAsync(
 			executor, executor, "DEBUGFORWARDLIST",
@@ -334,7 +334,7 @@ public class SharpMUSHParserVisitor(
 			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch);
 			if (locateResult.IsValid())
 			{
-				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message));
+				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message), executor);
 			}
 		}
 	}

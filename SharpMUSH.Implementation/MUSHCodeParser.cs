@@ -502,7 +502,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
 			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
-			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
+			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"), executorObj);
 		}
 	}
 

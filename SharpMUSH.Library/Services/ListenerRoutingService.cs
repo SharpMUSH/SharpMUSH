@@ -247,11 +247,13 @@ public class ListenerRoutingService(
 		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
 			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef)) return;
 
-		// A filter over the in-memory connection table, so asking it twice — once to gate, once to
-		// deliver — is cheaper than holding a list across the checks between.
-		var connections = connectionService.Get(owner.Object.DBRef);
-		if (!await connections.AnyAsync())
-			return;
+		// Snapshot immutable binding values before the remaining awaited relay reads. Metadata is
+		// mutable, so retaining ConnectionData itself would not retain its original session.
+		var bindings = await connectionService.Get(owner.Object.DBRef)
+			.Select(connection => (connection.Handle, connection.Ref,
+				Session: connection.Metadata.GetValueOrDefault("SessionId")))
+			.ToArrayAsync(ExecutionBudget.CurrentToken);
+		if (bindings.Length == 0) return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
 		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
@@ -285,9 +287,15 @@ public class ListenerRoutingService(
 			message.Match(markupString => markupString, MarkupText.Plain));
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
-		await foreach (var conn in connections)
+		foreach (var binding in bindings)
 		{
-			await publishEndpoint.HandlePublish(new MarkupOutputMessage(conn.Handle, serialized));
+			var current = connectionService.Get(binding.Handle);
+			if (current is null || current.State != IConnectionService.ConnectionState.LoggedIn
+				|| !Nullable.Equals(binding.Ref, owner.Object.DBRef)
+				|| !Nullable.Equals(current.Ref, binding.Ref)
+				|| !string.Equals(binding.Session, current.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal))
+				continue;
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized), ExecutionBudget.CurrentToken);
 		}
 	}
 
