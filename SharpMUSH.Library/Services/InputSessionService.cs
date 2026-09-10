@@ -186,7 +186,11 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
-		Discard(session);
+		lock (_gate)
+		{
+			if (!IsCurrent(session, timeout: false)) return NotActive;
+			_sessions.Remove(handle);
+		}
 		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return null;
 	}

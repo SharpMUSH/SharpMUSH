@@ -535,6 +535,75 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("replacement")]
+	[Arguments("disconnect")]
+	[Arguments("incarnation")]
+	[Arguments("expired")]
+	[Arguments("timeout-pending")]
+	[Arguments("ordinary")]
+	public async Task CancelRechecksCaptureAfterAuthorityRead(string transition)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var reads = 0;
+		async ValueTask<AnyOptionalSharpObject> ReadAuthority()
+		{
+			if (Interlocked.Increment(ref reads) == 1)
+			{
+				entered.TrySetResult();
+				await release.Task;
+			}
+			return h.Actor;
+		}
+		h.Mediator.Send(Arg.Is<GetObjectNodeQuery>(query => query.DBRef == h.Actor.Object.DBRef), Arg.Any<CancellationToken>())
+			.Returns(_ => ReadAuthority());
+		var pending = h.Sessions.CancelAsync(caller).AsTask();
+		try
+		{
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			Guid? replacement = null;
+			switch (transition)
+			{
+				case "replacement":
+					await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+					replacement = h.Sessions.GetCapturing(1)?.Id;
+					await Assert.That(replacement).IsNotNull();
+					await Assert.That(replacement).IsNotEqualTo(original.Id);
+					break;
+				case "disconnect": await h.Connections.Disconnect(1); break;
+				case "incarnation": original.Connection.Metadata["SessionId"] = "new-transport"; break;
+				case "expired": h.Time.Now += TimeSpan.FromMinutes(2); break;
+				case "timeout-pending":
+					h.Time.Now += TimeSpan.FromMinutes(2);
+					await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
+					break;
+			}
+			release.TrySetResult();
+			await Assert.That(await pending.WaitAsync(TimeSpan.FromSeconds(5)))
+				.IsEqualTo(transition == "ordinary" ? null : InputSessionService.NotActive);
+			if (transition == "ordinary")
+				await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionCancelled");
+			else
+				await h.Notify.DidNotReceive().NotifyLocalizedToSession(Arg.Any<long>(), Arg.Any<string>(), "InputSessionCancelled");
+			await Assert.That(h.Sessions.GetCapturing(1)?.Id).IsEqualTo(replacement);
+			if (transition == "expired") await Assert.That(h.Sessions.TakeExpired().Single().Id).IsEqualTo(original.Id);
+			if (transition == "timeout-pending")
+			{
+				await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty, timeout: true);
+				await Assert.That(h.Deliveries.Count).IsEqualTo(1);
+			}
+		}
+		finally
+		{
+			release.TrySetResult();
+			await pending.WaitAsync(TimeSpan.FromSeconds(5));
+		}
+	}
+
+	[Test]
 	public async Task PromptFailureAndUnhandledCallbackFailureEndCapture()
 	{
 		var h = new Harness();
