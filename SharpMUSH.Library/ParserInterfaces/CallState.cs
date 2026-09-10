@@ -114,7 +114,10 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 
 	/// <summary>Evaluates this argument without discarding failure metadata, retaining legacy delegates.</summary>
 	public async ValueTask<CallState> GetParsedResultAsync()
-		=> ParsedResult is { } evaluate
+	{
+		var result = ParsedResult is { } evaluate
 			? await evaluate() ?? Empty
-			: new CallState(await ParsedMessage()) { HadErrors = HadErrors };
+			: new CallState(await ParsedMessage());
+		return HadErrors ? result with { HadErrors = true } : result;
+	}
 }
