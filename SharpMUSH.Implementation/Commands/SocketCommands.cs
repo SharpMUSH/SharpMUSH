@@ -598,14 +598,19 @@ public partial class Commands
 
 	/// <summary>
 	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
-	/// triggers <c>PLAYER`CONNECT</c>, refreshes the login room's contents, syncs the connection's
-	/// output preferences, and shows post-login messages (MOTD/auto-look). Identical across
+	/// syncs output preferences and shows login messages before extensible connect hooks,
+	/// refreshes the login room's contents, and performs auto-look. Identical across
 	/// CONNECT (name/password and OTT token) and the account-mode MAKE/PLAY commands; guest logins
 	/// share the same sequence but additionally show the guest file, hence <paramref name="isGuest"/>.
 	/// </summary>
 	private async ValueTask CompletePlayerLoginAsync(
 		IMUSHCodeParser parser, long handle, SharpPlayer player, DBRef playerRef, bool isGuest = false)
 	{
+		// A bound connection must receive its required initialization before extensible
+		// hooks can exhaust the command budget. Auto-look remains after the hooks.
+		await SyncPlayerOutputPreferences(handle, player.Object);
+		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
+
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
 		var connectionCount = await ConnectionService.Get(playerRef).CountAsync();
@@ -629,17 +634,14 @@ public partial class Commands
 			connectRoomContainer.Object().DBRef.ToString(),
 			"connect");
 
-		await SyncPlayerOutputPreferences(handle, player.Object);
-
-		// Show post-login messages and auto-look (PennMUSH-compatible login experience)
-		await ShowPostLoginMessages(parser, handle, new AnySharpObject(player), isGuest);
+		await parser.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
 	}
 
 	/// <summary>
-	/// Shows post-login messages (MOTD, wizard MOTD, guest file) and performs an auto-look.
+	/// Shows required post-login messages (MOTD, wizard MOTD, guest file).
 	/// Matches PennMUSH login experience.
 	/// </summary>
-	private async Task ShowPostLoginMessages(IMUSHCodeParser parser, long handle, AnySharpObject player, bool isGuest = false)
+	private async Task ShowPostLoginMessages(long handle, AnySharpObject player, bool isGuest = false)
 	{
 		var motdData = await ObjectDataService.GetExpandedServerDataAsync<MotdData>();
 
@@ -674,8 +676,6 @@ public partial class Commands
 				await NotifyService.Notify(handle, guestText);
 			}
 		}
-
-		await parser.CommandParse(handle, ConnectionService, MarkupText.Plain("look"));
 	}
 
 	[GeneratedRegex("^(?<User>\"(?:.+?)\"|(?:.+?))(?:\\s+(?<Password>\\S+))?$")]
