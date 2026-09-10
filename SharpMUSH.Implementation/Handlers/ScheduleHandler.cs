@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Mediator;
 using SharpMUSH.Library.ParserInterfaces;
 using OneOf;
@@ -31,25 +30,17 @@ public class AdmissionAsyncScheduleHandler(ITaskScheduler scheduler) : IRequestH
 public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 	: IStreamQueryHandler<ScheduleSemaphoreQuery, SemaphoreTaskData>
 {
-	public async IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
-		[EnumeratorCancellation] CancellationToken cancellationToken)
-	{
-		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		var token = ExecutionBudget.CurrentToken;
-		await foreach (var row in query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks).WithCancellation(token)) yield return row;
-	}
+	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
+		CancellationToken cancellationToken)
+		=> SchedulerQueryLifetime.Read(() => query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks), cancellationToken);
 }
 
 public class GetDelayTasksHandler(ITaskScheduler scheduler)
 	: IStreamQueryHandler<ScheduleDelayQuery, long>
 {
-	public async IAsyncEnumerable<long> Handle(ScheduleDelayQuery query,
-		[EnumeratorCancellation] CancellationToken cancellationToken)
-	{
-		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		var token = ExecutionBudget.CurrentToken;
-		await foreach (var row in scheduler.GetDelayTasks(query.Query).WithCancellation(token)) yield return row;
-	}
+	public IAsyncEnumerable<long> Handle(ScheduleDelayQuery query,
+		CancellationToken cancellationToken)
+		=> SchedulerQueryLifetime.Read(() => scheduler.GetDelayTasks(query.Query), cancellationToken);
 }
 
 public class AdmissionDelayedScheduleHandler(ITaskScheduler scheduler) : IRequestHandler<AdmitDelayedCommandListRequest, QueueAdmissionResult>
@@ -131,25 +122,17 @@ public class ScheduleHaltHandler(ITaskScheduler scheduler) : IRequestHandler<Hal
 public class GetEnqueueTasksHandler(ITaskScheduler scheduler)
 	: IStreamQueryHandler<ScheduleEnqueueQuery, long>
 {
-	public async IAsyncEnumerable<long> Handle(ScheduleEnqueueQuery query,
-		[EnumeratorCancellation] CancellationToken cancellationToken)
-	{
-		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		var token = ExecutionBudget.CurrentToken;
-		await foreach (var row in scheduler.GetEnqueueTasks(query.Query).WithCancellation(token)) yield return row;
-	}
+	public IAsyncEnumerable<long> Handle(ScheduleEnqueueQuery query,
+		CancellationToken cancellationToken)
+		=> SchedulerQueryLifetime.Read(() => scheduler.GetEnqueueTasks(query.Query), cancellationToken);
 }
 
 public class GetAllTasksHandler(ITaskScheduler scheduler)
 	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, OneOf<string, DBRef>)[])>
 {
-	public async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> Handle(ScheduleAllTasksQuery query,
-		[EnumeratorCancellation] CancellationToken cancellationToken)
-	{
-		using var scope = ExecutionBudget.EnterLinked(cancellationToken);
-		var token = ExecutionBudget.CurrentToken;
-		await foreach (var row in scheduler.GetAllTasks().WithCancellation(token)) yield return row;
-	}
+	public IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> Handle(ScheduleAllTasksQuery query,
+		CancellationToken cancellationToken)
+		=> SchedulerQueryLifetime.Read(() => scheduler.GetAllTasks(), cancellationToken);
 }
 
 public class HaltByPidHandler(ITaskScheduler scheduler) : IRequestHandler<HaltByPidRequest, bool>
