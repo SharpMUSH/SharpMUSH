@@ -3217,7 +3217,7 @@ public partial class Commands
 
 		var interactableContents = contents
 			.Where(async (obj, _) =>
-				await PermissionService.CanInteract(executor, obj, InteractType.Hear));
+				await PermissionService.CanInteract(executor, obj.WithRoomOption(), InteractType.Hear, enactor));
 
 		if (isSpoof)
 		{
