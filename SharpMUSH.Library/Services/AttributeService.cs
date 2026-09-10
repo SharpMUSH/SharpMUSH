@@ -401,6 +401,7 @@ public class AttributeService(
 		AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false)
 	{
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
 			return MarkupText.Plain(ErrorMessages.Returns.ObjectAttributeString);
@@ -512,6 +513,7 @@ public class AttributeService(
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false,
 		bool ignoreLambda = false)
 	{
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
 		var split = objAndAttribute.Split("/");
 		var obj = split.First();
 		var attribute = MarkupText.Concat(split.Skip(1));
