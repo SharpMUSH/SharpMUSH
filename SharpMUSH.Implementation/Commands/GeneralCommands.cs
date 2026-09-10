@@ -4057,13 +4057,15 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
-		Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT"],
+		Switches = ["ALIAS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 5, ParameterNames = ["name", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
+
+		if (switches.Contains("LOCAL")) return await LocalFunctionCommand(parser, executor, switches);
 
 		if (args.Count == 0)
 		{

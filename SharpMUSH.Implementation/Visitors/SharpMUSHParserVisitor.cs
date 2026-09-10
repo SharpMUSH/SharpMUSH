@@ -63,7 +63,9 @@ public class SharpMUSHParserVisitor(
 {
 	private int _debugNestDepth;
 	private bool _didEmitFunctionDebug;
-	internal bool DidEmitFunctionDebug => _didEmitFunctionDebug;
+	private bool _containsRestrictedWrapper;
+	private readonly Dictionary<FunctionContext, bool> _restrictedScanResults = new();
+	internal bool SuppressSubstitutionOnlyDebugTrace => _didEmitFunctionDebug || _containsRestrictedWrapper;
 	private int _braceDepthCounter;
 	private int _suppressFunctionEval;
 
@@ -149,18 +151,21 @@ public class SharpMUSHParserVisitor(
 	private async ValueTask<CallState> LiteralFunctionCall(FunctionContext context, SharpMUSHParserVisitor visitor)
 	{
 		var parts = new MString[context.ChildCount];
+		using var retainedText = RestrictedTextRetention.Enter(parser.CurrentState);
 
 		visitor._suppressFunctionEval++;
 		try
 		{
 			for (var i = 0; i < context.ChildCount; i++)
 			{
-				parts[i] = context.GetChild(i) switch
+				var part = context.GetChild(i) switch
 				{
 					EvaluationStringContext argument => (await visitor.Visit(argument))?.Message ?? MarkupText.Empty,
 					ITerminalNode terminal => SliceSource(terminal.Symbol),
 					_ => MarkupText.Empty
 				};
+				retainedText?.Add(part.Length);
+				parts[i] = part;
 			}
 		}
 		finally
@@ -310,6 +315,8 @@ public class SharpMUSHParserVisitor(
 	/// <param name="message">The message to send</param>
 	private async ValueTask SendDebugOrVerboseOutput(AnySharpObject executor, string message)
 	{
+		if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+			return;
 		var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		await NotifyService.Notify(owner, MarkupText.Plain(message));
 
@@ -340,6 +347,7 @@ public class SharpMUSHParserVisitor(
 	}
 
 
+
 	public override async ValueTask<CallState?> VisitChildren(IRuleNode? node)
 	{
 		ExecutionBudget.Current?.ThrowIfExceeded();
@@ -358,13 +366,18 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var results = new List<CallState>(childCount);
+		using var retainedText = RestrictedTextRetention.Enter(parser.CurrentState);
 
 		for (var i = 0; i < childCount; i++)
 		{
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var child = node.GetChild(i);
 			var childResult = child is null ? null : await child.Accept(this);
-			if (childResult is not null) results.Add(childResult);
+			if (childResult is not null)
+			{
+				retainedText?.Add(childResult.Message?.Length ?? 0);
+				results.Add(childResult);
+			}
 
 			if (parser.CurrentState.LimitExceeded?.IsExceeded == true) break;
 		}
@@ -494,6 +507,74 @@ public class SharpMUSHParserVisitor(
 		return stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message;
 	};
 
+	private bool BeginsRestrictedEvaluation(FunctionContext context)
+	{
+		var name = FunctionNameOf(context);
+		if (!parser.FunctionLibrary.TryGetValue(name, out var definition)) return false;
+		return definition.LibraryInformation.RestrictedOperation == "restrictedexpr"
+			|| definition.LibraryInformation.RestrictedOperation == "fn"
+			&& EvaluationRestrictions.BeginsRestrictedEvaluation(definition.LibraryInformation,
+				RestrictedTargetNames(context), parser.FunctionLibrary);
+	}
+
+	private IEnumerable<string> RestrictedTargetNames(FunctionContext context)
+	{
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			if (context.GetChild(index) is EvaluationStringContext argument)
+				yield return GetContextText(argument).ToPlainText();
+		}
+	}
+
+	private static void DemandBoundedArguments(FunctionContext context)
+	{
+		var count = 1;
+		for (var index = 0; index < context.ChildCount; index++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			if (context.GetChild(index) is ITerminalNode terminal && terminal.Symbol.Type == COMMAWS
+				&& ++count > EvaluationRestrictions.MaximumArguments)
+				throw new RestrictedExpressionException();
+		}
+	}
+
+	private bool ContainsRestrictedEvaluation(IParseTree context)
+	{
+		// Keep traversal storage proportional to depth, not the number of comma tokens.
+		var pending = new Stack<(IParseTree Node, int NextChild)>();
+		pending.Push((context, 0));
+		while (pending.TryPeek(out var frame))
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (frame.Node is FunctionContext function && frame.NextChild == 0)
+			{
+				var found = _restrictedScanResults.TryGetValue(function, out var cached)
+					? cached : BeginsRestrictedEvaluation(function);
+				if (found)
+				{
+					foreach (var ancestor in pending)
+					{
+						ExecutionBudget.Current?.ThrowIfExceeded();
+						if (ancestor.Node is FunctionContext ancestorFunction) _restrictedScanResults[ancestorFunction] = true;
+					}
+					return true;
+				}
+				if (_restrictedScanResults.ContainsKey(function)) { pending.Pop(); continue; }
+			}
+			if (frame.NextChild >= frame.Node.ChildCount)
+			{
+				if (frame.Node is FunctionContext completed) _restrictedScanResults[completed] = false;
+				pending.Pop();
+				continue;
+			}
+			pending.Pop();
+			pending.Push((frame.Node, frame.NextChild + 1));
+			pending.Push((frame.Node.GetChild(frame.NextChild), 0));
+		}
+		return false;
+	}
+
 	/// <summary>
 	/// The lower-cased name of the function a call invokes. The FUNCHAR token is the name, any
 	/// whitespace the lexer folded in, and the opening parenthesis; this slices the name out of it
@@ -541,6 +622,11 @@ public class SharpMUSHParserVisitor(
 		}
 
 		var functionName = FunctionNameOf(context);
+		// Reject oversized calls before ANTLR child-array and argument-map materialization.
+		var restricted = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
+		if (restricted) DemandBoundedArguments(context);
+		var restrictedWrapper = BeginsRestrictedEvaluation(context);
+		if (!restricted && restrictedWrapper) DemandBoundedArguments(context);
 		var evalStrings = context.evaluationString();
 		var commas = context.COMMAWS();
 
@@ -565,7 +651,12 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		var executor = await parser.CurrentState.ExecutorObject(Mediator);
+		// Recognize the wrapper before its implementation enters the operation scope.
+		_containsRestrictedWrapper |= restrictedWrapper;
+		// Restricted evaluation must not read DEBUG flags or forwarding attributes.
+		var executor = restrictedWrapper || EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null
+			? new AnyOptionalSharpObject(new None())
+			: await parser.CurrentState.ExecutorObject(Mediator);
 		var shouldDebug = false;
 		AnySharpObject? executorObj = null;
 		string? indent = null;
@@ -597,6 +688,14 @@ public class SharpMUSHParserVisitor(
 				indent = new string(' ', _debugNestDepth);
 				dbrefNumber = executorObj.Object().DBRef.Number;
 			}
+		}
+
+		// An ancestor trace also contains the wrapper's literal inputs. This extra traversal
+		// is needed only while debug output is enabled; ordinary evaluation stays a single walk.
+		if (shouldDebug && ContainsRestrictedEvaluation(context))
+		{
+			_containsRestrictedWrapper = true;
+			shouldDebug = false;
 		}
 
 		if (shouldDebug && executorObj != null && indent != null)
@@ -661,6 +760,8 @@ public class SharpMUSHParserVisitor(
 				var userFunction = ResolveUserDefinedFunction(name);
 				if (userFunction is null)
 				{
+					if (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+						throw new RestrictedExpressionException();
 					if (!IsUnknownFunctionAnError(context))
 					{
 						// Not a function and not required to be one: the text is prose, not a call.
@@ -681,7 +782,12 @@ public class SharpMUSHParserVisitor(
 				libraryMatch = (userFunction.Value, false);
 			}
 
-			var (attribute, function) = libraryMatch.LibraryInformation;
+			var definition = libraryMatch.LibraryInformation;
+			EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
+			if ((EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+				&& args.Length > EvaluationRestrictions.MaximumArguments)
+				throw new RestrictedExpressionException();
+			var attribute = definition.Attribute;
 
 			var currentState = parser.CurrentState;
 			var contextDepth = context.Depth();
@@ -708,21 +814,25 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			// Every gate below is a permission check against the executor, so there is nothing to
-			// evaluate without one — the connect screen being the ordinary case. KnownExecutorObject
-			// threw here instead, which the catch below turned into an Error-level log with a full
-			// stack trace on every call while still returning the same empty result. Answer the
-			// question the gates are actually asking rather than raising an exception to say "no".
-			var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-			if (executorOption.IsNone)
+			var isolated = EvaluationRestrictions.Current is not null || currentState.Restrictions is not null
+				|| BeginsRestrictedEvaluation(context);
+			AnySharpObject? executor = null;
+			string? permissionError;
+			if (isolated)
 			{
-				success = false;
-				return CallState.Empty;
+				permissionError = SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionWithoutObjectData(attribute);
 			}
-
-			var executor = executorOption.Known();
-
-			var permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+			else
+			{
+				var executorOption = await currentState.ExecutorObject(Mediator);
+				if (executorOption.IsNone)
+				{
+					success = false;
+					return CallState.Empty;
+				}
+				executor = executorOption.Known();
+				permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
+			}
 			if (permissionError is not null)
 			{
 				success = false;
@@ -739,8 +849,8 @@ public class SharpMUSHParserVisitor(
 			var builtinRestriction = (parser as MUSHCodeParser)?.ServiceProvider
 				.GetService<IUserDefinedFunctionService>()?.GetBuiltinRestriction(name);
 
-			if ((functionRestriction is not null && !await executor.SatisfiesFunctionRestriction(functionRestriction))
-					|| (builtinRestriction is not null && !await executor.SatisfiesFunctionRestriction(builtinRestriction)))
+			if ((functionRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(functionRestriction)))
+					|| (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction))))
 			{
 				success = false;
 				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
@@ -799,6 +909,9 @@ public class SharpMUSHParserVisitor(
 			// Only user-defined attributes check recursion (see AttributeService.EvaluateAttributeFunctionAsync)
 
 			var stripAnsi = attribute.Flags.HasFlag(FunctionFlags.StripAnsi);
+			// Start at the already recognized wrapper boundary, including fn chains
+			// that serialize before the operation allowlist becomes ambient.
+			using var retainedArguments = RestrictedTextRetention.Enter(parser.CurrentState, isolated);
 
 			if (attribute.Flags.HasFlag(FunctionFlags.Literal))
 			{
@@ -824,6 +937,7 @@ public class SharpMUSHParserVisitor(
 					}
 
 					var msg = (await visitor.VisitChildren(x))?.Message ?? MarkupText.Empty;
+					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
 					refinedArguments.Add(new CallState(msg, x.Depth()));
 				}
@@ -895,7 +1009,7 @@ public class SharpMUSHParserVisitor(
 			));
 
 			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
-				new FunctionDefinition(attribute, function), executor,
+				definition, executor,
 				Configuration.CurrentValue.Function.FunctionSideEffects, NotifyService, logger,
 				argumentCount: args.Length, permissionsChecked: true, deferredArguments: true);
 
@@ -911,10 +1025,16 @@ public class SharpMUSHParserVisitor(
 
 			return result with { Depth = contextDepth };
 		}
+		catch (RestrictedExpressionException) { success = false; throw; }
 		catch (OperationCanceledException)
 		{
 			success = false;
 			throw;
+		}
+		catch (Exception) when (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		{
+			success = false;
+			throw new RestrictedExpressionException();
 		}
 		catch (Exception ex)
 		{
@@ -2525,7 +2645,7 @@ public class SharpMUSHParserVisitor(
 		var evalParser = mushParser.ResolveTrackingParser();
 
 		// A fresh visitor per call mirrors ParseInternalCore's "new SharpMUSHParserVisitor(...)
-		// per parse": its DidEmitFunctionDebug flag must start false for THIS argument alone, not
+		// per parse": its diagnostic-suppression flag must start false for THIS argument alone, not
 		// be shared/polluted by the outer command's own visitor (`this`), which is handling the
 		// whole command line and whose flag may already be set from a sibling argument or an
 		// enclosing function call.
@@ -2538,7 +2658,7 @@ public class SharpMUSHParserVisitor(
 		{
 			var rawText = argument.ToPlainText();
 			await MUSHCodeParser.EmitSubstitutionOnlyDebugTraceAsync(
-				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.DidEmitFunctionDebug);
+				Mediator, NotifyService, prs.CurrentState, rawText, result?.Message, subVisitor.SuppressSubstitutionOnlyDebugTrace);
 		}
 
 		return result;
@@ -2760,6 +2880,7 @@ public class SharpMUSHParserVisitor(
 			return new CallState("%" + context.GetText());
 		}
 
+		EvaluationRestrictions.DemandSubstitution(context.GetText(), parser.CurrentState.Restrictions);
 		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
 		var simpleSubstitutionSymbol = context.substitutionSymbol();
 

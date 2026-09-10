@@ -13,15 +13,30 @@ namespace SharpMUSH.Library.Services;
 public static class FunctionDispatcher
 {
 	public static async ValueTask<CallState> InvokeAsync(IMUSHCodeParser parser, FunctionDefinition definition,
-		AnySharpObject executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
+		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
 	{
+		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
 		var flags = attribute.Flags;
 		var name = attribute.Name.ToUpperInvariant();
-		if (!permissionsChecked)
+		var restrictedEntry = EvaluationRestrictions.BeginsRestrictedEvaluation(definition,
+			parser.CurrentState.ArgumentsOrdered.Values.Select(argument => argument.Message?.ToPlainText() ?? ""), parser.FunctionLibrary);
+		// #apply receives values after caller evaluation; it cannot establish a raw-input boundary.
+		if (restrictedEntry && !deferredArguments) return new CallState(EvaluationRestrictions.Error);
+		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null || restrictedEntry;
+		if (isolated)
 		{
-			var permissionError = await CheckPermissionAsync(attribute, executor);
+			var permissionError = CheckPermissionWithoutObjectData(attribute);
 			if (permissionError is not null) return new CallState(permissionError);
+		}
+		else
+		{
+			if (executor is null) return CallState.Empty;
+			if (!permissionsChecked)
+			{
+				var permissionError = await CheckPermissionAsync(attribute, executor);
+				if (permissionError is not null) return new CallState(permissionError);
+			}
 		}
 		var count = argumentCount ?? parser.CurrentState.Arguments.Count;
 
@@ -38,16 +53,17 @@ public static class FunctionDispatcher
 		var error = ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser);
 		if (error is not null) return new CallState(error);
 
-		if (flags.HasFlag(FunctionFlags.Deprecated))
+		var suppressDiagnostics = isolated;
+		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.Deprecated))
 		{
-			var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-			await notify.Notify(owner.Object.DBRef, $"Deprecated function {name} being used on object {executor.Object().DBRef}.");
+			var owner = await executor!.Object().Owner.WithCancellation(CancellationToken.None);
+			await notify.Notify(owner.Object.DBRef, $"Deprecated function {name} being used on object {executor!.Object().DBRef}.");
 		}
-		if (flags.HasFlag(FunctionFlags.LogArgs))
+		if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogArgs))
 			logger.LogInformation("Function {Function}({Arguments}) executed by {Executor}", name,
-				string.Join(",", parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText())), executor.Object().DBRef);
-		else if (flags.HasFlag(FunctionFlags.LogName))
-			logger.LogInformation("Function {Function} executed by {Executor}", name, executor.Object().DBRef);
+				string.Join(",", parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText())), executor!.Object().DBRef);
+		else if (!suppressDiagnostics && flags.HasFlag(FunctionFlags.LogName))
+			logger.LogInformation("Function {Function} executed by {Executor}", name, executor!.Object().DBRef);
 
 		if (!flags.HasFlag(FunctionFlags.Localize)) return await definition.Function(parser);
 		var localized = parser.Push(parser.CurrentState with
@@ -74,6 +90,16 @@ public static class FunctionDispatcher
 		return await definition.Function(localized);
 	}
 
+	/// <summary>Identity-dependent gates fail closed when the profile forbids object reads.</summary>
+	public static string? CheckPermissionWithoutObjectData(SharpFunctionAttribute attribute)
+	{
+		if (attribute.Flags.HasFlag(FunctionFlags.Disabled)) return ErrorMessages.Returns.FunctionDisabled;
+		const FunctionFlags identity = FunctionFlags.GodOnly | FunctionFlags.WizardOnly | FunctionFlags.AdminOnly
+			| FunctionFlags.NoGuest | FunctionFlags.NoGagged | FunctionFlags.NoFixed | FunctionFlags.HasSideFX;
+		return (attribute.Flags & identity) != 0 || attribute.Restrict.Length > 0
+			? ErrorMessages.Returns.PermissionDenied : null;
+	}
+
 	public static async ValueTask<string?> CheckPermissionAsync(SharpFunctionAttribute attribute, AnySharpObject executor)
 	{
 		var flags = attribute.Flags;
@@ -86,7 +112,7 @@ public static class FunctionDispatcher
 			return ErrorMessages.Returns.PermissionDenied;
 		if ((flags & (FunctionFlags.NoGagged | FunctionFlags.NoFixed)) != 0)
 		{
-			AnySharpObject owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+			AnySharpObject owner = await executor!.Object().Owner.WithCancellation(CancellationToken.None);
 			if ((flags.HasFlag(FunctionFlags.NoGagged) && await owner.HasFlag("GAGGED"))
 				|| (flags.HasFlag(FunctionFlags.NoFixed) && await owner.HasFlag("FIXED")))
 				return ErrorMessages.Returns.PermissionDenied;
