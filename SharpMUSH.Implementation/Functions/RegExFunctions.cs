@@ -390,7 +390,8 @@ public partial class Functions
 			if (defaultValue != null)
 			{
 				var defaultEvaluated = await defaultValue.Value.Value.GetParsedResultAsync();
-				return defaultEvaluated with { HadErrors = hadErrors || defaultEvaluated.HadErrors };
+				return new CallState(defaultEvaluated.Message ?? MarkupText.Empty)
+				{ HadErrors = hadErrors || defaultEvaluated.HadErrors };
 			}
 
 			return new CallState(MarkupText.Empty) { HadErrors = hadErrors };
