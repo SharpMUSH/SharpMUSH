@@ -4734,6 +4734,36 @@ public partial class Commands
 
 		var targetDbRef = target.Object().DBRef;
 
+		if (switches.Contains("ALL"))
+		{
+			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
+			// Usage is an optional extension; legacy schedulers still provide the queue listing.
+			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
+			try { usage = scheduler.GetQueueUsage(); }
+			catch (NotSupportedException) { usage = null; }
+			if (usage is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
+				foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
+			}
+
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
+			foreach (var (group, tasks) in allTasks)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), executor, group, tasks.Length);
+			}
+
+			return CallState.Empty;
+		}
+
+
 		SharpMUSH.Library.Models.SchedulerModels.SemaphoreTaskData[] semaphoreTasks;
 		try
 		{
@@ -4765,35 +4795,6 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
-			return CallState.Empty;
-		}
-
-		if (switches.Contains("ALL"))
-		{
-			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
-			// Usage is an optional extension; legacy schedulers still provide the queue listing.
-			SharpMUSH.Library.Models.SchedulerModels.QueueUsage? usage;
-			try { usage = scheduler.GetQueueUsage(); }
-			catch (NotSupportedException) { usage = null; }
-			if (usage is not null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueUsage), usage.Total, Configuration.CurrentValue.Limit.GlobalQueueLimit, Configuration.CurrentValue.Limit.PlayerQueueLimit);
-				foreach (var rejection in usage.Rejections.OrderBy(x => x.Key))
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QueueRejections), rejection.Key, rejection.Value);
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllHeader), executor);
-			foreach (var (group, tasks) in allTasks)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsAllGroupFormat), executor, group, tasks.Length);
-			}
-
 			return CallState.Empty;
 		}
 
