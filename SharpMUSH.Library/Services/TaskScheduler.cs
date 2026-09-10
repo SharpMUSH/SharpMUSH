@@ -71,6 +71,20 @@ public partial class TaskScheduler(
 		public QueueObservation? Observation { get; init; }
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 		public bool HaltAccountingSettled { get; init; }
+		public PendingInputCommand? PendingInput { get; init; }
+	}
+
+	// Stored only on admitted entries. An escape cannot retain a future-start tombstone.
+	private sealed class PendingInputCommand(long handle, IConnectionService.ConnectionData? connection,
+		string? transport, InputCaptureTicket? ticket)
+	{
+		public long Handle { get; } = handle;
+		public IConnectionService.ConnectionData? Connection { get; } = connection;
+		public string? Transport { get; } = transport;
+		public InputCaptureTicket? Ticket { get; } = ticket;
+		// Both flags are protected by _admissionLock.
+		public bool Completed { get; set; }
+		public bool EscapeRequested { get; set; }
 	}
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -148,7 +162,7 @@ public partial class TaskScheduler(
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
-	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true)
+	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null)
 	{
 		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
 		string owner = handle is null ? "system" : $"handle:{handle}";
@@ -178,7 +192,8 @@ public partial class TaskScheduler(
 				DBRef.TryParse(owner, out var diagnosticOwner);
 				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
 				{
-					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, DiagnosticKind(group), sourceAttribute)
+					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, DiagnosticKind(group), sourceAttribute),
+					PendingInput = pendingInput
 				};
 				_pendingEntries[pid] = entry;
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
@@ -542,28 +557,68 @@ public partial class TaskScheduler(
 		var generation = snapshot.Ticket?.InitialGeneration ?? inputSessions?.GetCaptureGeneration(handle);
 		if (inputSessions is not null && await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command, snapshot.Session?.Id))
 			return new QueueAdmissionResult(0, QueueRejectionReason.None);
+		var connection = connectionService.Get(handle);
+		if (inputSessions is not null && snapshot.Ticket is not null
+			&& command.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)
+			&& connection is not null
+			&& (connection.Metadata.GetValueOrDefault("SessionId") ?? "") == (state.ConnectionSessionId ?? ""))
+		{
+			var marked = false;
+			lock (_admissionLock)
+			{
+				foreach (var pair in _pendingEntries)
+				{
+					if (pair.Value.PendingInput is not { Completed: false } pending || pending.Handle != handle
+						|| !ReferenceEquals(pending.Connection, connection)
+						|| !ReferenceEquals(pending.Ticket, snapshot.Ticket)
+						|| (pending.Transport ?? "") != (state.ConnectionSessionId ?? "")) continue;
+					pending.EscapeRequested = true;
+					marked = true;
+				}
+			}
+			if (marked) return new QueueAdmissionResult(0, QueueRejectionReason.None);
+			// A start may have finished between the first escape check and the ledger scan.
+			if (await inputSessions.TryEscapeAsync(handle, state.ConnectionSessionId, command, snapshot.Ticket.ExpectedGeneration))
+				return new QueueAdmissionResult(0, QueueRejectionReason.None);
+		}
+		var pendingCommand = new PendingInputCommand(handle, connection, state.ConnectionSessionId, snapshot.Ticket);
 		var capture = snapshot.Session;
 		return await Admit(async () =>
 		{
-			if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
-			// Replies admitted before startup belong to the first capture that follows admission.
-			var session = capture ?? inputSessions?.GetCapturing(handle);
-			if (capture is null && session is not null)
+			try
 			{
-				if (snapshot.Ticket?.ExpectedGeneration != session.Id) return null;
-				if (await inputSessions!.TryEscapeAsync(handle, state.ConnectionSessionId, command, session.Id)) return null;
+				if (!string.IsNullOrEmpty(state.ConnectionSessionId) && connectionService.Get(handle)?.Metadata.GetValueOrDefault("SessionId") != state.ConnectionSessionId) return null;
+				// Replies admitted before startup belong to the first capture that follows admission.
+				var session = capture ?? inputSessions?.GetCapturing(handle);
+				if (capture is null && session is not null)
+				{
+					if (snapshot.Ticket?.ExpectedGeneration != session.Id) return null;
+					if (await inputSessions!.TryEscapeAsync(handle, state.ConnectionSessionId, command, session.Id)) return null;
+				}
+				// A captured generation never becomes ordinary command text, even if cancelled while queued.
+				if (session is not null)
+				{
+					if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
+					return await inputSessions!.DeliverAsync(parser, session, command);
+				}
+				// A capture that opened after admission still owns this reply after it ends.
+				if (inputSessions?.GetCaptureGeneration(handle) != generation) return null;
+				if (string.IsNullOrWhiteSpace(command.Text)) return null;
+				return await parser.FromState(state).CommandParse(handle, connectionService, command);
 			}
-			// A captured generation never becomes ordinary command text, even if cancelled while queued.
-			if (session is not null)
+			finally
 			{
-				if ((session.TransportSessionId ?? "") != (state.ConnectionSessionId ?? "")) return null;
-				return await inputSessions!.DeliverAsync(parser, session, command);
+				bool escape;
+				lock (_admissionLock)
+				{
+					pendingCommand.Completed = true;
+					escape = pendingCommand.EscapeRequested;
+				}
+				if (escape && inputSessions is not null && pendingCommand.Ticket is { } ticket
+					&& ReferenceEquals(connectionService.Get(handle), pendingCommand.Connection))
+					await inputSessions.TryEscapeAsync(handle, pendingCommand.Transport, MString.Plain("@input/cancel"), ticket.ExpectedGeneration);
 			}
-			// A capture that opened after admission still owns this reply after it ends.
-			if (inputSessions?.GetCaptureGeneration(handle) != generation) return null;
-			if (string.IsNullOrWhiteSpace(command.Text)) return null;
-			return await parser.FromState(state).CommandParse(handle, connectionService, command);
-		}, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle);
+		}, $"handle:{handle}", DirectInputGroup, connectionService.Get(handle)?.Ref, handle, pendingInput: pendingCommand);
 	}
 
 	public ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session)

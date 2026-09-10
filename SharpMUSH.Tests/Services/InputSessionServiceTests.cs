@@ -634,6 +634,72 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task EscapeBehindPendingStartBypassesSaturatedAdmission(bool ownerLimit)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await using var queue = Queue(h, global: ownerLimit ? 10u : 2u, owner: ownerLimit ? 1u : 100u);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		h.Parser.CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>())
+			.Returns(async ValueTask<CallState> (_) =>
+			{
+				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				return CallState.Empty;
+			});
+		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var state = ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" };
+			await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/start me/CALLBACK"), state)).Accepted).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
+			await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/cancel"), state)).Accepted).IsTrue();
+			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(2);
+		}
+		finally { release.TrySetResult(); }
+		await Drained(queue);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
+	}
+
+	[Test]
+	[Arguments("none")]
+	[Arguments("stale-transport")]
+	[Arguments("ordinary")]
+	public async Task PendingEscapeDoesNotBypassUnrelatedSaturation(string mode)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await using var queue = Queue(h, global: mode == "none" ? 1u : 2u);
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		h.Parser.CommandParse(Arg.Any<long>(), Arg.Any<IConnectionService>(), Arg.Any<MarkupText>())
+			.Returns(async ValueTask<CallState> (_) =>
+			{
+				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				return CallState.Empty;
+			});
+		await queue.EnqueueWork(async () => { entered.SetResult(); await release.Task; return null; }, "block", "test");
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			var state = ParserState.Empty with { Handle = 1, ConnectionSessionId = "transport" };
+			if (mode != "none")
+				await Assert.That((await queue.AdmitUserCommand(1, MarkupText.Plain("@input/start me/CALLBACK"), state)).Accepted).IsTrue();
+			var cancel = await queue.AdmitUserCommand(1, MarkupText.Plain(mode == "ordinary" ? "@input/cancel;think ordinary" : "@input/cancel"),
+				state with { ConnectionSessionId = mode == "stale-transport" ? "old" : "transport" });
+			await Assert.That(cancel.Accepted).IsFalse();
+		}
+		finally { release.TrySetResult(); }
+		await Drained(queue);
+		if (mode == "none")
+			await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNotNull();
+	}
+
+	[Test]
 	[Arguments(false, "")]
 	[Arguments(true, "")]
 	[Arguments(false, "  \t ")]
