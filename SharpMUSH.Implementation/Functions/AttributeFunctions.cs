@@ -1377,7 +1377,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var result = await AttributeService.EvaluateAttributeFunctionAsync(
+		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			executor,
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
@@ -1386,7 +1386,7 @@ public partial class Functions
 				.ToDictionary(),
 			ignoreLambda: true);
 
-		return new CallState(result);
+		return result;
 	}
 
 	[SharpFunction(Name = "pfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["object", "function", "arguments..."])]
@@ -1422,7 +1422,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var result = await AttributeService.EvaluateAttributeFunctionAsync(
+		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
 			executor,
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
@@ -1430,7 +1430,7 @@ public partial class Functions
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
 				.ToDictionary());
 
-		return new CallState(result);
+		return result;
 	}
 
 	[SharpFunction(Name = "ulocal", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular | FunctionFlags.Localize, ParameterNames = ["object/attribute", "arguments..."])]

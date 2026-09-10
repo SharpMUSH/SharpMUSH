@@ -1132,7 +1132,7 @@ public class SharpMUSHParserVisitor(
 			// the attribute is read and evaluated with the function object's permissions, not the
 			// caller's, so a player who lacks read access to the object can still call the function.
 			// The caller-level permission gate (@function/restrict) was already enforced in CallFunction.
-			var result = await AttributeService.EvaluateAttributeFunctionAsync(
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				invokedParser,
 				targetObject.Known,
 				targetObject.Known,
@@ -1140,7 +1140,7 @@ public class SharpMUSHParserVisitor(
 				args,
 				evalParent: false);
 
-			return new CallState(result);
+			return result;
 		});
 	}
 
@@ -2230,12 +2230,8 @@ public class SharpMUSHParserVisitor(
 				return await HandleUserDefinedCommand(localParser, matchResult.AsValue());
 			}
 
-			// Older attribute services expose text only; preserve their published contract.
-			if (AttributeService is IAttributeFunctionResultService results)
-				return await results.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
-					hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false);
-			return new CallState(await AttributeService.EvaluateAttributeFunctionAsync(localParser, executorObj, targetObj,
-				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false));
+			return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
+				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false);
 		}
 		finally
 		{

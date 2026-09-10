@@ -514,6 +514,12 @@ public class AttributeService(
 	}
 
 	public async ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		MString objAndAttribute, Dictionary<string, CallState> args, bool evalParent = true,
+		bool ignorePermissions = false, bool ignoreLambda = false)
+		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, objAndAttribute, args,
+			evalParent, ignorePermissions, ignoreLambda)).Message ?? MarkupText.Empty;
+
+	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute,
 		Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false,
 		bool ignoreLambda = false)
@@ -528,7 +534,7 @@ public class AttributeService(
 
 		if (!applyPredicate && !lambdaPredicate && attribute.Length == 0)
 		{
-			return await EvaluateAttributeFunctionAsync(parser, executor, executor,
+			return await EvaluateAttributeFunctionResultAsync(parser, executor, executor,
 				objPlainText, args, evalParent, ignorePermissions);
 		}
 
@@ -538,7 +544,7 @@ public class AttributeService(
 		if (!applyPredicate && !lambdaPredicate &&
 				!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, attribute, new None())))
 		{
-			return MarkupText.Plain(ErrorMessages.Returns.ObjectAttributeString);
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
 		var realExecutor = executor;
@@ -557,7 +563,7 @@ public class AttributeService(
 			var applyArgCountStr = objPlainText.Remove(0, 6); // part after "#apply"
 			if (!string.IsNullOrWhiteSpace(applyArgCountStr) && !int.TryParse(applyArgCountStr, out argN))
 			{
-				return MarkupText.Plain(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
+				return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "#APPLY"));
 			}
 
 			var slimArgs = Enumerable
@@ -570,7 +576,7 @@ public class AttributeService(
 				var builtinRestriction = serviceProvider.GetService<IUserDefinedFunctionService>()
 					?.GetBuiltinRestriction(attribute.ToPlainText());
 				if (builtinRestriction is not null && !await realExecutor.SatisfiesFunctionRestriction(builtinRestriction))
-					return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 
 				if (applyFunction.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.StripAnsi))
 				{
@@ -593,7 +599,7 @@ public class AttributeService(
 						serviceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AttributeService>>())
 				);
 
-				return result.Message!;
+				return result;
 			}
 
 			// Check if proper function name in the attribute section.
@@ -616,7 +622,7 @@ public class AttributeService(
 				LimitExceeded = s.LimitExceeded
 			},
 				async np => await np.FunctionParse(attribute));
-			return result!.Message!;
+			return result ?? CallState.Empty;
 		}
 
 		var maybeObject =
@@ -625,8 +631,8 @@ public class AttributeService(
 
 		return maybeObject switch
 		{
-			{ IsError: true } => maybeObject.AsError.Message!,
-			_ => await EvaluateAttributeFunctionAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(),
+			{ IsError: true } => maybeObject.AsError,
+			_ => await EvaluateAttributeFunctionResultAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(),
 				args, evalParent, ignorePermissions)
 		};
 	}
