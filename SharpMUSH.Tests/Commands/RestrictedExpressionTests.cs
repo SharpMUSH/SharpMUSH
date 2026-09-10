@@ -432,6 +432,72 @@ public class RestrictedExpressionTests
 		await Assert.That(await Eval("repeat(,2147483647)")).IsEqualTo("");
 	}
 
+	private sealed class ScanComparer : IEqualityComparer<string>
+	{
+		public Action? OnLookup { get; set; }
+		public bool Equals(string? x, string? y) => StringComparer.OrdinalIgnoreCase.Equals(x, y);
+		public int GetHashCode(string value)
+		{
+			var callback = OnLookup;
+			OnLookup = null;
+			callback?.Invoke();
+			return StringComparer.OrdinalIgnoreCase.GetHashCode(value);
+		}
+	}
+	private sealed class ScanLibrary(ScanComparer comparer) : LibraryService<string, FunctionDefinition>(comparer);
+	private sealed class ScanTimer : TimeProvider
+	{
+		private Action? _fire;
+		public void Fire() => _fire!();
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			_fire = () => callback(state);
+			return new Timer();
+		}
+		private sealed class Timer : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+			public void Dispose() { }
+			public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+		}
+	}
+
+	[Test]
+	[Arguments("function", true)]
+	[Arguments("command", true)]
+	[Arguments("visitor", true)]
+	[Arguments("function", false)]
+	[Arguments("command", false)]
+	[Arguments("visitor", false)]
+	public async Task RestrictedEntryScanKeepsDeadlineAndCallerCancellationDistinct(string mode, bool expiry)
+	{
+		var original = (MUSHCodeParser)Factory.FunctionParser;
+		var comparer = new ScanComparer();
+		var library = new ScanLibrary(comparer);
+		foreach (var pair in original.FunctionLibrary) library.Add(pair.Key, pair.Value);
+		var parser = original with
+		{
+			FunctionLibrary = library,
+			Configuration = new Options(original.Configuration.CurrentValue with
+			{ Debug = original.Configuration.CurrentValue.Debug with { DebugSharpParser = true } })
+		};
+		var timer = new ScanTimer();
+		using var caller = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), caller.Token, timer);
+		using var scope = budget.Enter();
+		var scanned = false;
+		comparer.OnLookup = () => { scanned = true; if (expiry) timer.Fire(); else caller.Cancel(); };
+		async Task<CallState?> Invoke() => mode switch
+		{
+			"function" => await parser.FunctionParse(MarkupText.Plain("fn(add,1,2)")),
+			"command" => await parser.CommandListParse(MarkupText.Plain("@pemit me=[fn(add,1,2)]")),
+			_ => await parser.CommandListParseVisitor(MarkupText.Plain("@pemit me=[fn(add,1,2)]"))()
+		};
+		if (expiry) await Assert.That((await Invoke())?.Message?.ToPlainText()).IsEqualTo(ExecutionBudget.Error);
+		else await Assert.ThrowsAsync<OperationCanceledException>(Invoke);
+		await Assert.That(scanned).IsTrue();
+	}
+
 	[Test]
 	[Arguments("restrictedexpr(add,private-input)")]
 	[Arguments("fn(restrictedexpr,add,private-input)")]

@@ -391,8 +391,18 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Two-stage SLL/LL prediction with strict/lenient recovery. The error listener is the one
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
-		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+		TContext context;
+		ParserErrorListener errorListener;
+		try
+		{
+			(context, errorListener) = ParseTwoStage(
+				bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+		}
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{
+			// Parsing and diagnostic classification share the visitor's deadline contract.
+			return (new CallState(ExecutionBudget.Error) { HadErrors = true }, true);
+		}
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.
@@ -638,8 +648,17 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)));
 		}
 
-		var (chatContext, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
+		SharpMUSHParser.StartCommandStringContext chatContext;
+		ParserErrorListener errorListener;
+		try
+		{
+			(chatContext, errorListener) = ParseTwoStage(
+				bufferedTokenSpanStream, p => p.startCommandString(), plaintext, lenient: false);
+		}
+		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExpired == true)
+		{
+			return () => ValueTask.FromResult<CallState?>(new CallState(ExecutionBudget.Error) { HadErrors = true });
+		}
 
 		if (errorListener.HasErrors)
 		{
