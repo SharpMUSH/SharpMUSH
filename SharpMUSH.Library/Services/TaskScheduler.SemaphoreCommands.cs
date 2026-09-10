@@ -1,4 +1,3 @@
-using Quartz;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
@@ -16,22 +15,21 @@ public partial class TaskScheduler
 	public async ValueTask<int> ApplySemaphoreCommandAsync(DbRefAttribute target, int? count, bool drain,
 		Func<int, ValueTask> persist, Func<ValueTask<bool>> reconcile, Dictionary<string, MString>? registers = null)
 	{
+		using var deferredLease = await LockDeferred();
 		QueueEntry[] selected;
 		lock (_admissionLock)
 		{
 			if (_stopping) throw new OperationCanceledException("The queue is stopping.");
 			selected = _pendingEntries.Values.Where(entry => entry.Group == $"{SemaphoreGroup}:{target}" &&
-				!_ready.Contains(entry.Pid) && !_semaphoreRepairs.ContainsKey(entry.Pid))
+				!_ready.Contains(entry.Pid) && entry.Deferred?.ReleasePending != true && !_semaphoreRepairs.ContainsKey(entry.Pid))
 				.OrderBy(entry => entry.Pid).Take(count ?? int.MaxValue).ToArray();
 		}
 		ParserState? registerState = null;
 		if (registers is not null)
 		{
 			if (selected.Length == 0) return 0;
-			var trigger = await _scheduler.GetTrigger(new TriggerKey(selected[0].TriggerName, selected[0].Group), ExecutionBudget.CurrentToken);
-			var job = trigger is null ? null : await _scheduler.GetJobDetail(trigger.JobKey, ExecutionBudget.CurrentToken);
-			if (job is null || !job.JobDataMap.TryGetValue("State", out var value) || value is not ParserState state) return 0;
-			registerState = state;
+			if (selected[0].Deferred is not { } deferred) return 0;
+			registerState = deferred.State;
 		}
 		lock (_admissionLock)
 		{
@@ -52,7 +50,7 @@ public partial class TaskScheduler
 				{
 					if (cleaned.Contains(entry.Pid)) continue;
 					ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-					await _scheduler.UnscheduleJob(new TriggerKey(entry.TriggerName, entry.Group), ExecutionBudget.CurrentToken);
+					await RemoveDeferredTrigger(entry);
 					cleaned.Add(entry.Pid);
 				}
 			}
@@ -98,7 +96,11 @@ public partial class TaskScheduler
 			}
 			catch (Exception repairFailure)
 			{
-				_semaphoreCommandRepair = Repair;
+				_semaphoreCommandRepair = async () =>
+				{
+					using var repairLease = await LockDeferred();
+					await Repair();
+				};
 				throw new AggregateException("Semaphore command accounting is uncertain; subsequent mutations require reconciliation.", writeFailure, repairFailure);
 			}
 			throw;
@@ -106,7 +108,11 @@ public partial class TaskScheduler
 		try { await Complete(true); }
 		catch
 		{
-			_semaphoreCommandRepair = Repair;
+			_semaphoreCommandRepair = async () =>
+			{
+				using var repairLease = await LockDeferred();
+				await Repair();
+			};
 			throw;
 		}
 		return selected.Length;

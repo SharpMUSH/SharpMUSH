@@ -58,6 +58,103 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task ExpiredCompoundLockDoesNotStartTheNextLegacyRead()
+	{
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(10), cancellation.Token);
+		using var scope = budget.Enter();
+		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
+		var services = Substitute.For<ILockEvaluationServices>();
+		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LEFT")
+			.Returns(_ => { cancellation.Cancel(); return ValueTask.FromResult<OneOf.OneOf<string, LockEvaluationFailure>>("yes"); });
+		var reads = 0;
+		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+			.Returns(_ => { reads++; return ValueTask.FromResult<OptionalSharpAttributeOrError>(new None()); });
+		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
+		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, Substitute.For<IMediator>(), cache);
+		bool cancelled = false;
+		try { await parser.Compile("LEFT/yes & RIGHT:value")(target, target); }
+		catch (OperationCanceledException) { cancelled = true; }
+		await Assert.That(cancelled).IsTrue();
+		await Assert.That(reads).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("FLAG^WIZARD")]
+	[Arguments("POWER^QUEUE")]
+	[Arguments("$me")]
+	[Arguments("CHANNEL^test")]
+	[Arguments("@#10")]
+	[Arguments("+#11")]
+	[Arguments("#11")]
+	[Arguments("TEST:value")]
+	[Arguments("@target")]
+	public async Task CompiledLockReadsReleaseTheConsumerOnExpiry(string expression)
+	{
+		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async Task Block(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+		}
+		async IAsyncEnumerable<T> Stream<T>([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			await Block(token);
+			yield break;
+		}
+		target.AsPlayer.Object.Flags = new(() => Stream<SharpObjectFlag>());
+		target.AsPlayer.Object.Powers = new(() => Stream<SharpPower>());
+		target.AsPlayer.Object.Owner = new(async token => { await Block(token); return target.AsPlayer; });
+		var mediator = Substitute.For<IMediator>();
+		async ValueTask<AnyOptionalSharpObject> ObjectRead(CancellationToken token) { await Block(token); return target.AsPlayer; }
+		async ValueTask<bool> ChannelRead(CancellationToken token) { await Block(token); return true; }
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(c => ObjectRead(c.Arg<CancellationToken>()));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.IsOnChannelQuery>(), Arg.Any<CancellationToken>()).Returns(c => ChannelRead(c.Arg<CancellationToken>()));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>()).Returns(c => Stream<AnySharpContent>(c.Arg<CancellationToken>()));
+		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
+		var services = Substitute.For<ILockEvaluationServices>();
+		async ValueTask<OptionalSharpAttributeOrError> AttributeRead() { await Block(CancellationToken.None); return new None(); }
+		async ValueTask<AnyOptionalSharpObjectOrError> LocateRead() { await Block(CancellationToken.None); return new None(); }
+		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>()).Returns(_ => AttributeRead());
+		services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>()).Returns(_ => LocateRead());
+		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, mediator, cache);
+		var compiled = parser.Compile(expression);
+		await using var queue = Create(global: 10, milliseconds: 200);
+		var following = Signal();
+		bool cancelled = false;
+		await queue.AdmitWork(async () =>
+		{
+			try { await compiled(target, target); }
+			catch (OperationCanceledException) { cancelled = true; throw; }
+			return null;
+		}, "lock", "test");
+		await queue.AdmitWork(() => { following.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		try
+		{
+			var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			if (expression is not "TEST:value" and not "@target") await Assert.That(token.CanBeCanceled).IsTrue();
+			await Assert.That(cancelled).IsTrue();
+		}
+		finally
+		{
+			cleanup.Cancel();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+
+		if (expression == "FLAG^WIZARD")
+		{
+			target.AsPlayer.Object.Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }.ToAsyncEnumerable());
+			using var fresh = new ExecutionBudget(TimeSpan.FromSeconds(3));
+			using var scope = fresh.Enter();
+			await Assert.That(await compiled(target, target)).IsTrue();
+			await Assert.That(ReferenceEquals(compiled, parser.Compile(expression))).IsTrue();
+		}
+	}
+
+	[Test]
 	[Arguments("read", true)]
 	[Arguments("write", true)]
 	[Arguments("read", false)]
@@ -607,7 +704,7 @@ public class QueueAdmissionTests
 		await Assert.That(count).IsEqualTo(2);
 	}
 
-	private static IMediator CountingMediator(Func<int> read, Action<int> write)
+	internal static IMediator CountingMediator(Func<int> read, Action<int> write)
 	{
 		var mediator = TargetMediator();
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
@@ -629,13 +726,15 @@ public class QueueAdmissionTests
 		var scheduler = Substitute.For<IScheduler>();
 		Scheduler? queue = null;
 		var observedAtPublication = -1;
-		Task? firing = null;
+		Task<QueueAdmissionResult>? firing = null;
 		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
 			observedAtPublication = count;
 			var pid = long.Parse(call.Arg<ITrigger>().Key.Name.Split('-').Last());
+			// Quartz invokes jobs independently of ScheduleJob's return. Start the competing
+			// transition here, then await it after admission releases its deferred lease.
 			firing = queue!.ReleaseScheduledWork(pid, semaphoreTimeout: true).AsTask();
-			return DateTimeOffset.UtcNow;
+			return Task.FromResult(DateTimeOffset.UtcNow);
 		});
 		var executed = Signal();
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -644,7 +743,7 @@ public class QueueAdmissionTests
 		await using var ownedQueue = queue = Create(mediator: mediator, scheduler: scheduler, parser: parser);
 		var result = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think ready"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 99, TimeSpan.Zero, manageSemaphoreCount: true);
-		await firing!;
+		await firing!.WaitAsync(TimeSpan.FromSeconds(5));
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(result.Accepted).IsTrue();
 		await Assert.That(observedAtPublication).IsEqualTo(1);
@@ -873,6 +972,7 @@ public class QueueAdmissionTests
 		var context = Substitute.For<IJobExecutionContext>();
 		context.CancellationToken.Returns(shutdown.Token);
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		async ValueTask<QueueAdmissionResult> WaitForShutdown()
 		{
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, escape.Token);
@@ -880,7 +980,7 @@ public class QueueAdmissionTests
 			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
 			return new QueueAdmissionResult(42, QueueRejectionReason.None);
 		}
-		queue.ReleaseScheduledWork(42, true).Returns(_ => WaitForShutdown());
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => WaitForShutdown());
 		var running = new SemaphoreTask(queue).Execute(context);
 		try
 		{
@@ -898,9 +998,10 @@ public class QueueAdmissionTests
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(Substitute.For<IScheduler>());
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		TimeSpan? remaining = null;
-		queue.ReleaseScheduledWork(42, true).Returns(_ =>
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ =>
 		{
 			remaining = ExecutionBudget.Current?.Remaining;
 			return ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None));
@@ -1473,6 +1574,7 @@ public class QueueAdmissionTests
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), managed ? 0 : 1, TimeSpan.FromHours(1), managed);
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		var job = new SemaphoreTask(queue);
@@ -1528,8 +1630,11 @@ public class QueueAdmissionTests
 
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		var storedTrigger = context.Trigger.GetTriggerBuilder().ForJob(context.JobDetail).Build();
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(storedTrigger);
 		var job = new SemaphoreTask(queue);
 		fail = true;
 		await Assert.That(async () => await job.Execute(context)).Throws<JobExecutionException>();
@@ -1555,10 +1660,12 @@ public class QueueAdmissionTests
 		var queue = Substitute.For<ITaskScheduler>();
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		var fail = true;
-		queue.ReleaseScheduledWork(42, true).Returns(_ => fail
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => fail
 			? throw new InvalidOperationException("injected release failure")
 			: ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None)));
 		var job = new SemaphoreTask(queue);
@@ -1567,8 +1674,10 @@ public class QueueAdmissionTests
 		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
 		fail = false;
 		await job.Execute(context);
-		await scheduler.Received(1).UnscheduleJob(context.Trigger.Key, Arg.Any<CancellationToken>());
-		await scheduler.Received(1).DeleteJob(context.JobDetail.Key, Arg.Any<CancellationToken>());
+		await queue.Received(2).ReleaseScheduledWork(42, true, 0);
+		// Generation-aware cleanup belongs to the ledger, so a stale job cannot remove a new timer.
+		await scheduler.DidNotReceive().UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
+		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -1808,14 +1917,15 @@ public class QueueAdmissionTests
 			var deferred = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think ignored"), ParserState.Empty, TimeSpan.FromHours(1));
 			var halt = queue.HaltByPid(deferred.Pid!.Value).AsTask();
 			await unscheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			// Publication now waits for the in-progress cancellation transition.
+			// Release now serializes behind cancellation's deferred transition. Do not await
+			// it before releasing the fake Quartz barrier, which would deadlock the fixture.
 			var firing = queue.ReleaseScheduledWork(deferred.Pid.Value).AsTask();
-			await Assert.That(firing.IsCompleted).IsFalse();
 			unscheduled.SetResult(true);
 			await Assert.That(await halt.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
 			await Assert.That((await firing.WaitAsync(TimeSpan.FromSeconds(5))).Reason)
 				.IsEqualTo(QueueRejectionReason.AlreadyReleased);
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That(queue.GetQueueEntry(deferred.Pid.Value)).IsNull();
 		}
 		finally { unscheduled.TrySetResult(true); release.TrySetResult(); }
 	}

@@ -2542,6 +2542,13 @@
   <data name="QueueRejected" xml:space="preserve"><value>Queue admission rejected: {0}.</value></data>
   <data name="QueueUsage" xml:space="preserve"><value>Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.</value></data>
   <data name="QueueRejections" xml:space="preserve"><value>Queue rejections ({0}): {1}.</value></data>
+  <data name="QueueControlSyntax" xml:space="preserve"><value>Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.</value></data>
+  <data name="QueueControlBadReason" xml:space="preserve"><value>Pause reasons must contain at most 160 characters and no control characters.</value></data>
+  <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0}: {1}.</value></data>
+  <data name="QueueControlEntry" xml:space="preserve"><value>PID {0} source {1} owner {2} {3} {4}; remaining {5}s; signalled {6}; {7}</value></data>
+  <data name="QueueControlTruncated" xml:space="preserve"><value>Showing or processing at most 200 entries. Narrow the selection; repeat a batch operation for remaining eligible entries.</value></data>
+  <data name="QueueControlEmpty" xml:space="preserve"><value>No accessible matching queue entries.</value></data>
+  <data name="QueuePausedHint" xml:space="preserve"><value>Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.</value></data>
   <data name="LocalFunctionMessage" xml:space="preserve"><value>{0}</value></data>
   <data name="LocalFunctionHeader" xml:space="preserve"><value>Owner-local functions (call with localfun):</value></data>
   <data name="LocalFunctionReset" xml:space="preserve"><value>Removed {0} unpreserved owner-local functions.</value></data>
