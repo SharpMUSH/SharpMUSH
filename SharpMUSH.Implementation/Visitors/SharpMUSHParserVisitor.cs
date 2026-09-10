@@ -338,7 +338,9 @@ public class SharpMUSHParserVisitor(
 
 		foreach (var targetStr in forwardListText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
 		{
-			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr, LocateFlags.AbsoluteMatch);
+			// Forwarding is receiver-directed, like a page; the sender need not see the recipient.
+			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr,
+				LocateFlags.AbsoluteMatch | LocateFlags.MatchForPage);
 			if (locateResult.IsValid())
 			{
 				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message), executor);

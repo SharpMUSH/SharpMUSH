@@ -37,7 +37,14 @@ public class RealityDebugOutputTests
 		await CheckDebug(disabled, visible, false, true);
 	}
 
-	private async Task CheckDebug(bool disabled, bool visible, bool forward, bool substitution)
+	[Test, NotInParallel]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task DebugForwardingUsesRecipientPerception(bool recipientCanReceive)
+		=> await CheckDebug(false, true, true, false, true, recipientCanReceive);
+
+	private async Task CheckDebug(bool disabled, bool visible, bool forward, bool substitution,
+		bool asymmetric = false, bool recipientCanReceive = true)
 	{
 		var objects = Get<IObjectStore>();
 		var mediator = Get<IMediator>();
@@ -53,6 +60,13 @@ public class RealityDebugOutputTests
 		try
 		{
 			await policy.SaveObjectAsync(source.Object.Id!, ObjectReality.Default(source.Object.DBRef) with { Transmit = [visible ? "normal" : "ghost"] }, default);
+			if (asymmetric)
+			{
+				await policy.SaveObjectAsync(source.Object.Id!, ObjectReality.Default(source.Object.DBRef) with
+				{ Receive = ["normal"], Transmit = ["ghost"] }, default);
+				await policy.SaveObjectAsync(receiver.Id!, ObjectReality.Default(receiver.DBRef) with
+				{ Receive = [recipientCanReceive ? "ghost" : "normal"], Transmit = ["ghost"] }, default);
+			}
 			await policy.SaveConfigurationAsync(new(1, !disabled, ["normal", "ghost"]), default);
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(receiver.Key, output))
@@ -63,7 +77,7 @@ public class RealityDebugOutputTests
 				else
 					await parser.FunctionParse(MarkupText.Plain("add(137,246)"));
 			}
-			await Assert.That(output.Body.ToString().Contains(substitution ? "secret-substitution" : "add(137,246)")).IsEqualTo(disabled || visible);
+			await Assert.That(output.Body.ToString().Contains(substitution ? "secret-substitution" : "add(137,246)")).IsEqualTo(disabled || visible && recipientCanReceive);
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}
