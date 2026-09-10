@@ -98,8 +98,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 			|| value.Descriptions.Keys.Distinct(StringComparer.OrdinalIgnoreCase).Count() != value.Descriptions.Count)
 		{
 			if (rejectMalformed) throw new InvalidDataException("Invalid object reality data.");
-			// A malformed participant must not reveal itself or interrupt unrelated gameplay.
-			return null;
+			// Keep the validated identity for self-perception, but expose no layers or descriptions.
+			return new ObjectReality(1, obj.DBRef, [], [], []);
 		}
 		return value with
 		{

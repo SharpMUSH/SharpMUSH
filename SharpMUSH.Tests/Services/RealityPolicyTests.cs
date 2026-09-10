@@ -10,11 +10,15 @@ namespace SharpMUSH.Tests.Services;
 public class RealityPolicyTests
 {
 	[Test]
-	[Arguments(false, false)]
-	[Arguments(true, false)]
-	[Arguments(false, true)]
-	[Arguments(true, true)]
-	public async Task MalformedProfilesDenyGameplayPerceptionButRemainAdministrativeErrors(bool malformedReceiver, bool collidingKeys)
+	[Arguments(false, false, false)]
+	[Arguments(true, false, false)]
+	[Arguments(false, true, false)]
+	[Arguments(true, true, false)]
+	[Arguments(false, false, true)]
+	[Arguments(true, false, true)]
+	[Arguments(false, true, true)]
+	[Arguments(true, true, true)]
+	public async Task MalformedProfilesDenyGameplayPerceptionButRemainAdministrativeErrors(bool malformedReceiver, bool collidingKeys, bool observeSelf)
 	{
 		var factory = new TestObjectFactory();
 		var receiver = factory.CreatePlayer(50, "receiver");
@@ -38,6 +42,11 @@ public class RealityPolicyTests
 		var scan = await policy.ObserveAsync(receiver.Object().DBRef);
 		await Assert.That(await scan(target.Object().DBRef, default)).IsFalse();
 		await Assert.That(await policy.DescriptionAttributeAsync(receiver.Object().DBRef, target.Object().DBRef)).IsNull();
+		var self = malformed.Object().DBRef;
+		var selfVisible = observeSelf
+			? await (await policy.ObserveAsync(self))(self, default)
+			: await policy.CanPerceiveAsync(self, self);
+		await Assert.That(selfVisible).IsTrue();
 		await Assert.ThrowsAsync<InvalidDataException>(async () => await policy.ReadObjectAsync(malformed.Object().DBRef));
 	}
 
@@ -49,6 +58,9 @@ public class RealityPolicyTests
 			.Returns(new RealityConfiguration(1, true, ["normal", "ghost"]));
 		var policy = new RealityPolicy(store, Substitute.For<IObjectStore>());
 		await Assert.That(await policy.CanPerceiveAsync(new DBRef(20, 1), new DBRef(21, 1))).IsFalse();
+		await Assert.That(await policy.CanPerceiveAsync(new DBRef(20, 1), new DBRef(20, 1))).IsFalse();
+		var scan = await policy.ObserveAsync(new DBRef(20, 1));
+		await Assert.That(await scan(new DBRef(20, 1), default)).IsFalse();
 	}
 
 	[Test]
