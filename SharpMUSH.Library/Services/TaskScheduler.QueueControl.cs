@@ -88,9 +88,15 @@ public partial class TaskScheduler
 		return new(entry.Pid, entry.Executor, owner,
 			entry.Deferred?.Semaphore is not null ? "semaphore" : entry.Deferred is not null ? "delay"
 				: entry.Group is DirectInputGroup or EnqueueGroup ? entry.Group : "other",
-			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false,
-			entry.Observation?.EnqueuedAt, entry.Observation?.StartedAt, entry.Observation?.WaitDuration,
-			entry.Observation?.ExecutionDuration, entry.Observation?.InvocationCount, entry.Observation?.SourceAttribute);
+			state, delay, entry.Deferred?.Reason ?? "", entry.Deferred?.ReleasePending ?? false)
+		{
+			EnqueuedAt = entry.Observation?.EnqueuedAt,
+			StartedAt = entry.Observation?.StartedAt,
+			WaitDuration = entry.Observation?.WaitDuration,
+			ExecutionDuration = entry.Observation?.ExecutionDuration,
+			InvocationCount = entry.Observation?.InvocationCount,
+			SourceAttribute = entry.Observation?.SourceAttribute
+		};
 	}
 
 	// Caller owns the admission lock. Every timer control uses the same repair exclusions.
