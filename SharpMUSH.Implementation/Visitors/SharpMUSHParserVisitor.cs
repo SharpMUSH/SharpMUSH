@@ -1951,6 +1951,24 @@ public class SharpMUSHParserVisitor(
 
 		var commandWithSwitches = src;
 
+		MString HookInput()
+		{
+			// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results.
+			// Reuse those same values here: evaluating the whole line loses bare function
+			// calls, ignores NoParse/RSNoParse/noeval, and runs side effects a second time.
+			var name = libraryCommandDefinition.Attribute.Name;
+			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
+			if (arguments.Count == 0) return MarkupText.Plain(prefix);
+
+			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty);
+			var eqSplit = !singleArgument && libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
+			var text = eqSplit && arguments.Count > 1
+				? MarkupText.Concat([arguments[0].Message ?? MarkupText.Empty, MarkupText.Plain("="),
+					MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
+				: MarkupText.Join(MarkupText.Plain(","), values);
+			return MarkupText.Concat(MarkupText.Plain(prefix + " "), text);
+		}
+
 		var dispatchResult = await prs.With(state =>
 			{
 				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
@@ -2033,15 +2051,7 @@ public class SharpMUSHParserVisitor(
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
 				if (overrideHook.IsSome())
 				{
-					// Match the override $-command against the command line EVALUATED in the caller's context
-					// (prs), so substitutions/functions are applied first — an override must see the command
-					// the way the real command would (e.g. `@emit payload=hello`, not the raw `@emit payload=%0`).
-					// Evaluate against prs, not newParser: newParser's %0 is the command's OWN argument, whereas
-					// prs still holds the caller's numbered registers (the surrounding $-command's %0).
-					var overrideEvaluation = await prs.FunctionParse(commandWithSwitches);
-					hookHadErrors |= overrideEvaluation?.HadErrors ?? false;
-					Option<MString> overrideInput = overrideEvaluation?.Message ?? commandWithSwitches;
-					var overrideResult = await EvaluateHook(overrideHook.AsValue(), overrideInput);
+					var overrideResult = await EvaluateHook(overrideHook.AsValue(), HookInput());
 					if (overrideResult.IsSome())
 					{
 						// 5. Check for /after hook before returning
@@ -2086,12 +2096,7 @@ public class SharpMUSHParserVisitor(
 					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
 					if (extendHook.IsSome())
 					{
-						// Same as the override path: match against the command line evaluated in the caller's
-						// context (prs) so substitutions are applied before the extend $-command sees it.
-						var extendEvaluation = await prs.FunctionParse(commandWithSwitches);
-						hookHadErrors |= extendEvaluation?.HadErrors ?? false;
-						Option<MString> extendInput = extendEvaluation?.Message ?? commandWithSwitches;
-						var extendResult = await EvaluateHook(extendHook.AsValue(), extendInput);
+						var extendResult = await EvaluateHook(extendHook.AsValue(), HookInput());
 						if (extendResult.IsSome())
 						{
 							// Execute /after hook before returning
