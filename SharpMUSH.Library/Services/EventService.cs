@@ -23,8 +23,13 @@ public class EventService(
 	ILogger<EventService> logger) : IEventService
 {
 	/// <inheritdoc />
-	public async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
+	public ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, params string[] args)
+		=> TriggerEventAsync(parser, eventName, enactor, ExecutionBudget.CurrentToken, args);
+
+	/// <inheritdoc />
+	public async ValueTask TriggerEventAsync(IMUSHCodeParser parser, string eventName, DBRef? enactor, CancellationToken cancellationToken, params string[] args)
 	{
+		using var lifetime = ExecutionBudget.EnterLinked(cancellationToken);
 		try
 		{
 			var eventHandlerDbRef = options.CurrentValue.Database.EventHandler;
@@ -35,7 +40,7 @@ public class EventService(
 			}
 
 			var eventHandlerRef = new DBRef((int)eventHandlerDbRef.Value, null);
-			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef));
+			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef), ExecutionBudget.CurrentToken);
 
 			if (eventHandlerResult.IsNone)
 			{
@@ -81,7 +86,7 @@ public class EventService(
 			}
 			else
 			{
-				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactorRef));
+				var enactorResult = await mediator.Send(new GetObjectNodeQuery(eventEnactorRef), ExecutionBudget.CurrentToken);
 				if (enactorResult.IsNone)
 				{
 					// Enactor no longer exists — fall back to God.
@@ -137,7 +142,10 @@ public class EventService(
 					? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
 					: parser.CurrentState.FunctionRecursionDepths ?? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
-				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag()));
+				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag())
+			{
+				ExecutionBudget = ExecutionBudget.Current
+			});
 
 			// Run the attribute body as a command list (same as @include, HTTP handler, @startup).
 			// This allows commands such as & (attribute set), @emit, @switch, etc.
@@ -146,11 +154,16 @@ public class EventService(
 			var attributeText = attributeResult.AsAttribute.Last().Value.ToPlainText();
 
 			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
+			ExecutionBudget.Current?.ThrowIfExceeded();
 
 			logger.LogDebug(
 				"Triggered event {EventName} with {ArgCount} arguments",
 				eventName,
 				args.Length);
+		}
+		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExceeded == true)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{

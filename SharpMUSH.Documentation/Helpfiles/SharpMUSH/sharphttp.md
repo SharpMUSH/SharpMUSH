@@ -37,7 +37,7 @@ You will very likely want to set the http_handler option in your mush.cnf file t
 
 A missing method handler returns **404 NOT FOUND**. An executed handler defaults to **200 OK** and `text/plain`; use `@respond` to choose another response.
 
-Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time limit, including asynchronous I/O. Zero disables this deadline. If the deadline expires, SharpMUSH returns **503 Service Unavailable** with `#-1 EXECUTION TIME LIMIT EXCEEDED`, discarding partial response output, headers, and status. World changes already performed are not rolled back. Request cancellation also cancels handler evaluation.
+Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time limit, including asynchronous I/O. Zero disables this deadline. If the deadline expires, SharpMUSH returns **503 Service Unavailable** with `#-1 EXECUTION TIME LIMIT EXCEEDED`, discarding partial response output, headers, and status. World changes already performed are not rolled back. Request cancellation also cancels handler evaluation. The ``HTTP`COMMAND`` completion event shares the remaining request lifetime and is omitted after expiry. Expiry during the event also returns 503.
 
 
 **See Also:**
