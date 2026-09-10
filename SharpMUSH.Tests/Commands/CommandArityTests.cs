@@ -18,6 +18,16 @@ namespace SharpMUSH.Tests.Commands;
 /// swallowed command exceptions. These tests pin the enforcement: a bare invocation of a command
 /// that requires arguments answers with an arity error rather than a crash.
 /// </summary>
+/// <remarks>
+/// <c>[NotInParallel]</c> because these assertions are the only ones in the suite that check for the
+/// ABSENCE of a message. Several classes use <c>#-1 EXCEPTION: ordinary text</c> as a fixture value
+/// (<c>CommandArgumentResultTests</c>, <c>InputSessionCommandTests</c>, <c>InputHookFailureTests</c>,
+/// <c>SearchPredicateResultTests</c>), and one of those reaches this class's recipient while it is
+/// running — so between two and eleven of these thirteen cases failed per run, with different
+/// members each time, while all thirteen passed alone. The unkeyed non-parallel bucket runs as one
+/// sequential loop after the whole parallel bucket, so nothing else is in flight during these.
+/// </remarks>
+[NotInParallel]
 public class CommandArityTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

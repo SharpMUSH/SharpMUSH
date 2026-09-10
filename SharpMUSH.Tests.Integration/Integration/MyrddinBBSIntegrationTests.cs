@@ -228,19 +228,25 @@ public class MyrddinBBSIntegrationTests
 			await ConnectionService.Bind(2L, testerDbRef!.Value);
 			Log($"[BBS INSTALL] Regular test user bound to handle {_regularUserHandle}.");
 
-			// Teleport BBSTester to the same room as mbboard so that mbboard's $-commands fire.
-			// In PennMUSH, $-commands on an object fire for players in the same room.
-			// mbboard is in God's room at creation time; BBSTester's default home may differ.
+			// Put mbboard and BBSTester in the same room, so mbboard's $-commands fire for them.
+			// mbboard is created into God's INVENTORY, not God's room, so "loc(mbboard)" is God —
+			// and teleporting a player to a player sends them to that player's location rather than
+			// inside them, unless /inside is given (PennMUSH do_teleport_one, src/wiz.c:487). Moving
+			// the board into the room first is what the comment above always meant, and it does not
+			// depend on where the installer happens to be standing.
 			if (!string.IsNullOrEmpty(_mbboardDbref))
 			{
-				var mbboardLocResult = await Parser.CommandParse(1, ConnectionService,
-					MarkupText.Plain($"think [loc({_mbboardDbref})]"));
-				var mbboardLoc = mbboardLocResult.Message?.ToPlainText()?.Trim();
-				if (!string.IsNullOrEmpty(mbboardLoc) && !mbboardLoc.StartsWith("#-"))
+				var godLocResult = await Parser.CommandParse(1, ConnectionService,
+					MarkupText.Plain("think [loc(#1)]"));
+				var room = godLocResult.Message?.ToPlainText()?.Trim();
+
+				if (!string.IsNullOrEmpty(room) && !room.StartsWith("#-"))
 				{
 					await Parser.CommandParse(1, ConnectionService,
-						MarkupText.Plain($"@tel {_regularUserDbref}={mbboardLoc}"));
-					Log($"[BBS INSTALL] Teleported BBSTester to mbboard's room: {mbboardLoc}.");
+						MarkupText.Plain($"@tel {_mbboardDbref}={room}"));
+					await Parser.CommandParse(1, ConnectionService,
+						MarkupText.Plain($"@tel {_regularUserDbref}={room}"));
+					Log($"[BBS INSTALL] mbboard and BBSTester both placed in {room}.");
 				}
 			}
 		}
