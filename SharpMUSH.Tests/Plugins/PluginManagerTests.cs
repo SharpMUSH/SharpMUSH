@@ -81,6 +81,8 @@ public class PluginManagerTests
 		await Assert.That(commands["+FOO"].IsSystem).IsTrue();
 		await Assert.That(functions.ContainsKey("fooadd")).IsTrue();
 		await Assert.That(functions["fooadd"].IsSystem).IsTrue();
+		functions.Remove("fooadd");
+		await Assert.That(functions.IsSystemNameReserved("FOOADD")).IsTrue();
 	}
 
 	[Test]

@@ -344,12 +344,19 @@ public partial class Functions
 
 	[SharpFunction(Name = "strcat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(MarkupText.Concat(parser.CurrentState.ArgumentsOrdered
-				.Select(x => x.Value.Message ?? MarkupText.Empty)));
+	{
+		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
+		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(values)
+			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Concat(values)));
+	}
 
 	[SharpFunction(Name = "cat", Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(MarkupText.Join(MarkupText.Plain(" "), parser.CurrentState.ArgumentsOrdered.Select(x => x.Value.Message ?? MarkupText.Empty)));
+	{
+		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
+		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(values, 1)
+			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Join(MarkupText.Space, values)));
+	}
 
 	[SharpFunction(Name = "accent", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "template"])]
 	public ValueTask<CallState> Accent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1547,6 +1554,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
+		if (FunctionLimits.ExceedsOutput((long)str.Length * repeatNumber))
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
+		if (str.Length == 0) return ValueTask.FromResult(CallState.Empty);
 		var repeat = str.Repeat(repeatNumber);
 		return ValueTask.FromResult(new CallState(repeat));
 	}
@@ -1610,6 +1620,8 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
+		if (FunctionLimits.ExceedsOutput(repeatNumber))
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		var repeat = MarkupText.Space.Repeat(repeatNumber);
 		return ValueTask.FromResult(new CallState(repeat));
 	}
