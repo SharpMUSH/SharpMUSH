@@ -1884,12 +1884,14 @@ public class SharpMUSHParserVisitor(
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
 		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
-		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
+
+		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
 
@@ -1936,7 +1938,7 @@ public class SharpMUSHParserVisitor(
 
 		var commandWithSwitches = src;
 
-		return await prs.With(state =>
+		var dispatchResult = await prs.With(state =>
 			{
 				// Save caller's numbered arguments (%0-%9) before overwriting with command's own args.
 				// This allows @wait/@force to preserve pattern-match variables in queued callbacks.
@@ -2172,6 +2174,7 @@ public class SharpMUSHParserVisitor(
 
 				return PreserveHookErrors(commandResult);
 			});
+		return PreserveArgumentErrors(dispatchResult, argumentResults);
 	}
 
 	/// <summary>
@@ -2263,19 +2266,22 @@ public class SharpMUSHParserVisitor(
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
 		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
-		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
 
-		return await prs.With(state => state with
+		var arguments = argumentResults.Values;
+
+		var dispatchResult = await prs.With(state => state with
 		{
 			Command = command,
 			Arguments = NumberedArguments(arguments),
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
+		return PreserveArgumentErrors(dispatchResult, argumentResults);
 	}
 
 	/// <summary>
@@ -2329,12 +2335,14 @@ public class SharpMUSHParserVisitor(
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
 		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
-		if (splitResult.TryPickT1(out var splitError, out var arguments))
+		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
+
+		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
 		var numbered = new Dictionary<string, CallState>(arguments.Count + 1) { ["0"] = new CallState(rest) };
@@ -2343,7 +2351,7 @@ public class SharpMUSHParserVisitor(
 			numbered[(i + 1).ToString()] = argument;
 		}
 
-		return await prs.With(state =>
+		var dispatchResult = await prs.With(state =>
 				state with
 				{
 					Command = singleRootCommand,
@@ -2352,9 +2360,30 @@ public class SharpMUSHParserVisitor(
 				},
 			async newParser => await singleLibraryCommandDefinition.Command.Invoke(newParser)
 		);
+		return PreserveArgumentErrors(dispatchResult, argumentResults);
 	}
 
-	private async ValueTask<OneOf<List<CallState>, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
+	// Each dispatch owns its arguments and observes only deferred evaluations actually requested
+	// by that command. Raw/skipped arguments never contribute a failure, and no state is ambient.
+	private sealed class CommandArguments
+	{
+		private bool _deferredHadErrors;
+		public List<CallState> Values { get; } = [];
+		public bool HadErrors => _deferredHadErrors || Values.Any(argument => argument.HadErrors);
+
+		public CallState? Record(CallState? result)
+		{
+			if (result?.HadErrors == true) _deferredHadErrors = true;
+			return result;
+		}
+	}
+
+	private static Option<CallState> PreserveArgumentErrors(Option<CallState> result, CommandArguments arguments)
+		=> arguments.HadErrors
+			? (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true }
+			: result;
+
+	private async ValueTask<OneOf<CommandArguments, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
@@ -2425,7 +2454,7 @@ public class SharpMUSHParserVisitor(
 			// (`say ` is `say`), so leave the EmptyArgument sentinel in place rather than splitting "".
 			if (remainder.Length == 0)
 			{
-				return new List<CallState>();
+				return new CommandArguments();
 			}
 
 			// command arg0 = arg1,still arg 1
@@ -2502,7 +2531,8 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		List<CallState> arguments = [];
+		var argumentResults = new CommandArguments();
+		var arguments = argumentResults.Values;
 
 		var eqSplit = behavior.HasFlag(CommandBehavior.EqSplit);
 		var noParse = behavior.HasFlag(CommandBehavior.NoParse) || noEval;
@@ -2514,7 +2544,7 @@ public class SharpMUSHParserVisitor(
 		// Also return early when Arguments is empty (EmptyArgument sentinel), meaning no args were provided.
 		if (argCallState is null or { Arguments: [] })
 		{
-			return arguments;
+			return argumentResults;
 		}
 
 		// Parse failure: the argument split detected a syntax error. Bubble it up as Error<string>.
@@ -2556,24 +2586,16 @@ public class SharpMUSHParserVisitor(
 			// can do so. Without this, the raw LHS (e.g. "[scenewhere(%L)]") never evaluated.
 			var noParseLhs = argCallState.Arguments.FirstOrDefault() ?? MarkupText.Empty;
 			arguments.Add(noParse
-				? new CallState(noParseLhs, argCallState.Depth, null,
-					async () => (await prs.FunctionParse(noParseLhs))!.Message!)
+				? DeferredArgument(noParseLhs)
 				: (await EvaluateArgumentSubtree(prs, parsedArgumentText, ContextAt(0), noParseLhs, emitSubstDebug: false, splitHadErrors))!);
 
-			if (nArgs < 2) return arguments;
+			if (nArgs < 2) return argumentResults;
 
 			if (noRsParse || noParse)
 			{
 				arguments.AddRange(argCallState.Arguments!
 					.Skip(1)
-					// TODO: Implement parsed message alternative for better performance.
-					// Currently creates deferred evaluation via Task, could be optimized.
-					.Select(x =>
-						new CallState(x,
-							argCallState.Depth,
-							null,
-							async () =>
-								(await prs.FunctionParse(x))!.Message!)));
+					.Select(DeferredArgument));
 			}
 			else
 			{
@@ -2587,8 +2609,7 @@ public class SharpMUSHParserVisitor(
 				// Attach a deferred ParsedMessage so a self-evaluating NoParse command
 				// (e.g. @SCENE/undo <poseId>) can evaluate a functional single arg on demand.
 				arguments.AddRange(argCallState.Arguments
-					.Select(x => new CallState(x, argCallState.Depth, null,
-						async () => (await prs.FunctionParse(x))!.Message!)));
+					.Select(DeferredArgument));
 			}
 			else
 			{
@@ -2596,7 +2617,14 @@ public class SharpMUSHParserVisitor(
 			}
 		}
 
-		return arguments;
+		return argumentResults;
+
+		CallState DeferredArgument(MString text)
+		{
+			async ValueTask<CallState?> Evaluate() => argumentResults.Record(await prs.FunctionParse(text));
+			return new CallState(text, argCallState.Depth, null, async () => (await Evaluate())?.Message)
+			{ ParsedResult = Evaluate };
+		}
 
 		// Arguments evaluate left to right, one at a time, each against the parse-tree slot it came from.
 		async ValueTask EvaluateArgumentsInto(List<CallState> target, MString[] raw, int firstIndex)
