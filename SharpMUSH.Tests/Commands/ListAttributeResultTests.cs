@@ -6,7 +6,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class ListAttributeResultTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

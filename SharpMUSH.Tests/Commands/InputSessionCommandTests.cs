@@ -13,7 +13,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class InputSessionCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
