@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -41,19 +43,22 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly NatsOptions _natsOptions;
 	private readonly ILogger<NatsBridgeService> _logger;
 	private readonly PluginCatalog _pluginCatalog;
+	private readonly IRoomEventDispatcher _roomDispatcher;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
 		IHubContext<GameHub> pluginHubContext,
 		NatsOptions natsOptions,
 		PluginCatalog pluginCatalog,
-		ILogger<NatsBridgeService> logger)
+		ILogger<NatsBridgeService> logger,
+		IRoomEventDispatcher roomDispatcher)
 	{
 		_hubContext = hubContext;
 		_pluginHubContext = pluginHubContext;
 		_natsOptions = natsOptions;
 		_pluginCatalog = pluginCatalog;
 		_logger = logger;
+		_roomDispatcher = roomDispatcher;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -179,39 +184,67 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		}
 	}
 
-	private async Task SubscribeRoomAsync(NatsConnection nats, CancellationToken ct)
+	public Task ForwardRoomEventAsync(RoomEventMessage message, CancellationToken ct = default)
+		=> _roomDispatcher.DispatchAsync(message, ct);
+
+	/// <summary>Eight bounded lanes preserve room ordering while allowing independent rooms to progress.</summary>
+	public async Task ForwardRoomEventsAsync(IAsyncEnumerable<RoomEventMessage> messages, CancellationToken ct = default)
 	{
-		// Subject wildcard: "game.room.*" — the last token is the room dbref.
-		await foreach (var msg in nats.SubscribeAsync<RoomEventMessage>(
-			"game.room.*",
-			serializer: NatsJsonSerializer<RoomEventMessage>.Default,
-			cancellationToken: ct))
+		using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		var lanes = Enumerable.Range(0, 8).Select(_ => Channel.CreateBounded<RoomEventMessage>(
+			new BoundedChannelOptions(32)
+			{ SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait })).ToArray();
+		async Task Consume(ChannelReader<RoomEventMessage> reader)
 		{
-			if (msg.Data is null) continue;
-
-			var dbref = msg.Data.RoomDbref;
-			if (!DBRef.TryParse(dbref, out var room) || room is not { IsObjid: true })
+			await foreach (var message in reader.ReadAllAsync(lifetime.Token))
 			{
-				_logger.LogWarning(
-					"[NatsBridge] Dropping RoomEventMessage whose RoomDbref {Dbref} is not a " +
-					"routable objid such as #7:1700000000; a bare dbref names a different group than subscribers join",
-					dbref);
-				continue;
-			}
-
-			var group = GameHub.RoomGroupName(room.Value);
-
-			_logger.LogDebug("[NatsBridge] Forwarding RoomEventMessage for room:{Dbref} to group {Group}",
-				dbref, group);
-
-			try
-			{
-				await _hubContext.Clients.Group(group).ReceiveRoomEvent(msg.Data);
-			}
-			catch (Exception ex) when (ex is not OperationCanceledException)
-			{
-				_logger.LogError(ex, "[NatsBridge] Error forwarding room event to group {Group}", group);
+				try { await ForwardRoomEventAsync(message, lifetime.Token); }
+				catch (Exception ex) when (ex is not OperationCanceledException || !lifetime.IsCancellationRequested)
+				{
+					_logger.LogError(ex, "[NatsBridge] Error forwarding room event for {Room}", message.RoomDbref);
+				}
 			}
 		}
+		var workers = lanes.Select(lane => Consume(lane.Reader)).ToArray();
+		var ingressFailed = false;
+		try
+		{
+			await foreach (var message in messages.WithCancellation(lifetime.Token))
+			{
+				if (!DBRef.TryParse(message.RoomDbref, out var room) || room is not { IsObjid: true })
+				{
+					_logger.LogWarning("[NatsBridge] Dropping room event without a full room objid");
+					continue;
+				}
+				// A full lane applies backpressure to ingress; at most 256 messages are buffered.
+				await lanes[(int)((uint)room.Value.Number % (uint)lanes.Length)].Writer.WriteAsync(message, lifetime.Token);
+			}
+		}
+		catch
+		{
+			ingressFailed = true;
+			await lifetime.CancelAsync();
+			throw;
+		}
+		finally
+		{
+			foreach (var lane in lanes) lane.Writer.TryComplete();
+			try { await Task.WhenAll(workers); }
+			catch (OperationCanceledException) when (ingressFailed && lifetime.IsCancellationRequested)
+			{
+				// Worker shutdown must not replace the original subscription failure.
+			}
+		}
+	}
+
+	private Task SubscribeRoomAsync(NatsConnection nats, CancellationToken ct)
+		=> ForwardRoomEventsAsync(RoomMessages(nats, ct), ct);
+
+	private static async IAsyncEnumerable<RoomEventMessage> RoomMessages(NatsConnection nats,
+		[EnumeratorCancellation] CancellationToken ct)
+	{
+		await foreach (var message in nats.SubscribeAsync<RoomEventMessage>("game.room.*",
+			serializer: NatsJsonSerializer<RoomEventMessage>.Default, cancellationToken: ct))
+			if (message.Data is { } data) yield return data;
 	}
 }

@@ -1,5 +1,6 @@
 using NSubstitute;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -29,7 +30,7 @@ public class NotifyPublicationCancellationTests
 			.Returns(call => Publish(call.Arg<CancellationToken>()));
 		bus.HandlePublish(Arg.Any<MarkupPromptMessage>(), Arg.Any<CancellationToken>())
 			.Returns(call => Publish(call.Arg<CancellationToken>()));
-		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(), Substitute.For<ILocalizationService>());
+		var notify = new NotifyService(bus, Substitute.For<IConnectionService>(), Substitute.For<ILocalizationService>(), Substitute.For<IRealityPolicy>());
 		var operation = (prompt ? notify.Prompt(1L, "output", null) : notify.Notify(1L, "output", null)).AsTask();
 		try
 		{

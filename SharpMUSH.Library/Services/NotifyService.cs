@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -21,10 +22,46 @@ public class NotifyService(
 	IMessageBus publishEndpoint,
 	IConnectionService connections,
 	ILocalizationService localizationService,
+	IRealityPolicy reality,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
 	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
 {
+	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
+	public NotifyService(IMessageBus publishEndpoint, IConnectionService connections,
+		ILocalizationService localizationService, IListenerRoutingService? listenerRoutingService = null,
+		IMediator? mediator = null, IHttpOutputCapture? httpOutputCapture = null)
+		: this(publishEndpoint, connections, localizationService, DisabledRealityPolicy.Instance,
+			listenerRoutingService, mediator, httpOutputCapture)
+	{ }
+
+	// A notification caches only perception results, never a connection binding.
+	private async ValueTask<bool> CanReceiveBound(long handle, DBRef intended, AnySharpObject? sender, Dictionary<DBRef, bool> perceptions)
+	{
+		if (connections.Get(handle)?.Ref is not { } current || !current.Equals(intended)) return false;
+		if (!perceptions.TryGetValue(current, out var allowed))
+			perceptions[current] = allowed = await CanReceive(current, sender);
+		return allowed && connections.Get(handle)?.Ref is { } latest && latest.Equals(intended);
+	}
+
+	private async ValueTask<bool> CanReceiveHandle(long handle, AnySharpObject? sender)
+	{
+		var initial = connections.Get(handle);
+		var reference = initial?.Ref;
+		var session = initial?.Metadata.GetValueOrDefault("SessionId");
+		if (!await CanReceive(reference, sender)) return false;
+		var latest = connections.Get(handle);
+		return Nullable.Equals(reference, latest?.Ref)
+			&& string.Equals(session, latest?.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal);
+	}
+
+	private async ValueTask<bool> CanReceive(DBRef? receiver, AnySharpObject? sender)
+	{
+		if (sender is null) return true;
+		if (receiver is null) return !await reality.IsEnabledAsync(ExecutionBudget.CurrentToken);
+		return await reality.CanPerceiveAsync(receiver.Value, sender.Object().DBRef, ExecutionBudget.CurrentToken);
+	}
+
 	/// <summary>
 	/// One message on its way out. The serialized form is computed once and shared by every
 	/// recipient whose connection wraps nothing around it, so a message to a player with several
@@ -106,6 +143,7 @@ public class NotifyService(
 
 	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (IsEmpty(what))
 		{
 			return;
@@ -149,17 +187,25 @@ public class NotifyService(
 		}
 
 		var outgoing = Prepare(what);
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkup(conn.Handle, outgoing);
+			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkup(conn.Handle, outgoing);
 		}
 	}
 
 	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> IsEmpty(what) ? ValueTask.CompletedTask : PublishMarkup(handle, Prepare(what));
+	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	{
+		if (IsEmpty(what))
+		{
+			return;
+		}
+
+		if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, Prepare(what));
+	}
 
 	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
@@ -171,29 +217,33 @@ public class NotifyService(
 		var outgoing = Prepare(what);
 		foreach (var handle in handles)
 		{
-			await PublishMarkup(handle, outgoing);
+			if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, outgoing);
 		}
 	}
 
 	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (IsEmpty(what))
 		{
 			return;
 		}
 
 		var outgoing = Prepare(what);
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			await PublishMarkupPrompt(conn.Handle, outgoing);
+			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkupPrompt(conn.Handle, outgoing);
 		}
 	}
 
 	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
-	public ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-		=> IsEmpty(what) ? ValueTask.CompletedTask : PublishMarkupPrompt(handle, Prepare(what));
+	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	{
+		if (!IsEmpty(what) && await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, Prepare(what));
+	}
 
 	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
@@ -205,7 +255,7 @@ public class NotifyService(
 		var outgoing = Prepare(what);
 		foreach (var handle in handles)
 		{
-			await PublishMarkupPrompt(handle, outgoing);
+			if (await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, outgoing);
 		}
 	}
 
@@ -221,13 +271,13 @@ public class NotifyService(
 			.Select(conn => conn.Handle)
 			.ToHashSetAsync();
 
+		if (!await CanReceive(who, sender)) return;
 		var outgoing = Prepare(what);
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			if (!excludeHandles.Contains(conn.Handle))
-			{
+			if (!excludeHandles.Contains(conn.Handle) && await CanReceiveBound(conn.Handle, who, sender, perceptions))
 				await PublishMarkup(conn.Handle, outgoing);
-			}
 		}
 	}
 
@@ -270,20 +320,8 @@ public class NotifyService(
 	private bool TryCaptureLocalized(DBRef who, string key, object[] args)
 		=> httpOutputCapture?.TryCapture(who.Number, localizationService.Format(key, null, args)) == true;
 
-	public async ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
-	{
-		if (TryCaptureLocalized(who, key, args))
-		{
-			return;
-		}
-
-		await foreach (var conn in connections.Get(who))
-		{
-			conn.Metadata.TryGetValue("Locale", out var locale);
-			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: null);
-		}
-	}
+	public ValueTask NotifyLocalized(DBRef who, string key, params object[] args)
+		=> NotifyLocalized(who, key, sender: null, args: args);
 
 	public ValueTask NotifyLocalized(AnySharpObject who, string key, params object[] args)
 		=> NotifyLocalized(who.Object().DBRef, key, args);
@@ -298,16 +336,19 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (TryCaptureLocalized(who, key, args))
 		{
 			return;
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
+			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
 			var message = localizationService.Format(key, locale, args);
-			await Notify(conn.Handle, message, sender: sender);
+			if (message.Length > 0) await PublishMarkup(conn.Handle, Prepare(message));
 		}
 	}
 
@@ -324,6 +365,7 @@ public class NotifyService(
 
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
+		if (!await CanReceive(who, sender)) return;
 		if (httpOutputCapture is not null)
 		{
 			var neutral = MarkupTemplateFormatter.Format(localizationService.Get(key, null), args);
@@ -333,12 +375,14 @@ public class NotifyService(
 			}
 		}
 
+		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
+			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
 			conn.Metadata.TryGetValue("Locale", out var locale);
 			var template = localizationService.Get(key, locale);
 			var message = MarkupTemplateFormatter.Format(template, args);
-			await Notify(conn.Handle, message, sender);
+			if (message.Length > 0) await PublishMarkup(conn.Handle, Prepare(message));
 		}
 	}
 

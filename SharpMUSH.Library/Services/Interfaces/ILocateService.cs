@@ -77,6 +77,9 @@ public enum LocateFlags
 	/// </summary>
 	MatchGlobalExits = 1 << 26,
 
+	/// <summary>Resolve PAGE recipients using the recipient receiving direction, with normal matching rules.</summary>
+	MatchForPage = 1 << 27,
+
 	/// <summary>
 	/// <c>MAT_EVERYTHING</c>, member for member. <c>MAT_CONTAINER</c>
 	/// (<see cref="MatchAgainstLookerLocationName"/>), <c>MAT_CARRIED_EXIT</c>

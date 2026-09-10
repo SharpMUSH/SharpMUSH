@@ -5,6 +5,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Library.Authorization;
 using System.Security.Claims;
 
 namespace SharpMUSH.Server.Hubs;
@@ -45,7 +47,8 @@ public interface IGameHubClient
 /// plugin's own SceneHub at /hubs/scene; see SharpMUSH.Plugins.Scene/Web. This hub is scene-agnostic.)
 /// </summary>
 [Authorize]
-public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard) : Hub<IGameHubClient>
+public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnectionRegistry registry, SitelockGuard sitelockGuard,
+	IVisibleWorldProjection projection) : Hub<IGameHubClient>
 {
 	/// <summary>Claim name that carries the authenticated character's dbref.</summary>
 	public const string CharacterDbrefClaim = "character_dbref";
@@ -75,20 +78,18 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 			return;
 		}
 
-		if (Context.User?.GetActingCharacter() is { IsObjid: true } character)
+		if (Context.User?.GetCapabilityActor() is { } actor
+			&& await projection.ResolveCharacterAsync(actor, Context.ConnectionAborted) is { } player)
 		{
-			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(character));
+			var character = player.Object.DBRef;
+			await Groups.AddToGroupAsync(Context.ConnectionId, CharacterGroupName(character), Context.ConnectionAborted);
 			logger.LogInformation("[GameHub] Connection {ConnectionId} joined character group {Group}",
 				Context.ConnectionId, CharacterGroupName(character));
 		}
 		else
 		{
-			// A bare dbref is refused rather than routed: it would name char:#N while publishers
-			// name char:#N:creation, and the connection would receive nothing with no error anywhere.
-			logger.LogWarning(
-				"[GameHub] Connection {ConnectionId} has no usable {Claim} claim (absent, unparseable, " +
-				"or a bare dbref rather than an objid); not added to character group",
-				Context.ConnectionId, CharacterDbrefClaim);
+			logger.LogWarning("[GameHub] Connection {ConnectionId} has no current linked character; not added to character group",
+				Context.ConnectionId);
 		}
 
 		var accountId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -114,23 +115,20 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// <param name="command">The raw command string typed by the player.</param>
 	public async Task SendCommand(string command)
 	{
-		if (Context.User?.GetActingCharacter() is not { IsObjid: true } character)
+		if (Context.User?.GetCapabilityActor() is not { } actor
+			|| await projection.ResolveCharacterAsync(actor, Context.ConnectionAborted) is not { } player)
 		{
-			// No routable character identity → the command is unroutable; fail at the auth boundary
-			// rather than publishing a reference the engine cannot reply to onto the bus.
-			logger.LogWarning(
-				"[GameHub] Connection {ConnectionId} sent a command without a usable {Claim} claim " +
-				"(absent, unparseable, or a bare dbref rather than an objid); rejecting",
-				Context.ConnectionId, CharacterDbrefClaim);
-			throw new HubException("No character identity on this connection.");
+			logger.LogWarning("[GameHub] Connection {ConnectionId} sent a command without a current linked character; rejecting",
+				Context.ConnectionId);
+			throw new HubException("No current linked character on this connection.");
 		}
 
-		var dbref = character.ToString();
+		var dbref = player.Object.DBRef.ToString();
 		logger.LogDebug("[GameHub] Connection {ConnectionId} (char:{Dbref}) sent command: {Command}",
 			Context.ConnectionId, dbref, command);
 
 		var message = new GameCommandMessage(dbref, command, DateTimeOffset.UtcNow);
-		await messageBus.Publish(message);
+		await messageBus.Publish(message, Context.ConnectionAborted);
 		logger.LogDebug("[GameHub] Published GameCommandMessage for char:{Dbref} at {Timestamp}",
 			message.CharacterDbref, message.Timestamp);
 	}
@@ -144,7 +142,15 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	public async Task JoinRoom(string? roomDbref)
 	{
 		var room = ParseRoomOrThrow(roomDbref);
-		await Groups.AddToGroupAsync(Context.ConnectionId, RoomGroupName(room));
+		if (Context.User?.GetCapabilityActor() is not { } actor
+			|| !await projection.CanSubscribeRoomAsync(actor, room, Context.ConnectionAborted))
+			throw new HubException("This room is not available to the current character.");
+		var previous = registry.SubscriptionFor(Context.ConnectionId);
+		if (!registry.JoinRoom(Context.ConnectionId, actor, room))
+			throw new HubException("This connection is no longer active.");
+		if (previous is not null && previous.Room != room)
+			await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(previous.Room), Context.ConnectionAborted);
+		await Groups.AddToGroupAsync(Context.ConnectionId, RoomGroupName(room), Context.ConnectionAborted);
 		logger.LogDebug("[GameHub] Connection {ConnectionId} joined room group {Group}",
 			Context.ConnectionId, RoomGroupName(room));
 	}
@@ -158,7 +164,8 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	public async Task LeaveRoom(string? roomDbref)
 	{
 		var room = ParseRoomOrThrow(roomDbref);
-		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(room));
+		registry.LeaveRoom(Context.ConnectionId, room);
+		await Groups.RemoveFromGroupAsync(Context.ConnectionId, RoomGroupName(room), Context.ConnectionAborted);
 		logger.LogDebug("[GameHub] Connection {ConnectionId} left room group {Group}",
 			Context.ConnectionId, RoomGroupName(room));
 	}
@@ -201,14 +208,15 @@ public class GameHub(IMessageBus messageBus, ILogger<GameHub> logger, HubConnect
 	/// <summary>
 	/// Broadcasts a <see cref="RoomEventMessage"/> to all connections observing a room.
 	/// </summary>
-	/// <param name="hubContext">The hub context injected by the calling service.</param>
+	/// <param name="dispatcher">The shared recipient-aware room dispatcher.</param>
 	/// <param name="room">The room's objid.</param>
 	/// <param name="message">The room event message to broadcast.</param>
 	public static Task SendToRoomAsync(
-		IHubContext<GameHub, IGameHubClient> hubContext,
+		IRoomEventDispatcher dispatcher,
 		DBRef room,
 		RoomEventMessage message) =>
-		hubContext.Clients.Group(RoomGroupName(room)).ReceiveRoomEvent(message);
+		room.IsObjid && DBRef.TryParse(message.RoomDbref, out var addressedRoom) && addressedRoom == room
+			? dispatcher.DispatchAsync(message) : Task.CompletedTask;
 
 	/// <summary>
 	/// Broadcasts a system <see cref="GameOutputMessage"/> to all currently connected clients.

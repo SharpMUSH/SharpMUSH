@@ -9,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -48,7 +49,9 @@ public class ObjectsController(
 	IAttributeService attributeService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
 	IEngineCommandInvoker commandInvoker,
-	IPermissionService permissionService) : ControllerBase
+	IPermissionService permissionService,
+	IRealityPolicy reality,
+	IVisibleWorldProjection projection) : ControllerBase
 {
 	/// <summary>
 	/// Attribute-tree levels returned by the listing endpoint when the caller does not ask.
@@ -114,7 +117,7 @@ public class ObjectsController(
 	public async Task<IActionResult> GetObject(int dbref, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		// The attribute endpoints inherit their visibility check from IAttributeService; this one
 		// returns name, owner and flags directly, so it has to ask. Without it any authenticated
@@ -132,7 +135,7 @@ public class ObjectsController(
 	public async Task<IActionResult> ListAttributes(int dbref, [FromQuery] int? depth, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		var requested = Math.Clamp(depth ?? DefaultListDepth, 1, MaxListDepth);
 		var result = await attributeService.GetVisibleAttributesAsync(executor, target, requested);
@@ -146,7 +149,7 @@ public class ObjectsController(
 	public async Task<IActionResult> GetAttribute(int dbref, string name, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		// parent: false — an editor must show what is stored on THIS object. Rendering an
 		// inherited value and then saving it would silently copy the parent's code down.
@@ -164,7 +167,7 @@ public class ObjectsController(
 		int dbref, string name, [FromBody] SetAttributeRequest request, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		// '& attr obj=' with an empty value clears unless empty_attrs is on — the same fork the
 		// command takes, so the two paths cannot disagree about what an empty save means.
@@ -185,7 +188,7 @@ public class ObjectsController(
 	public async Task<IActionResult> ClearAttribute(int dbref, string name, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		return await ClearAttributeAsync(executor, target, name);
 	}
@@ -195,7 +198,7 @@ public class ObjectsController(
 		int dbref, string name, [FromBody] SetAttributeFlagRequest request, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		var result = await attributeService.SetAttributeFlagAsync(executor, target, name, request.Flag);
 
@@ -208,7 +211,7 @@ public class ObjectsController(
 	public async Task<IActionResult> UnsetAttributeFlag(int dbref, string name, string flag, CancellationToken ct)
 	{
 		if (await ResolveExecutorAsync(ct) is not { } executor) return Unauthorized();
-		if (await ResolveTargetAsync(dbref, ct) is not { } target) return NotFound();
+		if (await ResolveTargetAsync(executor, dbref, ct) is not { } target) return NotFound();
 
 		var result = await attributeService.UnsetAttributeFlagAsync(executor, target, name, flag);
 
@@ -229,26 +232,24 @@ public class ObjectsController(
 	}
 
 	/// <summary>
-	/// The character this request acts as. Same rule as <c>MailController</c>: the
-	/// <c>character_dbref</c> claim, which <c>AuthController.SwitchCharacter</c> keeps in step with
-	/// the terminal's own character.
+	/// Resolves the claimed full character identity against its current account link.
+	/// A stale cookie cannot retain object access after unlinking or character recycling.
 	/// </summary>
 	private async Task<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct)
 	{
-		if (User.GetActingCharacter() is not { } character) return null;
-
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsNone ? null : result.Known;
+		if (User.GetCapabilityActor() is not { } actor) return null;
+		return await projection.ResolveCharacterAsync(actor, ct) is { } player ? (AnySharpObject)player : null;
 	}
 
 	/// <summary>
 	/// Addressing is by dbref only. Name resolution needs a parser and notifies on failure, and the
 	/// editor already picks its target out of the object browser as a dbref.
 	/// </summary>
-	private async Task<AnySharpObject?> ResolveTargetAsync(int dbref, CancellationToken ct)
+	private async Task<AnySharpObject?> ResolveTargetAsync(AnySharpObject executor, int dbref, CancellationToken ct)
 	{
 		var result = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct);
-		return result.IsNone ? null : result.Known;
+		return result.IsNone || !await reality.CanPerceiveAsync(executor.Object().DBRef, result.Known.Object().DBRef, ct)
+			? null : result.Known;
 	}
 
 	private static AttributeDto ToDto(SharpAttribute attribute) => new(
