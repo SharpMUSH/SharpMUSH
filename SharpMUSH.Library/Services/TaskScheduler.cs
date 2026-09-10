@@ -560,7 +560,7 @@ public partial class TaskScheduler(
 		=> inputSessions is null
 			? ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.InvalidTarget))
 			: Admit(() => inputSessions.DeliverAsync(parser, session, MString.Empty, timeout: true),
-				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session));
+				$"input-session:{session.Id}", EnqueueGroup, session.Executor, onReleased: () => inputSessions.Discard(session), notifyOnRejection: false);
 
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{

@@ -373,6 +373,31 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task TimeoutRejectionOnlyNotifiesCapturedConnection(bool ownerLimit)
+	{
+		var h = new Harness(); await h.Start();
+		await h.Connect(2, "other"); await h.Connections.Bind(2, h.Owner.Object.DBRef);
+		h.Notify.ClearReceivedCalls();
+		await using var queue = Queue(h, global: ownerLimit ? 10u : 0u, owner: ownerLimit ? 0u : 100u);
+		var notice = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		h.Notify.NotifyLocalizedToSession(1, "transport", "InputSessionTimeoutRejected").Returns(_ =>
+		{ notice.TrySetResult(); return ValueTask.CompletedTask; });
+		h.Time.Now += TimeSpan.FromMinutes(2);
+		using var worker = new SharpMUSH.Server.Services.InputSessionTimeoutService(h.Sessions, queue, h.Notify,
+			h.Connections, NullLogger<SharpMUSH.Server.Services.InputSessionTimeoutService>.Instance);
+		await worker.StartAsync(CancellationToken.None);
+		try { await notice.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+		finally { await worker.StopAsync(CancellationToken.None); }
+		await Assert.That(h.Notify.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "NotifyLocalized")).IsEqualTo(0);
+		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionTimeoutRejected");
+		h.Notify.ClearReceivedCalls();
+		await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "ordinary", "test", h.Actor.Object.DBRef);
+		await Assert.That(h.Notify.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "NotifyLocalized")).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task TimeoutWorkerCancellationReachesActualQueueAdmission()
 	{
 		var h = new Harness(); await h.Start();
@@ -570,11 +595,11 @@ public class InputSessionServiceTests
 		await queue.DidNotReceive().WriteUserCommand(Arg.Any<long>(), Arg.Any<MarkupText>(), Arg.Any<ParserState>());
 	}
 
-	private static Scheduler Queue(Harness h, IInputSessionService? sessions = null, uint global = 10, IQueueDiagnosticsRecorder? diagnostics = null)
+	private static Scheduler Queue(Harness h, IInputSessionService? sessions = null, uint global = 10, IQueueDiagnosticsRecorder? diagnostics = null, uint owner = 100)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = 100, QueueEntryCpuTime = 1000 } });
+		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = 1000 } });
 		return new(h.Parser, h.Connections, Substitute.For<ISchedulerFactory>(), h.Attributes, h.Mediator,
 			NullLogger<Scheduler>.Instance, options, h.Notify, sessions ?? h.Sessions, diagnostics);
 	}

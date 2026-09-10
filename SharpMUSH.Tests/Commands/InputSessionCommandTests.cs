@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using NSubstitute;
@@ -69,25 +70,52 @@ public class InputSessionCommandTests
 	[Arguments("throw", true)]
 	[Arguments("throw-list", true)]
 	[Arguments("literal", false)]
+	[Arguments("nested-syntax", true)]
+	[Arguments("nested-throw", true)]
+	[Arguments("nested-multiple", true)]
+	[Arguments("speech", true)]
 	public async Task ParsedCallbackFailureRetiresCapture(string mode, bool failed)
 	{
 		var player = await Player();
 		var original = (SharpMUSH.Implementation.MUSHCodeParser)Parser;
 		var name = "@inputfailure" + Guid.NewGuid().ToString("N");
+		var invocations = 0;
 		var commands = new SharpMUSH.Library.Services.CommandLibraryService();
 		foreach (var pair in original.CommandLibrary) commands.Add(pair.Key, pair.Value);
 		commands.Add(name, (new SharpMUSH.Library.Definitions.CommandDefinition(
 			new SharpCommandAttribute { Name = name, Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 0 },
-			_ => mode == "literal"
-				? ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"))
-				: throw new InvalidOperationException("input callback failed")), true));
+			_ =>
+			{
+				invocations++;
+				if (mode == "literal") return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"));
+				if (mode == "nested-multiple" && invocations > 1) return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(CallState.Empty);
+				throw new InvalidOperationException("input callback failed");
+			}), true));
+		if (mode == "speech") commands["SAY"] = (new SharpMUSH.Library.Definitions.CommandDefinition(
+			commands["SAY"].LibraryInformation.Attribute, _ => throw new InvalidOperationException("speech callback failed")), true);
+		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches = [];
+		var discovery = Substitute.For<ICommandDiscoveryService>();
+		discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())
+			.Returns(_ => ValueTask.FromResult(Option<IEnumerable<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>>.FromOption(matches)));
+		var provider = Substitute.For<IServiceProvider>();
+		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(ICommandDiscoveryService) && mode.StartsWith("nested-", StringComparison.Ordinal)
+			? discovery : Factory.Services.GetService(call.Arg<Type>()));
 		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, original.FunctionLibrary,
-			commands, original.Configuration, Factory.Services);
+			commands, original.Configuration, provider);
 		try
 		{
 			var actor = await Factory.Services.GetRequiredService<IMediator>().Send(
 				new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef));
-			var callback = mode == "syntax" ? "think [" : mode == "throw-list" ? name + "; think done" : name;
+			var callback = mode == "syntax" ? "think [" : mode == "throw-list" ? name + "; think done" : mode == "speech" ? "\"hello" : name;
+			if (mode.StartsWith("nested-", StringComparison.Ordinal))
+			{
+				callback = "inputnested" + Guid.NewGuid().ToString("N");
+				var body = mode == "nested-syntax" ? "think [" : name;
+				var attribute = new SharpAttribute("nested", "NESTED", "NESTED", [], 0, "NESTED", null!, null!, null!)
+				{ Value = MarkupText.Plain(body) };
+				matches = Enumerable.Range(0, mode == "nested-multiple" ? 2 : 1)
+					.Select(_ => (actor.Known(), attribute, new Dictionary<string, CallState>()));
+			}
 			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
 				actor.Known(), actor.Known(), "CALLBACK", MarkupText.Plain(callback));
 			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
@@ -95,6 +123,7 @@ public class InputSessionCommandTests
 			await Assert.That(session).IsNotNull();
 			var result = await Sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
 			await Assert.That(result).IsNotNull();
+			if (mode == "nested-throw" || mode == "nested-multiple") await Assert.That(invocations).IsEqualTo(mode == "nested-multiple" ? 2 : 1);
 			await Assert.That(Sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
 			if (failed) await Assert.That(result!.HadErrors).IsTrue();
 		}

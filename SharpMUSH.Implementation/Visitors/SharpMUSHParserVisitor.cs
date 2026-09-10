@@ -1274,9 +1274,9 @@ public class SharpMUSHParserVisitor(
 			var speechReplacer = SpeechTokenCommand(tokenText);
 			if (speechReplacer is not null)
 			{
-				await parser.CommandParse(MarkupText.Concat(
+				var result = await parser.CommandParse(MarkupText.Concat(
 					MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
-				return CallState.Empty;
+				return result.HadErrors ? result : CallState.Empty;
 			}
 
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
@@ -1649,6 +1649,7 @@ public class SharpMUSHParserVisitor(
 		IMUSHCodeParser prs,
 		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
 	{
+		CallState? failure = null;
 		foreach (var (obj, attr, arguments) in matches)
 		{
 			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
@@ -1669,10 +1670,11 @@ public class SharpMUSHParserVisitor(
 				Caller = prs.CurrentState.Executor
 			});
 
-			await newParser.CommandListParse(attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value));
+			var result = await newParser.CommandListParse(attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value));
+			if (result?.HadErrors == true) failure ??= result;
 		}
 
-		return CallState.Empty;
+		return failure ?? CallState.Empty;
 	}
 
 	/// <param name="typedName">
