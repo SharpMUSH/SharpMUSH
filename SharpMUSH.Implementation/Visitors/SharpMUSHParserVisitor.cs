@@ -749,6 +749,7 @@ public class SharpMUSHParserVisitor(
 		var success = true;
 		var didPushFunction = false;
 		LimitExceededFlag? limitExceeded = null;
+		var isolated = EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
 
 		try
 		{
@@ -816,8 +817,7 @@ public class SharpMUSHParserVisitor(
 
 			List<CallState> refinedArguments;
 
-			var isolated = EvaluationRestrictions.Current is not null || currentState.Restrictions is not null
-				|| BeginsRestrictedEvaluation(context);
+			isolated |= BeginsRestrictedEvaluation(context);
 			AnySharpObject? executor = null;
 			string? permissionError;
 			if (isolated)
@@ -1033,7 +1033,7 @@ public class SharpMUSHParserVisitor(
 			success = false;
 			throw;
 		}
-		catch (Exception) when (EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
+		catch (Exception) when (isolated || EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null)
 		{
 			success = false;
 			throw new RestrictedExpressionException();
