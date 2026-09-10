@@ -48,6 +48,8 @@ public class HttpHandlerCommandService(
 			&& (duration == Timeout.InfiniteTimeSpan || parentBudget.Remaining < duration))
 			duration = parentBudget.Remaining;
 		using var budget = new ExecutionBudget(duration, cancellation.Token);
+		// The parent timer can fire before the independently armed child deadline.
+		bool DeadlineExpired() => budget.IsExpired || parentBudget?.IsExpired == true;
 
 		// One response context, reachable two ways during execution (Penn's `struct http_request`):
 		// on the parser state for @respond, and in the output-capture frame for emitted output.
@@ -99,7 +101,7 @@ public class HttpHandlerCommandService(
 				budget.ThrowIfExceeded();
 				await evalParser.CommandListParse(attributeValue);
 			}
-			catch (OperationCanceledException) when (budget.IsExpired)
+			catch (OperationCanceledException) when (DeadlineExpired())
 			{
 				// Parser deadlines may return an error or throw while awaiting I/O.
 				// Both discard any response accumulated before the deadline.
@@ -107,17 +109,33 @@ public class HttpHandlerCommandService(
 		}
 
 		ct.ThrowIfCancellationRequested();
-		if (!budget.IsExpired) cancellation.Token.ThrowIfCancellationRequested();
-		var result = budget.IsExpired
+		if (cancellation.IsCancellationRequested && !DeadlineExpired()) cancellation.Token.ThrowIfCancellationRequested();
+		var result = DeadlineExpired()
 			? new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error)
 			: AssembleResult(context);
 
 		// HTTP`COMMAND sysevent, mirroring Penn: ip is unknown at this layer (proxied), method,
 		// path, code, ctype, request body length, response body length.
-		if (handlerRef is { } resolvedHandler) await eventService.TriggerEventAsync(
-			parser, "HTTP`COMMAND", resolvedHandler,
-			string.Empty, method, path, result.Status.ToString(), result.ContentType,
-			body.Length.ToString(), result.Body.Length.ToString());
+		if (!DeadlineExpired() && handlerRef is { } resolvedHandler)
+		{
+			using (budget.Enter())
+			{
+				try
+				{
+					budget.ThrowIfExceeded();
+					await eventService.TriggerEventAsync(
+						parser, "HTTP`COMMAND", resolvedHandler, budget.Token,
+						string.Empty, method, path, result.Status.ToString(), result.ContentType,
+						body.Length.ToString(), result.Body.Length.ToString());
+				}
+				catch (OperationCanceledException) when (DeadlineExpired()) { }
+			}
+		}
+
+		ct.ThrowIfCancellationRequested();
+		if (cancellation.IsCancellationRequested && !DeadlineExpired()) cancellation.Token.ThrowIfCancellationRequested();
+		if (DeadlineExpired())
+			return new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error);
 
 		return result;
 	}
