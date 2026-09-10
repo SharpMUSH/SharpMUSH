@@ -430,6 +430,7 @@ public class SharpMUSHParserVisitor(
 		CallState? argumentSource = null;
 		var totalArgs = 0;
 		var preserveSpaces = false;
+		var hadErrors = false;
 		foreach (var result in results)
 		{
 			if (result.Arguments is { } args)
@@ -439,6 +440,7 @@ public class SharpMUSHParserVisitor(
 			}
 
 			preserveSpaces |= result.PreserveSpaces;
+			hadErrors |= result.HadErrors;
 		}
 
 		if (argumentSource is not null)
@@ -454,7 +456,7 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			return argumentSource with { Arguments = merged };
+			return argumentSource with { Arguments = merged, HadErrors = hadErrors };
 		}
 
 		var messages = new MString[results.Length];
@@ -467,7 +469,8 @@ public class SharpMUSHParserVisitor(
 		return new CallState(combined, results[0].Depth, null,
 			() => ValueTask.FromResult<MString?>(combined))
 		{
-			PreserveSpaces = preserveSpaces
+			PreserveSpaces = preserveSpaces,
+			HadErrors = hadErrors
 		};
 	}
 
@@ -1598,7 +1601,7 @@ public class SharpMUSHParserVisitor(
 				await NotifyService.Notify(parser.CurrentState.Handle.Value, message);
 			}
 
-			return new CallState(message);
+			return new CallState(message) { HadErrors = true };
 		}
 		catch (Exception reportingFailure)
 		{
@@ -1607,7 +1610,7 @@ public class SharpMUSHParserVisitor(
 
 			// Still hand back an unprivileged payload: the player learns the command failed and gets
 			// the id that reaches the log, even though the notification could not be delivered.
-			return new CallState(ExceptionReport.Format(ex, command, correlationId, privileged: false));
+			return new CallState(ExceptionReport.Format(ex, command, correlationId, privileged: false)) { HadErrors = true };
 		}
 	}
 

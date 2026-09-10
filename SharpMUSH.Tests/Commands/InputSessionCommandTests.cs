@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using NSubstitute;
 using System.Reflection;
 using Mediator;
@@ -58,6 +60,43 @@ public class InputSessionCommandTests
 				original.CommandLibrary, original.Configuration, provider);
 			await parser.CommandParse(player.Handle, Connections, MarkupText.Plain("@input/prompt " + source));
 			await Assert.That(prompt).IsEqualTo(expected);
+		}
+		finally { await Connections.Disconnect(player.Handle); }
+	}
+
+	[Test]
+	[Arguments("syntax", true)]
+	[Arguments("throw", true)]
+	[Arguments("throw-list", true)]
+	[Arguments("literal", false)]
+	public async Task ParsedCallbackFailureRetiresCapture(string mode, bool failed)
+	{
+		var player = await Player();
+		var original = (SharpMUSH.Implementation.MUSHCodeParser)Parser;
+		var name = "@inputfailure" + Guid.NewGuid().ToString("N");
+		var commands = new SharpMUSH.Library.Services.CommandLibraryService();
+		foreach (var pair in original.CommandLibrary) commands.Add(pair.Key, pair.Value);
+		commands.Add(name, (new SharpMUSH.Library.Definitions.CommandDefinition(
+			new SharpCommandAttribute { Name = name, Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 0 },
+			_ => mode == "literal"
+				? ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"))
+				: throw new InvalidOperationException("input callback failed")), true));
+		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, original.FunctionLibrary,
+			commands, original.Configuration, Factory.Services);
+		try
+		{
+			var actor = await Factory.Services.GetRequiredService<IMediator>().Send(
+				new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef));
+			var callback = mode == "syntax" ? "think [" : mode == "throw-list" ? name + "; think done" : name;
+			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
+				actor.Known(), actor.Known(), "CALLBACK", MarkupText.Plain(callback));
+			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
+			var session = Sessions.GetCapturing(player.Handle);
+			await Assert.That(session).IsNotNull();
+			var result = await Sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
+			await Assert.That(result).IsNotNull();
+			await Assert.That(Sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
+			if (failed) await Assert.That(result!.HadErrors).IsTrue();
 		}
 		finally { await Connections.Disconnect(player.Handle); }
 	}

@@ -264,7 +264,9 @@ public sealed class InputSessionService : IInputSessionService
 				["0"] = new(input), ["1"] = new(timeout ? "timeout" : "input")
 			}
 		};
-		return await parser.FromState(state).CommandListParse(executable.AsAttribute.Last().Value);
+		var result = await parser.FromState(state).CommandListParse(executable.AsAttribute.Last().Value);
+		if (result?.HadErrors == true) Discard(session);
+		return result;
 	}
 
 	private async ValueTask<CallState?> Revoke(InputSession session)
