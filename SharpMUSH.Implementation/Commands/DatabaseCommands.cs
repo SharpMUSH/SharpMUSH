@@ -155,7 +155,10 @@ public partial class Commands
 						: null;
 					if (completion is not null && !completion.Admission.Accepted)
 					{
-						await NotifyService.Notify(executor, completion.Admission.Error, executor);
+						// Capacity/shutdown rejection is already reported by scheduler admission.
+						// Preflight failures return before that notification path.
+						if (completion.Admission.Reason is not (QueueRejectionReason.OwnerLimit or QueueRejectionReason.GlobalLimit or QueueRejectionReason.ShuttingDown))
+							await NotifyService.Notify(executor, completion.Admission.Error, executor);
 						return new CallState(completion.Admission.Error);
 					}
 
