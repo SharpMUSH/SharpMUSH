@@ -60,8 +60,8 @@ jobs:
   test:
     needs: [build]
     runs-on: ubuntu-latest
-    # Backstop only. It must clear the retry budget below (3 x 20 minutes) plus ~3 minutes of
-    # checkout, restore and build, or it would truncate the third attempt — reintroducing the
+    # Backstop only. It must clear the retry budget below (2 x 30 minutes) plus ~3 minutes of
+    # checkout, restore and build, or it would truncate the second attempt — reintroducing the
     # killed-mid-run failure this timeout exists to prevent.
     timeout-minutes: 70
     strategy:
@@ -91,18 +91,14 @@ jobs:
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         with:
-          # The surrealdb leg runs 6-10 minutes depending on runner contention — it has been in that
-          # band since July. A 10 minute
-          # timeout was inside that range, so a slow-but-healthy run got killed rather than finishing.
-          #
-          # That kill is not a clean abort: it disposes the host's IServiceProvider underneath the
-          # tests still running, and every in-flight parse then fails resolving a service. Run
-          # 31890423646 reported 98 failures, all ObjectDisposedException/BeforeTest hook failures
-          # stamped one second past the ten minute mark. Nothing was wrong with the tests.
-          #
-          # 20 minutes puts the wall clear of the band instead of inside it.
-          timeout_minutes: 20
-          max_attempts: 3
+          # The 9,320-case SurrealDB suite passed on the reviewed R7 tree in 16m31s.
+          # Main and image runs then reached the 20-minute cutoff with 9,058 and
+          # 9,124 passing tests respectively. The image run's final ten tests failed
+          # only after the timeout disposed the shared IServiceProvider underneath them.
+          # Give each attempt room to finish without extending the total retry budget:
+          # two 30-minute attempts retain the previous three x 20-minute maximum.
+          timeout_minutes: 30
+          max_attempts: 2
           # Bound shared-provider contention without changing per-entry execution deadlines.
           command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
 
