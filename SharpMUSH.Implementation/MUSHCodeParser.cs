@@ -204,12 +204,41 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private static bool ContainsRestrictedEntryPoint(BufferedTokenSpanStream tokens,
 		IReadOnlyDictionary<string, (FunctionDefinition LibraryInformation, bool IsSystem)> functions)
 	{
-		foreach (var token in tokens.tokens)
+		for (var index = 0; index < tokens.tokens.Count; index++)
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var token = tokens.tokens[index];
 			if (token.Type != SharpMUSHLexer.FUNCHAR) continue;
 			var name = token.Text.TrimEnd()[..^1];
-			if (functions.TryGetValue(name, out var definition)
-				&& definition.LibraryInformation.RestrictedOperation is "restrictedexpr" or "fn") return true;
+			if (!functions.TryGetValue(name, out var definition)) continue;
+			if (definition.LibraryInformation.RestrictedOperation == "restrictedexpr") return true;
+			if (definition.LibraryInformation.RestrictedOperation != "fn") continue;
+
+			// Resolve only literal target names, using the same audited operation identities as
+			// dispatch. Unknown or dynamic targets remain conservative; no evaluation or object
+			// lookup is permitted before deciding whether the input may be traced.
+			var uncertain = false;
+			IEnumerable<string> LiteralTargets()
+			{
+				for (var targetIndex = index + 1; targetIndex < tokens.tokens.Count; targetIndex += 2)
+				{
+					ExecutionBudget.Current?.ThrowIfExceeded();
+					var target = tokens.tokens[targetIndex];
+					var nextType = targetIndex + 1 < tokens.tokens.Count ? tokens.tokens[targetIndex + 1].Type : TokenConstants.EOF;
+					if (target.Type != SharpMUSHLexer.OTHER
+						|| nextType is not (SharpMUSHLexer.COMMAWS or SharpMUSHLexer.CPAREN or TokenConstants.EOF)
+						|| !functions.ContainsKey(target.Text))
+					{
+						uncertain = true;
+						yield break;
+					}
+					yield return target.Text;
+					if (nextType != SharpMUSHLexer.COMMAWS) break;
+				}
+				uncertain = true;
+			}
+			if (EvaluationRestrictions.BeginsRestrictedEvaluation(definition.LibraryInformation, LiteralTargets(), functions)
+				|| uncertain) return true;
 		}
 		return false;
 	}
@@ -238,7 +267,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		// Token inspection precedes ANTLR tracing, including malformed input with no visitor.
-		// Indirect calls may select the restricted wrapper, so suppress their parser diagnostics too.
+		// Literal indirect chains use the same restricted-entry classification as dispatch.
 		var debug = Configuration.CurrentValue.Debug.DebugSharpParser && EvaluationRestrictions.Current is null
 			&& !ContainsRestrictedEntryPoint(tokens, functions ?? FunctionLibrary);
 
