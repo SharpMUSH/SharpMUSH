@@ -37,8 +37,8 @@ It always goes last, after the function's existing arguments:
 ```
 csecs(#7)              →  1778518155
 csecs(#7,ms)           →  1778518155494
-timestring(90)         →   1m  30s
-timestring(90.25,0,ms) →   1m  30.250s
+timestring(90)         →   1m 30s
+timestring(90.25,0,ms) →   1m 30.250s
 convtime(Mon May 11 16:49:15 2026,UTC,ms)
 ```
 
@@ -67,8 +67,8 @@ timefmt($Y,fdiv(%q<stamp>,1000))
 Seconds may carry a fraction, and it is honoured to the millisecond:
 
 ```
-timestring(90.25)     →   1m  30s        ← rendered whole, PennMUSH-style
-timestring(90.25,0,f) →   1m  30.25s     ← ask for the fraction to see it
+timestring(90.25)     →   1m 30s         ← rendered whole, PennMUSH-style
+timestring(90.25,0,f) →   1m 30.25s      ← ask for the fraction to see it
 stringsecs(1.5s)      →  1
 stringsecs(1.5s,ms)   →  1500
 @wait 0.25=think tick

@@ -44,6 +44,18 @@ public class MushcodeHighlighterTests
 	}
 
 	[Test]
+	public async Task PlainText_IsEncodedAsRuns_NotPerCharacter()
+	{
+		// A non-BMP character is one character to the encoder, so it must reach it whole rather
+		// than as two lone surrogates; and consecutive plain text inside a dangerous span is one
+		// wrapper, never one per character.
+		var html = MushcodeHighlighter.ToHtml("think 😀 pemit(  *x)");
+
+		await Assert.That(html).Contains("think &#128512; ");
+		await Assert.That(html).Contains("<span class=\"mush-fn mush-danger\">pemit</span>(<span class=\"mush-danger\">  *</span>x)");
+	}
+
+	[Test]
 	public async Task NamedRegisters_AndPercentQ()
 	{
 		var html = MushcodeHighlighter.ToHtml("setq(0,%q<myname>) %q0 %qa");

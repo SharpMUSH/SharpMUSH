@@ -18,6 +18,7 @@ using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using LspRange = SharpMUSH.Library.Models.Range;
 
 namespace SharpMUSH.Implementation;
@@ -81,17 +82,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	public IMUSHCodeParser FromState(ParserState state) => this with { State = ImmutableStack.Create(state) };
 
 	public Option<ParserState> StateHistory(uint index)
-	{
-		try
-		{
-			var a = State.Take((int)index);
-			return a.Last();
-		}
-		catch
-		{
-			return new None();
-		}
-	}
+		=> State.Take((int)index).LastOrDefault() is { } state ? state : new None();
 
 	public IMUSHCodeParser Empty() => this with { State = ImmutableStack<ParserState>.Empty };
 
@@ -135,37 +126,37 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	internal static bool ExceedsNestingLimit(BufferedTokenSpanStream tokenStream, int limit, out IToken? offendingToken)
 	{
 		offendingToken = null;
-		var tokens = tokenStream.tokens;
-		var open = new Stack<char>();
+		// Most lines open nothing at all, so the matching stack exists only once one does.
+		Stack<char>? open = null;
 		var depth = 0;
 
-		foreach (var token in tokens)
+		foreach (var token in CollectionsMarshal.AsSpan(tokenStream.tokens))
 		{
 			switch (token.Type)
 			{
 				case SharpMUSHLexer.OBRACK:
-					open.Push('[');
+					(open ??= new Stack<char>()).Push('[');
 					if (++depth > limit) { offendingToken = token; return true; }
 					break;
 				case SharpMUSHLexer.OBRACE:
-					open.Push('{');
+					(open ??= new Stack<char>()).Push('{');
 					if (++depth > limit) { offendingToken = token; return true; }
 					break;
 				case SharpMUSHLexer.FUNCHAR:
-					open.Push('(');
+					(open ??= new Stack<char>()).Push('(');
 					if (++depth > limit) { offendingToken = token; return true; }
 					break;
 				case SharpMUSHLexer.OPAREN:
-					open.Push('o');
+					(open ??= new Stack<char>()).Push('o');
 					break;
 				case SharpMUSHLexer.CBRACK:
-					if (open.TryPeek(out var b) && b == '[') { open.Pop(); depth--; }
+					if (open is not null && open.TryPeek(out var b) && b == '[') { open.Pop(); depth--; }
 					break;
 				case SharpMUSHLexer.CBRACE:
-					if (open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
+					if (open is not null && open.TryPeek(out var c) && c == '{') { open.Pop(); depth--; }
 					break;
 				case SharpMUSHLexer.CPAREN:
-					if (open.TryPeek(out var p) && p is '(' or 'o')
+					if (open is not null && open.TryPeek(out var p) && p is '(' or 'o')
 					{
 						if (p == '(') depth--;
 						open.Pop();
@@ -332,7 +323,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		budget.ThrowIfExceeded();
 		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
-		StringSpanInputStream inputStream = new(text.ToPlainText(), methodName);
+		var plainText = text.ToPlainText();
+		StringSpanInputStream inputStream = new(plainText, methodName);
 		var sharpLexer = CreateLexer(inputStream);
 		BufferedTokenSpanStream bufferedTokenSpanStream = new(sharpLexer);
 		bufferedTokenSpanStream.Fill();
@@ -351,7 +343,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// from whichever pass produced the returned tree, and lenient parses run LenientErrorStrategy
 		// so recovery tokens carry empty text at the real input boundary rather than "<missing X>".
 		var (context, errorListener) = ParseTwoStage(
-			bufferedTokenSpanStream, entryPoint, text.ToPlainText(), lenient);
+			bufferedTokenSpanStream, entryPoint, plainText, lenient);
 
 		// In strict mode (default for function evaluation), surface any syntax error
 		// immediately as a MUSH failure string without visiting the recovery tree.

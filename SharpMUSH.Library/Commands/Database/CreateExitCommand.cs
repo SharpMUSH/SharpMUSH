@@ -6,7 +6,13 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator)
+/// <summary>Creates an exit and stamps the configured default exit flags on it.</summary>
+/// <param name="ApplyDefaultFlags">
+/// Whether the configured default flags for this type are stamped on the new object. True for
+/// anything a player creates. False for a package install, where the manifest is the whole truth
+/// about the object's flags: <c>exit_flags</c> defaults to nothing by default, but a game may set it.
+/// </param>
+public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator, bool ApplyDefaultFlags = true)
 	: ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Location.Object().DBRef), Definitions.CacheKeys.Object(Creator.Object.DBRef)];

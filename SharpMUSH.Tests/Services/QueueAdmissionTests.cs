@@ -30,7 +30,7 @@ public class QueueAdmissionTests
 		 factory, Substitute.For<IAttributeService>(), mediator ?? TargetMediator(),
 		 NullLogger<Scheduler>.Instance, options, notifications);
 	}
-	private static IMediator TargetMediator()
+	internal static IMediator TargetMediator()
 	{
 		var mediator = Substitute.For<IMediator>();
 		ConfigureTargets(mediator);

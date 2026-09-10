@@ -87,19 +87,11 @@ public partial class SurrealDatabase
 				parameters, cancellationToken);
 			var zoneKeys = zoneResponse.GetValue<List<int>>(0)!;
 
-			var nextKeys = new List<int>();
-			nextKeys.AddRange(parentKeys);
-			nextKeys.AddRange(zoneKeys);
-
-			if (nextKeys.Count == 0) return false;
-
-			foreach (var nk in nextKeys)
-			{
-				if (nk == targetKey) return true;
-			}
+			if (parentKeys.Count == 0 && zoneKeys.Count == 0) return false;
+			if (parentKeys.Contains(targetKey) || zoneKeys.Contains(targetKey)) return true;
 
 			// Follow the first path (parent takes precedence)
-			currentKey = nextKeys[0];
+			currentKey = parentKeys.Count > 0 ? parentKeys[0] : zoneKeys[0];
 			depth++;
 		}
 

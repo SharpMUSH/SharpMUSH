@@ -13,7 +13,13 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions : ILibraryProvider<FunctionDefinition>
 {
 	private IMediator Mediator { get; }
-	private ISharpDatabase Database { get; }
+	/// <summary>
+	/// The object store, and only that: the cycle guards in <see cref="HelperFunctions"/> are the
+	/// sole reason a function reaches a store at all, and they take an <see cref="IObjectStore"/>.
+	/// Holding the whole <see cref="ISharpDatabase"/> composite here would hand every function a
+	/// write surface that bypasses the Mediator (engine data trunk §1, §2).
+	/// </summary>
+	private IObjectStore Database { get; }
 	private ILocateService LocateService { get; }
 	private IAttributeService AttributeService { get; }
 	private INotifyService NotifyService { get; }
@@ -48,7 +54,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ILogger<Functions> logger,
 		IMediator mediator,
 		IMessageBus messageBus,
-		ISharpDatabase database,
+		IObjectStore database,
 		ILocateService locateService,
 		IAttributeService attributeService,
 		INotifyService notifyService,

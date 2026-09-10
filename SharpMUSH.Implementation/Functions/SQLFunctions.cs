@@ -81,12 +81,9 @@ public partial class Functions
 			}
 
 			var formattedRows = resultList
-				.Select(row =>
-					string.Join(fieldSeparator, row.Values.Select(v => v?.ToString() ?? string.Empty)))
-				.ToArray();
+				.Select(row => string.Join(fieldSeparator, row.Values.Select(v => v?.ToString() ?? string.Empty)));
 
-			var result = string.Join(rowSeparator, formattedRows);
-			return new CallState(result);
+			return new CallState(string.Join(rowSeparator, formattedRows));
 		}
 		catch (Exception ex) when (ex is DbException or InvalidOperationException)
 		{
@@ -200,9 +197,7 @@ public partial class Functions
 					{
 						if (doFieldNames && firstRow)
 						{
-							var columnNames = row.Keys.ToList();
-
-							var remainder = columnNames
+							var remainder = row.Keys
 								.Select((x, i)
 									=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
 								.ToDictionary();
@@ -218,14 +213,11 @@ public partial class Functions
 							firstRow = false;
 						}
 
-						var currentRow = rowNumber;
-						var values = row.Values.ToList();
-
-						var dict = values.Select((x, i) =>
+						var dict = row.Values.Select((x, i) =>
 								new KeyValuePair<string, CallState>((i + 1).ToString(),
 									MarkupText.Plain(x?.ToString() ?? string.Empty)))
 							.ToDictionary();
-						dict.TryAdd("0", MarkupText.Plain(currentRow.ToString()));
+						dict.TryAdd("0", MarkupText.Plain(rowNumber.ToString()));
 
 						var result = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, attrName,
 							dict);
@@ -240,7 +232,7 @@ public partial class Functions
 					return new CallState($"#-1 SQL ERROR: {ex.Message}");
 				}
 
-				return MarkupText.Join(osep, results.ToArray());
+				return MarkupText.Join(osep, results);
 			});
 	}
 }

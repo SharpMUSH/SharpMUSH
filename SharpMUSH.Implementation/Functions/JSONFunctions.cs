@@ -277,10 +277,9 @@ public partial class Functions
 						var val = evalResult.Matches[0].Value;
 						return val?.ToString();
 					}, StringComparer.Ordinal)
-					.ToList();
+					.ToArray();
 
-				var sortedArray = new JsonArray(sorted.ToArray());
-				return new CallState(sortedArray.ToJsonString());
+				return new CallState(new JsonArray(sorted).ToJsonString());
 			}
 
 			var jsonPath = JsonPath.Parse(arg2);

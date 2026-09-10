@@ -231,10 +231,12 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks)
-			{
-				[lockName] = new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() }
-			};
+			// Fold rather than copy: the row may predate canonical lock names, and a plain
+			// case-insensitive copy constructor would throw on the two spellings of one lock it can
+			// still hold. Writing the folded map back is what retires the old spelling on disk.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks[LockNames.Canonical(lockName)] =
+				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -245,8 +247,9 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
-			var locks = new Dictionary<string, LockRecord>(found.Record.Locks);
-			locks.Remove(lockName);
+			// Folding first is what makes @unlock able to clear a lock stored under an old spelling.
+			var locks = LockNames.Fold(found.Record.Locks);
+			locks.Remove(LockNames.Canonical(lockName));
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -273,8 +276,10 @@ public partial class LightningDatabase
 
 	public ValueTask<int> GetOwnedObjectCountAsync(SharpPlayer player, CancellationToken cancellationToken = default)
 	{
-		var count = Store.Read(tx => tx.Dups(Tables.Owner.Reverse, Keys.Dbref(player.Object.Key)).Count());
-		return ValueTask.FromResult(count);
+		var count = Store.Read(tx => tx.CountDups(Tables.Owner.Reverse, Keys.Dbref(player.Object.Key)));
+		return ValueTask.FromResult(count.Match(
+			owned => (int)owned,
+			error => throw new InvalidOperationException($"Owned-object count for #{player.Object.Key} failed: {error.Value}")));
 	}
 
 	public ValueTask<int> GetObjectCountAsync(CancellationToken cancellationToken = default)
@@ -380,6 +385,9 @@ public partial class LightningDatabase
 		var skip = filter.Skip ?? 0;
 		var skipped = 0;
 		var yielded = 0;
+		// The row itself answers the type and name predicates; only the edge and flag/power ones need a
+		// transaction, so a search on name alone opens none per row.
+		var needsEdges = NeedsEdgePredicates(filter);
 
 		await foreach (var (key, value) in entries.WithCancellation(ct))
 		{
@@ -390,7 +398,7 @@ public partial class LightningDatabase
 			}
 
 			var record = Codec.Deserialize<ObjectRecord>(value);
-			if (!Store.Read(tx => MatchesFilter(tx, dbref, record, filter)))
+			if (!MatchesRecord(record, filter) || (needsEdges && !Store.Read(tx => MatchesEdges(tx, dbref, record, filter))))
 			{
 				continue;
 			}
@@ -412,28 +420,34 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// Evaluates every populated predicate of <paramref name="filter"/> against one already-decoded row, inside
-	/// <c>GetFilteredObjectsAsync</c> predicate-for-predicate; see that method and the doc comment on
-	/// <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
+	/// The predicates of <paramref name="filter"/> that one already-decoded row answers on its own — type and
+	/// name — inside <c>GetFilteredObjectsAsync</c> predicate-for-predicate; see that method and the doc
+	/// comment on <c>IObjectStore.GetFilteredObjectsAsync</c> for why each predicate means what it means.
 	/// </summary>
-	private static bool MatchesFilter(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	private static bool MatchesRecord(ObjectRecord record, ObjectSearchFilter filter)
 	{
 		if (filter.Types is { Length: > 0 } types && !types.Contains(record.Type))
 		{
 			return false;
 		}
 
-		if (!string.IsNullOrEmpty(filter.NamePattern))
+		if (string.IsNullOrEmpty(filter.NamePattern))
 		{
-			var nameMatches = filter.UseRegex
-				? Regex.IsMatch(record.Name, filter.NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
-				: record.Name.Contains(filter.NamePattern, StringComparison.OrdinalIgnoreCase);
-			if (!nameMatches)
-			{
-				return false;
-			}
+			return true;
 		}
 
+		return filter.UseRegex
+			? Regex.IsMatch(record.Name, filter.NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+			: record.Name.Contains(filter.NamePattern, StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool NeedsEdgePredicates(ObjectSearchFilter filter)
+		=> filter.Owner.HasValue || filter.Zone.HasValue || filter.Parent.HasValue
+			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower);
+
+	/// <summary>The remaining predicates — owner, zone, parent, flag, power — each of which reads an edge table.</summary>
+	private static bool MatchesEdges(ITx tx, long dbref, ObjectRecord record, ObjectSearchFilter filter)
+	{
 		if (filter.Owner.HasValue && GetSingleEdge(tx, Tables.Owner.Forward, dbref) != filter.Owner.Value.Number)
 		{
 			return false;
@@ -969,18 +983,15 @@ public partial class LightningDatabase
 		}
 	}
 
-	private static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
-	{
-		var builder = ImmutableDictionary.CreateBuilder<string, SharpLockData>();
-		foreach (var (name, lockRecord) in locks)
-		{
-			var flags = Enum.TryParse<LockService.LockFlags>(lockRecord.Flags, out var parsed)
-				? parsed
-				: LockService.LockFlags.Default;
-			builder[name] = new SharpLockData(lockRecord.LockString, flags);
-		}
-		return builder.ToImmutable();
-	}
+	/// <summary>
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives a collision.
+	/// </summary>
+	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
+		=> LockNames.FoldToImmutable(locks,
+			record => new SharpLockData(record.LockString,
+				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;

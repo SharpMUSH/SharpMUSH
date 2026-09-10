@@ -65,11 +65,7 @@ public class EventService(
 
 			// Build the arguments dictionary for the attribute execution
 			// Arguments are passed as %0, %1, %2, etc. in the attribute code
-			var argsDict = new Dictionary<string, CallState>();
-			for (var i = 0; i < args.Length; i++)
-			{
-				argsDict[i.ToString()] = new CallState(args[i]);
-			}
+			var argsDict = args.Index().ToDictionary(x => x.Index.ToString(), x => new CallState(x.Item));
 
 			// Resolve the enactor (%#) for this event.
 			// PennMUSH contract: %# is the object that caused the event (e.g. the player who

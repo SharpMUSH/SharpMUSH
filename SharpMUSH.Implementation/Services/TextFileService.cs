@@ -133,17 +133,13 @@ public class TextFileService : ITextFileService
 			}
 
 			var files = Directory.GetFiles(categoryPath, "*.*")
-				.Select(Path.GetFileName)
-				.Where(f => f != null)
-				.Cast<string>();
+				.Select(f => Path.GetFileName(f)!);
 			return Task.FromResult(files);
 		}
 		else
 		{
 			var files = Directory.GetFiles(baseDir, "*.*", SearchOption.AllDirectories)
-				.Select(Path.GetFileName)
-				.Where(f => f != null)
-				.Cast<string>()
+				.Select(f => Path.GetFileName(f)!)
 				.Distinct();
 			return Task.FromResult(files);
 		}
@@ -361,33 +357,31 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	public static string StripConsecutiveHeaders(string content)
 	{
-		var lines = content.Split('\n');
-		var firstHeaderIndex = -1;
-		var lastConsecutiveHeaderIndex = -1;
+		var text = content.AsSpan();
+		var headers = 0;
+		var firstHeaderLength = 0;
+		var afterHeaders = 0;
 
-		for (var i = 0; i < lines.Length; i++)
+		// The leading run of header lines, up to the first line that is not one.
+		foreach (var range in text.Split('\n'))
 		{
-			if (lines[i].StartsWith("# "))
-			{
-				if (firstHeaderIndex < 0)
-				{
-					firstHeaderIndex = i;
-				}
-				lastConsecutiveHeaderIndex = i;
-			}
-			else
+			var (offset, length) = range.GetOffsetAndLength(text.Length);
+			if (!text.Slice(offset, length).StartsWith("# "))
 			{
 				break;
 			}
+
+			if (headers++ == 0)
+			{
+				firstHeaderLength = length;
+			}
+
+			afterHeaders = Math.Min(offset + length + 1, text.Length);
 		}
 
-		if (firstHeaderIndex >= 0 && lastConsecutiveHeaderIndex > firstHeaderIndex)
-		{
-			var remaining = string.Join('\n', lines.Skip(lastConsecutiveHeaderIndex + 1));
-			return lines[firstHeaderIndex] + "\n" + remaining;
-		}
-
-		return content;
+		return headers > 1
+			? string.Concat(text[..firstHeaderLength], "\n", text[afterHeaders..])
+			: content;
 	}
 
 	/// <summary>

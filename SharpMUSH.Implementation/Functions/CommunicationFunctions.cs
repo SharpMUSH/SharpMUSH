@@ -14,12 +14,51 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	/// <summary>
+	/// The Speech lock every emit-family function has to clear before it may put a message into
+	/// <paramref name="room"/>.
+	/// <para>
+	/// PennMUSH reaches these functions through the very same handlers as the commands —
+	/// <c>fun_emit</c> calls <c>do_emit</c>, <c>fun_lemit</c> calls <c>do_lemit</c>,
+	/// <c>fun_remit</c> calls <c>do_remit</c> (<c>src/funmisc.c:221-296</c>) — so the
+	/// <c>eval_lock_with(..., Speech_Lock, ...)</c> in <c>src/speech.c</c> gates softcode exactly
+	/// as it gates the typed command. Enforcing it in the commands alone leaves the lock a
+	/// suggestion, since <c>emit()</c> is reachable from any softcode the locked-out player runs.
+	/// </para>
+	/// </summary>
+	/// <param name="room">The room the message would land in.</param>
+	/// <param name="executor">Who is trying to speak.</param>
+	/// <param name="notificationKey">
+	/// <see cref="ErrorMessages.Notifications.MayNotSpeakHere"/> for the executor's own location,
+	/// <see cref="ErrorMessages.Notifications.MayNotSpeakThere"/> for any other room, matching
+	/// PennMUSH's two <c>fail_lock</c> strings.
+	/// </param>
+	private async ValueTask<bool> CanSpeakIn(
+		AnySharpContainer room,
+		AnySharpObject executor,
+		string notificationKey)
+	{
+		if (await LockService.Evaluate(LockType.Speech, room.WithExitOption(), executor))
+		{
+			return true;
+		}
+
+		await NotifyService.NotifyLocalized(executor, notificationKey, executor);
+		return false;
+	}
+
 	[SharpFunction(Name = "emit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
 	public async ValueTask<CallState> Emit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.Where();
 		var message = parser.CurrentState.Arguments["0"].Message!;
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakHere)))
+		{
+			return CallState.Empty;
+		}
 
 		await CommunicationService.SendToRoomAsync(
 			executor,
@@ -36,6 +75,12 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var executorLocation = await executor.OutermostWhere();
 		var message = parser.CurrentState.Arguments["0"].Message!;
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+		{
+			return CallState.Empty;
+		}
 
 		await CommunicationService.SendToRoomAsync(
 			executor,
@@ -57,8 +102,7 @@ public partial class Functions
 		var defmsg = orderedArgs["1"];
 		var objectAndAttribute = orderedArgs["2"];
 		var inBetweenArgs = orderedArgs.Skip(3).Take(MaxFunctionArguments)
-			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value))
-			.ToList();
+			.Select((kvp, idx) => new KeyValuePair<string, CallState>(idx.ToString(), kvp.Value));
 
 		var switchesText = parser.CurrentState.Arguments.TryGetValue("13", out var switchArg)
 			? (await switchArg.ParsedMessage())?.ToPlainText() ?? ""
@@ -88,6 +132,13 @@ public partial class Functions
 			: INotifyService.NotificationType.Emit;
 
 		var executorLocation = await executor.Where();
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakHere)))
+		{
+			return CallState.Empty;
+		}
+
 		var contents = executorLocation.Content(Mediator);
 
 		await foreach (var obj in contents
@@ -112,7 +163,16 @@ public partial class Functions
 			? INotifyService.NotificationType.NSEmit
 			: INotifyService.NotificationType.Emit;
 
-		var executorLocation = await executor.Where();
+		// nslemit() is @nslemit is do_lemit, which speaks into absolute_room(), not the immediate
+		// location (PennMUSH src/speech.c:1333). Reading Where() here made it a second nsemit().
+		var executorLocation = await executor.OutermostWhere();
+
+		if (!await CanSpeakIn(executorLocation, executor,
+					nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+		{
+			return CallState.Empty;
+		}
+
 		var contents = executorLocation.Content(Mediator);
 
 		await foreach (var obj in contents
@@ -228,12 +288,8 @@ public partial class Functions
 			? INotifyService.NotificationType.NSAnnounce
 			: INotifyService.NotificationType.Announce;
 
-		if (IsIntegerList(recipients))
+		if (TryParsePorts(recipients, out var ports))
 		{
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(long.Parse)
-				.ToArray();
-
 			await CommunicationService.SendToPortsAsync(executor, ports, _ => message, notificationType);
 			return CallState.Empty;
 		}
@@ -327,6 +383,13 @@ public partial class Functions
 				}
 
 				var container = target.AsContainer;
+
+				if (!await CanSpeakIn(container, executor,
+							nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
+				{
+					return CallState.Empty;
+				}
+
 				await CommunicationService.SendToRoomAsync(
 					executor,
 					container,
@@ -468,12 +531,8 @@ public partial class Functions
 		var recipients = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var message = parser.CurrentState.Arguments["1"].Message!;
 
-		if (IsIntegerList(recipients))
+		if (TryParsePorts(recipients, out var ports))
 		{
-			var ports = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(long.Parse)
-				.ToArray();
-
 			await CommunicationService.SendToPortsAsync(executor, ports, _ => message,
 				INotifyService.NotificationType.Announce);
 			return CallState.Empty;
@@ -503,12 +562,24 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	private bool IsIntegerList(string input)
+	/// <summary>
+	/// A recipient list made entirely of descriptor numbers, which pemit() sends to as ports rather
+	/// than matching as names.
+	/// </summary>
+	private static bool TryParsePorts(string recipients, out long[] ports)
 	{
-		if (string.IsNullOrWhiteSpace(input)) return false;
+		var tokens = recipients.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		ports = new long[tokens.Length];
 
-		var tokens = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		return tokens.Length > 0 && tokens.All(token => long.TryParse(token, out _));
+		foreach (var (i, token) in tokens.Index())
+		{
+			if (!long.TryParse(token, out ports[i]))
+			{
+				return false;
+			}
+		}
+
+		return tokens.Length > 0;
 	}
 
 	[SharpFunction(Name = "prompt", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["target", "message"])]
@@ -563,6 +634,12 @@ public partial class Functions
 				async target =>
 				{
 					if (!target.IsContainer)
+					{
+						return CallState.Empty;
+					}
+
+					if (!await CanSpeakIn(target.AsContainer, executor,
+								nameof(ErrorMessages.Notifications.MayNotSpeakThere)))
 					{
 						return CallState.Empty;
 					}

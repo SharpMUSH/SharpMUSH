@@ -128,6 +128,32 @@ public class PasswordServiceTests
 	}
 
 	[Test]
+	public async ValueTask PennMUSHPassword_WithoutTimestamp_ValidPassword_ReturnsTrue()
+	{
+		var password = "mypassword";
+		var salt = "kl";
+		var withTimestamp = CreatePennMUSHHash(salt, password, "SHA1", timestamp: 12345);
+		var pennMUSHHash = withTimestamp[..withTimestamp.LastIndexOf(':')];
+
+		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+
+		await Assert.That(pennMUSHHash.Count(c => c == ':')).IsEqualTo(2);
+		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask PennMUSHPassword_FieldsAfterTheTimestamp_AreIgnored()
+	{
+		var password = "mypassword";
+		var salt = "mn";
+		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA256", timestamp: 12345) + ":extra:fields";
+
+		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
+
+		await Assert.That(result).IsTrue();
+	}
+
+	[Test]
 	public async ValueTask EmptyHash_ReturnsFalse()
 	{
 		var result = PasswordService.PasswordIsValid("user", "password", "");

@@ -1,4 +1,7 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -497,6 +500,75 @@ public class ObjectSnapshotTests
 		var finalPreview = await real.PreviewAsync(actor, target, second.RecoverySnapshotId, selection);
 		await Assert.That((await real.RestoreAsync(actor, target, second.RecoverySnapshotId, selection, finalPreview.Token)).Completed).IsTrue();
 		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
+	}
+
+	/// <summary>
+	/// An image written before lock names were canonical names <see cref="LockType.TPort"/> the way
+	/// that world spelled it. The before-image a restore retains has to carry the live lock under the
+	/// name the object is keyed by: recorded as absent instead, recovery removes the lock rather than
+	/// restoring its value — and an absent lock reads as "no lock", which passes everybody.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task RecoveryKeepsALockAPreUpgradeSnapshotSpelledTheOldWay()
+	{
+		var (actor, target, player) = await Setup();
+		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.TPort), "#TRUE", player));
+		var real = Get<IObjectSnapshotService>();
+		var saved = await real.CaptureAsync(actor, target, "pre-upgrade spelling");
+		// Rewrite the stored image to the spelling a world older than the fix would have written,
+		// re-digesting it so it is exactly what that world would hold rather than a corrupt row.
+		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.TPort), "Teleport");
+		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.TPort), "#FALSE", player));
+
+		var failing = Substitute.For<IManipulateSharpObjectService>();
+		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
+			.Returns(_ => ValueTask.FromException<CallState>(new IOException("Injected later failure")));
+		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
+			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), Get<IAttributeService>(), failing, Get<ILockService>(), Get<IMediator>());
+		var selection = new SnapshotSelection([], Locks: true, Name: true);
+		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
+		var failed = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
+		await Assert.That(failed.Completed).IsFalse();
+
+		var recovery = (await real.ListAsync(actor, target)).Snapshots.Single(s => s.Id == failed.RecoverySnapshotId);
+		await Assert.That(recovery.Locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+			.Because("the durable before-image must carry the live lock it is the only record of");
+		await Assert.That(recovery.AbsentLocks.Select(LockNames.Canonical)).DoesNotContain(nameof(LockType.TPort));
+
+		var recoverySelection = new SnapshotSelection(recovery.DefaultAttributes(), Locks: true, Name: true);
+		var recoveryPreview = await real.PreviewAsync(actor, target, recovery.Id, recoverySelection);
+		await Assert.That((await real.RestoreAsync(actor, target, recovery.Id, recoverySelection, recoveryPreview.Token)).Completed).IsTrue();
+		var locks = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks;
+		await Assert.That(locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+			.Because("recovery must put the lock back, not delete it");
+		await Assert.That(locks[nameof(LockType.TPort)].LockString).IsEqualTo("#FALSE");
+	}
+
+	/// <summary>Rewrites one stored snapshot's lock key and re-digests it, producing the image a world older than lock-name canonicalisation would hold.</summary>
+	private async Task RespellStoredLockAsync(DBRef target, string snapshotId, string from, string to)
+	{
+		var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+		var id = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Id!;
+		var stored = await Get<IExpandedDataStore>().GetExpandedObjectData<SnapshotStorageRecord>(id, ObjectSnapshotService.StorageKey)
+			?? throw new InvalidOperationException("The snapshot history was not stored.");
+		var rewritten = stored.History.Snapshots.Select(snapshot =>
+		{
+			if (snapshot.Id != snapshotId) return snapshot;
+			var legacy = snapshot with
+			{
+				Locks = snapshot.Locks.ToDictionary(
+					pair => string.Equals(pair.Key, from, StringComparison.Ordinal) ? to : pair.Key,
+					pair => pair.Value, StringComparer.Ordinal)
+			};
+			return legacy with
+			{
+				Digest = Convert.ToHexString(SHA256.HashData(
+					Encoding.UTF8.GetBytes(JsonSerializer.Serialize(legacy with { Digest = "" }, json))))
+			};
+		}).ToArray();
+		await Get<IExpandedDataStore>().SetExpandedObjectData(id, ObjectSnapshotService.StorageKey,
+			new SnapshotStorageRecord(stored.History with { Snapshots = rewritten }));
 	}
 
 	[Test, NotInParallel]
