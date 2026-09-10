@@ -98,17 +98,18 @@ public class CommandArityTests
 		await Assert.That(messages).Contains("What do you want to do with the channel?");
 	}
 
-	private string[] NotificationsTo(DBRef target) =>
-		NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(call => call.GetArguments() is [AnySharpObject obj, ..] && obj.Object().DBRef == target)
-			.Select(TextOf)
-			.Where(text => text is not null)
-			.Select(text => text!)
-			.ToArray();
-
-	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, OneOf<MString, string> msg, ..]
-			? msg.Match(ms => ms.ToPlainText(), s => s)
-			: null;
+	/// <summary>
+	/// Every notification <paramref name="target"/> has had, read from the per-recipient recorder
+	/// rather than from the notify substitute's received-call list.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TestHelpers.NotificationRecorder"/> is written from the substitute's delivery
+	/// callback, on the calling thread, keyed by recipient. <c>ReceivedCalls()</c> is not: the
+	/// substitute is a singleton shared by every test in the session, TUnit runs tests in parallel,
+	/// so enumerating it reads a collection other tests are still writing to — which NSubstitute's
+	/// threading contract forbids, and which surfaced here as another class's fixture string
+	/// appearing in this one's assertions.
+	/// </remarks>
+	private string[] NotificationsTo(DBRef target)
+		=> [.. WebAppFactoryArg.Notifications.For(target)];
 }
