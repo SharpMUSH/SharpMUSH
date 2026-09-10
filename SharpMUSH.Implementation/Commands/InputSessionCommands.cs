@@ -16,7 +16,7 @@ public partial class Commands
 {
 	[SharpCommand(Name = "@INPUT", Switches = ["START", "PROMPT", "CANCEL"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 0, MaxArgs = 3, ParameterNames = ["object/attribute", "prompt", "timeout-seconds"])]
+		SingleArgumentSwitches = ["PROMPT"], MinArgs = 0, MaxArgs = 3, ParameterNames = ["object/attribute", "prompt", "timeout-seconds"])]
 	public async ValueTask<Option<CallState>> Input(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
 		var sessions = parser.ServiceProvider.GetRequiredService<IInputSessionService>();

@@ -350,6 +350,60 @@ public class InputSessionServiceTests
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 	}
 
+	[Test]
+	[Arguments("halt")]
+	[Arguments("read")]
+	[Arguments("execute")]
+	[Arguments("control")]
+	[Arguments("owner")]
+	public async Task OversizedInputStillRetiresRevokedAuthority(string change)
+	{
+		var h = new Harness(); var session = await h.Start();
+		switch (change)
+		{
+			case "halt": Halt(h.Actor.Object); break;
+			case "read": h.CanRead = false; break;
+			case "execute": h.CanExecute = false; break;
+			case "control": h.CanControl = false; break;
+			case "owner": h.Target.Object.Owner = new(_ => Task.FromResult(h.Character)); break;
+		}
+		await h.Sessions.DeliverAsync(h.Parser, session, MarkupText.Plain(new string('x', InputSessionService.MaxInputCodeUnits + 1)));
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		await Assert.That(h.Deliveries.Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TimeoutWorkerCancellationReachesActualQueueAdmission()
+	{
+		var h = new Harness(); await h.Start();
+		h.Time.Now += TimeSpan.FromMinutes(2);
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		h.Mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
+		{
+			var ct = call.Arg<CancellationToken>(); entered.TrySetResult(ct);
+			await release.Task.WaitAsync(ct);
+			return h.Actor;
+		});
+		await using var queue = new Scheduler(h.Parser, h.Connections, Substitute.For<ISchedulerFactory>(), h.Attributes,
+			h.Mediator, NullLogger<Scheduler>.Instance, inputSessions: h.Sessions);
+		using var worker = new SharpMUSH.Server.Services.InputSessionTimeoutService(h.Sessions, queue, h.Notify, h.Connections,
+			NullLogger<SharpMUSH.Server.Services.InputSessionTimeoutService>.Instance);
+		await worker.StartAsync(CancellationToken.None);
+		try
+		{
+			var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await worker.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2));
+			await Assert.That(token.IsCancellationRequested).IsTrue();
+			await Assert.That(worker.ExecuteTask!.IsCompleted).IsTrue();
+		}
+		finally
+		{
+			release.TrySetResult();
+			await worker.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+		}
+	}
+
 	private static void Halt(SharpObject obj) => obj.Flags = new(() => new[]
 	{
 		new SharpObjectFlag { Name = "HALT", Symbol = "h", SetPermissions = [], UnsetPermissions = [], System = true, TypeRestrictions = [] }

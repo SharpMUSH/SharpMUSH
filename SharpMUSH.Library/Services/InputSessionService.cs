@@ -232,11 +232,6 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
-		if (input.Length > MaxInputCodeUnits)
-		{
-			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionInputTooLarge");
-			return null;
-		}
 		var actor = await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken);
 		var target = await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken);
 		var character = await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken);
@@ -250,6 +245,11 @@ public sealed class InputSessionService : IInputSessionService
 		if (!readable.IsAttribute || !executable.IsAttribute) return await Revoke(session);
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
+		if (input.Length > MaxInputCodeUnits)
+		{
+			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionInputTooLarge");
+			return null;
+		}
 		if (timeout) Discard(session);
 		var state = ParserState.RootFor(session.Executor) with
 		{

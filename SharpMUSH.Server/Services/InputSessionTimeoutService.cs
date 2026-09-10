@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services.Interfaces;
@@ -17,6 +18,7 @@ public sealed class InputSessionTimeoutService(IInputSessionService sessions, IT
 			{
 				try
 				{
+					using var admissionScope = ExecutionBudget.EnterLinked(stoppingToken);
 					var admission = await scheduler.WriteInputSessionTimeout(session);
 					if (admission.Accepted) continue;
 					sessions.Discard(session);

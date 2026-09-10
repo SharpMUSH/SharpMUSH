@@ -1862,7 +1862,8 @@ public class SharpMUSHParserVisitor(
 		CommandDefinition libraryCommandDefinition)
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
-		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch);
+		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
+		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
 		if (splitResult.TryPickT1(out var splitError, out var arguments))
 		{
 			if (prs.CurrentState.Handle.HasValue)
@@ -1886,7 +1887,7 @@ public class SharpMUSHParserVisitor(
 		}
 
 		// For EQSPLIT commands, populate LS/RS registers
-		if (libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit))
+		if (!singleArgument && libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit))
 		{
 			var sourceText = src.ToString();
 			var equalsIndex = sourceText.IndexOf('=');
@@ -2330,10 +2331,11 @@ public class SharpMUSHParserVisitor(
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
 		string? rootCommand = null,
-		bool noEvalSwitch = false)
+		bool noEvalSwitch = false, bool singleArgument = false)
 	{
 		var argCallState = CallState.EmptyArgument;
 		var behavior = libraryCommandDefinition.Attribute.Behavior;
+		if (singleArgument) behavior &= ~(CommandBehavior.EqSplit | CommandBehavior.RSArgs);
 
 		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
 		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
@@ -2474,9 +2476,9 @@ public class SharpMUSHParserVisitor(
 
 		List<CallState> arguments = [];
 
-		var eqSplit = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.EqSplit);
-		var noParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.NoParse) || noEval;
-		var noRsParse = libraryCommandDefinition.Attribute.Behavior.HasFlag(CommandBehavior.RSNoParse);
+		var eqSplit = behavior.HasFlag(CommandBehavior.EqSplit);
+		var noParse = behavior.HasFlag(CommandBehavior.NoParse) || noEval;
+		var noRsParse = behavior.HasFlag(CommandBehavior.RSNoParse);
 		var nArgs = argCallState?.Arguments?.Length;
 
 		// TODO: Implement lsargs (list-style arguments) support.

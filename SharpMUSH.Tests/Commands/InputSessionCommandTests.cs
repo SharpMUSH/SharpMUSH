@@ -1,3 +1,4 @@
+using NSubstitute;
 using System.Reflection;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,6 +33,33 @@ public class InputSessionCommandTests
 	{
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
 		while (await Read(player, attribute) != expected) await Task.Delay(20, timeout.Token);
+	}
+
+	[Test]
+	[Arguments("Name=value:", "Name=value:")]
+	[Arguments("A=B,C,D", "A=B,C,D")]
+	[Arguments("=value=", "=value=")]
+	[Arguments("plain, text", "plain, text")]
+	[Arguments("Name=[add(1,2)]", "Name=3")]
+	public async Task RepromptPreservesCompleteSingleArgument(string source, string expected)
+	{
+		var player = await Player();
+		try
+		{
+			var sessions = Substitute.For<IInputSessionService>();
+			string? prompt = null;
+			sessions.PromptAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<MarkupText>()).Returns(call =>
+			{ prompt = call.Arg<MarkupText>().ToPlainText(); return ValueTask.FromResult<string?>(null); });
+			var provider = Substitute.For<IServiceProvider>();
+			provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IInputSessionService)
+				? sessions : Factory.Services.GetService(call.Arg<Type>()));
+			var original = (SharpMUSH.Implementation.MUSHCodeParser)Parser;
+			var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, original.FunctionLibrary,
+				original.CommandLibrary, original.Configuration, provider);
+			await parser.CommandParse(player.Handle, Connections, MarkupText.Plain("@input/prompt " + source));
+			await Assert.That(prompt).IsEqualTo(expected);
+		}
+		finally { await Connections.Disconnect(player.Handle); }
 	}
 
 	[Test]
