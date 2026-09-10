@@ -114,10 +114,26 @@ public class HttpHandlerCommandService(
 
 		// HTTP`COMMAND sysevent, mirroring Penn: ip is unknown at this layer (proxied), method,
 		// path, code, ctype, request body length, response body length.
-		if (handlerRef is { } resolvedHandler) await eventService.TriggerEventAsync(
-			parser, "HTTP`COMMAND", resolvedHandler,
-			string.Empty, method, path, result.Status.ToString(), result.ContentType,
-			body.Length.ToString(), result.Body.Length.ToString());
+		if (!budget.IsExpired && handlerRef is { } resolvedHandler)
+		{
+			using (budget.Enter())
+			{
+				try
+				{
+					budget.ThrowIfExceeded();
+					await eventService.TriggerEventAsync(
+						parser, "HTTP`COMMAND", resolvedHandler, budget.Token,
+						string.Empty, method, path, result.Status.ToString(), result.ContentType,
+						body.Length.ToString(), result.Body.Length.ToString());
+				}
+				catch (OperationCanceledException) when (budget.IsExpired) { }
+			}
+		}
+
+		ct.ThrowIfCancellationRequested();
+		if (!budget.IsExpired) cancellation.Token.ThrowIfCancellationRequested();
+		if (budget.IsExpired)
+			return new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error);
 
 		return result;
 	}
