@@ -3431,9 +3431,10 @@ public partial class Commands
 			ownerFilter = maybeOwner.AsAnyObject.Object().DBRef;
 		}
 
-		var matches = await SearchSpecEngine.ExecuteAsync(
+		var search = await SearchSpecEngine.ExecuteResultAsync(
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, ownerFilter, pairs, useRegex: false);
+		var matches = search.Matches;
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor);
 
@@ -3451,7 +3452,7 @@ public partial class Commands
 		if (matches.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
-			return new CallState("0");
+			return new CallState("0") { HadErrors = search.HadErrors };
 		}
 
 		foreach (var obj in matches)
@@ -3461,7 +3462,7 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, matches.Count);
 
-		return new CallState(matches.Count.ToString());
+		return new CallState(matches.Count.ToString()) { HadErrors = search.HadErrors };
 	}
 
 	/// <summary>

@@ -860,13 +860,13 @@ public partial class Functions
 				args[(i + 1).ToString()].Message!.ToPlainText()));
 		}
 
-		var matches = await SearchSpecEngine.ExecuteAsync(
+		var search = await SearchSpecEngine.ExecuteResultAsync(
 			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
 			executor, classObj?.Object().DBRef, pairs, useRegex);
 
-		var finalResults = matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
+		var finalResults = search.Matches.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
 
-		return new CallState(string.Join(" ", finalResults));
+		return new CallState(string.Join(" ", finalResults)) { HadErrors = search.HadErrors };
 	}
 
 	[SharpFunction(Name = "lsearchr", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["object", "class=restriction..."])]
