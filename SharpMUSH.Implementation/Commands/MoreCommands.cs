@@ -1652,8 +1652,17 @@ public partial class Commands
 				await NotifyService.Notify(itemObject,
 					string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
 
-				await MoveService.EnterRoom(parser, item, executor.AsContainer, noMoveMsgs: false,
-					executor.Object().DBRef, "empty");
+				var takeMove = await MoveService.EnterRoom(parser, item, executor.AsContainer,
+					noMoveMsgs: false, executor.Object().DBRef, "empty");
+
+				// A refused take leaves the item in the container, so it is not one of the objects the
+				// tally at the end reports, and none of its triads describe anything that happened.
+				if (takeMove.IsT1)
+				{
+					count--;
+					await NotifyService.Notify(executor, takeMove.AsT1.Value, executor);
+					continue;
+				}
 
 				// did_it_with(player, item, "SUCCESS", …, NOTHING, thing_loc, NOTHING, NA_INTER_HEAR)
 				// (move.c:874-876). The 8th argument is `loc` and it is NOTHING, which real_did_it
@@ -2145,8 +2154,16 @@ public partial class Commands
 		// rob.c:346 hands the gift to moveto, and moveto IS enter_room (move.c:53-56): a gift changes
 		// hands through the same pipeline every other move uses, and fires the same move triads.
 		var contentToGive = objectToGive.AsContent;
-		await MoveService.EnterRoom(parser, contentToGive, recipientContainer, noMoveMsgs: false,
-			executor.Object().DBRef, "give");
+		var giveMove = await MoveService.EnterRoom(parser, contentToGive, recipientContainer,
+			noMoveMsgs: false, executor.Object().DBRef, "give");
+
+		// A refused move leaves the gift where it was, so none of the triads below describe anything
+		// that happened. rob.c has no analogue because moveto cannot fail there.
+		if (giveMove.IsT1)
+		{
+			await NotifyService.Notify(executor, giveMove.AsT1.Value, executor);
+			return CallState.Empty;
+		}
 
 		var giverName = executor.Object().Name;
 		var giftName = objectToGive.Object().Name;

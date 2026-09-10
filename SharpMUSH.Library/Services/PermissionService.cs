@@ -310,7 +310,11 @@ public class PermissionService(
 			current = (await current.AsContent.Location()).WithExitOption();
 		}
 
-		return false;
+		// Fail closed. Reaching the cap means the walk never found a room or a terminating container,
+		// so it cannot say the chain is findable — and answering "findable" here would disclose a
+		// player's location on exactly the malformed chain that defeated the walk. Only a verified
+		// non-UNFINDABLE terminator returns false, above.
+		return true;
 	}
 
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
