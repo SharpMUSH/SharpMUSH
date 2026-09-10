@@ -28,7 +28,7 @@ public class QueueDiagnosticBoundaryTests
 		options.CurrentValue.Returns(config with { Limit = config.Limit with { QueueEntryCpuTime = 1000 } });
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(),
 			Substitute.For<ISchedulerFactory>(), Substitute.For<IAttributeService>(), mediator ?? QueueAdmissionTests.TargetMediator(),
-			NullLogger<Scheduler>.Instance, options, notify, recorder);
+			NullLogger<Scheduler>.Instance, options, notify, diagnostics: recorder);
 	}
 
 	[Test]
