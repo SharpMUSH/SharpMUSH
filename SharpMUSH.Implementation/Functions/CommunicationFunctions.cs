@@ -114,13 +114,13 @@ public partial class Functions
 		var isNospoof = switchesList.Contains("nospoof", StringComparer.OrdinalIgnoreCase);
 		var isSpoof = switchesList.Contains("spoof", StringComparer.OrdinalIgnoreCase);
 
-		await MessageHelpers.ProcessMessageAsync(
+		var result = await MessageHelpers.ProcessMessageAsync(
 			parser, Mediator, LocateService, AttributeService, NotifyService,
 			PermissionService, CommunicationService, executor,
 			recipients.Message!, defmsg.Message!, objectAndAttribute.Message!.ToPlainText(),
 			inBetweenArgs, isRemit, isOemit, isNospoof, isSpoof, isSilent: true);
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = result.HadErrors };
 	}
 
 	[SharpFunction(Name = "nsemit", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["message"])]
