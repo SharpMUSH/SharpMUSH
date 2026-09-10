@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Definitions;
 using DotNext;
@@ -1389,6 +1391,15 @@ public partial class Functions
 	public async ValueTask<CallState> S(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> (await parser.FunctionParse(parser.CurrentState.Arguments.Last().Value.Message!))!;
 
+	private static async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveProjectionRealityAsync(
+		IMUSHCodeParser parser, DBRef receiver)
+	{
+		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		return reality is IRealityObservationProvider observations
+			? await observations.ObserveAsync(receiver, ExecutionBudget.CurrentToken)
+			: (target, token) => reality.CanPerceiveAsync(receiver, target, token);
+	}
+
 	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1480,9 +1491,11 @@ public partial class Functions
 			}
 		}
 
+		var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
 		var uniqueObjects = objectsToScan
 			.Distinct()
-			.ToAsyncEnumerable();
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) => await perceive(obj.Object().DBRef, ExecutionBudget.CurrentToken));
 
 		var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
 			parser,
