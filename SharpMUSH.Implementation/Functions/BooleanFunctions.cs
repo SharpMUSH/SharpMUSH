@@ -132,8 +132,7 @@ public partial class Functions
 	public ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
-			.Where(value => value.Truthy(parser))
-			.Count() == 1
+			.Count(value => value.Truthy(parser)) == 1
 			? "1"
 			: "0");
 }

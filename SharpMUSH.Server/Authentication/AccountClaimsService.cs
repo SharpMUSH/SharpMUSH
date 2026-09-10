@@ -113,11 +113,12 @@ public class AccountClaimsService(
 
 	private async Task<IReadOnlySet<string>> ComputeGrantedScopesCoreAsync(string accountId, PortalRole role, CancellationToken ct)
 	{
-		var allRoles = await roleRegistry.GetRolesAsync(ct);
-		var bySlug = allRoles.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
+		var derivedSlug = BuiltInRoles.SlugFor(role);
+		var derived = (await roleRegistry.GetRolesAsync(ct))
+			.FirstOrDefault(r => string.Equals(r.Slug, derivedSlug, StringComparison.OrdinalIgnoreCase));
 
 		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		if (bySlug.TryGetValue(BuiltInRoles.SlugFor(role), out var derived))
+		if (derived is not null)
 			effective[derived.Slug] = derived;
 		foreach (var assigned in await roleRegistry.GetRolesForAccountAsync(accountId, ct))
 			effective[assigned.Slug] = assigned;

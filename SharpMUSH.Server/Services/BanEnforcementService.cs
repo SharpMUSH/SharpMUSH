@@ -76,10 +76,7 @@ public sealed class BanEnforcementService(
 		await RunGuardedAsync("resolve linked characters", accountId, async () =>
 		{
 			var characters = await database.GetCharactersForAccountAsync(accountId, ct);
-			foreach (var character in characters)
-			{
-				linkedCharacterKeys.Add(character.Object.Key);
-			}
+			linkedCharacterKeys.UnionWith(characters.Select(character => character.Object.Key));
 		});
 
 		await foreach (var connection in connectionService.GetAll().WithCancellation(ct))

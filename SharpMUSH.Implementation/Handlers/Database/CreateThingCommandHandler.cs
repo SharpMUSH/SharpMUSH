@@ -16,8 +16,11 @@ public class CreateThingCommandHandler(
 	{
 		var created = await database.CreateThingAsync(request.Name, request.Where, request.Owner, request.Home, cancellationToken: cancellationToken);
 
-		await DefaultObjectFlags.ApplyAsync(flags, database, created,
-			configuration.CurrentValue.Flag.ThingFlags, cancellationToken: cancellationToken);
+		if (request.ApplyDefaultFlags)
+		{
+			await DefaultObjectFlags.ApplyAsync(flags, database, created,
+				configuration.CurrentValue.Flag.ThingFlags, cancellationToken: cancellationToken);
+		}
 
 		return created;
 	}

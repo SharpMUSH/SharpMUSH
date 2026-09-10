@@ -188,13 +188,8 @@ public static class WikiCommandHelper
 		}
 
 		var database = parser.ServiceProvider.GetRequiredService<IAttributeStore>();
-		var localeAttrs = database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None);
-		await foreach (var attr in localeAttrs)
-		{
-			var saved = attr.Value.ToPlainText();
-			if (!string.IsNullOrEmpty(saved)) return saved;
-		}
-
-		return null;
+		return await database.GetAttributeAsync(executor.Object().DBRef, ["LOCALE"], CancellationToken.None)
+			.Select(attr => attr.Value.ToPlainText())
+			.FirstOrDefaultAsync(saved => !string.IsNullOrEmpty(saved));
 	}
 }

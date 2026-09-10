@@ -117,11 +117,19 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 					}
 				};
 
-				substitute.CurrentValue.Returns(config);
+				// Read through TestOptionsOverride so a test can scope a config change to its own
+				// async flow; with no scope active this hands back `config` unchanged.
+				substitute.CurrentValue.Returns(_ => TestOptionsOverride.Apply(config));
 				sqlOptionsMonitor.CurrentValue.Returns(sqlConfigOverride);
 
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
 				sc.AddSingleton(substitute);
+
+				// Services that take IOptionsMonitor<SharpMUSHOptions> directly (PermissionService is
+				// the notable one) never see the wrapper, so the scoped override is applied here too.
+				sc.AddSingleton<IOptionsMonitor<SharpMUSHOptions>>(sp =>
+					new TestOverridableOptionsMonitor(
+						ActivatorUtilities.CreateInstance<OptionsMonitor<SharpMUSHOptions>>(sp)));
 
 				if (notifier is not null)
 				{

@@ -1,8 +1,14 @@
+using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
@@ -124,6 +130,11 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 			.IsTrue()
 			.Because("a package that is shipped but not flagged must not be installed at first boot");
 
+		// Read the master room's contents FIRST, so the entry the install has to invalidate is
+		// actually in the cache. Without this the staleness check below can pass for the wrong
+		// reason — nothing cached, nothing stale.
+		await MasterRoomContentsAsync();
+
 		try
 		{
 			var plan = Value(await controller.Plan(
@@ -144,11 +155,51 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 			await Assert.That(after.AsT0.SourceRepo).IsEqualTo(BundledPackages.SourceRepo);
 			await Assert.That(after.AsT0.SourcePath).IsEqualTo("wiki-reader");
 			await Assert.That(after.AsT0.InstalledCommit).IsEqualTo(BundledPackages.SourceCommit);
+
+			await AssertTheNewObjectIsLiveInTheMasterRoom(applied.CreatedObjects["wiki_global"]);
 		}
 		finally
 		{
 			await factory.Services.GetRequiredService<IPackageInstallService>()
 				.UninstallAsync("wiki-reader", force: true, CancellationToken.None);
 		}
+	}
+
+	/// <summary>
+	/// The two ways an installed package used to arrive dead, both asserted against the live game
+	/// rather than the registry, because the registry recorded success in both cases.
+	/// <para>
+	/// First, the master room's <c>contents</c> was cached and the installer created its object by
+	/// calling the store directly, so nothing invalidated it — and command matching walks exactly
+	/// that list (<c>SharpMUSHParserVisitor</c> step 15). <c>+wiki</c> answered "Huh?" until the
+	/// entry expired or the game restarted.
+	/// </para>
+	/// <para>
+	/// Second, going back through <c>CreateThingCommand</c> to get that invalidation brought the
+	/// configured default thing flags with it, and the stock <c>thing_flags</c> is
+	/// <c>no_command</c> — PennMUSH's own default, and the one flag that silently disables every
+	/// <c>$</c>-command a package ships. A package object's flags come from its manifest.
+	/// </para>
+	/// </summary>
+	private async Task AssertTheNewObjectIsLiveInTheMasterRoom(string objid)
+	{
+		var created = PackageInstallService.ParseObjid(objid)!.Value;
+
+		await Assert.That(await MasterRoomContentsAsync()).Contains(created.Number);
+
+		var node = (await factory.Services.GetRequiredService<IMediator>()
+			.Send(new GetObjectNodeQuery(created))).Known();
+		await Assert.That(await node.HasFlag("NO_COMMAND")).IsFalse();
+	}
+
+	private async Task<List<int>> MasterRoomContentsAsync()
+	{
+		var masterRoom = new DBRef(Convert.ToInt32(factory.Services
+			.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom));
+
+		return await factory.Services.GetRequiredService<IMediator>()
+			.CreateStream(new GetContentsQuery(masterRoom))
+			.Select(x => x.Object().DBRef.Number)
+			.ToListAsync();
 	}
 }

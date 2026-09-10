@@ -16,6 +16,15 @@ public class SemanticTokenRendererTests
 	};
 
 	[Test]
+	[Arguments("", new[] { 0 })]
+	[Arguments("one line", new[] { 0 })]
+	[Arguments("a\nb", new[] { 0, 2 })]
+	[Arguments("a\n", new[] { 0, 2 })]
+	[Arguments("\n\n", new[] { 0, 1, 2 })]
+	public async Task BuildLineStartTable_HasOneEntryPerLine(string text, int[] expected)
+		=> await Assert.That(SemanticTokenRenderer.BuildLineStartTable(text)).IsEquivalentTo(expected);
+
+	[Test]
 	public async Task NoTokens_ReturnsSourceUnchanged()
 	{
 		var result = SemanticTokenRenderer.Render(MarkupText.Plain("add(1,2)"), []);

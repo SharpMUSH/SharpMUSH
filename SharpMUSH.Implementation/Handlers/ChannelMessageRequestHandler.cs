@@ -23,8 +23,8 @@ public class ChannelMessageRequestHandler(
 {
 	public async ValueTask Handle(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
-		var channelMembers = await notification.Channel.Members.Value.ToArrayAsync(cancellationToken);
 		var chanName = notification.Channel.Name;
+		var options = string.Join(" ", notification.Options);
 
 		var chatType = notification.MessageType switch
 		{
@@ -103,7 +103,7 @@ public class ChannelMessageRequestHandler(
 							["4"] = new CallState(notification.Title),
 							["5"] = new CallState(notification.PlayerName),
 							["6"] = new CallState(notification.Says),
-							["7"] = new CallState(MarkupText.Plain(string.Join(" ", notification.Options)))
+							["7"] = new CallState(MarkupText.Plain(options))
 						};
 
 						partArgs["0"] = new CallState(mogrifiedChanName);
@@ -153,7 +153,7 @@ public class ChannelMessageRequestHandler(
 							["4"] = new CallState(mogrifiedTitle),
 							["5"] = new CallState(defaultMessage),
 							["6"] = new CallState(mogrifiedSays),
-							["7"] = new CallState(MarkupText.Plain(string.Join(" ", notification.Options)))
+							["7"] = new CallState(MarkupText.Plain(options))
 						};
 						var formatResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`FORMAT", formatArgs);
 						if (formatResult.Length > 0)
@@ -184,7 +184,7 @@ public class ChannelMessageRequestHandler(
 				? (int?)null
 				: notification.Source.Known().Object().DBRef.Number;
 
-			foreach (var (member, status) in channelMembers)
+			await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
 			{
 				// CB_SEEALL (src/extchat.c:3958): a privileged-only line reaches See_All members and the
 				// source, nobody else. Used for the connect/disconnect announcement of a hidden player.
@@ -224,7 +224,7 @@ public class ChannelMessageRequestHandler(
 							mogrifiedTitle,
 							message,
 							mogrifiedSays,
-							notification.Options);
+							options);
 					}
 
 					await notifyService.Notify(member, finalMessage, notification.Source.Known, notification.MessageType);
@@ -274,7 +274,7 @@ public class ChannelMessageRequestHandler(
 		MString title,
 		MString defaultFormat,
 		MString says,
-		string[] options)
+		string options)
 	{
 		var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
 
@@ -296,7 +296,7 @@ public class ChannelMessageRequestHandler(
 			["4"] = new CallState(title),
 			["5"] = new CallState(defaultFormat),
 			["6"] = new CallState(says),
-			["7"] = new CallState(MarkupText.Plain(string.Join(" ", options)))
+			["7"] = new CallState(MarkupText.Plain(options))
 		};
 
 		var sourceObj = source.IsNone ? player : source.Known();

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using MarkupString;
 using MarkupString.Layout;
 using SharpMUSH.Library.Definitions;
@@ -67,7 +68,7 @@ public static class PrintfFormatter
 					if (field.Zero && !field.Left && field.Width > number.Length)
 					{
 						var sign = number[0] is '+' or '-' ? 1 : 0;
-						number = number[..sign] + new string('0', field.Width - number.Length) + number[sign..];
+						number = number.Insert(sign, new string('0', field.Width - number.Length));
 					}
 					value = ApplyMarkupAt(source, 0, MarkupText.Plain(number));
 				}
@@ -84,7 +85,7 @@ public static class PrintfFormatter
 			position = field.End;
 		}
 		if (!Append(format.Substring(position))) return TooLarge(out error);
-		result = MarkupText.Concat(parts.ToArray());
+		result = MarkupText.Concat(CollectionsMarshal.AsSpan(parts));
 		error = null;
 		return true;
 
@@ -104,11 +105,9 @@ public static class PrintfFormatter
 	}
 
 	private static MarkupText ApplyMarkupAt(MarkupText source, int index, MarkupText value)
-	{
-		foreach (var run in source.Substring(index, 1).Runs)
-			foreach (var markup in run.Markups) value = MarkupText.Wrap(markup, value);
-		return value;
-	}
+		=> source.Substring(index, 1).Runs
+			.SelectMany(run => run.Markups)
+			.Aggregate(value, (wrapped, markup) => MarkupText.Wrap(markup, wrapped));
 
 	private static bool TryParse(string format, out List<Field> fields, out string? error)
 	{

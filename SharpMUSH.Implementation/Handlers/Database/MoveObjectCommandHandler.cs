@@ -12,9 +12,9 @@ public class MoveObjectCommandHandler(INavigationStore database, IPublisher publ
 	public async ValueTask<DBRef> Handle(MoveObjectCommand request, CancellationToken cancellationToken)
 	{
 		var oldLocation = request.OldContainer ?? await request.Target.Match<ValueTask<DBRef>>(
-			async player => await player.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken),
-			async exit => await exit.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken),
-			async thing => await thing.Location.WithCancellation(cancellationToken).ContinueWith(t => t.Result.Object().DBRef, cancellationToken));
+			async player => (await player.Location.WithCancellation(cancellationToken)).Object().DBRef,
+			async exit => (await exit.Location.WithCancellation(cancellationToken)).Object().DBRef,
+			async thing => (await thing.Location.WithCancellation(cancellationToken)).Object().DBRef);
 
 		await database.MoveObjectAsync(request.Target, request.Destination, cancellationToken);
 

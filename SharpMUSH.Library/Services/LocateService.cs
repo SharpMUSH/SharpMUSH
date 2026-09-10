@@ -962,8 +962,6 @@ public partial class LocateService(
 			return (name, flags, 0);
 		}
 
-		var ordinal = ordinalMatch.Groups["Ordinal"].Value;
-
 		// Validate the ordinal suffix, following PennMUSH parse_english() rules:
 		//   11th, 12th, 13th  → always "th"  (teen exception – not st/nd/rd)
 		//   *1  (excl. 11)    → "st"
@@ -979,7 +977,8 @@ public partial class LocateService(
 			: mod10 == 2 ? "nd"
 			: "rd";
 
-		if (count < 1 || !ordinal.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
+		if (count < 1
+				|| !ordinalMatch.Groups["Ordinal"].ValueSpan.Equals(expectedSuffix, StringComparison.CurrentCultureIgnoreCase))
 		{
 			return (name, flags, 0);
 		}

@@ -47,14 +47,13 @@ public static class SemanticTokenRenderer
 
 		var sortedTokens = tokens
 			.OrderBy(t => t.Range.Start.Line)
-			.ThenBy(t => t.Range.Start.Character)
-			.ToList();
+			.ThenBy(t => t.Range.Start.Character);
 
 		// Walk the token list left to right, emitting an unstyled span for any gap the tokens
 		// don't cover (before the first token, between tokens, after the last) so that a token
 		// list which fails to tile the input never loses characters — a deliberate divergence
 		// from the loop this was lifted from, which assumed perfect tiling.
-		var parts = new List<MString>(sortedTokens.Count * 2 + 1);
+		var parts = new List<MString>(tokens.Count * 2 + 1);
 		var cursor = 0;
 		foreach (var token in sortedTokens)
 		{
@@ -150,12 +149,12 @@ public static class SemanticTokenRenderer
 	/// </summary>
 	internal static int[] BuildLineStartTable(string plainText)
 	{
-		var starts = new List<int> { 0 };
-		for (var i = 0; i < plainText.Length; i++)
+		var starts = new List<int>();
+		foreach (var line in plainText.AsSpan().Split('\n'))
 		{
-			if (plainText[i] == '\n')
-				starts.Add(i + 1);
+			starts.Add(line.Start.Value);
 		}
+
 		return [.. starts];
 	}
 

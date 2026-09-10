@@ -247,25 +247,20 @@ public class ListenerRoutingService(
 		if (!await reality.CanPerceiveAsync(owner.Object.DBRef, speaker.Object().DBRef)
 			|| !await reality.CanPerceiveAsync(owner.Object.DBRef, puppet.Object().DBRef)) return;
 
+		// A filter over the in-memory connection table, so asking it twice — once to gate, once to
+		// deliver — is cheaper than holding a list across the checks between.
 		var connections = connectionService.Get(owner.Object.DBRef);
-		var isConnected = await connections.AnyAsync();
-		if (!isConnected)
+		if (!await connections.AnyAsync())
 			return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
 		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE");
 		if (!hasVerbose)
 		{
-			var puppetLocation = await puppet.Match<ValueTask<AnySharpContainer?>>(
-				async player => await player.Location.WithCancellation(CancellationToken.None),
-				room => ValueTask.FromResult<AnySharpContainer?>(room),
-				async exit => await exit.Location.WithCancellation(CancellationToken.None),
-				async thing => await thing.Location.WithCancellation(CancellationToken.None)
-			);
-
+			var puppetLocation = await LocateService.FriendlyWhereIs(puppet);
 			var ownerLocation = await owner.Location.WithCancellation(CancellationToken.None);
 
-			if (puppetLocation?.Object().DBRef == ownerLocation.Object().DBRef)
+			if (puppetLocation.Object().DBRef == ownerLocation.Object().DBRef)
 				return;
 		}
 
@@ -289,10 +284,10 @@ public class ListenerRoutingService(
 			MarkupText.Plain(prefix),
 			message.Match(markupString => markupString, MarkupText.Plain));
 
-		await foreach (var conn in connectionService.Get(owner.Object.DBRef))
+		var serialized = MarkupTextSerializer.Serialize(relayed);
+		await foreach (var conn in connections)
 		{
-			await publishEndpoint.HandlePublish(
-				new MarkupOutputMessage(conn.Handle, MarkupTextSerializer.Serialize(relayed)));
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(conn.Handle, serialized));
 		}
 	}
 

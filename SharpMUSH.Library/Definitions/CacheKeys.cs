@@ -76,19 +76,27 @@ public static class CacheKeys
 	/// <summary>An attribute path as it appears in a key: the segments joined by backticks.</summary>
 	public static string AttributePath(string[] attribute) => string.Join('`', attribute);
 
-	public static string Attribute(DBRef dbref, string[] attribute)
-		=> $"attribute:#{dbref.Number}:{AttributePath(attribute)}";
+	public static string Attribute(DBRef dbref, string[] attribute) => Attribute(dbref, AttributePath(attribute));
+
+	private static string Attribute(DBRef dbref, string path) => $"attribute:#{dbref.Number}:{path}";
 
 	// The lazy- prefix keeps this from colliding with Attribute, which caches a different element
 	// type under the same identity. Matches the inheritance query pair.
-	public static string LazyAttribute(DBRef dbref, string[] attribute)
-		=> $"lazy-attribute:#{dbref.Number}:{AttributePath(attribute)}";
+	public static string LazyAttribute(DBRef dbref, string[] attribute) => LazyAttribute(dbref, AttributePath(attribute));
+
+	private static string LazyAttribute(DBRef dbref, string path) => $"lazy-attribute:#{dbref.Number}:{path}";
 
 	public static string AttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent)
-		=> $"attribute-inheritance:#{dbref.Number}:{AttributePath(attribute)}:{checkParent}";
+		=> AttributeWithInheritance(dbref, AttributePath(attribute), checkParent);
+
+	private static string AttributeWithInheritance(DBRef dbref, string path, bool checkParent)
+		=> $"attribute-inheritance:#{dbref.Number}:{path}:{checkParent}";
 
 	public static string LazyAttributeWithInheritance(DBRef dbref, string[] attribute, bool checkParent)
-		=> $"lazy-attribute-inheritance:#{dbref.Number}:{AttributePath(attribute)}:{checkParent}";
+		=> LazyAttributeWithInheritance(dbref, AttributePath(attribute), checkParent);
+
+	private static string LazyAttributeWithInheritance(DBRef dbref, string path, bool checkParent)
+		=> $"lazy-attribute-inheritance:#{dbref.Number}:{path}:{checkParent}";
 
 	/// <summary>The object's $-command attributes, with their patterns compiled.</summary>
 	public static string Commands(DBRef dbref) => $"commands:#{dbref.Number}";
@@ -124,27 +132,28 @@ public static class CacheKeys
 	/// </summary>
 	public static string[] AttributesTouchedBy(DBRef dbref, string[] attribute)
 	{
-		var keys = new List<string>((attribute.Length * 6) + 4);
+		var keys = new string[(attribute.Length * 6) + 4];
+		var next = 0;
 
 		for (var length = 1; length <= attribute.Length; length++)
 		{
-			var prefix = attribute[..length];
-			keys.Add(Attribute(dbref, prefix));
-			keys.Add(LazyAttribute(dbref, prefix));
-			keys.Add(AttributeWithInheritance(dbref, prefix, true));
-			keys.Add(AttributeWithInheritance(dbref, prefix, false));
-			keys.Add(LazyAttributeWithInheritance(dbref, prefix, true));
-			keys.Add(LazyAttributeWithInheritance(dbref, prefix, false));
+			var prefix = string.Join('`', attribute, 0, length);
+			keys[next++] = Attribute(dbref, prefix);
+			keys[next++] = LazyAttribute(dbref, prefix);
+			keys[next++] = AttributeWithInheritance(dbref, prefix, true);
+			keys[next++] = AttributeWithInheritance(dbref, prefix, false);
+			keys[next++] = LazyAttributeWithInheritance(dbref, prefix, true);
+			keys[next++] = LazyAttributeWithInheritance(dbref, prefix, false);
 		}
 
 		// The $-command and ^-listen sets are derived from the object's attributes, so any attribute
 		// write can change them — the attribute written is not necessarily the one carrying a pattern,
 		// since a flag change alone can add or remove one.
-		keys.Add(Commands(dbref));
-		keys.Add(Listens(dbref));
-		keys.Add(AncestorCommands(dbref.Number));
-		keys.Add(AncestorListens(dbref.Number));
+		keys[next++] = Commands(dbref);
+		keys[next++] = Listens(dbref);
+		keys[next++] = AncestorCommands(dbref.Number);
+		keys[next] = AncestorListens(dbref.Number);
 
-		return [.. keys];
+		return keys;
 	}
 }
