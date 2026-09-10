@@ -1019,10 +1019,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -1237,8 +1239,9 @@ public partial class Commands
 
 			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
 			{
-				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer))
-					.ToArrayAsync();
+				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+					.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
+					.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 				if (exits.Length > 0)
 				{
@@ -2207,6 +2210,7 @@ public partial class Commands
 			? parser.CurrentState.Switches.ToArray()
 			: ["ROOM", "SELF", "ZONE", "GLOBALS"];
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		List<string> runningOutput = [];
 
 		async Task<bool> CanScan(AnySharpObject obj)
@@ -2220,7 +2224,8 @@ public partial class Commands
 
 		async ValueTask ReportMatches(IAsyncEnumerable<AnySharpObject> candidates)
 		{
-			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, arg0);
+			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
+				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
 			if (!matched.IsSome())
 			{
 				return;
@@ -7008,6 +7013,7 @@ public partial class Commands
 		var exitsFlag = switches.Contains("EXITS");
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var location = await executor.Where();
 		var locationObj = location.Object();
 		var locationAnyObject = location.WithRoomOption();
@@ -7048,8 +7054,9 @@ public partial class Commands
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepRoomBroadcastingFormat), executor, locationObj.Name);
 			}
 
-			var contents = location.Content(Mediator);
-			await foreach (var obj in contents)
+			var contents = location.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct));
+			await foreach (var obj in contents.WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
@@ -7088,8 +7095,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningExits), executor);
 			if (await locationAnyObject.IsAudible())
 			{
-				var exits = (location.Content(Mediator)).Where(x => x.IsExit);
-				await foreach (var exit in exits)
+				var exits = location.Content(Mediator).Where(x => x.IsExit)
+					.Where((item, ct) => perceive(item.Object().DBRef, ct));
+				await foreach (var exit in exits.WithCancellation(ExecutionBudget.CurrentToken))
 				{
 					if (await exit.WithRoomOption().IsAudible())
 					{
@@ -7102,7 +7110,8 @@ public partial class Commands
 		if (!hereFlag && !exitsFlag && inventoryFlag)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SweepListeningInInventory), executor);
-			await foreach (var obj in executor.AsContainer.Content(Mediator))
+			await foreach (var obj in executor.AsContainer.Content(Mediator)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct)).WithCancellation(ExecutionBudget.CurrentToken))
 			{
 				var fullObj = obj.WithRoomOption();
 				var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);

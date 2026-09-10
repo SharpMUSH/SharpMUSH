@@ -13,6 +13,17 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	// Administrative reports retain their existing permission and formatting rules;
+	// reality only determines which identities may enter the projection.
+	private static async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveRealityAsync(
+		IMUSHCodeParser parser, AnySharpObject viewer)
+	{
+		var policy = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		return policy is IRealityObservationProvider observations
+			? await observations.ObserveAsync(viewer.Object().DBRef, ExecutionBudget.CurrentToken)
+			: (target, ct) => policy.CanPerceiveAsync(viewer.Object().DBRef, target, ct);
+	}
+
 	private static ValueTask<bool> CanMoveInReality(IMUSHCodeParser parser, DBRef mover, DBRef destination)
 		=> parser.ServiceProvider.GetRequiredService<IRealityPolicy>().CanPerceiveAsync(mover, destination);
 

@@ -893,10 +893,12 @@ public partial class Commands
 			return new CallState(limitedObj.DBRef.ToString());
 		}
 
+		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
-			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer))
-				.ToArrayAsync();
+			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
@@ -2186,12 +2188,13 @@ public partial class Commands
 		}
 
 		var container = executor.AsContainer;
-		var contents = container.Content(Mediator);
+		var perceive = await ObserveRealityAsync(parser, executor);
+		var contents = container.Content(Mediator).Where((item, ct) => perceive(item.Object().DBRef, ct));
 
 		// PennMUSH: own inventory always shows Name(#dbrefFlags)
 		var items = await contents
 			.Select((AnySharpContent item, CancellationToken _) => MessageHelpers.FormatObjectWithDbref(item.Object()))
-			.ToListAsync();
+			.ToListAsync(ExecutionBudget.CurrentToken);
 
 		if (items.Count == 0)
 		{
@@ -2956,10 +2959,12 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
+			var perceive = await ObserveRealityAsync(parser, executor);
 			var players = await executorLocation.Content(Mediator)
 				.Where(obj => obj.IsPlayer && !obj.Object().DBRef.Equals(executor.Object().DBRef))
+				.Where((item, ct) => perceive(item.Object().DBRef, ct))
 				.Select(obj => obj.Object().Name)
-				.ToListAsync();
+				.ToListAsync(ExecutionBudget.CurrentToken);
 
 			if (players.Count == 0)
 			{
