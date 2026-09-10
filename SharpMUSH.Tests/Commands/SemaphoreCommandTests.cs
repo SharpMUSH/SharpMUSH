@@ -25,6 +25,65 @@ public class SemaphoreCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
+	[Arguments("Notify")]
+	[Arguments("Drain")]
+	public async Task SemaphoreLinkPermissionReadHonorsCancellation(string command)
+	{
+		var objects = new SharpMUSH.Tests.Services.TestObjectFactory();
+		var actor = objects.CreatePlayer(40, "actor");
+		var target = objects.CreateThing(41, "semaphore");
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async IAsyncEnumerable<SharpMUSH.Library.Models.SharpObjectFlag> Flags(
+			[System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			entered.TrySetResult(token);
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cleanup.Token);
+			await Task.Delay(Timeout.Infinite, linked.Token);
+			yield break;
+		}
+		target.Object().Flags = new(() => Flags());
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor.AsPlayer));
+		var locate = Substitute.For<ILocateService>();
+		locate.LocateAndNotifyIfInvalidWithCallState(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
+			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
+			.Returns(ValueTask.FromResult<AnySharpObjectOrErrorCallState>(target));
+		locate.LocateAndNotifyIfInvalid(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
+			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObjectOrError>(target.AsThing));
+		var permissions = Substitute.For<IPermissionService>();
+		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(false);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+			WebAppFactoryArg.Services, mediator, locate, permissions);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.ServiceProvider.Returns(WebAppFactoryArg.Services);
+		parser.CurrentState.Returns(ParserState.RootFor(actor.Object().DBRef) with
+		{
+			Arguments = new() { ["0"] = new("#41/SEMAPHORE") }
+		});
+		var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
+			typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(command)!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+		using var scope = budget.Enter();
+		var operation = command == "Notify" ? commands.Notify(parser, metadata).AsTask() : commands.Drain(parser, metadata).AsTask();
+		try
+		{
+			var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			cancellation.Cancel();
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await operation.WaitAsync(TimeSpan.FromSeconds(1)));
+			await Assert.That(observed).IsEqualTo(budget.Token);
+		}
+		finally
+		{
+			cleanup.Cancel();
+			try { await operation; } catch (OperationCanceledException) { }
+		}
+	}
+
+	[Test]
 	[Arguments("preflight")]
 	[Arguments("admission")]
 	[Arguments("delay")]

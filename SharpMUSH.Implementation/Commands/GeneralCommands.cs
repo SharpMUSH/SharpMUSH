@@ -2111,7 +2111,7 @@ public partial class Commands
 		if (maybeObject.IsError) return maybeObject.AsError;
 		var objectToNotify = maybeObject.AsSharpObject;
 		if (!await PermissionService.Controls(executor, objectToNotify) &&
-			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -2974,7 +2974,7 @@ public partial class Commands
 
 		var objectToDrain = maybeObject.AsAnyObject;
 		if (!await PermissionService.Controls(executor, objectToDrain) &&
-			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase)))
+			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
