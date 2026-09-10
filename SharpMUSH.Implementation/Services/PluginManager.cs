@@ -308,6 +308,8 @@ public sealed class PluginManager(
 			if (functionLibrary.TryAdd(name, (definition, true)))
 			{
 				tracked.FunctionNames.Add(name);
+				functionLibrary.ReserveSystemName(name);
+				(serviceProvider.GetService(typeof(IUserDefinedFunctionService)) as IUserDefinedFunctionService)?.InvalidateLocalName(name);
 				added++;
 			}
 			else

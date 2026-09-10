@@ -288,6 +288,9 @@ public partial record ParserState(
 	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
 	public ExecutionBudget? ExecutionBudget { get; init; }
 
+	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
+	public EvaluationRestrictions? Restrictions { get; init; }
+
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
