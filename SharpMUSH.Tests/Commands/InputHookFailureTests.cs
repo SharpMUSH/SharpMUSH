@@ -29,6 +29,9 @@ public class InputHookFailureTests
 	[Arguments("AFTER", "branch-extend")]
 	[Arguments("BEFORE", "branch-invalid")]
 	[Arguments("BEFORE", "branch-lock")]
+	[Arguments("IGNORE", "nested")]
+	[Arguments("BEFORE", "nested")]
+	[Arguments("AFTER", "nested")]
 	[Arguments("IGNORE", "syntax")]
 	[Arguments("BEFORE", "syntax")]
 	[Arguments("AFTER", "syntax")]
@@ -107,8 +110,9 @@ public class InputHookFailureTests
 			discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())
 				.Returns(ValueTask.FromResult<Option<IEnumerable<(AnySharpObject, SharpAttribute, Dictionary<string, CallState>)>>>(
 					new[] { (actor, matchAttribute, new Dictionary<string, CallState>()) }));
-			var hookText = mode switch { "syntax" => "[", "throw" => functionName + "()", "literal" => "#-1 EXCEPTION: ordinary text", _ => "1" };
+			var hookText = mode switch { "syntax" => "[", "nested" => "ufun(me/NESTED)", "throw" => functionName + "()", "literal" => "#-1 EXCEPTION: ordinary text", _ => "1" };
 			if (mode.StartsWith("branch-", StringComparison.Ordinal)) hookText = "[";
+			if (mode == "nested") await attributes.SetAttributeAsync(actor, actor, "NESTED", MarkupText.Plain("["));
 			await attributes.SetAttributeAsync(actor, actor, "HOOKBODY", MarkupText.Plain(hookText));
 			await attributes.SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain(commandName + (mode is "branch-extend" or "branch-invalid" ? "/extra" : "")));
 			await original.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
@@ -119,7 +123,7 @@ public class InputHookFailureTests
 			if (mode == "throw") await Assert.That(functionCalls).IsEqualTo(1);
 			if (mode == "legacy") await legacy.Received(1).EvaluateAttributeFunctionAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
 				"HOOKBODY", Arg.Any<Dictionary<string, CallState>>(), true, false);
-			var failed = mode is "syntax" or "throw" || mode.StartsWith("branch-", StringComparison.Ordinal);
+			var failed = mode is "syntax" or "throw" or "nested" || mode.StartsWith("branch-", StringComparison.Ordinal);
 			await Assert.That(result!.HadErrors).IsEqualTo(failed);
 			await Assert.That(sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
 			if (mode.StartsWith("branch-", StringComparison.Ordinal))
