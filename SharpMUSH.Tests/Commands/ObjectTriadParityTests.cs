@@ -39,6 +39,9 @@ public class ObjectTriadParityTests
 		=> await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 	private async Task<string> Read(DBRef holder, string attribute)
+		=> await Read(holder.ToString(), attribute);
+
+	private async Task<string> Read(string holder, string attribute)
 	{
 		var value = await GodParser.FunctionParse(MarkupText.Plain($"[get({holder}/{attribute})]"));
 		return value!.Message!.ToPlainText().Trim();
@@ -104,35 +107,93 @@ public class ObjectTriadParityTests
 	}
 
 	/// <summary>
-	/// The take lock is evaluated and failed against the object's own location, not the item:
-	/// <c>eval_lock_with(player, oldloc, Take_Lock, …)</c> then
-	/// <c>fail_lock(player, oldloc, Take_Lock, …)</c> (<c>src/move.c:670-673</c>).
+	/// <c>did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
+	/// NOTHING, NA_INTER_HEAR, AN_MOVE)</c> (<c>src/move.c:684-686</c>). The eighth argument is
+	/// <c>loc</c> and the ninth is <c>env0</c>, so the o-message goes to the taker's room — which
+	/// <c>NOTHING</c> resolves to (<c>src/predicat.c:230</c>) — and the taken item rides in
+	/// <c>%0</c>.
 	/// </summary>
 	[Test]
-	public async ValueTask GetsTakeLockFailsOnTheSourceContainerNotTheItem()
+	public async ValueTask GetsReceiveOMessageReachesTheRoomAndCarriesTheItemInEnv0()
+	{
+		var taker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReceiveTriadTaker");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ReceiveTriadWatch");
+		var item = await Thing("ReceiveTriadItem");
+		await Room("ReceiveTriadRoom", taker.DbRef, watcher.DbRef, item);
+
+		await God($"&ORECEIVE {taker.DbRef}=pockets it.");
+		await God($"&ARECEIVE {taker.DbRef}=&POCKETED me=%0");
+
+		var seen = await MessagesWhile(watcher.DbRef, async () =>
+			await GodParser.CommandParse(taker.Handle, ConnectionService, MarkupText.Plain($"get {item}")));
+
+		await Assert.That(seen.Any(m => m == $"{taker.Name} pockets it.")).IsTrue()
+			.Because("loc is NOTHING, so ORECEIVE is broadcast into the taker's room");
+
+		await Scheduler.DrainImmediateQueueForTests();
+		await Assert.That(BareDbrefs(await Read(taker.DbRef, "POCKETED"))).IsEqualTo($"#{item.Number}")
+			.Because("env0 is the taken object");
+	}
+
+	/// <summary>
+	/// The take lock is evaluated and failed against the object's own location, not the item:
+	/// <c>eval_lock_with(player, oldloc, Take_Lock, …)</c> then
+	/// <c>fail_lock(player, oldloc, Take_Lock, …)</c> (<c>src/move.c:668-673</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask GetsTakeLockFailsOnTheSourceRoomNotTheItem()
 	{
 		var taker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "TakeLockTaker");
-		var box = await Thing("TakeLockBox");
 		var item = await Thing("TakeLockItem");
-		await Room("TakeLockRoom", taker.DbRef, box);
+		var room = await Room("TakeLockRoom", taker.DbRef, item);
+
+		await God($"@lock/take {room}=#0");
+		await God($"&TAKE_LOCK`AFAILURE {room}=&REFUSED me=%#");
+		// The same attributes on the item must stay untouched — that is the half of this the
+		// pre-fix code got wrong.
+		await God($"&TAKE_LOCK`AFAILURE {item}=&REFUSED me=wrong-object");
+
+		await GodParser.CommandParse(taker.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(room, "REFUSED")).IsEqualTo($"#{taker.DbRef.Number}")
+			.Because("fail_lock names oldloc, so the source room's take-failure action runs");
+		await Assert.That(await Read(item, "REFUSED")).IsEmpty()
+			.Because("the item is not the object the take lock was failed on");
+	}
+
+	/// <summary>
+	/// The possessive path folds both locks into one condition with a single <c>else</c>, so every
+	/// refusal reports as <c>fail_lock(player, thing, Basic_Lock, T("You can't take that from
+	/// there."), NOTHING)</c> (<c>src/move.c:635-642</c>): the FAILURE family on the ITEM, carrying
+	/// the take lock's text.
+	/// </summary>
+	[Test]
+	public async ValueTask PossessiveGetFailsTheBasicLockOnTheItem()
+	{
+		var taker = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PossessTaker");
+		var box = await Thing("PossessBox");
+		var item = await Thing("PossessItem");
+		await Room("PossessRoom", taker.DbRef, box);
 
 		await God($"@set {box}=ENTER_OK");
 		await God($"@teleport/silent {item}={box}");
 		await God($"@lock/take {box}=#0");
-		await God($"&TAKE_LOCK`AFAILURE {box}=&REFUSED me=%#");
-		// The same attributes on the item must stay untouched — that is the half of this the
-		// pre-fix code got wrong.
-		await God($"&TAKE_LOCK`AFAILURE {item}=&REFUSED me=wrong-object");
+		await God($"&AFAILURE {item}=&REFUSED me=%#");
+		await God($"&TAKE_LOCK`AFAILURE {box}=&REFUSED me=wrong-object");
 
 		await GodParser.CommandParse(taker.Handle, ConnectionService,
 			MarkupText.Plain($"get {box}'s {item}"));
 		await Scheduler.DrainImmediateQueueForTests();
 
-		await Assert.That(await Read(box, "REFUSED")).IsEqualTo($"#{taker.DbRef.Number}")
-			.Because("fail_lock names oldloc, so the container's take-failure action runs");
-		await Assert.That(await Read(item, "REFUSED")).IsEmpty()
-			.Because("the item is not the object the take lock was failed on");
+		await Assert.That(await Read(item, "REFUSED")).IsEqualTo($"#{taker.DbRef.Number}")
+			.Because("the possessive else fires Basic_Lock's failure family on the item");
+		await Assert.That(await Read(box, "REFUSED")).IsEmpty()
+			.Because("the container's take-failure family is not what the possessive else names");
 	}
 
 	// --- DROP -----------------------------------------------------------------------------------
@@ -188,11 +249,70 @@ public class ObjectTriadParityTests
 		await Assert.That(await Read(item, "STUCK")).IsEqualTo($"#{dropper.DbRef.Number}");
 	}
 
+	/// <summary>
+	/// The drop-in branch is the one <c>else if</c> in <c>do_drop</c>'s chain with no <c>return</c>
+	/// (<c>src/move.c:745-747</c>): the object moves nowhere, but control still reaches the DROP
+	/// triad at <c>src/move.c:768</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask DropInRefusalStillFiresTheDropTriad()
+	{
+		var dropper = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DropInActor");
+		var item = await Thing("DropInItem");
+		var room = await Room("DropInRoom", dropper.DbRef, item);
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
+		await God($"@lock/dropin {room}=#0");
+		await God($"&DROPIN_LOCK`AFAILURE {room}=&BOUNCED me=%#");
+		await God($"&ADROP {item}=&DROPPED me=%#");
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(room, "BOUNCED")).IsEqualTo($"#{dropper.DbRef.Number}")
+			.Because("the drop-in lock is failed on the room");
+		await Assert.That(await Read(item, "DROPPED")).IsEqualTo($"#{dropper.DbRef.Number}")
+			.Because("do_drop falls through the drop-in branch to its unconditional DROP triad");
+
+		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(location!.Message!.ToPlainText().Trim()))
+			.IsEqualTo($"#{dropper.DbRef.Number}")
+			.Because("the refused drop moves the object nowhere");
+	}
+
+	/// <summary>
+	/// <c>fail_lock(player, loc, Drop_Lock, T("You can't seem to drop things here."), NOTHING)</c>
+	/// (<c>src/move.c:740-744</c>): the drop lock is checked on the ROOM as well as on the thing,
+	/// and that branch returns.
+	/// </summary>
+	[Test]
+	public async ValueTask DropsDropLockIsAlsoCheckedOnTheRoom()
+	{
+		var dropper = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RoomDropLockActor");
+		var item = await Thing("RoomDropLockItem");
+		var room = await Room("RoomDropLockRoom", dropper.DbRef, item);
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"get {item}"));
+		await God($"@lock/drop {room}=#0");
+		await God($"&DROP_LOCK`AFAILURE {room}=&BARRED me=%#");
+		await God($"&ADROP {item}=&DROPPED me=%#");
+
+		await GodParser.CommandParse(dropper.Handle, ConnectionService, MarkupText.Plain($"drop {item}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(room, "BARRED")).IsEqualTo($"#{dropper.DbRef.Number}")
+			.Because("the room's own drop lock is evaluated after the thing's");
+		await Assert.That(await Read(item, "DROPPED")).IsEmpty()
+			.Because("the room's drop-lock branch returns before the DROP triad");
+	}
+
 	// --- GIVE -----------------------------------------------------------------------------------
 
 	/// <summary>
 	/// <c>did_it_with(player, player, "GIVE", …, "AGIVE", NOTHING, thing, who, …)</c>
-	/// (<c>src/rob.c:415-417</c>): GIVE/OGIVE/AGIVE live on the GIVER, with the gift in
+	/// (<c>src/rob.c:357-358</c>): GIVE/OGIVE/AGIVE live on the GIVER, with the gift in
 	/// <c>%0</c> and the recipient in <c>%1</c>.
 	/// </summary>
 	[Test]
@@ -219,7 +339,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>did_it_with(who, who, "RECEIVE", …, "ARECEIVE", NOTHING, thing, player, …)</c>
-	/// (<c>src/rob.c:428-429</c>) and <c>did_it(who, thing, "SUCCESS", …)</c> (<c>:423-424</c>):
+	/// (<c>src/rob.c:369-370</c>) and <c>did_it(who, thing, "SUCCESS", …)</c> (<c>:364-365</c>):
 	/// the recipient's receive triad and the gift's own success triad both run with the RECIPIENT
 	/// as the enactor.
 	/// </summary>
@@ -250,7 +370,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>fail_lock(player, thing, Give_Lock, T("You can't give that away."), NOTHING)</c>
-	/// (<c>src/rob.c:322-324</c>): the give lock fails on the gift.
+	/// (<c>src/rob.c:325-327</c>): the give lock fails on the gift.
 	/// </summary>
 	[Test]
 	public async ValueTask GivesGiveLockFailsOnTheGift()
@@ -277,7 +397,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>did_it(player, thing, "USE", T("Used."), "OUSE", NULL, "AUSE", NOTHING, AN_SYS)</c>
-	/// (<c>src/set.c:1417-1418</c>).
+	/// (<c>src/set.c:1416-1417</c>).
 	/// </summary>
 	[Test]
 	public async ValueTask UseFiresTheUseTriadAndDefaultsToUsed()
@@ -293,7 +413,7 @@ public class ObjectTriadParityTests
 			await GodParser.CommandParse(user.Handle, ConnectionService, MarkupText.Plain($"use {gadget}")));
 
 		await Assert.That(seen).Contains("Used.")
-			.Because("set.c:1417 passes T(\"Used.\") as the USE default");
+			.Because("set.c:1416 passes T(\"Used.\") as the USE default");
 
 		await Scheduler.DrainImmediateQueueForTests();
 		await Assert.That(await Read(gadget, "USED")).IsEqualTo($"#{user.DbRef.Number}");
@@ -301,7 +421,7 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>fail_lock(player, thing, Use_Lock, T("Permission denied."), NOTHING)</c>
-	/// (<c>src/set.c:1415</c>), whose attributes come from <c>lock_msgs</c> as
+	/// (<c>src/set.c:1413</c>), whose attributes come from <c>lock_msgs</c> as
 	/// UFAIL/OUFAIL/AUFAIL (<c>src/lock.c:102-106</c>).
 	/// </summary>
 	[Test]
@@ -331,8 +451,8 @@ public class ObjectTriadParityTests
 	/// <summary>
 	/// <c>fail_lock(executor, target, Page_Lock, NULL, NOTHING)</c> (<c>src/speech.c:948</c>). The
 	/// page lock is not in <c>lock_msgs</c>, so its attributes are the derived
-	/// <c>PAGE_LOCK`FAILURE</c> family (<c>src/lock.c:865-875</c>) — and they are EVALUATED, which
-	/// the hand-rolled reads this replaced were not.
+	/// <c>PAGE_LOCK`FAILURE</c> family (<c>src/lock.c:861-870</c>), and they are evaluated as the
+	/// recipient with the pager as <c>%#</c>.
 	/// </summary>
 	[Test]
 	public async ValueTask PageLockFailureEvaluatesTheDerivedAttributes()

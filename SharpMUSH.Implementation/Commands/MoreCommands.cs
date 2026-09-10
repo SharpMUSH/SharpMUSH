@@ -1387,8 +1387,10 @@ public partial class Commands
 
 		var currentRoom = executorLocation;
 
-		// The drop lock fails on the object being dropped (move.c:735-737), the drop-in lock on the
-		// room being dropped into (move.c:745-746).
+		// The drop lock fails on the object being dropped (move.c:735-737) and again on the room, when
+		// the location is one (move.c:740-744); both return. The drop-in lock is the room's
+		// (move.c:745-747), and its branch is the one `else if` in the chain with no `return` — the
+		// object stays put, but do_drop still falls through to the DROP triad at move.c:768.
 		if (!await LockService.Evaluate(LockType.Drop, objectToDrop, executor))
 		{
 			await DidItService.FailLock(parser, executor, objectToDrop, LockType.Drop,
@@ -1396,53 +1398,64 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!await LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), objectToDrop))
+		if (currentRoom.IsRoom && !await LockService.Evaluate(LockType.Drop, currentRoom.WithExitOption(), executor))
 		{
-			await DidItService.FailLock(parser, executor, currentRoom.WithExitOption(), LockType.DropIn,
+			await DidItService.FailLock(parser, executor, currentRoom.WithExitOption(), LockType.Drop,
 				MarkupText.Plain(ErrorMessages.Notifications.CantSeemToDropThingsHere));
 			return CallState.Empty;
 		}
 
-		var contentToDrop = objectToDrop.AsContent;
+		var dropInRefused = !await LockService.Evaluate(LockType.DropIn, currentRoom.WithExitOption(), executor);
 
-		// move.c:757 — the dropped object is told who dropped it, before the move.
-		await NotifyService.Notify(objectToDrop,
-			string.Format(ErrorMessages.Notifications.DropsYou, executor.Object().Name));
-
-		await MoveService.MoveIt(parser, contentToDrop, currentRoom, noMoveMsgs: false,
-			executor.Object().DBRef, "drop");
-
-		if (currentRoom.IsRoom)
+		if (dropInRefused)
 		{
-			var room = currentRoom.AsRoom;
-			var dropToLocation = await room.Location.WithCancellation(CancellationToken.None);
+			await DidItService.FailLock(parser, executor, currentRoom.WithExitOption(), LockType.DropIn,
+				MarkupText.Plain(ErrorMessages.Notifications.CantSeemToDropThingsHere));
+		}
+		else
+		{
+			var contentToDrop = objectToDrop.AsContent;
 
-			if (!dropToLocation.IsT3) // Not None
+			// move.c:757 — the dropped object is told who dropped it, before the move.
+			await NotifyService.Notify(objectToDrop,
+				string.Format(ErrorMessages.Notifications.DropsYou, executor.Object().Name));
+
+			await MoveService.MoveIt(parser, contentToDrop, currentRoom, noMoveMsgs: false,
+				executor.Object().DBRef, "drop");
+
+			if (currentRoom.IsRoom)
 			{
-				if (await LockService.Evaluate(LockType.DropTo, room, objectToDrop))
+				var room = currentRoom.AsRoom;
+				var dropToLocation = await room.Location.WithCancellation(CancellationToken.None);
+
+				if (!dropToLocation.IsT3) // Not None
 				{
-					var dropToContainer = dropToLocation.Match<AnySharpContainer>(
-						player => player,
-						r => r,
-						thing => thing,
-						_ => currentRoom);
-
-					if (await MoveService.WouldCreateLoop(contentToDrop, dropToContainer))
+					if (await LockService.Evaluate(LockType.DropTo, room, objectToDrop))
 					{
-						await NotifyService.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
-						return CallState.Empty;
-					}
+						var dropToContainer = dropToLocation.Match<AnySharpContainer>(
+							player => player,
+							r => r,
+							thing => thing,
+							_ => currentRoom);
 
-					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer,
-						OldContainer: currentRoom.Object().DBRef));
+						if (await MoveService.WouldCreateLoop(contentToDrop, dropToContainer))
+						{
+							await NotifyService.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
+							return CallState.Empty;
+						}
+
+						await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer,
+							OldContainer: currentRoom.Object().DBRef));
+					}
 				}
 			}
 		}
 
 		// did_it(player, thing, "DROP", "You drop X.", "ODROP", "drops X.", "ADROP", NOTHING)
 		// (move.c:768-769). It is the tail of do_drop and runs whichever branch the object took —
-		// the room, the drop-to, or home — so it sits after the drop-to handling rather than
-		// inside it, and it is the dropper's only success message.
+		// the room, the drop-to, home, or the drop-in refusal that moves it nowhere — so it sits
+		// after the drop-to handling rather than inside it, and it is the dropper's only success
+		// message.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: objectToDrop,
 			What: AttrDrop,
@@ -1620,7 +1633,7 @@ public partial class Commands
 					continue;
 				}
 
-				if (!await LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), itemObj))
+				if (!await LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), executor))
 				{
 					failedCount++;
 					continue;
@@ -1910,27 +1923,47 @@ public partial class Commands
 		// plain one, then `eval_lock_with(player, oldloc, Take_Lock, pe_info)` and
 		// `fail_lock(player, oldloc, Take_Lock, ...)` (move.c:670-673). Aiming it at the item would
 		// look for TAKE_LOCK`FAILURE on the item, so a container's own take-failure message and
-		// action would never run. It is also checked BEFORE the item's own basic lock (move.c:675).
+		// action would never run. On the plain path it is also checked BEFORE the item's own basic
+		// lock (move.c:668-675); the possessive path reports both as one failure, below.
 		var takeSource = objectLocation.WithExitOption();
+		var isPossessiveGet = possessiveIndex > 0;
 
-		if (!await LockService.Evaluate(LockType.Take, takeSource, executor))
+		if (isPossessiveGet)
 		{
-			await DidItService.FailLock(parser, executor, takeSource, LockType.Take,
-				MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
-			return CallState.Empty;
+			// The possessive path folds both locks into one `if` and has a single `else`
+			// (move.c:635-642), so every refusal — the item's own basic lock or the container's take
+			// lock — reports as `fail_lock(player, thing, Basic_Lock, "You can't take that from
+			// there.")`: the FAILURE family on the *item*, carrying the take lock's text.
+			var canSteal = await LockService.Evaluate(LockType.Basic, objectToGet, executor)
+										 && await LockService.Evaluate(LockType.Take, takeSource, executor);
+
+			if (!canSteal)
+			{
+				await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
+					MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
+				return CallState.Empty;
+			}
 		}
-
-		if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
+		else
 		{
-			await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
-				MarkupText.Plain(ErrorMessages.Notifications.CantPickThatUp));
-			return CallState.Empty;
+			if (!await LockService.Evaluate(LockType.Take, takeSource, executor))
+			{
+				await DidItService.FailLock(parser, executor, takeSource, LockType.Take,
+					MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
+				return CallState.Empty;
+			}
+
+			if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
+			{
+				await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
+					MarkupText.Plain(ErrorMessages.Notifications.CantPickThatUp));
+				return CallState.Empty;
+			}
 		}
 
 		var executorContainer = executor.AsContainer;
 		var contentToGet = objectToGet.AsContent;
 		var takenName = objectToGet.Object().Name;
-		var isPossessiveGet = possessiveIndex > 0;
 
 		if (isPossessiveGet)
 		{
@@ -1945,9 +1978,10 @@ public partial class Commands
 		await MoveService.MoveIt(parser, contentToGet, executorContainer, noMoveMsgs: false,
 			executor.Object().DBRef, "get");
 
-		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, …)
-		// (move.c:634-636 possessive, :681-683 plain): the o-message audience is the location the
-		// object came out of, which is not the taker's room on the possessive path.
+		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, …)
+		// (move.c:634-636 possessive, :681-683 plain). The 8th argument is `loc` and the 9th is
+		// `env0`: `loc` is NOTHING, which real_did_it resolves to Location(player) (predicat.c:230),
+		// so the o-message audience is the taker's own room; the source container rides in %0.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: objectToGet,
 			What: AttrSuccess,
@@ -1959,15 +1993,15 @@ public partial class Commands
 				? string.Format(ErrorMessages.Notifications.TakesFrom, takenName, objectLocation.Object().Name)
 				: string.Format(ErrorMessages.Notifications.Takes, takenName),
 			AWhat: AttrASuccess,
-			Loc: objectLocation));
+			Env0: objectLocation.Object().DBRef.ToString()));
 
 		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
-		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :684-686): the taker's own receive triad,
-		// with the taken object standing in as the o-message's location.
+		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :684-686): the taker's own receive triad.
+		// `loc` is NOTHING — the room the taker is in — and the taken object is %0.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: executor,
 			What: AttrReceive, OWhat: AttrOReceive, AWhat: AttrAReceive,
-			Loc: objectToGet.AsContainer));
+			Env0: objectToGet.Object().DBRef.ToString()));
 
 		return CallState.Empty;
 	}
@@ -2043,7 +2077,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// rob.c:322-341 orders these give lock, from lock, receive lock, and only then the
+		// rob.c:325-343 orders these give lock, from lock, receive lock, and only then the
 		// ENTER_OK/controls gate. Of the three, only the give lock is a fail_lock — the other two
 		// report a plain message and trigger nothing on the recipient.
 		if (!await LockService.Evaluate(LockType.Give, objectToGive, executor))
@@ -2061,7 +2095,7 @@ public partial class Commands
 		}
 
 		// The receive lock is evaluated with the OBJECT as the one being tested, not the giver
-		// (rob.c:335).
+		// (rob.c:337).
 		if (!await LockService.Evaluate(LockType.Receive, recipient, objectToGive))
 		{
 			await NotifyService.Notify(executor,
@@ -2090,7 +2124,7 @@ public partial class Commands
 		var giftName = objectToGive.Object().Name;
 		var recipientDisplayName = recipient.Object().Name;
 
-		// rob.c:415-417. GIVE/OGIVE/AGIVE live on the GIVER, not on the gift: did_it_with's `thing`
+		// rob.c:357-358. GIVE/OGIVE/AGIVE live on the GIVER, not on the gift: did_it_with's `thing`
 		// argument here is `player`. %0 is the gift and %1 the recipient.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: executor,
@@ -2102,16 +2136,16 @@ public partial class Commands
 			Env1: recipient.Object().DBRef.ToString(),
 			Interact: IPermissionService.InteractType.See));
 
-		// rob.c:420 — the gift is told what happened to it.
+		// rob.c:361 — the gift is told what happened to it.
 		await NotifyService.Notify(objectToGive,
 			string.Format(ErrorMessages.Notifications.GaveYouTo, giverName, recipientDisplayName));
 
-		// rob.c:423-424: the GIFT's success triad, fired with the RECIPIENT as the enactor.
+		// rob.c:364-365: the GIFT's success triad, fired with the RECIPIENT as the enactor.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: recipient, Thing: objectToGive,
 			What: AttrSuccess, OWhat: AttrOSuccess, AWhat: AttrASuccess));
 
-		// rob.c:428-429: RECEIVE/ORECEIVE/ARECEIVE live on the RECIPIENT and run with the recipient
+		// rob.c:369-370: RECEIVE/ORECEIVE/ARECEIVE live on the RECIPIENT and run with the recipient
 		// as the enactor, so a recipient who cannot see the giver still gets their own message.
 		// %0 is the gift and %1 the giver.
 		await DidItService.DidIt(parser, new DidItRequest(
@@ -2401,22 +2435,27 @@ public partial class Commands
 
 			if (!isOverride)
 			{
-				// `fails_lock = !(override || eval_lock_with(executor, target, Page_Lock, pe_info))`
-				// (speech.c:924-925). The page lock itself had never been read here — the gate was
-				// the Interact lock alone, so @lock/page did nothing and the failure attributes below
-				// were unreachable.
-				var failsLock = !await LockService.Evaluate(LockType.Page, recipient, executor)
-					|| !await PermissionService.CanInteract(executor, recipient,
-						IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page);
+				// The interaction filter is its own gate and carries no failure triad: `fails_lock` at
+				// speech.c:924-925 is `eval_lock_with(executor, target, Page_Lock, pe_info)` alone, and
+				// only it reaches the fail_lock at :948.
+				if (!await PermissionService.CanInteract(executor, recipient,
+							IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page))
+				{
+					await NotifyService.Notify(executor,
+						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
+						executor);
 
-				if (failsLock)
+					continue;
+				}
+
+				if (!await LockService.Evaluate(LockType.Page, recipient, executor))
 				{
 					// speech.c:944-948: the pager is told, and then
 					// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
 					// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
-					// `OFAILURE / `AFAILURE (lock.c:865-875) that LockMessages.FailureAttributes
-					// builds — and unlike the hand-rolled reads this replaces, they are evaluated
-					// rather than shown raw. No default: Penn passes NULL.
+					// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
+					// builds, and FailLock evaluates them as the recipient. No default: Penn passes
+					// NULL.
 					await NotifyService.Notify(executor,
 						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
 						executor);
@@ -2749,7 +2788,7 @@ public partial class Commands
 
 		var objectToUse = locateResult.WithoutError().WithoutNone();
 
-		// fail_lock(player, thing, Use_Lock, T("Permission denied."), NOTHING) (set.c:1415): the use
+		// fail_lock(player, thing, Use_Lock, T("Permission denied."), NOTHING) (set.c:1413): the use
 		// lock fails on the thing being used, and its failure attributes are UFAIL/OUFAIL/AUFAIL
 		// through lock_msgs (lock.c:102).
 		if (!await LockService.Evaluate(LockType.Use, objectToUse, executor))
@@ -2760,7 +2799,7 @@ public partial class Commands
 		}
 
 		// did_it(player, thing, "USE", T("Used."), "OUSE", NULL, "AUSE", NOTHING, AN_SYS)
-		// (set.c:1417-1418). PennMUSH picks AUSE or RUNOUT there by charge_action (predicat.c:88),
+		// (set.c:1416-1417). PennMUSH picks AUSE or RUNOUT there by charge_action (predicat.c:88),
 		// which decrements a CHARGES attribute; SharpMUSH has no CHARGES at all, so there is nothing
 		// yet to switch on and AUSE always runs.
 		await DidItService.DidIt(parser, new DidItRequest(
