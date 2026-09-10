@@ -292,7 +292,7 @@ runaway rather than dropping subsequent work.
   `EnterRoom`.
 - **`HOME`** gains Penn's three `"There's no place like home..."` lines and the
   `"<Name> goes home."` broadcast, gated on the mover and location both being non-Dark.
-- **Full sweep:** `GET`, `DROP`, `GIVE`, `USE`, `BUY`, `PAGE`, `LOOK`, `@name` and the
+- **Full sweep:** `GET`, `DROP`, `EMPTY`, `GIVE`, `USE`, `BUY`, `PAGE`, `LOOK`, `@name` and the
   connect/disconnect announcements adopt `DidIt`/`FailLock` in place of their hand-rolled triads.
   `GET`'s take-lock failure fires on the **source container**, not the item — PennMUSH evaluates
   and fails `Take_Lock` against `oldloc` (`src/move.c:670-671`).
@@ -352,8 +352,9 @@ Deliberately not closed, each verified against PennMUSH and recorded rather than
 - **`DBRef.ToString()` emits `#N:creation`** where PennMUSH's `unparse_dbref` emits `#N`, so
   softcode reading a triad's `%0` gets a stamped dbref. Tests strip the stamp rather than the code
   matching Penn.
-- **`EMPTY`'s lock placement differs** — PennMUSH puts the drop-in lock on the held branch and
-  checks the room's `Drop_Lock` too (`move.c:828-831` against `:849-851`).
+- **`EMPTY` walks the whole contents list**, where PennMUSH walks `first_visible`
+  (`predicat.c:292`), so an item the emptier cannot see is emptied here and skipped there. The
+  visibility walk belongs to `LookService` and has no shared seam yet.
 - **Possessive `GET` does not honour PennMUSH's `controls()` bypass.**
 - **`GetExitsQuery` is not `ICacheable`**, so the automatic look's exit listing is an uncached store
   read on every move. Making it cacheable needs its own invalidation design spanning `@open`,

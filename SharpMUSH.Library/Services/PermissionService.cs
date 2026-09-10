@@ -258,6 +258,60 @@ public class PermissionService(
 	public async ValueTask<bool> CanIdle(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("IDLE");
 
+	/// <summary>
+	/// PennMUSH <c>Can_Locate</c> (<c>hdrs/mushdb.h:75</c>): may <paramref name="who"/> tell where
+	/// <paramref name="what"/> is.
+	/// </summary>
+	/// <remarks>
+	/// The macro's last clause is gated on <c>command_check_byname(p, "@whereis")</c>. SharpMUSH's
+	/// <c>@WHEREIS</c> carries no command lock, so that half is unconditionally true and the clause
+	/// reduces to whether the target is a findable player.
+	/// </remarks>
+	public async ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what)
+	{
+		if (await Controls(who, what)
+				|| await LocateService.Nearby(who, what)
+				|| await who.IsSee_All())
+		{
+			return true;
+		}
+
+		if (!what.IsPlayer || await what.HasFlag("UNFINDABLE"))
+		{
+			return false;
+		}
+
+		return !await IsUnfindable((await what.AsContent.Location()).WithExitOption());
+	}
+
+	/// <summary>
+	/// PennMUSH <c>unfindable</c> (<c>src/utils.c:523</c>): the object, or any container it sits
+	/// inside, carries UNFINDABLE. Penn caps the walk at a hard 50; SharpMUSH uses the configured
+	/// <c>Limit.MaxDepth</c>, so one setting bounds every containment walk in the server.
+	/// </summary>
+	private async ValueTask<bool> IsUnfindable(AnySharpObject thing)
+	{
+		var current = thing;
+		var maxDepth = (int)options.CurrentValue.Limit.MaxDepth;
+
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			if (await current.HasFlag("UNFINDABLE"))
+			{
+				return true;
+			}
+
+			if (current.IsRoom || !current.IsContent)
+			{
+				return false;
+			}
+
+			current = (await current.AsContent.Location()).WithExitOption();
+		}
+
+		return false;
+	}
+
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
 	{
 		if (await viewer.IsPriv() || await viewer.IsSee_All())
@@ -442,12 +496,11 @@ public class PermissionService(
 	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover.
 	/// </summary>
 	/// <remarks>
-	/// <paramref name="destination"/> takes no part in the decision. Penn resolves the destination
-	/// only after <c>could_doit</c> has passed, so nothing about where the exit leads can influence
-	/// whether it may be walked; the parameter stays because callers already hold it and the
-	/// signature is the seam a game that wants a destination-aware rule would override.
+	/// The destination takes no part in the decision, and is not asked for: Penn resolves it only
+	/// after <c>could_doit</c> has passed, so nothing about where the exit leads can influence
+	/// whether it may be walked.
 	/// </remarks>
-	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
+	public ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit)
 		=> PassesLock(who, new AnySharpObject(exit), LockType.Basic);
 
 	/// <summary>PennMUSH <c>Chan_Ok_Type</c> — hdrs/extchat.h:196.</summary>

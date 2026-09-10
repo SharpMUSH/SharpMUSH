@@ -24,7 +24,10 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <c>real_did_it</c>'s <c>PE_REGS</c> is text: <c>did_it_with</c> is only the dbref-flavoured
 /// wrapper and stores <c>unparse_dbref(env0)</c> (<c>src/predicat.c:159</c>), while
 /// <c>do_name</c> puts the old and new names straight in (<c>src/set.c:155-157</c>). A dbref
-/// caller writes <c>.ToString()</c>.
+/// caller writes <c>.ToString()</c>, which renders an objid — <c>#N:creation</c>, Penn's
+/// <c>unparse_objid</c> — rather than the bare <c>#N</c> of <c>unparse_dbref</c>. That is the
+/// codebase-wide spelling of a dbref in text: <c>loc()</c> and its siblings answer with objids
+/// too, so a triad's <c>%0</c> compares equal to what softcode gets everywhere else.
 /// </param>
 /// <param name="Env1"><c>%1</c>, on the same terms as <paramref name="Env0"/>.</param>
 /// <param name="Interact">Interaction gate applied to the o-message audience.</param>

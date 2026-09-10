@@ -16,10 +16,16 @@ internal class SemaphoreTask(IMUSHCodeParser parser, ITaskScheduler taskSchedule
 
 		if (state != null && command != null)
 		{
+			// The executor is what charges the work to an owner's queue quota and what makes it visible
+			// to @halt, @ps and the runaway halt. PennMUSH charges a semaphore wait to its executor when
+			// wait_que builds it (pay_queue, src/cque.c:904) and dequeue_semaphores moves that same
+			// entry onto the run queue with its executor intact (src/cque.c:1379-1427), so a released
+			// semaphore command is charged exactly like any other queued one.
 			await taskScheduler.EnqueueWork(
 				() => parser.FromState(state).CommandListParse(command),
 				context.Trigger.Key.Name,
-				context.Trigger.Key.Group);
+				context.Trigger.Key.Group,
+				state.Executor);
 		}
 	}
 }

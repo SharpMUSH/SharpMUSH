@@ -70,6 +70,13 @@ public class QueueQuotaTests
 		// (GeneralCommands.cs:759). Left on, the runaway never starts and the HALT the test asserts on
 		// is the one @chown set rather than the one the quota set.
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=!HALT"));
+
+		// Assert the clear took. Without this, hasflag(runaway,HALT) at the end of the test has two
+		// possible authors — the quota and @chown — and the test passes on either.
+		var startsUnhalted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({thing},HALT)]"));
+		await Assert.That(startsUnhalted!.Message!.ToPlainText().Trim()).IsEqualTo("0")
+			.Because("the runaway has to start able to run, or the HALT the test asserts on is @chown's");
+
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ADESCRIBE {thing}=look me;look me"));
 
 		return thing;
@@ -204,6 +211,70 @@ public class QueueQuotaTests
 		var ran = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/TYPED)]"));
 		await Assert.That(ran!.Message!.ToPlainText().Trim()).IsEqualTo("ran")
 			.Because("direct input is admitted whatever the owner's pending count is");
+	}
+
+	/// <summary>
+	/// A semaphore released by <c>@notify</c> is ordinary queued work belonging to the object that
+	/// waited. PennMUSH charges it to that executor when <c>wait_que</c> builds it
+	/// (<c>src/cque.c:904</c>) and <c>dequeue_semaphores</c> moves the same entry onto the run queue
+	/// with its executor intact (<c>src/cque.c:1379-1427</c>) — so it counts against the owner's
+	/// quota and answers to <c>@halt</c> and <c>@ps</c> like anything else. Released without an
+	/// executor it would be charged to nobody, and a <c>@notify</c>-driven cycle would walk straight
+	/// past the quota that is supposed to stop it.
+	/// </summary>
+	[Test]
+	public async ValueTask SemaphoreWorkIsChargedToTheObjectThatWaitedForIt()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "SemaphoreCharge");
+
+		var waiting = GodParser.CurrentState with
+		{
+			Executor = thing,
+			Enactor = thing,
+			Caller = thing
+		};
+
+		var gate = await ParkTheConsumer();
+		var pids = new List<long>();
+
+		try
+		{
+			// The timed form is the one SemaphoreTask releases; @notify releases through
+			// TaskScheduler.Notify, which threads the executor itself.
+			await Scheduler.WriteCommandList(
+				MarkupText.Plain($"&WOKE {thing}=yes"),
+				waiting,
+				new DbRefAttribute(thing, ["SEM"]),
+				oldValue: 0,
+				TimeSpan.FromMilliseconds(50));
+
+			// The consumer is parked, so the entry SemaphoreTask releases stays pending and countable.
+			// GetEnqueueTasks is exactly what @halt <object> and @ps ask about.
+			var deadline = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(10);
+
+			while (pids.Count == 0 && DateTimeOffset.UtcNow < deadline)
+			{
+				pids = await Scheduler.GetEnqueueTasks(thing).ToListAsync();
+
+				if (pids.Count == 0)
+				{
+					await Task.Delay(TimeSpan.FromMilliseconds(10));
+				}
+			}
+		}
+		finally
+		{
+			gate.SetResult();
+		}
+
+		await Assert.That(pids).IsNotEmpty()
+			.Because("a released semaphore is the waiting object's queued work, not nobody's");
+
+		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
+
+		var woke = await GodParser.FunctionParse(MarkupText.Plain($"[get({thing}/WOKE)]"));
+		await Assert.That(woke!.Message!.ToPlainText().Trim()).IsEqualTo("yes")
+			.Because("charging the work must not stop it running");
 	}
 
 	/// <summary>

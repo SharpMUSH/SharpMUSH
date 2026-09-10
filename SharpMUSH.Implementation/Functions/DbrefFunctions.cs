@@ -426,8 +426,8 @@ public partial class Functions
 				}
 				var victim = victimResult.AsAnyObject;
 
-				// Lock names match case-insensitively per PennMUSH, and "teleport" has to find the
-				// lock LockType spells TPort — both of which LockNames owns.
+				// Lock names match case-insensitively per PennMUSH, and the legacy "tport" spelling has
+				// to find the lock LockType spells Teleport — both of which LockNames owns.
 				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 				{
 					// No lock set = passes (TRUE_BOOLEXP)
@@ -683,8 +683,8 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				// Lock names match case-insensitively per PennMUSH, and "teleport" has to find the
-				// lock LockType spells TPort — both of which LockNames owns.
+				// Lock names match case-insensitively per PennMUSH, and the legacy "tport" spelling has
+				// to find the lock LockType spells Teleport — both of which LockNames owns.
 				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 				{
 					// PennMUSH returns *UNLOCKED* for unset locks

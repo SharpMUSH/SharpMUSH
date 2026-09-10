@@ -678,11 +678,15 @@ int oldValue)
 	/// Whether an immediate-queue entry belongs to <paramref name="dbRef"/>'s object queue, which is
 	/// what <c>@halt &lt;object&gt;</c> and <c>@ps</c> ask about. The entry's executor answers this
 	/// directly; the trigger name does not, because an attribute queued by
-	/// <see cref="WriteAsyncAttribute"/> is named after its attribute rather than its object.
-	/// Direct player input is deliberately excluded, as it is in PennMUSH.
+	/// <see cref="WriteAsyncAttribute"/> is named after its attribute rather than its object, and
+	/// neither does the group, because a released <c>@wait &lt;obj&gt;/&lt;attr&gt;</c> keeps the
+	/// semaphore group it was scheduled under while running as ordinary queued work — PennMUSH's
+	/// <c>do_halt</c> matches on the entry's executor across the run, wait and semaphore queues alike
+	/// (<c>src/cque.c:2179-2218</c>). Direct player input is excluded, as it is in PennMUSH: it is
+	/// admitted with no executor at all.
 	/// </summary>
 	private static bool IsQueuedFor(QueueEntry entry, DBRef dbRef)
-		=> entry.Group == EnqueueGroup && entry.Executor?.Number == dbRef.Number;
+		=> entry.Executor?.Number == dbRef.Number;
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{

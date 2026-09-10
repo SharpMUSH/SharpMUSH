@@ -1881,7 +1881,10 @@ public partial class Functions
 		var objectName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
 
-		// Optional quiet flag (arg 2) and force flag (arg 3) - for now we ignore these
+		// fundb.c:2321-2322: the third argument is TEL_SILENT, which safe_tel passes through as
+		// nomovemsgs. TEL_DEFAULT carries no silence, so an unqualified tel() announces the move.
+		// The fourth, TEL_INSIDE, only decides the player-into-player case, which this does not model.
+		var quiet = args.TryGetValue("2", out var quietArg) && quietArg.Message!.Truthy();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
@@ -1914,17 +1917,16 @@ public partial class Functions
 							return ErrorMessages.Returns.WouldCreateLoop;
 						}
 
-						var oldContainer = await targetContent.Location();
+						// fundb.c:2326 hands the whole thing to do_teleport, whose move is safe_tel
+						// (wiz.c:578): the move triads fire, and STICKY luggage is stripped on a
+						// cross-owner hop.
+						var moveResult = await MoveService.SafeTel(
+							parser, targetContent, destinationContainer, quiet,
+							executor.Object().DBRef, "tel()");
 
-						await Mediator.Send(new MoveObjectCommand(
-							targetContent,
-							destinationContainer,
-							OldContainer: oldContainer.Object().DBRef,
-							Enactor: executor.Object().DBRef,
-							IsSilent: true,
-							Cause: "tel()"));
-
-						return "1";
+						return moveResult.IsT1
+							? ErrorMessages.Returns.CannotTeleport
+							: "1";
 					});
 			});
 	}

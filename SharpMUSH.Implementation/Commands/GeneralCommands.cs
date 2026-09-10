@@ -1236,7 +1236,7 @@ public partial class Commands
 
 		var destination = resolved.AsT0;
 
-		if (!await PermissionService.CanGoto(executor, exitObj, destination))
+		if (!await PermissionService.CanGoto(executor, exitObj))
 		{
 			return await FailBasicLock(parser, executor, exitObject);
 		}

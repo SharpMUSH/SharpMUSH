@@ -340,23 +340,38 @@ public class ObjectTriadParityTests
 
 	/// <summary>
 	/// <c>eval_lock_with(player, thing_loc, DropIn_Lock, pe_info)</c> (<c>src/move.c:829</c>):
-	/// <c>@empty</c> evaluates the destination's drop-in lock against the PLAYER emptying the
-	/// container, not against each item being moved.
+	/// <c>empty me</c> evaluates the destination's drop-in lock against the PLAYER emptying their
+	/// own inventory, not against each item being moved. It is the one branch of <c>do_empty</c>
+	/// that consults the drop-in lock at all — the container branch (<c>move.c:836-853</c>) gates on
+	/// the drop locks instead.
 	/// </summary>
 	[Test]
-	public async ValueTask EmptyEvaluatesTheDropInLockAgainstThePlayer()
+	public async ValueTask EmptyMeEvaluatesTheDropInLockAgainstThePlayer()
 	{
 		var emptier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "EmptyActor");
-		var box = await Thing("EmptyBox");
 		var item = await Thing("EmptyItem");
-		var room = await Room("EmptyRoom", emptier.DbRef, box);
+		var room = await Room("EmptyRoom", emptier.DbRef);
 
-		await God($"@set {box}=ENTER_OK");
-		await God($"@teleport/silent {item}={box}");
+		await God($"@teleport/silent {item}={emptier.DbRef}");
+
+		// A lock naming somebody else: the emptier fails it, so nothing leaves their hands.
+		var stranger = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "EmptyStranger");
+		await God($"@lock/dropin {room}=#{stranger.Number}");
+
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain("empty me"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var refused = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));
+		await Assert.That(BareDbrefs(refused!.Message!.ToPlainText().Trim()))
+			.IsEqualTo(BareDbrefs(emptier.DbRef.ToString()))
+			.Because("the drop-in lock is evaluated against the emptier, and the emptier fails it");
+
+		// The control: relocked to name the emptier, the same command moves the same item.
 		await God($"@lock/dropin {room}=#{emptier.DbRef.Number}");
 
-		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain("empty me"));
 		await Scheduler.DrainImmediateQueueForTests();
 
 		var location = await GodParser.FunctionParse(MarkupText.Plain($"[loc({item})]"));

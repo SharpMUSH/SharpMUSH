@@ -1030,8 +1030,8 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "teleport" ->
-			// "TPort"); a switch naming no standard lock is a user lock and passes through as typed.
+			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "tport" ->
+			// "Teleport"); a switch naming no standard lock is a user lock and passes through as typed.
 			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 

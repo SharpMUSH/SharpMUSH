@@ -107,8 +107,9 @@ public class MovementParityTests
 
 	/// <summary>
 	/// The number half of a reference that may have been rendered as a full objid (<c>#N:creation</c>).
-	/// <c>@dig</c> answers with an objid and a triad's <c>%0</c> with a bare dbref, so both sides of a
-	/// comparison go through this.
+	/// Everything here renders objids — <c>@dig</c>'s answer, <c>loc()</c>, and a triad's <c>%0</c>
+	/// alike — but the creation stamp of a room dug in one test is noise when it is compared against a
+	/// dbref captured in another, so both sides of a comparison go through this.
 	/// </summary>
 	private static string BareDbref(string reference)
 	{
@@ -162,6 +163,10 @@ public class MovementParityTests
 			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("out")));
 
 		await Assert.That(arrival.Any(m => m.Contains("has arrived."))).IsFalse();
+
+		// The control: a command that failed outright would satisfy the silence above on its own.
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(to))
+			.Because("the wizard is silent because they are DARK, not because they never moved");
 	}
 
 	[Test]
@@ -173,19 +178,29 @@ public class MovementParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "SilentWatch");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {watcher.DbRef}={destination}"));
 
+		// OLEAVE goes to the room being LEFT (moveit's `loc` is `old`), so a watcher standing in the
+		// destination is not evidence about it either way — the departure needs its own witness.
+		var leftBehind = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SilentStay");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {leftBehind.DbRef}={room}"));
+
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(
 			GodParser, ConnectionService, "SilentThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={room}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&AENTER {destination}=&ARRIVED me=yes"));
 
+		var departureBefore = WebAppFactoryArg.Notifications.CountFor(leftBehind.DbRef);
+
 		var arrival = await MessagesWhile(watcher.DbRef, async () =>
 			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {thing}={destination}")));
+
+		var departure = WebAppFactoryArg.Notifications.For(leftBehind.DbRef).Skip(departureBefore).ToList();
 
 		// The non-hearer branch suppresses the enter and leave messages specifically. The MOVE
 		// triad is gated on nomovemsgs, not on hearing, so assert the two separately rather than
 		// letting one absent string stand for both.
 		await Assert.That(arrival.Any(m => m.Contains("has arrived."))).IsFalse();
-		await Assert.That(arrival.Any(m => m.Contains("has left."))).IsFalse();
+		await Assert.That(departure.Any(m => m.Contains("has left."))).IsFalse();
 
 		await Scheduler.DrainImmediateQueueForTests();
 		var arrived = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/ARRIVED)]"));
@@ -607,8 +622,13 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 
-		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
+		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
 			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+
+		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
+		// the move has to be shown to have happened before its location says anything about safe_tel.
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere));
 
 		await Assert.That(await LocationOf(sticky.ToString()))
 			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
@@ -711,8 +731,13 @@ public class MovementParityTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={start}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {sticky}={mover.DbRef}"));
 
-		await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
+		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
 			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
+
+		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
+		// the move has to be shown to have happened before its location says anything about safe_tel.
+		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere));
 
 		await Assert.That(await LocationOf(sticky.ToString()))
 			.IsEqualTo(BareDbref(mover.DbRef.ToString()));
@@ -1098,6 +1123,10 @@ public class MovementParityTests
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.Teleported))
 			.IsFalse()
 			.Because("victim == player is exactly the case wiz.c:585 excludes");
+
+		// The control: a @teleport that was refused outright would say nothing either.
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere))
+			.Because("the silence has to come from the victim==player branch, not from a failed move");
 	}
 
 	/// <summary>

@@ -516,6 +516,15 @@
   <data name="DropsYou" xml:space="preserve">
     <value>{0} drops you.</value>
   </data>
+  <data name="Dropped" xml:space="preserve">
+    <value>Dropped.</value>
+  </data>
+  <data name="RemovedOneObjectFrom" xml:space="preserve">
+    <value>You remove 1 object from {0}.</value>
+  </data>
+  <data name="RemovedObjectsFrom" xml:space="preserve">
+    <value>You remove {0} objects from {1}.</value>
+  </data>
   <data name="YouGaveTo" xml:space="preserve">
     <value>You gave {0} to {1}.</value>
   </data>

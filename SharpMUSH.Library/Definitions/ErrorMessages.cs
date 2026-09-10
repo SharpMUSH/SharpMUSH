@@ -681,9 +681,17 @@ public static class ErrorMessages
 		/// <summary>PennMUSH <c>src/move.c:766</c>, the drop o-message, name-prefixed.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Drops = "drops {0}.";
-		/// <summary>PennMUSH <c>src/move.c:751</c> and <c>:757</c>: what the dropped object is told.</summary>
+		/// <summary>PennMUSH <c>src/move.c:752</c> and <c>:757</c>: what the dropped object is told.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DropsYou = "{0} drops you.";
+		/// <summary>PennMUSH <c>src/move.c:749</c>: what a STICKY object sent home is told instead.</summary>
+		public const string Dropped = "Dropped.";
+		/// <summary>PennMUSH <c>src/move.c:906</c>: what EMPTY tells the emptier when one item moved.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RemovedOneObjectFrom = "You remove 1 object from {0}.";
+		/// <summary>PennMUSH <c>src/move.c:909</c>: the same, for any other count.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string RemovedObjectsFrom = "You remove {0} objects from {1}.";
 		/// <summary>PennMUSH <c>src/rob.c:412</c>, the give actor message.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouGaveTo = "You gave {0} to {1}.";

@@ -12,6 +12,11 @@ public interface IPermissionService
 	[Flags]
 	enum InteractType
 	{
+		/// <summary>
+		/// No interaction gate at all — PennMUSH's <c>flags = 0</c>, which several <c>did_it_with</c>
+		/// call sites pass deliberately (<c>src/move.c:634</c>, <c>:685</c>).
+		/// </summary>
+		None = 0x0,
 		See = 0x1,
 		Hear = 0x2,
 		Match = 0x4,
@@ -80,7 +85,14 @@ public interface IPermissionService
 
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
-	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination);
+	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit);
+
+	/// <summary>
+	/// PennMUSH <c>Can_Locate</c> (<c>hdrs/mushdb.h:75</c>): may <paramref name="who"/> tell where
+	/// <paramref name="what"/> is. <c>moveit</c> gates the LEAVE and ENTER environment on this
+	/// (<c>src/move.c:104</c>, <c>:112</c>, <c>:136</c>).
+	/// </summary>
+	ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what);
 
 	ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target);
 

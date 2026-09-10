@@ -1414,41 +1414,7 @@ public partial class Commands
 		}
 		else
 		{
-			var contentToDrop = objectToDrop.AsContent;
-
-			// move.c:757 — the dropped object is told who dropped it, before the move.
-			await NotifyService.Notify(objectToDrop,
-				string.Format(ErrorMessages.Notifications.DropsYou, executor.Object().Name));
-
-			await MoveService.MoveIt(parser, contentToDrop, currentRoom, noMoveMsgs: false,
-				executor.Object().DBRef, "drop");
-
-			if (currentRoom.IsRoom)
-			{
-				var room = currentRoom.AsRoom;
-				var dropToLocation = await room.Location.WithCancellation(CancellationToken.None);
-
-				if (!dropToLocation.IsT3) // Not None
-				{
-					if (await LockService.Evaluate(LockType.DropTo, room, objectToDrop))
-					{
-						var dropToContainer = dropToLocation.Match<AnySharpContainer>(
-							player => player,
-							r => r,
-							thing => thing,
-							_ => currentRoom);
-
-						if (await MoveService.WouldCreateLoop(contentToDrop, dropToContainer))
-						{
-							await NotifyService.Notify(executor, $"Cannot drop {objectToDrop.Object().Name} there - it would create a containment loop.", executor);
-							return CallState.Empty;
-						}
-
-						await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer,
-							OldContainer: currentRoom.Object().DBRef));
-					}
-				}
-			}
+			await DropTo(parser, executor, objectToDrop, currentRoom, "drop");
 		}
 
 		// did_it(player, thing, "DROP", "You drop X.", "ODROP", "drops X.", "ADROP", NOTHING)
@@ -1468,6 +1434,89 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// Where a dropped object actually lands, and the single move that puts it there. PennMUSH
+	/// <c>do_drop</c>'s three-way chain (<c>src/move.c:748-759</c>), shared with <c>EMPTY</c>, whose
+	/// drop half is the same chain (<c>src/move.c:890-899</c>).
+	/// </summary>
+	/// <remarks>
+	/// One move, straight to the destination. Landing the object in the room first and then pushing it
+	/// through the drop-to would announce an arrival in a room it never stayed in, and would run the
+	/// enter and leave triads for it.
+	/// <para>
+	/// DEVIATION on the STICKY branch, for <c>EMPTY</c> only: <c>do_empty</c> sends <c>thing</c> — the
+	/// container being emptied — home rather than the item it just took out, and skips the
+	/// <c>Dropped.</c> message <c>do_drop</c> sends. Both commands use <c>do_drop</c>'s shape here.
+	/// </para>
+	/// </remarks>
+	private async ValueTask DropTo(
+		IMUSHCodeParser parser,
+		AnySharpObject dropper,
+		AnySharpObject thing,
+		AnySharpContainer location,
+		string cause)
+	{
+		var content = thing.AsContent;
+		AnySharpObject owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
+
+		// move.c:748-750. Fixed(x) is a flag on the OWNER (hdrs/dbdefs.h:84), not on the object.
+		if (await thing.HasFlag("STICKY") && !await owner.HasFlag("FIXED"))
+		{
+			await NotifyService.Notify(thing, ErrorMessages.Notifications.Dropped);
+
+			var home = await content.Home();
+
+			// safe_tel resolves HOME itself; MoveService takes a resolved container, so an object with
+			// no home has nowhere to be sent and stays where it is.
+			if (!home.IsNone)
+			{
+				await MoveService.SafeTel(parser, content, home.WithoutNone(), noMoveMsgs: false,
+					dropper.Object().DBRef, cause);
+			}
+
+			return;
+		}
+
+		// move.c:751-755: the room's immediate drop-to, gated on the room NOT being STICKY — a STICKY
+		// room holds its contents until the last Dropper leaves, which is what MoveService.EnterRoom's
+		// maybe_dropto handles.
+		var destination = location;
+
+		if (location.IsRoom && !await location.WithExitOption().HasFlag("STICKY"))
+		{
+			var dropTo = await location.AsRoom.Location.WithCancellation(CancellationToken.None);
+
+			// The drop-to lock is evaluated against the room with the OBJECT as the one being tested,
+			// not the dropper (move.c:754).
+			if (!dropTo.IsNone
+					&& await LockService.Evaluate(LockType.DropTo, location.WithExitOption(), thing))
+			{
+				destination = dropTo.WithoutNone();
+			}
+		}
+
+		// move.c:752 and :757 — the dropped object is told who dropped it, before the move.
+		await NotifyService.Notify(thing,
+			string.Format(ErrorMessages.Notifications.DropsYou, dropper.Object().Name));
+
+		await MoveService.EnterRoom(parser, content, destination, noMoveMsgs: false,
+			dropper.Object().DBRef, cause);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_empty</c> (<c>src/move.c:796</c>): every item in a container passes through the
+	/// emptier's hands, so each one runs the same get and drop triads <c>GET</c> and <c>DROP</c> run.
+	/// </summary>
+	/// <remarks>
+	/// The locks are re-evaluated per item rather than once for the whole container, which is Penn's
+	/// documented choice (<c>src/move.c:783-789</c>): a lock that counts what is left has to see each
+	/// move.
+	/// <para>
+	/// DEVIATION: Penn walks <c>first_visible</c> (<c>src/predicat.c:292</c>), so an item the emptier
+	/// cannot see is skipped. SharpMUSH walks the whole contents list — the visibility walk is
+	/// <c>LookService</c>'s and has no shared seam yet.
+	/// </para>
+	/// </remarks>
 	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED",
 		Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Empty(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -1477,9 +1526,10 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 
+		// move.c:809-812: an unmatchable name is noisy_match_result's refusal, not a usage line.
 		if (string.IsNullOrWhiteSpace(objectName))
 		{
-			await NotifyService.Notify(executor, "Empty what?", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -1493,6 +1543,7 @@ public partial class Commands
 
 		var objectToEmpty = locateResult.WithoutError().WithoutNone();
 
+		// move.c:809: TYPE_THING | TYPE_PLAYER only.
 		if (!objectToEmpty.IsThing && !objectToEmpty.IsPlayer)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
@@ -1500,193 +1551,135 @@ public partial class Commands
 		}
 
 		var executorLocation = await executor.Where();
+		var containerLocation = await objectToEmpty.Where();
+		var containerObject = containerLocation.WithExitOption();
 
-		var objectLocation = await objectToEmpty.Where();
+		var heldByEmptier = containerLocation.Object().DBRef.Equals(executor.Object().DBRef);
+		var besideEmptier = containerLocation.Object().DBRef.Equals(executorLocation.Object().DBRef);
 
-		bool isHolding = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
-
-		bool sameLocation = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executorLocation.Object().DBRef),
-			room => room.Object.DBRef.Equals(executorLocation.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executorLocation.Object().DBRef));
-
-		if (!isHolding && !sameLocation)
+		// move.c:816-819: the container has to be in the emptier's inventory or beside them.
+		if (!heldByEmptier && !besideEmptier)
 		{
-			await NotifyService.Notify(executor, "You must be holding that object or in the same location as it.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantEmptyThatFromHere), executor);
 			return CallState.Empty;
 		}
 
-		if (!await objectToEmpty.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, objectToEmpty))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return CallState.Empty;
-		}
-
-		var container = objectToEmpty.AsContainer;
-		var contents = await container.Content(Mediator).ToListAsync();
-
-		if (contents.Count == 0)
-		{
-			await NotifyService.Notify(executor, $"{objectToEmpty.Object().Name} is already empty.", executor);
-			return CallState.Empty;
-		}
-
-		AnySharpContainer destination;
-		if (isHolding)
-		{
-			destination = executor.AsContainer;
-		}
-		else
-		{
-			destination = executorLocation;
-		}
-
-		int movedCount = 0;
-		int failedCount = 0;
+		var emptyingSelf = objectToEmpty.Object().DBRef.Equals(executor.Object().DBRef);
+		var contents = await objectToEmpty.AsContainer.Content(Mediator).ToListAsync();
+		var count = 0;
 
 		foreach (var item in contents)
 		{
-			var itemObj = item.WithRoomOption();
+			var itemObject = item.WithRoomOption();
 
-			if (itemObj.IsRoom || itemObj.IsExit)
+			// move.c:822-823: exits are not dropped.
+			if (itemObject.IsExit)
 			{
-				failedCount++;
 				continue;
 			}
 
-			if (!await LockService.Evaluate(LockType.Basic, itemObj, executor))
-			{
-				failedCount++;
-				continue;
-			}
+			bool emptyOk;
 
-			if (!await LockService.Evaluate(LockType.Take, container.WithExitOption(), executor))
+			if (emptyingSelf)
 			{
-				failedCount++;
-				continue;
+				// move.c:825-832, "empty me": nothing is taken, because the items are already in hand,
+				// so only the drop half is gated. This is the one branch that consults the drop-in lock,
+				// and it consults it against the EMPTIER.
+				emptyOk = await LockService.Evaluate(LockType.Drop, itemObject, executor)
+									&& await LockService.Evaluate(LockType.DropIn, containerObject, executor)
+									&& (!containerLocation.IsRoom
+											|| await LockService.Evaluate(LockType.Drop, containerObject, executor));
 			}
-
-			if (isHolding)
+			else if (await PermissionService.Controls(executor, objectToEmpty)
+							 || (await objectToEmpty.HasFlag("ENTER_OK")
+									 && await LockService.Evaluate(LockType.Enter, objectToEmpty, executor)))
 			{
-				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
+				// move.c:838-843: could_doit on the ITEM, reported as a fail_lock on the CONTAINER with a
+				// null default — silent unless the container carries a FAILURE attribute of its own.
+				if (!await LockService.Evaluate(LockType.Basic, itemObject, executor))
 				{
-					failedCount++;
+					await DidItService.FailLock(parser, executor, objectToEmpty, LockType.Basic);
 					continue;
 				}
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination,
-					OldContainer: container.Object().DBRef));
-
-				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
-				{
-					var successMsg = successAttr.AsT0[0].Value;
-					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
-					{
-						await NotifyService.Notify(executor, successMsg, executor);
-					}
-				}
-
-				// Executor = the item being picked up; enactor = player (PennMUSH @a* semantics)
-				var asuccessAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrASuccess, IAttributeService.AttributeMode.Read, true);
-				if (asuccessAttr.IsAttribute && asuccessAttr.AsT0.Length > 0)
-				{
-					var asuccessActions = asuccessAttr.AsT0[0].Value;
-					if (!string.IsNullOrEmpty(asuccessActions.ToPlainText()))
-					{
-						await parser.With(
-							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
-							async p => await p.CommandParse(asuccessActions));
-					}
-				}
-
-				movedCount++;
+				// move.c:846-853: taking it into your own hands is enough on its own; dropping it where
+				// the container stands needs the drop locks as well.
+				emptyOk = heldByEmptier
+									|| (await LockService.Evaluate(LockType.Drop, itemObject, executor)
+											&& (!containerLocation.IsRoom
+													|| await LockService.Evaluate(LockType.Drop, containerObject, executor)));
 			}
 			else
 			{
-				// If in same location, temporarily move to inventory then drop (like GET then DROP)
-				if (await MoveService.WouldCreateLoop(itemObj.AsContent, executor.AsContainer))
-				{
-					failedCount++;
-					continue;
-				}
+				emptyOk = false;
+			}
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer,
-					OldContainer: container.Object().DBRef));
+			if (!emptyOk)
+			{
+				continue;
+			}
 
-				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
-				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
-				{
-					var successMsg = successAttr.AsT0[0].Value;
-					if (!string.IsNullOrEmpty(successMsg.ToPlainText()))
-					{
-						await NotifyService.Notify(executor, successMsg, executor);
-					}
-				}
+			count++;
 
-				if (!await LockService.Evaluate(LockType.Drop, itemObj, executor))
-				{
-					failedCount++;
-					continue;
-				}
+			var itemName = itemObject.Object().Name;
 
-				if (!await LockService.Evaluate(LockType.DropIn, destination.WithExitOption(), executor))
-				{
-					failedCount++;
-					continue;
-				}
+			// move.c:864-878, the get half — skipped when the emptier IS the container.
+			if (!emptyingSelf)
+			{
+				await NotifyService.Notify(objectToEmpty,
+					string.Format(ErrorMessages.Notifications.WasTakenFromYou, itemName));
+				await NotifyService.Notify(itemObject,
+					string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
 
-				if (await MoveService.WouldCreateLoop(itemObj.AsContent, destination))
-				{
-					failedCount++;
-					continue;
-				}
+				await MoveService.EnterRoom(parser, item, executor.AsContainer, noMoveMsgs: false,
+					executor.Object().DBRef, "empty");
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination,
-					OldContainer: executor.Object().DBRef));
+				// did_it_with(player, item, "SUCCESS", …, NOTHING, thing_loc, NOTHING, NA_INTER_HEAR)
+				// (move.c:874-876). The 8th argument is `loc` and it is NOTHING, which real_did_it
+				// resolves to the emptier's own room; the 9th is `env0`, and it is the CONTAINER'S
+				// location rather than the container itself — where do_get puts the source container.
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: executor, Thing: itemObject,
+					What: AttrSuccess,
+					Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouTakeFrom,
+						itemName, objectToEmpty.Object().Name)),
+					OWhat: AttrOSuccess,
+					ODef: string.Format(ErrorMessages.Notifications.TakesFrom,
+						itemName, objectToEmpty.Object().Name),
+					AWhat: AttrASuccess,
+					Env0: containerLocation.Object().DBRef.ToString()));
 
-				var dropAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
-				if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
-				{
-					var dropMsg = dropAttr.AsT0[0].Value;
-					if (!string.IsNullOrEmpty(dropMsg.ToPlainText()))
-					{
-						await NotifyService.Notify(executor, dropMsg, executor);
-					}
-				}
+				// move.c:877-878: the emptier's own receive triad, with the item in %0.
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: executor, Thing: executor,
+					What: AttrReceive, OWhat: AttrOReceive, AWhat: AttrAReceive,
+					Env0: itemObject.Object().DBRef.ToString()));
+			}
 
-				// Executor = the dropped item; enactor = player (PennMUSH @a* semantics)
-				var adropAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrADrop, IAttributeService.AttributeMode.Read, true);
-				if (adropAttr.IsAttribute && adropAttr.AsT0.Length > 0)
-				{
-					var adropActions = adropAttr.AsT0[0].Value;
-					if (!string.IsNullOrEmpty(adropActions.ToPlainText()))
-					{
-						await parser.With(
-							state => state with { Executor = itemObj.Object().DBRef, Caller = state.Executor },
-							async p => await p.CommandParse(adropActions));
-					}
-				}
+			// move.c:881-903, the drop half — skipped when the container is already in the emptier's
+			// inventory, because its items have nowhere further to go.
+			if (!heldByEmptier)
+			{
+				await DropTo(parser, executor, itemObject, containerLocation, "empty");
 
-				movedCount++;
+				// did_it(player, item, "DROP", …, "ADROP", NOTHING) (move.c:901-902): `loc` NOTHING is
+				// the emptier's own room.
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: executor, Thing: itemObject,
+					What: AttrDrop,
+					Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouDrop, itemName)),
+					OWhat: AttrODrop,
+					ODef: string.Format(ErrorMessages.Notifications.Drops, itemName),
+					AWhat: AttrADrop));
 			}
 		}
 
-		if (movedCount > 0 && failedCount == 0)
-		{
-			await NotifyService.Notify(executor, $"Emptied {objectToEmpty.Object().Name}.", executor);
-		}
-		else if (movedCount > 0 && failedCount > 0)
-		{
-			await NotifyService.Notify(executor, $"Emptied {movedCount} item(s) from {objectToEmpty.Object().Name}. {failedCount} item(s) could not be moved.", executor);
-		}
-		else if (movedCount == 0 && failedCount > 0)
-		{
-			await NotifyService.Notify(executor, $"Could not empty {objectToEmpty.Object().Name}.", executor);
-		}
+		// move.c:906-911: the tally, printed whatever the count — nothing moved still reports zero.
+		await NotifyService.Notify(executor,
+			count == 1
+				? string.Format(ErrorMessages.Notifications.RemovedOneObjectFrom, objectToEmpty.Object().Name)
+				: string.Format(ErrorMessages.Notifications.RemovedObjectsFrom, count, objectToEmpty.Object().Name),
+			executor);
 
 		return CallState.Empty;
 	}
@@ -1978,10 +1971,12 @@ public partial class Commands
 		await MoveService.MoveIt(parser, contentToGet, executorContainer, noMoveMsgs: false,
 			executor.Object().DBRef, "get");
 
-		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, …)
+		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, 0)
 		// (move.c:634-636 possessive, :685-686 plain). The 8th argument is `loc` and the 9th is
 		// `env0`: `loc` is NOTHING, which real_did_it resolves to Location(player) (predicat.c:230),
-		// so the o-message audience is the taker's own room; the source container rides in %0.
+		// so the o-message audience is the taker's own room; the source container rides in %0. The
+		// final `flags` is 0 on both get paths, so this o-message consults no interaction lock —
+		// unlike the RECEIVE triad below, which Penn gives NA_INTER_HEAR.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: objectToGet,
 			What: AttrSuccess,
@@ -1993,7 +1988,8 @@ public partial class Commands
 				? string.Format(ErrorMessages.Notifications.TakesFrom, takenName, objectLocation.Object().Name)
 				: string.Format(ErrorMessages.Notifications.Takes, takenName),
 			AWhat: AttrASuccess,
-			Env0: objectLocation.Object().DBRef.ToString()));
+			Env0: objectLocation.Object().DBRef.ToString(),
+			Interact: IPermissionService.InteractType.None));
 
 		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
 		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :687-689): the taker's own receive triad.
@@ -2116,9 +2112,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// rob.c:346 hands the gift to moveto, and moveto IS enter_room (move.c:53-56): a gift changes
+		// hands through the same pipeline every other move uses, and fires the same move triads.
 		var contentToGive = objectToGive.AsContent;
-		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer,
-			OldContainer: objectLocation.Object().DBRef));
+		await MoveService.EnterRoom(parser, contentToGive, recipientContainer, noMoveMsgs: false,
+			executor.Object().DBRef, "give");
 
 		var giverName = executor.Object().Name;
 		var giftName = objectToGive.Object().Name;

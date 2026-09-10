@@ -156,6 +156,18 @@ public class MoveService(
 		var old = oldContainer.Object().DBRef;
 		var destination = where.Object().DBRef;
 
+		var destinationObject = where.WithExitOption();
+		var oldObject = oldContainer.WithExitOption();
+
+		// move.c:77 and :100. Both are read while the mover is still in `old`, which is where Penn
+		// reads them too: `oldSeeswhat` is computed after the contents lists have been shuffled but
+		// before `Location(what)` is rewritten, and `where_is` answers off Location. They gate the
+		// LEAVE and ENTER *environment*: a side that cannot Can_Locate the mover is given
+		// did_it_interact rather than did_it_with, and did_it_interact carries no PE_REGS at all
+		// (predicat.c:186-192), so %0 is unset for that triad.
+		var whereSeesWhat = await permissionService.CanLocate(destinationObject, mover);
+		var oldSeesWhat = await permissionService.CanLocate(oldObject, mover);
+
 		// The absolute room is walked once before the write and once after, and each side's zone is
 		// read once from it. Both are handed to the zone triads, which re-walk nothing.
 		var absOld = await AbsoluteRoom(mover);
@@ -166,8 +178,6 @@ public class MoveService(
 		var absNew = await AbsoluteRoom(mover);
 		var oldZone = absOld is null ? null : await ZoneOf(absOld);
 		var newZone = absNew is null ? null : await ZoneOf(absNew);
-		var destinationObject = where.WithExitOption();
-		var oldObject = oldContainer.WithExitOption();
 
 		var wizardSuppressed = configuration.CurrentValue.Command.WizardNoAEnter
 			&& await mover.IsWizard() && await mover.IsDarkLegal();
@@ -184,7 +194,8 @@ public class MoveService(
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: oldObject,
 					What: "LEAVE", OWhat: "OLEAVE", ODef: ErrorMessages.Notifications.DefaultOLeave,
-					AWhat: "ALEAVE", Loc: oldContainer, Env0: destination.ToString(),
+					AWhat: "ALEAVE", Loc: oldContainer,
+					Env0: oldSeesWhat ? destination.ToString() : null,
 					Interact: IPermissionService.InteractType.Presence));
 
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer);
@@ -211,7 +222,8 @@ public class MoveService(
 				await didItService.DidIt(parser, new DidItRequest(
 					Player: mover, Thing: destinationObject,
 					What: "ENTER", OWhat: "OENTER", ODef: ErrorMessages.Notifications.DefaultOEnter,
-					AWhat: "AENTER", Loc: where, Env0: old.ToString(),
+					AWhat: "AENTER", Loc: where,
+					Env0: whereSeesWhat ? old.ToString() : null,
 					Interact: IPermissionService.InteractType.Presence));
 			}
 			else
