@@ -5,10 +5,20 @@ namespace SharpMUSH.Library.Services.Interfaces;
 
 public interface IPermissionService
 {
-	[Flags]
+	/// <summary>
+	/// PennMUSH's interaction hook types (<c>hdrs/mushtype.h:46-49</c>). <c>can_interact</c>
+	/// (<c>src/utils.c:832</c>) compares the type for equality, never as a bitmask, so these are
+	/// plain ordinals and not bit values.
+	/// </summary>
 	enum InteractType
 	{
-		// Published plugin ABI: Presence historically occupies the combined value 3.
+		/// <summary>
+		/// No interaction gate at all — PennMUSH's <c>flags = 0</c>, which several <c>did_it_with</c>
+		/// call sites pass deliberately (<c>src/move.c:634</c>, <c>:685</c>). Numbered outside the
+		/// published plugin ABI's ascending block so a future Penn type can take the next ordinal.
+		/// </summary>
+		None = -1,
+		// Published plugin ABI: these ordinals are fixed and must not be renumbered.
 		See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4
 	}
 
@@ -55,6 +65,13 @@ public interface IPermissionService
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
 	/// <summary>
+	/// PennMUSH <c>Hearer</c> (<c>src/game.c:1564</c>): a connected player, a <c>PUPPET</c>, an
+	/// <c>AUDIBLE</c> object carrying a <c>FORWARDLIST</c>, or anything with a <c>LISTEN</c>.
+	/// A move by a non-hearer fires action attributes only, never messages.
+	/// </summary>
+	ValueTask<bool> IsHearer(AnySharpObject obj);
+
+	/// <summary>
 	/// PennMUSH <c>Can_Nspemit</c> (<c>hdrs/mushdb.h:33</c>): may this object emit without a nospoof
 	/// header. The power is <c>Can_Spoof</c> — <c>NOSPOOF</c> is a FLAG (<c>FlagSeed.cs:39</c>), so
 	/// testing it here matched nothing and reduced the whole predicate to the wizard half.
@@ -70,7 +87,19 @@ public interface IPermissionService
 
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
+	/// <summary>
+	/// PennMUSH <c>could_doit</c> (<c>src/predicat.c:75</c>) as <c>do_move</c> uses it
+	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover, plus the
+	/// reality gate on both the exit and where it leads.
+	/// </summary>
 	ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination);
+
+	/// <summary>
+	/// PennMUSH <c>Can_Locate</c> (<c>hdrs/mushdb.h:75</c>): may <paramref name="who"/> tell where
+	/// <paramref name="what"/> is. <c>moveit</c> gates the LEAVE and ENTER environment on this
+	/// (<c>src/move.c:104</c>, <c>:112</c>, <c>:136</c>).
+	/// </summary>
+	ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what);
 
 	ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target);
 

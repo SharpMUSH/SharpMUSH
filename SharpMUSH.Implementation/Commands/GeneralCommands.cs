@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration;
@@ -11,9 +11,9 @@ using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
-using System.Net;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -32,7 +32,6 @@ using System.Text.RegularExpressions;
 using System.Linq;
 using MarkupString;
 using MarkupString.Ansi;
-using MarkupString.Html;
 using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -45,31 +44,6 @@ public partial class Commands
 {
 	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
 	private static readonly string[] DefaultSemaphoreAttributeArray = [DefaultSemaphoreAttribute];
-
-	/// <summary>
-	/// Wraps an exit name in a &lt;send&gt; HtmlMarkup tag for Pueblo/MXP clients.
-	/// The first alias (before ';') is used as the href command.
-	/// All aliases are pipe-delimited in the hint for right-click menus (BeipMU pattern).
-	/// For ANSI clients, HtmlMarkup passes through as plain text (only the display name).
-	/// </summary>
-	private MString WrapExitInSendTag(string exitName)
-	{
-		var aliases = exitName.Split(';');
-		var displayName = aliases[0];
-		var command = WebUtility.HtmlEncode(aliases[0]);
-		var hint = aliases.Length > 1
-			? WebUtility.HtmlEncode(string.Join("|", aliases))
-			: $"Go {command}";
-		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
-		return MarkupText.Wrap(sendMarkup, MarkupText.Plain(displayName));
-	}
-
-	private MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
-	{
-		var template = LocalizationService?.Get(nameof(ErrorMessages.Notifications.ExitNameToDestFormat), locale)
-			?? ErrorMessages.Notifications.ExitNameToDestFormat;
-		return MarkupTemplateFormatter.Format(template, exitName, MarkupText.Plain(destName));
-	}
 
 	/// <summary>
 	/// Handles delimiter/pid extraction for @dolist and @map commands when /DELIMIT or /PID is used.
@@ -590,7 +564,8 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var forceOpaque = switches.Contains("OPAQUE");
+		// cmds.c:1742: the /opaque switch is LOOK_NOCONTENTS.
+		var key = switches.Contains("OPAQUE") ? LookKey.NoContents : LookKey.Normal;
 		var lookOutside = switches.Contains("OUTSIDE");
 
 		if (executor.IsPlayer)
@@ -649,294 +624,7 @@ public partial class Commands
 			return new None();
 		}
 
-		var realViewing = viewing.Known;
-		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
-		if (!await reality.CanPerceiveAsync(executor.Object().DBRef, realViewing.Object().DBRef))
-			return new CallState("#-1 NO MATCH");
-		var viewingObject = realViewing.Object();
-
-		var executorLocation = executor.IsContent
-			? await executor.AsContent.Location()
-			: null;
-		var viewingFromInside = executorLocation != null
-			&& executorLocation.Object().DBRef == viewingObject.DBRef;
-
-		var baseName = viewingObject.Name;
-		var baseDesc = MarkupText.Empty;
-		string? descriptionAttributeName = null;
-		var god = await HelperFunctions.GetGod(Mediator);
-		var lookerEnactor = executor.Object().DBRef;
-
-		// @idescribe is only used for players and things; rooms and exits always use @describe
-		// (help @idescribe). Inside formats are discovered independently of @idescribe, however:
-		// a present @idescformat formats the fallback @describe too.
-		var tryIdesc = viewingFromInside && !lookOutside
-			&& (realViewing.IsPlayer || realViewing.IsThing);
-		var usedIdesc = false;
-		var customDescription = false;
-		var layerDescription = await reality.DescriptionAttributeAsync(executor.Object().DBRef, viewingObject.DBRef);
-		if (layerDescription is not null)
-		{
-			var layerAttribute = await AttributeService.GetAttributeAsync(executor, realViewing, layerDescription,
-				IAttributeService.AttributeMode.Read, true);
-			if (layerAttribute.IsAttribute && await PermissionService.CanExecuteAttribute(executor, realViewing, layerAttribute.AsAttribute))
-			{
-				customDescription = true;
-				descriptionAttributeName = layerDescription;
-			}
-		}
-
-		if (tryIdesc && !customDescription)
-		{
-			var idescResult = await AttributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
-				IAttributeService.AttributeMode.Read, true);
-			if (idescResult.IsAttribute)
-			{
-				// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
-				// @aidescribe without text), so an empty value stays empty here.
-				usedIdesc = true;
-				descriptionAttributeName = "IDESCRIBE";
-				baseDesc = idescResult.AsAttribute.Last().Value;
-			}
-		}
-
-		if (!usedIdesc && !customDescription)
-		{
-			var descResult = await AttributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
-				IAttributeService.AttributeMode.Read, true);
-			if (descResult.IsAttribute)
-			{
-				descriptionAttributeName = "DESCRIBE";
-				baseDesc = descResult.AsAttribute.Last().Value;
-			}
-			else
-			{
-				baseDesc = MarkupText.Plain("You see nothing special.");
-			}
-		}
-
-		if (descriptionAttributeName is not null)
-		{
-			baseDesc = await parser.With(
-				state => state with { Enactor = lookerEnactor },
-				lookParser => AttributeService.EvaluateAttributeFunctionAsync(
-					lookParser, executor, realViewing, descriptionAttributeName,
-					new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: !customDescription));
-		}
-
-		var flags = await viewingObject.Flags.Value.ToArrayAsync();
-		var flagStr = string.Join(string.Empty, flags.Select(x => x.Symbol));
-		var defaultFormattedName = Format($"{baseName.Hilight()}(#{viewingObject.DBRef.Number}{flagStr})");
-
-		var formattedName = defaultFormattedName;
-		if (realViewing.IsRoom && viewingFromInside)
-		{
-			var nameFormatArgs = new Dictionary<string, CallState>
-			{
-				["0"] = new CallState(viewingObject.DBRef.ToString()),
-				["1"] = new CallState(defaultFormattedName)
-			};
-
-			formattedName = await AttributeHelpers.EvaluateFormatAttribute(
-				AttributeService, parser, executor, realViewing, "NAMEFORMAT",
-				nameFormatArgs, defaultFormattedName, checkParents: false);
-		}
-
-		var formatAttrName = tryIdesc ? "IDESCFORMAT" : "DESCFORMAT";
-		var formatAttribute = await AttributeService.GetAttributeAsync(
-			god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
-
-		if (tryIdesc && !usedIdesc && formatAttribute.IsNone)
-		{
-			formatAttrName = "DESCFORMAT";
-			formatAttribute = await AttributeService.GetAttributeAsync(
-				god, realViewing, formatAttrName, IAttributeService.AttributeMode.Read, true);
-		}
-
-		var formattedDesc = baseDesc;
-		if (formatAttribute.IsAttribute)
-		{
-			var descFormatArgs = new Dictionary<string, CallState>();
-			if (descriptionAttributeName is not null)
-			{
-				descFormatArgs["0"] = new CallState(baseDesc);
-			}
-
-			formattedDesc = await parser.With(
-				state => state with { Enactor = lookerEnactor },
-				lookParser => AttributeService.EvaluateAttributeFunctionAsync(
-					lookParser, executor, realViewing, formatAttrName,
-					descFormatArgs, evalParent: true, ignorePermissions: true));
-		}
-
-		await NotifyService.Notify(executor, formattedName, executor);
-		if (formattedDesc.Length > 0)
-		{
-			await NotifyService.Notify(executor, formattedDesc, executor);
-		}
-
-		var actionAttributeName = tryIdesc
-			? usedIdesc ? "AIDESCRIBE" : null
-			: "ADESCRIBE";
-		if (actionAttributeName is not null && !await realViewing.HasFlag("HALT"))
-		{
-			var actionAttribute = await AttributeService.GetAttributeAsync(
-				realViewing, realViewing, actionAttributeName, IAttributeService.AttributeMode.Execute);
-			if (actionAttribute.IsAttribute)
-			{
-				var action = actionAttribute.AsAttribute.Last();
-				var actionState = parser.CurrentState with
-				{
-					Executor = viewingObject.DBRef,
-					Enactor = lookerEnactor,
-					Caller = parser.CurrentState.Executor,
-					Arguments = new Dictionary<string, CallState>(),
-					EnvironmentRegisters = new Dictionary<string, CallState>(),
-					CurrentEvaluation = new DBAttribute(viewingObject.DBRef, action.LongName!),
-					Function = null
-				};
-				await Mediator.Send(new AdmitCommandListRequest(
-					action.Value,
-					actionState,
-					new DbRefAttribute(viewingObject.DBRef, action.LongName!.Split('`')),
-					-1), ExecutionBudget.CurrentToken);
-			}
-		}
-
-		var showInventory = realViewing.IsContainer
-			&& !forceOpaque
-			&& !(await realViewing.IsOpaque());
-
-		if (showInventory)
-		{
-			var allContents = Mediator.CreateStream(new GetContentsQuery(realViewing.AsContainer), ExecutionBudget.CurrentToken);
-
-			var canSeeAll = await executor.IsSee_All();
-			var visibleContents = new List<AnySharpContent>();
-			var visibleExits = new List<AnySharpContent>();
-			var canSeeContent = await WorldVisibility.CreateScanAsync(executor, realViewing, reality, ConnectionService, ExecutionBudget.CurrentToken);
-			await foreach (var item in allContents.WithCancellation(ExecutionBudget.CurrentToken))
-			{
-				if (!await canSeeContent(item, ExecutionBudget.CurrentToken)) continue;
-				if (item.IsExit) visibleExits.Add(item);
-				else visibleContents.Add(item);
-			}
-
-			if (visibleContents.Count > 0)
-			{
-				var contentDbrefs = string.Join(" ", visibleContents.Select(x => $"#{x.Object().DBRef.Number}"));
-				var contentNames = string.Join("|", visibleContents.Select(x => x.Object().Name));
-				var contentsLabel = realViewing.IsRoom ? "Contents:" : "Carrying:";
-
-				// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
-				var contentMStrings = await Task.WhenAll(visibleContents.Select(async item =>
-				{
-					if (canSeeAll)
-					{
-						return await MessageHelpers.FormatObjectWithDbrefMString(item.Object());
-					}
-					return MarkupText.Plain(item.Object().Name);
-				}));
-				var defaultContents = MarkupText.Join(MarkupText.NewLine, new[] { MarkupText.Plain(contentsLabel) }.Concat(contentMStrings));
-
-				var conFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(contentDbrefs),
-					["1"] = new CallState(contentNames)
-				};
-
-				var formattedContents = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "CONFORMAT",
-					conFormatArgs, defaultContents, checkParents: false);
-
-				await NotifyService.Notify(executor, formattedContents, executor);
-			}
-
-			if (visibleExits.Count > 0 && realViewing.IsRoom)
-			{
-				var exitDbrefs = string.Join(" ", visibleExits.Select(x => $"#{x.Object().DBRef.Number}"));
-				var exitFormatArgs = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(exitDbrefs)
-				};
-
-				var isTransparent = await realViewing.IsTransparent();
-				string? executorLocale = null;
-				if (ConnectionService != null)
-				{
-					var firstConnection = await ConnectionService.Get(executor.Object().DBRef).FirstOrDefaultAsync();
-					firstConnection?.Metadata.TryGetValue("Locale", out executorLocale);
-				}
-				MString defaultExits;
-				if (isTransparent)
-				{
-					var exitParts = new List<MString>();
-					foreach (var exit in visibleExits)
-					{
-						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit
-							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new None());
-						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
-
-						var exitMString = WrapExitInSendTag(exitObj.Name);
-
-						if (await exit.WithRoomOption().IsOpaque())
-						{
-							exitParts.Add(exitMString);
-						}
-						else
-						{
-							exitParts.Add(FormatExitNameToDestination(exitMString, destName, executorLocale));
-						}
-					}
-					defaultExits = MarkupText.Join(MarkupText.NewLine, exitParts);
-				}
-				else
-				{
-					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
-					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageHelpers.FormatMStringsWithOxfordComma(exitMStrings));
-				}
-
-				var formattedExits = await AttributeHelpers.EvaluateFormatAttribute(
-					AttributeService, parser, executor, realViewing, "EXITFORMAT",
-					exitFormatArgs, defaultExits, checkParents: false);
-
-				if (formattedExits == defaultExits && isTransparent)
-				{
-					foreach (var exit in visibleExits)
-					{
-						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit
-							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new None());
-						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
-
-						var exitMString = WrapExitInSendTag(exitObj.Name);
-
-						if (await exit.WithRoomOption().IsOpaque())
-						{
-							await NotifyService.Notify(executor, exitMString, executor);
-						}
-						else
-						{
-							await NotifyService.NotifyLocalizedMarkup(
-								executor,
-								nameof(ErrorMessages.Notifications.ExitNameToDestFormat),
-								executor,
-								exitMString,
-								MarkupText.Plain(destName));
-						}
-					}
-				}
-				else
-				{
-					await NotifyService.Notify(executor, formattedExits, executor);
-				}
-			}
-		}
-
-		return new CallState(viewingObject.DBRef.ToString());
+		return await LookService.LookRoom(parser, executor, viewing, key, lookOutside);
 	}
 
 	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
@@ -1052,7 +740,7 @@ public partial class Commands
 
 		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 
-		var objFlagStr = showFlags ? MessageHelpers.FlagSymbols(objFlags) : string.Empty;
+		var objFlagStr = showFlags ? MessageFormatting.FlagSymbols(objFlags) : string.Empty;
 		var nameRow = Format($"{name.Hilight()}(#{obj.DBRef.Number}{objFlagStr})");
 		outputSections.Add(nameRow);
 
@@ -1072,11 +760,11 @@ public partial class Commands
 		}
 		else
 		{
-			var zoneLine = await MessageHelpers.FormatObjectWithDbrefMString(objZone.Known.Object());
+			var zoneLine = await MessageFormatting.FormatObjectWithDbrefMString(objZone.Known.Object());
 			zoneSection = Format($"  Zone: {zoneLine}");
 		}
 
-		var ownerFlagStr = showFlags ? await MessageHelpers.FlagSymbolsAsync(ownerObj) : string.Empty;
+		var ownerFlagStr = showFlags ? await MessageFormatting.FlagSymbolsAsync(ownerObj) : string.Empty;
 		var ownerRow = Format($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number}{ownerFlagStr}){zoneSection}");
 		outputSections.Add(ownerRow);
 
@@ -1087,7 +775,7 @@ public partial class Commands
 		}
 		else
 		{
-			var parentLine = await MessageHelpers.FormatObjectWithDbrefMString(parentObject);
+			var parentLine = await MessageFormatting.FormatObjectWithDbrefMString(parentObject);
 			outputSections.Add(Format($"Parent: {parentLine}"));
 		}
 
@@ -1233,7 +921,7 @@ public partial class Commands
 					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
 					var contentItems = await contents
 						.ToAsyncEnumerable()
-						.Select((AnySharpContent content, CancellationToken _) => MessageHelpers.FormatObjectWithDbrefMString(content.Object()))
+						.Select((AnySharpContent content, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(content.Object()))
 						.Prepend(MarkupText.Plain(contentsLabel))
 						.ToListAsync();
 					await NotifyService.Notify(enactor,
@@ -1251,7 +939,7 @@ public partial class Commands
 				{
 					var exitLines = await exits
 						.ToAsyncEnumerable()
-						.Select((SharpExit exit, CancellationToken _) => MessageHelpers.FormatObjectWithDbrefMString(exit.Object))
+						.Select((SharpExit exit, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(exit.Object))
 						.Prepend(MarkupText.Plain("Exits:"))
 						.ToListAsync();
 					await NotifyService.Notify(enactor,
@@ -1264,7 +952,7 @@ public partial class Commands
 				var homeContainer = await viewingKnown.MinusRoom().Home();
 				var locationContainer = await viewingKnown.AsContent.Location();
 
-				var locationLine = await MessageHelpers.FormatObjectWithDbrefMString(locationContainer.Object());
+				var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object());
 
 				// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
 				if (homeContainer.IsNone)
@@ -1273,7 +961,7 @@ public partial class Commands
 				}
 				else
 				{
-					var homeLine = await MessageHelpers.FormatObjectWithDbrefMString(homeContainer.WithoutNone().Object());
+					var homeLine = await MessageFormatting.FormatObjectWithDbrefMString(homeContainer.WithoutNone().Object());
 					await NotifyService.Notify(enactor, Format($"Home: {homeLine}"), enactor);
 				}
 
@@ -1346,57 +1034,6 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
 			executor, message, MarkupText.Plain(only.Object().Name));
-	}
-
-	/// <summary>
-	/// PennMUSH <c>fail_lock</c> (<c>lock.c:832</c>) for an exit's basic lock: the exit's
-	/// <c>@fail</c> replaces the default message, <c>@ofail</c> goes to the rest of the room, and
-	/// <c>@afail</c> runs as the exit.
-	/// </summary>
-	private async ValueTask<Option<CallState>> FailToGoThatWay(
-		IMUSHCodeParser parser, AnySharpObject executor, SharpExit exit)
-	{
-		var exitObject = new AnySharpObject(exit);
-
-		var failAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "FAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (failAttr.IsAttribute && failAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(failAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await NotifyService.Notify(executor, failAttr.AsAttribute[0].Value, executor);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
-		}
-
-		var ofailAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "OFAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (ofailAttr.IsAttribute && ofailAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(ofailAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await CommunicationService.SendToRoomAsync(
-				executor,
-				await executor.Where(),
-				_ => ofailAttr.AsAttribute[0].Value,
-				INotifyService.NotificationType.Emit,
-				excludeObjects: [executor]);
-		}
-
-		var afailAttr = await AttributeService.GetAttributeAsync(
-			executor, exitObject, "AFAILURE", IAttributeService.AttributeMode.Read, true);
-
-		if (afailAttr.IsAttribute && afailAttr.AsAttribute.Length > 0
-				&& !string.IsNullOrEmpty(afailAttr.AsAttribute[0].Value.ToPlainText()))
-		{
-			await parser.With(
-				state => state with { Executor = exit.Object.DBRef, Caller = state.Executor },
-				async p => await p.CommandParse(afailAttr.AsAttribute[0].Value));
-		}
-
-		return CallState.Empty;
 	}
 
 	/// <summary>
@@ -1565,8 +1202,27 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// enter_room only moves a Mobile (move.c:243). A room cannot be content, and asking it where
+		// it is would throw rather than refuse.
+		if (!executor.IsContent)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantGoThatWay), executor);
+			return CallState.Empty;
+		}
+
 		var exitObj = exit.AsExit;
 		var exitObject = new AnySharpObject(exitObj);
+
+		// The leave lock on the room the mover is standing in is evaluated before the exit's own
+		// lock (move.c:441).
+		var currentLocation = await executor.Where();
+
+		if (!await PermissionService.PassesLock(executor, currentLocation.WithExitOption(), LockType.Leave))
+		{
+			await DidItService.FailLock(parser, executor, currentLocation.WithExitOption(), LockType.Leave,
+				MarkupText.Plain(ErrorMessages.Notifications.CantGoThatWay));
+			return CallState.Empty;
+		}
 
 		// The exit name or alias actually typed: args["1"] when the visitor routed a bare exit command
 		// here, otherwise the argument to an explicit `goto`.
@@ -1578,11 +1234,11 @@ public partial class Commands
 
 		if (!resolved.IsT0)
 		{
-			// PennMUSH could_doit() (predicat.c:75) refuses an exit with no destination before the basic
+			// PennMUSH could_doit() (predicat.c:77) refuses an exit with no destination before the basic
 			// lock is even evaluated, so do_move falls through to fail_lock. A variable exit that could
 			// not work out where it leads has already reported that itself.
 			return resolved.AsT1 == ExitDestinationFailure.Unlinked
-				? await FailToGoThatWay(parser, executor, exitObj)
+				? await FailBasicLock(parser, executor, exitObject)
 				: CallState.Empty;
 		}
 
@@ -1590,7 +1246,7 @@ public partial class Commands
 
 		if (!await PermissionService.CanGoto(executor, exitObj, destination))
 		{
-			return await FailToGoThatWay(parser, executor, exitObj);
+			return await FailBasicLock(parser, executor, exitObject);
 		}
 
 		if (await MoveService.WouldCreateLoop(executor.AsContent, destination))
@@ -1599,14 +1255,79 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await Mediator.Send(new MoveObjectCommand(executor.AsContent, destination));
+		// did_it_with(..., NOTHING, Location(player), NOTHING, …) (move.c:480-482): the success triad
+		// runs with the room being LEFT in %0. did_it's loc of NOTHING resolves to the mover's
+		// location, which is still that room (predicat.c:230).
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: exitObject,
+			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
+			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString()));
+
+		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
+		// is var_dest, not the room being left (move.c:483).
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: exitObject,
+			What: "DROP", OWhat: "ODROP", AWhat: "ADROP",
+			Loc: destination));
+
+		// A room destination goes through enter_room, anything else through safe_tel (move.c:486-508).
+		var result = destination.WithExitOption().IsRoom
+			? await MoveService.EnterRoom(parser, executor.AsContent, destination,
+				noMoveMsgs: false, executor.Object().DBRef, "move")
+			: await MoveService.SafeTel(parser, executor.AsContent, destination,
+				noMoveMsgs: false, executor.Object().DBRef, "move");
+
+		if (result.IsT1)
+		{
+			await NotifyService.Notify(executor, result.AsT1.Value, executor);
+			return CallState.Empty;
+		}
+
+		// Followers trail the leader only if the leader actually went somewhere (move.c:493).
+		var newLocation = await executor.Where();
+
+		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
+		{
+			await FollowerCommand(parser, executor, currentLocation, "GOTO", exitObj.Object.DBRef);
+		}
 
 		return new CallState(destination.ToString());
 	}
 
+	/// <summary>
+	/// PennMUSH <c>fail_lock(player, exit, Basic_Lock, "You can't go that way.", NOTHING)</c>
+	/// (<c>src/move.c:516</c>).
+	/// </summary>
+	private async ValueTask<Option<CallState>> FailBasicLock(
+		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject exitObject)
+	{
+		await DidItService.FailLock(parser, executor, exitObject, LockType.Basic,
+			MarkupText.Plain(ErrorMessages.Notifications.CantGoThatWay));
+
+		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>Puppet(victim) &amp;&amp; (Owner(victim) == Owner(player))</c> (<c>src/wiz.c:585</c>):
+	/// a puppet relays everything it is told to its owner, so an owner acting on their own puppet does
+	/// not need a second confirmation.
+	/// </summary>
+	private static async ValueTask<bool> IsOwnPuppet(AnySharpObject thing, AnySharpObject player)
+	{
+		if (!await thing.HasFlag("PUPPET"))
+		{
+			return false;
+		}
+
+		var thingOwner = (await thing.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		var playerOwner = (await player.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		return thingOwner.Equals(playerOwner);
+	}
+
 
 	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2,
-		Switches = ["LIST", "INSIDE", "QUIET"], ParameterNames = ["object", "destination"])]
+		Switches = ["LIST", "INSIDE", "SILENT"], ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -1702,10 +1423,49 @@ public partial class Commands
 				destinationContainer = resolvedExit.AsT0;
 			}
 
+			// recursive_member(destination, victim, 0) || victim == destination (wiz.c:440). This is a
+			// refusal, so it has to be decided before anything announces the departure — safe_tel
+			// declining the move afterwards would leave the room told about a move that never happened.
+			if (targetContent.Object().DBRef.Equals(destinationContainer.Object().DBRef)
+					|| await MoveService.WouldCreateLoop(targetContent, destinationContainer))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
+				continue;
+			}
+
+			// Every check from here to the end of the command is gated on Tel_Anywhere in PennMUSH
+			// (wiz.c:442, 487, 541, 549, 563): Hasprivs(x) || has_power_by_name(x, "TPORT_ANYWHERE")
+			// (hdrs/mushdb.h:17-18), where Hasprivs is Wizard or Royalty. SharpMUSH seeds the matching
+			// power as Tport_Anywhere (SharpMUSH.Database/Seed/PowerSeed.cs:48).
+			var telAnywhere = await executor.IsWizard()
+				|| await executor.IsRoyalty()
+				|| await executor.HasPower("Tport_Anywhere");
+
+			// wiz.c:442: without Tel_Anywhere, another player is not a destination at all — the
+			// /INSIDE question below only arises for someone who could have gone there.
+			if (!telAnywhere && target.IsPlayer && destinationContainer.IsPlayer)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
+				continue;
+			}
+
+			// wiz.c:487: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
+			// player rather than inside them. /INSIDE is what asks for the containment instead.
+			// DEVIATION: Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns
+			// before wiz.c:585, so it never prints "Teleported." here. This falls through to the shared
+			// path below instead, which does print it.
+			if (telAnywhere
+					&& target.IsPlayer
+					&& destinationContainer.IsPlayer
+					&& !parser.CurrentState.Switches.Contains("INSIDE"))
+			{
+				destinationContainer = await destinationContainer.Location();
+			}
+
 			// Zone teleport restriction: check if the source room blocks teleporting out.
 			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
 			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
-			if (!await executor.IsWizard())
+			if (!telAnywhere)
 			{
 				AnySharpContainer? sourceLocation = null;
 				try
@@ -1752,24 +1512,32 @@ public partial class Commands
 
 			// Check TPort lock on the destination (PennMUSH src/wiz.c).
 			// Wizards bypass the TPort lock check.
-			if (!await executor.IsWizard())
+			if (!telAnywhere)
 			{
 				var destObj = destinationContainer.WithExitOption();
-				if (!await LockService.Evaluate(LockType.TPort, destObj, executor))
+				if (!await LockService.Evaluate(LockType.Teleport, destObj, executor))
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;
 				}
 			}
 
-			var isSilent = parser.CurrentState.Switches.Contains("QUIET");
-			var moveResult = await MoveService.ExecuteMoveAsync(
-				parser,
-				targetContent,
-				destinationContainer,
-				executor.Object().DBRef,
-				"teleport",
-				isSilent);
+			// PennMUSH do_teleport_one (wiz.c:568-579). /SILENT suppresses the OXTPORT and TPORT
+			// triads and, through safe_tel's nomovemsgs, the MOVE triad. It does not reach ENTER or
+			// LEAVE, and it does not reach the automatic look enter_room ends with.
+			var isSilent = parser.CurrentState.Switches.Contains("SILENT");
+			var currentLocation = await targetContent.Location();
+			var changesRoom = !currentLocation.Object().DBRef.Equals(destinationContainer.Object().DBRef);
+
+			if (!isSilent && changesRoom)
+			{
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: target, Thing: target, OWhat: "OXTPORT",
+					Loc: currentLocation, Env0: executor.Object().DBRef.ToString()));
+			}
+
+			var moveResult = await MoveService.SafeTel(
+				parser, targetContent, destinationContainer, isSilent, executor.Object().DBRef, "teleport");
 
 			if (moveResult.IsT1)
 			{
@@ -1777,21 +1545,22 @@ public partial class Commands
 				continue;
 			}
 
-			if (target.IsPlayer && !isSilent)
+			if (!isSilent && changesRoom)
 			{
-				await NotifyService.NotifyLocalized(target.Object().DBRef, nameof(ErrorMessages.Notifications.TeleportedPlayerNotified));
+				await DidItService.DidIt(parser, new DidItRequest(
+					Player: target, Thing: target,
+					What: "TPORT", OWhat: "OTPORT", AWhat: "ATPORT",
+					Loc: destinationContainer,
+					Env0: executor.Object().DBRef.ToString(), Env1: currentLocation.Object().DBRef.ToString()));
+			}
 
-				var targetPlayerState = parser.CurrentState with
-				{
-					Executor = target.Object().DBRef,
-					Enactor = target.Object().DBRef
-				};
-
-				await Mediator.Send(new AdmitCommandListRequest(
-					MarkupText.Plain("look"),
-					targetPlayerState,
-					new DbRefAttribute(target.Object().DBRef, DefaultSemaphoreAttributeArray),
-					-1), ExecutionBudget.CurrentToken);
+			// wiz.c:585-588: the teleporter is told the move happened, unless they were the one moved,
+			// unless the victim is their own puppet (which reports for itself), and unless AreQuiet.
+			if (!target.Object().DBRef.Equals(executor.Object().DBRef)
+					&& !await IsOwnPuppet(target, executor)
+					&& !await target.Object().AreQuietAsync(executor))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Teleported), executor);
 			}
 		}
 

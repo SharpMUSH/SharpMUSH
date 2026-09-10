@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -9,12 +9,25 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
-	IRealityPolicy reality) : IPermissionService
+public class PermissionService(
+	ILockService lockService,
+	IOptionsMonitor<SharpMUSHOptions> options,
+	IRealityPolicy reality,
+	IConnectionService connectionService,
+	Lazy<IAttributeService> attributeService) : IPermissionService
 {
 	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
 	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options)
 		: this(lockService, options, DisabledRealityPolicy.Instance) { }
+
+	/// <summary>
+	/// Retains the published reality-aware constructor for legacy callers. <see cref="IsHearer"/> is
+	/// the only member that needs the two remaining dependencies, and it postdates this signature, so
+	/// nothing bound to it can reach them.
+	/// </summary>
+	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
+		IRealityPolicy reality)
+		: this(lockService, options, reality, null!, null!) { }
 
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
@@ -263,6 +276,64 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanIdle(AnySharpObject executor)
 		=> await executor.IsPriv() || await executor.HasPower("IDLE");
 
+	/// <summary>
+	/// PennMUSH <c>Can_Locate</c> (<c>hdrs/mushdb.h:75</c>): may <paramref name="who"/> tell where
+	/// <paramref name="what"/> is.
+	/// </summary>
+	/// <remarks>
+	/// The macro's last clause is gated on <c>command_check_byname(p, "@whereis")</c>. SharpMUSH's
+	/// <c>@WHEREIS</c> carries no command lock, so that half is unconditionally true and the clause
+	/// reduces to whether the target is a findable player.
+	/// </remarks>
+	public async ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what)
+	{
+		if (await Controls(who, what)
+				|| await LocateService.Nearby(who, what)
+				|| await who.IsSee_All())
+		{
+			return true;
+		}
+
+		if (!what.IsPlayer || await what.HasFlag("UNFINDABLE"))
+		{
+			return false;
+		}
+
+		return !await IsUnfindable((await what.AsContent.Location()).WithExitOption());
+	}
+
+	/// <summary>
+	/// PennMUSH <c>unfindable</c> (<c>src/utils.c:523</c>): the object, or any container it sits
+	/// inside, carries UNFINDABLE. Penn caps the walk at a hard 50; SharpMUSH uses the configured
+	/// <c>Limit.MaxDepth</c>, so one setting bounds every containment walk in the server.
+	/// </summary>
+	private async ValueTask<bool> IsUnfindable(AnySharpObject thing)
+	{
+		var current = thing;
+		var maxDepth = (int)options.CurrentValue.Limit.MaxDepth;
+
+		for (var depth = 0; depth < maxDepth; depth++)
+		{
+			if (await current.HasFlag("UNFINDABLE"))
+			{
+				return true;
+			}
+
+			if (current.IsRoom || !current.IsContent)
+			{
+				return false;
+			}
+
+			current = (await current.AsContent.Location()).WithExitOption();
+		}
+
+		// Fail closed. Reaching the cap means the walk never found a room or a terminating container,
+		// so it cannot say the chain is findable — and answering "findable" here would disclose a
+		// player's location on exactly the malformed chain that defeated the walk. Only a verified
+		// non-UNFINDABLE terminator returns false, above.
+		return true;
+	}
+
 	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
 	{
 		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
@@ -399,12 +470,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanInteract(AnySharpObject from, AnySharpObject to,
 		IPermissionService.InteractType type, AnySharpObject hearingSource)
 	{
-		var hear = type != IPermissionService.InteractType.Presence
-			&& (type & (IPermissionService.InteractType.Hear | IPermissionService.InteractType.Page)) != 0;
+		// can_interact (src/utils.c:832) compares the type, so the routing does too: only Hear
+		// (and SharpMUSH's Page, which is a directed hearing) look from the receiver back at the
+		// source. Presence, See and Match run in the sender's direction.
+		var hear = type is IPermissionService.InteractType.Hear or IPermissionService.InteractType.Page;
 		if (!await reality.CanPerceiveAsync((hear ? to : from).Object().DBRef, (hear ? hearingSource : to).Object().DBRef)) return false;
 		if (from.Id() == to.Id() || from.IsRoom || to.IsRoom) return true;
 
-		if (type.HasFlag(IPermissionService.InteractType.Hear) && !await lockService.Evaluate(LockType.Interact, to, from))
+		// src/utils.c:855 — `(type == INTERACT_HEAR)`, an equality test, not a bitmask.
+		if (type == IPermissionService.InteractType.Hear && !await lockService.Evaluate(LockType.Interact, to, from))
 			return false;
 
 		return true;
@@ -413,6 +487,9 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 	public async ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interactee,
 		IPermissionService.InteractType type)
 		=> await CanInteract(interactor, interactee.WithRoomOption(), type);
+
+	public ValueTask<bool> IsHearer(AnySharpObject obj)
+		=> obj.IsHearer(connectionService, attributeService.Value);
 
 	public static async ValueTask<bool> CanEval(AnySharpObject evaluator, AnySharpObject evaluationTarget)
 		=> !await evaluationTarget.IsPriv()
@@ -449,10 +526,15 @@ public class PermissionService(ILockService lockService, IOptionsMonitor<SharpMU
 			_ => PassesLock(who, thing.Known, LockType.Basic)
 		};
 
+	/// <summary>
+	/// PennMUSH <c>could_doit</c> (<c>src/predicat.c:75</c>) as <c>do_move</c> uses it
+	/// (<c>src/move.c:446</c>): the exit's basic lock, evaluated against the mover, gated by the
+	/// reality policy on both the exit itself and the room it leads to.
+	/// </summary>
 	public async ValueTask<bool> CanGoto(AnySharpObject who, SharpExit exit, AnySharpContainer destination)
 	{
 		if (!await reality.CanPerceiveAsync(who.Object().DBRef, exit.Object.DBRef)
-			|| !await reality.CanPerceiveAsync(who.Object().DBRef, destination.Object().DBRef)) return false;
+				|| !await reality.CanPerceiveAsync(who.Object().DBRef, destination.Object().DBRef)) return false;
 		return await lockService.Evaluate(LockType.Basic, exit, who);
 	}
 

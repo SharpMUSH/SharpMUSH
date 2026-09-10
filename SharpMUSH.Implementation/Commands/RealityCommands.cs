@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
@@ -25,6 +25,7 @@ public partial class Commands
 		return (target, ct) => observe(target, ct.CanBeCanceled ? ct : ExecutionBudget.CurrentToken);
 	}
 
+	/// <summary>Whether <paramref name="mover"/> could arrive at <paramref name="destination"/> at all.</summary>
 	private static ValueTask<bool> CanMoveInReality(IMUSHCodeParser parser, DBRef mover, DBRef destination)
 		=> parser.ServiceProvider.GetRequiredService<IRealityPolicy>().CanPerceiveAsync(mover, destination);
 

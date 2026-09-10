@@ -503,23 +503,24 @@ public class ObjectSnapshotTests
 	}
 
 	/// <summary>
-	/// An image written before lock names were canonical names <see cref="LockType.TPort"/> the way
-	/// that world spelled it. The before-image a restore retains has to carry the live lock under the
-	/// name the object is keyed by: recorded as absent instead, recovery removes the lock rather than
-	/// restoring its value — and an absent lock reads as "no lock", which passes everybody.
+	/// An image written before lock names were canonical names <see cref="LockType.Teleport"/> the way
+	/// that world spelled it — <c>tport</c>, which is why <see cref="LockNames"/> still carries it as
+	/// an alias. The before-image a restore retains has to carry the live lock under the name the
+	/// object is keyed by: recorded as absent instead, recovery removes the lock rather than restoring
+	/// its value — and an absent lock reads as "no lock", which passes everybody.
 	/// </summary>
 	[Test, NotInParallel]
 	public async Task RecoveryKeepsALockAPreUpgradeSnapshotSpelledTheOldWay()
 	{
 		var (actor, target, player) = await Setup();
 		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
-		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.TPort), "#TRUE", player));
+		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.Teleport), "#TRUE", player));
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "pre-upgrade spelling");
 		// Rewrite the stored image to the spelling a world older than the fix would have written,
 		// re-digesting it so it is exactly what that world would hold rather than a corrupt row.
-		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.TPort), "Teleport");
-		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.TPort), "#FALSE", player));
+		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.Teleport), "tport");
+		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.Teleport), "#FALSE", player));
 
 		var failing = Substitute.For<IManipulateSharpObjectService>();
 		failing.SetName(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<MarkupText>(), false)
@@ -532,17 +533,17 @@ public class ObjectSnapshotTests
 		await Assert.That(failed.Completed).IsFalse();
 
 		var recovery = (await real.ListAsync(actor, target)).Snapshots.Single(s => s.Id == failed.RecoverySnapshotId);
-		await Assert.That(recovery.Locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+		await Assert.That(recovery.Locks.ContainsKey(nameof(LockType.Teleport))).IsTrue()
 			.Because("the durable before-image must carry the live lock it is the only record of");
-		await Assert.That(recovery.AbsentLocks.Select(LockNames.Canonical)).DoesNotContain(nameof(LockType.TPort));
+		await Assert.That(recovery.AbsentLocks.Select(LockNames.Canonical)).DoesNotContain(nameof(LockType.Teleport));
 
 		var recoverySelection = new SnapshotSelection(recovery.DefaultAttributes(), Locks: true, Name: true);
 		var recoveryPreview = await real.PreviewAsync(actor, target, recovery.Id, recoverySelection);
 		await Assert.That((await real.RestoreAsync(actor, target, recovery.Id, recoverySelection, recoveryPreview.Token)).Completed).IsTrue();
 		var locks = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks;
-		await Assert.That(locks.ContainsKey(nameof(LockType.TPort))).IsTrue()
+		await Assert.That(locks.ContainsKey(nameof(LockType.Teleport))).IsTrue()
 			.Because("recovery must put the lock back, not delete it");
-		await Assert.That(locks[nameof(LockType.TPort)].LockString).IsEqualTo("#FALSE");
+		await Assert.That(locks[nameof(LockType.Teleport)].LockString).IsEqualTo("#FALSE");
 	}
 
 	/// <summary>Rewrites one stored snapshot's lock key and re-digests it, producing the image a world older than lock-name canonicalisation would hold.</summary>

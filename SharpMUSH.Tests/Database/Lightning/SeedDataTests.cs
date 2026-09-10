@@ -7,7 +7,7 @@ public class SeedDataTests
 	[Test]
 	public async Task SeedCountsMatchTheProviders()
 	{
-		await Assert.That(FlagSeed.Flags.Length).IsEqualTo(62);
+		await Assert.That(FlagSeed.Flags.Length).IsEqualTo(63);
 		await Assert.That(AttributeFlagSeed.Flags.Length).IsEqualTo(26);
 		await Assert.That(PowerSeed.Powers.Length).IsEqualTo(36);
 		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(216);

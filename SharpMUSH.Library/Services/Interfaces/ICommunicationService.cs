@@ -50,6 +50,11 @@ public interface ICommunicationService
 	/// <param name="notificationType">The type of notification to send</param>
 	/// <param name="sender">The object shown as the sender (for spoof support)</param>
 	/// <param name="excludeObjects">Optional list of objects to exclude from receiving the message</param>
+	/// <param name="interact">
+	/// Which interaction gate each candidate recipient must pass. PennMUSH's <c>notify_except2</c>
+	/// takes this per message: movement leave/enter messages are <c>NA_INTER_PRESENCE</c>, the
+	/// OX-prefixed and zone messages are <c>NA_INTER_SEE</c>, and speech is <c>NA_INTER_HEAR</c>.
+	/// </param>
 	/// <returns>Task representing the async operation</returns>
 	ValueTask SendToRoomAsync(
 		AnySharpObject executor,
@@ -57,7 +62,8 @@ public interface ICommunicationService
 		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
-		IEnumerable<AnySharpObject>? excludeObjects = null);
+		IEnumerable<AnySharpObject>? excludeObjects = null,
+		IPermissionService.InteractType interact = IPermissionService.InteractType.Hear);
 
 	/// <summary>
 	/// Sends a message to a single object after locating it and checking permissions.

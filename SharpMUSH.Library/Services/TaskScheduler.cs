@@ -1,4 +1,5 @@
-using Mediator;
+﻿using Mediator;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Extensions;
@@ -171,6 +172,7 @@ public partial class TaskScheduler(
 		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
 		string owner = handle is null ? "system" : $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
+		var executorIsPlayer = false;
 		if (executor is not null)
 		{
 			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken);
@@ -180,6 +182,7 @@ public partial class TaskScheduler(
 				return Reject(QueueRejectionReason.InvalidTarget);
 			}
 			executor = target.Known().Object().DBRef;
+			executorIsPlayer = target.Known().IsPlayer;
 			if (await target.Known().IsWizard(ExecutionBudget.CurrentToken) || await target.Known().HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
 			owner = (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
@@ -224,8 +227,114 @@ public partial class TaskScheduler(
 				await foreach (var connection in connectionService.Get(player!.Value))
 					await notifyService.NotifyLocalized(connection.Handle, "QueueRejected", result.Reason);
 		}
+		// Deviation: PennMUSH's pay_queue wipes whatever executor tripped the quota, player or not
+		// (do_halt(Owner(player), "", player), src/cque.c:311). Its message names an object, and a
+		// player only ever reaches that branch through queued work, since run_user_input bypasses
+		// pay_queue entirely (src/cque.c:1076-1088). Here the refusal already stopped the new entry,
+		// and wiping a player's queue on top of it would take out work they did not run away with.
+		if (result.Reason == QueueRejectionReason.OwnerLimit && !executorIsPlayer && executor is { } offender)
+			QueueRunawayHalt(offender, owner);
 		return result;
 	}
+
+	// One outstanding halt per offender. A quota that is full stays full until the wipe runs, so
+	// every admission behind this one is refused too and would otherwise queue its own duplicate.
+	private readonly ConcurrentDictionary<DBRef, byte> _runawayHalts = new();
+
+	/// <summary>
+	/// PennMUSH's runaway path (<c>src/cque.c:303-313</c>): <c>pay_queue</c> does not merely refuse
+	/// the entry, it tells the owner, wipes the offender's queue and sets <c>HALT</c> on it. The
+	/// refused entry is simply not queued.
+	/// </summary>
+	/// <remarks>
+	/// Deviation: the wipe runs detached rather than inline. <see cref="Halt"/> takes the semaphore
+	/// and delayed transition leases, and an admission that came from <c>@wait &lt;obj&gt;/&lt;attr&gt;</c>
+	/// is already holding the semaphore lease when it is refused, so halting inline would wait on a
+	/// lease this call stack owns. It is not admitted as a queue entry either: the refusal it answers
+	/// means the queue is at a limit, and taking a slot to run the wipe would deny one to an
+	/// unrelated owner. <see cref="DrainImmediateQueueForTests"/> waits on the outstanding set.
+	/// </remarks>
+	private void QueueRunawayHalt(DBRef offender, string owner)
+	{
+		if (!_runawayHalts.TryAdd(offender, 0)) return;
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				// The refused admission's budget is disposed the moment it returns, and the ambient one
+				// flows into this task. The wipe gets a lifetime of its own, bounded by shutdown.
+				var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+				using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, _shutdownCts.Token);
+				using var scope = budget.Enter();
+				await HaltRunaway(offender, owner);
+			}
+			catch (Exception ex) { logger.LogError(ex, "Could not halt runaway object {DbRef}", offender); }
+			finally { _runawayHalts.TryRemove(offender, out _); }
+		});
+	}
+
+	private async ValueTask HaltRunaway(DBRef offender, string owner)
+	{
+		var node = await mediator.Send(new GetObjectNodeQuery(offender), ExecutionBudget.CurrentToken);
+		var name = node.IsNone ? offender.ToString() : node.Known().Object().Name;
+
+		// The wipe has to happen: without it the backlog the object already built keeps running, each
+		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
+		await Halt(offender);
+
+		// Penn exempts players from the halted gate at both ends — insert_que (src/cque.c:530) and the
+		// dequeue re-check (:1136) each test !IsPlayer(executor) first. SharpMUSH's DidItService
+		// honours HALT on everyone, so the flag on a player would silence them outright. Admission
+		// already refuses to send a player down this path; this is the second lock on that door.
+		if (!node.IsNone && !node.Known().IsPlayer)
+		{
+			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"), ExecutionBudget.CurrentToken);
+			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(node.Known(), haltFlag), ExecutionBudget.CurrentToken);
+		}
+
+		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
+			await notifyService.NotifyLocalized(ownerRef!.Value,
+				nameof(ErrorMessages.Notifications.RunawayObjectFormat), name, offender.ToString());
+
+		logger.LogWarning("Runaway object {Name} ({DbRef}) exceeded its owner's queue quota; commands halted",
+			name, offender);
+	}
+
+	/// <summary>
+	/// Waits until the immediate-execution queue has no entries left to run, so a test can assert on
+	/// the effects of work that was queued rather than run inline — an action attribute triggered by
+	/// <see cref="IDidItService"/>, for one.
+	/// </summary>
+	/// <remarks>
+	/// Only entries the readiness gate has published are waited on. A <c>@wait</c> parked on a
+	/// semaphore or a timer also sits in <see cref="_pendingEntries"/>, and waiting for that to empty
+	/// would be waiting for the semaphore to be notified.
+	/// </remarks>
+	public async ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
+	{
+		EnsureConsumerStarted();
+
+		// An entry leaves _ready only after its action has finished, and anything that action queued
+		// is published before that removal, so an empty set means the queue is quiet — including the
+		// work the drained entries themselves produced.
+		var deadline = DateTimeOffset.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
+
+		while (true)
+		{
+			int outstanding;
+			lock (_admissionLock) outstanding = _ready.Count;
+			if (outstanding == 0 && _runawayHalts.IsEmpty) return;
+
+			if (DateTimeOffset.UtcNow >= deadline)
+			{
+				throw new TimeoutException(
+					$"The immediate queue still held {outstanding} entries after the drain timeout.");
+			}
+
+			await Task.Delay(TimeSpan.FromMilliseconds(5));
+		}
+	}
+
 	private static string? SourceAttribute(ParserState state) => state.CurrentEvaluation is { } current
 		&& current.DB == state.Executor ? current.Name : null;
 	private async ValueTask<QueueAdmissionResult> RejectInvalidTarget(DBRef? executor, string kind)
@@ -1118,13 +1227,28 @@ public partial class TaskScheduler(
 		}
 	}
 
+	/// <summary>
+	/// The PIDs on <paramref name="obj"/>'s run queue, which is what <c>@ps</c> counts as the command
+	/// queue and what <c>@halt &lt;object&gt;</c> reaches. The entry's executor answers this, not its
+	/// trigger name or group: an attribute queued by <see cref="AdmitAsyncAttribute"/> is named after
+	/// its attribute, and a released <c>@wait &lt;obj&gt;/&lt;attr&gt;</c> keeps the semaphore group
+	/// it was scheduled under while running as ordinary queued work. PennMUSH's <c>do_halt</c> matches
+	/// on the executor across the run, wait and semaphore queues alike (<c>src/cque.c:2167-2218</c>),
+	/// and <c>dequeue_semaphores</c> (<c>:1379-1427</c>) moves a released entry onto the run queue
+	/// with its executor intact. Entries still waiting are excluded — they are the wait and semaphore
+	/// queues <c>@ps</c> counts separately — and so is direct player input, as it is in Penn.
+	/// </summary>
 	public IAsyncEnumerable<long> GetEnqueueTasks(DBRef obj)
 	{
-		var dbRefPrefix = $"dbref:{obj}-";
-		return _pendingEntries
-			.Where(kvp => kvp.Value.TriggerName.StartsWith(dbRefPrefix) && kvp.Value.Group == EnqueueGroup)
-			.Select(kvp => kvp.Key)
-			.ToAsyncEnumerable();
+		long[] pids;
+		lock (_admissionLock)
+			pids = _pendingEntries.Values
+				.Where(entry => entry.Executor?.Matches(obj) == true
+					&& entry.Group != DirectInputGroup
+					&& _ready.Contains(entry.Pid))
+				.Select(entry => entry.Pid)
+				.ToArray();
+		return pids.ToAsyncEnumerable();
 	}
 
 

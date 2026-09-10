@@ -155,6 +155,16 @@ public interface ITaskScheduler
 	/// <param name="group">Group identifier for categorization</param>
 	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
+	/// <summary>
+	/// Waits until the immediate-execution queue has no entries left to run, so a test can assert on
+	/// the effects of work that was queued rather than run inline — an action attribute triggered by
+	/// <see cref="IDidItService"/>, for one.
+	/// </summary>
+	/// <param name="timeout">How long to wait before giving up; defaults to five seconds.</param>
+	/// <exception cref="TimeoutException">The queue was still busy when the timeout elapsed.</exception>
+	ValueTask DrainImmediateQueueForTests(TimeSpan? timeout = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
 	/// <summary>Whether work admitted with this original trigger name and group still owns a queued, running, or canceled reservation.</summary>
 	bool HasPendingWork(string triggerName, string group)
 		=> throw new NotSupportedException("This scheduler does not support pending-work inspection.");

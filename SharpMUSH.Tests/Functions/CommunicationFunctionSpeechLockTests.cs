@@ -51,7 +51,7 @@ public class CommunicationFunctionSpeechLockTests
 		string Room);
 
 	/// <summary>
-	/// A fresh room holding a speaker and a witness. /QUIET keeps the arrival autolook from
+	/// A fresh room holding a speaker and a witness. /SILENT keeps the arrival autolook from
 	/// queueing output into some other test's capture window, as the shared NotifyService
 	/// substitute is session-wide.
 	/// </summary>
@@ -63,8 +63,8 @@ public class CommunicationFunctionSpeechLockTests
 		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Wi");
 
-		await Command(1, $"@teleport/quiet {speaker.DbRef}={room}");
-		await Command(1, $"@teleport/quiet {witness.DbRef}={room}");
+		await Command(1, $"@teleport/silent {speaker.DbRef}={room}");
+		await Command(1, $"@teleport/silent {witness.DbRef}={room}");
 
 		await Assert.That(await Eval(speaker.Handle, "loc(me)")).IsEqualTo(room)
 			.Because("every assertion below is vacuous unless the speaker actually moved into the room");
@@ -216,10 +216,10 @@ public class CommunicationFunctionSpeechLockTests
 
 		var box = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SpkNestBox");
 
-		await Command(1, $"@teleport/quiet {box}={room}");
-		await Command(1, $"@teleport/quiet {speaker.DbRef}={box}");
-		await Command(1, $"@teleport/quiet {inside.DbRef}={box}");
-		await Command(1, $"@teleport/quiet {outside.DbRef}={room}");
+		await Command(1, $"@teleport/silent {box}={room}");
+		await Command(1, $"@teleport/silent {speaker.DbRef}={box}");
+		await Command(1, $"@teleport/silent {inside.DbRef}={box}");
+		await Command(1, $"@teleport/silent {outside.DbRef}={room}");
 
 		await Assert.That(await Eval(speaker.Handle, "loc(me)")).IsEqualTo(box.ToString())
 			.Because("the nesting assertions are vacuous unless the speaker is inside the box");

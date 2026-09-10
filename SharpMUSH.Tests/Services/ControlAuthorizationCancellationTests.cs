@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using OneOf.Types;
@@ -41,7 +41,8 @@ public class ControlAuthorizationCancellationTests
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		var baseline = TestSharpMushOptions.Create();
 		options.CurrentValue.Returns(baseline with { Database = baseline.Database with { ZoneControlZmpOnly = false } });
-		var service = new PermissionService(Substitute.For<ILockService>(), options, Substitute.For<IRealityPolicy>());
+		var service = new PermissionService(Substitute.For<ILockService>(), options, Substitute.For<IRealityPolicy>(),
+			Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(Substitute.For<IAttributeService>()));
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
 		async Task<T> Block<T>(CancellationToken token)

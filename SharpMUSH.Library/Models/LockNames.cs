@@ -13,9 +13,10 @@ namespace SharpMUSH.Library.Models;
 /// Names arrive spelled three ways: from an <c>@lock</c>/<c>@unlock</c> switch (whatever case the
 /// player typed), from a PennMUSH world import (<c>PennMUSHDatabaseConverter</c> writes the lock
 /// names verbatim out of the foreign database), and from a package manifest. PennMUSH spells three
-/// of them differently only in case — <c>Chzone</c>, <c>Dropto</c>, <c>Chown</c> — and one as a
-/// different word, <c>Teleport</c> for <see cref="LockType.TPort"/>, which is why
-/// <see cref="Aliases"/> exists and case-insensitivity alone is not enough.
+/// of them differently only in case — <c>Chzone</c>, <c>Dropto</c>, <c>Chown</c> — which is what
+/// <see cref="Comparer"/> bridges. <see cref="Aliases"/> carries any spelling that is not merely a
+/// case variation of a <see cref="LockType"/> member; every member currently matches its PennMUSH
+/// name up to case, so the table is empty and exists for the next divergence.
 /// <para>
 /// Lock names that are not standard locks (a user lock, say) pass through unchanged; they are still
 /// matched case-insensitively, as PennMUSH matches lock names.
@@ -31,9 +32,14 @@ public static class LockNames
 	public static StringComparer Comparer => StringComparer.OrdinalIgnoreCase;
 
 	/// <summary>Spellings that are not just a case variation of a <see cref="LockType"/> member.</summary>
+	/// <remarks>
+	/// <c>tport</c> is what SharpMUSH stored before the lock names were canonicalised, and a world
+	/// written then still holds it. PennMUSH itself only ever spells this lock <c>Teleport</c>
+	/// (<c>src/lock.c:61</c>).
+	/// </remarks>
 	private static readonly (string Alias, LockType Type)[] Aliases =
 	[
-		("Teleport", LockType.TPort)
+		("tport", LockType.Teleport)
 	];
 
 	private static readonly FrozenDictionary<string, string> CanonicalByName =

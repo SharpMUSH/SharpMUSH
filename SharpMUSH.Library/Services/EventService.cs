@@ -144,6 +144,7 @@ public class EventService(
 				TotalInvocations: isEmpty ? new InvocationCounter() : parser.CurrentState.TotalInvocations ?? new InvocationCounter(),
 				LimitExceeded: isEmpty ? new LimitExceededFlag() : parser.CurrentState.LimitExceeded ?? new LimitExceededFlag())
 			{
+				MoveDepth = isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter(),
 				ExecutionBudget = ExecutionBudget.Current
 			});
 

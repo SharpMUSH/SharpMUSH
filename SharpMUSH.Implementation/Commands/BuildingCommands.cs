@@ -156,6 +156,16 @@ public partial class Commands
 						found.Object().DBRef.ToString(),
 						name.ToPlainText(),
 						oldName);
+
+					// real_did_it(player, thing, NULL, NULL, "ONAME", NULL, "ANAME", NOTHING, pe_regs,
+					// NA_INTER_PRESENCE, AN_SYS) with %0 the old name and %1 the new (set.c:155-158).
+					// There is no actor half — @name's own "Name set." is a separate notify — and the
+					// loc of NOTHING resolves to the RENAMER's location, not the target's.
+					await DidItService.DidIt(parser, new DidItRequest(
+						Player: executor, Thing: found,
+						OWhat: "ONAME", AWhat: "ANAME",
+						Env0: oldName, Env1: name.ToPlainText(),
+						Interact: IPermissionService.InteractType.Presence));
 				}
 
 				return result;
@@ -670,18 +680,43 @@ public partial class Commands
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							// create.c:395: a home is any object that is not an exit — a room, a player or a
+							// thing. safe_tel's "homed to the mover" case (move.c:311) is only reachable
+							// because a player can be a home.
+							if (!destObj.IsContainer)
 							{
 								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
 									errorReturn: ErrorMessages.Returns.InvalidDestination,
-									notifyMessage: ErrorMessages.Notifications.HomeMustBeRoom,
+									notifyMessage: ErrorMessages.Notifications.HomeIsAnExit,
+									shouldNotify: true);
+							}
+
+							// create.c:399.
+							if (destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
+							{
+								return await NotifyService.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.InvalidDestination,
+									notifyMessage: ErrorMessages.Notifications.CannotLinkToItself,
+									shouldNotify: true);
+							}
+
+							// create.c:404. Penn's following room == HOME guard (create.c:412) is
+							// unreachable: this branch matches with MAT_EVERYTHING, which has no
+							// home entry, and only parse_linkable_room ever yields HOME.
+							if (!await CanSetHomeTo(executor, destObj))
+							{
+								return await NotifyService.NotifyAndReturn(
+									executor.Object().DBRef,
+									errorReturn: ErrorMessages.Returns.PermissionDenied,
+									notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 									shouldNotify: true);
 							}
 
 							// Convert to AnySharpContent for SetObjectHomeCommand
 							var contentObj = exitObj.AsContent;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsRoom));
+							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
 							return CallState.Empty;
 						}
@@ -995,8 +1030,8 @@ public partial class Commands
 		var lockType = "Basic";
 		if (parser.CurrentState.Switches.Any())
 		{
-			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "teleport" ->
-			// "TPort"); a switch naming no standard lock is a user lock and passes through as typed.
+			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "tport" ->
+			// "Teleport"); a switch naming no standard lock is a user lock and passes through as typed.
 			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
 		}
 
@@ -1190,6 +1225,22 @@ public partial class Commands
 		}
 
 		return await destination.HasFlag("LINK_OK");
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_link</c>'s home gate (<c>src/create.c:404</c>): <c>!controls(player, room) &amp;&amp;
+	/// !Abode(room)</c>. Any non-exit can be a home, so without this a player could home an object
+	/// they control into someone else's inventory. <c>ABODE</c> is ROOM-only in the flag seed, as in
+	/// PennMUSH, so a player or thing destination is gated on control alone.
+	/// </summary>
+	private async ValueTask<bool> CanSetHomeTo(AnySharpObject executor, AnySharpObject destination)
+	{
+		if (await PermissionService.Controls(executor, destination))
+		{
+			return true;
+		}
+
+		return await destination.HasFlag("ABODE");
 	}
 
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,

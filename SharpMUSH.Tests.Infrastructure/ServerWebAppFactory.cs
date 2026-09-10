@@ -138,7 +138,10 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag(),
 				Flags: ParserStateFlags.DirectInput
-			));
+			)
+			{
+				MoveDepth = new InvocationCounter()
+			});
 	}
 
 	/// <summary>Evaluates functions as God.</summary>

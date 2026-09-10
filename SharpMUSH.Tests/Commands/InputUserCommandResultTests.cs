@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -49,7 +49,8 @@ public class InputUserCommandResultTests
 		var actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
 		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
 		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command room", god)))).AsRoom;
-		await mediator.Send(new MoveObjectCommand(actor, room, IsSilent: true));
+		var actorOrigin = await actor.Location.WithCancellation(default);
+		await mediator.Send(new MoveObjectCommand(actor, room, actorOrigin.Object().DBRef, IsSilent: true));
 		actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
 		var master = (await objects.GetObjectNodeAsync(new DBRef((int)Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom))).Known;
 		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Known;

@@ -63,14 +63,28 @@ public class ObjectDestructionService(
 		await mediator.Send(new HaltObjectQueueRequest(dbref), cancellationToken);
 
 		// Type-specific teardown, in PennMUSH's order: clear_* runs before the object is unlinked.
-		await target.Match<ValueTask>(
+		var cleared = await target.Match(
 			player => ClearPlayerAsync(parser, player, cancellationToken),
 			room => ClearRoomAsync(parser, room, cancellationToken),
 			// clear_exit() only detaches the exit from its source's exit list and refunds the deposit.
 			// The detach is the AtLocation edge, which the storage delete removes, and SharpMUSH has no
 			// money to refund (money() is unsupported), so nothing is left to do here.
-			_ => ValueTask.CompletedTask,
+			_ => ValueTask.FromResult(true),
 			thing => ClearThingAsync(parser, thing, cancellationToken));
+
+		// DEVIATION: PennMUSH's empty_contents cannot fail — moveto is a pointer rewrite over an
+		// in-memory database. Here evacuating is a move that can be refused (a containment loop, the
+		// move-recursion ceiling, a provider write that did not land), and DeleteObjectCommand would
+		// then take the location edge of content still standing inside, leaving every later read of
+		// that content invalid. Nothing has been unlinked yet, so refusing here leaves the object
+		// exactly as it was: still GOING, and retried on the next purge pass.
+		if (!cleared)
+		{
+			logger.LogError(
+				"Refusing to destroy #{DbRef} ({Name}): its contents could not be evacuated, and deleting it "
+				+ "would strand them without a location.", dbref.Number, target.Object().Name);
+			return false;
+		}
 
 		// Exits that led here point at their own source instead of into limbo, and anything that
 		// called this home falls back to default_home. Both stand in for the pass in PennMUSH
@@ -180,14 +194,16 @@ public class ObjectDestructionService(
 	/// <summary>
 	/// PennMUSH <c>clear_thing()</c>, minus the deposit refund (SharpMUSH tracks no money).
 	/// </summary>
-	private ValueTask ClearThingAsync(IMUSHCodeParser parser, SharpThing thing, CancellationToken ct)
+	/// <returns><see langword="false"/> when a piece of content could not be evacuated.</returns>
+	private ValueTask<bool> ClearThingAsync(IMUSHCodeParser parser, SharpThing thing, CancellationToken ct)
 		=> EmptyContentsAsync(parser, thing, ct);
 
 	/// <summary>
 	/// PennMUSH <c>clear_room()</c>. Exits sourced in the room are destroyed with it; in SharpMUSH
 	/// they are contents of the room, so <see cref="EmptyContentsAsync"/> already handles them.
 	/// </summary>
-	private ValueTask ClearRoomAsync(IMUSHCodeParser parser, SharpRoom room, CancellationToken ct)
+	/// <returns><see langword="false"/> when a piece of content could not be evacuated.</returns>
+	private ValueTask<bool> ClearRoomAsync(IMUSHCodeParser parser, SharpRoom room, CancellationToken ct)
 		=> EmptyContentsAsync(parser, room, ct);
 
 	/// <summary>
@@ -201,7 +217,8 @@ public class ObjectDestructionService(
 	/// deleting the player would sever their ownership edge and make every later read of them throw.
 	/// PennMUSH has the same split and resolves it the same way — the probate judge exists for this.
 	/// </remarks>
-	private async ValueTask ClearPlayerAsync(IMUSHCodeParser parser, SharpPlayer player, CancellationToken ct)
+	/// <returns><see langword="false"/> when a piece of content could not be evacuated.</returns>
+	private async ValueTask<bool> ClearPlayerAsync(IMUSHCodeParser parser, SharpPlayer player, CancellationToken ct)
 	{
 		var probate = await ResolveProbatePlayerAsync(ct);
 		if (probate is not null)
@@ -227,7 +244,7 @@ public class ObjectDestructionService(
 			await mediator.Send(new ReassignAttributeOwnerCommand(player, probate), ct);
 		}
 
-		await EmptyContentsAsync(parser, player, ct);
+		return await EmptyContentsAsync(parser, player, ct);
 	}
 
 	/// <summary>
@@ -235,7 +252,11 @@ public class ObjectDestructionService(
 	/// send everything else home — to <c>default_home</c> when its own home is missing, is the
 	/// container being destroyed, or is itself an exit.
 	/// </summary>
-	private async ValueTask EmptyContentsAsync(IMUSHCodeParser parser, AnySharpContainer container,
+	/// <returns>
+	/// <see langword="false"/> when a piece of content is still standing inside the container — its
+	/// home refused it and so did <c>default_home</c>. The caller must not delete the container then.
+	/// </returns>
+	private async ValueTask<bool> EmptyContentsAsync(IMUSHCodeParser parser, AnySharpContainer container,
 		CancellationToken ct)
 	{
 		var containerDbRefNumber = container.Object().DBRef.Number;
@@ -247,6 +268,8 @@ public class ObjectDestructionService(
 				nameof(ErrorMessages.Notifications.FloorDisappearsNothingness), sender: null);
 		}
 
+		var emptied = true;
+
 		foreach (var content in contents)
 		{
 			if (content.IsExit)
@@ -257,11 +280,53 @@ public class ObjectDestructionService(
 			}
 
 			var destination = await ResolveEvacuationTargetAsync(content, containerDbRefNumber, ct);
-			if (destination is null) continue;
+			if (destination is null)
+			{
+				emptied = false;
+				continue;
+			}
 
-			await moveService.ExecuteMoveAsync(parser, content, destination, cause: "container destroyed",
-				silent: true);
+			// PennMUSH's empty_contents calls moveto with nomovemsgs = 0, "so that AENTER and such are
+			// all triggered properly" (destroy.c:821), and SYSEVENT — #-1 (externs.h:168) — as the
+			// enactor, which this codebase resolves to God the same way EventService does. moveto is
+			// enter_room (move.c:52-56), so the evacuee gets the automatic look at where it landed.
+			var moved = await moveService.EnterRoom(parser, content, destination, noMoveMsgs: false,
+				new DBRef(-1), "container destroyed");
+
+			if (!moved.IsT1)
+			{
+				continue;
+			}
+
+			// Its own home refused it — a containment loop, a lock, the move-recursion ceiling.
+			// default_home is where empty_contents already sends anything whose home is unusable, so
+			// it is the one retry worth making before giving up on this content.
+			var fallback = await ResolveDefaultHomeAsync(ct);
+
+			if (fallback is null || fallback.Object().DBRef.Equals(destination.Object().DBRef))
+			{
+				logger.LogError(
+					"#{Content} could not be evacuated from #{Container}: {Reason}",
+					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value);
+				emptied = false;
+				continue;
+			}
+
+			var rehoused = await moveService.EnterRoom(parser, content, fallback, noMoveMsgs: false,
+				new DBRef(-1), "container destroyed");
+
+			if (rehoused.IsT1)
+			{
+				logger.LogError(
+					"#{Content} could not be evacuated from #{Container} to its home ({Reason}) nor to "
+					+ "default_home (#{DefaultHome}: {FallbackReason}).",
+					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value,
+					fallback.Object().DBRef.Number, rehoused.AsT1.Value);
+				emptied = false;
+			}
 		}
+
+		return emptied;
 	}
 
 	/// <summary>

@@ -285,6 +285,18 @@ public partial record ParserState(
 	BreakPropagation? BreakPropagation = null,
 	string? ConnectionSessionId = null)
 {
+	/// <summary>
+	/// Shared counter bounding recursive movement — <c>enter_room</c> reached through
+	/// <c>safe_tel</c>'s HOME case or through a container's drop-to. PennMUSH caps the equivalent at
+	/// 15 (<c>src/move.c:232</c>) with a process-global counter, which is only safe under its
+	/// single-threaded queue; here it is per evaluation, like <see cref="CallDepth"/>.
+	/// </summary>
+	/// <remarks>
+	/// An init-only property rather than a positional parameter: the record's positional signature is
+	/// the contract compiled plugins bind to, and <c>ParserStateCompatibilityTests</c> holds it fixed.
+	/// </remarks>
+	public InvocationCounter? MoveDepth { get; init; }
+
 	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
 	public ExecutionBudget? ExecutionBudget { get; init; }
 
@@ -344,7 +356,10 @@ public partial record ParserState(
 		new InvocationCounter(),
 		new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		new InvocationCounter(),
-		new LimitExceededFlag());
+		new LimitExceededFlag())
+	{
+		MoveDepth = new InvocationCounter()
+	};
 
 	/// <summary>
 	/// A fresh root state for code that runs as <paramref name="actor"/> with no ambient parser:
@@ -381,7 +396,10 @@ public partial record ParserState(
 		CallDepth: new InvocationCounter(),
 		FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 		TotalInvocations: new InvocationCounter(),
-		LimitExceeded: new LimitExceededFlag());
+		LimitExceeded: new LimitExceededFlag())
+	{
+		MoveDepth = new InvocationCounter()
+	};
 
 	/// <summary>
 	/// The executor of a command is the object actually carrying out the command or running the code: %!

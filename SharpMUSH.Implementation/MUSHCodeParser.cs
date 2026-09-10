@@ -506,6 +506,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag())
 		{
+			MoveDepth = new InvocationCounter(),
 			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
 			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null
 		});
@@ -720,7 +721,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			TotalInvocations: new InvocationCounter(),
 			LimitExceeded: new LimitExceededFlag(),
 			Flags: ParserStateFlags.DirectInput,
-			ConnectionSessionId: expectedSession));
+			ConnectionSessionId: expectedSession)
+		{
+			MoveDepth = new InvocationCounter()
+		});
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
 

@@ -1021,8 +1021,10 @@ public class SharpMUSHParserVisitor(
 				CallDepth: callDepth,
 				FunctionRecursionDepths: recursionDepths,
 				TotalInvocations: invocationCounter,
-				LimitExceeded: limitExceeded
-			));
+				LimitExceeded: limitExceeded)
+			{
+				MoveDepth = currentState.MoveDepth
+			});
 
 			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
 				definition, executor,

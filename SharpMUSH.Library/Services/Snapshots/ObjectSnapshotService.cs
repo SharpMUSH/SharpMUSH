@@ -248,7 +248,7 @@ public sealed partial class ObjectSnapshotService(
 	/// </summary>
 	/// <remarks>
 	/// An image written before lock names were canonical spells its locks the way that world did —
-	/// <c>Teleport</c> for <see cref="LockType.TPort"/>, <c>Chzone</c> for <see cref="LockType.ChZone"/>.
+	/// <c>Teleport</c> for <see cref="LockType.Teleport"/>, <c>Chzone</c> for <see cref="LockType.ChZone"/>.
 	/// Every comparison downstream is against a live key, so leaving the raw name in place omits the
 	/// live lock from the before-image, records it as absent, and lets recovery delete it — the same
 	/// fail-open hole in a different path. Applied after the digest check and never written back:

@@ -1310,7 +1310,7 @@ See [queue2]
 # QUEUE2
   There are several `@config` options which affect queueing.
 
-  The option 'player_queue_limit' controls how many action lists can be queued by one object at any given time. Wizards and objects with the Queue `@power` can queue more commands (equal to the player_queue_limit plus the current number of objects in the database, including garbage).
+  The option 'player_queue_limit' controls how many action lists can be queued by one object at any given time. Wizards and objects with the Queue `@power` can queue more commands (equal to the player_queue_limit plus the current number of objects in the database, including garbage). An object that tries to queue past its limit is halted: its pending commands are wiped, it is set HALT, and its owner is told "Runaway object: `<name>`(`<dbref>`). Commands halted." A player's own typed commands are never counted against the limit, so a player whose objects have exhausted it can still act.
 
   Normally each object has its own queue count, but if the 'owner_queues' option is enabled, objects share a queue count with their owner.
 

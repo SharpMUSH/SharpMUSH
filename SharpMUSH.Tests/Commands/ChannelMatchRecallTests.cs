@@ -49,7 +49,7 @@ public class ChannelMatchRecallTests
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@teleport/quiet {player.DbRef}={digResult.Message!.ToPlainText().Trim()}"));
+			MarkupText.Plain($"@teleport/silent {player.DbRef}={digResult.Message!.ToPlainText().Trim()}"));
 
 		return player;
 	}

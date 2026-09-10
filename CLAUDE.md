@@ -177,6 +177,14 @@ Functions use `[SharpFunction]` attribute on instance methods of the partial `Fu
 public ValueTask<CallState> Name(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 ```
 
+Attribute triads go through `IDidItService`, never hand-rolled: `DidIt` for the
+message/o-message/action trio (PennMUSH's `real_did_it`) and `FailLock` for a failed lock
+(`fail_lock`). The o-message is evaluated once with the attribute's holder as executor, and the
+action attribute is queued rather than run inline. Movement is `IMoveService.EnterRoom` /
+`SafeTel`; no command sends `MoveObjectCommand` directly, and that command requires the origin
+container so a move can never expire every container's contents. The automatic look after a move is
+`ILookService.LookRoom(..., LookKey.Auto)` — commands do not queue a `look` of their own.
+
 `Commands` and `Functions` are DI-constructed; their services are non-null members (`Mediator`,
 `NotifyService`, ...), never static and never null-forgiven. The source generators emit
 `CommandLibrary.Create(instance)` / `FunctionLibrary.Create(instance)` for instance methods and a

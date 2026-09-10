@@ -129,7 +129,19 @@ public class TelDiagnosticTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {containerName}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {containerName}=ENTER_OK"));
 
+		// @create leaves the container in the creator's inventory, and stepping into something you are
+		// carrying is a containment loop - PennMUSH refuses it with "Bad destination."
+		// (recursive_member, src/wiz.c:440). Put the container in the room first so this test is about
+		// entering a container rather than about the loop guard.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {containerName}=#0"));
+
 		var errors = await ExecAndCollectErrors($"@tel {containerName}");
+
+		// Put God back before asserting. ServerWebAppFactory is shared for the whole session, and this
+		// is the one test that moves God and does not open by undoing it: an @emit later in the session
+		// speaks into the emitter's outermost room, which is this container for as long as God carries
+		// nothing else, so the audience a room-scoped assertion expects is simply not there.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));
 
 		foreach (var e in errors) Console.WriteLine($"ERROR: {e}");
 		await Assert.That(errors).IsEmpty()

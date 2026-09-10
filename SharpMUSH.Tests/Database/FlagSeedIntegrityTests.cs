@@ -43,6 +43,23 @@ public class FlagSeedIntegrityTests
 			.Because("src/flags.c:778 declares MISTRUST as TYPE_THING | TYPE_EXIT | TYPE_ROOM");
 	}
 
+	/// <summary>
+	/// <c>hdrs/flag_tab.h:25</c> declares STICKY as <c>'S'</c> on <c>NOTYPE</c> — every object type.
+	/// It backs a room's drop-to (<c>src/move.c:272</c>) and <c>safe_tel</c>'s stripping of carried
+	/// objects (<c>src/move.c:311</c>), neither of which can fire while the flag is unseeded.
+	/// </summary>
+	[Test]
+	public async Task StickyIsSeededForEveryObjectType()
+	{
+		var flag = await Mediator.Send(new GetObjectFlagQuery("STICKY"));
+
+		await Assert.That(flag).IsNotNull();
+		await Assert.That(flag!.Name).IsEqualTo("STICKY");
+		await Assert.That(flag.Symbol).IsEqualTo("S");
+		await Assert.That(flag.TypeRestrictions.Order(StringComparer.Ordinal).ToArray())
+			.IsEquivalentTo(new[] { "EXIT", "PLAYER", "ROOM", "THING" });
+	}
+
 	[Test]
 	public async Task MyopicIsSeededAsItsOwnPlayerFlag()
 	{
