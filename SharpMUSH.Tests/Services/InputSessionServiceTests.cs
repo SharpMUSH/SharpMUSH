@@ -552,6 +552,71 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments(false, "throw")]
+	[Arguments(true, "throw")]
+	[Arguments(false, "cancel")]
+	[Arguments(true, "cancel")]
+	[Arguments(false, "budget")]
+	[Arguments(true, "budget")]
+	[Arguments(false, "errors")]
+	[Arguments(true, "errors")]
+	public async Task FailedDeliveryRetiresCallbackOwnedReplacement(bool timeout, string failure)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		if (timeout) { h.Time.Now += TimeSpan.FromMinutes(2); h.Sessions.TakeExpired(); }
+		using var cancellation = new CancellationTokenSource();
+		using var budget = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
+		using var scope = budget.Enter();
+		Guid? replacement = null;
+		async ValueTask<CallState?> Callback()
+		{
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			replacement = h.Sessions.GetCapturing(1)?.Id;
+			if (failure == "throw") throw new InvalidOperationException("callback failed");
+			if (failure is "cancel" or "budget") cancellation.Cancel();
+			if (failure == "cancel") cancellation.Token.ThrowIfCancellationRequested();
+			return new CallState("result") { HadErrors = failure == "errors" };
+		}
+		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => Callback());
+		Exception? caught = null;
+		try { await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty, timeout); }
+		catch (Exception error) when (error is InvalidOperationException or OperationCanceledException) { caught = error; }
+		await Assert.That(replacement).IsNotNull();
+		await Assert.That(replacement).IsNotEqualTo(original.Id);
+		await Assert.That(caught is not null).IsEqualTo(failure is "throw" or "cancel");
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task NestedDeliveryRestoresOuterReplacementOwnership(bool startAgain)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		var calls = 0;
+		async ValueTask<CallState?> Callback()
+		{
+			calls++;
+			await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "REPLACEMENT", MarkupText.Empty, TimeSpan.FromSeconds(60));
+			if (calls == 1)
+			{
+				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.GetCapturing(1)!, MarkupText.Empty);
+				if (startAgain) await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "OUTER", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				return new CallState("failed outer") { HadErrors = true };
+			}
+			return CallState.Empty;
+		}
+		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => Callback());
+		await h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty);
+		await Assert.That(calls).IsEqualTo(2);
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+	}
+
+	[Test]
 	public async Task ExpiredExecutionBudgetEndsCaptureBeforeCallback()
 	{
 		var h = new Harness(); var session = await h.Start();

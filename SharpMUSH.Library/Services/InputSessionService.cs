@@ -30,6 +30,18 @@ public sealed class InputSessionService : IInputSessionService
 		public bool TimeoutPending { get; set; }
 	}
 
+	private sealed class CallbackOwnership(InputSession original, CallbackOwnership? parent)
+	{
+		public InputSession Original { get; } = original;
+		public CallbackOwnership? Parent { get; } = parent;
+		public InputSession? Replacement { get; set; }
+		public bool Closed { get; set; }
+	}
+
+	// Execution context identifies starts performed by this callback, not unrelated starts
+	// on the same handle. Recording and closure are serialized with capture publication.
+	private readonly AsyncLocal<CallbackOwnership?> _callbackOwnership = new();
+
 	private sealed class Generation { public InputCaptureTicket Ticket { get; set; } = new(Guid.NewGuid()); }
 	// Metadata survives bind/unbind but belongs to one transport incarnation. Weak keys do not
 	// retain disconnected handles, while their last capture still fences previously queued replies.
@@ -123,6 +135,12 @@ public sealed class InputSessionService : IInputSessionService
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
 			if (_sessions.Count(pair => pair.Key != handle && pair.Value.Session.Owner == owner) >= MaxOwnerSessions) return SessionLimit;
 			_sessions[handle] = new Entry(session);
+			for (var callback = _callbackOwnership.Value; callback is { Closed: false }; callback = callback.Parent)
+			{
+				if (ReferenceEquals(callback.Original.Connection, connection)
+					&& callback.Original.TransportSessionId == session.TransportSessionId)
+					callback.Replacement = session;
+			}
 			var generation = GenerationFor(connection);
 			generation.Ticket.ObserveStart(session.Id);
 			generation.Ticket = new InputCaptureTicket(session.Id);
@@ -223,9 +241,32 @@ public sealed class InputSessionService : IInputSessionService
 
 	public async ValueTask<CallState?> DeliverAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout = false)
 	{
-		try { return await DeliverCoreAsync(parser, session, input, timeout); }
-		catch { Discard(session); throw; }
-		finally { if (ExecutionBudget.Current?.IsExceeded == true) Discard(session); }
+		var prior = _callbackOwnership.Value;
+		var ownership = new CallbackOwnership(session, prior);
+		_callbackOwnership.Value = ownership;
+		var failed = true;
+		try
+		{
+			var result = await DeliverCoreAsync(parser, session, input, timeout);
+			failed = result?.HadErrors == true;
+			return result;
+		}
+		finally
+		{
+			try
+			{
+				lock (_gate)
+				{
+					ownership.Closed = true;
+					if (failed || ExecutionBudget.Current?.IsExceeded == true)
+					{
+						Discard(session);
+						if (ownership.Replacement is { } replacement) Discard(replacement);
+					}
+				}
+			}
+			finally { _callbackOwnership.Value = prior; }
+		}
 	}
 
 	private async ValueTask<CallState?> DeliverCoreAsync(IMUSHCodeParser parser, InputSession session, MString input, bool timeout)
@@ -264,9 +305,7 @@ public sealed class InputSessionService : IInputSessionService
 				["0"] = new(input), ["1"] = new(timeout ? "timeout" : "input")
 			}
 		};
-		var result = await parser.FromState(state).CommandListParse(executable.AsAttribute.Last().Value);
-		if (result?.HadErrors == true) Discard(session);
-		return result;
+		return await parser.FromState(state).CommandListParse(executable.AsAttribute.Last().Value);
 	}
 
 	private async ValueTask<CallState?> Revoke(InputSession session)
