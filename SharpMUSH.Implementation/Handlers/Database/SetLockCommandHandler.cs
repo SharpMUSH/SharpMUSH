@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -10,9 +11,13 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 {
 	public async ValueTask<Unit> Handle(SetLockCommand request, CancellationToken cancellationToken)
 	{
+		// A standard lock is always stored under its LockType spelling, because that is the only one
+		// LockService.Get looks up and a miss there reads as "unlocked", which passes everybody.
+		var lockName = LockNames.Canonical(request.LockName);
+
 		// Invalidate any previously compiled expression for the old lock text.
 		// The old lock text comes from the in-memory object (no extra DB round-trip).
-		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
+		if (request.Target.Locks.TryGetValue(lockName, out var oldLock)
 			&& oldLock.LockString is not "#TRUE" and not null)
 		{
 			booleanParser.InvalidateCache(oldLock.LockString);
@@ -22,14 +27,14 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 		// This ensures locks won't match recycled dbrefs after objects are destroyed
 		var normalizedLockString = booleanParser.Normalize(request.LockString, request.Executor);
 
-		var flags = request.Flags ?? lockService.SystemLocks.GetValueOrDefault(request.LockName, Library.Services.LockService.LockFlags.Default);
+		var flags = request.Flags ?? lockService.SystemLocks.GetValueOrDefault(lockName, Library.Services.LockService.LockFlags.Default);
 
 		var lockData = new Library.Models.SharpLockData(normalizedLockString, flags);
 
-		await database.SetLockAsync(request.Target, request.LockName, lockData, cancellationToken);
+		await database.SetLockAsync(request.Target, lockName, lockData, cancellationToken);
 
 		// The loaded object is a snapshot; the command's own CacheKeys expire the cached one.
-		request.Target.WithLock(request.LockName, lockData);
+		request.Target.WithLock(lockName, lockData);
 
 		return new Unit();
 	}
@@ -38,16 +43,18 @@ public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionPa
 {
 	public async ValueTask<Unit> Handle(UnsetLockCommand request, CancellationToken cancellationToken)
 	{
+		var lockName = LockNames.Canonical(request.LockName);
+
 		// Invalidate the compiled expression for the lock being removed
-		if (request.Target.Locks.TryGetValue(request.LockName, out var oldLock)
+		if (request.Target.Locks.TryGetValue(lockName, out var oldLock)
 			&& oldLock.LockString is not "#TRUE" and not null)
 		{
 			booleanParser.InvalidateCache(oldLock.LockString);
 		}
 
-		await database.UnsetLockAsync(request.Target, request.LockName, cancellationToken);
+		await database.UnsetLockAsync(request.Target, lockName, cancellationToken);
 
-		request.Target.WithoutLock(request.LockName);
+		request.Target.WithoutLock(lockName);
 
 		return new Unit();
 	}

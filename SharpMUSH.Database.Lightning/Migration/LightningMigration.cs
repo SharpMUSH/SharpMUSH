@@ -107,10 +107,43 @@ public partial class LightningDatabase
 			}));
 		}
 
+		MergeRenamedPower(tx, "Pueblo_Send", "Send_OOB");
+
 		foreach (var (name, defaultFlags) in AttributeEntrySeed.Entries)
 		{
 			tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(new AttributeEntryRecord { Name = name, DefaultFlags = defaultFlags }));
 		}
+	}
+
+	/// <summary>
+	/// PennMUSH renames Pueblo_Send to Send_OOB at load (<c>src/flags.c:850-855</c>) by rewriting the
+	/// FLAG struct's name in place, so the struct keeps its identity and every object already holding
+	/// the power follows the rename for free. Grants here are edges keyed by the power's name, so the
+	/// equivalent is to move the edges onto the new name and drop the superseded record.
+	/// Idempotent: once the old record is gone every later boot finds nothing to do.
+	/// </summary>
+	private static void MergeRenamedPower(ITx tx, string oldName, string newName)
+	{
+		var oldKey = Keys.Upper(oldName);
+		if (!tx.TryGet(Tables.Power, oldKey, out _))
+		{
+			return;
+		}
+
+		var newKey = Keys.Upper(newName);
+
+		// Materialise before mutating: the edge tables are being written inside this loop.
+		var holders = tx.Dups(Tables.ObjPower.Reverse, oldKey).Select(value => Keys.ReadDbref(value)).ToArray();
+
+		foreach (var holder in holders)
+		{
+			tx.Put(Tables.ObjPower.Forward, Keys.Dbref(holder), newKey);
+			tx.Put(Tables.ObjPower.Reverse, newKey, Keys.Dbref(holder));
+			tx.Delete(Tables.ObjPower.Forward, Keys.Dbref(holder), oldKey);
+			tx.Delete(Tables.ObjPower.Reverse, oldKey, Keys.Dbref(holder));
+		}
+
+		tx.Delete(Tables.Power, oldKey);
 	}
 
 	private static void UpsertFlag(ITx tx, string name, string symbol, IReadOnlyList<string> aliases, IReadOnlyList<string> setPerms,

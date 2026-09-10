@@ -67,7 +67,7 @@ public static partial class MushcodeHighlighter
 		var builder = new StringBuilder(value.Length * 2);
 		var dangerSpans = DangerRegex().Matches(value)
 			.Select(m => (Start: m.Index, End: m.Index + m.Length))
-			.ToList();
+			.ToArray();
 
 		var position = 0;
 
@@ -81,34 +81,52 @@ public static partial class MushcodeHighlighter
 			position = command.Length;
 		}
 
+		// Plain text is gathered into runs and encoded once per run rather than once per character:
+		// a run ends where a construct starts or where the danger state flips, so the span nesting
+		// is unchanged, and a surrogate pair is encoded as the one character it is.
+		var plainStart = -1;
 		while (position < value.Length)
 		{
 			Match match;
 			if ((match = MustacheRegex().Match(value, position)).Success)
 			{
+				FlushPlain(builder, value, ref plainStart, position, dangerSpans);
 				Append(builder, "mush-ref", match.Value, dangerSpans, position);
 			}
 			else if ((match = SubstitutionRegex().Match(value, position)).Success)
 			{
+				FlushPlain(builder, value, ref plainStart, position, dangerSpans);
 				Append(builder, "mush-sub", match.Value, dangerSpans, position);
 			}
 			else if ((match = DbrefRegex().Match(value, position)).Success)
 			{
+				FlushPlain(builder, value, ref plainStart, position, dangerSpans);
 				Append(builder, "mush-dbref", match.Value, dangerSpans, position);
 			}
 			else if ((match = AtCommandRegex().Match(value, position)).Success)
 			{
+				FlushPlain(builder, value, ref plainStart, position, dangerSpans);
 				Append(builder, "mush-atcmd", match.Value, dangerSpans, position);
 			}
 			else if ((match = FunctionCallRegex().Match(value, position)).Success)
 			{
+				FlushPlain(builder, value, ref plainStart, position, dangerSpans);
 				// Highlight the name; the paren stays plain.
 				Append(builder, "mush-fn", match.Groups["name"].Value, dangerSpans, position);
 				builder.Append('(');
 			}
 			else
 			{
-				AppendPlain(builder, value[position].ToString(), dangerSpans, position);
+				if (plainStart >= 0 && InDanger(dangerSpans, position) != InDanger(dangerSpans, plainStart))
+				{
+					FlushPlain(builder, value, ref plainStart, position, dangerSpans);
+				}
+
+				if (plainStart < 0)
+				{
+					plainStart = position;
+				}
+
 				position++;
 				continue;
 			}
@@ -116,28 +134,58 @@ public static partial class MushcodeHighlighter
 			position += match.Length;
 		}
 
+		FlushPlain(builder, value, ref plainStart, value.Length, dangerSpans);
+
 		return builder.ToString();
 	}
 
 	private static void Append(
 		StringBuilder builder, string cssClass, string text,
-		List<(int Start, int End)> dangerSpans, int position)
+		(int Start, int End)[] dangerSpans, int position)
 	{
-		var encoded = WebUtility.HtmlEncode(text);
-		builder.Append(InDanger(dangerSpans, position)
-			? $"<span class=\"{cssClass} mush-danger\">{encoded}</span>"
-			: $"<span class=\"{cssClass}\">{encoded}</span>");
+		builder.Append("<span class=\"").Append(cssClass);
+		if (InDanger(dangerSpans, position))
+		{
+			builder.Append(" mush-danger");
+		}
+
+		builder.Append("\">").Append(WebUtility.HtmlEncode(text)).Append("</span>");
 	}
 
-	private static void AppendPlain(
-		StringBuilder builder, string text, List<(int Start, int End)> dangerSpans, int position)
+	/// <summary>
+	/// Encodes the plain run <c>value[plainStart, end)</c>, if one is open, and closes it.
+	/// </summary>
+	private static void FlushPlain(
+		StringBuilder builder, string value, ref int plainStart, int end, (int Start, int End)[] dangerSpans)
 	{
-		var encoded = WebUtility.HtmlEncode(text);
-		builder.Append(InDanger(dangerSpans, position)
-			? $"<span class=\"mush-danger\">{encoded}</span>"
-			: encoded);
+		if (plainStart < 0)
+		{
+			return;
+		}
+
+		var encoded = WebUtility.HtmlEncode(value[plainStart..end]);
+		if (InDanger(dangerSpans, plainStart))
+		{
+			builder.Append("<span class=\"mush-danger\">").Append(encoded).Append("</span>");
+		}
+		else
+		{
+			builder.Append(encoded);
+		}
+
+		plainStart = -1;
 	}
 
-	private static bool InDanger(List<(int Start, int End)> spans, int position) =>
-		spans.Any(s => position >= s.Start && position < s.End);
+	private static bool InDanger((int Start, int End)[] spans, int position)
+	{
+		foreach (var (start, end) in spans)
+		{
+			if (position >= start && position < end)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }

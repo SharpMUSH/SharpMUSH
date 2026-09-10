@@ -63,6 +63,7 @@ public partial class TaskScheduler(
 	)
 	{
 		public DeferredSchedule? Deferred { get; init; }
+		public bool HaltAccountingSettled { get; init; }
 	}
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -210,19 +211,59 @@ public partial class TaskScheduler(
 		public void Dispose() => Interlocked.Exchange(ref _gate, null)?.Release();
 	}
 
-	// Caller holds the mutation lease; shared with pending halt bookkeeping.
-	private async ValueTask AdjustSemaphoreCountCore(string group, DBRef? target = null)
+	// Caller holds the semaphore mutation lease. Keep an uncertain Halt write behind
+	// the existing command-repair barrier until its before/after value is reconciled.
+	private async ValueTask AdjustHaltSemaphoreCountCore(QueueEntry entry)
 	{
-		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
-		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
-		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
-		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
+		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
+		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
+		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
+			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		var attribute = await Read();
+		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
+		var expected = original > 0 ? original - 1 : 0;
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
 		if (!god.IsPlayer) return;
-		if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
-			throw new InvalidOperationException("Semaphore count update failed.");
+		async ValueTask Write()
+		{
+			if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
+				MarkupString.MarkupText.Plain(expected.ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
+				throw new InvalidOperationException("Semaphore count update failed.");
+			ExecutionBudget.Current?.ThrowIfExceeded();
+		}
+		try { await Write(); }
+		catch
+		{
+			lock (_admissionLock)
+			{
+				_ready.Remove(entry.Pid);
+				_semaphoreCommandReservations.Add(entry.Pid);
+			}
+			_semaphoreCommandRepair = async () =>
+			{
+				using var deferred = await LockDeferred();
+				var observed = await Read();
+				if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out var current)
+					|| current != expected && current != original)
+					throw new InvalidOperationException("Semaphore changed during uncertain accounting.");
+				if (current != expected) await Write();
+				ExecutionBudget.Current?.ThrowIfExceeded();
+				lock (_admissionLock)
+				{
+					_semaphoreCommandReservations.Remove(entry.Pid);
+					// Halt settled transport before attempting the counter write. This
+					// cancelled entry now needs consumer disposal only, not another halt
+					// decrement or retained-notification cleanup attempt.
+					if (_pendingEntries.TryGetValue(entry.Pid, out var pending))
+						_pendingEntries[entry.Pid] = pending with { Deferred = null, HaltAccountingSettled = true };
+				}
+				await Activate(entry.Pid);
+			};
+			throw;
+		}
 	}
+
 	// Caller owns both transition leases. Counter confirmation and transport cleanup
 	// form one settlement; the existing command barrier retains failed settlements.
 	private async ValueTask<QueueAdmissionResult> SettleTimeout(QueueEntry entry)
@@ -407,29 +448,6 @@ public partial class TaskScheduler(
 	public const string EnqueueGroup = "enqueue";
 	public const string SemaphoreGroup = "semaphore";
 	public const string DelayGroup = "delay";
-
-	[Flags]
-	private enum TaskQueueType
-	{
-		Default = 0,
-		Object = 1,
-		Player = Object << 1,
-		Socket = Player << 1,
-		InPlace = Socket << 1,
-		NoBreaks = InPlace << 1,
-		PreserveQReg = NoBreaks << 1,
-		ClearQReg = PreserveQReg << 1,
-		PropagateQReg = ClearQReg << 1,
-		NoList = PropagateQReg << 1,
-		Break = NoList << 1,
-		Retry = Break << 1,
-		Debug = Retry << 1,
-		NoDebug = Debug << 1,
-		Priority = NoDebug << 1,
-		DebugPrivileges = Priority << 1,
-		Event = DebugPrivileges << 1,
-		Recurse = InPlace | NoBreaks | PreserveQReg
-	}
 
 	public ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
 	 => Admit(async () =>
@@ -639,6 +657,10 @@ public partial class TaskScheduler(
 
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
+		using var budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining, cancellation.Token);
+		using var scope = budget.Enter();
 		using var lease = await LockDeferred();
 		QueueEntry[] waiting;
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
@@ -710,6 +732,18 @@ public partial class TaskScheduler(
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
+		var result = await HaltByPidCore(pid);
+		bool settled;
+		lock (_admissionLock)
+			settled = _pendingEntries.TryGetValue(pid, out var entry) && entry.HaltAccountingSettled;
+		// Core's transition leases have been released. Keep successful Halt's
+		// synchronous quota release, including a recovered canceled consumer item.
+		if (settled) Release(pid);
+		return result;
+	}
+
+	private async ValueTask<bool> HaltByPidCore(long pid)
+	{
 		QueueEntry? entry;
 		bool ready;
 		lock (_admissionLock)
@@ -736,7 +770,7 @@ public partial class TaskScheduler(
 			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
 			// Notifications and all timeouts account before becoming release-pending.
 			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
-				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
+				await AdjustHaltSemaphoreCountCore(entry);
 			lock (_admissionLock)
 			{
 				_delayedRepairs.Remove(pid);
@@ -800,10 +834,6 @@ public partial class TaskScheduler(
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
 		var token = cancellation.Token;
 		token.ThrowIfCancellationRequested();
-		var translate = new Func<string, string>(x =>
-			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-				.TakeWhile(c => c != '-').ToArray()));
-
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
@@ -811,12 +841,7 @@ public partial class TaskScheduler(
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
-			yield return (key.Key, key.Select(x => (
-				x.Value,
-				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(x.Name)
-			)).ToArray());
+			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
@@ -824,11 +849,49 @@ public partial class TaskScheduler(
 			token.ThrowIfCancellationRequested();
 			yield return (group.Key, group.Select(e => (
 				DateTimeOffset.UtcNow,
-				DBRef.TryParse(translate(e.TriggerName), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(e.TriggerName)
+				DescribeTrigger(e.TriggerName)
 			)).ToArray());
 		}
+	}
+
+	/// <summary>
+	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
+	/// or the raw name when it does not carry one.
+	/// </summary>
+	private static OneOf<string, DBRef> DescribeTrigger(string triggerName)
+	{
+		var identity = triggerName.AsSpan();
+		if (identity.StartsWith("dbref:"))
+		{
+			identity = identity["dbref:".Length..];
+		}
+		else if (identity.StartsWith("handle:"))
+		{
+			identity = identity["handle:".Length..];
+		}
+
+		Span<System.Range> parts = stackalloc System.Range[2];
+		identity.Split(parts, '-');
+
+		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
+			? OneOf<string, DBRef>.FromT1(dbref!.Value)
+			: OneOf<string, DBRef>.FromT0(triggerName);
+	}
+
+	/// <summary>
+	/// The PID from a trigger name shaped <c>prefix-pid</c>: exactly one dash, followed by the number.
+	/// </summary>
+	private static bool TryParsePid(string triggerName, out long pid)
+	{
+		var name = triggerName.AsSpan();
+		Span<System.Range> parts = stackalloc System.Range[3];
+		if (name.Split(parts, '-') != 2)
+		{
+			pid = 0;
+			return false;
+		}
+
+		return long.TryParse(name[parts[1]], out pid);
 	}
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
@@ -863,12 +926,12 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"), token);
 
+		// Extract PID from identity: "dbref:{executor}-{pid}"
 		foreach (var key in keys)
 		{
 			token.ThrowIfCancellationRequested();
 			// Extract PID from identity: "dbref:{executor}-{pid}"
-			var parts = key.Name.Split('-');
-			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
+			if (TryParsePid(key.Name, out var pid))
 			{
 				yield return pid;
 			}

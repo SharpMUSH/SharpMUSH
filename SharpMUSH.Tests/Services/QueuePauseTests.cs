@@ -26,6 +26,39 @@ public class QueuePauseTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
+	public async Task HaltReconcilesCommittedCounterWithoutRetainingPausedWork(bool paused)
+	{
+		var count = 3;
+		var writes = 0;
+		var mediator = QueueAdmissionTests.TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			new[] { new SharpAttribute("id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = MarkupText.Plain(count.ToString()) } }.ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+			if (++writes == 1) throw new IOException("committed without acknowledgement");
+			return ValueTask.FromResult(true);
+		});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		await using var queue = Create(parser, Substitute.For<IScheduler>(), mediator);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("think never"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0);
+		if (paused) await Assert.That(await queue.PausePending(admission.Pid!.Value, "hold")).IsEqualTo(QueueControlResult.Applied);
+		await Assert.ThrowsAsync<IOException>(async () => await queue.HaltByPid(admission.Pid!.Value));
+		await Assert.That(count).IsEqualTo(2);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(await queue.HaltByPid(admission.Pid!.Value)).IsTrue();
+		await Assert.That(count).IsEqualTo(2);
+		await Assert.That(writes).IsEqualTo(1);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await Assert.That(queue.GetQueueEntry(admission.Pid!.Value)).IsNull();
+		await parser.DidNotReceive().CommandListParse(Arg.Any<MarkupText>());
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
 	public async Task NotifyRetriesJobDeletionAfterTriggerIsGone(bool canceled)
 	{
 		var fail = true;

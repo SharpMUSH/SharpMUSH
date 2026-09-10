@@ -26,8 +26,8 @@ does not need to compete for capacity a second time. Immediate work is FIFO;
 semaphore notifications and partial drains select ascending PIDs.
 
 Draining removes only work still waiting on the semaphore. A timeout that has
-already made a command runnable keeps its reservation until execution accounts
-for it. Partial drains subtract only removed waiters and preserve unused
+already made a command runnable keeps its reservation until the consumer
+finishes it. Partial drains subtract only removed waiters and preserve unused
 notification credits; a full drain also clears unused notification credits.
 
 If a failed semaphore submission cannot restore its counter, the cancelled PID

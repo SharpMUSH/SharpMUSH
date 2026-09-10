@@ -385,13 +385,9 @@ public static class ChannelHelper
 				: ChannelMatch.NoMatch;
 		}
 
-		// Materialise the channel list BEFORE testing scope or visibility, for the same reason
-		// VisibleChannels does: those tests read channel.Members, and enumerating one database stream
-		// inside another faults on a thread pool thread and takes the process with it.
-		var all = await mediator.CreateStream(new GetChannelListQuery()).ToArrayAsync();
 		var candidates = new List<SharpChannel>();
 
-		foreach (var channel in all)
+		await foreach (var channel in mediator.CreateStream(new GetChannelListQuery()))
 		{
 			var candidateName = channel.Name.ToPlainText();
 
@@ -513,13 +509,9 @@ public static class ChannelHelper
 	public static async ValueTask<SharpChannel[]> VisibleChannels(IPermissionService permissionService,
 		AnySharpObject viewer, IAsyncEnumerable<SharpChannel> channels)
 	{
-		// Materialise the channel list BEFORE testing visibility. The test reads channel.Members, which
-		// enumerated inside another — it faults on a thread pool thread and takes the process with it.
-		// The same driver race is already worked around in HelperFunctions.HasPower.
-		var all = await channels.ToArrayAsync();
-		var visible = new List<SharpChannel>(all.Length);
+		var visible = new List<SharpChannel>();
 
-		foreach (var channel in all)
+		await foreach (var channel in channels)
 		{
 			if (await CanSeeChannel(permissionService, viewer, channel))
 			{
@@ -726,11 +718,9 @@ public static class ChannelHelper
 	public static async ValueTask<List<ChannelMember>> ChannelMembers(IConnectionService connectionService,
 		SharpChannel channel)
 	{
-		// Materialised before the connection lookups for the same reason as everywhere else in this file.
-		var members = await channel.Members.Value.ToArrayAsync();
-		var result = new List<ChannelMember>(members.Length);
+		var result = new List<ChannelMember>();
 
-		foreach (var (member, status) in members)
+		await foreach (var (member, status) in channel.Members.Value)
 		{
 			var connected = member.IsThing
 											|| await connectionService.Get(member.Object().DBRef).AnyAsync();

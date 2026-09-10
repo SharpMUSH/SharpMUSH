@@ -1,6 +1,5 @@
 using Mediator;
 using OneOf;
-using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -67,7 +66,7 @@ public static partial class ArgHelpers
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var decimals = new List<decimal>();
+		decimal? result = null;
 
 		foreach (var arg in args)
 		{
@@ -76,12 +75,11 @@ public static partial class ArgHelpers
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 			}
-			decimals.Add(value);
+
+			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		var result = decimals.Aggregate(aggregateFunction);
-
-		return ValueTask.FromResult<CallState>(FormatDecimal(result));
+		return ValueTask.FromResult<CallState>(FormatDecimal(result ?? 0));
 	}
 
 	/// <summary>
@@ -95,14 +93,15 @@ public static partial class ArgHelpers
 
 	/// <summary>
 	/// Aggregates arguments as 64-bit unsigned integers, matching PennMUSH's UIVAL. The result is
-	/// rendered signed, because PennMUSH renders it that way too: bnot(0) is -1, not 18446744073709551615.
+	/// rendered signed, because PennMUSH renders it that way too: safe_uinteger (src/strutil.c) hands
+	/// the value to unparse_integer, which takes an intmax_t, so bnot(0) is -1, not 18446744073709551615.
 	/// </summary>
 	public static ValueTask<CallState> AggregateUnsignedIntegers(IMUSHCodeParser parser,
 		Func<ulong, ulong, ulong> aggregateFunction)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var numbers = NumericEvaluation.For(parser);
-		var integers = new List<ulong>();
+		ulong? result = null;
 
 		foreach (var arg in args)
 		{
@@ -111,11 +110,11 @@ public static partial class ArgHelpers
 			{
 				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UIntegers);
 			}
-			integers.Add(value);
+
+			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		var result = integers.Aggregate(aggregateFunction);
-		return ValueTask.FromResult<CallState>(unchecked((long)result).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(long.CreateTruncating(result ?? 0).ToString(CultureInfo.InvariantCulture));
 	}
 
 	/// <inheritdoc cref="AggregateUnsignedIntegers"/>
@@ -130,7 +129,7 @@ public static partial class ArgHelpers
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.UInteger);
 		}
 
-		return ValueTask.FromResult<CallState>(unchecked((long)func(value)).ToString(CultureInfo.InvariantCulture));
+		return ValueTask.FromResult<CallState>(long.CreateTruncating(func(value)).ToString(CultureInfo.InvariantCulture));
 	}
 
 	public static ValueTask<CallState> EvaluateDecimal(IMUSHCodeParser parser,
@@ -188,29 +187,45 @@ public static partial class ArgHelpers
 			return ValueTask.FromResult(new CallState(Message: ErrorMessages.Returns.TooFewArguments));
 		}
 
-		var doubles = args.Select(x =>
-		(
-			IsDouble: numbers.TryDecimal((x.Value.Message ?? MarkupText.Empty).ToPlainText(), out var b),
-			Double: b
-		)).ToList();
-
-		if (doubles.Any(x => !x.IsDouble))
+		// Every argument is checked before any comparison decides the answer: a non-number anywhere in
+		// the list is the error, even after a pair that already failed the comparison.
+		var result = true;
+		decimal? previous = null;
+		foreach (var arg in args)
 		{
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-		}
+			if (!numbers.TryDecimal((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
+			{
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
+			}
 
-		var result = doubles.Select(x => x.Double).Pairwise().All(func);
+			if (previous is { } left)
+			{
+				result &= func((left, value));
+			}
+
+			previous = value;
+		}
 
 		return new ValueTask<CallState>(result != negate ? "1" : "0");
 	}
 
-	public static async ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> await obj.Flags.Value
-			.ContainsAsync(flag);
+	/// <summary>
+	/// Flag and power names are matched case-insensitively, by name or alias: PennMUSH's
+	/// <c>match_flag</c> / <c>match_power</c> (<c>src/flags.c:124-149</c>) both resolve through
+	/// <c>ptab_find</c>, which compares with <c>strcasecmp</c> and <c>string_prefix</c>, and
+	/// <c>string_prefix</c> compares through <c>DOWNCASE</c>.
+	/// <para>
+	/// Both of these forward to <see cref="HelperFunctions"/> so there is exactly one answer to
+	/// "does this object have this flag/power?" — the two used to be separate implementations that
+	/// disagreed, which made a permission check depend on which helper the call site reached for.
+	/// </para>
+	/// </summary>
+	public static ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
+		=> obj.HasFlag(flag.Name);
 
-	public static async ValueTask<bool> HasObjectPowers(SharpObject obj, string power) =>
-		await obj.Powers.Value
-			.AnyAsync(x => x.Name == power || x.Alias == power);
+	/// <inheritdoc cref="HasObjectFlags"/>
+	public static ValueTask<bool> HasObjectPowers(SharpObject obj, string power)
+		=> obj.HasPower(power);
 
 	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
@@ -278,15 +293,15 @@ public static partial class ArgHelpers
 			return null;
 		}
 
-		var flags = await found.Known.Object().Flags.Value.Select(flag => flag.Name).ToArrayAsync();
+		var names = await found.Known.Object().Flags.Value
+			.Select(flag => flag.Name)
+			.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
 		return new PlayerColorFlags(
-			Ansi: Has("ANSI"),
-			Color: Has("COLOR"),
-			Xterm256: Has("XTERM256"),
-			Truecolor: Has("TRUECOLOR"));
-
-		bool Has(string name) => flags.Any(flag => string.Equals(flag, name, StringComparison.OrdinalIgnoreCase));
+			Ansi: names.Contains("ANSI"),
+			Color: names.Contains("COLOR"),
+			Xterm256: names.Contains("XTERM256"),
+			Truecolor: names.Contains("TRUECOLOR"));
 	}
 
 	/// <summary>

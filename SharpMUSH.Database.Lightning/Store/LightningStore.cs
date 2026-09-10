@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using LightningDB;
+using OneOf;
+using OneOf.Types;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
 
@@ -494,9 +496,9 @@ public sealed partial class LightningStore : IDisposable
 			{
 				var (code, k, v) = cursor.GetCurrent();
 				if (code != MDBResultCode.Success) yield break;
-				var key = k.CopyToNewArray();
-				if (!Keys.StartsWith(key, prefix)) yield break;
-				yield return (key, v.CopyToNewArray());
+				// The prefix test reads the mapped page directly; only an entry that is yielded is copied out.
+				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
@@ -522,8 +524,8 @@ public sealed partial class LightningStore : IDisposable
 			{
 				var (code, k, v) = cursor.GetCurrent();
 				if (code != MDBResultCode.Success) yield break;
-				if (!k.CopyToNewArray().AsSpan().SequenceEqual(afterKey)) break;
-				if (afterValue is not null && v.CopyToNewArray().AsSpan().SequenceCompareTo(afterValue) > 0) break;
+				if (!k.AsSpan().SequenceEqual(afterKey)) break;
+				if (afterValue is not null && v.AsSpan().SequenceCompareTo(afterValue) > 0) break;
 				if (cursor.Next().resultCode != MDBResultCode.Success) yield break;
 			}
 
@@ -531,9 +533,8 @@ public sealed partial class LightningStore : IDisposable
 			{
 				var (code, k, v) = cursor.GetCurrent();
 				if (code != MDBResultCode.Success) yield break;
-				var key = k.CopyToNewArray();
-				if (!Keys.StartsWith(key, prefix)) yield break;
-				yield return (key, v.CopyToNewArray());
+				if (!Keys.StartsWith(k.AsSpan(), prefix)) yield break;
+				yield return (k.CopyToNewArray(), v.CopyToNewArray());
 			} while (cursor.Next().resultCode == MDBResultCode.Success);
 		}
 
@@ -562,9 +563,21 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
 		}
 
+		public OneOf<long, Error<string>> CountDups(TableDef table, ReadOnlySpan<byte> key)
+		{
+			using var cursor = tx.CreateCursor(Db(table));
+			if (cursor.Set(key) != MDBResultCode.Success) return 0L;
+			// mdb_cursor_count is only defined for a DUPSORT database; a plain one holds one value per key.
+			if (!table.Duplicates) return 1L;
+			var code = cursor.Count(out var count);
+			if (code != MDBResultCode.Success) return new Error<string>(LightningStoreException.Describe(code, $"count {table}"));
+			return count;
+		}
+
 		public int DeletePrefix(TableDef table, byte[] prefix)
 		{
-			var keys = Range(table, prefix).Select(e => (e.Key, e.Value)).ToList();
+			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
+			var keys = Range(table, prefix).ToList();
 			foreach (var (k, v) in keys)
 			{
 				if (table.Duplicates) tx.Delete(Db(table), k, v);

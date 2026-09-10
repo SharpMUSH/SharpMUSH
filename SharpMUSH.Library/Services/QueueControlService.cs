@@ -28,7 +28,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 	/// <summary>Existing Penn game permissions for PID operations, independent of account role grants.</summary>
 	public async Task<bool> CanAccessLegacyAsync(AnySharpObject actor, long pid, bool mutate, CancellationToken ct = default)
 	{
-		using var requestScope = new RequestScope(ct);
+		using var requestScope = ExecutionBudget.EnterLinked(ct);
 		ct = ExecutionBudget.CurrentToken;
 		var entry = scheduler.GetQueueEntry(pid);
 		if (entry is null) return false;
@@ -59,7 +59,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 
 	public async Task<bool> CanInspectAsync(QueueInspectionScope scope, DBRef? owner, DBRef? source, CancellationToken ct = default)
 	{
-		using var requestScope = new RequestScope(ct);
+		using var requestScope = ExecutionBudget.EnterLinked(ct);
 		ct = ExecutionBudget.CurrentToken;
 		ct.ThrowIfCancellationRequested();
 		var own = owner == scope.Actor.ActiveCharacter;
@@ -69,7 +69,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 
 	public async Task<QueueControlResult> ChangeAsync(CapabilityActor actor, long pid, bool resume, string reason = "", CancellationToken ct = default)
 	{
-		using var requestScope = new RequestScope(ct);
+		using var requestScope = ExecutionBudget.EnterLinked(ct);
 		ct = ExecutionBudget.CurrentToken;
 		ct.ThrowIfCancellationRequested();
 		if (!await ValidActor(actor, ct)) return QueueControlResult.NotFound;
@@ -99,31 +99,4 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		return await permissions.Controls(player.Known(), target.Known()).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
-	// Queue controls are also called by HTTP and background services without a parser.
-	// Preserve an inherited deadline while carrying their cancellation through legacy
-	// permission APIs and directly awaited scheduler mutations.
-	private sealed class RequestScope : IDisposable
-	{
-		private readonly CancellationTokenSource _cancellation;
-		private readonly ExecutionBudget _budget;
-		private readonly IDisposable _scope;
-
-		public RequestScope(CancellationToken token)
-		{
-			token.ThrowIfCancellationRequested();
-			var inherited = ExecutionBudget.Current;
-			inherited?.ThrowIfExceeded();
-			var remaining = inherited?.Remaining ?? TimeSpan.MaxValue;
-			_cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, ExecutionBudget.CurrentToken);
-			_budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : remaining, _cancellation.Token);
-			_scope = _budget.Enter();
-		}
-
-		public void Dispose()
-		{
-			_scope.Dispose();
-			_budget.Dispose();
-			_cancellation.Dispose();
-		}
-	}
 }
