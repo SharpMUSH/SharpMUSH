@@ -414,9 +414,10 @@ public class ObjectSnapshotTests
 
 	/// <summary>
 	/// An image written before lock names were canonical names <see cref="LockType.Teleport"/> the way
-	/// that world spelled it. The before-image a restore retains has to carry the live lock under the
-	/// name the object is keyed by: recorded as absent instead, recovery removes the lock rather than
-	/// restoring its value — and an absent lock reads as "no lock", which passes everybody.
+	/// that world spelled it — <c>tport</c>, which is why <see cref="LockNames"/> still carries it as
+	/// an alias. The before-image a restore retains has to carry the live lock under the name the
+	/// object is keyed by: recorded as absent instead, recovery removes the lock rather than restoring
+	/// its value — and an absent lock reads as "no lock", which passes everybody.
 	/// </summary>
 	[Test, NotInParallel]
 	public async Task RecoveryKeepsALockAPreUpgradeSnapshotSpelledTheOldWay()
@@ -428,7 +429,7 @@ public class ObjectSnapshotTests
 		var saved = await real.CaptureAsync(actor, target, "pre-upgrade spelling");
 		// Rewrite the stored image to the spelling a world older than the fix would have written,
 		// re-digesting it so it is exactly what that world would hold rather than a corrupt row.
-		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.Teleport), "Teleport");
+		await RespellStoredLockAsync(target, saved.Id, nameof(LockType.Teleport), "tport");
 		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.Teleport), "#FALSE", player));
 
 		var failing = Substitute.For<IManipulateSharpObjectService>();

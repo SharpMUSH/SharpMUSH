@@ -647,19 +647,29 @@ public class ObjectTriadParityTests
 		var newName = TestIsolationHelpers.GenerateUniqueName("NameTriadNew");
 
 		// The renamer has to control the sign for @name to run at all; WIZARD is the smallest way
-		// to get there without @chown, which sets HALT and would suppress ANAME.
+		// to get there without @chown, which sets HALT and would suppress ANAME. The factory is
+		// SharedType.PerTestSession, so the flag has to come back off however this test ends —
+		// otherwise every later test in the run sees this player as a wizard.
 		await God($"@set {renamer.DbRef}=WIZARD");
-		await God($"&ONAME {sign}=repaints the sign.");
-		await God($"&ANAME {sign}=&RENAMED me=%0/%1");
 
-		var seen = await MessagesWhile(watcher.DbRef, async () =>
-			await GodParser.CommandParse(renamer.Handle, ConnectionService,
-				MarkupText.Plain($"@name {sign}={newName}")));
+		try
+		{
+			await God($"&ONAME {sign}=repaints the sign.");
+			await God($"&ANAME {sign}=&RENAMED me=%0/%1");
 
-		await Assert.That(seen.Any(m => m == $"{renamer.Name} repaints the sign.")).IsTrue()
-					.Because("ONAME is name-prefixed and shown to the renamer's room");
+			var seen = await MessagesWhile(watcher.DbRef, async () =>
+				await GodParser.CommandParse(renamer.Handle, ConnectionService,
+					MarkupText.Plain($"@name {sign}={newName}")));
 
-		await Scheduler.DrainImmediateQueueForTests();
-		await Assert.That(await Read(sign, "RENAMED")).IsEqualTo($"{oldName}/{newName}");
+			await Assert.That(seen.Any(m => m == $"{renamer.Name} repaints the sign.")).IsTrue()
+						.Because("ONAME is name-prefixed and shown to the renamer's room");
+
+			await Scheduler.DrainImmediateQueueForTests();
+			await Assert.That(await Read(sign, "RENAMED")).IsEqualTo($"{oldName}/{newName}");
+		}
+		finally
+		{
+			await God($"@set {renamer.DbRef}=!WIZARD");
+		}
 	}
 }

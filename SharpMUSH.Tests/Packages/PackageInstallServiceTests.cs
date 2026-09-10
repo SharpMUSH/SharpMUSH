@@ -303,10 +303,11 @@ public class PackageInstallServiceTests
 
 	/// <summary>
 	/// A revision written before lock names were canonical names <see cref="LockType.Teleport"/> the way
-	/// that world spelled it. Rolling back to it must leave the lock in place: the raw
-	/// <c>Teleport</c> add and the folded baseline's <c>TPort</c> removal both canonicalise in the
-	/// provider, and the removal is applied last, so the rollback used to delete the very lock the
-	/// revision asked it to keep — and an absent lock reads as "no lock", which passes everybody.
+	/// that world spelled it — <c>tport</c>, which is why <see cref="LockNames"/> still carries it as
+	/// an alias. Rolling back to it must leave the lock in place: the raw <c>tport</c> add and the
+	/// folded baseline's <c>Teleport</c> removal both canonicalise in the provider, and the removal is
+	/// applied last, so the rollback used to delete the very lock the revision asked it to keep — and
+	/// an absent lock reads as "no lock", which passes everybody.
 	/// </summary>
 	[Test, NotInParallel]
 	public async Task LegacyRollback_KeepsALockTheOldWorldSpelledDifferently()
@@ -332,7 +333,7 @@ public class PackageInstallServiceTests
 		var snapshot = new PackageRevisionSnapshot("1.0.0", [], [],
 		[
 			new PackageRevisionSnapshotStructure(objid, [], [],
-				new Dictionary<string, string> { ["Teleport"] = "=#1" },
+				new Dictionary<string, string> { ["tport"] = "=#1" },
 				new Dictionary<string, IReadOnlyList<string>>())
 		]);
 		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(package, 1, PackageRevisionKind.Install,

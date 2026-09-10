@@ -1506,4 +1506,67 @@ public class MovementParityTests
 			.Any(m => m.Contains("goes home."))).IsFalse();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(home));
 	}
+
+	/// <summary>
+	/// <c>do_enter</c> opens with <c>if (!Mobile(player)) return;</c> (<c>src/move.c:928</c>), before
+	/// it matches anything. <c>ENTER</c> is <c>CB.Default</c>, so <c>@force</c> and <c>@trigger</c> can
+	/// run it with a room as executor — and a room is not content, so asking it where it stands throws
+	/// instead of refusing.
+	/// </summary>
+	[Test]
+	public async ValueTask EnterRefusesARoomExecutorRatherThanThrowing()
+	{
+		var room = await Dig("RoomEnterExecutor");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "RoomEnterExecutorBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+		// Hasprivs is what admits MAT_ABSOLUTE (move.c:930-931); without it the room never matches the
+		// target at all and the command returns before it can misread the executor.
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {room}=WIZARD"));
+
+		var roomDbRef = DBRef.Parse(room);
+		var asRoom = GodParser.CurrentState with
+		{
+			Executor = roomDbRef,
+			Enactor = roomDbRef,
+			Caller = roomDbRef
+		};
+
+		var result = await GodParser.Push(asRoom).CommandParse(MarkupText.Plain($"enter #{box.Number}"));
+
+		// A command that throws is caught by the visitor and answered with an exception report, so the
+		// empty CallState is what says the guard refused rather than AsContent blowing up.
+		await Assert.That(result.Message?.ToPlainText() ?? string.Empty).IsEmpty()
+			.Because("move.c:928 refuses a non-Mobile silently, before anything can throw");
+		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room))
+			.Because("nothing moved, because a room cannot enter anything");
+	}
+
+	/// <summary>
+	/// <c>do_teleport_one</c> moves an exit by rewriting its <c>Source</c> and returns before
+	/// <c>safe_tel</c> is reached (<c>src/wiz.c:450-479</c>), so Penn's <c>safe_tel</c> never sees one.
+	/// SharpMUSH has no such branch and an exit IS <c>AnySharpContent</c>, so one arrives here; it is
+	/// not a container, and reading its contents to strip them throws.
+	/// </summary>
+	[Test]
+	public async ValueTask SafeTelRefusesAnExitRatherThanReadingItAsAContainer()
+	{
+		var (_, _, _, exit) = await Corridor("ExitSafeTel");
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExitSafeTelOwner");
+		var destination = await Dig("ExitSafeTelDestination");
+
+		// move.c:294 short-circuits to a plain enter_room when both ends share an owner; the
+		// stripping pass is only reached across owners.
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@chown/preserve {destination}={owner.DbRef}"));
+
+		var result = await MoveService.SafeTel(GodParser, (await Node(exit)).AsContent,
+			(await Node(destination)).AsContainer, noMoveMsgs: true, new DBRef(1), "test");
+
+		await Assert.That(result.IsT1).IsTrue()
+			.Because("only a Mobile is moved by enter_room (move.c:243)");
+		await Assert.That(await LocationOf(exit)).IsNotEqualTo(BareDbref(destination));
+	}
 }

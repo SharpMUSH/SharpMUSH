@@ -276,9 +276,14 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(follower.Object().DBRef,
 				nameof(ErrorMessages.Notifications.YouFollowFormat), leader.Object().Name);
 
-			// parse_que gives the queued command its own pe_info (src/parse.c), so the follower's move
-			// does not spend the leader's recursion budget; and it is not direct input, so it carries
-			// no connection handle.
+			// move.c:1484 queues with parse_que, which is PE_INFO_DEFAULT over a NULL parent queue
+			// (hdrs/externs.h:178): the follower's command gets an entirely fresh pe_info, not a view
+			// of the leader's and not a clone of it. Every collection and counter on ParserState is a
+			// reference type, and the queue entry runs on the scheduler's thread while the leader's
+			// command list is still going, so carrying the leader's over would be a data race as well
+			// as a semantic leak — the leader pops its register frame and its SwitchStack entry long
+			// before the consumer drains this, and a shared ExecutionStack would let the follower's
+			// @break stop the leader's list. It is not direct input either, so it carries no handle.
 			await Mediator.Send(new QueueCommandListRequest(
 				MarkupText.Plain(line),
 				parser.CurrentState with
@@ -287,7 +292,23 @@ public partial class Commands
 					Enactor = leader.Object().DBRef,
 					Caller = leader.Object().DBRef,
 					Handle = null,
-					MoveDepth = new InvocationCounter()
+					// parse_que passes no pe_regs, so %0-%9 and the q-registers start empty.
+					Arguments = new Dictionary<string, CallState>(),
+					EnvironmentRegisters = new Dictionary<string, CallState>(),
+					CallerArguments = null,
+					Registers = new([[]]),
+					IterationRegisters = [],
+					RegexRegisters = [],
+					SwitchStack = [],
+					ExecutionStack = [],
+					CallDepth = new InvocationCounter(),
+					FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations = new InvocationCounter(),
+					LimitExceeded = new LimitExceededFlag(),
+					MoveDepth = new InvocationCounter(),
+					CommandHistory = null,
+					BreakPropagation = null,
+					HttpResponse = null
 				},
 				new DbRefAttribute(follower.Object().DBRef, DefaultSemaphoreAttributeArray),
 				-1));
@@ -1689,6 +1710,15 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// move.c:928: do_enter refuses a non-Mobile before it matches anything, silently. ENTER is
+		// CB.Default, so @force and @trigger can run it with a room or an exit as executor; a room has
+		// no location to read and neither can be moved by enter_room (move.c:243).
+		if (!executor.IsPlayer && !executor.IsThing)
+		{
+			return CallState.Empty;
+		}
+
 		var args = parser.CurrentState.Arguments;
 		var objectName = args["0"].Message!.ToPlainText();
 

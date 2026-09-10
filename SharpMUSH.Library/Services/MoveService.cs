@@ -401,6 +401,17 @@ public class MoveService(
 			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
 		}
 
+		// wiz.c:450-479: do_teleport_one handles an exit by rewriting its Source and returns, so Penn's
+		// safe_tel never sees one. SharpMUSH has no such branch, and an exit IS AnySharpContent, so one
+		// still arrives here — `@force <exit>=goto <exit leading to a thing>` (GeneralCommands' IsContent
+		// guard admits it) and `tel(<exit>,<thing>)` both reach this. An exit is not a container and has
+		// nothing to strip, so the stripping pass is skipped; EnterRoom below then refuses the move
+		// itself, because only a Mobile is moved by enter_room (move.c:243).
+		if (what.IsExit)
+		{
+			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+		}
+
 		// The list is materialised before anything moves, because each EnterRoom below rewrites the
 		// contents it is being read from.
 		var carried = await mover.AsContainer.Content(mediator).ToListAsync();
