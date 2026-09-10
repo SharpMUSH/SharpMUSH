@@ -571,10 +571,10 @@ public class SoftcodeLayoutEquivalenceTests
 			}
 		}
 
-		Console.WriteLine("OBRACK break sites exercised by the corpus:");
+		TestDiagnostics.WriteLine("OBRACK break sites exercised by the corpus:");
 		foreach (var site in exercised["OBRACK"].Distinct())
 		{
-			Console.WriteLine($"  {site}");
+			TestDiagnostics.WriteLine($"  {site}");
 		}
 
 		foreach (var (type, sites) in exercised)

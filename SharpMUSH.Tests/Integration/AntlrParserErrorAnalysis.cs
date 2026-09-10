@@ -66,7 +66,7 @@ public class AntlrParserErrorAnalysis
 		void Log(string message)
 		{
 			output.AppendLine(message);
-			Console.WriteLine(message);
+			TestDiagnostics.WriteLine(message);
 		}
 
 		var scriptLines = ReadBBSInstallScript();
@@ -246,7 +246,7 @@ public class AntlrParserErrorAnalysis
 
 		var outputPath = Path.Combine(AppContext.BaseDirectory, TestDataDir, AnalysisOutputFileName);
 		await File.WriteAllTextAsync(outputPath, output.ToString());
-		Console.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
+		TestDiagnostics.WriteLine($"\n[ANALYSIS] Full output written to: {outputPath}");
 
 		// After Fix B (brace function semantics), inFunction scope isolation,
 		// and token stream rewriting (RewriteOrphanedBracketClosers),

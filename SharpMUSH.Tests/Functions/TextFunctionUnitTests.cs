@@ -13,7 +13,7 @@ public class TextFunctionUnitTests
 	[Arguments("textentries(file)", "0")]
 	public async Task Textentries(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -22,7 +22,7 @@ public class TextFunctionUnitTests
 	[Arguments("textfile(file)", "")]
 	public async Task Textfile(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -31,7 +31,7 @@ public class TextFunctionUnitTests
 	[Arguments("textsearch(file,pattern)", "")]
 	public async Task Textsearch(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

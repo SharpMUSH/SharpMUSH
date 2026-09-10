@@ -13,7 +13,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class InputPredicateResultTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -92,7 +91,7 @@ public class InputPredicateResultTests
 			var session = sessions.GetCapturing(player.Handle);
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
-			Console.WriteLine($"{command}/{mode}: errors={result?.HadErrors}, capture={sessions.GetCapturing(player.Handle)?.Id}");
+			TestDiagnostics.WriteLine($"{command}/{mode}: errors={result?.HadErrors}, capture={sessions.GetCapturing(player.Handle)?.Id}");
 			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");
 			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(mode == "syntax" ? null : session!.Id);
 		}
@@ -147,7 +146,7 @@ public class InputPredicateResultTests
 			var session = sessions.GetCapturing(player.Handle)!;
 			await Assert.That(session).IsNotNull();
 			var result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));
-			Console.WriteLine($"retry/{stage}/{mode}: errors={result?.HadErrors}, invocations={invocations}");
+			TestDiagnostics.WriteLine($"retry/{stage}/{mode}: errors={result?.HadErrors}, invocations={invocations}");
 			await Assert.That(invocations).IsEqualTo(stage == "condition" ? 1 : 2);
 			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");
 			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(mode == "syntax" ? null : session.Id);

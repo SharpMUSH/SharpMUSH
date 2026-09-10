@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
@@ -53,30 +51,8 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		builder.UseSetting("RateLimiting:PublicApi:WindowSeconds", "60");
 		builder.UseSetting("RateLimiting:PublicApi:QueueLimit", "100000");
 
-		var logConfig = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose()
-			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
-			.MinimumLevel.Override("NATS", LogEventLevel.Error);
-
-		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
-													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-
-		if (!isConsoleEnabled)
-		{
-			// Per-query SQL traces can exhaust the test report while parallel fixtures initialize.
-			logConfig.MinimumLevel.Override("SharpMUSH.Database.SurrealDB", LogEventLevel.Warning);
-			builder.UseSetting("Serilog:MinimumLevel:Override:SharpMUSH.Database.SurrealDB", "Warning");
-		}
-
-		if (isConsoleEnabled)
-		{
-			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
-		}
-
-		var log = logConfig.CreateLogger();
-		Log.Logger = log;
+		Log.Logger = TestDiagnostics.CreateLogger();
+		TestDiagnostics.ConfigureHost(builder);
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))

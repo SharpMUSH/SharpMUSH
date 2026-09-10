@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
@@ -58,7 +58,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("neq(1,2,3)", "1")]
 	public async Task T(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -72,7 +72,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("and(1,1,1)", "1")]
 	public async Task And(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -86,7 +86,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("nand(1,1,1)", "0")]
 	public async Task Nand(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -101,7 +101,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("or(1,1,1)", "1")]
 	public async Task Or(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -116,7 +116,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("nor(1,1,1)", "0")]
 	public async Task Nor(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -130,7 +130,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("xor(0,0)", "0")]
 	public async Task Xor(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -144,7 +144,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("not(false)", "0")]
 	public async Task Not(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -158,7 +158,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("cand(1,1,1)", "1")]
 	public async Task Cand(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -172,7 +172,7 @@ public class BooleanFunctionUnitTests
 	[Arguments("cor(0,0,1)", "1")]
 	public async Task Cor(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 

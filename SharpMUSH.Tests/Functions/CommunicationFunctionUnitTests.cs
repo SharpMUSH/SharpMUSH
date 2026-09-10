@@ -79,7 +79,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("nsoemit(#1,test)", "")]
 	public async Task Nsoemit(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -106,7 +106,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("nsprompt(#1,test)", "")]
 	public async Task Nsprompt(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -115,7 +115,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("nsremit(#0,test)", "")]
 	public async Task Nsremit(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -124,7 +124,7 @@ public class CommunicationFunctionUnitTests
 	[Arguments("nszemit(#0,test)", "")]
 	public async Task Nszemit(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

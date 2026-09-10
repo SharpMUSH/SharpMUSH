@@ -1,7 +1,6 @@
 using SharpMUSH.Library.ParserInterfaces;
 using MySqlConnector;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text.Json;
 
 namespace SharpMUSH.Library.Services;
 
@@ -14,7 +13,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecuteQueryAsync(string query)
 	{
-		var guid = Guid.NewGuid();
+
 		var results = new List<Dictionary<string, object?>>();
 
 		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
@@ -31,7 +30,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
 			results.Add(row);
-			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
+
 		}
 
 		ExecutionBudget.Current?.ThrowIfExceeded();
@@ -61,7 +60,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 
 	public async ValueTask<IEnumerable<Dictionary<string, object?>>> ExecutePreparedQueryAsync(string query, params object?[] parameters)
 	{
-		var guid = Guid.NewGuid();
+
 		var results = new List<Dictionary<string, object?>>();
 
 		await using var connection = await source.OpenConnectionAsync(ExecutionBudget.CurrentToken);
@@ -84,7 +83,7 @@ public class MySqlService(MySqlDataSource source) : ISqlService
 				row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
 			}
 			results.Add(row);
-			Console.WriteLine($"{guid}: {JsonSerializer.Serialize(row)}");
+
 		}
 
 		ExecutionBudget.Current?.ThrowIfExceeded();

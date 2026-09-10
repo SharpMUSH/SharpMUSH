@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.ConnectionServer.Services;
 using Microsoft.AspNetCore.TestHost;
 using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.SystemConsole.Themes;
 using TUnit.AspNetCore;
 
 namespace SharpMUSH.Tests;
@@ -24,23 +22,8 @@ public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 	/// </summary>
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
-		var logConfig = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose()
-			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
-			.MinimumLevel.Override("NATS", LogEventLevel.Error);
-
-		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
-													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-
-		if (isConsoleEnabled)
-		{
-			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
-		}
-
-		var log = logConfig.CreateLogger();
-		Log.Logger = log;
+		Log.Logger = TestDiagnostics.CreateLogger();
+		TestDiagnostics.ConfigureHost(builder);
 
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 

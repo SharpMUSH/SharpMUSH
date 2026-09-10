@@ -1,4 +1,4 @@
-﻿using Mediator;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using OneOf;
@@ -31,7 +31,7 @@ public class GeneralCommandTests
 	[Arguments("@pemit #1=2 This is a test;", "2 This is a test;")]
 	public async ValueTask SimpleCommandParse(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 
 		var executor = WebAppFactoryArg.ExecutorDBRef;
@@ -47,7 +47,7 @@ public class GeneralCommandTests
 	[Arguments("l"), Skip("Not yet implemented properly")]
 	public async ValueTask CommandAliasRuns(string str)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
 	}
 

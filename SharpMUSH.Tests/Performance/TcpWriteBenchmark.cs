@@ -11,14 +11,14 @@ public class TcpWriteBenchmark
 	[Test]
 	public async Task MeasureBatchingServiceMetrics()
 	{
-		Console.WriteLine("=== Batching Service Metrics ===\n");
+		TestDiagnostics.WriteLine("=== Batching Service Metrics ===\n");
 
 		// Try to get the batching service via reflection since we don't have direct reference
 		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
 
 		if (batchingServiceType == null)
 		{
-			Console.WriteLine("Batching service type not found");
+			TestDiagnostics.WriteLine("Batching service type not found");
 			return;
 		}
 
@@ -26,21 +26,21 @@ public class TcpWriteBenchmark
 
 		if (batchingService == null)
 		{
-			Console.WriteLine("Batching service not available in DI container");
+			TestDiagnostics.WriteLine("Batching service not available in DI container");
 			return;
 		}
 
 		var getMetricsMethod = batchingServiceType.GetMethod("GetMetrics");
 		if (getMetricsMethod == null)
 		{
-			Console.WriteLine("GetMetrics method not found");
+			TestDiagnostics.WriteLine("GetMetrics method not found");
 			return;
 		}
 
 		var metricsResult = getMetricsMethod.Invoke(batchingService, null);
 		if (metricsResult == null)
 		{
-			Console.WriteLine("Failed to get metrics");
+			TestDiagnostics.WriteLine("Failed to get metrics");
 			return;
 		}
 
@@ -52,32 +52,32 @@ public class TcpWriteBenchmark
 		var flushesFromTimeout = (long)metricsType.GetField("Item5")!.GetValue(metricsResult)!;
 		var totalTcpWriteTimeMs = (long)metricsType.GetField("Item6")!.GetValue(metricsResult)!;
 
-		Console.WriteLine($"Total messages received:   {messagesReceived}");
-		Console.WriteLine($"Total batches flushed:     {batchesFlushed}");
-		Console.WriteLine($"Average batch size:        {avgBatchSize:F2} messages");
-		Console.WriteLine($"Flushes from size limit:   {flushesFromSize}");
-		Console.WriteLine($"Flushes from timeout:      {flushesFromTimeout}");
-		Console.WriteLine($"Total TCP write time:      {totalTcpWriteTimeMs}ms");
-		Console.WriteLine();
+		TestDiagnostics.WriteLine($"Total messages received:   {messagesReceived}");
+		TestDiagnostics.WriteLine($"Total batches flushed:     {batchesFlushed}");
+		TestDiagnostics.WriteLine($"Average batch size:        {avgBatchSize:F2} messages");
+		TestDiagnostics.WriteLine($"Flushes from size limit:   {flushesFromSize}");
+		TestDiagnostics.WriteLine($"Flushes from timeout:      {flushesFromTimeout}");
+		TestDiagnostics.WriteLine($"Total TCP write time:      {totalTcpWriteTimeMs}ms");
+		TestDiagnostics.WriteLine();
 
 		if (avgBatchSize < 2.0 && messagesReceived > 100)
 		{
-			Console.WriteLine("WARNING: Average batch size < 2 - batching is NOT working!");
-			Console.WriteLine("Messages are arriving too slowly to batch effectively.");
-			Console.WriteLine("This confirms the architectural limitation: messages are published");
-			Console.WriteLine("sequentially with awaits between them, so they arrive too slowly to batch.");
+			TestDiagnostics.WriteLine("WARNING: Average batch size < 2 - batching is NOT working!");
+			TestDiagnostics.WriteLine("Messages are arriving too slowly to batch effectively.");
+			TestDiagnostics.WriteLine("This confirms the architectural limitation: messages are published");
+			TestDiagnostics.WriteLine("sequentially with awaits between them, so they arrive too slowly to batch.");
 		}
 		else if (avgBatchSize >= 50)
 		{
-			Console.WriteLine("SUCCESS: Good batch sizes - batching is working well!");
+			TestDiagnostics.WriteLine("SUCCESS: Good batch sizes - batching is working well!");
 		}
 		else if (avgBatchSize >= 10)
 		{
-			Console.WriteLine("Moderate batching - some benefit but could be better");
+			TestDiagnostics.WriteLine("Moderate batching - some benefit but could be better");
 		}
 
-		Console.WriteLine($"\nIf @dolist took ~17000ms and TCP writes took {totalTcpWriteTimeMs}ms,");
-		Console.WriteLine($"then TCP overhead is {(double)totalTcpWriteTimeMs / 17000.0 * 100:F1}% of total time.");
+		TestDiagnostics.WriteLine($"\nIf @dolist took ~17000ms and TCP writes took {totalTcpWriteTimeMs}ms,");
+		TestDiagnostics.WriteLine($"then TCP overhead is {(double)totalTcpWriteTimeMs / 17000.0 * 100:F1}% of total time.");
 
 		await Task.CompletedTask;
 	}

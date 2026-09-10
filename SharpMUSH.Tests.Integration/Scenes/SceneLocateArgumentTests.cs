@@ -1,32 +1,58 @@
+using SharpMUSH.Library.Extensions;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Infrastructure;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Integration.Scenes;
 
-/// <summary>
-/// Proves the scene functions resolve object-reference arguments (rooms, players) through the engine
-/// <c>LocateService</c> — so <c>me</c>, <c>here</c>, and player names work, exactly like every other
-/// engine function, not just bare dbrefs. Before the fix the scene functions handed the raw argument
-/// straight to storage (which only does <c>DBRef.TryParse</c>), so <c>scenewhere(here)</c> /
-/// <c>scenefocus(me)</c> returned <c>#-1 NOT FOUND</c> even with an active, focused scene present.
-///
-/// Driven over the WIRE via the <c>scene…()</c> functions. The <see cref="ServerWebAppFactory.FunctionParser"/>
-/// binds enactor = executor = <c>#1</c> (God), so <c>me</c> must resolve to <c>#1</c> and <c>here</c> to
-/// <c>#1</c>'s location. Runs identically on both supported providers.
-///
-/// <para><c>[NotInParallel]</c> for the same reason as <c>SceneDbrefResolutionTests</c>: every test drives
-/// the single shared God object (<c>#1</c>), and <c>scenecreate</c> focuses the owner on the new scene, so
-/// running the focus round-trip concurrently with another test's create would race on <c>#1</c>'s one
-/// focus pointer.</para>
-/// </summary>
-[NotInParallel]
+/// <summary>Scene object references round-trip through the engine using a private player and room.</summary>
 public class SceneLocateArgumentTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParser;
+	private IMUSHCodeParser FunctionParser => WebAppFactory.FunctionParserFor(_player.DbRef);
 
-	private const string God = "#1";
+	private TestIsolationHelpers.TestPlayer _player = null!;
+	private string _playerName = null!;
+	private DBRef? _roomId;
+	private string PlayerDbref => $"#{_player.DbRef.Number}";
+	private IConnectionService Connections => WebAppFactory.Services.GetRequiredService<IConnectionService>();
+
+	[Before(Test)]
+	public async Task CreatePlayerAndRoom()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<IMediator>();
+		var objects = WebAppFactory.Services.GetRequiredService<IObjectStore>();
+		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, mediator, Connections, "SceneReference");
+		var actor = (await objects.GetObjectNodeAsync(_player.DbRef)).AsPlayer;
+		_playerName = actor.Object.Name;
+		var roomId = await mediator.Send(new CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("SceneReferenceRoom"), actor));
+		_roomId = roomId;
+		var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
+		var origin = await actor.Location.WithCancellation(default);
+		await mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
+		await WebAppFactory.CommandParser.CommandParse(1, Connections,
+			MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
+	}
+
+	[After(Test)]
+	public async Task CleanUpPrivateObjects()
+	{
+		if (_player is null) return;
+		await Connections.Disconnect(_player.Handle);
+		var mediator = WebAppFactory.Services.GetRequiredService<IMediator>();
+		// These private fixture objects have no remaining consumers after this test.
+		if (_roomId is { } roomId) await mediator.Send(new DeleteObjectCommand(roomId));
+		await mediator.Send(new DeleteObjectCommand(_player.DbRef));
+	}
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
@@ -38,23 +64,23 @@ public class SceneLocateArgumentTests
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");
 
-		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(God);
+		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(PlayerDbref);
 	}
 
 	[Test]
 	public async Task SceneAddMember_ResolvesPlayer_FromMeKeyword()
 	{
-		var id = await Eval($"scenecreate(,{God},Locate member {Guid.NewGuid():N})");
+		var id = await Eval($"scenecreate(,{PlayerDbref},Locate member {Guid.NewGuid():N})");
 		await Eval($"sceneset({id},public,1)");
 
-		await Assert.That(await Eval($"sceneaddmember({id},me,participant)")).IsEqualTo(God);
-		await Assert.That(await Eval($"scenemembers({id})")).Contains(God);
+		await Assert.That(await Eval($"sceneaddmember({id},me,participant)")).IsEqualTo(PlayerDbref);
+		await Assert.That(await Eval($"scenemembers({id})")).Contains(PlayerDbref);
 	}
 
 	[Test]
 	public async Task SceneFocus_ResolvesPlayer_FromMeKeyword()
 	{
-		var id = await Eval($"scenecreate(,{God},Locate focus {Guid.NewGuid():N})");
+		var id = await Eval($"scenecreate(,{PlayerDbref},Locate focus {Guid.NewGuid():N})");
 		await Eval($"sceneset({id},public,1)");
 
 		await Eval($"sceneaddmember({id},me,participant)");
@@ -65,17 +91,17 @@ public class SceneLocateArgumentTests
 	[Test]
 	public async Task SceneCreate_ResolvesOwner_FromPlayerName()
 	{
-		var id = await Eval($"scenecreate(,God,Locate name {Guid.NewGuid():N})");
+		var id = await Eval($"scenecreate(,{_playerName},Locate name {Guid.NewGuid():N})");
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");
 
-		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(God);
+		await Assert.That(await Eval($"scene({id}, owner)")).IsEqualTo(PlayerDbref);
 	}
 
 	[Test]
 	public async Task SceneWhere_ResolvesRoom_FromHereKeyword()
 	{
-		var id = await Eval($"scenecreate(here,{God},Locate here {Guid.NewGuid():N})");
+		var id = await Eval($"scenecreate(here,{PlayerDbref},Locate here {Guid.NewGuid():N})");
 		await Assert.That(id).DoesNotStartWith("#-1");
 		await Eval($"sceneset({id},public,1)");
 		await Eval($"sceneset({id},status,active)");

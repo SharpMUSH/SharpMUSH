@@ -14,6 +14,7 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithUsername("testuser")
 		.WithPassword("testpass")
 		.WithReuse(false)
+		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();

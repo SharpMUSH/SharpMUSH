@@ -66,7 +66,7 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(result).IsNotNull();
 		var output = result!.Message.ToPlainText();
-		Console.WriteLine($"Stack depth test result: {output}");
+		TestDiagnostics.WriteLine($"Stack depth test result: {output}");
 
 		await Assert.That(output).IsEqualTo("1");
 	}
@@ -99,8 +99,8 @@ public class RecursionAndInvocationLimitTests
 		var output10 = result10!.Message.ToPlainText();
 		var output11 = result11!.Message.ToPlainText();
 
-		Console.WriteLine($"10-deep result: {output10}");
-		Console.WriteLine($"11-deep result: {output11}");
+		TestDiagnostics.WriteLine($"10-deep result: {output10}");
+		TestDiagnostics.WriteLine($"11-deep result: {output11}");
 
 		await Assert.That(output10).IsEqualTo("1");
 		await Assert.That(output11).IsEqualTo("1");
@@ -232,8 +232,8 @@ public class RecursionAndInvocationLimitTests
 
 		await Assert.That(stackOutput).IsEqualTo("1");
 
-		Console.WriteLine($"Recursion error: {recursionError}");
-		Console.WriteLine($"Stack depth result: {stackOutput}");
+		TestDiagnostics.WriteLine($"Recursion error: {recursionError}");
+		TestDiagnostics.WriteLine($"Stack depth result: {stackOutput}");
 	}
 
 	/// <summary>
@@ -266,9 +266,9 @@ public class RecursionAndInvocationLimitTests
 		var ufunOutput = ufunResult!.Message.ToPlainText();
 		var ulocalOutput = ulocalResult!.Message.ToPlainText();
 
-		Console.WriteLine($"u() recursion test: {uOutput}");
-		Console.WriteLine($"ufun() recursion test: {ufunOutput}");
-		Console.WriteLine($"ulocal() recursion test: {ulocalOutput}");
+		TestDiagnostics.WriteLine($"u() recursion test: {uOutput}");
+		TestDiagnostics.WriteLine($"ufun() recursion test: {ufunOutput}");
+		TestDiagnostics.WriteLine($"ulocal() recursion test: {ulocalOutput}");
 
 		await Assert.That(uOutput).Contains("#-1");
 		await Assert.That(ufunOutput).Contains("#-1");

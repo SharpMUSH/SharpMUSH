@@ -26,6 +26,7 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithBindMount(_configTempFile, NatsConfigPath)
 		.WithCommand("-c", NatsConfigPath)
 		.WithReuse(false)
+		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.StartAsync();

@@ -22,7 +22,7 @@ public class StringFunctionUnitTests
 	[Arguments("ansi(hy,yellow)", "yellow", (byte)3, true)]
 	public async Task ANSI(string str, string expectedText, byte paletteIndex, bool bright)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 
@@ -80,7 +80,7 @@ public class StringFunctionUnitTests
 	[Arguments("ansi(hY,yellow)", "yellow", (byte)3, true)]
 	public async Task ANSIBackground(string str, string expectedText, byte paletteIndex, bool bold)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 

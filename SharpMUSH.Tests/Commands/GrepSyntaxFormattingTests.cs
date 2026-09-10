@@ -1,43 +1,48 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using OneOf;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Wires <c>SoftcodeFormatter.Format</c> (Task 5) into <c>@grep/PRINT</c>'s attribute loop -- an
-/// attribute carrying <c>cmdsyntax</c>/<c>funsyntax</c> renders as a formatted, wrapped code block
-/// instead of the raw value, with the existing plain-text match highlight re-sliced from the
-/// formatted result -- and covers the companion advisory set-time validation added to
-/// <see cref="SharpMUSH.Library.Services.AttributeService.SetAttributeAsync"/>: storing broken code
-/// into a syntax-flagged attribute warns the setter but never blocks the set. Fixture pattern
-/// copied from <see cref="ExamineSyntaxFormattingTests"/>.
-/// <para>
-/// <see cref="WebAppFactoryArg"/> is <c>SharedType.PerTestSession</c>, so <see cref="NotifyService"/> is
-/// one substitute shared across every test in the process -- <c>Received()</c> and
-/// <c>DidNotReceive()</c> match calls recorded by any test that ran before them, in this class or any
-/// other. Every test below calls <c>ClearReceivedCalls()</c> immediately before the command under test
-/// (after its setup commands), and asserts on a fragment tied to that test's specific input.
-/// </para>
-/// <para>
-/// <c>[NotInParallel]</c>: with <see cref="NotifyService"/> shared across the whole session, a test
-/// running concurrently with this class could record a <c>Notify</c> call between one test's
-/// <c>ClearReceivedCalls()</c> and its own assertion. Matches the same guard already used by
-/// <c>CommunicationCommandTests</c> and <c>UtilityCommandTests</c> for the identical reason.
-/// </para>
+/// Checks grep formatting and set-time syntax warnings through an isolated player.
 /// </summary>
-[NotInParallel]
 public class GrepSyntaxFormattingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	private TestIsolationHelpers.TestPlayer _player = null!;
+
+	[Before(Test)]
+	public async Task CreatePlayer()
+	{
+		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GrepSyntaxFormatting");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
+	}
+
+	[After(Test)]
+	public async Task DisconnectPlayer()
+	{
+		if (_player is not null)
+			await ConnectionService.Disconnect(_player.Handle);
+	}
+
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
+
+	private int _notificationOffset;
+	private IEnumerable<OneOf<MString, string>> Messages =>
+		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
+
+	private void BeginNotificationWindow() =>
+		_notificationOffset = WebAppFactoryArg.Notifications.RawCountFor(_player.DbRef);
 
 	// Comfortably longer than the 78-column fallback width, so it must break.
 	private const string LongCode =
@@ -45,47 +50,33 @@ public class GrepSyntaxFormattingTests
 
 	private const string BrokenCode = "add(1,2";
 
-	private ValueTask ExpectPlainText(string fragment) => NotifyService.Received().Notify(
-		Arg.Any<AnySharpObject>(),
-		Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, fragment)),
-		Arg.Any<AnySharpObject?>(),
-		Arg.Any<INotifyService.NotificationType>());
+	private async ValueTask ExpectPlainText(string fragment) =>
+		await Assert.That(Messages.Any(m => TestHelpers.MessagePlainTextContains(m, fragment))).IsTrue();
 
 	// Unlike ExpectPlainText, matches against ToString() (markup intact). A regression that dropped
 	// semantic colouring while reconstructing before+match+after would leave the plain text identical
 	// but would never emit this fragment -- ExpectPlainText alone cannot see that class of bug.
-	private ValueTask ExpectMarkup(string fragment) => NotifyService.Received().Notify(
-		Arg.Any<AnySharpObject>(),
-		Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessageContains(m, fragment)),
-		Arg.Any<AnySharpObject?>(),
-		Arg.Any<INotifyService.NotificationType>());
+	private async ValueTask ExpectMarkup(string fragment) =>
+		await Assert.That(Messages.Any(m => TestHelpers.MessageContains(m, fragment))).IsTrue();
 
 	[Test]
 	public async ValueTask SettingBrokenCodeIntoFlaggedAttribute_WarnsButStillStores()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnOn");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "SetWarnOn");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}=placeholder"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/BAD=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&BAD {obj}=placeholder"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/BAD=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
 
 		// ErrorMessages.Returns.ParserFailure is "#-1 PARSER FAILURE: {0}" -- ParseError.ToMushFailureString()
 		// formats through it, so this fragment is the exact wording the advisory notify emits.
 		await ExpectPlainText("PARSER FAILURE");
 
-		// Advisory only -- the value must still be stored despite the warning above. Clear again
-		// first: ExpectPlainText matches on Received(), which would otherwise still see the
-		// "PARSER FAILURE" notify above in its match window. ParseError.ToMushFailureString() embeds
-		// a source excerpt for errors that land mid-expression (see ErrorWithExcerptCode below), so
-		// for some broken-code values that stale notify could itself contain the asserted fragment.
-		// Without this second clear, the assertion below would pass on that stale notify even if
-		// get() returned nothing at all -- confirmed by temporarily redirecting the read to a
-		// never-written attribute and using a mid-expression BrokenCode value: the assertion passed
-		// with only one ClearReceivedCalls() and correctly failed once this second one was restored.
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"think [get({obj}/BAD)]"));
+		// Start a new recipient-specific window so the warning cannot satisfy the read assertion.
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"think [get({obj}/BAD)]"));
 		await ExpectPlainText(BrokenCode);
 	}
 
@@ -99,14 +90,15 @@ public class GrepSyntaxFormattingTests
 		// so on the very first write `existing` comes back empty -- but SetAttributeCommand applies
 		// this DefaultFlags entry (funsyntax) to the brand-new node during that same call, so only a
 		// post-set re-fetch can see it in time to validate.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@attribute/access DEFAULTFN=funsyntax"));
+		var attribute = TestIsolationHelpers.GenerateUniqueName("DEFAULTFN");
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@attribute/access {attribute}=funsyntax"));
 
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnDefault");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "SetWarnDefault");
 
-		NotifyService.ClearReceivedCalls();
-		// First-ever write to DEFAULTFN on this object -- the attribute node does not exist before
+		BeginNotificationWindow();
+		// First-ever write to this unique attribute on this object -- the node does not exist before
 		// this call.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&DEFAULTFN {obj}={BrokenCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&{attribute} {obj}={BrokenCode}"));
 
 		await ExpectPlainText("PARSER FAILURE");
 	}
@@ -114,28 +106,24 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask SettingBrokenCodeIntoUnflaggedAttribute_IsSilent()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetWarnOff");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "SetWarnOff");
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&BAD {obj}={BrokenCode}"));
 
-		await NotifyService.DidNotReceive().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "PARSER FAILURE")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(Messages.Any(m => TestHelpers.MessagePlainTextContains(m, "PARSER FAILURE"))).IsFalse();
 	}
 
 	[Test]
 	public async ValueTask GrepPrintOnFlaggedAttribute_IsFormatted()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmt");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmt");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
 		// words() alone on an indented line and expanding it over its own argument in turn -- the same
@@ -149,12 +137,12 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask GrepPrintOnUnflaggedAttribute_RendersVerbatim()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtOff");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtOff");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// Byte-identical regression contract: unflagged output stays a single unbroken line, so this
 		// exact single-line fragment (which the formatted, wrapped block would never produce whole)
@@ -165,13 +153,13 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask GrepPrintOnFlaggedAttribute_PreservesSyntaxColoring()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtColor");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtColor");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}=words"));
 
 		// "38;2;220;220;170" is the literal 24-bit ANSI foreground sequence
 		// (ANSI.SGR(38, 2, 0xDC, 0xDC, 0xAA)) SemanticTokenAnsiPalette assigns SemanticTokenType.Function
@@ -185,13 +173,13 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask GrepPrintOnFlaggedAttribute_WildcardMatch_IsFormatted()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtWild");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtWild");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*words*"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*words*"));
 
 		// The isWild branch assigns displayValue = formatted directly, skipping the highlight-slice
 		// path entirely -- a separate code path from GrepPrintOnFlaggedAttribute_IsFormatted's literal
@@ -202,24 +190,20 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask GrepPrintOnFlaggedEmptyAttribute_EmitsNoStrayParserFailure()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtEmpty");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
+		BeginNotificationWindow();
 		// "*" as a WILD pattern matches the empty attribute value too, reaching the print loop
 		// without ever going through the literal-match path (which an empty value can't match).
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/wild/print {obj}=*"));
 
 		// The empty-value guard skips the formatter entirely for an empty attribute -- an empty
 		// funsyntax body is itself a parse error and would otherwise surface a stray parser-failure
 		// summary in place of blank, exactly the bug @examine's equivalent guard was added to prevent.
-		await NotifyService.DidNotReceive().Notify(
-			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "PARSER FAILURE")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(Messages.Any(m => TestHelpers.MessagePlainTextContains(m, "PARSER FAILURE"))).IsFalse();
 
 		await ExpectPlainText("EMPTYFN: ");
 	}
@@ -241,18 +225,15 @@ public class GrepSyntaxFormattingTests
 	[Test]
 	public async ValueTask GrepPrintOnFlaggedAttribute_NeverHighlightsInsideTheErrorSummary()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GrepFmtSummary");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "GrepFmtSummary");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&BADFN {obj}={ErrorWithExcerptCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/BADFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&BADFN {obj}={ErrorWithExcerptCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/BADFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@grep/print {obj}={StraddlesABreak}"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}={StraddlesABreak}"));
 
-		var messages = NotifyService.ReceivedCalls()
-			.Select(c => c.GetArguments())
-			.Where(args => args.Length >= 2 && args[1] is OneOf<MString, string>)
-			.Select(args => (OneOf<MString, string>)args[1]!)
+		var messages = Messages
 			.Select(m => (Plain: m.Match(ms => ms.ToPlainText(), s => s), Markup: m.Match(ms => ms.ToString(), s => s)))
 			.ToList();
 

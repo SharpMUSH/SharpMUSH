@@ -88,7 +88,7 @@ public class QueueDiagnosticsSchedulerTests
 				using var drainedTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 				while (queue.GetQueueUsage().Total != 0) await Task.Delay(1, drainedTimeout.Token);
 				elapsed?.Stop();
-				if (measure) Console.WriteLine($"Queue diagnostics benchmark: round={round}, mode={mode}, entries={count}, elapsed_ms={elapsed!.Elapsed.TotalMilliseconds:F2}, allocated_bytes={GC.GetTotalAllocatedBytes() - allocatedBefore}");
+				if (measure) TestDiagnostics.WriteLine($"Queue diagnostics benchmark: round={round}, mode={mode}, entries={count}, elapsed_ms={elapsed!.Elapsed.TotalMilliseconds:F2}, allocated_bytes={GC.GetTotalAllocatedBytes() - allocatedBefore}");
 				await Assert.That(observed).IsEqualTo(count);
 				if (recorder is not null)
 					await Assert.That(recorder.Recent().All(row => row.InvocationCount == 3 && row.Outcome == QueueOutcome.Completed)).IsTrue();

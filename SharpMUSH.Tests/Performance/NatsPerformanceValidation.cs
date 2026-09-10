@@ -40,9 +40,9 @@ public class NatsPerformanceValidation
 		sw.Stop();
 
 		var elapsedMs = sw.ElapsedMilliseconds;
-		Console.WriteLine($"[NATS] Published {messageCount} messages in {elapsedMs}ms");
-		Console.WriteLine($"[NATS] Throughput: {messageCount * 1000.0 / elapsedMs:F2} msg/sec");
-		Console.WriteLine($"[NATS] Average latency: {(double)elapsedMs / messageCount:F2}ms per message");
+		TestDiagnostics.WriteLine($"[NATS] Published {messageCount} messages in {elapsedMs}ms");
+		TestDiagnostics.WriteLine($"[NATS] Throughput: {messageCount * 1000.0 / elapsedMs:F2} msg/sec");
+		TestDiagnostics.WriteLine($"[NATS] Average latency: {(double)elapsedMs / messageCount:F2}ms per message");
 
 		// NATS JetStream should be faster than Kafka (Kafka target: <15 000ms)
 		await Assert.That(elapsedMs).IsLessThan(15000)
@@ -63,7 +63,7 @@ public class NatsPerformanceValidation
 		sw.Stop();
 
 		var elapsedMs = sw.ElapsedMilliseconds;
-		Console.WriteLine($"[NATS] Single message latency: {elapsedMs}ms");
+		TestDiagnostics.WriteLine($"[NATS] Single message latency: {elapsedMs}ms");
 
 		// NATS has no configurable linger/batching window, so single-message
 		// latency should be lower than Kafka's target of <100ms
@@ -85,9 +85,9 @@ public class NatsPerformanceValidation
 		sw.Stop();
 
 		var elapsedMs = sw.ElapsedMilliseconds;
-		Console.WriteLine($"[NATS] Published {messageCount} messages (concurrent) in {elapsedMs}ms");
-		Console.WriteLine($"[NATS] Throughput: {messageCount * 1000.0 / elapsedMs:F2} msg/sec");
-		Console.WriteLine($"[NATS] Average latency: {(double)elapsedMs / messageCount:F2}ms per message");
+		TestDiagnostics.WriteLine($"[NATS] Published {messageCount} messages (concurrent) in {elapsedMs}ms");
+		TestDiagnostics.WriteLine($"[NATS] Throughput: {messageCount * 1000.0 / elapsedMs:F2} msg/sec");
+		TestDiagnostics.WriteLine($"[NATS] Average latency: {(double)elapsedMs / messageCount:F2}ms per message");
 
 		// NATS has no linger window, so concurrent publishes can complete much
 		// faster than Kafka's 16ms linger target
@@ -108,11 +108,11 @@ public class NatsPerformanceValidation
 		await Assert.That(options.MaxAge).IsGreaterThan(TimeSpan.Zero)
 			.Because("Messages should have a finite retention age");
 
-		Console.WriteLine($"[NATS] Configuration:");
-		Console.WriteLine($"  Stream: {options.StreamName}");
-		Console.WriteLine($"  Subject prefix: {options.SubjectPrefix}");
-		Console.WriteLine($"  Max message age: {options.MaxAge}");
-		Console.WriteLine($"  URL: {options.Url}");
+		TestDiagnostics.WriteLine($"[NATS] Configuration:");
+		TestDiagnostics.WriteLine($"  Stream: {options.StreamName}");
+		TestDiagnostics.WriteLine($"  Subject prefix: {options.SubjectPrefix}");
+		TestDiagnostics.WriteLine($"  Max message age: {options.MaxAge}");
+		TestDiagnostics.WriteLine($"  URL: {options.Url}");
 	}
 
 	[Test]
@@ -141,7 +141,7 @@ public class NatsPerformanceValidation
 		var msg = new TelnetOutputMessage(1, Encoding.UTF8.GetBytes("hello"));
 		await bus.Publish(msg);
 
-		Console.WriteLine("[NATS] TelnetOutputMessage published to subject sharpmush.perf.test.telnet-output");
-		Console.WriteLine("[NATS] Kafka topic equivalent: telnet-output");
+		TestDiagnostics.WriteLine("[NATS] TelnetOutputMessage published to subject sharpmush.perf.test.telnet-output");
+		TestDiagnostics.WriteLine("[NATS] Kafka topic equivalent: telnet-output");
 	}
 }

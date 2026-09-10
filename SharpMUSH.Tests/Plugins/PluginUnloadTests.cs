@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Xml.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,7 +21,6 @@ namespace SharpMUSH.Tests.Plugins;
 /// underlying <c>AssemblyLoadContext</c> is actually reclaimed by the GC (dead WeakReference). No DB, no
 /// server host: a pure loader/registrar test.
 /// </summary>
-[NotInParallel]
 public class PluginUnloadTests
 {
 	private static readonly IServiceProvider EmptyProvider = new EmptyServiceProvider();
@@ -57,6 +58,14 @@ public class PluginUnloadTests
 	[Test]
 	public async Task UnloadAsync_CommandOnlyPlugin_CollectibleContextIsReclaimed()
 	{
+		// Full collections affect the entire process, including the shared test server's heap.
+		// Run this exact assertion in a small child process instead of collecting the whole suite.
+		if (Environment.GetEnvironmentVariable("SHARPMUSH_PLUGIN_UNLOAD_PROBE") != "1")
+		{
+			await RunCollectionProbeAsync();
+			return;
+		}
+
 		await Assert.That(File.Exists(CommandOnlyDllPath))
 			.IsTrue()
 			.Because($"the CommandOnlyPlugin fixture DLL must be copied to {CommandOnlyDllPath}");
@@ -136,6 +145,64 @@ public class PluginUnloadTests
 		var loaded = PluginLoaderService.LoadOne(CommandOnlyDllPath, NullLogger.Instance)!;
 		manager.RegisterPlugin(loaded.Plugin);
 		return (new WeakReference(loaded.Loader), loaded.Plugin.Id);
+	}
+
+	private static async Task RunCollectionProbeAsync()
+	{
+		var directory = Path.Join(Path.GetTempPath(), "sm-unload-" + Guid.NewGuid().ToString("N"));
+		Directory.CreateDirectory(directory);
+		var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
+		{
+			UseShellExecute = false,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true
+		};
+		foreach (var argument in new[]
+		{
+			typeof(PluginUnloadTests).Assembly.Location,
+			"--treenode-filter",
+			$"/*/*/*{nameof(PluginUnloadTests)}*/{nameof(UnloadAsync_CommandOnlyPlugin_CollectibleContextIsReclaimed)}",
+			"--output", "Detailed", "--report-trx", "--report-trx-filename", "probe.trx",
+			"--results-directory", directory
+		}) start.ArgumentList.Add(argument);
+		start.Environment["SHARPMUSH_PLUGIN_UNLOAD_PROBE"] = "1";
+		start.Environment["TUNIT_DISABLE_HTML_REPORTER"] = "true";
+		start.Environment["TUNIT_DISABLE_GITHUB_REPORTER"] = "true";
+		start.Environment["TUNIT_DISABLE_ARTIFACT_UPLOAD"] = "true";
+		using var process = new Process { StartInfo = start };
+		var succeeded = false;
+		try
+		{
+			process.Start();
+			var output = process.StandardOutput.ReadToEndAsync();
+			var error = process.StandardError.ReadToEndAsync();
+			using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+			try
+			{
+				await process.WaitForExitAsync(timeout.Token);
+			}
+			catch (OperationCanceledException)
+			{
+				process.Kill(entireProcessTree: true);
+				await process.WaitForExitAsync();
+				throw new TimeoutException($"Plugin collection probe timed out.\n{await output}\n{await error}");
+			}
+			await Assert.That(process.ExitCode).IsEqualTo(0)
+				.Because($"Plugin collection probe failed.\n{await output}\n{await error}");
+			var report = XDocument.Load(Path.Join(directory, "probe.trx"));
+			XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
+			var results = report.Descendants(ns + "UnitTestResult").ToArray();
+			await Assert.That(results.Length).IsEqualTo(1);
+			await Assert.That((string?)results[0].Attribute("outcome")).IsEqualTo("Passed");
+			succeeded = true;
+		}
+		finally
+		{
+			// Preserve the primary probe failure; cleanup failures still fail an otherwise successful test.
+			try { Directory.Delete(directory, recursive: true); }
+			catch (IOException) when (!succeeded) { }
+			catch (UnauthorizedAccessException) when (!succeeded) { }
+		}
 	}
 
 	private static bool WaitForCollected(WeakReference reference)

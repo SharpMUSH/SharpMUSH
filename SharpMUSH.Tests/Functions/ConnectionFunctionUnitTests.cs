@@ -185,7 +185,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("lwhoid()", "")]
 	public async Task Lwhoid(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -194,7 +194,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("ncon()", "0")]
 	public async Task Ncon(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -203,7 +203,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nexits(#0)", "0")]
 	public async Task Nexits(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -212,7 +212,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nplayers()", "0")]
 	public async Task Nplayers(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -221,7 +221,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nthings()", "0")]
 	public async Task Nthings(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -230,7 +230,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nvcon()", "0")]
 	public async Task Nvcon(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -239,7 +239,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nvexits()", "0")]
 	public async Task Nvexits(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -248,7 +248,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nvplayers()", "0")]
 	public async Task Nvplayers(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -257,7 +257,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("nvthings()", "0")]
 	public async Task Nvthings(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -266,7 +266,7 @@ public class ConnectionFunctionUnitTests
 	[Arguments("ports()", "4201")]
 	public async Task Ports(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

@@ -26,9 +26,9 @@ public class TelnetSocketPreservationTests
 		var socketPath = Path.Combine(directory, "render.sock");
 		var natsUrl = $"nats://localhost:{NatsTestServer.Instance.GetMappedPublicPort(4222)}";
 		var retry = new RetryLogger();
-		WebApplication? worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+		WebApplication? worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		await using var owner = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(
-			["--ConnectionServer:TelnetPort=0", "--ConnectionServer:HttpPort=0", "--ConnectionServer:TelnetSslPort=0",
+			[.. TestDiagnostics.HostArguments, "--ConnectionServer:TelnetPort=0", "--ConnectionServer:HttpPort=0", "--ConnectionServer:TelnetSslPort=0",
 				"--Rendering:SocketPath=" + socketPath], natsUrl,
 			services => services.AddSingleton<ILogger<RemoteOutputRenderer>>(retry));
 		using var client = new TcpClient();
@@ -62,7 +62,7 @@ public class TelnetSocketPreservationTests
 			await Assert.That(pendingRead.IsCompleted).IsFalse();
 			await Assert.That(ReferenceEquals(connections.Get(connection.Handle), connection)).IsTrue();
 
-			worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+			worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 			await worker.StartAsync(ct);
 			await pendingRead;
 			await Assert.That(client.Client.LocalEndPoint).IsEqualTo(originalEndpoint);

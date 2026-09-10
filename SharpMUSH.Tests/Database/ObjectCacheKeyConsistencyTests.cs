@@ -19,7 +19,6 @@ namespace SharpMUSH.Tests.Database;
 /// read cached under. The objid (recycle) check now lives outside the cache (see
 /// DbrefBothFormsResolutionTests.ObjidWithWrongTimestamp_DoesNotResolve_EvenWhenBareIsCached).
 /// </summary>
-[NotInParallel]
 public class ObjectCacheKeyConsistencyTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

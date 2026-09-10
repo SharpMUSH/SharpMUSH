@@ -29,7 +29,7 @@ public class ReplayPersistLatencyBenchmark
 	[Test]
 	public async Task Decoupling_persist_removes_the_nats_rtt_from_output_delivery()
 	{
-		var strategy = new NatsTestContainerStrategy();
+		var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
 		var sInline = Guid.NewGuid().ToString("N");
 		var sDecoupled = Guid.NewGuid().ToString("N");
 		try
@@ -90,11 +90,11 @@ public class ReplayPersistLatencyBenchmark
 
 			inline.Sort();
 			decoupled.Sort();
-			Console.WriteLine("==== Replay persist: output-delivery latency (real NATS JetStream) ====");
-			Console.WriteLine($"frames={Frames}  payload={line.Length}B");
-			Console.WriteLine($"INLINE    per-frame ms  p50={Percentile(inline, 50):F3}  p99={Percentile(inline, 99):F3}  mean={inline.Average():F3}   burst_total={inlineTotal.Elapsed.TotalMilliseconds:F1}ms");
-			Console.WriteLine($"DECOUPLED per-frame ms  p50={Percentile(decoupled, 50):F3}  p99={Percentile(decoupled, 99):F3}  mean={decoupled.Average():F3}   burst_total={decoupledTotal.Elapsed.TotalMilliseconds:F1}ms");
-			Console.WriteLine($"speedup(burst)= {inlineTotal.Elapsed.TotalMilliseconds / decoupledTotal.Elapsed.TotalMilliseconds:F1}x   decoupled_persisted={persisted}/{Frames}");
+			TestDiagnostics.WriteLine("==== Replay persist: output-delivery latency (real NATS JetStream) ====");
+			TestDiagnostics.WriteLine($"frames={Frames}  payload={line.Length}B");
+			TestDiagnostics.WriteLine($"INLINE    per-frame ms  p50={Percentile(inline, 50):F3}  p99={Percentile(inline, 99):F3}  mean={inline.Average():F3}   burst_total={inlineTotal.Elapsed.TotalMilliseconds:F1}ms");
+			TestDiagnostics.WriteLine($"DECOUPLED per-frame ms  p50={Percentile(decoupled, 50):F3}  p99={Percentile(decoupled, 99):F3}  mean={decoupled.Average():F3}   burst_total={decoupledTotal.Elapsed.TotalMilliseconds:F1}ms");
+			TestDiagnostics.WriteLine($"speedup(burst)= {inlineTotal.Elapsed.TotalMilliseconds / decoupledTotal.Elapsed.TotalMilliseconds:F1}x   decoupled_persisted={persisted}/{Frames}");
 
 			await store.DisposeAsync();
 

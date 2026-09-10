@@ -22,7 +22,7 @@ public class TimeFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("time()")))?.Message!;
 		// Result should be in the format "Day Mon DD HH:MM:SS YYYY"
-		Console.WriteLine(result.ToPlainText());
+		TestDiagnostics.WriteLine(result.ToPlainText());
 		var parts = result.ToPlainText().Split(' ');
 		await Assert.That(parts.Length).IsEqualTo(5);
 	}

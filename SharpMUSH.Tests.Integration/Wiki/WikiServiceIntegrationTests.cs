@@ -14,7 +14,6 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 /// IWikiService is exposed through the ISharpDatabase singleton; all tests retrieve it
 /// from the DI container and verify identical semantics across both supported database providers.
 /// </summary>
-[NotInParallel]
 public class WikiServiceIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -28,9 +27,9 @@ public class WikiServiceIntegrationTests
 			string title,
 			WikiNamespace ns = WikiNamespace.Main,
 			string markdown = "Hello **world**.",
-			string editor = "#1")
+			string editor = "#1", IWikiService? wiki = null)
 	{
-		var result = await Wiki.CreateAsync(title, markdown, editor, ns);
+		var result = await (wiki ?? Wiki).CreateAsync(title, markdown, editor, ns);
 		await Assert.That(result.IsT0).IsTrue();
 		return result.AsT0;
 	}
@@ -387,14 +386,17 @@ public class WikiServiceIntegrationTests
 	[Test]
 	public async Task GetRecentChangesAsync_ReturnsNewestFirstAndRespectsCount()
 	{
-		var uid = Guid.NewGuid().ToString("N")[..8];
-		await CreatePageAsync($"Rc Page A {uid}");
-		await Task.Delay(10); // ensure distinct UpdatedAt timestamps
-		var pageB = await CreatePageAsync($"Rc Page B {uid}");
-		await Task.Delay(10);
-		var pageC = await CreatePageAsync($"Rc Page C {uid}");
+		await using var database = await IsolatedWikiDatabase.CreateAsync();
+		var wiki = database.Wiki;
 
-		var recent = await Wiki.GetRecentChangesAsync(count: 2);
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		await CreatePageAsync($"Rc Page A {uid}", wiki: wiki);
+		await Task.Delay(10); // ensure distinct UpdatedAt timestamps
+		var pageB = await CreatePageAsync($"Rc Page B {uid}", wiki: wiki);
+		await Task.Delay(10);
+		var pageC = await CreatePageAsync($"Rc Page C {uid}", wiki: wiki);
+
+		var recent = await wiki.GetRecentChangesAsync(count: 2);
 
 		await Assert.That(recent.Count).IsEqualTo(2);
 		await Assert.That(recent[0].Id).IsEqualTo(pageC.Id);
@@ -404,50 +406,56 @@ public class WikiServiceIntegrationTests
 	[Test]
 	public async Task CountPagesAsync_DraftFilterComposesWithTheNamespaceFilter()
 	{
+		await using var database = await IsolatedWikiDatabase.CreateAsync();
+		var wiki = database.Wiki;
+
 		// @wiki/list renders this count beside a draft-filtered listing, so a total that counted drafts
 		// let a mortal difference it against the visible rows and learn how many drafts exist.
 		// The system namespace is written by nothing else, so these counts are exact — main and help are
 		// touched by test classes that may be running concurrently against the same store.
-		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(0);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(0);
 
 		var uid = Guid.NewGuid().ToString("N")[..8];
-		var kept = await CreatePageAsync($"Count Published {uid}", WikiNamespace.System);
-		var draft = await CreatePageAsync($"Count Draft {uid}", WikiNamespace.System);
-		var unpublished = await Wiki.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
+		var kept = await CreatePageAsync($"Count Published {uid}", WikiNamespace.System, wiki: wiki);
+		var draft = await CreatePageAsync($"Count Draft {uid}", WikiNamespace.System, wiki: wiki);
+		var unpublished = await wiki.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
 
 		await Assert.That(kept.Published).IsTrue();
 		await Assert.That(unpublished.IsT0).IsTrue();
 		await Assert.That(unpublished.AsT0.Published).IsFalse();
 
-		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
 
 		// A draft in another namespace must not move these. A query in which the published condition
 		// replaced the namespace condition rather than joining it would satisfy every assertion above.
-		var elsewhere = await CreatePageAsync($"Count Elsewhere {uid}", WikiNamespace.Character);
-		await Wiki.SetMetadataAsync(elsewhere.Id, elsewhere.Category, elsewhere.Tags, published: false);
+		var elsewhere = await CreatePageAsync($"Count Elsewhere {uid}", WikiNamespace.Character, wiki: wiki);
+		await wiki.SetMetadataAsync(elsewhere.Id, elsewhere.Category, elsewhere.Tags, published: false);
 
-		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
-		await Assert.That(await Wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
+		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
 
 		// Unfiltered, both drafts are still counted when asked for — which rules out a store that simply
 		// never persisted the unpublished flag, and an implementation that always excludes drafts.
-		var allPublished = await Wiki.CountPagesAsync(null, includeDrafts: false);
-		var allTotal = await Wiki.CountPagesAsync(null, includeDrafts: true);
+		var allPublished = await wiki.CountPagesAsync(null, includeDrafts: false);
+		var allTotal = await wiki.CountPagesAsync(null, includeDrafts: true);
 		await Assert.That(allTotal - allPublished).IsGreaterThanOrEqualTo(2);
 	}
 
 	[Test]
 	public async Task GetRecentChangesAsync_UpdatedPageRisesToTop()
 	{
-		var uid = Guid.NewGuid().ToString("N")[..8];
-		var pageA = await CreatePageAsync($"Rc Rise A {uid}");
-		await Task.Delay(10);
-		await CreatePageAsync($"Rc Rise B {uid}");
-		await Task.Delay(10);
-		await Wiki.UpdateAsync(pageA.Id, "updated content", "#1");
+		await using var database = await IsolatedWikiDatabase.CreateAsync();
+		var wiki = database.Wiki;
 
-		var recent = await Wiki.GetRecentChangesAsync(count: 2);
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var pageA = await CreatePageAsync($"Rc Rise A {uid}", wiki: wiki);
+		await Task.Delay(10);
+		await CreatePageAsync($"Rc Rise B {uid}", wiki: wiki);
+		await Task.Delay(10);
+		await wiki.UpdateAsync(pageA.Id, "updated content", "#1");
+
+		var recent = await wiki.GetRecentChangesAsync(count: 2);
 
 		await Assert.That(recent[0].Id).IsEqualTo(pageA.Id);
 	}

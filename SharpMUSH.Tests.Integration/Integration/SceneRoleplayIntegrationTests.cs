@@ -193,7 +193,7 @@ public class SceneRoleplayIntegrationTests
 	public async Task SceneRoleplay_FullNarrative_FromPlayerPerspective()
 	{
 		var output = new StringBuilder();
-		void Log(string m) { output.AppendLine(m); Console.WriteLine(m); }
+		void Log(string m) { output.AppendLine(m); TestDiagnostics.WriteLine(m); }
 
 		Log(new string('=', 78));
 		Log("SCENE SYSTEM — FULL NARRATIVE (TEXT-BASED PLAYER PERSPECTIVE)");
@@ -471,7 +471,7 @@ public class SceneRoleplayIntegrationTests
 		var outPath = Path.Combine(AppContext.BaseDirectory, "Integration", "TestData", "SceneRoleplay_TestOutput.txt");
 		Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
 		await File.WriteAllTextAsync(outPath, output.ToString());
-		Console.WriteLine($"[SCENE] Full narrative output written to: {outPath}");
+		TestDiagnostics.WriteLine($"[SCENE] Full narrative output written to: {outPath}");
 	}
 
 	/// <summary>
@@ -506,7 +506,7 @@ public class SceneRoleplayIntegrationTests
 		var potMsgs = await RunAndCollectAs(21L, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
 		var table = string.Join("\n", lines);
-		Console.WriteLine("=== +pot ===\n" + table);
+		TestDiagnostics.WriteLine("=== +pot ===\n" + table);
 
 		await Assert.That(table).Contains("Pose Tracker").Because("the +pot header should render");
 		await Assert.That(table).Contains($"Pat_{Tag}").Because("Pat (a poser) should be listed");
@@ -538,7 +538,7 @@ public class SceneRoleplayIntegrationTests
 
 		var listMsgs = await RunAndCollectAs(31L, "+scene");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene ===\n" + table);
+		TestDiagnostics.WriteLine("=== +scene ===\n" + table);
 
 		await Assert.That(table).Contains("Scenes").Because("the list header should render");
 		await Assert.That(table).Contains($"ListTest_{Tag}").Because("the created scene's title should appear in the table");
@@ -574,7 +574,7 @@ public class SceneRoleplayIntegrationTests
 		// function-parser doesn't see the just-written scene in a collection scan; a key lookup does).
 		var listMsgs = await RunAndCollectAs(41L, "+scene/upcoming");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene/upcoming ===\n" + table);
+		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + table);
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
 		await Assert.That(table).Contains($"Gala_{Tag}").Because("the scheduled scene's title should appear");
 	}
@@ -619,7 +619,7 @@ public class SceneRoleplayIntegrationTests
 		// Details card renders the fields (Volund-style `+scene <id>`).
 		var infoMsgs = await RunAndCollectAs(51L, $"+scene {sceneId}");
 		var card = string.Join("\n", infoMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
-		Console.WriteLine("=== +scene <id> ===\n" + card);
+		TestDiagnostics.WriteLine("=== +scene <id> ===\n" + card);
 		await Assert.That(card).Contains("Pitch").Because("the details card should have a Pitch row");
 		await Assert.That(card).Contains("A tense standoff").Because("the pitch text should render in the card");
 		await Assert.That(card).Contains("active").Because("the Status row should show the scene is active");
@@ -661,7 +661,7 @@ public class SceneRoleplayIntegrationTests
 		// #4: pose must OUTPUT to Zed's room and be CAPTURED — using loc(%#), not the logger's %L.
 		var poseMsgs = await RunAndCollectAs(61L, "pose waves a banner");
 		var poseOut = string.Join("\n", poseMsgs.SelectMany(m => m.Split('\n')));
-		Console.WriteLine("=== remote pose output ===\n" + poseOut);
+		TestDiagnostics.WriteLine("=== remote pose output ===\n" + poseOut);
 		await Assert.That(poseOut).Contains("waves a banner")
 			.Because("the pose must emit to the poser's room (loc(%#)), not the logger's room in #2");
 		await Assert.That(await Eval($"words(sceneposes({sceneId}))")).IsEqualTo("1")

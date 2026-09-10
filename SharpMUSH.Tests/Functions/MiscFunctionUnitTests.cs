@@ -253,7 +253,7 @@ public class MiscFunctionUnitTests
 	[Arguments("zfun(#0,func,arg)", "")]
 	public async Task Zfun(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -262,7 +262,7 @@ public class MiscFunctionUnitTests
 	[Arguments("zmwho()", "")]
 	public async Task Zmwho(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}
@@ -271,7 +271,7 @@ public class MiscFunctionUnitTests
 	[Arguments("zone(#0)", "#-1")]
 	public async Task Zone(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 		await Assert.That(result).IsNotNull();
 	}

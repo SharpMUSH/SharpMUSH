@@ -14,7 +14,7 @@ public class FlowFunctionUnitTests
 	[Arguments("if(0,True)", "")]
 	public async Task If(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
@@ -27,7 +27,7 @@ public class FlowFunctionUnitTests
 	[Arguments("if(0,True,False)", "False")]
 	public async Task IfElse(string str, string expected)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 

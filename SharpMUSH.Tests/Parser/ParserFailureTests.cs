@@ -118,7 +118,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain("add(1,2"), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
-		Console.WriteLine($@"add(1,2 → error column {col}");
+		TestDiagnostics.WriteLine($@"add(1,2 → error column {col}");
 		// EOF is reported at the position after the last character (column 7)
 		await Assert.That(col).IsEqualTo(7);
 	}
@@ -146,7 +146,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var col = errors[0].Column;
-		Console.WriteLine($@"{input} → error column {col} (input length {input.Length})");
+		TestDiagnostics.WriteLine($@"{input} → error column {col} (input length {input.Length})");
 		await Assert.That(col).IsEqualTo(input.Length);
 	}
 
@@ -160,7 +160,7 @@ public class ParserFailureTests
 		var errors = Parser.ValidateAndGetErrors(MarkupText.Plain(input), ParseType.Function);
 		await Assert.That(errors).IsNotEmpty();
 		var failureMsg = errors[0].ToMushFailureString();
-		Console.WriteLine($"ToMushFailureString → '{failureMsg}'");
+		TestDiagnostics.WriteLine($"ToMushFailureString → '{failureMsg}'");
 		await Assert.That(failureMsg).StartsWith("#-1 PARSER FAILURE:");
 		await Assert.That(failureMsg).Contains(")");
 	}
@@ -183,7 +183,7 @@ public class ParserFailureTests
 	{
 		// add(1,5)) — the outer ) closes add(), inner ) has no opener → literal text
 		var result = await Eval("add(1,5))");
-		Console.WriteLine($@"add(1,5)) → '{result}'");
+		TestDiagnostics.WriteLine($@"add(1,5)) → '{result}'");
 		// Expect "6)" — the orphaned ) becomes literal text
 		await Assert.That(result).IsEqualTo("6)");
 	}
@@ -195,7 +195,7 @@ public class ParserFailureTests
 	public async Task EscapedCloseParen_IsLiteralText()
 	{
 		var result = await Eval("strcat(a,\\),b)");
-		Console.WriteLine($@"strcat(a,\),b) → '{result}'");
+		TestDiagnostics.WriteLine($@"strcat(a,\),b) → '{result}'");
 		await Assert.That(result).IsEqualTo("a)b");
 	}
 }

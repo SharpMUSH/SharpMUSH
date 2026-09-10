@@ -15,7 +15,7 @@ public class RenderingWorkerRestartTests
 	{
 		var directory = Path.Join(Path.GetTempPath(), "sm-render-" + Guid.NewGuid().ToString("N"));
 		var socketPath = Path.Join(directory, "render.sock");
-		var worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+		var worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		using var stopping = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 		var lifetime = Substitute.For<IHostApplicationLifetime>();
 		lifetime.ApplicationStopping.Returns(stopping.Token);
@@ -36,7 +36,7 @@ public class RenderingWorkerRestartTests
 			await logger.Unavailable.Task.WaitAsync(stopping.Token);
 			await Assert.That(pending.IsCompleted).IsFalse();
 
-			worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+			worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 			await worker.StartAsync(stopping.Token);
 			var second = await pending.WaitAsync(stopping.Token);
 			await Assert.That(Encoding.UTF8.GetString(second)).IsEqualTo("second");

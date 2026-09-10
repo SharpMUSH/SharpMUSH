@@ -9,7 +9,7 @@ public class RenderingWorkerHealthTests
 	{
 		var directory = Path.Combine(Path.GetTempPath(), "sm-health-" + Guid.NewGuid().ToString("N"));
 		var socketPath = Path.Combine(directory, "render.sock");
-		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		try
 		{
 			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(socketPath)).IsFalse();

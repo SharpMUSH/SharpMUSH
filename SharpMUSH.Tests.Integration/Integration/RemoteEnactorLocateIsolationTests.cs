@@ -168,12 +168,12 @@ public class RemoteEnactorLocateIsolationTests
 		var dInline = Joined(await RunAndCollectAs(pcHandle, $"prod-inl-{Tag}"));
 		var dInclude = Joined(await RunAndCollectAs(pcHandle, $"prod-inc-{Tag}"));
 
-		Console.WriteLine("=== @include remote-enactor isolation (inline vs @include) ===");
-		Console.WriteLine($"probe={probe} (loc #2)   enactor={pcNum} (loc {room})");
-		Console.WriteLine($"A enactor(%#)    inline=[{aInline}]   include=[{aInclude}]");
-		Console.WriteLine($"B qreg(@if setr) inline=[{bInline}]   include=[{bInclude}]");
-		Console.WriteLine($"C loc(%#)        inline=[{cInline}]   include=[{cInclude}]");
-		Console.WriteLine($"D @remit room    inline=[{dInline}]   include=[{dInclude}]");
+		TestDiagnostics.WriteLine("=== @include remote-enactor isolation (inline vs @include) ===");
+		TestDiagnostics.WriteLine($"probe={probe} (loc #2)   enactor={pcNum} (loc {room})");
+		TestDiagnostics.WriteLine($"A enactor(%#)    inline=[{aInline}]   include=[{aInclude}]");
+		TestDiagnostics.WriteLine($"B qreg(@if setr) inline=[{bInline}]   include=[{bInclude}]");
+		TestDiagnostics.WriteLine($"C loc(%#)        inline=[{cInline}]   include=[{cInclude}]");
+		TestDiagnostics.WriteLine($"D @remit room    inline=[{dInline}]   include=[{dInclude}]");
 
 		await Assert.That(aInline).Contains($"R:{pcNum}").Because("inline %# is the remote enactor");
 		await Assert.That(bInline).Contains($"R:SENT{Tag}").Because("inline reads the @if-condition q-register");
@@ -206,9 +206,9 @@ public class RemoteEnactorLocateIsolationTests
 		await God1($"@set {probe}/C_TRIG=regexp");
 
 		var got = Joined(await RunAndCollectAs(pcHandle, $"trig-{Tag}"));
-		Console.WriteLine("=== @trigger remote-enactor isolation ===");
-		Console.WriteLine($"probe={probe} (loc #2)   room={room}");
-		Console.WriteLine($"trigger result=[{got}]");
+		TestDiagnostics.WriteLine("=== @trigger remote-enactor isolation ===");
+		TestDiagnostics.WriteLine($"probe={probe} (loc #2)   room={room}");
+		TestDiagnostics.WriteLine($"trigger result=[{got}]");
 
 		await Assert.That(got).DoesNotContain("NOT PERMITTED")
 			.Because("@trigger must locate its target (%!) as the executor, not the remote enactor");

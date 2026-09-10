@@ -12,6 +12,7 @@ public class DockerNetwork : IAsyncInitializer, IAsyncDisposable
 {
 	public INetwork Instance { get; } = new NetworkBuilder()
 		.WithName($"tunit-sharpmush-{Guid.NewGuid():N}")
+		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
 	public async Task InitializeAsync() => await Instance.CreateAsync();

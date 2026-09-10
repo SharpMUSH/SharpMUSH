@@ -208,38 +208,38 @@ public class ZoneParentCycleTests
 		var z2 = await Mediator.Send(new GetObjectNodeQuery(zone2DbRefParsed));
 		await Mediator.Send(new UnsetObjectZoneCommand(z2.Known));
 
-		Console.WriteLine($"Created objects: #{zone1DbRefParsed.Number} and #{zone2DbRefParsed.Number}");
+		TestDiagnostics.WriteLine($"Created objects: #{zone1DbRefParsed.Number} and #{zone2DbRefParsed.Number}");
 
 		// Use number-only DBRefs for commands (to avoid parser issues with timestamps)
 		var zone1Num = zone1DbRefParsed.Number;
 		var zone2Num = zone2DbRefParsed.Number;
 
 		var firstCommand = $"@chzone #{zone1Num}=#{zone2Num}";
-		Console.WriteLine($"First command: {firstCommand}");
+		TestDiagnostics.WriteLine($"First command: {firstCommand}");
 		var firstResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(firstCommand));
-		Console.WriteLine($"First @chzone result: '{firstResult.Message?.ToPlainText()}'");
+		TestDiagnostics.WriteLine($"First @chzone result: '{firstResult.Message?.ToPlainText()}'");
 
 		var zone1Obj = await Mediator.Send(new GetObjectNodeQuery(zone1DbRefParsed));
 		var zone1Zone = await zone1Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		Console.WriteLine($"zone1.zone IsNone: {zone1Zone.IsNone}");
+		TestDiagnostics.WriteLine($"zone1.zone IsNone: {zone1Zone.IsNone}");
 		if (!zone1Zone.IsNone)
 		{
-			Console.WriteLine($"zone1.zone = #{zone1Zone.Known.Object().DBRef.Number}");
+			TestDiagnostics.WriteLine($"zone1.zone = #{zone1Zone.Known.Object().DBRef.Number}");
 		}
 
 		// Try to set zone2's zone to zone1 (should fail with cycle detection)
 		var secondCommand = $"@chzone #{zone2Num}=#{zone1Num}";
-		Console.WriteLine($"Second command: {secondCommand}");
+		TestDiagnostics.WriteLine($"Second command: {secondCommand}");
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(secondCommand));
-		Console.WriteLine($"Second @chzone result: '{result.Message?.ToPlainText()}'");
+		TestDiagnostics.WriteLine($"Second @chzone result: '{result.Message?.ToPlainText()}'");
 
 		// Check if zone2.zone was actually set (it shouldn't be! - cycle prevention)
 		var zone2Obj = await Mediator.Send(new GetObjectNodeQuery(zone2DbRefParsed));
 		var zone2Zone = await zone2Obj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		Console.WriteLine($"zone2.zone IsNone: {zone2Zone.IsNone}");
+		TestDiagnostics.WriteLine($"zone2.zone IsNone: {zone2Zone.IsNone}");
 		if (!zone2Zone.IsNone)
 		{
-			Console.WriteLine($"zone2.zone = #{zone2Zone.Known.Object().DBRef.Number} (SHOULD NOT BE SET!)");
+			TestDiagnostics.WriteLine($"zone2.zone = #{zone2Zone.Known.Object().DBRef.Number} (SHOULD NOT BE SET!)");
 		}
 
 		// The key assertion: zone2's zone should NOT be set (cycle was prevented)
@@ -288,16 +288,16 @@ public class ZoneParentCycleTests
 		await Mediator.Send(new UnsetObjectZoneCommand(dbObj2.Known));
 
 		var chzoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {obj1DbRef}={obj2DbRef}"));
-		Console.WriteLine($"Chzone result: '{chzoneResult.Message?.ToPlainText()}'");
+		TestDiagnostics.WriteLine($"Chzone result: '{chzoneResult.Message?.ToPlainText()}'");
 
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 		var obj1Zone = await obj1.Known.Object().Zone.WithCancellation(CancellationToken.None);
 
-		Console.WriteLine($"obj1.zone IsNone: {obj1Zone.IsNone}");
+		TestDiagnostics.WriteLine($"obj1.zone IsNone: {obj1Zone.IsNone}");
 		if (!obj1Zone.IsNone)
 		{
-			Console.WriteLine($"obj1.zone DBRef: {obj1Zone.Known.Object().DBRef}");
-			Console.WriteLine($"Expected: {obj2DbRef}");
+			TestDiagnostics.WriteLine($"obj1.zone DBRef: {obj1Zone.Known.Object().DBRef}");
+			TestDiagnostics.WriteLine($"Expected: {obj2DbRef}");
 		}
 
 		await Assert.That(obj1Zone.IsNone).IsFalse();

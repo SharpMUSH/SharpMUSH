@@ -7,7 +7,6 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class NestedAttributeFunctionErrorTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -58,7 +57,7 @@ public class NestedAttributeFunctionErrorTests
 				_ => $"{kind}(me/{name})"
 			};
 			var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
-			Console.WriteLine($"{kind}/{mode}: errors={result!.HadErrors}; message={result.Message}");
+			TestDiagnostics.WriteLine($"{kind}/{mode}: errors={result!.HadErrors}; message={result.Message}");
 			await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
 			if (mode != "syntax") await Assert.That(result.Message!.ToPlainText()).IsEqualTo(value);
 		}

@@ -4,8 +4,6 @@ using NSubstitute;
 using OneOf.Types;
 using Quartz;
 using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.SystemConsole.Themes;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
@@ -184,29 +182,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 				_connectionEventCounts.AddOrUpdate(GetTagValue(tags, "event.type"), measurement, (_, old) => old + measurement);
 		});
 		_meterListener.Start();
-		var logConfig = new LoggerConfiguration()
-			.Enrich.FromLogContext()
-			.MinimumLevel.Verbose()
-			.MinimumLevel.Override("SurrealDb", LogEventLevel.Error)
-			.MinimumLevel.Override("NATS", LogEventLevel.Error);
-
-		var enableConsoleLogging = Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING");
-		var isConsoleEnabled = !string.IsNullOrEmpty(enableConsoleLogging) &&
-													 (enableConsoleLogging.Equals("true", StringComparison.OrdinalIgnoreCase) || enableConsoleLogging == "1");
-
-		if (!isConsoleEnabled)
-		{
-			// Per-query SQL traces can exhaust the test report while parallel fixtures initialize.
-			logConfig.MinimumLevel.Override("SharpMUSH.Database.SurrealDB", LogEventLevel.Warning);
-		}
-
-		if (isConsoleEnabled)
-		{
-			logConfig.WriteTo.Console(theme: AnsiConsoleTheme.Code);
-		}
-
-		var log = logConfig.CreateLogger();
-		Log.Logger = log;
+		Log.Logger = TestDiagnostics.CreateLogger();
 
 		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
 		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
@@ -402,7 +378,8 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		}
 		catch (Exception ex)
 		{
-			Console.Error.WriteLine($"[Telemetry] Error writing summary to '{outputPath}': {ex.Message}");
+			using var logger = TestDiagnostics.CreateLogger();
+			logger.Fatal(ex, "Failed to write requested test telemetry summary to {OutputPath}", outputPath);
 		}
 	}
 }

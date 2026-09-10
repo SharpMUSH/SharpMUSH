@@ -32,7 +32,7 @@ public class CommandFlowUnitTests
 	public async ValueTask IfElse(string str, string expected)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		await Parser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService.Received(1)

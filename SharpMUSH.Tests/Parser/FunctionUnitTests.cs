@@ -38,10 +38,10 @@ public class FunctionUnitTests
 	[Arguments("add(1,add(1,add(1,add(1,5)))", "#-1 PARSER FAILURE: Expected ) or , at end of expression")]
 	public async Task Test(string str, string? expected = null)
 	{
-		Console.WriteLine("Testing: {0}", str);
+		TestDiagnostics.WriteLine("Testing: {0}", str);
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();
 
-		Console.WriteLine(string.Join("", result));
+		TestDiagnostics.WriteLine(string.Join("", result));
 
 		if (expected is not null)
 		{

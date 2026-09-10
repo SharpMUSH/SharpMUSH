@@ -22,7 +22,7 @@ public class RenderingWorkerMarkupTests
 	{
 		var directory = Path.Combine(Path.GetTempPath(), "sm-markup-" + Guid.NewGuid().ToString("N"));
 		var socketPath = Path.Combine(directory, "render.sock");
-		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 		var lifetime = Substitute.For<IHostApplicationLifetime>();
 		var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -76,7 +76,7 @@ public class RenderingWorkerMarkupTests
 	{
 		var directory = Path.Combine(Path.GetTempPath(), "sm-markup-" + Guid.NewGuid().ToString("N"));
 		var socketPath = Path.Combine(directory, "render.sock");
-		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication([], socketPath);
+		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 		var lifetime = Substitute.For<IHostApplicationLifetime>();
 		var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>

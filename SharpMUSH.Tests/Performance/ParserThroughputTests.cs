@@ -168,12 +168,12 @@ public class ParserThroughputTests
 		var p99Ms = timings[GetPercentileIndex(sampleCount, 0.99)] / ticksPerMs;
 		var opsPerSec = 1000.0 / meanMs;
 
-		Console.WriteLine($"\n[{label}]");
-		Console.WriteLine($"  Iterations : {iterations}");
-		Console.WriteLine($"  Mean       : {meanMs,8:F3} ms  ({opsPerSec:F0} ops/sec)");
-		Console.WriteLine($"  P50        : {p50Ms,8:F3} ms");
-		Console.WriteLine($"  P95        : {p95Ms,8:F3} ms");
-		Console.WriteLine($"  P99        : {p99Ms,8:F3} ms");
+		TestDiagnostics.WriteLine($"\n[{label}]");
+		TestDiagnostics.WriteLine($"  Iterations : {iterations}");
+		TestDiagnostics.WriteLine($"  Mean       : {meanMs,8:F3} ms  ({opsPerSec:F0} ops/sec)");
+		TestDiagnostics.WriteLine($"  P50        : {p50Ms,8:F3} ms");
+		TestDiagnostics.WriteLine($"  P95        : {p95Ms,8:F3} ms");
+		TestDiagnostics.WriteLine($"  P99        : {p99Ms,8:F3} ms");
 	}
 
 	private static int GetPercentileIndex(int count, double percentile)
