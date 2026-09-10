@@ -37,6 +37,30 @@ public class OutputConsumerResilienceTests
 	}
 
 	[Test]
+	[Arguments(false, false, true)]
+	[Arguments(true, false, true)]
+	[Arguments(false, true, true)]
+	[Arguments(true, false, false)]
+	public async Task SessionStatusRejectsAReusedTransportHandle(bool replacedBeforeReceive, bool replacedDuringRender, bool fenced)
+	{
+		var writes = 0;
+		var connections = Substitute.For<IConnectionServerService>();
+		var current = Connection(1, _ => { writes++; return ValueTask.CompletedTask; }) with { SessionId = replacedBeforeReceive ? "replacement" : "original" };
+		connections.Get(1).Returns(_ => current);
+		var renderer = Substitute.For<IMarkupOutputRenderer>();
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		{
+			if (replacedDuringRender) current = current with { SessionId = "replacement" };
+			return ValueTask.FromResult(new RenderedOutput("status"u8.ToArray(), false));
+		});
+		var json = fenced ? "{\"Handle\":1,\"Markup\":\"session cancelled\",\"SessionId\":\"original\"}"
+			: "{\"Handle\":1,\"Markup\":\"ordinary output\"}";
+		var message = System.Text.Json.JsonSerializer.Deserialize<MarkupOutputMessage>(json)!;
+		await new MarkupOutputConsumer(connections, renderer, Substitute.For<IOutputTransformService>(), NullLogger<MarkupOutputConsumer>.Instance).HandleAsync(message);
+		await Assert.That(writes).IsEqualTo(fenced && (replacedBeforeReceive || replacedDuringRender) ? 0 : 1);
+	}
+
+	[Test]
 	public async Task BroadcastRendersOncePerValueEqualCapabilitiesAndPreferences()
 	{
 		var received = new Dictionary<long, byte[]>();

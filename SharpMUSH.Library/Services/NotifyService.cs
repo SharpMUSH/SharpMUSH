@@ -50,13 +50,13 @@ public class NotifyService(
 	/// wire format (ANSI/Pueblo/MXP for terminals, a markup envelope for portal/WebSocket clients),
 	/// so the markup is kept as an <see cref="MString"/> here and only serialized for transport.
 	/// </summary>
-	private ValueTask PublishMarkup(long handle, Outgoing outgoing)
+	private ValueTask PublishMarkup(long handle, Outgoing outgoing, string? sessionId = null)
 	{
 		var wrapped = ApplyOutputPrefixSuffix(handle, outgoing.Text);
 		var serialized = ReferenceEquals(wrapped, outgoing.Text)
 			? outgoing.Serialized
 			: MarkupTextSerializer.Serialize(wrapped);
-		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized), ExecutionBudget.CurrentToken));
+		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized) { SessionId = sessionId }, ExecutionBudget.CurrentToken));
 	}
 
 	/// <summary>
@@ -297,6 +297,15 @@ public class NotifyService(
 		var locale = conn is not null && conn.Metadata.TryGetValue("Locale", out var l) ? l : null;
 		var message = localizationService.Format(key, locale, args);
 		await Notify(handle, message, sender: null);
+	}
+
+	public async ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
+	{
+		var connection = connections.Get(handle);
+		if (connection is null || (connection.Metadata.GetValueOrDefault("SessionId") ?? "") != sessionId) return;
+		var locale = connection.Metadata.GetValueOrDefault("Locale");
+		var message = localizationService.Format(key, locale, args);
+		await PublishMarkup(handle, Prepare(message), sessionId);
 	}
 
 	public async ValueTask NotifyLocalized(DBRef who, string key, AnySharpObject? sender, params object[] args)

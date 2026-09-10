@@ -22,7 +22,7 @@ public sealed class InputSessionTimeoutService(IInputSessionService sessions, IT
 					sessions.Discard(session);
 					if (ReferenceEquals(connections.Get(session.Connection.Handle), session.Connection)
 						&& session.Connection.Metadata.GetValueOrDefault("SessionId") == session.TransportSessionId)
-						await notify.NotifyLocalized(session.Connection.Handle, "InputSessionTimeoutRejected");
+						await notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionTimeoutRejected");
 				}
 				catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
 				{

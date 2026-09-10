@@ -81,6 +81,10 @@ public interface INotifyService
 	/// </summary>
 	ValueTask NotifyLocalized(long handle, string key, params object[] args);
 
+	/// <summary>Publishes a localized status only to the captured transport incarnation.</summary>
+	ValueTask NotifyLocalizedToSession(long handle, string sessionId, string key, params object[] args)
+		=> throw new NotSupportedException("This notifier does not support incarnation-bound status output.");
+
 	/// <summary>
 	/// Sends a locale-aware notification to all connections for a DBRef, recording the sender.
 	/// </summary>

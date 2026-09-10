@@ -21,7 +21,7 @@ public class MarkupOutputConsumer(
 	{
 		var connection = connectionService.Get(message.Handle);
 
-		if (connection == null)
+		if (connection == null || (message.SessionId is { } expected && connection.SessionId != expected))
 		{
 			logger.LogWarning("Received markup output for unknown connection handle: {Handle}", message.Handle);
 			return;
@@ -37,6 +37,7 @@ public class MarkupOutputConsumer(
 				? await transformService.TransformAsync(rendered.Data, connection.Capabilities, connection.Preferences, cancellationToken)
 				: rendered.Data;
 
+			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
 			await connection.OutputFunction(data);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

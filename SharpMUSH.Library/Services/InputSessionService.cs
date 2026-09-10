@@ -169,22 +169,24 @@ public sealed class InputSessionService : IInputSessionService
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
 		Discard(session);
-		await _notify.NotifyLocalized(handle, "InputSessionCancelled");
+		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return null;
 	}
 
 	public async ValueTask<bool> TryEscapeAsync(long handle, string? transportSessionId, MString input, Guid? expectedCapture = null)
 	{
 		if (!input.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)) return false;
+		InputSession session;
 		lock (_gate)
 		{
 			if (!_sessions.TryGetValue(handle, out var entry) || entry.TimeoutPending
 				|| entry.Session.ExpiresAt <= _time.GetUtcNow() || !BindingMatches(entry.Session)
 				|| !TransportMatches(entry.Session.Connection, transportSessionId)) return false;
 			if (expectedCapture is { } expected && entry.Session.Id != expected) return true;
+			session = entry.Session;
 			_sessions.Remove(handle);
 		}
-		await _notify.NotifyLocalized(handle, "InputSessionCancelled");
+		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
 	}
 
@@ -232,7 +234,7 @@ public sealed class InputSessionService : IInputSessionService
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		if (input.Length > MaxInputCodeUnits)
 		{
-			await _notify.NotifyLocalized(session.Connection.Handle, "InputSessionInputTooLarge");
+			await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionInputTooLarge");
 			return null;
 		}
 		var actor = await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken);
@@ -268,7 +270,7 @@ public sealed class InputSessionService : IInputSessionService
 	private async ValueTask<CallState?> Revoke(InputSession session)
 	{
 		Discard(session);
-		if (BindingMatches(session)) await _notify.NotifyLocalized(session.Connection.Handle, "InputSessionRevoked");
+		if (BindingMatches(session)) await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRevoked");
 		return null;
 	}
 }

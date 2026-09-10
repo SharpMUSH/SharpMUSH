@@ -190,6 +190,53 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("cancel")]
+	[Arguments("escape")]
+	[Arguments("too-large")]
+	[Arguments("revoked")]
+	[Arguments("timeout-rejected")]
+	public async Task SessionStatusPublicationCarriesCapturedTransportIdentity(string action)
+	{
+		var h = new Harness();
+		var caller = await h.Connect();
+		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
+		var publication = new TaskCompletionSource<MarkupOutputMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		bus.HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{ publication.TrySetResult(call.Arg<MarkupOutputMessage>()); return Task.CompletedTask; });
+		var localization = Substitute.For<ILocalizationService>();
+		localization.Format(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<object[]>()).Returns(call => call.ArgAt<string>(0));
+		var notify = new NotifyService(bus, h.Connections, localization);
+		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
+		await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var session = sessions.GetCapturing(1)!;
+		switch (action)
+		{
+			case "cancel": await sessions.CancelAsync(caller); break;
+			case "escape": await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); break;
+			case "too-large": await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain(new string('x', InputSessionService.MaxInputCodeUnits + 1))); break;
+			case "revoked": h.CanControl = false; await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("answer")); break;
+			case "timeout-rejected":
+				h.Time.Now += TimeSpan.FromMinutes(2);
+				var scheduler = Substitute.For<ITaskScheduler>();
+				scheduler.WriteInputSessionTimeout(session).Returns(new SharpMUSH.Library.Models.SchedulerModels.QueueAdmissionResult(null,
+					SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.OwnerLimit));
+				using (var timeout = new SharpMUSH.Server.Services.InputSessionTimeoutService(sessions, scheduler, notify, h.Connections,
+					NullLogger<SharpMUSH.Server.Services.InputSessionTimeoutService>.Instance))
+				{
+					await timeout.StartAsync(CancellationToken.None);
+					try { await publication.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+					finally { await timeout.StopAsync(CancellationToken.None); }
+				}
+				break;
+		}
+		var message = await publication.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var serialized = System.Text.Json.JsonSerializer.SerializeToElement(message);
+		await Assert.That(serialized.TryGetProperty("SessionId", out var identity)).IsTrue();
+		await Assert.That(identity.GetString()).IsEqualTo("transport");
+		await Assert.That(message.Markup).Contains("InputSession");
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task GuidedPromptPublicationCarriesCapturedTransportIdentity(bool reprompt)
