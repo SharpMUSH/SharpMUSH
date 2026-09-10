@@ -184,7 +184,7 @@ public partial class SurrealDatabase(
 		CancellationToken ct = default)
 	{
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var response = await db.RawQuery(query, null, ct);
+		var response = await SurrealRequestCancellation.RunAsync(token => db.RawQuery(query, null, token), ct);
 		if (response.HasErrors)
 		{
 			LogResponseErrors(string.Join("; ", response.Errors.Select(FormatError)), query);
@@ -207,7 +207,7 @@ public partial class SurrealDatabase(
 
 		// Log the query template (not the expanded query) to avoid leaking sensitive parameter values
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
-		var response = await db.RawQuery(expandedQuery, null, ct);
+		var response = await SurrealRequestCancellation.RunAsync(token => db.RawQuery(expandedQuery, null, token), ct);
 		if (response.HasErrors)
 		{
 			LogResponseErrors(string.Join("; ", response.Errors.Select(FormatError)), query);

@@ -122,16 +122,24 @@ public class LegacyNotifyHaltTests
 	{
 		TimeSpan remaining = default;
 		var scheduler = Substitute.For<IScheduler>();
-		scheduler.GetTriggerKeys(Arg.Any<Quartz.Impl.Matchers.GroupMatcher<TriggerKey>>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		ITrigger? trigger = null;
+		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(call =>
+		{
+			trigger = call.Arg<ITrigger>().GetTriggerBuilder().ForJob(call.Arg<IJobDetail>()).Build();
+			return Task.FromResult(DateTimeOffset.UtcNow);
+		});
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(_ =>
 		{
 			remaining = ExecutionBudget.Current!.Remaining;
-			return Task.FromResult<IReadOnlyCollection<TriggerKey>>([]);
+			return Task.FromResult(trigger);
 		});
 		var factory = Substitute.For<ISchedulerFactory>(); factory.GetScheduler().Returns(scheduler);
 		await using var queue = new Scheduler(Substitute.For<IMUSHCodeParser>(), Substitute.For<IConnectionService>(), factory, Substitute.For<IAttributeService>(), QueueAdmissionTests.TargetMediator(), NullLogger<Scheduler>.Instance);
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
-		await queue.NotifyCounted(new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0);
+		var target = new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]);
+		await queue.AdmitCommandList(MarkupText.Plain("think parent budget"), ParserState.Empty, target, 0);
+		await queue.NotifyCounted(target, 0);
 		await Assert.That(remaining > TimeSpan.FromSeconds(1)).IsTrue();
 		await Assert.That(remaining <= budget.Remaining + TimeSpan.FromSeconds(1)).IsTrue();
 	}

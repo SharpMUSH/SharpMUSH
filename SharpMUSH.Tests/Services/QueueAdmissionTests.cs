@@ -607,7 +607,7 @@ public class QueueAdmissionTests
 		await Assert.That(count).IsEqualTo(2);
 	}
 
-	private static IMediator CountingMediator(Func<int> read, Action<int> write)
+	internal static IMediator CountingMediator(Func<int> read, Action<int> write)
 	{
 		var mediator = TargetMediator();
 		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
@@ -629,13 +629,15 @@ public class QueueAdmissionTests
 		var scheduler = Substitute.For<IScheduler>();
 		Scheduler? queue = null;
 		var observedAtPublication = -1;
-		Task? firing = null;
+		Task<QueueAdmissionResult>? firing = null;
 		scheduler.ScheduleJob(Arg.Any<IJobDetail>(), Arg.Any<ITrigger>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{
 			observedAtPublication = count;
 			var pid = long.Parse(call.Arg<ITrigger>().Key.Name.Split('-').Last());
+			// Quartz invokes jobs independently of ScheduleJob's return. Start the competing
+			// transition here, then await it after admission releases its deferred lease.
 			firing = queue!.ReleaseScheduledWork(pid, semaphoreTimeout: true).AsTask();
-			return DateTimeOffset.UtcNow;
+			return Task.FromResult(DateTimeOffset.UtcNow);
 		});
 		var executed = Signal();
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -644,7 +646,7 @@ public class QueueAdmissionTests
 		await using var ownedQueue = queue = Create(mediator: mediator, scheduler: scheduler, parser: parser);
 		var result = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think ready"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 99, TimeSpan.Zero, manageSemaphoreCount: true);
-		await firing!;
+		await firing!.WaitAsync(TimeSpan.FromSeconds(5));
 		await executed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 		await Assert.That(result.Accepted).IsTrue();
 		await Assert.That(observedAtPublication).IsEqualTo(1);
@@ -873,6 +875,7 @@ public class QueueAdmissionTests
 		var context = Substitute.For<IJobExecutionContext>();
 		context.CancellationToken.Returns(shutdown.Token);
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		async ValueTask<QueueAdmissionResult> WaitForShutdown()
 		{
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, escape.Token);
@@ -880,7 +883,7 @@ public class QueueAdmissionTests
 			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
 			return new QueueAdmissionResult(42, QueueRejectionReason.None);
 		}
-		queue.ReleaseScheduledWork(42, true).Returns(_ => WaitForShutdown());
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => WaitForShutdown());
 		var running = new SemaphoreTask(queue).Execute(context);
 		try
 		{
@@ -898,9 +901,10 @@ public class QueueAdmissionTests
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(Substitute.For<IScheduler>());
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		TimeSpan? remaining = null;
-		queue.ReleaseScheduledWork(42, true).Returns(_ =>
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ =>
 		{
 			remaining = ExecutionBudget.Current?.Remaining;
 			return ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None));
@@ -1473,6 +1477,7 @@ public class QueueAdmissionTests
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), managed ? 0 : 1, TimeSpan.FromHours(1), managed);
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
 		var job = new SemaphoreTask(queue);
@@ -1528,8 +1533,11 @@ public class QueueAdmissionTests
 
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-" + admission.Pid, "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		var storedTrigger = context.Trigger.GetTriggerBuilder().ForJob(context.JobDetail).Build();
+		scheduler.GetTrigger(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>()).Returns(storedTrigger);
 		var job = new SemaphoreTask(queue);
 		fail = true;
 		await Assert.That(async () => await job.Execute(context)).Throws<JobExecutionException>();
@@ -1555,10 +1563,12 @@ public class QueueAdmissionTests
 		var queue = Substitute.For<ITaskScheduler>();
 		var context = Substitute.For<IJobExecutionContext>();
 		context.Scheduler.Returns(scheduler);
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		context.Trigger.Returns(TriggerBuilder.Create().WithIdentity("dbref:10-42", "semaphore:10/SEMAPHORE").Build());
 		context.JobDetail.Returns(JobBuilder.Create<SemaphoreTask>().Build());
+		context.MergedJobDataMap.Returns(new JobDataMap { ["Generation"] = 0L });
 		var fail = true;
-		queue.ReleaseScheduledWork(42, true).Returns(_ => fail
+		queue.ReleaseScheduledWork(42, true, 0).Returns(_ => fail
 			? throw new InvalidOperationException("injected release failure")
 			: ValueTask.FromResult(new QueueAdmissionResult(42, QueueRejectionReason.None)));
 		var job = new SemaphoreTask(queue);
@@ -1567,8 +1577,10 @@ public class QueueAdmissionTests
 		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
 		fail = false;
 		await job.Execute(context);
-		await scheduler.Received(1).UnscheduleJob(context.Trigger.Key, Arg.Any<CancellationToken>());
-		await scheduler.Received(1).DeleteJob(context.JobDetail.Key, Arg.Any<CancellationToken>());
+		await queue.Received(2).ReleaseScheduledWork(42, true, 0);
+		// Generation-aware cleanup belongs to the ledger, so a stale job cannot remove a new timer.
+		await scheduler.DidNotReceive().UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
+		await scheduler.DidNotReceive().DeleteJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -1808,14 +1820,15 @@ public class QueueAdmissionTests
 			var deferred = await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think ignored"), ParserState.Empty, TimeSpan.FromHours(1));
 			var halt = queue.HaltByPid(deferred.Pid!.Value).AsTask();
 			await unscheduling.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			// Publication now waits for the in-progress cancellation transition.
+			// Release now serializes behind cancellation's deferred transition. Do not await
+			// it before releasing the fake Quartz barrier, which would deadlock the fixture.
 			var firing = queue.ReleaseScheduledWork(deferred.Pid.Value).AsTask();
-			await Assert.That(firing.IsCompleted).IsFalse();
 			unscheduled.SetResult(true);
 			await Assert.That(await halt.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
 			await Assert.That((await firing.WaitAsync(TimeSpan.FromSeconds(5))).Reason)
 				.IsEqualTo(QueueRejectionReason.AlreadyReleased);
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+			await Assert.That(queue.GetQueueEntry(deferred.Pid.Value)).IsNull();
 		}
 		finally { unscheduled.TrySetResult(true); release.TrySetResult(); }
 	}
