@@ -916,6 +916,7 @@ public partial class Functions
 		}
 
 		var resultList = new List<string>();
+		var hadErrors = false;
 
 		foreach (var item in namelist)
 		{
@@ -982,18 +983,19 @@ public partial class Functions
 
 				if (hasErrorCallback && callbackObject != null && callbackAttribute != null)
 				{
-					await AttributeService.EvaluateAttributeFunctionAsync(
+					var callbackResult = await AttributeService.EvaluateAttributeFunctionResultAsync(
 						parser, executor, callbackObject, string.Join("`", callbackAttribute),
 						new Dictionary<string, CallState>
 						{
 							["0"] = new(MarkupText.Plain(originalName)),
 							["1"] = new(MarkupText.Plain($"#{errorCode}"))
 						});
+					hadErrors |= callbackResult.HadErrors;
 				}
 			}
 		}
 
-		return string.Join(" ", resultList);
+		return new CallState(string.Join(" ", resultList)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "nchildren", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

@@ -6,6 +6,7 @@ using Markdig.Syntax.Inlines;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Implementation.Commands.WikiCommand;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -125,14 +126,14 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 				return null;
 			}
 
-			var result = await _attributeService.EvaluateAttributeFunctionAsync(
+			var result = await _attributeService.EvaluateAttributeFunctionResultAsync(
 				_parser,
 				_executor,
 				_templateObject,
 				attrName,
 				args);
 
-			return result;
+			return result.HadErrors ? null : result.Message;
 		}
 		catch
 		{

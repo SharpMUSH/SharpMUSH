@@ -16,6 +16,14 @@ public partial class Functions
 	[SharpFunction(Name = "sql", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["query", "rowsep", "fieldsep", "register"])]
 	public async ValueTask<CallState> SQL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
@@ -30,11 +38,11 @@ public partial class Functions
 
 		var args = parser.CurrentState.Arguments;
 
-		var query = (await args["0"].ParsedMessage())?.ToPlainText() ?? string.Empty;
+		var query = (await EvaluateArgument(args["0"]))?.ToPlainText() ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState(ErrorMessages.Returns.NoQuerySpecified);
+			return new CallState(ErrorMessages.Returns.NoQuerySpecified) { HadErrors = hadErrors };
 		}
 
 		var rowSeparator = args.Count > 1 && args.TryGetValue("1", out var value)
@@ -61,7 +69,7 @@ public partial class Functions
 				{
 					if (args.TryGetValue(i.ToString(), out var paramArg))
 					{
-						var paramValue = (await paramArg.ParsedMessage())?.ToPlainText() ?? string.Empty;
+						var paramValue = (await EvaluateArgument(paramArg))?.ToPlainText() ?? string.Empty;
 						parameters.Add(paramValue);
 					}
 				}
@@ -83,11 +91,11 @@ public partial class Functions
 			var formattedRows = resultList
 				.Select(row => string.Join(fieldSeparator, row.Values.Select(v => v?.ToString() ?? string.Empty)));
 
-			return new CallState(string.Join(rowSeparator, formattedRows));
+			return new CallState(string.Join(rowSeparator, formattedRows)) { HadErrors = hadErrors };
 		}
 		catch (Exception ex) when (ex is DbException or InvalidOperationException)
 		{
-			return new CallState($"#-1 SQL ERROR: {ex.Message}");
+			return new CallState($"#-1 SQL ERROR: {ex.Message}") { HadErrors = hadErrors };
 		}
 	}
 
@@ -110,6 +118,14 @@ public partial class Functions
 	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["obj/attr", "query", "osep", "fieldnames"])]
 	public async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var hadErrors = false;
+		async ValueTask<MString?> EvaluateArgument(CallState argument)
+		{
+			var result = await argument.GetParsedResultAsync();
+			hadErrors |= result.HadErrors;
+			return result.Message;
+		}
+
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
@@ -126,11 +142,11 @@ public partial class Functions
 
 		var objAttrStr = args["0"].Message?.ToPlainText() ?? string.Empty;
 
-		var query = (await args["1"].ParsedMessage())?.ToPlainText() ?? string.Empty;
+		var query = (await EvaluateArgument(args["1"]))?.ToPlainText() ?? string.Empty;
 
 		if (string.IsNullOrWhiteSpace(objAttrStr) || string.IsNullOrWhiteSpace(query))
 		{
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
+			return new CallState(ErrorMessages.Returns.InvalidArguments) { HadErrors = hadErrors };
 		}
 
 		var osep = args.Count > 2 && args.TryGetValue("2", out var osepArg)
@@ -147,12 +163,12 @@ public partial class Functions
 		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
 		if (maybeObjAttr.IsT1)
 		{
-			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
+			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute) { HadErrors = hadErrors };
 		}
 
 		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
+		var mappedResult = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,
 			async found =>
 			{
@@ -161,7 +177,7 @@ public partial class Functions
 
 				if (!maybeAttribute.IsAttribute)
 				{
-					return maybeAttribute.AsCallState;
+					return maybeAttribute.AsCallState with { HadErrors = hadErrors || maybeAttribute.AsCallState.HadErrors };
 				}
 
 				var results = new List<MString>();
@@ -178,7 +194,7 @@ public partial class Functions
 						{
 							if (args.TryGetValue(i.ToString(), out var paramArg))
 							{
-								var paramValue = (await paramArg.ParsedMessage())?.ToPlainText() ?? string.Empty;
+								var paramValue = (await EvaluateArgument(paramArg))?.ToPlainText() ?? string.Empty;
 								parameters.Add(paramValue);
 							}
 						}
@@ -204,11 +220,12 @@ public partial class Functions
 
 							remainder.TryAdd("0", MushText.Zero);
 
-							var headerResult = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found,
+							var headerResult = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found,
 								attrName,
 								remainder);
 
-							results.Add(headerResult);
+							hadErrors |= headerResult.HadErrors;
+							results.Add(headerResult.Message ?? MarkupText.Empty);
 
 							firstRow = false;
 						}
@@ -219,20 +236,22 @@ public partial class Functions
 							.ToDictionary();
 						dict.TryAdd("0", MarkupText.Plain(rowNumber.ToString()));
 
-						var result = await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, attrName,
+						var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
 							dict);
 
-						results.Add(result);
+						hadErrors |= result.HadErrors;
+						results.Add(result.Message ?? MarkupText.Empty);
 
 						rowNumber++;
 					}
 				}
 				catch (Exception ex) when (ex is DbException or InvalidOperationException)
 				{
-					return new CallState($"#-1 SQL ERROR: {ex.Message}");
+					return new CallState($"#-1 SQL ERROR: {ex.Message}") { HadErrors = hadErrors };
 				}
 
-				return MarkupText.Join(osep, results);
+				return new CallState(MarkupText.Join(osep, results)) { HadErrors = hadErrors };
 			});
+		return mappedResult with { HadErrors = hadErrors || mappedResult.HadErrors };
 	}
 }
