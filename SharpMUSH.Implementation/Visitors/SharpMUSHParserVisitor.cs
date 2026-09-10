@@ -3120,7 +3120,8 @@ public class SharpMUSHParserVisitor(
 			],
 			ParsedMessage: () => ValueTask.FromResult<MString?>(null))
 		{
-			ArgumentContexts = [evalString]
+			ArgumentContexts = [evalString],
+			HadErrors = visited?.HadErrors == true
 		};
 	}
 
@@ -3143,7 +3144,8 @@ public class SharpMUSHParserVisitor(
 			[baseArg?.Message ?? MarkupText.Empty, .. commaArgs?.Arguments ?? []],
 			() => ValueTask.FromResult<MString?>(null))
 		{
-			ArgumentContexts = [evalString, .. commaArgs?.ArgumentContexts ?? []]
+			ArgumentContexts = [evalString, .. commaArgs?.ArgumentContexts ?? []],
+			HadErrors = baseArg?.HadErrors == true || commaArgs?.HadErrors == true
 		};
 	}
 
@@ -3160,14 +3162,14 @@ public class SharpMUSHParserVisitor(
 
 		if (equalsToken is null)
 		{
+			var argument = evalStrings.Length > 0 ? await Visit(evalStrings[0]) : null;
 			return new CallState(null, context.Depth(), [
-					evalStrings.Length > 0
-						? (await Visit(evalStrings[0]))?.Message ?? MarkupText.Empty
-						: MarkupText.Empty
+					argument?.Message ?? MarkupText.Empty
 				],
 				() => ValueTask.FromResult<MString?>(null))
 			{
-				ArgumentContexts = [evalStrings.Length > 0 ? evalStrings[0] : null]
+				ArgumentContexts = [evalStrings.Length > 0 ? evalStrings[0] : null],
+				HadErrors = argument?.HadErrors == true
 			};
 		}
 
@@ -3183,7 +3185,8 @@ public class SharpMUSHParserVisitor(
 			[
 				lhsExists ? evalStrings[0] : null,
 				rsIdx < evalStrings.Length ? evalStrings[rsIdx] : null
-			]
+			],
+			HadErrors = lhsArg?.HadErrors == true || rhsArg?.HadErrors == true
 		};
 	}
 
@@ -3203,12 +3206,14 @@ public class SharpMUSHParserVisitor(
 		var arguments = new MString[argCount];
 		var contexts = new object?[argCount];
 		var evalIdx = 0;
+		var hadErrors = false;
 		for (var i = 0; i < argCount; i++)
 		{
 			if (evalIdx < evalStrings.Length
 					&& (i >= commas.Length || evalStrings[evalIdx].Start.StartIndex < commas[i].Symbol.StartIndex))
 			{
 				var result = await Visit(evalStrings[evalIdx++]);
+				hadErrors |= result?.HadErrors == true;
 				arguments[i] = result?.Message ?? GetContextText(evalStrings[evalIdx - 1]);
 				contexts[i] = evalStrings[evalIdx - 1];
 			}
@@ -3221,7 +3226,8 @@ public class SharpMUSHParserVisitor(
 
 		return new CallState(null, context.Depth(), arguments, () => ValueTask.FromResult<MString?>(null))
 		{
-			ArgumentContexts = contexts
+			ArgumentContexts = contexts,
+			HadErrors = hadErrors
 		};
 	}
 
