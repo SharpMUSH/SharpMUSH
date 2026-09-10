@@ -402,29 +402,6 @@ public partial class TaskScheduler(
 	public const string SemaphoreGroup = "semaphore";
 	public const string DelayGroup = "delay";
 
-	[Flags]
-	private enum TaskQueueType
-	{
-		Default = 0,
-		Object = 1,
-		Player = Object << 1,
-		Socket = Player << 1,
-		InPlace = Socket << 1,
-		NoBreaks = InPlace << 1,
-		PreserveQReg = NoBreaks << 1,
-		ClearQReg = PreserveQReg << 1,
-		PropagateQReg = ClearQReg << 1,
-		NoList = PropagateQReg << 1,
-		Break = NoList << 1,
-		Retry = Break << 1,
-		Debug = Retry << 1,
-		NoDebug = Debug << 1,
-		Priority = NoDebug << 1,
-		DebugPrivileges = Priority << 1,
-		Event = DebugPrivileges << 1,
-		Recurse = InPlace | NoBreaks | PreserveQReg
-	}
-
 	public ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
 	 => Admit(async () =>
 	 {
