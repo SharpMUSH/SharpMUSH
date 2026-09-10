@@ -1,0 +1,5 @@
+.jobs { container-type: inline-size; width: 100%; max-width: 52rem; margin-inline: auto; padding: 1rem; display: grid; gap: 1rem; }
+.jobs-form, .jobs-entry { padding: 1rem; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); display: grid; gap: .65rem; min-width: 0; }
+.jobs-entry code { overflow-wrap: anywhere; }
+.jobs-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+@container (max-width: 30rem) { .jobs-actions { flex-direction: column; } .jobs-actions ::deep button { width: 100%; } }

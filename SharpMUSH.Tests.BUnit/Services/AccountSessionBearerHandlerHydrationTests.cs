@@ -4,6 +4,7 @@ using NSubstitute;
 using SharpMUSH.Client.Services;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
@@ -19,7 +20,8 @@ file sealed class CapturingHandler : HttpMessageHandler
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		LastAuthorization = request.Headers.Authorization;
-		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+		{ Content = JsonContent.Create(new { username = "current", mustChangePassword = false, role = "Player", permissions = Array.Empty<string>() }) });
 	}
 }
 
@@ -33,7 +35,7 @@ file sealed class CapturingHandler : HttpMessageHandler
 /// loudly. These tests use the real <see cref="AccountAuthService"/> over bUnit's JSInterop so they
 /// exercise the actual storage read, not a fake that is already "hydrated".
 /// </summary>
-public class AccountSessionBearerHandlerHydrationTests : BunitContext
+public class AccountSessionBearerHandlerHydrationTests : TrackingBunitContext
 {
 	private AccountAuthService ServiceWithStoredSession(string? storedToken)
 	{
@@ -41,8 +43,11 @@ public class AccountSessionBearerHandlerHydrationTests : BunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult(storedToken);
 
+		var factory = Substitute.For<IHttpClientFactory>();
+		var http = Track(new HttpClient(new CapturingHandler()) { BaseAddress = new Uri("https://localhost/") });
+		factory.CreateClient("api").Returns(http);
 		return new AccountAuthService(
-			Substitute.For<IHttpClientFactory>(),
+			factory,
 			JSInterop.JSRuntime,
 			NullLogger<AccountAuthService>.Instance,
 			Substitute.For<ITerminalService>(),

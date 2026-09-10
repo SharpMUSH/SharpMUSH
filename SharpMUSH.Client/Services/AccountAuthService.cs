@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
@@ -52,6 +54,7 @@ public class AccountAuthService(
 	private record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
 	private record ChangeUsernameRequest(string NewUsername);
 	private record SetupStatusResponse(bool NeedsSetup);
+	private record SessionStateResponse(string Username, bool MustChangePassword, string? Role, IReadOnlyList<string>? Permissions);
 	private record SetupCompleteRequest(string Username, string Password);
 
 	public string? AccountSessionToken { get; private set; }
@@ -211,7 +214,7 @@ public class AccountAuthService(
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
 		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
-		if (AccountSessionToken is null)
+		if (AccountSessionToken is null || ExplicitlyLoggedOut)
 		{
 			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
 			// Permissions from localStorage/sessionStorage — a returning user in a new tab would
@@ -224,11 +227,42 @@ public class AccountAuthService(
 		Username = await js.InvokeAsync<string?>("sessionStorage.getItem", UsernameKey);
 		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
-		Role = await js.InvokeAsync<string?>("sessionStorage.getItem", RoleKey);
-		var permissionsJson = await js.InvokeAsync<string?>("sessionStorage.getItem", PermissionsKey);
-		Permissions = permissionsJson is null
-			? []
-			: JsonSerializer.Deserialize<IReadOnlyList<string>>(permissionsJson) ?? [];
+		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
+		Role = null;
+		Permissions = [];
+		try
+		{
+			// Authentication-state queries share this bootstrap task; a stalled refresh must not
+			// hold public rendering for the named client's much longer default timeout.
+			using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			var token = AccountSessionToken;
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
+			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
+			// recursively waiting on this same initialization task.
+			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+			using var response = await httpClientFactory.CreateClient("api")
+				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
+			if (AccountSessionToken != token) return;
+			if (response.StatusCode == HttpStatusCode.Unauthorized)
+			{
+				ClearSessionState();
+				return;
+			}
+			if (!response.IsSuccessStatusCode) return;
+			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
+			refresh.Token.ThrowIfCancellationRequested();
+			if (current is null || AccountSessionToken != token) return;
+			Username = current.Username;
+			MustChangePassword = current.MustChangePassword;
+			Role = current.Role;
+			Permissions = current.Permissions ?? [];
+		}
+		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
+		{
+			// The credential remains usable even when current display authority could not be loaded.
+			// No stored role or grant has been restored, so permission-gated controls stay closed.
+			logger.LogWarning(ex, "Could not refresh account session permissions");
+		}
 	}
 
 	/// <summary>Everything a tab holding no usable session must look like. Does not raise
@@ -249,7 +283,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/account-login",
+			using var response = await http.PostAsJsonAsync("api/auth/account-login",
 				new AccountLoginRequest(identifier, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -275,7 +309,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/account-register",
+			using var response = await http.PostAsJsonAsync("api/auth/account-register",
 				new AccountRegisterRequest(username, string.IsNullOrWhiteSpace(email) ? null : email, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -311,7 +345,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync("api/setup/status");
+			using var response = await http.GetAsync("api/setup/status");
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogError("Setup status check returned {Status}", response.StatusCode);
@@ -339,7 +373,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/setup/complete",
+			using var response = await http.PostAsJsonAsync("api/setup/complete",
 				new SetupCompleteRequest(username, password));
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync(), false);
@@ -426,7 +460,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync("api/auth/debug-ott");
+			using var response = await http.GetAsync("api/auth/debug-ott");
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogWarning("Debug OTT request failed: {Status}", response.StatusCode);
@@ -468,7 +502,7 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
 				new MushTokenWithAccountRequest(AccountSessionToken, character.DbrefNumber, character.CreationTime));
 
 			if (!response.IsSuccessStatusCode)
@@ -505,7 +539,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PostAsJsonAsync("api/auth/switch-character",
+			using var response = await http.PostAsJsonAsync("api/auth/switch-character",
 				new SwitchCharacterRequest(character.DbrefNumber, character.CreationTime));
 
 			if (!response.IsSuccessStatusCode)
@@ -577,7 +611,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PostAsJsonAsync("api/account/characters",
+			using var response = await http.PostAsJsonAsync("api/account/characters",
 				new CreateCharacterRequest(name, password));
 
 			if (!response.IsSuccessStatusCode)
@@ -607,7 +641,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
+			using var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 
@@ -691,7 +725,7 @@ public class AccountAuthService(
 				var http = httpClientFactory.CreateClient("api");
 				http.DefaultRequestHeaders.Authorization =
 					new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-				await http.PostAsync("api/account/logout", null);
+				using var response = await http.PostAsync("api/account/logout", null);
 			}
 			catch { /* best-effort */ }
 		}
@@ -815,7 +849,7 @@ public class AccountAuthService(
 			var http = httpClientFactory.CreateClient("api");
 			http.DefaultRequestHeaders.Authorization =
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
-			var response = await http.PutAsJsonAsync(path, body);
+			using var response = await http.PutAsJsonAsync(path, body);
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
 			return (true, null);

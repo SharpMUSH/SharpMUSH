@@ -154,6 +154,10 @@ public interface ITaskScheduler
 	/// <param name="group">Group identifier for categorization</param>
 	ValueTask EnqueueWork(Func<ValueTask<CallState?>> action, string triggerName, string group);
 
+	/// <summary>Whether work admitted with this original trigger name and group still owns a queued, running, or canceled reservation.</summary>
+	bool HasPendingWork(string triggerName, string group)
+		=> throw new NotSupportedException("This scheduler does not support pending-work inspection.");
+
 	// Additive admission and control APIs. Legacy implementations remain loadable and fail explicitly
 	// if a caller requests a feature they have not implemented.
 	ValueTask<IDisposable> EnterSemaphoreMutationAsync()
