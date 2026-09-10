@@ -119,7 +119,12 @@ public sealed partial class ObjectSnapshotService(
 				// Best effort diagnostic. The pending marker was committed before any object writes,
 				// so a crash or storage outage still leaves a discoverable recovery state.
 				var reason = ex is SnapshotOperationException ? ex.Message : "A mutation or storage operation failed.";
-				try { await Save(obj, history with { LastRestoreError = reason }, CancellationToken.None); }
+				try
+				{
+					// Cancellation must not start another storage operation. The pending recovery
+					// image already records every mutation that may have completed.
+					if (!ct.IsCancellationRequested) await Save(obj, history with { LastRestoreError = reason }, ct);
+				}
 				catch { /* The previously committed pending marker remains authoritative. */ }
 				return new(false, before.Id, "Restore stopped; preview and restore the retained recovery snapshot. " + reason);
 			}
@@ -150,6 +155,7 @@ public sealed partial class ObjectSnapshotService(
 
 	private async Task<(AnySharpObject Executor, AnySharpObject Object)> Authorize(CapabilityActor actor, DBRef target, string scope, CancellationToken ct)
 	{
+		ct.ThrowIfCancellationRequested();
 		if (!target.IsObjid || actor.ActiveCharacter is not { IsObjid: true } active ||
 			!await capabilities.AuthorizeAsync(actor, scope, ct)) throw Error("denied", "A linked active player with the required capability is required.");
 		var executor = await objects.GetObjectNodeAsync(active, ct);

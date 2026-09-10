@@ -303,10 +303,18 @@ public class SoftcodeLayoutEquivalenceTests
 	];
 
 	private async Task<string?> Eval(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message?.ToString();
+	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		return (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message?.ToString();
+	}
 
 	private async Task<string?> EvalCommandList(string code)
-		=> (await Parser.CommandListParse(MarkupText.Plain(code)))?.Message?.ToString();
+	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		return (await Parser.CommandListParse(MarkupText.Plain(code)))?.Message?.ToString();
+	}
 
 	private static bool IsParseFailure(string? result) =>
 		result?.StartsWith(ErrorMessages.Returns.ParserFailure[..^3], StringComparison.Ordinal) == true;

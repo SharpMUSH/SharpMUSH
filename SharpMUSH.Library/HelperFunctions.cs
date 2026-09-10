@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
@@ -43,23 +44,47 @@ public static partial class HelperFunctions
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
 	/// </summary>
-	public static async ValueTask<bool> IsWizard(this AnySharpObject obj)
-		=> obj.IsGod() || await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase));
+	public static ValueTask<bool> IsWizard(this AnySharpObject obj)
+		=> obj.IsWizard(ExecutionBudget.CurrentToken);
 
-	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name.Equals("ROYALTY", StringComparison.OrdinalIgnoreCase));
+	public static async ValueTask<bool> IsWizard(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsGod() || await obj.Object().Flags.Value
+			.AnyAsync(x => x.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
 
-	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj)
-		=> await (obj.Object().Flags.Value)
-			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase));
+	public static ValueTask<bool> IsRoyalty(this AnySharpObject obj)
+		=> obj.IsRoyalty(ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> IsRoyalty(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return await obj.Object().Flags.Value
+			.AnyAsync(x => x.Name.Equals("ROYALTY", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
+
+	public static ValueTask<bool> IsMistrust(this AnySharpObject obj)
+		=> obj.IsMistrust(ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> IsMistrust(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return await obj.Object().Flags.Value
+			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
 
 	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object().Key == 1;
 
-	public static async ValueTask<bool> IsPriv(this AnySharpObject obj)
-		=> IsGod(obj) || await IsWizard(obj) || await IsRoyalty(obj);
+	public static ValueTask<bool> IsPriv(this AnySharpObject obj)
+		=> obj.IsPriv(ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> IsPriv(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return IsGod(obj) || await obj.IsWizard(cancellationToken) || await obj.IsRoyalty(cancellationToken);
+	}
 
 	public static async ValueTask<bool> IsSee_All(this AnySharpObject obj)
 		=> await IsPriv(obj) || await obj.HasPower("See_All");
@@ -191,17 +216,21 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasPower(this AnySharpObject obj, string power)
 		=> obj.Object().HasPower(power);
 
+	public static ValueTask<bool> HasPower(this AnySharpObject obj, string power, CancellationToken cancellationToken)
+		=> obj.Object().HasPower(power, cancellationToken);
+
 	/// <summary>
-	/// Both overloads used to swallow <see cref="NotSupportedException"/> and
-	/// property and handed it to every consumer, so one consumer's disposal could land on another's
-	/// live enumeration. <c>FreshAsyncEnumerable</c> gives each enumeration its own machine, and the
-	/// catch is gone with it — a swallow here answers "no power" to a question that failed, which is
-	/// fail-open for anything phrased as a restriction. See issue #798.
+	/// Power-read failures propagate instead of being reported as "no power", which
+	/// could fail open when the caller is checking a restriction. Database streams use
+	/// <c>FreshAsyncEnumerable</c> to isolate each reader's enumeration state. See issue #798.
 	/// </summary>
-	public static async ValueTask<bool> HasPower(this SharpObject obj, string power)
+	public static ValueTask<bool> HasPower(this SharpObject obj, string power)
+		=> obj.HasPower(power, ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> HasPower(this SharpObject obj, string power, CancellationToken cancellationToken)
 		=> await obj.Powers.Value
 			.AnyAsync(x => (x.Name?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false)
-									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false));
+									 || (x.Alias?.Equals(power, StringComparison.InvariantCultureIgnoreCase) ?? false), cancellationToken);
 
 	public static async ValueTask<bool> IsHearer(this AnySharpObject obj, IConnectionService connections,
 		IAttributeService attributes)
@@ -269,6 +298,9 @@ public static partial class HelperFunctions
 	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
 		=> obj.Object().HasFlag(flag);
 
+	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag, CancellationToken cancellationToken)
+		=> obj.Object().HasFlag(flag, cancellationToken);
+
 	/// <summary>
 	/// Name <b>or</b> alias, as PennMUSH's <c>has_flag_by_name</c> resolves it: the name goes through
 	/// <c>flag_hash_lookup</c> → <c>match_flag_ns</c>, which searches <c>ptab_flag</c> — declared in
@@ -289,10 +321,13 @@ public static partial class HelperFunctions
 	/// ANSI share 'A'), Penn disambiguates by object type, and nothing here asks by letter.
 	/// </para>
 	/// </remarks>
-	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag)
+	public static ValueTask<bool> HasFlag(this SharpObject obj, string flag)
+		=> HasFlag(obj, flag, ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> HasFlag(this SharpObject obj, string flag, CancellationToken cancellationToken)
 		=> await obj.Flags.Value
 			.AnyAsync(x => x.Name.Equals(flag, StringComparison.InvariantCultureIgnoreCase)
-									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)));
+									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
 	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and
@@ -345,7 +380,7 @@ public static partial class HelperFunctions
 			return null;
 		}
 
-		return await obj.IsOrphan() ? null : typeAncestor;
+		return await HasFlag(obj.Object(), "ORPHAN", ExecutionBudget.CurrentToken) ? null : typeAncestor;
 	}
 
 	/// <summary>
@@ -358,17 +393,25 @@ public static partial class HelperFunctions
 	/// case-insensitive and alias-aware. An ordinal comparison here could never match the seeded
 	/// flag, which is spelled <c>TRUST</c> with the alias <c>INHERIT</c> (<c>FlagSeed.cs:22</c>).
 	/// </summary>
-	public static async ValueTask<bool> Inheritable(this AnySharpObject obj)
-		=> obj.IsPlayer
-			 || await obj.HasFlag("Trust")
-			 || await (await obj.Object().Owner.WithCancellation(CancellationToken.None))
-				 .Object.HasFlag("Trust")
-			 || await IsWizard(obj);
+	public static ValueTask<bool> Inheritable(this AnySharpObject obj)
+		=> obj.Inheritable(ExecutionBudget.CurrentToken);
 
-	public static async ValueTask<bool> Owns(this AnySharpObject who,
-		AnySharpObject what)
-		=> (await who.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id ==
-			 (await what.Object().Owner.WithCancellation(CancellationToken.None)).Object.Id;
+	public static async ValueTask<bool> Inheritable(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer
+			|| await obj.HasFlag("Trust", cancellationToken)
+			|| await (await obj.Object().Owner.WithCancellation(cancellationToken))
+				.Object.HasFlag("Trust", cancellationToken)
+			|| await obj.IsWizard(cancellationToken);
+	}
+
+	public static ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what)
+		=> who.Owns(what, ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> Owns(this AnySharpObject who, AnySharpObject what, CancellationToken cancellationToken)
+		=> (await who.Object().Owner.WithCancellation(cancellationToken)).Object.Id ==
+			(await what.Object().Owner.WithCancellation(cancellationToken)).Object.Id;
 
 	/// <summary>
 	/// Takes the pattern of '#DBREF/attribute' and splits it out if possible.
@@ -510,7 +553,7 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"#$(?<Object>\d+(:\d+)?)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?<Object>#\d+(?::\d+)?)/(?<Attribute>[a-zA-Z0-9#@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>

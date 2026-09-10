@@ -315,6 +315,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		parser ??= this;
+		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
+		 ? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
+		var budget = ExecutionBudget.Current ?? (parser.State.IsEmpty ? null : parser.CurrentState.ExecutionBudget) ?? ownedBudget!;
+		using var budgetScope = budget.Enter();
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		budget.ThrowIfExceeded();
+		if (!parser.State.IsEmpty) parser = parser.Push(parser.CurrentState with { ExecutionBudget = budget });
 
 		var plainText = text.ToPlainText();
 		StringSpanInputStream inputStream = new(plainText, methodName);
@@ -359,7 +366,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_lockService,
 			text);
 
-		var result = await visitor.Visit(context);
+		CallState? result;
+		try { result = await visitor.Visit(context); }
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{ return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false); }
+		if (budget.IsExpired) return (new CallState(ExecutionBudget.Error) { HadErrors = true }, false);
+		budget.ThrowIfExceeded();
 
 		// A lenient parse can reach here having still hit a syntax error: LenientErrorStrategy
 		// recovers and lets the visitor walk a best-effort tree instead of throwing, so
@@ -489,7 +501,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (shouldDebug && executorObj is not null)
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
-			var owner = await executorObj.Object().Owner.WithCancellation(CancellationToken.None);
+			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 			await notifyService.Notify(owner, MarkupText.Plain($"#{dbrefNumber}! {rawText} => {evaluatedText}"));
 		}
 	}
@@ -516,16 +528,29 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (string.IsNullOrEmpty(text.ToPlainText()))
 			return CallState.Empty;
 
-		var parser = ResolveTrackingParser();
+		// Completion diagnostics belong to the same operation as parsing. Keep its original
+		// deadline alive through the final awaited read/notification, including standalone calls.
+		using var ownedBudget = ExecutionBudget.Current is null && (State.IsEmpty || CurrentState.ExecutionBudget is null)
+			? ExecutionBudget.FromMilliseconds(Configuration.CurrentValue.Limit.QueueEntryCpuTime) : null;
+		var budget = ExecutionBudget.Current ?? (State.IsEmpty ? null : CurrentState.ExecutionBudget) ?? ownedBudget!;
+		using var budgetScope = budget.Enter();
+		try
+		{
+			budget.ThrowIfExceeded();
+			var parser = ResolveTrackingParser();
+			var rawText = text.ToPlainText();
+			var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
+			budget.ThrowIfExceeded();
 
-		// Capture raw text BEFORE evaluation for substitution-only debug
-		var rawText = text.ToPlainText();
-		var (result, didEmitFunctionDebug) = await ParseInternalCore(text, p => p.startPlainString(), nameof(FunctionParse), parser);
-
-		await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, CurrentState, rawText, result?.Message,
-			didEmitFunctionDebug);
-
-		return result;
+			await EmitSubstitutionOnlyDebugTraceAsync(_mediator, _notifyService, State.IsEmpty ? parser.CurrentState : CurrentState,
+				rawText, result?.Message, didEmitFunctionDebug);
+			budget.ThrowIfExceeded();
+			return result;
+		}
+		catch (OperationCanceledException) when (budget.IsExpired)
+		{
+			return new CallState(ExecutionBudget.Error) { HadErrors = true };
+		}
 	}
 
 	public ValueTask<CallState?> CommandListParse(MString text)

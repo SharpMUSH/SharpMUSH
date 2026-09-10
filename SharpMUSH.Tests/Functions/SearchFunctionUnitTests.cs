@@ -27,7 +27,7 @@ public class SearchFunctionUnitTests
 	public async Task Lsearch_NameFilter_ReturnsMatchingObjects()
 	{
 		var uniqueName = $"LSearchTest_{Guid.NewGuid():N}";
-		var createResult = await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {uniqueName}"));
+		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(WebAppFactoryArg.CommandParser, ConnectionService, uniqueName);
 		var createOutput = createResult?.Message?.ToPlainText() ?? "";
 
 		var dbrefMatch = System.Text.RegularExpressions.Regex.Match(createOutput, @"#(\d+)");
@@ -189,8 +189,7 @@ public class SearchFunctionUnitTests
 
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var result = await WebAppFactoryArg.CommandParser.CommandParse(
-			1, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var result = await TestIsolationHelpers.CreateObjectCommandAsync(WebAppFactoryArg.CommandParser, ConnectionService, name);
 		return DBRef.Parse(result.Message!.ToPlainText().Trim());
 	}
 

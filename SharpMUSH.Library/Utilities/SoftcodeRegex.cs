@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Markup;
@@ -65,6 +66,10 @@ public static class SoftcodeRegex
 	/// <exception cref="ArgumentException">The pattern is not a valid regular expression.</exception>
 	public static Regex Create(string pattern, RegexOptions options)
 	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
+		// A near-deadline pattern must not borrow the cache's longer timeout.
+		if (ExecutionBudget.Current is { } budget && budget.Remaining < MatchTimeout)
+			return new Regex(pattern, options, TimeSpan.FromMilliseconds(Math.Max(1, budget.Remaining.TotalMilliseconds)));
 		var key = (pattern, options);
 		if (Cache.TryGetValue(key, out Regex? cached) && cached is not null)
 		{

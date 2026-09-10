@@ -103,7 +103,8 @@ jobs:
           # 20 minutes puts the wall clear of the band instead of inside it.
           timeout_minutes: 20
           max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed
+          # Bound shared-provider contention without changing per-entry execution deadlines.
+          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
 
       - name: Publish Telemetry to Summary
         if: always()
@@ -202,7 +203,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --verbosity normal -- --output Detailed
+          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
 
       - name: Publish Integration Telemetry to Summary
         if: always()

@@ -1,4 +1,6 @@
 using Mediator;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 
@@ -31,11 +33,15 @@ public class SetObjectLocationCommandHandler(IObjectStore database) : ICommandHa
 	}
 }
 
-public class SetObjectOwnerCommandHandler(IObjectStore database) : ICommandHandler<SetObjectOwnerCommand, Unit>
+public class SetObjectOwnerCommandHandler(IObjectStore database, IUserDefinedFunctionService? functions = null) : ICommandHandler<SetObjectOwnerCommand, Unit>
 {
 	public async ValueTask<Unit> Handle(SetObjectOwnerCommand request, CancellationToken cancellationToken)
 	{
+		// Read the current owner from storage: the request's object may carry an older lazy owner.
+		var previous = functions is null ? null : await database.GetBaseObjectNodeAsync(request.Target.Object().DBRef, cancellationToken);
+		var unchanged = previous is not null && (await previous.Owner.WithCancellation(cancellationToken)).Object.DBRef == request.Owner.Object.DBRef;
 		await database.SetObjectOwner(request.Target, request.Owner, cancellationToken);
+		if (!unchanged) functions?.InvalidateLocalDefinitions(request.Target.Object().DBRef);
 		return Unit.Value;
 	}
 }

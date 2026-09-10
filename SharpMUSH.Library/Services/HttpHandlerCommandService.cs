@@ -31,6 +31,7 @@ public class HttpHandlerCommandService(
 		IEnumerable<(string Name, string Value)> headers,
 		CancellationToken ct = default)
 	{
+		ct.ThrowIfCancellationRequested();
 		var handlerDbRef = options.CurrentValue.Database.HttpHandler;
 		if (handlerDbRef is null or 0)
 		{
@@ -38,59 +39,103 @@ public class HttpHandlerCommandService(
 			return new NotFound();
 		}
 
-		var handlerResult = await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), ct);
-		if (handlerResult.IsNone)
-		{
-			logger.LogWarning("Configured http_handler #{HandlerDbRef} not found.", handlerDbRef.Value);
-			return new NotFound();
-		}
-
-		var handler = handlerResult.Known;
-		var handlerRef = handler.Object().DBRef;
-
-		// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
-		// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
-		// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
-		var attributeName = method.ToUpperInvariant();
-		var attributeResult = await attributeService.GetAttributeAsync(
-			handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
-		if (!attributeResult.IsAttribute)
-		{
-			return new NotFound();
-		}
+		ct.ThrowIfCancellationRequested();
+		var parentBudget = ExecutionBudget.Current;
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, parentBudget?.Token ?? default);
+		var milliseconds = options.CurrentValue.Limit.QueueEntryCpuTime;
+		var duration = milliseconds == 0 ? Timeout.InfiniteTimeSpan : TimeSpan.FromMilliseconds(milliseconds);
+		if (parentBudget is not null && parentBudget.Remaining != TimeSpan.MaxValue
+			&& (duration == Timeout.InfiniteTimeSpan || parentBudget.Remaining < duration))
+			duration = parentBudget.Remaining;
+		using var budget = new ExecutionBudget(duration, cancellation.Token);
+		// The parent timer can fire before the independently armed child deadline.
+		bool DeadlineExpired() => budget.IsExpired || parentBudget?.IsExpired == true;
 
 		// One response context, reachable two ways during execution (Penn's `struct http_request`):
 		// on the parser state for @respond, and in the output-capture frame for emitted output.
 		var context = new HttpResponseContext();
+		DBRef? handlerRef = null;
 
-		// Build a fresh parser state — there is no ambient parser on the HTTP request path.
-		// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
-		var evalParser = parser.Push(ParserState.RootFor(handlerRef) with
+		using (budget.Enter())
 		{
-			Registers = new([BuildHeaderRegisters(headers)]),
-			EnvironmentRegisters = new Dictionary<string, CallState>
+			try
 			{
-				["0"] = new CallState(path),
-				["1"] = new CallState(body)
-			},
-			HttpResponse = context
-		});
+				budget.ThrowIfExceeded();
+				var handlerResult = await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), budget.Token);
+				if (handlerResult.IsNone)
+				{
+					logger.LogWarning("Configured http_handler #{HandlerDbRef} not found.", handlerDbRef.Value);
+					return new NotFound();
+				}
 
-		var attributeValue = attributeResult.AsAttribute.Last().Value;
+				var handler = handlerResult.Known;
+				handlerRef = handler.Object().DBRef;
+				budget.ThrowIfExceeded();
+				using var capture = outputCapture.BeginCapture(handlerRef.Value.Number, context);
+				// The <METHOD> attribute is the handler entry point: GET, POST, etc. — run as commands,
+				// the equivalent of PennMUSH's `@include #handler/<method>`. SharpMUSH deviates from
+				// Penn (200 + empty body) by answering 404 when the attribute is absent; see help sharphttp.
+				var attributeName = method.ToUpperInvariant();
+				var attributeResult = await attributeService.GetAttributeAsync(
+					handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
+				if (!attributeResult.IsAttribute)
+				{
+					return new NotFound();
+				}
 
-		using (outputCapture.BeginCapture(handlerRef.Number, context))
-		{
-			await evalParser.CommandListParse(attributeValue);
+				// Build a fresh parser state — there is no ambient parser on the HTTP request path.
+				// 'Invisible login': the handler is executor, enactor, and caller, as in Penn.
+				var evalParser = parser.Push(ParserState.RootFor(handlerRef.Value) with
+				{
+					Registers = new([BuildHeaderRegisters(headers)]),
+					EnvironmentRegisters = new Dictionary<string, CallState>
+					{
+						["0"] = new CallState(path),
+						["1"] = new CallState(body)
+					},
+					ExecutionBudget = budget,
+					HttpResponse = context
+				});
+
+				var attributeValue = attributeResult.AsAttribute.Last().Value;
+				budget.ThrowIfExceeded();
+				await evalParser.CommandListParse(attributeValue);
+			}
+			catch (OperationCanceledException) when (DeadlineExpired())
+			{
+				// Parser deadlines may return an error or throw while awaiting I/O.
+				// Both discard any response accumulated before the deadline.
+			}
 		}
 
-		var result = AssembleResult(context);
+		ct.ThrowIfCancellationRequested();
+		if (cancellation.IsCancellationRequested && !DeadlineExpired()) cancellation.Token.ThrowIfCancellationRequested();
+		var result = DeadlineExpired()
+			? new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error)
+			: AssembleResult(context);
 
 		// HTTP`COMMAND sysevent, mirroring Penn: ip is unknown at this layer (proxied), method,
 		// path, code, ctype, request body length, response body length.
-		await eventService.TriggerEventAsync(
-			parser, "HTTP`COMMAND", handlerRef,
-			string.Empty, method, path, result.Status.ToString(), result.ContentType,
-			body.Length.ToString(), result.Body.Length.ToString());
+		if (!DeadlineExpired() && handlerRef is { } resolvedHandler)
+		{
+			using (budget.Enter())
+			{
+				try
+				{
+					budget.ThrowIfExceeded();
+					await eventService.TriggerEventAsync(
+						parser, "HTTP`COMMAND", resolvedHandler, budget.Token,
+						string.Empty, method, path, result.Status.ToString(), result.ContentType,
+						body.Length.ToString(), result.Body.Length.ToString());
+				}
+				catch (OperationCanceledException) when (DeadlineExpired()) { }
+			}
+		}
+
+		ct.ThrowIfCancellationRequested();
+		if (cancellation.IsCancellationRequested && !DeadlineExpired()) cancellation.Token.ThrowIfCancellationRequested();
+		if (DeadlineExpired())
+			return new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error);
 
 		return result;
 	}

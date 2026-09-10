@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -19,6 +20,29 @@ public class UtilityFunctionUnitTests
 	private IPasswordService PasswordService => WebAppFactoryArg.Services.GetRequiredService<IPasswordService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+
+	[Test]
+	public async Task UnsetQWithoutArgumentsClearsAllRegisters()
+	{
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var before = await parser.FunctionParse(MarkupText.Plain("strcat(setq(LOCAL,value),listq())"));
+		await Assert.That(before!.Message!.ToPlainText()).IsEqualTo("LOCAL");
+		var result = await parser.FunctionParse(MarkupText.Plain("strcat(unsetq(),listq())"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("");
+	}
+
+	[Test]
+	[Arguments("foo", "|2")]
+	[Arguments("FoO", "|2")]
+	[Arguments(" foo  bAr ", "|")]
+	public async Task UnsetQNormalizesNamedRegisters(string names, string expected)
+	{
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var before = await parser.FunctionParse(MarkupText.Plain("strcat(setq(foo,1,BAR,2),r(foo),r(BAR))"));
+		await Assert.That(before!.Message!.ToPlainText()).IsEqualTo("12");
+		var result = await parser.FunctionParse(MarkupText.Plain($"strcat(unsetq({names}),r(foo),|,r(BAR))"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
 
 	[Test]
 	public async Task PCreate()

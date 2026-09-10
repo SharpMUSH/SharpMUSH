@@ -81,7 +81,7 @@ public partial class Commands
 				var requestBody = dataArg?.Message?.ToPlainText();
 				var dbRefAttribute = new DbRefAttribute(found.Object()!.DBRef, attrName.Split("`"));
 
-				await Mediator.Send(new QueueAttributeRequest(
+				var admission = await Mediator.Send(new AdmitAttributeRequest(
 					async () =>
 					{
 						var client = HttpClientFactory.CreateClient("api");
@@ -99,14 +99,14 @@ public partial class Commands
 							RequestUri = requestUri
 						};
 
-						var response = await client.SendAsync(message);
+						using var response = await client.SendAsync(message, ExecutionBudget.CurrentToken);
 
 						parser.CurrentState.AddRegister("STATUS",
 							MarkupText.Plain(((int)response.StatusCode).ToString()));
 						parser.CurrentState.AddRegister("CONTENT-TYPE",
 							MarkupText.Plain(response.Content.Headers.ContentType?.ToString() ?? string.Empty));
 
-						var content = await response.Content.ReadAsStringAsync();
+						var content = await response.Content.ReadAsStringAsync(ExecutionBudget.CurrentToken);
 						var contentState = new CallState(MarkupText.Plain(content));
 						var contentDict = new Dictionary<string, CallState> { { "0", contentState } };
 
@@ -116,7 +116,17 @@ public partial class Commands
 							EnvironmentRegisters = contentDict
 						};
 					},
-					dbRefAttribute));
+					dbRefAttribute, parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+
+				if (!admission.Accepted)
+				{
+					// Capacity and shutdown failures are already reported by the scheduler.
+					// Preflight failures return before that generic reporting boundary.
+					if (admission.Reason is SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.InvalidTarget
+						or SharpMUSH.Library.Models.SchedulerModels.QueueRejectionReason.AlreadyReleased)
+						await NotifyService.Notify(executor, admission.Error, executor);
+					return new CallState(admission.Error);
+				}
 
 				return CallState.Empty;
 			});

@@ -49,8 +49,13 @@ public partial class LightningDatabase
 		=> await Store.WriteAsync(tx => tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role))));
 
 	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)
+		=> GetRoleAsync(slug, CancellationToken.None);
+
+	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
 		var role = Store.Read(tx => ReadRoleBySlug(tx, slug));
+		cancellationToken.ThrowIfCancellationRequested();
 		return Task.FromResult<OneOf<SharpRole, NotFound>>(role is null ? new NotFound() : role);
 	}
 

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
@@ -62,7 +63,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		if (_currentProvider == null || _currentConnectionString != connectionString)
 		{
-			await _providerLock.WaitAsync();
+			await _providerLock.WaitAsync(ExecutionBudget.CurrentToken);
 			try
 			{
 				// Double-check after acquiring lock
@@ -169,11 +170,19 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
-		command.CommandText = query;
-		await using var reader = await command.ExecuteReaderAsync();
-
-		while (await reader.ReadAsync())
+		if (ExecutionBudget.Current is { } budget)
 		{
+			budget.ThrowIfExceeded();
+			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
+		}
+		command.CommandText = query;
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
+
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -182,6 +191,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 			results.Add(row);
 		}
 
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		return results;
 	}
 
@@ -197,6 +207,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
+		if (ExecutionBudget.Current is { } budget)
+		{
+			budget.ThrowIfExceeded();
+			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
+		}
 		command.CommandText = query;
 
 		for (var i = 0; i < parameters.Length; i++)
@@ -222,10 +238,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 			command.Parameters.Add(param);
 		}
 
-		await using var reader = await command.ExecuteReaderAsync();
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
 
-		while (await reader.ReadAsync())
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -234,6 +252,7 @@ public class SqlService : ISqlService, IAsyncDisposable
 			results.Add(row);
 		}
 
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		return results;
 	}
 
@@ -247,11 +266,19 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
-		command.CommandText = query;
-		await using var reader = await command.ExecuteReaderAsync();
-
-		while (await reader.ReadAsync(CancellationToken.None))
+		if (ExecutionBudget.Current is { } budget)
 		{
+			budget.ThrowIfExceeded();
+			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
+		}
+		command.CommandText = query;
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
+
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{
@@ -271,6 +298,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 
 		await using var connection = await provider.CreateConnectionAsync();
 		await using var command = connection.CreateCommand();
+		if (ExecutionBudget.Current is { } budget)
+		{
+			budget.ThrowIfExceeded();
+			command.CommandTimeout = Math.Min(command.CommandTimeout > 0 ? command.CommandTimeout : int.MaxValue,
+				Math.Max(1, (int)Math.Min(int.MaxValue, Math.Ceiling(budget.Remaining.TotalSeconds))));
+		}
 		command.CommandText = query;
 
 		for (var i = 0; i < parameters.Length; i++)
@@ -296,10 +329,12 @@ public class SqlService : ISqlService, IAsyncDisposable
 			command.Parameters.Add(param);
 		}
 
-		await using var reader = await command.ExecuteReaderAsync();
+		await using var reader = await command.ExecuteReaderAsync(ExecutionBudget.CurrentToken);
+		ExecutionBudget.Current?.ThrowIfExceeded();
 
-		while (await reader.ReadAsync(CancellationToken.None))
+		while (await reader.ReadAsync(ExecutionBudget.CurrentToken))
 		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
 			var row = new Dictionary<string, object?>();
 			for (var i = 0; i < reader.FieldCount; i++)
 			{

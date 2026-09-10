@@ -1,25 +1,30 @@
 using Quartz;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Models.SchedulerModels;
 
-internal class SemaphoreTask(IMUSHCodeParser parser, ITaskScheduler taskScheduler) : IJob
+internal class SemaphoreTask(ITaskScheduler taskScheduler, IOptionsWrapper<SharpMUSHOptions>? configuration = null) : IJob
 {
 	public async Task Execute(IJobExecutionContext context)
 	{
-		var state = context.MergedJobDataMap.Get("State") as ParserState;
-		var command = context.MergedJobDataMap.Get("Command") as MString;
-
-		await context.Scheduler.UnscheduleJob(context.Trigger.Key);
-		await context.Scheduler.DeleteJob(context.JobDetail.Key);
-
-		if (state != null && command != null)
+		try
 		{
-			await taskScheduler.EnqueueWork(
-				() => parser.FromState(state).CommandListParse(command),
-				context.Trigger.Key.Name,
-				context.Trigger.Key.Group);
+			// Quartz runs outside the parser: give persistence its own finite deadline and shutdown token.
+			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+			using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, context.CancellationToken);
+			using var scope = budget.Enter();
+			await taskScheduler.ReleaseScheduledWork(long.Parse(context.Trigger.Key.Name.Split('-').Last()), semaphoreTimeout: true);
 		}
+		catch (Exception exception) when (!context.CancellationToken.IsCancellationRequested)
+		{
+			// Keep Quartz's current job alive until its durable counter update succeeds.
+			// Back off before requesting refire so an unavailable store cannot cause a hot loop.
+			await Task.Delay(TimeSpan.FromSeconds(1), context.CancellationToken);
+			throw new JobExecutionException(exception, refireImmediately: true);
+		}
+		await context.Scheduler.UnscheduleJob(context.Trigger.Key, context.CancellationToken);
+		await context.Scheduler.DeleteJob(context.JobDetail.Key, context.CancellationToken);
 	}
 }
