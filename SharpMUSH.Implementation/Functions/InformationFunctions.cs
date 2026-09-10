@@ -167,9 +167,16 @@ public partial class Functions
 		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 		if (task is null) return new CallState(ErrorMessages.Returns.NoSuchPid);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
-			.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		try
+		{
+			if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
+				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+		catch (NotSupportedException)
+		{
+			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
+		}
 		return FormatTaskInfo(task, field, delimiter);
 	}
 

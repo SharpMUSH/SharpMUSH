@@ -21,6 +21,12 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> QueueControl(IMUSHCodeParser parser, SharpCommandAttribute _)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		try { return await QueueControlCore(parser, executor); }
+		catch (NotSupportedException) { return await QueueInspectionUnsupported(executor); }
+	}
+
+	private async ValueTask<Option<CallState>> QueueControlCore(IMUSHCodeParser parser, AnySharpObject executor)
+	{
 		var switches = parser.CurrentState.Switches.ToHashSet(StringComparer.Ordinal);
 		var pause = switches.Contains("PAUSE");
 		var resume = switches.Contains("RESUME");
