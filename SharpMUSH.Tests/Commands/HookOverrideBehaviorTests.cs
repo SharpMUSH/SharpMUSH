@@ -9,18 +9,8 @@ using SharpMUSH.Tests;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Bare-minimum behavioural tests for <c>@hook/override</c> itself (independent of the scene package).
-///
-/// The override path (<c>SharpMUSHParserVisitor.ExecuteHookCode</c>) re-runs <c>$</c>-command matching
-/// against <c>commandWithSwitches</c>, which is the command's <b>raw, pre-evaluation</b> source
-/// (see <c>SharpMUSHParserVisitor.cs</c>: <c>namedRegisters["ARGS"] = src // before evaluation</c>).
-/// Consequence: an override that re-uses its captured argument operates on the UNEVALUATED text, so a
-/// <c>%0</c>/substitution coming from the surrounding command context survives verbatim into the
-/// override body instead of being substituted first.
-///
-/// These tests pin that behaviour on a plain dummy object so the contract is visible without the scene
-/// package. Each test overrides <c>@EMIT</c>, captures what the override saw into an attribute, reads it
-/// straight from the database, and ALWAYS clears the hook in a finally (the hook is global session state).
+/// Tests that override hooks receive the arguments produced by the command's own parser.
+/// Each test captures the hook argument in the database and clears its global hook in finally.
 /// </summary>
 [NotInParallel]
 public class HookOverrideBehaviorTests
@@ -36,6 +26,43 @@ public class HookOverrideBehaviorTests
 	private async Task<string> ReadAttributeAsync(DBRef obj, string attribute) =>
 		(await Database.GetAttributeAsync(obj, attribute.Split('`'), CancellationToken.None).LastOrDefaultAsync())
 			?.Value.ToPlainText() ?? "";
+
+	[Test]
+	[Arguments("SAY", "OVERRIDE", "", "ansi(hr,rawr)", "rawr")]
+	[Arguments("POSE", "OVERRIDE", "", "ansi(hr,rawr)", "rawr")]
+	[Arguments("SAY", "EXTEND", "/custom", "ansi(hr,rawr)", "rawr")]
+	[Arguments("TEACH", "OVERRIDE", "", "[add(1,2)]", "[add(1,2)]")]
+	[Arguments("@PEMIT", "OVERRIDE", "", "add(1,2)=add(3,4)", "3=7")]
+	[Arguments("@FORCE", "OVERRIDE", "", "add(1,2)=[add(3,4)]", "3=7")]
+	[Arguments("@DOLIST", "OVERRIDE", "", "add(1,2)=[add(3,4)]", "3=[add(3,4)]")]
+	[Arguments("@PEMIT", "OVERRIDE", "", "add(1,2)=", "3=")]
+	[Arguments("@DIG", "OVERRIDE", "", "add(1,2)=add(3,4),,add(5,6)", "3=7,,11")]
+	[Arguments("SAY", "OVERRIDE", "/noeval", "[add(1,2)]", "[add(1,2)]")]
+	[Arguments("SAY", "OVERRIDE", "", "[setq(hook_count,inc(firstof(%q<hook_count>,0)))]%q<hook_count>", "1")]
+	public async ValueTask Hook_UsesCommandArgumentParsing(string command, string hookType,
+		string switches, string input, string expected)
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookParsing");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&OVR {obj}=${command}{switches} *:&RESULT {obj}=%0"));
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@hook/{hookType} {command}={obj},OVR"));
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"{command}{switches} {input}"));
+			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo(expected);
+			if (input == "ansi(hr,rawr)")
+			{
+				var captured = (await Database.GetAttributeAsync(obj, ["RESULT"], CancellationToken.None).LastAsync()).Value;
+				await Assert.That(captured.Render(MarkupFormat.Ansi)).Contains("\u001b[");
+			}
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(command, hookType);
+		}
+	}
 
 	/// <summary>
 	/// Sanity floor: an <c>@hook/override</c> fires and captures the command's literal argument. Proves the
