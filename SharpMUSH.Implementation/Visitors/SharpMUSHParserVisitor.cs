@@ -1436,7 +1436,13 @@ public class SharpMUSHParserVisitor(
 			// pattern is checked and before its wildcards capture %0... This mirrors what the hook
 			// OVERRIDE/EXTEND path already does. It is only reached once no built-in command matched
 			// (Steps 1-8 above), so a built-in never pays for this evaluation.
-			var evaluatedCommandText = (await parser.FunctionParse(commandText))?.Message ?? commandText;
+			var evaluatedCommandResult = await parser.FunctionParse(commandText);
+			var evaluatedCommandText = evaluatedCommandResult?.Message ?? commandText;
+			Option<CallState> PreserveCommandEvaluationErrors(Option<CallState> result)
+			{
+				if (evaluatedCommandResult?.HadErrors != true) return result;
+				return (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true };
+			}
 
 			// Live discovery uses the invoking executor's perception before handlers can match.
 			// Explicit configured hooks keep their separate administrative dispatch path.
@@ -1456,7 +1462,7 @@ public class SharpMUSHParserVisitor(
 
 			if (userDefinedCommandMatches.IsSome())
 			{
-				return await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue());
+				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue()));
 			}
 
 			// Step 10: Zone Exit Name and Aliases - handled in LocateService
@@ -1482,7 +1488,7 @@ public class SharpMUSHParserVisitor(
 
 					if (userDefinedCommandMatchesOnZMR.IsSome())
 					{
-						return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnZMR.AsValue());
+						return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnZMR.AsValue()));
 					}
 				}
 			}
@@ -1498,7 +1504,7 @@ public class SharpMUSHParserVisitor(
 
 				if (userDefinedCommandMatchesOnLocation.IsSome())
 				{
-					return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue());
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue()));
 				}
 			}
 
@@ -1519,7 +1525,7 @@ public class SharpMUSHParserVisitor(
 
 				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
 				{
-					return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnPersonalZMR.AsValue());
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnPersonalZMR.AsValue()));
 				}
 			}
 
@@ -1540,7 +1546,7 @@ public class SharpMUSHParserVisitor(
 
 			if (userDefinedCommandMatchesOnGlobal.IsSome())
 			{
-				return await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue());
+				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue()));
 			}
 
 			// Step 16: HUH_COMMAND is run
@@ -1554,7 +1560,7 @@ public class SharpMUSHParserVisitor(
 				var huhResult = await ExecuteHookCode(parser, executor, huhHook.AsValue(), huhInput);
 				if (huhResult.IsSome())
 				{
-					return huhResult.AsValue();
+					return PreserveCommandEvaluationErrors(huhResult);
 				}
 			}
 
@@ -1567,7 +1573,7 @@ public class SharpMUSHParserVisitor(
 
 			var huhCommand = await parser.CommandLibrary["HUH_COMMAND"].LibraryInformation.Command.Invoke(newParser);
 
-			return huhCommand;
+			return PreserveCommandEvaluationErrors(huhCommand);
 		}
 		catch (OperationCanceledException)
 		{
