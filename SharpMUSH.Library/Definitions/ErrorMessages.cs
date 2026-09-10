@@ -525,6 +525,8 @@ public static class ErrorMessages
 			"The floor disappears under your feet, you fall through NOTHINGness and then:";
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
+		// These reach the game as literal text, not through the resx. That is the settled convention
+		// for every triad default; the reasoning is written out once, on DidItRequest.
 		public const string DefaultOLeave = "has left.";
 		public const string DefaultOEnter = "has arrived.";
 		public const string HomeNoPlaceLikeHome = "There's no place like home...";

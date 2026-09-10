@@ -1425,12 +1425,25 @@ public partial class Commands
 				continue;
 			}
 
+			// Every check from here to the end of the command is gated on Tel_Anywhere in PennMUSH
+			// (wiz.c:446, 483, 541, 549, 563). DEVIATION: SharpMUSH has no Tel_Anywhere power, so
+			// wizardry stands in for it, as it already did for the NO_TEL and zone checks below.
+			var telAnywhere = await executor.IsWizard();
+
+			// wiz.c:446: without Tel_Anywhere, another player is not a destination at all — the
+			// /INSIDE question below only arises for someone who could have gone there.
+			if (!telAnywhere && target.IsPlayer && destinationContainer.IsPlayer)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
+				continue;
+			}
+
 			// wiz.c:483: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
 			// player rather than inside them. /INSIDE is what asks for the containment instead.
-			if (!parser.CurrentState.Switches.Contains("INSIDE")
+			if (telAnywhere
 					&& target.IsPlayer
 					&& destinationContainer.IsPlayer
-					&& await executor.IsWizard())
+					&& !parser.CurrentState.Switches.Contains("INSIDE"))
 			{
 				destinationContainer = await destinationContainer.Location();
 			}
@@ -1438,7 +1451,7 @@ public partial class Commands
 			// Zone teleport restriction: check if the source room blocks teleporting out.
 			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
 			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
-			if (!await executor.IsWizard())
+			if (!telAnywhere)
 			{
 				AnySharpContainer? sourceLocation = null;
 				try
@@ -1485,7 +1498,7 @@ public partial class Commands
 
 			// Check TPort lock on the destination (PennMUSH src/wiz.c).
 			// Wizards bypass the TPort lock check.
-			if (!await executor.IsWizard())
+			if (!telAnywhere)
 			{
 				var destObj = destinationContainer.WithExitOption();
 				if (!await LockService.Evaluate(LockType.Teleport, destObj, executor))

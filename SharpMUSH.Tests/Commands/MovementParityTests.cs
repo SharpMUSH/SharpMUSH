@@ -934,6 +934,55 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// <c>Connected(follower) || IsThing(follower)</c> (<c>src/move.c:1481</c>): a player who is not
+	/// logged in is left where they stood rather than walked around the game by whoever they last
+	/// followed. The FOLLOWERS attribute outlives the connection, so nothing else stops this.
+	/// </summary>
+	[Test]
+	public async ValueTask ALoggedOutFollowerIsLeftBehind()
+	{
+		var (leader, from, _, _) = await Corridor("FollowOffline");
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowOfflineTrail");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {follower.DbRef}={from}"));
+		await GodParser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain($"follow {leader.Name}"));
+
+		await ConnectionService.Disconnect(follower.Handle);
+
+		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await LocationOf(follower.DbRef.ToString()))
+			.IsEqualTo(BareDbref(from))
+			.Because("follower_command skips a follower that is neither connected nor a thing");
+	}
+
+	/// <summary>
+	/// <c>Dark(Location(follower)) &amp;&amp; !Light(leader)</c> (<c>src/move.c:1482</c>): a departure
+	/// the follower could not have seen is not one they can follow. The leader here is not
+	/// <c>DarkLegal</c> — the room is what hides them.
+	/// </summary>
+	[Test]
+	public async ValueTask AFollowerInADarkRoomDoesNotSeeAnUnlitLeaderLeave()
+	{
+		var (leader, from, _, _) = await Corridor("FollowDark");
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowDarkTrail");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {follower.DbRef}={from}"));
+		await GodParser.CommandParse(follower.Handle, ConnectionService, MarkupText.Plain($"follow {leader.Name}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {from}=DARK"));
+
+		await GodParser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain("out"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await LocationOf(follower.DbRef.ToString()))
+			.IsEqualTo(BareDbref(from))
+			.Because("the leader is neither lit nor visible, so there was nothing to follow");
+	}
+
+	/// <summary>
 	/// <c>@teleport/silent</c> passes <c>nomovemsgs</c> to <c>safe_tel</c> and skips the <c>TPORT</c>
 	/// triad (<c>src/wiz.c:568-579</c>). It reaches neither the <c>ENTER</c> triad nor the automatic
 	/// look, both of which are inside <c>enter_room</c> below that flag.
