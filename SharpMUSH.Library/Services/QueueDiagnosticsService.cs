@@ -91,6 +91,8 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		// A capture must have a usable reporting path before it consumes bounded recorder capacity.
 		try { await queues.ListAsync(actor, 1, ct); }
 		catch (NotSupportedException) { return DiagnosticsError.Unsupported; }
+		// The awaited probe may outlive a role or active-character change.
+		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
 		var profile = recorder.StartProfile(actor, TimeSpan.FromSeconds(seconds));
 		return profile is null ? DiagnosticsError.CapacityExceeded : profile.Id;
 	}
