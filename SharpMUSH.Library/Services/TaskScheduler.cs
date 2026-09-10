@@ -60,7 +60,8 @@ public partial class TaskScheduler(
 		DBRef? Executor,
 		DBRef? SemaphoreTarget = null,
 		bool ManagesSemaphoreCount = false,
-		JobKey? NotificationJob = null
+		JobKey? NotificationJob = null,
+		bool HaltAccountingSettled = false
 	);
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -213,22 +214,9 @@ public partial class TaskScheduler(
 		public void Dispose() => Interlocked.Exchange(ref _gate, null)?.Release();
 	}
 
-	// Caller holds the mutation lease; shared with pending halt bookkeeping.
-	private async ValueTask AdjustSemaphoreCountCore(string group, DBRef? target = null)
-	{
-		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
-		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
-		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
-		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-		if (!god.IsPlayer) return;
-		if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
-			throw new InvalidOperationException("Semaphore count update failed.");
-	}
-	// Caller holds the semaphore mutation lease. Keep an uncertain timeout write behind
+	// Caller holds the semaphore mutation lease. Keep an uncertain timeout or Halt write behind
 	// the existing command-repair barrier until its before/after value is reconciled.
-	private async ValueTask AdjustTimeoutSemaphoreCountCore(QueueEntry entry)
+	private async ValueTask AdjustSemaphoreCountCore(QueueEntry entry, bool halted = false)
 	{
 		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
 		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
@@ -244,7 +232,7 @@ public partial class TaskScheduler(
 		{
 			if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
 				MarkupString.MarkupText.Plain(expected.ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
-				throw new InvalidOperationException("Semaphore timeout count update failed.");
+				throw new InvalidOperationException("Semaphore count update failed.");
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
 		try { await Write(); }
@@ -260,10 +248,18 @@ public partial class TaskScheduler(
 				var observed = await Read();
 				if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out var current)
 					|| current != expected && current != original)
-					throw new InvalidOperationException("Semaphore changed during uncertain timeout accounting.");
+					throw new InvalidOperationException("Semaphore changed during uncertain accounting.");
 				if (current != expected) await Write();
 				ExecutionBudget.Current?.ThrowIfExceeded();
-				lock (_admissionLock) _semaphoreCommandReservations.Remove(entry.Pid);
+				lock (_admissionLock)
+				{
+					_semaphoreCommandReservations.Remove(entry.Pid);
+					// Halt settled transport before attempting the counter write. This
+					// cancelled entry now needs consumer disposal only, not another halt
+					// decrement or retained-notification cleanup attempt.
+					if (halted && _pendingEntries.TryGetValue(entry.Pid, out var pending))
+						_pendingEntries[entry.Pid] = pending with { NotificationJob = null, HaltAccountingSettled = true };
+				}
 				await Activate(entry.Pid);
 			};
 			throw;
@@ -386,7 +382,7 @@ public partial class TaskScheduler(
 		{
 			// Claim the release before awaiting persistence. Halt retains the reservation and
 			// drain excludes it, while notify cannot turn its outstanding count into lost credit.
-			await AdjustTimeoutSemaphoreCountCore(entry);
+			await AdjustSemaphoreCountCore(entry);
 			return await Activate(pid, readyReserved: true);
 		}
 		catch
@@ -607,10 +603,16 @@ public partial class TaskScheduler(
 	// This lease never acquires the semaphore mutation lease: compatibility callers may
 	// already own that lease. The ready claim fences other release paths during cleanup.
 	private readonly SemaphoreSlim _notifications = new(1, 1);
+	private async ValueTask<IDisposable> EnterNotificationAsync()
+	{
+		await _notifications.WaitAsync(ExecutionBudget.CurrentToken);
+		return new SemaphoreMutationLease(_notifications);
+	}
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
-		using var budget = ExecutionBudget.FromMilliseconds(1000, cancellation.Token);
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
+		using var budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining, cancellation.Token);
 		using var scope = budget.Enter();
 		await _notifications.WaitAsync(ExecutionBudget.CurrentToken);
 		try
@@ -629,14 +631,16 @@ public partial class TaskScheduler(
 				QueueEntry? entry;
 				lock (_admissionLock)
 				{
-					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+					if (!_pendingEntries.TryGetValue(pid, out entry) || _semaphoreCommandReservations.Contains(pid)
+						|| entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
 				}
 				var job = entry.NotificationJob ?? (await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken))?.JobKey;
 				if (job is null) continue;
 				lock (_admissionLock)
 				{
 					if (_stopping) throw new OperationCanceledException(_shutdownCts.Token);
-					if (!_pendingEntries.TryGetValue(pid, out entry) || entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
+					if (!_pendingEntries.TryGetValue(pid, out entry) || _semaphoreCommandReservations.Contains(pid)
+						|| entry.NotificationJob is null && !CanReleasePendingSemaphore(pid)) continue;
 					_pendingEntries[pid] = entry with { NotificationJob = job };
 					_ready.Add(pid);
 				}
@@ -750,12 +754,24 @@ public partial class TaskScheduler(
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
+		var result = await HaltByPidCore(pid);
+		bool settled;
+		lock (_admissionLock)
+			settled = _pendingEntries.TryGetValue(pid, out var entry) && entry.HaltAccountingSettled;
+		// Core's transition leases have been released. Keep successful Halt's
+		// synchronous quota release, including a recovered canceled consumer item.
+		if (settled) Release(pid);
+		return result;
+	}
+
+	private async ValueTask<bool> HaltByPidCore(long pid)
+	{
 		QueueEntry? entry;
 		bool ready;
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry)) return false;
-			ready = _ready.Contains(pid);
+			ready = _ready.Contains(pid) && entry.NotificationJob is null;
 		}
 		CancelEntry(entry);
 		if (ready) return true;
@@ -768,22 +784,36 @@ public partial class TaskScheduler(
 			? await EnterDelayedTransitionAsync() : null;
 		using var mutation = entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
 			? await EnterSemaphoreMutationAsync() : null;
+		// Compatibility notification callers may already hold the mutation lease.
+		// Always acquire that lease before the notification lease, and re-read the
+		// entry: a notification may have published it while this halt was waiting.
+		using var notification = mutation is not null ? await EnterNotificationAsync() : null;
+		lock (_admissionLock)
+		{
+			if (!_pendingEntries.TryGetValue(pid, out entry)) return true;
+			if (_ready.Contains(pid) && entry.NotificationJob is null) return true;
+		}
 		await _scheduler.UnscheduleJob(new TriggerKey(entry.TriggerName, entry.Group), ExecutionBudget.CurrentToken);
+		if (entry.NotificationJob is { } notificationJob)
+			await _scheduler.DeleteJob(notificationJob, ExecutionBudget.CurrentToken);
 		lock (_admissionLock)
 		{
 			if (!_pendingEntries.TryGetValue(pid, out entry)) return true;
 			// Reserve the transition against timeout publication while persistence is awaited.
-			if (!_ready.Add(pid)) return true;
+			if (!_ready.Add(pid) && entry.NotificationJob is null) return true;
 		}
 		try
 		{
 			if (entry.Group.StartsWith(SemaphoreGroup + ":"))
-				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
+				await AdjustSemaphoreCountCore(entry, halted: true);
 		}
 		catch
 		{
 			// Preserve the cancelled PID and its quota so a later halt or timer can retry.
-			lock (_admissionLock) _ready.Remove(pid);
+			// A notification cleanup claim is not consumer publication. Keep its
+			// identity and claim until a later halt/notify can finish this transition.
+			if (entry.NotificationJob is null)
+				lock (_admissionLock) _ready.Remove(pid);
 			throw;
 		}
 		QueueEntry? removed;
