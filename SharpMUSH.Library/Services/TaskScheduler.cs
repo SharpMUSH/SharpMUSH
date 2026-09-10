@@ -62,7 +62,6 @@ public partial class TaskScheduler(
 		CancellationTokenSource Cts,
 		string Owner,
 		DBRef? Executor,
-		Func<ValueTask>? BeforeExecution = null,
 		DBRef? SemaphoreTarget = null,
 		Action? OnReleased = null,
 		bool ManagesSemaphoreCount = false
@@ -71,6 +70,7 @@ public partial class TaskScheduler(
 		public DeferredSchedule? Deferred { get; init; }
 		public QueueObservation? Observation { get; init; }
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
+		public bool HaltAccountingSettled { get; init; }
 	}
 
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
@@ -146,7 +146,8 @@ public partial class TaskScheduler(
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true)
 	{
-		string owner = $"handle:{handle}";
+		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
+		string owner = handle is null ? "system" : $"handle:{handle}";
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		if (executor is not null)
 		{
@@ -267,26 +268,120 @@ public partial class TaskScheduler(
 		public void Dispose() => Interlocked.Exchange(ref _gate, null)?.Release();
 	}
 
-	private async ValueTask AdjustSemaphoreCount(string group, DBRef? target = null)
+	// Caller holds the semaphore mutation lease. Keep an uncertain Halt write behind
+	// the existing command-repair barrier until its before/after value is reconciled.
+	private async ValueTask AdjustHaltSemaphoreCountCore(QueueEntry entry)
 	{
-		using var lease = await EnterSemaphoreMutationAsync();
-		await AdjustSemaphoreCountCore(group, target);
-	}
-
-	// Caller holds the mutation lease; shared with pending halt bookkeeping.
-	private async ValueTask AdjustSemaphoreCountCore(string group, DBRef? target = null)
-	{
-		var semaphore = DbRefAttribute.Parse(group[(SemaphoreGroup.Length + 1)..]);
-		if (target is not null) semaphore = new DbRefAttribute(target.Value, semaphore.Attribute);
-		var value = await mediator.CreateStream(new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken).LastOrDefaultAsync(ExecutionBudget.CurrentToken);
-		if (value is null || !int.TryParse(value.Value.ToPlainText(), out var count)) return;
+		using var observation = entry.Observation?.Enter();
+		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
+		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
+		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
+			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		var attribute = await Read();
+		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
+		var expected = original > 0 ? original - 1 : 0;
 		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
 		if (!god.IsPlayer) return;
-		if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-		 MarkupString.MarkupText.Plain((count > 0 ? count - 1 : 0).ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
-			throw new InvalidOperationException("Semaphore count update failed.");
+		async ValueTask Write()
+		{
+			if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
+				MarkupString.MarkupText.Plain(expected.ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
+				throw new InvalidOperationException("Semaphore count update failed.");
+			ExecutionBudget.Current?.ThrowIfExceeded();
+		}
+		try { await Write(); }
+		catch
+		{
+			lock (_admissionLock)
+			{
+				_ready.Remove(entry.Pid);
+				_semaphoreCommandReservations.Add(entry.Pid);
+			}
+			_semaphoreCommandRepair = async () =>
+			{
+				using var repairObservation = entry.Observation?.Enter();
+				using var deferred = await LockDeferred();
+				var observed = await Read();
+				if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out var current)
+					|| current != expected && current != original)
+					throw new InvalidOperationException("Semaphore changed during uncertain accounting.");
+				if (current != expected) await Write();
+				ExecutionBudget.Current?.ThrowIfExceeded();
+				lock (_admissionLock)
+				{
+					_semaphoreCommandReservations.Remove(entry.Pid);
+					// Halt settled transport before attempting the counter write. This
+					// cancelled entry now needs consumer disposal only, not another halt
+					// decrement or retained-notification cleanup attempt.
+					if (_pendingEntries.TryGetValue(entry.Pid, out var pending))
+						_pendingEntries[entry.Pid] = pending with { Deferred = null, HaltAccountingSettled = true };
+				}
+				await Activate(entry.Pid);
+			};
+			throw;
+		}
 	}
-	private ValueTask<QueueAdmissionResult> Activate(long pid, bool semaphoreTimeout = false)
+
+	// Caller owns both transition leases. Counter confirmation and transport cleanup
+	// form one settlement; the existing command barrier retains failed settlements.
+	private async ValueTask<QueueAdmissionResult> SettleTimeout(QueueEntry entry)
+	{
+		using var observation = entry.Observation?.Enter();
+		var semaphore = DbRefAttribute.Parse(entry.Group[(SemaphoreGroup.Length + 1)..]);
+		if (entry.SemaphoreTarget is { } target) semaphore = new(target, semaphore.Attribute);
+		async ValueTask<SharpAttribute?> Read() => await mediator.CreateStream(
+			new GetAttributeQuery(semaphore.DbRef, semaphore.Attribute), ExecutionBudget.CurrentToken)
+			.LastOrDefaultAsync(ExecutionBudget.CurrentToken);
+		var attribute = await Read();
+		var original = 0;
+		var accounted = attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out original);
+		var expected = original > 0 ? original - 1 : 0;
+		var god = accounted ? default : await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
+		accounted = accounted || god?.IsPlayer != true;
+		JobKey? transportJob = null;
+		async ValueTask<QueueAdmissionResult> Complete(bool retry)
+		{
+			if (!accounted)
+			{
+				var current = original;
+				if (retry)
+				{
+					var observed = await Read();
+					if (observed is null || !int.TryParse(observed.Value.ToPlainText(), out current)
+						|| current != expected && current != original)
+						throw new InvalidOperationException("Semaphore changed during uncertain timeout accounting.");
+				}
+				if ((!retry || current != expected) && !await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
+					MarkupString.MarkupText.Plain(expected.ToString()), god!.AsPlayer), ExecutionBudget.CurrentToken))
+					throw new InvalidOperationException("Semaphore timeout count update failed.");
+				accounted = true;
+			}
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			// Normal settlement already holds the deferred lease; repair enters from the semaphore gate.
+			using DeferredLease? lease = retry ? await LockDeferred() : null;
+			var key = new TriggerKey(entry.TriggerName, entry.Group);
+			var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
+			transportJob ??= trigger?.JobKey;
+			await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
+			if (transportJob is not null) await _scheduler.DeleteJob(transportJob, ExecutionBudget.CurrentToken);
+			lock (_admissionLock) _semaphoreCommandReservations.Remove(entry.Pid);
+			return await Activate(entry.Pid);
+		}
+		try { return await Complete(retry: false); }
+		catch
+		{
+			lock (_admissionLock) _semaphoreCommandReservations.Add(entry.Pid);
+			_semaphoreCommandRepair = async () =>
+			{
+				using var repairObservation = entry.Observation?.Enter();
+				await Complete(retry: true);
+			};
+			throw;
+		}
+	}
+
+	private ValueTask<QueueAdmissionResult> Activate(long pid)
 	{
 		lock (_admissionLock)
 		{
@@ -295,19 +390,11 @@ public partial class TaskScheduler(
 			if (entry.Deferred?.Paused == true)
 			{
 				if (entry.Deferred.ReleasePending) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
-				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true, ReleaseTimeout = semaphoreTimeout } };
+				_pendingEntries[pid] = entry with { Deferred = entry.Deferred with { ReleasePending = true } };
 				return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 			}
 			if (!_ready.Add(pid)) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.AlreadyReleased));
-			var group = entry.Group;
-			var semaphoreTarget = entry.SemaphoreTarget;
-			entry = entry with
-			{
-				Group = EnqueueGroup,
-				// Run accounting on the serialized consumer, including when this released job is halted.
-				// This prevents timeout updates racing a command's @notify attribute update.
-				BeforeExecution = semaphoreTimeout && group.StartsWith(SemaphoreGroup + ":") ? () => AdjustSemaphoreCount(group, semaphoreTarget) : null
-			};
+			entry = entry with { Group = EnqueueGroup };
 			_pendingEntries[pid] = entry;
 			_immediateQueue.Writer.TryWrite(entry);
 		}
@@ -326,7 +413,14 @@ public partial class TaskScheduler(
 
 	private void EnsureConsumerStarted()
 	{
-		lock (_admissionLock) _consumerTask ??= Task.Run(() => ProcessQueueAsync(_shutdownCts.Token));
+		lock (_admissionLock)
+		{
+			if (_consumerTask is not null) return;
+			// The consumer outlives its submitter. Each entry creates its own budget;
+			// release callbacks must not restore a disposed submitting context afterward.
+			using var flow = ExecutionContext.IsFlowSuppressed() ? default : ExecutionContext.SuppressFlow();
+			_consumerTask = Task.Run(() => ProcessQueueAsync(_shutdownCts.Token));
+		}
 	}
 
 	private async Task ProcessQueueAsync(CancellationToken shutdownToken)
@@ -339,31 +433,13 @@ public partial class TaskScheduler(
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
 					var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
-					// Released semaphore accounting still runs for halted entries, but shares the
-					// entry's elapsed-time limit. Link halt cancellation only for the user body.
-					using var accountingBudget = entry.BeforeExecution is null ? null : ExecutionBudget.FromMilliseconds(milliseconds, shutdownToken);
-					using var accountingScope = accountingBudget?.Enter();
-					using var accountingObservation = entry.BeforeExecution is null ? null : entry.Observation?.Enter();
-					if (entry.BeforeExecution is not null)
-					{
-						try { await entry.BeforeExecution(); }
-						catch (Exception ex) { logger.LogError(ex, "Semaphore bookkeeping failed for PID {Pid}", entry.Pid); }
-					}
 					lock (_admissionLock)
 					{
 						if (_stopping || entry.Cts.IsCancellationRequested) continue;
 					}
-					if (accountingBudget?.IsExceeded == true)
-					{
-						entry.Observation?.Complete(QueueOutcome.ExecutionLimit);
-						if (!shutdownToken.IsCancellationRequested) await NotifyExpired(entry);
-						continue;
-					}
-					using var budget = accountingBudget is null
-						? ExecutionBudget.FromMilliseconds(milliseconds, entry.Cts.Token)
-						: new ExecutionBudget(accountingBudget.Remaining == TimeSpan.MaxValue ? Timeout.InfiniteTimeSpan : accountingBudget.Remaining, entry.Cts.Token);
+					using var budget = ExecutionBudget.FromMilliseconds(milliseconds, entry.Cts.Token);
 					using var scope = budget.Enter();
-					using var observation = accountingObservation is null ? entry.Observation?.Enter() : null;
+					using var observation = entry.Observation?.Enter();
 					try
 					{
 						budget.ThrowIfExceeded();
@@ -411,30 +487,37 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 	{
 		QueueEntry entry;
+		bool recoveringTimeout;
 		lock (_admissionLock)
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
 			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
-				|| _semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid))
+				|| _semaphoreRepairs.ContainsKey(pid) || (!semaphoreTimeout && _semaphoreCommandReservations.Contains(pid)) || _delayedRepairs.Contains(pid))
 				return new(null, QueueRejectionReason.AlreadyReleased);
+			recoveringTimeout = semaphoreTimeout && _semaphoreCommandReservations.Contains(pid);
 		}
-		// Counter writes precede deferred transitions; failed persistence leaves the reservation retryable.
+		using var releaseCancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
+		using var releaseBudget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, releaseCancellation.Token);
+		using var releaseScope = releaseBudget.Enter();
+		releaseBudget.ThrowIfExceeded();
+		// Counter writes precede deferred transitions; failed persistence retains the PID.
 		using var mutation = entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal)
 			? await EnterSemaphoreMutationAsync() : null;
+		if (recoveringTimeout) return new(pid, QueueRejectionReason.None);
 		using var lease = await LockDeferred();
 		lock (_admissionLock)
 		{
 			if (_stopping) return Reject(QueueRejectionReason.ShuttingDown);
 			if (!_pendingEntries.TryGetValue(pid, out entry!) || _ready.Contains(pid)
-				|| entry.Deferred?.ReleasePending == true || _delayedRepairs.Contains(pid)
+				|| entry.Deferred?.ReleasePending == true || (semaphoreTimeout && entry.Deferred?.CleanupJob is not null) || _delayedRepairs.Contains(pid)
 				|| generation is not null && entry.Deferred?.Generation != generation)
 				return new(null, QueueRejectionReason.AlreadyReleased);
 		}
-		var managedTimeout = semaphoreTimeout && entry.ManagesSemaphoreCount;
-		if (managedTimeout) await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
-		try { await RemoveDeferredTrigger(entry); }
-		catch (Exception ex) { logger.LogWarning(ex, "Trigger cleanup failed for PID {Pid}; continuing admitted work", pid); }
-		return await Activate(pid, semaphoreTimeout && !managedTimeout);
+		if (semaphoreTimeout && entry.Group.StartsWith(SemaphoreGroup + ":", StringComparison.Ordinal))
+			return await SettleTimeout(entry);
+		await RemoveDeferredTrigger(entry);
+		return await Activate(pid);
 	}
 
 	private readonly IScheduler _scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
@@ -442,29 +525,6 @@ public partial class TaskScheduler(
 	public const string EnqueueGroup = "enqueue";
 	public const string SemaphoreGroup = "semaphore";
 	public const string DelayGroup = "delay";
-
-	[Flags]
-	private enum TaskQueueType
-	{
-		Default = 0,
-		Object = 1,
-		Player = Object << 1,
-		Socket = Player << 1,
-		InPlace = Socket << 1,
-		NoBreaks = InPlace << 1,
-		PreserveQReg = NoBreaks << 1,
-		ClearQReg = PreserveQReg << 1,
-		PropagateQReg = ClearQReg << 1,
-		NoList = PropagateQReg << 1,
-		Break = NoList << 1,
-		Retry = Break << 1,
-		Debug = Retry << 1,
-		NoDebug = Debug << 1,
-		Priority = NoDebug << 1,
-		DebugPrivileges = Priority << 1,
-		Event = DebugPrivileges << 1,
-		Recurse = InPlace | NoBreaks | PreserveQReg
-	}
 
 	public async ValueTask<QueueAdmissionResult> AdmitUserCommand(long handle, MString command, ParserState state)
 	{
@@ -549,6 +609,14 @@ public partial class TaskScheduler(
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state,
 	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
+		// Direct callers have no queue-entry budget; shutdown must still interrupt
+		// every provider operation while this transaction owns the semaphore gate.
+		using var transactionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
+		using var transactionBudget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining,
+			transactionCancellation.Token);
+		using var transactionScope = transactionBudget.Enter();
+		transactionBudget.ThrowIfExceeded();
 		if (!manageSemaphoreCount && oldValue < 0) return await AdmitCommandList(command, state);
 		// Serialize counter mutation before exposing a reservation or taking the deferred lease.
 		using var mutation = await EnterSemaphoreMutationAsync();
@@ -695,6 +763,10 @@ public partial class TaskScheduler(
 
 	public async ValueTask<IReadOnlyList<QueueAdmissionResult>> NotifyCounted(DbRefAttribute dbAttribute, int oldValue, int count = 1)
 	{
+		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
+		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
+		using var budget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining, cancellation.Token);
+		using var scope = budget.Enter();
 		using var lease = await LockDeferred();
 		QueueEntry[] waiting;
 		var group = $"{SemaphoreGroup}:{dbAttribute}";
@@ -766,6 +838,18 @@ public partial class TaskScheduler(
 
 	public async ValueTask<bool> HaltByPid(long pid)
 	{
+		var result = await HaltByPidCore(pid);
+		bool settled;
+		lock (_admissionLock)
+			settled = _pendingEntries.TryGetValue(pid, out var entry) && entry.HaltAccountingSettled;
+		// Core's transition leases have been released. Keep successful Halt's
+		// synchronous quota release, including a recovered canceled consumer item.
+		if (settled) Release(pid);
+		return result;
+	}
+
+	private async ValueTask<bool> HaltByPidCore(long pid)
+	{
 		QueueEntry? entry;
 		bool ready;
 		lock (_admissionLock)
@@ -790,11 +874,9 @@ public partial class TaskScheduler(
 			}
 			await RemoveDeferredTrigger(entry);
 			// Both transition leases keep the cancelled reservation retryable until persistence succeeds.
-			// Unmanaged timeouts defer accounting until execution; a paused entry halted here
-			// will never execute. Notifications and managed timeouts have already accounted.
-			if (entry.Group.StartsWith(SemaphoreGroup + ":") && (entry.Deferred?.ReleasePending != true
-				|| entry.Deferred is { ReleaseTimeout: true } && !entry.ManagesSemaphoreCount))
-				await AdjustSemaphoreCountCore(entry.Group, entry.SemaphoreTarget);
+			// Notifications and all timeouts account before becoming release-pending.
+			if (entry.Group.StartsWith(SemaphoreGroup + ":") && entry.Deferred?.ReleasePending != true)
+				await AdjustHaltSemaphoreCountCore(entry);
 			lock (_admissionLock)
 			{
 				_delayedRepairs.Remove(pid);
@@ -862,23 +944,14 @@ public partial class TaskScheduler(
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
 		var token = cancellation.Token;
 		token.ThrowIfCancellationRequested();
-		var translate = new Func<string, string>(x =>
-			new string(x.Replace("dbref:", string.Empty).Replace("handle:", string.Empty)
-				.TakeWhile(c => c != '-').ToArray()));
-
 		var keys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), token);
 		var keyTriggers = keys.ToAsyncEnumerable()
 			.Select<TriggerKey, ITrigger?>(async (triggerKey, ct) => await _scheduler.GetTrigger(triggerKey, ct))
-			.Where(trigger => trigger is not null).Select(trigger => trigger!)
+			.Where(trigger => trigger?.FinalFireTimeUtc is not null).Select(trigger => trigger!)
 			.GroupBy(trigger => trigger.Key.Group, trigger => (trigger.FinalFireTimeUtc!.Value, trigger.Key.Name));
 		await foreach (var key in keyTriggers.WithCancellation(token))
 		{
-			yield return (key.Key, key.Select(x => (
-				x.Value,
-				DBRef.TryParse(translate(x.Name), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(x.Name)
-			)).ToArray());
+			yield return (key.Key, key.Select(x => (x.Value, DescribeTrigger(x.Name))).ToArray());
 		}
 
 		foreach (var group in _pendingEntries.Values.Where(e => e.Group is DirectInputGroup or EnqueueGroup).GroupBy(e => e.Group))
@@ -886,11 +959,49 @@ public partial class TaskScheduler(
 			token.ThrowIfCancellationRequested();
 			yield return (group.Key, group.Select(e => (
 				DateTimeOffset.UtcNow,
-				DBRef.TryParse(translate(e.TriggerName), out var dbref)
-					? OneOf<string, DBRef>.FromT1(dbref!.Value)
-					: OneOf<string, DBRef>.FromT0(e.TriggerName)
+				DescribeTrigger(e.TriggerName)
 			)).ToArray());
 		}
+	}
+
+	/// <summary>
+	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
+	/// or the raw name when it does not carry one.
+	/// </summary>
+	private static OneOf<string, DBRef> DescribeTrigger(string triggerName)
+	{
+		var identity = triggerName.AsSpan();
+		if (identity.StartsWith("dbref:"))
+		{
+			identity = identity["dbref:".Length..];
+		}
+		else if (identity.StartsWith("handle:"))
+		{
+			identity = identity["handle:".Length..];
+		}
+
+		Span<System.Range> parts = stackalloc System.Range[2];
+		identity.Split(parts, '-');
+
+		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
+			? OneOf<string, DBRef>.FromT1(dbref!.Value)
+			: OneOf<string, DBRef>.FromT0(triggerName);
+	}
+
+	/// <summary>
+	/// The PID from a trigger name shaped <c>prefix-pid</c>: exactly one dash, followed by the number.
+	/// </summary>
+	private static bool TryParsePid(string triggerName, out long pid)
+	{
+		var name = triggerName.AsSpan();
+		Span<System.Range> parts = stackalloc System.Range[3];
+		if (name.Split(parts, '-') != 2)
+		{
+			pid = 0;
+			return false;
+		}
+
+		return long.TryParse(name[parts[1]], out pid);
 	}
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
@@ -925,12 +1036,12 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals($"{DelayGroup}:{obj}"), token);
 
+		// Extract PID from identity: "dbref:{executor}-{pid}"
 		foreach (var key in keys)
 		{
 			token.ThrowIfCancellationRequested();
 			// Extract PID from identity: "dbref:{executor}-{pid}"
-			var parts = key.Name.Split('-');
-			if (parts.Length == 2 && long.TryParse(parts[1], out var pid))
+			if (TryParsePid(key.Name, out var pid))
 			{
 				yield return pid;
 			}

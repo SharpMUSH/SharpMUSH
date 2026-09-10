@@ -183,8 +183,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	{
 		var lines = code.Lines.Lines?
 			.Where(line => line.Slice.Text != null)
-			.Select(line => line.Slice.ToString())
-			.ToList() ?? new List<string>();
+			.Select(line => line.Slice.ToString()) ?? [];
 
 		var codeContent = string.Join("\n", lines);
 		var args = new Dictionary<string, CallState>
@@ -215,9 +214,8 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	protected override MString RenderQuote(QuoteBlock quote)
 	{
 		var parts = quote
-			.Select(child => Render(child))
-			.Where(rendered => rendered.Length > 0)
-			.ToList();
+			.Select(Render)
+			.Where(rendered => rendered.Length > 0);
 
 		var content = MarkupText.Join(MarkupText.NewLine, parts);
 		var args = new Dictionary<string, CallState>
@@ -499,7 +497,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var name = tokens.Length > 0 ? tokens[0] : string.Empty;
 		var arguments = tokens.Length > 1 ? tokens[1] : string.Empty;
 
-		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0).ToList());
+		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0));
 
 		return Template("CONTAINER", Args(Text(name), Text(arguments), contents))
 			?? base.RenderCustomContainer(container);

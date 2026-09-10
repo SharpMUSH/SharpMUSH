@@ -117,6 +117,8 @@ public class FlowFunctionUnitTests
 	[Arguments("strfirstof(,bar,foo)", "bar")]
 	[Arguments("strfirstof(bar,,foo)", "bar")]
 	[Arguments("strfirstof(bar,baz,foo)", "bar")]
+	[Arguments("strfirstof(add(1,1),7)", "2")]
+	[Arguments("strfirstof(,add(1,1))", "2")]
 	public async Task StrFirstof(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message?.ToString();

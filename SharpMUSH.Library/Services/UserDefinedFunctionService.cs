@@ -130,7 +130,8 @@ public sealed class UserDefinedFunctionService : IUserDefinedFunctionService
 	public int ResetUnpreserved()
 	{
 		var removed = 0;
-		foreach (var entry in _functions.Values.ToArray())
+		// ConcurrentDictionary.Values is already a snapshot, so removing while iterating it is safe.
+		foreach (var entry in _functions.Values)
 		{
 			if (!entry.Preserved && _functions.TryRemove(entry.Name, out _))
 			{

@@ -11,6 +11,9 @@ to 100 and applies to the executor's owner, across that owner's objects and
 connections. Wizards and executors with Queue power add the current database
 object count (including garbage) to that owner allowance. The global ceiling
 still applies. Before login, the connection handle supplies the owner bucket.
+Host callbacks submitted without an executor or connection share the `system`
+bucket, which also obeys `player_queue_limit`. Use the executor-aware admission
+overload for player-owned work; omitting an actor never bypasses the owner cap.
 Reducing a limit does not discard existing work; new submissions are rejected
 until usage falls below the limit. Capacity rejection never waits for room in
 the queue, including when a running command submits another command.
@@ -23,8 +26,8 @@ does not need to compete for capacity a second time. Immediate work is FIFO;
 semaphore notifications and partial drains select ascending PIDs.
 
 Draining removes only work still waiting on the semaphore. A timeout that has
-already made a command runnable keeps its reservation until execution accounts
-for it. Partial drains subtract only removed waiters and preserve unused
+already made a command runnable keeps its reservation until the consumer
+finishes it. Partial drains subtract only removed waiters and preserve unused
 notification credits; a full drain also clears unused notification credits.
 
 If a failed semaphore submission cannot restore its counter, the cancelled PID

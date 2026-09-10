@@ -51,13 +51,15 @@ public static class StringDistance
 	{
 		var result = new int[count];
 		var index = 0;
+		// A cluster seen before is looked up by span; only a new one is copied out as the key.
+		var lookup = symbols.GetAlternateLookup<ReadOnlySpan<char>>();
 		foreach (var range in Graphemes.Enumerate(text))
 		{
-			var cluster = text[range];
-			if (!symbols.TryGetValue(cluster, out var symbol))
+			var cluster = text.AsSpan(range);
+			if (!lookup.TryGetValue(cluster, out var symbol))
 			{
 				symbol = symbols.Count;
-				symbols.Add(cluster, symbol);
+				lookup.TryAdd(cluster, symbol);
 			}
 			result[index++] = symbol;
 		}

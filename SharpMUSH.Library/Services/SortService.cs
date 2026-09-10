@@ -162,33 +162,12 @@ public class SortService(ILocateService locateService, IConnectionService connec
 
 			ISortService.SortType.Conn => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							player => connectionService.Get(player.Object.DBRef)
-								.FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
-								.Connected ?? TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue
-						),
+						=> await ConnectionTime(await keySelector(key, ct), conn => conn.Connected, ct),
 					direction),
 
 			ISortService.SortType.Idle => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							player => connectionService.Get(player.Object.DBRef)
-													.FirstOrDefaultAsync(ct).AsTask().GetAwaiter().GetResult()?
-													.Connected ??
-												TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue,
-							_ => TimeSpan.MaxValue
-						),
+						=> await ConnectionTime(await keySelector(key, ct), conn => conn.Idle, ct),
 					direction),
 
 			ISortService.SortType.Owner => source
@@ -254,6 +233,21 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		})
 		{
 			yield return item;
+		}
+
+		// Locates the named object and reads one of its connection's timings; anything that is not a
+		// connected player sorts last.
+		async ValueTask<TimeSpan> ConnectionTime(string name,
+			Func<IConnectionService.ConnectionData, TimeSpan?> selector, CancellationToken ct)
+		{
+			var located = await locateService.Locate(parser, executor, executor, name, LocateFlags.All);
+			if (!located.IsPlayer)
+			{
+				return TimeSpan.MaxValue;
+			}
+
+			var connection = await connectionService.Get(located.AsPlayer.Object.DBRef).FirstOrDefaultAsync(ct);
+			return connection is null ? TimeSpan.MaxValue : selector(connection) ?? TimeSpan.MaxValue;
 		}
 	}
 

@@ -143,5 +143,12 @@ public class WildcardParityTests
 		await Assert.That(SoftcodeRegex.Wildcard("tes*", caseSensitive: true).IsMatch("TEST")).IsFalse()
 			.Because("wildgrep passes cs = 1");
 		await Assert.That(SoftcodeRegex.Wildcard("tes*", caseSensitive: true).IsMatch("test")).IsTrue();
+
+		// MushText.IsWildcardMatch is the entry point strmatch(), switch() and the SearchSpec
+		// engine reach the matcher through. It used to compile Glob.ToRegex with bare Regex
+		// options, which took neither the case folding nor the backtracking guard above.
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain("TEST"), "tes*")).IsTrue();
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain("TEST"), "tes*", caseSensitive: true))
+			.IsFalse();
 	}
 }

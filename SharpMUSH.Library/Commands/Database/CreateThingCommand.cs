@@ -6,7 +6,14 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreateThingCommand(string Name, AnySharpContainer Where, SharpPlayer Owner, AnySharpContainer Home) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
+/// <summary>Creates a thing and stamps the configured default thing flags on it.</summary>
+/// <param name="ApplyDefaultFlags">
+/// Whether the configured default flags for this type are stamped on the new object. True for
+/// anything a player creates. False for a package install, where the manifest is the whole truth
+/// about the object's flags: <c>thing_flags</c> defaults to <c>no_command</c> (PennMUSH's own
+/// default), which would silently disable every <c>$</c>-command a package ships.
+/// </param>
+public record CreateThingCommand(string Name, AnySharpContainer Where, SharpPlayer Owner, AnySharpContainer Home, bool ApplyDefaultFlags = true) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Where.Object().DBRef), Definitions.CacheKeys.Object(Owner.Object.DBRef), Definitions.CacheKeys.Object(Home.Object().DBRef)];
 

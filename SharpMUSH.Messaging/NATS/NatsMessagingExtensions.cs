@@ -178,30 +178,9 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 	private string GetDurableName(Type messageType)
 	{
 		var prefix = string.IsNullOrEmpty(_groupPrefix) ? "consumer" : _groupPrefix;
-		return $"{prefix}-{GetKebabTypeName(messageType)}";
+		return $"{prefix}-{NatsSubjects.KebabName(messageType)}";
 	}
 
-	internal static string GetSubjectForMessageType(Type messageType, string subjectPrefix)
-	{
-		var typeName = messageType.Name;
-		if (typeName.EndsWith("Message", StringComparison.Ordinal))
-			typeName = typeName[..^7];
-
-		var kebabCase = string.Concat(
-			typeName.Select((c, i) => i > 0 && char.IsUpper(c) ? "-" + c : c.ToString())
-		).ToLowerInvariant();
-
-		return $"{subjectPrefix}.{kebabCase}";
-	}
-
-	private static string GetKebabTypeName(Type messageType)
-	{
-		var typeName = messageType.Name;
-		if (typeName.EndsWith("Message", StringComparison.Ordinal))
-			typeName = typeName[..^7];
-
-		return string.Concat(
-			typeName.Select((c, i) => i > 0 && char.IsUpper(c) ? "-" + c : c.ToString())
-		).ToLowerInvariant();
-	}
+	internal static string GetSubjectForMessageType(Type messageType, string subjectPrefix) =>
+		NatsSubjects.For(messageType, subjectPrefix);
 }

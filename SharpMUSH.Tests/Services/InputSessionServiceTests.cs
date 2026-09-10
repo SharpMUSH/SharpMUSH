@@ -671,6 +671,59 @@ public class InputSessionServiceTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
+	public async Task ReleaseCallbackCanControlQueueAfterSubmitterBudgetIsDisposed(bool callerSuppressesFlow)
+	{
+		var h = new Harness(); var session = await h.Start();
+		var captures = Substitute.For<IInputSessionService>();
+		await using var queue = Queue(h, captures);
+		var callback = new TaskCompletionSource<Exception?>(TaskCreationOptions.RunContinuationsAsynchronously);
+		captures.When(service => service.Discard(session)).Do(_ =>
+		{
+			try
+			{
+				queue.PausePending(long.MaxValue, "release callback probe").AsTask().GetAwaiter().GetResult();
+				callback.TrySetResult(null);
+			}
+			catch (Exception error) { callback.TrySetResult(error); }
+		});
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var finish = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var bodyHasBudget = false;
+		try
+		{
+			using (var submittingBudget = new ExecutionBudget(TimeSpan.FromSeconds(30)))
+			using (submittingBudget.Enter())
+			{
+				Func<ValueTask<CallState?>> work = async () =>
+				{
+					bodyHasBudget = ExecutionBudget.Current is not null;
+					entered.TrySetResult();
+					await finish.Task.WaitAsync(ExecutionBudget.CurrentToken);
+					return null;
+				};
+				if (callerSuppressesFlow)
+				{
+					ValueTask<SharpMUSH.Library.Models.SchedulerModels.QueueAdmissionResult> admission;
+					using (ExecutionContext.SuppressFlow()) admission = queue.AdmitWork(work, "starts-consumer", "test");
+					await admission;
+				}
+				else await queue.AdmitWork(work, "starts-consumer", "test");
+				await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			}
+			var timeout = await queue.WriteInputSessionTimeout(session);
+			await queue.HaltByPid(timeout.Pid!.Value);
+			finish.TrySetResult();
+			var error = await callback.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await Assert.That(error).IsNull();
+			await Assert.That(bodyHasBudget).IsTrue();
+			captures.Received(1).Discard(session);
+		}
+		finally { finish.TrySetResult(); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
 	public async Task HaltAndShutdownReleaseTimeoutRecordsExactlyOnceOutsideAdmissionLock(bool shutdown)
 	{
 		var h = new Harness(); var session = await h.Start();

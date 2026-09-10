@@ -279,10 +279,12 @@ public class TimePrecisionFunctionTests
 	// ---- consumers read seconds ---------------------------------------------------------------
 
 	[Test]
-	[Arguments("timestring(90)", "1m  30s")]
-	[Arguments("timestring(90.25)", "1m  30s")]
-	[Arguments("timestring(90.25,0,ms)", "1m  30.250s")]
-	[Arguments("timestring(90.5,0,f)", "1m  30.5s")]
+	[Arguments("timestring(90)", "1m 30s")]
+	[Arguments("timestring(90.25)", "1m 30s")]
+	// The fraction widens the field on its own, so only the whole part is aligned: "30.250s", not
+	// " 30.250s".
+	[Arguments("timestring(90.25,0,ms)", "1m 30.250s")]
+	[Arguments("timestring(90.5,0,f)", "1m 30.5s")]
 	public async Task TimestringReadsFractionalSecondsAndRendersAtPrecision(string code, string expected)
 		=> await Assert.That((await Eval(code)).Trim()).IsEqualTo(expected.Trim());
 
@@ -318,7 +320,7 @@ public class TimePrecisionFunctionTests
 	[Test]
 	public async Task DurationsKeepTheFull64BitSecondsRange()
 		=> await Assert.That(await Eval("timestring(9223372036854775807)"))
-			.IsEqualTo(" 106751991167300d  15h  30m  7s");
+			.IsEqualTo("106751991167300d 15h 30m  7s");
 
 	[Test]
 	[Arguments("etime(61)", "1m  1s")]

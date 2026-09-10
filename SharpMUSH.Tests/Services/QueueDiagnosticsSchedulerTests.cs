@@ -177,24 +177,51 @@ public class QueueDiagnosticsSchedulerTests
 	}
 
 	[Test]
-	public async Task TimeoutBookkeepingExpiryRecordsExecutionLimitAndTiming()
+	public async Task CancelledTimeoutAccountingRetainsObservationUntilRecovery()
 	{
 		var recorder = new QueueDiagnosticsRecorder();
-		await using var queue = Create(recorder, milliseconds: 20, scheduled: Substitute.For<IScheduler>());
+		var count = 1;
+		var block = true;
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		await queue.AdmitWork(async () => { entered.SetResult(); await release.Task; return null; }, "blocker", "test");
-		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		var result = await queue.AdmitCommandList(MarkupText.Plain("not executed"), ParserState.Empty,
+		var mediator = QueueAdmissionTests.TargetMediator();
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			new[] { new SharpAttribute("id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = MarkupText.Plain(count.ToString()) } }.ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<bool> (call) =>
+			{
+				if (block)
+				{
+					entered.TrySetResult();
+					await Task.Delay(Timeout.InfiniteTimeSpan, call.Arg<CancellationToken>());
+				}
+				count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				return true;
+			});
+		await using var queue = Create(recorder, milliseconds: 30000, scheduled: Substitute.For<IScheduler>(), mediator: mediator);
+		var result = await queue.AdmitCommandList(MarkupText.Plain("after recovery"), ParserState.Empty,
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 1);
-		await queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true);
-		using var held = await queue.EnterSemaphoreMutationAsync();
-		release.TrySetResult();
-		await HistoryCount(recorder, 2);
-		var row = recorder.Recent().Single(entry => entry.Pid == result.Pid);
-		await Assert.That(row.Outcome).IsEqualTo(QueueOutcome.ExecutionLimit);
+		using (var cancellation = new CancellationTokenSource())
+		using (var budget = new ExecutionBudget(TimeSpan.FromSeconds(30), cancellation.Token))
+		using (budget.Enter())
+		{
+			var release = queue.ReleaseScheduledWork(result.Pid!.Value, semaphoreTimeout: true).AsTask();
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			cancellation.Cancel();
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await release);
+		}
+		await Assert.That(recorder.Recent().Count).IsEqualTo(0);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await Assert.That(queue.GetQueueEntry(result.Pid!.Value)!.StartedAt).IsNotNull();
+		block = false;
+		using (await queue.EnterSemaphoreMutationAsync()) { }
+		await HistoryCount(recorder, 1);
+		var row = recorder.Recent().Single();
+		await Assert.That(row.Pid).IsEqualTo(result.Pid);
+		await Assert.That(row.Outcome).IsEqualTo(QueueOutcome.Completed);
 		await Assert.That(row.StartedAt).IsNotNull();
 		await Assert.That(row.ExecutionDuration).IsNotNull();
+		await Assert.That(count).IsEqualTo(0);
 	}
 
 	[Test]

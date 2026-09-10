@@ -1,6 +1,8 @@
+using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using MarkupString;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Markup;
 
@@ -14,7 +16,7 @@ namespace SharpMUSH.Library.Markup;
 /// behaviours, and nothing about <see cref="MarkupText"/> implies them.
 /// </para>
 /// </summary>
-public static partial class MushText
+public static class MushText
 {
 	/// <summary>The generic MUSH error return, <c>#-1</c>.</summary>
 	public static readonly MarkupText Error = MarkupText.Plain("#-1");
@@ -78,20 +80,8 @@ public static partial class MushText
 	/// <summary>
 	/// Compiles MUSH glob patterns (<c>*</c>, <c>?</c>, with <c>\</c> escaping either) to .NET regex.
 	/// </summary>
-	public static partial class Glob
+	public static class Glob
 	{
-		[GeneratedRegex(@"(?<!\\)\\\*")]
-		private static partial Regex StarPattern();
-
-		[GeneratedRegex(@"(?<!\\)\\\?")]
-		private static partial Regex QuestionPattern();
-
-		[GeneratedRegex(@"\\\\\\\*")]
-		private static partial Regex EscapedStarPattern();
-
-		[GeneratedRegex(@"\\\\\\\?")]
-		private static partial Regex EscapedQuestionPattern();
-
 		/// <summary>
 		/// Inline single-line mode, so the <c>.</c> that <c>*</c> and <c>?</c> compile to also matches
 		/// a newline.
@@ -107,16 +97,49 @@ public static partial class MushText
 		/// </remarks>
 		private const string SingleLineMode = "(?s)";
 
+		/// <summary>The characters <see cref="Regex.Escape"/> puts a backslash in front of.</summary>
+		private static readonly SearchValues<char> Metacharacters = SearchValues.Create("\t\n\f\r #$()*+.?[\\^{|");
+
 		/// <summary>The anchored regex equivalent to the glob <paramref name="pattern"/>.</summary>
+		/// <remarks>
+		/// The pattern is cut at every metacharacter; the text between them is literal and each
+		/// metacharacter is spelled from its neighbours alone: a wildcard becomes a capture group unless
+		/// a backslash precedes it, a backslash is an escape only when a wildcard follows it, and every
+		/// other one is escaped the way <see cref="Regex.Escape"/> escapes it.
+		/// </remarks>
 		public static string ToRegex(string pattern)
 		{
 			ArgumentNullException.ThrowIfNull(pattern);
-			var escaped = $"^{Regex.Escape(pattern)}$";
-			escaped = StarPattern().Replace(escaped, "(.*?)");
-			escaped = QuestionPattern().Replace(escaped, "(.)");
-			escaped = EscapedStarPattern().Replace(escaped, @"\*");
-			escaped = EscapedQuestionPattern().Replace(escaped, @"\?");
-			return SingleLineMode + escaped;
+			var pieces = new List<string> { SingleLineMode, "^" };
+			foreach (var literal in pattern.AsSpan().SplitAny(Metacharacters))
+			{
+				pieces.Add(pattern[literal]);
+				if (literal.End.Value < pattern.Length)
+				{
+					pieces.Add(Metacharacter(pattern, literal.End.Value));
+				}
+			}
+
+			pieces.Add("$");
+			return string.Concat(pieces);
+		}
+
+		/// <summary>The regex text for the metacharacter at <paramref name="at"/> in <paramref name="pattern"/>.</summary>
+		private static string Metacharacter(string pattern, int at)
+		{
+			var escaped = at > 0 && pattern[at - 1] == '\\';
+			var escaping = at + 1 < pattern.Length && pattern[at + 1] is '*' or '?';
+			return pattern[at] switch
+			{
+				'*' => escaped ? "*" : "(.*?)",
+				'?' => escaped ? "?" : "(.)",
+				'\\' => escaping ? @"\" : @"\\",
+				'\n' => @"\n",
+				'\r' => @"\r",
+				'\t' => @"\t",
+				'\f' => @"\f",
+				var c => $@"\{c}",
+			};
 		}
 	}
 
@@ -125,8 +148,23 @@ public static partial class MushText
 		IsWildcardMatch(input, pattern.ToPlainText());
 
 	/// <summary>Whether <paramref name="input"/> matches the glob <paramref name="pattern"/>.</summary>
-	public static bool IsWildcardMatch(MarkupText input, string pattern) =>
-		Regex.IsMatch(input.ToPlainText(), Glob.ToRegex(pattern));
+	/// <remarks>
+	/// Through <see cref="SoftcodeRegex.Wildcard"/>, which is where the two properties of a MUSH
+	/// wildcard live that <c>Glob.ToRegex</c> deliberately leaves out of the pattern string: case
+	/// folding, and the non-backtracking engine for a multi-star glob. Compiling the translated
+	/// pattern here with bare <see cref="Regex"/> options got neither, so <c>strmatch()</c> and
+	/// <c>switch()</c> were case-SENSITIVE — PennMUSH's <c>wild_match_test</c> is called with
+	/// <c>cs = 0</c> from both (<c>src/wild.c</c>) — and a pattern like <c>*a*a*a*b</c> could
+	/// backtrack for seconds.
+	/// </remarks>
+	/// <param name="caseSensitive">
+	/// PennMUSH takes this as an argument to <c>wild_match_test</c> rather than baking it into the
+	/// pattern. <c>quick_wild</c> passes 0 — <c>strmatch()</c>, <c>switch()</c>, <c>$</c>-commands
+	/// and <c>@listen</c> — and that is the default. <c>grep_util</c> passes 1, which is what
+	/// <c>wildgrep()</c> wants.
+	/// </param>
+	public static bool IsWildcardMatch(MarkupText input, string pattern, bool caseSensitive = false) =>
+		SoftcodeRegex.Wildcard(pattern, caseSensitive: caseSensitive).IsMatch(input.ToPlainText());
 
 	/// <summary>
 	/// Every match of the regex <paramref name="pattern"/> in <paramref name="input"/>, paired with
@@ -134,9 +172,9 @@ public static partial class MushText
 	/// </summary>
 	public static IEnumerable<(Match Match, IEnumerable<MarkupText> Groups)> GetMatches(MarkupText input, string pattern)
 	{
-		foreach (var match in Regex.Matches(input.ToPlainText(), pattern).Cast<Match>())
+		foreach (Match match in Regex.Matches(input.ToPlainText(), pattern))
 		{
-			var groups = match.Groups.Cast<Group>().Select(g => input.Substring(g.Index, g.Length));
+			var groups = match.Groups.Values.Select(g => input.Substring(g.Index, g.Length));
 			yield return (match, groups);
 		}
 	}
@@ -145,7 +183,17 @@ public static partial class MushText
 	public static IEnumerable<(Match Match, IEnumerable<MarkupText> Groups)> GetRegexpMatches(
 		MarkupText input, MarkupText pattern) => GetMatches(input, pattern.ToPlainText());
 
-	/// <summary>As <see cref="GetMatches(MarkupText, string)"/>, for a glob pattern.</summary>
+	/// <summary>
+	/// As <see cref="GetMatches(MarkupText, string)"/>, for a glob pattern — case-insensitive and
+	/// backtracking-guarded, for the reasons on <see cref="IsWildcardMatch(MarkupText, string)"/>.
+	/// </summary>
 	public static IEnumerable<(Match Match, IEnumerable<MarkupText> Groups)> GetWildcardMatches(
-		MarkupText input, MarkupText pattern) => GetMatches(input, Glob.ToRegex(pattern.ToPlainText()));
+		MarkupText input, MarkupText pattern)
+	{
+		var plain = input.ToPlainText();
+		foreach (var match in SoftcodeRegex.Wildcard(pattern.ToPlainText()).Matches(plain).Cast<Match>())
+		{
+			yield return (match, match.Groups.Cast<Group>().Select(g => input.Substring(g.Index, g.Length)));
+		}
+	}
 }

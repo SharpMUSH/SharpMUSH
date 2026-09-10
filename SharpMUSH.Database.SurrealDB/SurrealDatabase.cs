@@ -94,24 +94,30 @@ public partial class SurrealDatabase(
 
 	private static int ExtractKey(string id)
 	{
-		var parts = id.Split('/');
-		if (parts.Length < 2 || !int.TryParse(parts[1], out var key))
+		if (!int.TryParse(SecondSegment(id), out var key))
 			throw new ArgumentException($"Invalid ID format: '{id}'. Expected 'Label/numericKey'.", nameof(id));
 		return key;
 	}
 
-	private static string ExtractKeyString(string id) => id.Split('/')[1];
+	private static string ExtractKeyString(string id) => SecondSegment(id).ToString();
+
+	/// <summary>The text between the first and second <c>/</c> of a typed id (<c>Attribute/5_FOO</c> → <c>5_FOO</c>); empty when there is no <c>/</c>.</summary>
+	private static ReadOnlySpan<char> SecondSegment(string id)
+	{
+		Span<System.Range> segments = stackalloc System.Range[3];
+		return id.AsSpan().Split(segments, '/') < 2 ? [] : id.AsSpan()[segments[1]];
+	}
 
 	/// <summary>
 	/// Extracts the SurrealDB table name from a typed ID like "Player/42" → "player".
 	/// </summary>
 	private static string ExtractTable(string typedId)
 	{
-		var parts = typedId.Split('/');
-		if (parts.Length < 2 || string.IsNullOrWhiteSpace(parts[0]))
+		Span<System.Range> segments = stackalloc System.Range[2];
+		if (typedId.AsSpan().Split(segments, '/') < 2 || typedId.AsSpan()[segments[0]].IsWhiteSpace())
 			throw new ArgumentException($"Invalid ID format: '{typedId}'. Expected 'Label/key'.", nameof(typedId));
 
-		return parts[0].ToLowerInvariant();
+		return typedId[segments[0]].ToLowerInvariant();
 	}
 
 	private const string AttributeChildrenByParentQuery =
@@ -197,23 +203,7 @@ public partial class SurrealDatabase(
 		IReadOnlyDictionary<string, object?> parameters,
 		CancellationToken ct = default)
 	{
-		// Replace $param references with their serialized values inline.
-		// Special handling: when $param appears inside ⟨...⟩ (record ID context),
-		// use the raw value without string quotes.
-		var expandedQuery = query;
-		foreach (var kvp in parameters.OrderByDescending(k => k.Key.Length))
-		{
-			var paramToken = $"${kvp.Key}";
-			var serialized = SerializeValue(kvp.Value);
-			var rawValue = SerializeValueRaw(kvp.Value);
-
-			expandedQuery = System.Text.RegularExpressions.Regex.Replace(
-				expandedQuery,
-				$@"⟨([^⟩]*?){Regex.Escape(paramToken)}([^⟩]*?)⟩",
-				m => $"⟨{m.Groups[1].Value}{rawValue}{m.Groups[2].Value}⟩");
-
-			expandedQuery = expandedQuery.Replace(paramToken, serialized);
-		}
+		var expandedQuery = ExpandParameters(query, parameters);
 
 		// Log the query template (not the expanded query) to avoid leaking sensitive parameter values
 		logger.LogDebug("Executing SurrealQL: {Query}", query);
@@ -224,6 +214,60 @@ public partial class SurrealDatabase(
 		}
 		return response;
 	}
+
+	/// <summary>
+	/// Inlines every <c>$name</c> of <paramref name="parameters"/> into <paramref name="query"/> in one pass.
+	/// A token inside <c>⟨…⟩</c> (a record id) takes the raw value, one anywhere else the quoted SurrealQL
+	/// literal. A substituted value is never rescanned: an attribute value or mail body that happens to
+	/// contain <c>$key</c> is stored as written, not spliced with another parameter. Where one parameter's
+	/// name is a prefix of another's (<c>$key</c>, <c>$keyName</c>) the longer name wins, so neither can
+	/// clobber the other. Text that starts with <c>$</c> and matches no parameter — SurrealQL's own
+	/// variables, <c>$parent</c>, <c>$candidates</c> — is left alone.
+	/// </summary>
+	internal static string ExpandParameters(string query, IReadOnlyDictionary<string, object?> parameters)
+	{
+		if (parameters.Count == 0 || !query.Contains('$'))
+		{
+			return query;
+		}
+
+		var names = parameters.Keys.OrderByDescending(name => name.Length).ToArray();
+		var text = query.AsSpan();
+		var pieces = new List<string>();
+		var inRecordId = false;
+
+		// Every segment after the first begins right after a `$`.
+		foreach (var range in text.Split('$'))
+		{
+			var segment = query[range];
+			if (range.Start.Value == 0)
+			{
+				pieces.Add(segment);
+			}
+			else if (ParameterNameAtStart(segment, names) is { } name)
+			{
+				pieces.Add(inRecordId ? SerializeValueRaw(parameters[name]) : SerializeValue(parameters[name]));
+				pieces.Add(segment[name.Length..]);
+			}
+			else
+			{
+				pieces.Add(string.Concat("$", segment));
+			}
+
+			// Only the query's own text opens or closes a record id, never a substituted value.
+			var bracket = segment.AsSpan().LastIndexOfAny('⟨', '⟩');
+			if (bracket >= 0)
+			{
+				inRecordId = segment[bracket] == '⟨';
+			}
+		}
+
+		return string.Concat(pieces);
+	}
+
+	/// <summary>The longest parameter name <paramref name="segment"/> starts with, or null.</summary>
+	private static string? ParameterNameAtStart(string segment, string[] namesLongestFirst) =>
+		namesLongestFirst.FirstOrDefault(name => segment.StartsWith(name, StringComparison.Ordinal));
 
 	/// <summary>
 	/// Serializes a value to a SurrealQL literal string (with quotes for strings).
@@ -272,6 +316,10 @@ public partial class SurrealDatabase(
 	}
 
 
+	/// <summary>
+	/// Serialises the loaded lock map. Its keys are already canonical and unique under
+	/// <see cref="LockNames.Comparer"/>, so the plain <c>ToDictionary</c> here cannot collide.
+	/// </summary>
 	private static string SerializeLocks(IImmutableDictionary<string, SharpLockData>? locks)
 	{
 		if (locks == null || locks.Count == 0) return "{}";
@@ -281,33 +329,38 @@ public partial class SurrealDatabase(
 		return JsonSerializer.Serialize(dict, JsonOptions);
 	}
 
-	private static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
+	/// <summary>
+	/// Canonicalises the stored lock names and folds any collision, so a world written before the
+	/// names were canonical loads with one entry per lock under the spelling the gates read. The
+	/// intermediate dictionary is deliberately ordinal: the stored JSON may hold two spellings of
+	/// one lock, and deserialising straight into a case-insensitive map would throw on it. See
+	/// <see cref="LockNames.Fold{TValue}"/> for which entry survives.
+	/// </summary>
+	internal static IImmutableDictionary<string, SharpLockData> DeserializeLocks(string? json)
 	{
 		if (string.IsNullOrEmpty(json) || json == "{}")
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		try
 		{
 			var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, JsonOptions);
-			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty;
-			var builder = ImmutableDictionary.CreateBuilder<string, SharpLockData>();
-			foreach (var kvp in dict)
-			{
-				var lockString = kvp.Value.GetProperty("LockString").GetString() ?? "";
-				var flagsStr = kvp.Value.TryGetProperty("Flags", out var flagsProp) ? flagsProp.GetString() : null;
-				var flags = Library.Services.LockService.LockFlags.Default;
-				if (!string.IsNullOrEmpty(flagsStr))
-				{
-					if (!Enum.TryParse<Library.Services.LockService.LockFlags>(flagsStr, out flags))
-						flags = Library.Services.LockService.LockFlags.Default;
-				}
-				builder[kvp.Key] = new SharpLockData(lockString, flags);
-			}
-			return builder.ToImmutable();
+			if (dict == null) return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
+			return LockNames.FoldToImmutable(dict, DeserializeLock);
 		}
 		catch
 		{
-			return ImmutableDictionary<string, SharpLockData>.Empty;
+			return ImmutableDictionary<string, SharpLockData>.Empty.WithComparers(LockNames.Comparer);
 		}
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private static SharpLockData DeserializeLock(JsonElement element)
+	{
+		var lockString = element.GetProperty("LockString").GetString() ?? string.Empty;
+		var flagsStr = element.TryGetProperty("Flags", out var flagsProp) ? flagsProp.GetString() : null;
+		var flags = !string.IsNullOrEmpty(flagsStr) && Enum.TryParse<Library.Services.LockService.LockFlags>(flagsStr, out var parsed)
+			? parsed
+			: Library.Services.LockService.LockFlags.Default;
+		return new SharpLockData(lockString, flags);
 	}
 
 	private SharpObject MapRecordToSharpObject(ObjectRecord record)
