@@ -1,3 +1,9 @@
+using NSubstitute;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using SharpMUSH.Server.Controllers;
 using Mediator;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +21,50 @@ public class QueueDiagnosticsCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
+
+	[Test]
+	[Arguments("@ps/history", true)]
+	[Arguments("@profile", true)]
+	[Arguments("http", true)]
+	[Arguments("http", false)]
+	public async Task UnsupportedSchedulerDiagnosticsRemainAuthorized(string path, bool allowed)
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known().Object().DBRef;
+		var actor = new CapabilityActor("diagnostics", full, full);
+		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
+		capabilities.GetGameActorAsync(full, Arg.Any<CancellationToken>()).Returns(actor);
+		capabilities.GetGrantedScopesAsync(actor, Arg.Any<CancellationToken>()).Returns(
+			new HashSet<string>(allowed ? [PortalPermission.QueueInspect, PortalPermission.DiagnosticsProfile] : []));
+		var scheduler = Substitute.For<ITaskScheduler>();
+		scheduler.EnumerateQueueEntries().Returns(_ => throw new NotSupportedException("legacy scheduler"));
+		var queues = new QueueControlService(scheduler, capabilities, mediator, Factory.Services.GetRequiredService<IPermissionService>());
+		var diagnostics = new QueueDiagnosticsService(new QueueDiagnosticsRecorder(), queues, NullLogger<QueueDiagnosticsService>.Instance);
+		if (path == "http")
+		{
+			var controller = new QueueDiagnosticsController(diagnostics)
+			{
+				ControllerContext = new ControllerContext
+				{
+					HttpContext = new DefaultHttpContext
+					{ User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "diagnostics")], "test")) }
+				}
+			};
+			var response = await controller.Inspect(full.ToString());
+			var status = response is ObjectResult obj ? obj.StatusCode : ((StatusCodeResult)response).StatusCode;
+			await Assert.That(status).IsEqualTo(allowed ? 501 : 403);
+			if (!allowed) scheduler.DidNotReceive().EnumerateQueueEntries();
+			return;
+		}
+		var provider = Substitute.For<IServiceProvider>();
+		provider.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IQueueDiagnosticsService) ? diagnostics
+			: call.Arg<Type>() == typeof(IAdministrativeCapabilityService) ? capabilities : Factory.Services.GetService(call.Arg<Type>()));
+		var original = (SharpMUSH.Implementation.MUSHCodeParser)Factory.CommandParser;
+		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, original.FunctionLibrary,
+			original.CommandLibrary, original.Configuration, provider);
+		var result = await parser.CommandParse(1, Factory.Services.GetRequiredService<IConnectionService>(), MarkupText.Plain(path));
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 DIAGNOSTICS UNSUPPORTED");
+	}
 
 	[Test]
 	public async Task MetadataExposesProfileArgumentsAndHistorySwitch()

@@ -103,7 +103,8 @@
             using var response = await HttpFactory.CreateClient("api").GetAsync($"api/diagnostics?{Query}&limit=50" +
                 (cursor is null ? "" : $"&beforeCursor={cursor}"));
             if (response.IsSuccessStatusCode) _report = await response.Content.ReadFromJsonAsync<QueueDiagnosticsReport>();
-            else _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied" : "DiagError";
+            else _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied"
+                : response.StatusCode == System.Net.HttpStatusCode.NotImplemented ? "DiagUnsupported" : "DiagError";
         }
         catch (HttpRequestException) { _error = "DiagError"; }
         catch (System.Text.Json.JsonException) { _error = "DiagError"; }
@@ -128,7 +129,8 @@
             if (!response.IsSuccessStatusCode)
             {
                 _report = null;
-                _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied" : "DiagError";
+                _error = response.StatusCode == System.Net.HttpStatusCode.Forbidden ? "DiagDenied"
+                : response.StatusCode == System.Net.HttpStatusCode.NotImplemented ? "DiagUnsupported" : "DiagError";
                 return;
             }
             await Refresh();

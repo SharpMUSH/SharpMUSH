@@ -18,6 +18,7 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 	private sealed class Api : HttpMessageHandler
 	{
 		public bool Denied;
+		public bool Unsupported;
 		public bool CanProfile;
 		public bool Recording;
 		public string? StartBody;
@@ -31,6 +32,7 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 				{ Content = JsonContent.Create(new[] { new AccountAuthService.CharacterSummary(7, 123, "Linked", "") }) };
 			LastQuery = request.RequestUri.Query;
 			if (Denied) return new(HttpStatusCode.Forbidden);
+			if (Unsupported) return new(HttpStatusCode.NotImplemented);
 			if (request.Method == HttpMethod.Post)
 			{
 				StartBody = await request.Content!.ReadAsStringAsync(ct);
@@ -93,16 +95,19 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task RevokedInspectionClearsPreviouslyVisibleRows()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task UnavailableInspectionClearsPreviouslyVisibleRows(bool unsupported)
 	{
 		var api = Setup(); var cut = Render<QueueDiagnostics>();
 		cut.WaitForAssertion(() => cut.Find("option[value='#7:123']"));
 		await cut.Find("select").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "#7:123" });
 		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(1);
-		api.Denied = true;
+		api.Denied = !unsupported;
+		api.Unsupported = unsupported;
 		await cut.FindAll("button").Single(button => button.TextContent == "Refresh").ClickAsync(new());
 		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(0);
-		await Assert.That(cut.Find("[role=alert]").TextContent).IsEqualTo("DiagDenied");
+		await Assert.That(cut.Find("[role=alert]").TextContent).IsEqualTo(unsupported ? "DiagUnsupported" : "DiagDenied");
 	}
 	[Test]
 	public async Task ProfileControlsSendFullCharacterAndRenderStoppedResults()

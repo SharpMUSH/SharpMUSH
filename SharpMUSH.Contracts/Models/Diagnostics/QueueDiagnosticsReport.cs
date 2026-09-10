@@ -1,6 +1,6 @@
 namespace SharpMUSH.Library.Models.Diagnostics;
 
-public enum DiagnosticsError { PermissionDenied, InvalidRequest, InvalidDuration, CapacityExceeded, NotFound }
+public enum DiagnosticsError { PermissionDenied, InvalidRequest, InvalidDuration, CapacityExceeded, NotFound, Unsupported }
 
 public sealed record DiagnosticQueueRow(long? Pid, string? Source, string? Owner,
 	string Kind, string Status, string? SourceAttribute, DateTimeOffset? EnqueuedAt,
