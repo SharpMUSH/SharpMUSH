@@ -16,6 +16,7 @@ public partial class Functions
 	[SharpFunction(Name = "chain", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
 	public async ValueTask<CallState> Chain(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var attrListStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
@@ -26,7 +27,7 @@ public partial class Functions
 
 		if (tokens.Length == 0)
 		{
-			return new CallState(accumulator);
+			return errors.Complete(new CallState(accumulator));
 		}
 
 		// Fixed side-arguments: chain(<list>, <base>, <arg0>, <arg1>, ...) exposes <arg0> as %1, <arg1> as
@@ -52,7 +53,7 @@ public partial class Functions
 			{
 				if (objAttr is { IsT1: true, AsT1: false })
 				{
-					return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+					return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 				}
 
 				var (dbref, attrName) = objAttr.AsT0;
@@ -62,7 +63,7 @@ public partial class Functions
 					parser, executor, executor, dbref, LocateFlags.All);
 				if (!locate.IsValid())
 				{
-					return CallState.Empty;
+					return errors.Complete(CallState.Empty);
 				}
 
 				var located = locate.WithoutError().WithoutNone();
@@ -71,12 +72,12 @@ public partial class Functions
 					executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 				if (maybeAttr.IsNone)
 				{
-					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+					return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 				}
 
 				if (maybeAttr.IsError)
 				{
-					return new CallState(maybeAttr.AsError.Value);
+					return errors.Complete(new CallState(maybeAttr.AsError.Value));
 				}
 
 				var attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -93,7 +94,7 @@ public partial class Functions
 					EnvironmentRegisters = env
 				});
 
-				accumulator = (await stepParser.FunctionParse(attrValue))!.Message!;
+				accumulator = errors.Record(await stepParser.FunctionParse(attrValue));
 
 				// A step called ibreak(): stop the pipeline and return the value produced so far.
 				if (wrappedIteration.Break)
@@ -107,6 +108,6 @@ public partial class Functions
 			parser.CurrentState.IterationRegisters.TryPop(out _);
 		}
 
-		return new CallState(accumulator);
+		return errors.Complete(new CallState(accumulator));
 	}
 }

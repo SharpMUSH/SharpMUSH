@@ -34,7 +34,24 @@ public static class SearchSpecEngine
 		DBRef? ownerFilter,
 		IReadOnlyList<SearchPair> pairs,
 		bool useRegex)
+		=> (await ExecuteResultAsync(parser, mediator, locateService, attributeService, booleanExpressionParser,
+			permissionService, executor, ownerFilter, pairs, useRegex)).Matches;
+
+	public readonly record struct SearchResult(IReadOnlyList<SharpObject> Matches, bool HadErrors);
+
+	public static async ValueTask<SearchResult> ExecuteResultAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		ILocateService locateService,
+		IAttributeService attributeService,
+		IBooleanExpressionParser booleanExpressionParser,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		DBRef? ownerFilter,
+		IReadOnlyList<SearchPair> pairs,
+		bool useRegex)
 	{
+		var hadErrors = false;
 		var types = new List<string>();
 		var namePattern = (string?)null;
 		int? minDbRef = null;
@@ -205,7 +222,7 @@ public static class SearchSpecEngine
 
 		if (!needsPerObjectEvaluation)
 		{
-			return await filteredObjects.ToListAsync();
+			return new SearchResult(await filteredObjects.ToListAsync(), false);
 		}
 
 		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
@@ -249,6 +266,7 @@ public static class SearchSpecEngine
 					var expression = evalExpression.Replace("##", objectDbRefNum);
 
 					var evalResult = await parser.FunctionParse(MarkupText.Plain(expression));
+					hadErrors |= evalResult?.HadErrors == true;
 					if (evalResult == null || !evalResult.Message.Truthy(parser))
 					{
 						matches = false;
@@ -338,7 +356,7 @@ public static class SearchSpecEngine
 			finalResults = [.. finalResults.Skip(skipCount).Take(takeCount)];
 		}
 
-		return finalResults;
+		return new SearchResult(finalResults, hadErrors);
 	}
 
 	/// <summary>

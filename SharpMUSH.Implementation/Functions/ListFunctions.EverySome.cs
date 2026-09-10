@@ -30,11 +30,12 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> EverySomeInternal(IMUSHCodeParser parser, bool isEvery)
 	{
+		var errors = new ListEvaluationErrors();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var rawAttrArg = parser.CurrentState.Arguments["0"].Message!;
 		var rawAttrStr = rawAttrArg.ToPlainText();
 
-		var delim = await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 2, MarkupText.Space);
+		var delim = await errors.DefaultArgumentAsync(parser, 2, MarkupText.Space);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
 
 		string? registerName = null;
@@ -52,10 +53,10 @@ public partial class Functions
 		{
 			if (registerName is not null && !parser.CurrentState.AddRegister(registerName.ToUpper(), MarkupText.Empty))
 			{
-				return new CallState(ErrorMessages.Returns.BadRegName);
+				return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 			}
 
-			return new CallState(isEvery ? "1" : "0");
+			return errors.Complete(new CallState(isEvery ? "1" : "0"));
 		}
 
 		var failures = new List<MString>();
@@ -70,9 +71,9 @@ public partial class Functions
 			// matching the non-lambda branch below.
 			foreach (var item in list)
 			{
-				var result = await AttributeService.EvaluateAttributeFunctionAsync(
+				var result = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
 					parser, executor, rawAttrArg,
-					new Dictionary<string, CallState> { { "0", new CallState(item) } });
+					new Dictionary<string, CallState> { { "0", new CallState(item) } }));
 
 				if (result.Truthy(parser))
 				{
@@ -102,7 +103,7 @@ public partial class Functions
 			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
 			if (objAttr is { IsT1: true, AsT1: false })
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
 			var (dbref, attrName) = objAttr.AsT0;
@@ -112,7 +113,7 @@ public partial class Functions
 				parser, executor, executor, dbref, LocateFlags.All);
 			if (!locate.IsValid())
 			{
-				return CallState.Empty;
+				return errors.Complete(CallState.Empty);
 			}
 
 			var located = locate.WithoutError().WithoutNone();
@@ -121,12 +122,12 @@ public partial class Functions
 				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
 			if (maybeAttr.IsNone)
 			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
 			}
 
 			if (maybeAttr.IsError)
 			{
-				return new CallState(maybeAttr.AsError.Value);
+				return errors.Complete(new CallState(maybeAttr.AsError.Value));
 			}
 
 			var attrValue = maybeAttr.AsAttribute.Last().Value;
@@ -139,7 +140,7 @@ public partial class Functions
 					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
 				});
 
-				if ((await newParser.FunctionParse(attrValue))!.Message!.Truthy(parser))
+				if (errors.Record(await newParser.FunctionParse(attrValue)).Truthy(parser))
 				{
 					sawPass = true;
 
@@ -166,11 +167,11 @@ public partial class Functions
 		if (registerName is not null && !parser.CurrentState.AddRegister(
 			registerName.ToUpper(), MarkupText.Join(delim, failures)))
 		{
-			return new CallState(ErrorMessages.Returns.BadRegName);
+			return errors.Complete(new CallState(ErrorMessages.Returns.BadRegName));
 		}
 
-		return new CallState(isEvery
+		return errors.Complete(new CallState(isEvery
 			? sawFail ? "0" : "1"
-			: sawPass ? "1" : "0");
+			: sawPass ? "1" : "0"));
 	}
 }

@@ -2787,9 +2787,9 @@ public partial class Commands
 				_ => MarkupText.Plain($"{executor.Object().Name} types --> {actionList}"),
 				INotifyService.NotificationType.Emit);
 
-			await parser.CommandListParse(MarkupText.Plain(actionList));
+			var result = await parser.CommandListParse(MarkupText.Plain(actionList));
 
-			return CallState.Empty;
+			return CallState.Empty with { HadErrors = result?.HadErrors == true };
 		}
 
 		if (!args.ContainsKey("0"))
@@ -2805,9 +2805,9 @@ public partial class Commands
 			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
 			INotifyService.NotificationType.Emit);
 
-		await parser.CommandParse(MarkupText.Plain(command));
+		var commandResult = await parser.CommandParse(MarkupText.Plain(command));
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = commandResult.HadErrors };
 	}
 
 	[SharpCommand(Name = "UNFOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,

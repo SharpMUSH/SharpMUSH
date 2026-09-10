@@ -1,5 +1,6 @@
 ﻿using OneOf;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.InputSessions;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -210,6 +211,9 @@ public interface ITaskScheduler
 		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
 	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+	/// <summary>Admit an expired input callback under its initiating executor and normal queue budget.</summary>
+	ValueTask<QueueAdmissionResult> WriteInputSessionTimeout(InputSession session)
+		=> throw new NotSupportedException("This scheduler does not support guided input callbacks.");
 	IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
 		=> throw new NotSupportedException("This scheduler does not support queue control.");
 	QueueEntrySnapshot? GetQueueEntry(long pid)

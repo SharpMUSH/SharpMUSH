@@ -15,6 +15,16 @@ public static class FunctionDispatcher
 	public static async ValueTask<CallState> InvokeAsync(IMUSHCodeParser parser, FunctionDefinition definition,
 		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount = null, bool permissionsChecked = false, bool deferredArguments = false)
 	{
+		var result = await InvokeCoreAsync(parser, definition, executor, sideEffects, notify, logger,
+			argumentCount, permissionsChecked, deferredArguments);
+		return parser.CurrentState.Arguments.Values.Any(argument => argument.HadErrors)
+			? result with { HadErrors = true } : result;
+	}
+
+	private static async ValueTask<CallState> InvokeCoreAsync(IMUSHCodeParser parser, FunctionDefinition definition,
+		AnySharpObject? executor, bool sideEffects, INotifyService notify, ILogger logger, int? argumentCount,
+		bool permissionsChecked, bool deferredArguments)
+	{
 		EvaluationRestrictions.Demand(definition, parser.CurrentState.Restrictions);
 		var attribute = definition.Attribute;
 		var flags = attribute.Flags;
@@ -76,14 +86,19 @@ public static class FunctionDispatcher
 			// Rebind lazy argument evaluation to this scope instead of the caller's visitor.
 			localized = localized.Push(localized.CurrentState with
 			{
-				Arguments = localized.CurrentState.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value with
+				Arguments = localized.CurrentState.Arguments.ToDictionary(pair => pair.Key, pair =>
 				{
-					ParsedMessage = async () =>
+					async ValueTask<CallState?> Evaluate()
 					{
-						var message = (await localized.FunctionParse(pair.Value.Message ?? MarkupText.Empty))?.Message;
+						var result = await localized.FunctionParse(pair.Value.Message ?? MarkupText.Empty) ?? CallState.Empty;
 						return flags.HasFlag(FunctionFlags.StripAnsi)
-							? MarkupText.Plain(message?.ToPlainText() ?? "") : message;
+							? result with { Message = MarkupText.Plain(result.Message?.ToPlainText() ?? "") } : result;
 					}
+					return pair.Value with
+					{
+						ParsedResult = Evaluate,
+						ParsedMessage = async () => (await Evaluate())?.Message
+					};
 				})
 			});
 		}

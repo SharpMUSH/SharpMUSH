@@ -128,6 +128,18 @@
   <data name="SocksetInvalidDescriptor" xml:space="preserve">
     <value>Descripteur invalide.</value>
   </data>
+  <data name="InputSessionCancelled" xml:space="preserve">
+    <value>Session de saisie annulée. Les commandes ordinaires sont disponibles.</value>
+  </data>
+  <data name="InputSessionInputTooLarge" xml:space="preserve">
+    <value>La saisie est trop longue. La session reste active ; utilisez @input/cancel pour la quitter.</value>
+  </data>
+  <data name="InputSessionRevoked" xml:space="preserve">
+    <value>La session de saisie a pris fin car les autorisations du rappel ou l’identité du personnage ont changé.</value>
+  </data>
+  <data name="InputSessionTimeoutRejected" xml:space="preserve">
+    <value>La session de saisie a expiré. Son rappel d’expiration n’a pas pu être mis en file.</value>
+  </data>
   <data name="QueueControlSyntax" xml:space="preserve"><value>Utilisez @queue/list [pid], @queue/pause pid=raison ou @queue/resume pid ; ajoutez /owner ou /object pour un groupe cible.</value></data>
   <data name="QueueControlBadReason" xml:space="preserve"><value>Une raison de pause doit contenir au plus 160 caractères, sans caractères de contrôle.</value></data>
   <data name="QueueControlOutcome" xml:space="preserve"><value>PID {0} : {1}.</value></data>

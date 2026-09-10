@@ -20,22 +20,27 @@ public partial class Functions
 			: "0");
 
 	[SharpFunction(Name = "cand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
-	public async ValueTask<CallState> CancellingAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
-			.ToAsyncEnumerable()
-			.AllAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Truthy(parser))
-			? "1"
-			: "0";
+	public ValueTask<CallState> CancellingAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: true);
 
 	[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
-	public async ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
-			.ToAsyncEnumerable()
-			.AnyAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Truthy(parser))
-			? "1"
-			: "0";
+	public ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: false, truthy: true);
+
+	private static async ValueTask<CallState> EvaluateLazyBoolean(IMUSHCodeParser parser,
+		IEnumerable<CallState> arguments, bool all, bool truthy)
+	{
+		var hadErrors = false;
+		async ValueTask<bool> Test(CallState argument, CancellationToken _)
+		{
+			var parsed = await parser.FunctionParse(argument.Message!) ?? CallState.Empty;
+			hadErrors |= parsed.HadErrors;
+			return truthy ? parsed.Message.Truthy(parser) : parsed.Message.Falsy(parser);
+		}
+		var values = arguments.ToAsyncEnumerable();
+		var result = all ? await values.AllAsync(Test) : await values.AnyAsync(Test);
+		return new CallState(result) { HadErrors = hadErrors };
+	}
 
 	[SharpFunction(Name = "eq", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.DecimalsOnly, ParameterNames = ["value1", "value2"])]
 	public ValueTask<CallState> ExactEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -70,16 +75,8 @@ public partial class Functions
 			: "0");
 
 	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
-	public async ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await parser.CurrentState.ArgumentsOrdered
-			.Select(x => x.Value.Message!)
-			.ToAsyncEnumerable()
-			.AnyAsync(async (m, _) =>
-			{
-				var parsed = await parser.FunctionParse(m);
-				return parsed!.Message.Falsy(parser);
-			})
-			? "1" : "0";
+	public ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: false, truthy: false);
 
 	[SharpFunction(Name = "ncand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -99,13 +96,8 @@ public partial class Functions
 			: "0");
 
 	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
-	public async ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
-			.ToAsyncEnumerable()
-			.AllAsync(async (m, _) => (await parser.FunctionParse(m))!.Message.Falsy(parser))
-			? "1"
-			: "0";
+	public ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: false);
 
 	[SharpFunction(Name = "not", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1, ParameterNames = ["boolean"])]
 	public ValueTask<CallState> Not(IMUSHCodeParser parser, SharpFunctionAttribute _2)

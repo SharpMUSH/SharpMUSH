@@ -183,6 +183,7 @@ public static class MessageHelpers
 		}
 
 		int recipientCount = 0;
+		var hadErrors = false;
 
 		foreach (var target in recipientNamelist)
 		{
@@ -211,7 +212,8 @@ public static class MessageHelpers
 					pinnedAttribute, defmsg, functionArgs);
 
 				await communicationService.SendToRoomAsync(
-					enactor, container, _ => evaluatedMessage, notificationType);
+					enactor, container, _ => evaluatedMessage.Message ?? defmsg, notificationType);
+				hadErrors |= evaluatedMessage.HadErrors;
 
 				recipientCount++;
 				continue;
@@ -232,7 +234,8 @@ public static class MessageHelpers
 				locateTarget, objToEvaluate, attrToEvaluate,
 				pinnedAttribute, defmsg, functionArgs);
 
-			await notifyService.Notify(locateTarget, message, enactor, notificationType);
+			hadErrors |= message.HadErrors;
+			await notifyService.Notify(locateTarget, message.Message ?? defmsg, enactor, notificationType);
 			recipientCount++;
 		}
 
@@ -258,7 +261,8 @@ public static class MessageHelpers
 				pinnedAttribute, defmsg, functionArgs);
 
 			await communicationService.SendToRoomAsync(
-				enactor, executorLocation, _ => message, notificationType, excludeObjects: excludeObjects);
+				enactor, executorLocation, _ => message.Message ?? defmsg, notificationType, excludeObjects: excludeObjects);
+			hadErrors |= message.HadErrors;
 
 			recipientCount = 1;
 		}
@@ -268,10 +272,10 @@ public static class MessageHelpers
 			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageSentToRecipientsFormat), executor, recipientCount);
 		}
 
-		return CallState.Empty;
+		return CallState.Empty with { HadErrors = hadErrors };
 	}
 
-	private static async ValueTask<MString> EvaluateMessageForRecipient(
+	private static async ValueTask<CallState> EvaluateMessageForRecipient(
 		IMUSHCodeParser parser,
 		IAttributeService attributeService,
 		AnySharpObject executor,
@@ -315,7 +319,7 @@ public static class MessageHelpers
 				},
 				newParser => newParser.FunctionParse(pinnedAttribute.Last().Value));
 
-			return result?.Message ?? defmsg;
+			return result is null ? new CallState(defmsg) : result with { Message = result.Message ?? defmsg };
 		}
 		else
 		{
@@ -325,7 +329,7 @@ public static class MessageHelpers
 
 			if (maybeAttr.IsError || maybeAttr.IsNone)
 			{
-				return defmsg;
+				return new CallState(defmsg);
 			}
 			else
 			{
@@ -335,10 +339,10 @@ public static class MessageHelpers
 						Enactor = enactor.Object().DBRef,
 						Caller = state.Executor
 					},
-					newParser => attributeService.EvaluateAttributeFunctionAsync(
+					newParser => attributeService.EvaluateAttributeFunctionResultAsync(
 						newParser, recipient, recipient, attrToEvaluate, processedArgs));
 
-				return result ?? defmsg;
+				return result with { Message = result.Message ?? defmsg };
 			}
 		}
 	}

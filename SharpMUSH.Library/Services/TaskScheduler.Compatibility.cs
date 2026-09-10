@@ -23,6 +23,13 @@ public partial class TaskScheduler
 		INotifyService? notifyService)
 		: this(parser, connectionService, schedulerFactory, attributeService, mediator, logger, configuration, notifyService, diagnostics: null) { }
 
+	// Keep the diagnostics constructor slot when guided input adds its own service.
+	public TaskScheduler(IMUSHCodeParser parser, IConnectionService connectionService,
+		ISchedulerFactory schedulerFactory, IAttributeService attributeService, IMediator mediator,
+		ILogger<TaskScheduler> logger, IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>? configuration,
+		INotifyService? notifyService, IQueueDiagnosticsRecorder? diagnostics)
+		: this(parser, connectionService, schedulerFactory, attributeService, mediator, logger, configuration, notifyService, inputSessions: null, diagnostics: diagnostics) { }
+
 	public async ValueTask WriteUserCommand(long handle, MString command, ParserState state)
 	{ await AdmitUserCommand(handle, command, state); }
 	public async ValueTask WriteCommandList(MString command, ParserState state)

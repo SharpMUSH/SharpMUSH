@@ -11,6 +11,8 @@ public sealed class SharpCommandAttribute : Attribute
 	public string CommandLock { get; set; } = string.Empty;
 	public CommandBehavior Behavior { get; set; } = CommandBehavior.Default;
 	public string[]? Switches { get; set; } = [];
+	/// <summary>Switches that treat the complete argument text as one argument, retaining normal evaluation policy.</summary>
+	public string[] SingleArgumentSwitches { get; set; } = [];
 	/// <summary>
 	/// Optional parameter names for better IDE support (inlay hints, signature help, etc.)
 	/// Names should match the help file documentation.

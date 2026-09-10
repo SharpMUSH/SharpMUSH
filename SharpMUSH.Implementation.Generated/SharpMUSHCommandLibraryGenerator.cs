@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace SharpMUSH.Implementation.Generated;
 
-using CommandInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string CommandLock, string CommandBehavior, string[] Switches, string[] ParameterNames, bool StaticMethod);
+using CommandInformation = (string Name, string ClassName, string MethodName, string AttributeName, string MinArgs, string MaxArgs, string CommandLock, string CommandBehavior, string[] Switches, string[] SingleArgumentSwitches, string[] ParameterNames, bool StaticMethod);
 
 [Generator]
 public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
@@ -40,12 +40,16 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 		var switches = switchesArg.Kind == TypedConstantKind.Array
 			? switchesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
+		var singleArgumentSwitchesArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "SingleArgumentSwitches").Value;
+		var singleArgumentSwitches = singleArgumentSwitchesArg.Kind == TypedConstantKind.Array
+			? singleArgumentSwitchesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
+			: [];
 		var paramNamesArg = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ParameterNames").Value;
 		var parameterNames = paramNamesArg.Kind == TypedConstantKind.Array
 			? paramNamesArg.Values.Select(v => v.Value?.ToString() ?? "").ToArray()
 			: [];
 		var staticMethod = syntax.Modifiers.Any(m => m.ValueText == "static");
-		return (name, className, methodName, attrName, minArgs, maxArgs, commandLock, commandBehavior, switches, parameterNames, staticMethod);
+		return (name, className, methodName, attrName, minArgs, maxArgs, commandLock, commandBehavior, switches, singleArgumentSwitches, parameterNames, staticMethod);
 	}
 
 	private static void Execute(SourceProductionContext context,
@@ -109,6 +113,7 @@ public sealed class SharpMUSHCommandLibraryGenerator : IIncrementalGenerator
 			  					CommandLock = "{{info.CommandLock}}",
 			  					Behavior = (SharpMUSH.Library.Definitions.CommandBehavior){{info.CommandBehavior}},
 			  					Switches = [ {{string.Join(", ", info.Switches.Select(x => $"\"{x}\""))}} ],
+			                      SingleArgumentSwitches = [ {{string.Join(", ", info.SingleArgumentSwitches.Select(x => $"\"{EscapeString(x)}\""))}} ],
 			  					ParameterNames = [ {{string.Join(", ", info.ParameterNames.Select(x => $"\"{EscapeString(x)}\""))}} ]
 			  				},
 			  				{{receiver}}.{{info.MethodName}})

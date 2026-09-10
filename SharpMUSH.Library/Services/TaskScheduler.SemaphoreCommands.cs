@@ -72,6 +72,7 @@ public partial class TaskScheduler
 						else activation = Activate(entry.Pid);
 					}
 				}
+				// Semaphore entries never carry direct-input release callbacks.
 				if (removed is not null) DisposeEntry(removed);
 				if (activation is { } pending) await pending;
 			}

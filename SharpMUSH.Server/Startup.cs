@@ -460,6 +460,8 @@ public class Startup(
 		services.AddSingleton<ITaskScheduler, TaskScheduler>();
 		services.AddSingleton<IQueueControlService, QueueControlService>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
+		services.AddSingleton<IInputSessionService, InputSessionService>();
+		services.AddHostedService<Services.InputSessionTimeoutService>();
 		services.AddSingleton<IOttStore, InMemoryOttStore>();
 		services.AddSingleton<HubConnectionRegistry>();
 		services.AddSingleton<IVisibleWorldProjection, VisibleWorldProjection>();
