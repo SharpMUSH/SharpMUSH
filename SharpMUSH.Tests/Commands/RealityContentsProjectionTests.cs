@@ -43,10 +43,12 @@ public class RealityContentsProjectionTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var home = await actor.Location.WithCancellation(default);
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("projection room", actor)))).AsRoom;
+		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("projection room", god)))).AsRoom;
 		var suffix = Guid.NewGuid().ToString("N")[..12];
+		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand("Projection" + suffix, "test-password", room.Object.DBRef, room.Object.DBRef, 20)))).AsPlayer;
+		var home = await actor.Location.WithCancellation(default);
+		room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("owned projection room", actor)))).AsRoom;
 		var visibleName = "Visible" + suffix;
 		var hiddenName = "Hidden" + suffix;
 		var inInventory = projection is "inventory" or "@sweep/inventory";
@@ -92,7 +94,7 @@ public class RealityContentsProjectionTests
 			using (Get<IHttpOutputCapture>().BeginCapture(actor.Object.Key, output))
 				await Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)).CommandListParse(MarkupText.Plain(command));
 			var text = output.Body.ToString();
-			await Assert.That(text.Contains(visibleName)).IsTrue();
+			await Assert.That(text.Contains(visibleName)).IsTrue().Because($"the visible owned object must be reported; actual output: {text}");
 			await Assert.That(text.Contains(hiddenName)).IsEqualTo(!enabled);
 			if (projection == "examine-format")
 				await Assert.That(text.Contains(hidden.Object().DBRef.ToString())).IsFalse();
