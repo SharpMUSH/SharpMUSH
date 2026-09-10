@@ -58,6 +58,7 @@ jobs:
         run: dotnet build --no-restore -p:SkipFormatVerification=true
 
   test:
+    name: test (${{ matrix.database }}, ${{ matrix.shard.name }})
     needs: [build]
     runs-on: ubuntu-latest
     # Backstop only. It must clear the retry budget below (2 x 30 minutes) plus ~3 minutes of
@@ -65,8 +66,20 @@ jobs:
     # killed-mid-run failure this timeout exists to prevent.
     timeout-minutes: 70
     strategy:
+      fail-fast: false
       matrix:
         database: [surrealdb, lightning]
+        # Keep each test class and its shared fixture in one process. Global
+        # NotInParallel tests still run exclusively within that provider world.
+        # The final filter is the complement of A-P, so future class names,
+        # including names outside the Latin alphabet, cannot fall through.
+        shard:
+          - name: a-h
+            filter: '/*/*/(A*)|(B*)|(C*)|(D*)|(E*)|(F*)|(G*)|(H*)/*'
+          - name: i-p
+            filter: '/*/*/(I*)|(J*)|(K*)|(L*)|(M*)|(N*)|(O*)|(P*)/*'
+          - name: remaining
+            filter: '/*/*/(!A*)&(!B*)&(!C*)&(!D*)&(!E*)&(!F*)&(!G*)&(!H*)&(!I*)&(!J*)&(!K*)&(!L*)&(!M*)&(!N*)&(!O*)&(!P*)/*'
 
     steps:
       - uses: actions/checkout@v6
@@ -84,23 +97,20 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -p:SkipFormatVerification=true
 
-      - name: Test (${{ matrix.database }})
+      - name: Test (${{ matrix.database }}, ${{ matrix.shard.name }})
         uses: nick-fields/retry@v4
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         with:
-          # The 9,320-case SurrealDB suite passed on the reviewed R7 tree in 16m31s.
-          # Main and image runs then reached the 20-minute cutoff with 9,058 and
-          # 9,124 passing tests respectively. The image run's final ten tests failed
-          # only after the timeout disposed the shared IServiceProvider underneath them.
-          # Give each attempt room to finish without extending the total retry budget:
-          # two 30-minute attempts retain the previous three x 20-minute maximum.
+          # Retain the existing attempt budget while separate provider worlds
+          # shorten the serial critical path. Per-entry execution deadlines and
+          # the fixed concurrency limit remain unchanged.
           timeout_minutes: 30
           max_attempts: 2
           # Bound shared-provider contention without changing per-entry execution deadlines.
-          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed
+          command: dotnet run --project SharpMUSH.Tests --no-build --verbosity normal -- --output Detailed --maximum-parallel-tests 8 --parallelism-strategy fixed --treenode-filter '${{ matrix.shard.filter }}' --results-directory test-results --report-trx --report-trx-filename results.trx
 
       - name: Publish Telemetry to Summary
         if: always()
@@ -117,9 +127,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-telemetry-${{ matrix.database }}
+          name: test-telemetry-${{ matrix.database }}-${{ matrix.shard.name }}
           path: test-telemetry.md
           if-no-files-found: ignore
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.database }}-${{ matrix.shard.name }}
+          path: test-results/*.trx
+          if-no-files-found: error
 
   test-bunit:
     needs: [build]
