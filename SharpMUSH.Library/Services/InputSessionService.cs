@@ -140,9 +140,7 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 		{
 			if (!BindingMatches(session)) return InvalidContext;
-			for (var callback = _callbackOwnership.Value; callback is not null; callback = callback.Parent)
-				if (callback.Cancelled && ReferenceEquals(callback.Original.Connection.Metadata, connection.Metadata)
-					&& callback.Original.TransportSessionId == session.TransportSessionId) return NotActive;
+			if (HasCancelledOwnership(session)) return NotActive;
 			if (_sessions.TryGetValue(handle, out var previous) && BindingMatches(previous.Session)
 				&& (previous.TimeoutPending || previous.Session.ExpiresAt <= _time.GetUtcNow())) return PendingTimeout;
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
@@ -190,7 +188,10 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
-		if (GetCapturing(handle)?.Id != session.Id) return NotActive;
+		lock (_gate)
+		{
+			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
+		}
 		await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
 		return null;
 	}
@@ -201,7 +202,7 @@ public sealed class InputSessionService : IInputSessionService
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
 		lock (_gate)
 		{
-			if (!IsCurrent(session, timeout: false)) return NotActive;
+			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
 			CancelCallbacks(session);
 			_sessions.Remove(handle);
 		}
@@ -225,6 +226,15 @@ public sealed class InputSessionService : IInputSessionService
 		}
 		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
+	}
+
+	// Read under _gate, just before an input operation commits or publishes.
+	private bool HasCancelledOwnership(InputSession session)
+	{
+		for (var callback = _callbackOwnership.Value; callback is not null; callback = callback.Parent)
+			if (callback.Cancelled && ReferenceEquals(callback.Original.Connection.Metadata, session.Connection.Metadata)
+				&& callback.Original.TransportSessionId == session.TransportSessionId) return true;
+		return false;
 	}
 
 	// Called under _gate after validating the current capture. Fence already-running

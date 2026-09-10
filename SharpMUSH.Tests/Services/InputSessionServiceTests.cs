@@ -730,6 +730,44 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("prompt")]
+	[Arguments("cancel")]
+	public async Task CancelledCallbackCannotManageIndependentCapture(string operation)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		string? result = null;
+		async ValueTask<CallState?> Callback()
+		{
+			entered.SetResult(); await release.Task;
+			result = operation == "prompt"
+				? await h.Sessions.PromptAsync(caller, MarkupText.Plain("STALE"))
+				: await h.Sessions.CancelAsync(caller);
+			return CallState.Empty;
+		}
+		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => Callback());
+		var delivery = h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsTrue();
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "INDEPENDENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		var independent = h.Sessions.GetCapturing(1)!.Id;
+		h.Notify.ClearReceivedCalls();
+		release.SetResult();
+		await delivery.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(result).IsEqualTo(InputSessionService.NotActive);
+		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsEqualTo(independent);
+		await Assert.That(h.Notify.ReceivedCalls().Any()).IsFalse();
+		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("CURRENT"))).IsNull();
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<OneOf.OneOf<MarkupText, string>>(text => text.IsT0 && text.AsT0.Text == "CURRENT"));
+		await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionCancelled");
+	}
+
+	[Test]
 	public async Task ExpiredExecutionBudgetEndsCaptureBeforeCallback()
 	{
 		var h = new Harness(); var session = await h.Start();
