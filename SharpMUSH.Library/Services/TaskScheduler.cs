@@ -107,6 +107,8 @@ public partial class TaskScheduler(
 	private readonly object _admissionLock = new();
 	private readonly Dictionary<QueueRejectionReason, long> _rejections = new();
 	private readonly HashSet<long> _ready = new();
+	// Updated with the reservation ledger under _admissionLock.
+	private readonly SortedSet<long> _orderedPids = new();
 	private bool _stopping;
 	public QueueUsage GetQueueUsage()
 	{
@@ -129,7 +131,9 @@ public partial class TaskScheduler(
 		if (_semaphoreRepairs.ContainsKey(pid) || _semaphoreCommandReservations.Contains(pid) || _delayedRepairs.Contains(pid)) return null;
 		_ready.Remove(pid);
 		_running.Remove(pid);
-		return _pendingEntries.TryRemove(pid, out var entry) ? entry : null;
+		if (!_pendingEntries.TryRemove(pid, out var entry)) return null;
+		_orderedPids.Remove(pid);
+		return entry;
 	}
 	private void Release(long pid, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
@@ -196,6 +200,7 @@ public partial class TaskScheduler(
 					PendingInput = pendingInput
 				};
 				_pendingEntries[pid] = entry;
+				_orderedPids.Add(pid);
 				if (ready) { _ready.Add(pid); _immediateQueue.Writer.TryWrite(entry); }
 				result = new(pid, QueueRejectionReason.None);
 			}

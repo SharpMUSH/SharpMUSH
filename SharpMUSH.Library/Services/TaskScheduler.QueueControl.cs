@@ -38,23 +38,23 @@ public partial class TaskScheduler
 		long upperPid;
 		lock (_admissionLock) upperPid = _nextPid;
 		var afterPid = 0L;
-		// Select only the next page: a full key copy would grow with the entire ledger.
-		// The greatest retained PID is at the heap root, so smaller candidates replace it.
-		var next = new PriorityQueue<long, long>(pageSize, Comparer<long>.Create((left, right) => right.CompareTo(left)));
+		// Copy only one ordered page while holding the ledger lock. The index avoids
+		// rescanning the entire ledger for every page; caller work runs outside the lock.
 		var pids = new long[pageSize];
 		while (afterPid < upperPid)
 		{
-			foreach (var entry in _pendingEntries)
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var count = 0;
+			lock (_admissionLock)
 			{
-				ExecutionBudget.Current?.ThrowIfExceeded();
-				var pid = entry.Key;
-				if (pid <= afterPid || pid > upperPid) continue;
-				if (next.Count < pageSize) next.Enqueue(pid, pid);
-				else if (pid < next.Peek()) next.DequeueEnqueue(pid, pid);
+				foreach (var pid in _orderedPids.GetViewBetween(afterPid + 1, upperPid))
+				{
+					ExecutionBudget.Current?.ThrowIfExceeded();
+					pids[count++] = pid;
+					if (count == pageSize) break;
+				}
 			}
-			var count = next.Count;
 			if (count == 0) yield break;
-			for (var index = count - 1; index >= 0; index--) pids[index] = next.Dequeue();
 			for (var index = 0; index < count; index++)
 			{
 				ExecutionBudget.Current?.ThrowIfExceeded();

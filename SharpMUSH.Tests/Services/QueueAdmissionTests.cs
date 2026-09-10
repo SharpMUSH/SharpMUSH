@@ -405,6 +405,7 @@ public class QueueAdmissionTests
 			await Assert.That(reserved.Admission.Accepted).IsTrue();
 			await Assert.That((await queue.AdmitWork(() => { order.Add("row"); return ValueTask.FromResult<CallState?>(null); }, "row", "test")).Accepted).IsTrue();
 			await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(3);
+			await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 			await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "overflow", "test")).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
 			await Assert.That((await reserved.PublishAsync()).Accepted).IsTrue();
 			await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
@@ -428,6 +429,7 @@ public class QueueAdmissionTests
 		if (halt) await queue.HaltByPid(reserved.Admission.Pid!.Value);
 		else reserved.Dispose();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.AlreadyReleased);
 		using var next = await queue.ReserveCommandList(MarkupText.Plain("next"), ParserState.RootFor(new DBRef(10)));
 		await Assert.That(next.Admission.Accepted).IsTrue();
@@ -440,6 +442,7 @@ public class QueueAdmissionTests
 		using var reserved = await queue.ReserveCommandList(MarkupText.Plain("completion"), ParserState.RootFor(new DBRef(10)));
 		await queue.DisposeAsync();
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await reserved.PublishAsync()).Reason).IsEqualTo(QueueRejectionReason.ShuttingDown);
 	}
 
@@ -1125,6 +1128,7 @@ public class QueueAdmissionTests
 			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), 0, manageSemaphoreCount: true)).Throws<AggregateException>();
 		await Assert.That(count).IsEqualTo(1);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That((await queue.ReleaseScheduledWork(1)).Accepted).IsFalse();
 		// No later counter transaction may run before the uncertain write is repaired.
 		using (var bounded = ExecutionBudget.FromMilliseconds(50))
@@ -1136,10 +1140,12 @@ public class QueueAdmissionTests
 		await Assert.That(async () => { using var lease = await queue.EnterSemaphoreMutationAsync(); }).Throws<InvalidOperationException>();
 		await Assert.That(count).IsEqualTo(7);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		count = 1;
 		await Assert.That(await queue.HaltByPid(1)).IsTrue();
 		await Assert.That(count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		await QueueEnumerationOrderingTests.AssertIndexMatchesLedger(queue);
 		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.ScheduleFailed);
 	}
 
