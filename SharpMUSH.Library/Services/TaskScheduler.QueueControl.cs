@@ -34,10 +34,35 @@ public partial class TaskScheduler
 	/// <summary>Live metadata traversal with no full-ledger copy and no lock held across caller work.</summary>
 	public IEnumerable<QueueEntrySnapshot> EnumerateQueueEntries()
 	{
-		// ConcurrentDictionary's enumerator tolerates release/admission during inspection.
-		// Re-read each current entry under the ledger gate so state fields agree at snapshot time.
-		foreach (var entry in _pendingEntries)
-			if (GetQueueEntry(entry.Key) is { } snapshot) yield return snapshot;
+		const int pageSize = 128;
+		long upperPid;
+		lock (_admissionLock) upperPid = _nextPid;
+		var afterPid = 0L;
+		// Select only the next page: a full key copy would grow with the entire ledger.
+		// The greatest retained PID is at the heap root, so smaller candidates replace it.
+		var next = new PriorityQueue<long, long>(pageSize, Comparer<long>.Create((left, right) => right.CompareTo(left)));
+		var pids = new long[pageSize];
+		while (afterPid < upperPid)
+		{
+			foreach (var entry in _pendingEntries)
+			{
+				ExecutionBudget.Current?.ThrowIfExceeded();
+				var pid = entry.Key;
+				if (pid <= afterPid || pid > upperPid) continue;
+				if (next.Count < pageSize) next.Enqueue(pid, pid);
+				else if (pid < next.Peek()) next.DequeueEnqueue(pid, pid);
+			}
+			var count = next.Count;
+			if (count == 0) yield break;
+			for (var index = count - 1; index >= 0; index--) pids[index] = next.Dequeue();
+			for (var index = 0; index < count; index++)
+			{
+				ExecutionBudget.Current?.ThrowIfExceeded();
+				afterPid = pids[index];
+				// Re-read current metadata after caller work; released entries disappear.
+				if (GetQueueEntry(afterPid) is { } snapshot) yield return snapshot;
+			}
+		}
 	}
 
 	public IReadOnlyList<QueueEntrySnapshot> GetQueueEntries()
