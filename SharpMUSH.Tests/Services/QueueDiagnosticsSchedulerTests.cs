@@ -217,7 +217,7 @@ public class QueueDiagnosticsSchedulerTests
 		}
 		await Assert.That(recorder.Recent().Count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
-		await Assert.That(queue.GetQueueEntry(result.Pid!.Value)!.StartedAt).IsNotNull();
+		await Assert.That(queue.GetQueueEntry(result.Pid!.Value)!.StartedAt).IsNull();
 		block = false;
 		using (await queue.EnterSemaphoreMutationAsync()) { }
 		await HistoryCount(recorder, 1);
@@ -227,6 +227,74 @@ public class QueueDiagnosticsSchedulerTests
 		await Assert.That(row.StartedAt).IsNotNull();
 		await Assert.That(row.ExecutionDuration).IsNotNull();
 		await Assert.That(count).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task SemaphoreBookkeepingNeverStartsBodyTiming(bool halt, bool repair)
+	{
+		var clock = new QueueDiagnosticsRecorderTests.Clock();
+		var recorder = new QueueDiagnosticsRecorder(clock);
+		var mediator = QueueAdmissionTests.TargetMediator();
+		var count = 2;
+		var accounting = false;
+		var fail = repair;
+		mediator.CreateStream(Arg.Any<GetAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(_ =>
+			new[] { new SharpAttribute("id", "key", "SEMAPHORE", [], null, "SEMAPHORE", null!, null!, null!)
+			{ Value = MarkupText.Plain(count.ToString()) } }.ToAsyncEnumerable());
+		mediator.Send(Arg.Any<SharpMUSH.Library.Commands.Database.SetAttributeCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				if (accounting)
+				{
+					clock.Advance(TimeSpan.FromSeconds(5));
+					if (fail) { fail = false; throw new IOException("retry accounting"); }
+				}
+				count = int.Parse(call.Arg<SharpMUSH.Library.Commands.Database.SetAttributeCommand>().Value.ToPlainText());
+				return ValueTask.FromResult(true);
+			});
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.FromState(Arg.Any<ParserState>()).Returns(parser);
+		var bodies = 0;
+		parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ =>
+		{
+			Interlocked.Increment(ref bodies);
+			clock.Advance(TimeSpan.FromSeconds(2));
+			return ValueTask.FromResult<CallState?>(null);
+		});
+		await using var queue = Create(recorder, milliseconds: 30000, parser: parser,
+			scheduled: Substitute.For<IScheduler>(), mediator: mediator);
+		var admission = await queue.AdmitCommandList(MarkupText.Plain("body"), ParserState.Empty,
+			new DbRefAttribute(new DBRef(10), ["SEMAPHORE"]), count, manageSemaphoreCount: true);
+		await Assert.That(admission.Accepted).IsTrue();
+		await Assert.That(count).IsEqualTo(3);
+		accounting = true;
+		clock.Advance(TimeSpan.FromSeconds(10));
+		async Task Transition()
+		{
+			if (halt) await queue.HaltByPid(admission.Pid!.Value);
+			else await queue.ReleaseScheduledWork(admission.Pid!.Value, semaphoreTimeout: true);
+		}
+		if (repair)
+		{
+			await Assert.ThrowsAsync<IOException>(Transition);
+			await Assert.That(queue.GetQueueEntry(admission.Pid!.Value)!.StartedAt).IsNull();
+			await Assert.That(recorder.Recent().Count).IsEqualTo(0);
+			clock.Advance(TimeSpan.FromSeconds(10));
+		}
+		await Transition();
+		await HistoryCount(recorder, 1);
+		var row = recorder.Recent().Single();
+		await Assert.That(row.Outcome).IsEqualTo(halt ? QueueOutcome.Cancelled : QueueOutcome.Completed);
+		await Assert.That(row.WaitDuration).IsEqualTo(TimeSpan.FromSeconds(repair ? 30 : 15));
+		await Assert.That(row.StartedAt).IsEqualTo(halt ? (DateTimeOffset?)null : DateTimeOffset.UnixEpoch.AddSeconds(repair ? 30 : 15));
+		await Assert.That(row.ExecutionDuration).IsEqualTo(halt ? (TimeSpan?)null : TimeSpan.FromSeconds(2));
+		await Assert.That(bodies).IsEqualTo(halt ? 0 : 1);
+		await Assert.That(count).IsEqualTo(2);
+		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
 	}
 
 	[Test]
