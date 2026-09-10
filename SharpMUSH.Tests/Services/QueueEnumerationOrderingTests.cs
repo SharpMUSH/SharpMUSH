@@ -86,4 +86,42 @@ public class QueueEnumerationOrderingTests
 		}
 		finally { foreach (var reservation in reservations) reservation.Dispose(); }
 	}
+
+	internal static async Task AssertIndexMatchesLedger(Scheduler queue)
+	{
+		var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+		var gate = typeof(Scheduler).GetField("_admissionLock", flags)!.GetValue(queue)!;
+		string indexed;
+		string ledger;
+		lock (gate)
+		{
+			var index = (SortedSet<long>)typeof(Scheduler).GetField("_orderedPids", flags)!.GetValue(queue)!;
+			indexed = string.Join(',', index);
+			ledger = string.Join(',', queue.GetQueueEntries().Select(entry => entry.Pid));
+		}
+		await Assert.That(indexed).IsEqualTo(ledger);
+	}
+
+	[Test]
+	[Arguments(0)]
+	[Arguments(127)]
+	[Arguments(128)]
+	public async Task CancellationStopsTraversalAtPageAndYieldBoundaries(int yielded)
+	{
+		await using var queue = Create();
+		var reservations = await ReserveSparsePids(queue, 300);
+		try
+		{
+			using var entries = queue.EnumerateQueueEntries().GetEnumerator();
+			for (var index = 0; index < yielded; index++)
+				await Assert.That(entries.MoveNext()).IsTrue();
+			using var cancellation = new CancellationTokenSource();
+			using var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), cancellation.Token);
+			using var scope = budget.Enter();
+			cancellation.Cancel();
+			await Assert.That(() => entries.MoveNext()).Throws<OperationCanceledException>();
+		}
+		finally { foreach (var reservation in reservations) reservation.Dispose(); }
+		await AssertIndexMatchesLedger(queue);
+	}
 }
