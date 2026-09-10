@@ -108,4 +108,13 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 	/// </para>
 	/// </summary>
 	public bool HadErrors { get; init; }
+
+	/// <summary>Optional full-result counterpart to the published text-only deferred delegate.</summary>
+	public Func<ValueTask<CallState?>>? ParsedResult { get; init; }
+
+	/// <summary>Evaluates this argument without discarding failure metadata, retaining legacy delegates.</summary>
+	public async ValueTask<CallState> GetParsedResultAsync()
+		=> ParsedResult is { } evaluate
+			? await evaluate() ?? Empty
+			: new CallState(await ParsedMessage()) { HadErrors = HadErrors };
 }

@@ -503,14 +503,14 @@ public class SharpMUSHParserVisitor(
 	/// <param name="stripAnsi">Whether to strip ANSI codes from the result</param>
 	/// <returns>A function that evaluates the context when called</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static Func<ValueTask<MString?>> CreateDeferredEvaluation(
+	private static Func<ValueTask<CallState?>> CreateDeferredEvaluation(
 		EvaluationStringContext context,
 		SharpMUSHParserVisitor visitor,
 		bool stripAnsi) => async () =>
 	{
-		var result = await visitor.VisitChildren(context);
-		var message = result?.Message ?? MarkupText.Empty;
-		return stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message;
+		var result = await visitor.VisitChildren(context) ?? CallState.Empty;
+		var message = result.Message ?? MarkupText.Empty;
+		return result with { Message = stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message };
 	};
 
 	private bool BeginsRestrictedEvaluation(FunctionContext context)
@@ -942,10 +942,11 @@ public class SharpMUSHParserVisitor(
 						continue;
 					}
 
-					var msg = (await visitor.VisitChildren(x))?.Message ?? MarkupText.Empty;
+					var evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
+					var msg = evaluated.Message ?? MarkupText.Empty;
 					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = MarkupText.Plain(msg.ToPlainText());
-					refinedArguments.Add(new CallState(msg, x.Depth()));
+					refinedArguments.Add(new CallState(msg, x.Depth()) { HadErrors = evaluated.HadErrors });
 				}
 
 				if (refinedArguments.Count == 0)
@@ -967,7 +968,9 @@ public class SharpMUSHParserVisitor(
 
 					var text = GetContextText(x);
 					var evalText = stripAnsi ? MarkupText.Plain(text.ToPlainText()) : text;
-					refinedArguments.Add(new CallState(evalText, x.Depth(), null, CreateDeferredEvaluation(x, visitor, stripAnsi)));
+					var evaluate = CreateDeferredEvaluation(x, visitor, stripAnsi);
+					refinedArguments.Add(new CallState(evalText, x.Depth(), null, async () => (await evaluate())?.Message)
+					{ ParsedResult = evaluate });
 				}
 
 				if (refinedArguments.Count == 0)

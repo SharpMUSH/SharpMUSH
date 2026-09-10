@@ -306,7 +306,9 @@ public partial class Functions
 	/// </summary>
 	private async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
-		var arg0 = await parser.CurrentState.Arguments["0"].ParsedMessage();
+		var input = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var hadErrors = input.HadErrors;
+		var arg0 = input.Message;
 		var str = arg0!.ToPlainText();
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
 
@@ -331,7 +333,9 @@ public partial class Functions
 				var patternKv = orderedArgs[i];
 				var listKv = orderedArgs[i + 1];
 
-				var pattern = await patternKv.Value.ParsedMessage();
+				var patternResult = await patternKv.Value.GetParsedResultAsync();
+				hadErrors |= patternResult.HadErrors;
+				var pattern = patternResult.Message;
 				var patternStr = pattern!.ToPlainText();
 
 				try
@@ -360,12 +364,13 @@ public partial class Functions
 						}
 
 						var evaluated = (await parser.FunctionParse(MarkupText.Plain(list))) ?? new CallState(MarkupText.Empty);
+						hadErrors |= evaluated.HadErrors;
 						var evaluatedMsg = evaluated.Message ?? MarkupText.Empty;
 						results.Add(evaluatedMsg);
 
 						if (!all)
 						{
-							return new CallState(evaluatedMsg);
+							return new CallState(evaluatedMsg) { HadErrors = hadErrors };
 						}
 					}
 				}
@@ -379,16 +384,16 @@ public partial class Functions
 			if (results.Count > 0)
 			{
 				// PennMUSH concatenates results with no separator (like appending to a buffer)
-				return new CallState(MarkupText.Concat(results));
+				return new CallState(MarkupText.Concat(results)) { HadErrors = hadErrors };
 			}
 
 			if (defaultValue != null)
 			{
-				var defaultEvaluated = await defaultValue.Value.Value.ParsedMessage();
-				return new CallState(defaultEvaluated!);
+				var defaultEvaluated = await defaultValue.Value.Value.GetParsedResultAsync();
+				return defaultEvaluated with { HadErrors = hadErrors || defaultEvaluated.HadErrors };
 			}
 
-			return new CallState(MarkupText.Empty);
+			return new CallState(MarkupText.Empty) { HadErrors = hadErrors };
 		}
 		finally
 		{
