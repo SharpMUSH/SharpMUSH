@@ -58,6 +58,103 @@ public class QueueAdmissionTests
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	[Test]
+	public async Task ExpiredCompoundLockDoesNotStartTheNextLegacyRead()
+	{
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(10), cancellation.Token);
+		using var scope = budget.Enter();
+		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
+		var services = Substitute.For<ILockEvaluationServices>();
+		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LEFT")
+			.Returns(_ => { cancellation.Cancel(); return ValueTask.FromResult<OneOf.OneOf<string, LockEvaluationFailure>>("yes"); });
+		var reads = 0;
+		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
+			.Returns(_ => { reads++; return ValueTask.FromResult<OptionalSharpAttributeOrError>(new None()); });
+		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
+		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, Substitute.For<IMediator>(), cache);
+		bool cancelled = false;
+		try { await parser.Compile("LEFT/yes & RIGHT:value")(target, target); }
+		catch (OperationCanceledException) { cancelled = true; }
+		await Assert.That(cancelled).IsTrue();
+		await Assert.That(reads).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments("FLAG^WIZARD")]
+	[Arguments("POWER^QUEUE")]
+	[Arguments("$me")]
+	[Arguments("CHANNEL^test")]
+	[Arguments("@#10")]
+	[Arguments("+#11")]
+	[Arguments("#11")]
+	[Arguments("TEST:value")]
+	[Arguments("@target")]
+	public async Task CompiledLockReadsReleaseTheConsumerOnExpiry(string expression)
+	{
+		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var cleanup = new CancellationTokenSource();
+		async Task Block(CancellationToken token)
+		{
+			entered.TrySetResult(token);
+			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
+		}
+		async IAsyncEnumerable<T> Stream<T>([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token = default)
+		{
+			await Block(token);
+			yield break;
+		}
+		target.AsPlayer.Object.Flags = new(() => Stream<SharpObjectFlag>());
+		target.AsPlayer.Object.Powers = new(() => Stream<SharpPower>());
+		target.AsPlayer.Object.Owner = new(async token => { await Block(token); return target.AsPlayer; });
+		var mediator = Substitute.For<IMediator>();
+		async ValueTask<AnyOptionalSharpObject> ObjectRead(CancellationToken token) { await Block(token); return target.AsPlayer; }
+		async ValueTask<bool> ChannelRead(CancellationToken token) { await Block(token); return true; }
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(c => ObjectRead(c.Arg<CancellationToken>()));
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.IsOnChannelQuery>(), Arg.Any<CancellationToken>()).Returns(c => ChannelRead(c.Arg<CancellationToken>()));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>()).Returns(c => Stream<AnySharpContent>(c.Arg<CancellationToken>()));
+		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
+		var services = Substitute.For<ILockEvaluationServices>();
+		async ValueTask<OptionalSharpAttributeOrError> AttributeRead() { await Block(CancellationToken.None); return new None(); }
+		async ValueTask<AnyOptionalSharpObjectOrError> LocateRead() { await Block(CancellationToken.None); return new None(); }
+		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>()).Returns(_ => AttributeRead());
+		services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>()).Returns(_ => LocateRead());
+		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, mediator, cache);
+		var compiled = parser.Compile(expression);
+		await using var queue = Create(global: 10, milliseconds: 200);
+		var following = Signal();
+		bool cancelled = false;
+		await queue.AdmitWork(async () =>
+		{
+			try { await compiled(target, target); }
+			catch (OperationCanceledException) { cancelled = true; throw; }
+			return null;
+		}, "lock", "test");
+		await queue.AdmitWork(() => { following.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "following", "test");
+		try
+		{
+			var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+			if (expression is not "TEST:value" and not "@target") await Assert.That(token.CanBeCanceled).IsTrue();
+			await Assert.That(cancelled).IsTrue();
+		}
+		finally
+		{
+			cleanup.Cancel();
+			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
+		}
+
+		if (expression == "FLAG^WIZARD")
+		{
+			target.AsPlayer.Object.Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }.ToAsyncEnumerable());
+			using var fresh = new ExecutionBudget(TimeSpan.FromSeconds(3));
+			using var scope = fresh.Enter();
+			await Assert.That(await compiled(target, target)).IsTrue();
+			await Assert.That(ReferenceEquals(compiled, parser.Compile(expression))).IsTrue();
+		}
+	}
+
+	[Test]
 	[Arguments("read", true)]
 	[Arguments("write", true)]
 	[Arguments("read", false)]
