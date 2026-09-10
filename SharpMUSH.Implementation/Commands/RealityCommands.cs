@@ -19,9 +19,10 @@ public partial class Commands
 		IMUSHCodeParser parser, AnySharpObject viewer)
 	{
 		var policy = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
-		return policy is IRealityObservationProvider observations
+		Func<DBRef, CancellationToken, ValueTask<bool>> observe = policy is IRealityObservationProvider observations
 			? await observations.ObserveAsync(viewer.Object().DBRef, ExecutionBudget.CurrentToken)
 			: (target, ct) => policy.CanPerceiveAsync(viewer.Object().DBRef, target, ct);
+		return (target, ct) => observe(target, ct.CanBeCanceled ? ct : ExecutionBudget.CurrentToken);
 	}
 
 	private static ValueTask<bool> CanMoveInReality(IMUSHCodeParser parser, DBRef mover, DBRef destination)
