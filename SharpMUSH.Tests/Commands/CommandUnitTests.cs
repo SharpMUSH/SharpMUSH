@@ -1,13 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
-[NotInParallel]
 public class CommandUnitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -17,22 +15,34 @@ public class CommandUnitTests
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
 
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
-	/// <summary>
-	/// Pending: <c>]command</c> NoEval semantics require a dedicated implementation pass.
-	/// The leading <c>]</c> should suppress evaluation of the argument (PennMUSH compat),
-	/// but this was previously only working via ANTLR silent error-recovery.
-	/// </summary>
+	private TestIsolationHelpers.TestPlayer _player = null!;
+
+	[Before(TUnit.Core.HookType.Test)]
+	public async Task CreatePlayer()
+	{
+		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CommandUnit");
+	}
+
+	[After(TUnit.Core.HookType.Test)]
+	public async Task DisconnectPlayer()
+	{
+		if (_player is not null)
+			await ConnectionService.Disconnect(_player.Handle);
+	}
+
+	// A leading ] suppresses argument evaluation.
 	[Test]
 	[Arguments("]think [add(1,2)]3", "[add(1,2)]3")]
 	public async Task Test_NoEval(string str, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var executor = _player.DbRef;
 		Console.WriteLine("Testing NoEval: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)
@@ -48,11 +58,9 @@ public class CommandUnitTests
 		"Command1 Arg;think Command2 Arg")]
 	public async Task Test(string str, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		// TODO: We need eval vs noparse evaluation.
-		// NoParse is currently not running the command. So let's use NoEval instead for that.
+		var executor = _player.DbRef;
 		Console.WriteLine("Testing: {0}", str);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(str));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)
@@ -77,20 +85,17 @@ public class CommandUnitTests
 		"Command4 Arg.")]
 	public async Task TestSingle(string str, string expected1, string expected2)
 	{
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "CmdListParse");
-		var testParser = WebAppFactoryArg.CommandParserFor(testPlayer.DbRef, testPlayer.Handle);
 		Console.WriteLine("Testing: {0}", str);
-		await testParser.CommandListParse(MarkupText.Plain(str));
+		await Parser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> TestHelpers.MessageContains(x, expected1)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> TestHelpers.MessageContains(x, expected1)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
-				=> TestHelpers.MessageContains(x, expected2)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+				=> TestHelpers.MessageContains(x, expected2)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
 	}
 }

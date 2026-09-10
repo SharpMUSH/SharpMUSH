@@ -1,75 +1,72 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using OneOf;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Wires <c>SoftcodeFormatter.Format</c> (Task 5) into <c>@examine</c>'s attribute loop: an attribute
-/// carrying <c>cmdsyntax</c>/<c>funsyntax</c> renders as a highlighted header followed by a formatted,
-/// wrapped code block, while an unflagged attribute keeps today's exact single-line rendering.
-/// Fixture pattern copied from <see cref="ExamineNullOwnerTests"/>.
-/// <para>
-/// <see cref="WebAppFactoryArg"/> is <c>SharedType.PerTestSession</c>, so <see cref="NotifyService"/> is
-/// one substitute shared across every test in the process — <c>Received()</c> matches calls recorded by
-/// any test that ran before it, in this class or any other. Every test below calls
-/// <c>ClearReceivedCalls()</c> immediately before the <c>examine</c> invocation it's asserting on, and
-/// asserts on a fragment the formatter alone produces for this exact input (a specific broken line with
-/// its 2-space indent), not a substring that also appears in the raw, unformatted attribute value.
-/// </para>
-/// <para>
-/// <c>[NotInParallel]</c>: with <see cref="NotifyService"/> shared across the whole session, a test
-/// running concurrently with this class could record a <c>Notify</c> call between one test's
-/// <c>ClearReceivedCalls()</c> and its own assertion, corrupting order-sensitive checks like
-/// <see cref="FlaggedAttribute_WithEmptyValue_EmitsNoStrayBlankLine"/>'s "the call right after the
-/// header" lookup. Matches the same guard already used by <c>CommunicationCommandTests</c> and
-/// <c>UtilityCommandTests</c> for the identical reason.
-/// </para>
+/// Checks attribute formatting through an isolated examiner.
 /// </summary>
-[NotInParallel]
 public class ExamineSyntaxFormattingTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+
+	private TestIsolationHelpers.TestPlayer _player = null!;
+
+	[Before(Test)]
+	public async Task CreatePlayer()
+	{
+		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
+	}
+
+	[After(Test)]
+	public async Task DisconnectPlayer()
+	{
+		if (_player is not null)
+			await ConnectionService.Disconnect(_player.Handle);
+	}
+
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
+
+	private int _notificationOffset;
+	private IEnumerable<OneOf<MString, string>> Messages =>
+		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
+
+	private void BeginNotificationWindow() =>
+		_notificationOffset = WebAppFactoryArg.Notifications.RawCountFor(_player.DbRef);
 
 	// Comfortably longer than the 78-column fallback width, so it must break.
 	private const string LongCode =
 		"switch(words(%0),0,you said absolutely nothing at all,1,you said just one word,many words indeed here)";
 
-	private ValueTask Expect(string fragment) => NotifyService.Received().Notify(
-		Arg.Any<AnySharpObject>(),
-		Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessageContains(m, fragment)),
-		Arg.Any<AnySharpObject?>(),
-		Arg.Any<INotifyService.NotificationType>());
+	private async ValueTask Expect(string fragment) =>
+		await Assert.That(Messages.Any(m => TestHelpers.MessageContains(m, fragment))).IsTrue();
 
 	// The formatted block is syntax-highlighted, so ANSI escape codes sit between tokens — a fragment
 	// spanning a break (newline + indent + the next token) won't appear contiguously in
 	// TestHelpers.MessageContains's ToString()-with-escapes comparison. Match on plain text instead.
-	private ValueTask ExpectPlainText(string fragment) => NotifyService.Received().Notify(
-		Arg.Any<AnySharpObject>(),
-		Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, fragment)),
-		Arg.Any<AnySharpObject?>(),
-		Arg.Any<INotifyService.NotificationType>());
+	private async ValueTask ExpectPlainText(string fragment) =>
+		await Assert.That(Messages.Any(m => TestHelpers.MessagePlainTextContains(m, fragment))).IsTrue();
 
 	[Test]
 	public async ValueTask FlaggedAttribute_IsBrokenAcrossLines()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtOn");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtOn");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		// The layout engine's first break for this exact input lands right after "switch(", putting
 		// words() alone on an indented line — and, because a call that breaks expands everything nested
@@ -82,12 +79,12 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask UnflaggedAttribute_RendersVerbatim()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtOff");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtOff");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		await Expect(LongCode);
 	}
@@ -95,13 +92,13 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask FlaggedAttribute_LosesNoCharacters()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtIntact");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtIntact");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
 		// The formatter's last break for this input puts the closing argument on its own indented line.
 		// Unlike a bare "many words indeed here)" substring (which the raw, unformatted single line would
@@ -113,19 +110,17 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask FlaggedAttribute_WithEmptyValue_EmitsNoStrayBlankLine()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtEmpty");
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtEmpty");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"examine {obj}/EMPTYFN"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/EMPTYFN"));
 
 		// Every Notify call's plain text, in the order they were sent this command.
-		var texts = NotifyService.ReceivedCalls()
-			.Select(c => c.GetArguments())
-			.Where(args => args.Length >= 2 && args[1] is OneOf<MString, string>)
-			.Select(args => ((OneOf<MString, string>)args[1]!).Match(ms => ms.ToPlainText(), s => s))
+		var texts = Messages
+			.Select(m => m.Match(ms => ms.ToPlainText(), s => s))
 			.ToList();
 
 		var headerIndex = texts.FindIndex(t => t.StartsWith("EMPTYFN ["));
@@ -151,29 +146,18 @@ public class ExamineSyntaxFormattingTests
 		// but it's client-controlled metadata that parses as a perfectly valid int. A player who reports
 		// 0 (or a broken client that always does) must still get the 78-column fallback, not a
 		// SoftcodeLayout.Compute clamp to width 1.
-		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamFmtWidth0");
-		ConnectionService.Update(testPlayer.Handle, "WIDTH", "0");
+		ConnectionService.Update(_player.Handle, "WIDTH", "0");
 
-		// A fresh mortal can't @set or examine an object it doesn't own; God's WIZARD bit lets this
-		// player create, flag and examine its own attribute in one identity, keeping the connection
-		// (and its WIDTH=0 metadata) tied to the same executor throughout.
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {testPlayer.DbRef}=WIZARD"));
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtWidth0Obj");
 
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "ExamFmtWidth0Obj");
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
 
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
+		BeginNotificationWindow();
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"examine {obj}/LONGFN"));
-
-		// Same break as the no-connection fallback case: proves WIDTH=0 was rejected and 78 was used,
+		// Same break as the missing-width fallback case: proves WIDTH=0 was rejected and 78 was used,
 		// not that width silently became 1 (which would break after nearly every character instead).
-		await NotifyService.Received().Notify(
-			TestHelpers.MatchingObject(testPlayer.DbRef),
-			Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessagePlainTextContains(m, "\n  words(\n    %0),")),
-			Arg.Any<AnySharpObject?>(),
-			Arg.Any<INotifyService.NotificationType>());
+		await ExpectPlainText("\n  words(\n    %0),");
 	}
 }
