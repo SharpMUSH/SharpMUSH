@@ -124,6 +124,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		AnySharpObject gated,
 		AnySharpObject unlocker)
 	{
+		ExecutionBudget.Current?.ThrowIfExceeded();
 		var depth = _evaluationDepth.Value;
 		// The outermost evaluation is depth zero; max_depth indirect hops are allowed.
 		// Check before the #TRUE fast path, just as PennMUSH does.
@@ -146,7 +147,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
 			return await Evaluate(lockString, unlocker, unlocker);
 		// Channels have no object representation, so evaluate against the channel owner.
-		var channelOwner = await gatedChannel.Owner.WithCancellation(CancellationToken.None);
+		var channelOwner = await gatedChannel.Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		var syntheticGated = new AnySharpObject(channelOwner);
 		return await Evaluate(lockString, syntheticGated, unlocker);
 	}
