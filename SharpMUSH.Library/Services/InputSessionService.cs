@@ -36,11 +36,13 @@ public sealed class InputSessionService : IInputSessionService
 		public CallbackOwnership? Parent { get; } = parent;
 		public InputSession? Replacement { get; set; }
 		public bool Closed { get; set; }
+		public bool Cancelled { get; set; }
 	}
 
 	// Execution context identifies starts performed by this callback, not unrelated starts
 	// on the same handle. Recording and closure are serialized with capture publication.
 	private readonly AsyncLocal<CallbackOwnership?> _callbackOwnership = new();
+	private readonly HashSet<CallbackOwnership> _activeCallbacks = [];
 
 	private sealed class Generation { public InputCaptureTicket Ticket { get; set; } = new(Guid.NewGuid()); }
 	// Metadata survives bind/unbind but belongs to one transport incarnation. Weak keys do not
@@ -64,7 +66,15 @@ public sealed class InputSessionService : IInputSessionService
 		_permissions = permissions;
 		_notify = notify;
 		_time = timeProvider ?? TimeProvider.System;
-		connections.ListenState(change => { lock (_gate) _sessions.Remove(change.Item1); });
+		connections.ListenState(change =>
+		{
+			lock (_gate)
+			{
+				_sessions.Remove(change.Item1);
+				foreach (var callback in _activeCallbacks)
+					if (callback.Original.Connection.Handle == change.Item1) callback.Cancelled = true;
+			}
+		});
 	}
 
 	private bool BindingMatches(InputSession session)
@@ -130,6 +140,9 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 		{
 			if (!BindingMatches(session)) return InvalidContext;
+			for (var callback = _callbackOwnership.Value; callback is not null; callback = callback.Parent)
+				if (callback.Cancelled && ReferenceEquals(callback.Original.Connection.Metadata, connection.Metadata)
+					&& callback.Original.TransportSessionId == session.TransportSessionId) return NotActive;
 			if (_sessions.TryGetValue(handle, out var previous) && BindingMatches(previous.Session)
 				&& (previous.TimeoutPending || previous.Session.ExpiresAt <= _time.GetUtcNow())) return PendingTimeout;
 			if (!_sessions.ContainsKey(handle) && _sessions.Count >= MaxSessions) return SessionLimit;
@@ -189,6 +202,7 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 		{
 			if (!IsCurrent(session, timeout: false)) return NotActive;
+			CancelCallbacks(session);
 			_sessions.Remove(handle);
 		}
 		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
@@ -206,10 +220,21 @@ public sealed class InputSessionService : IInputSessionService
 				|| !TransportMatches(entry.Session.Connection, transportSessionId)) return false;
 			if (expectedCapture is { } expected && entry.Session.Id != expected) return true;
 			session = entry.Session;
+			CancelCallbacks(session);
 			_sessions.Remove(handle);
 		}
 		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
+	}
+
+	// Called under _gate after validating the current capture. Fence already-running
+	// callbacks on this transport; future independent starts have no cancelled ownership.
+	private void CancelCallbacks(InputSession session)
+	{
+		foreach (var callback in _activeCallbacks)
+			if (ReferenceEquals(callback.Original.Connection, session.Connection)
+				&& callback.Original.TransportSessionId == session.TransportSessionId)
+				callback.Cancelled = true;
 	}
 
 	public IReadOnlyList<InputSession> TakeExpired()
@@ -248,6 +273,7 @@ public sealed class InputSessionService : IInputSessionService
 		var prior = _callbackOwnership.Value;
 		var ownership = new CallbackOwnership(session, prior);
 		_callbackOwnership.Value = ownership;
+		lock (_gate) _activeCallbacks.Add(ownership);
 		var failed = true;
 		try
 		{
@@ -262,6 +288,7 @@ public sealed class InputSessionService : IInputSessionService
 				lock (_gate)
 				{
 					ownership.Closed = true;
+					_activeCallbacks.Remove(ownership);
 					if (failed || ExecutionBudget.Current?.IsExceeded == true)
 					{
 						Discard(session);

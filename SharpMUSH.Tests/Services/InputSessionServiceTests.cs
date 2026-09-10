@@ -686,6 +686,50 @@ public class InputSessionServiceTests
 	}
 
 	[Test]
+	[Arguments("escape", false, false)]
+	[Arguments("escape", false, true)]
+	[Arguments("escape", true, false)]
+	[Arguments("cancel", false, false)]
+	[Arguments("cancel", false, true)]
+	[Arguments("cancel", true, false)]
+	[Arguments("disconnect", false, false)]
+	public async Task CancelledCallbackCannotReopenCapture(string cancellation, bool nested, bool externalBeforeCancel)
+	{
+		var h = new Harness(); var caller = await h.Connect();
+		await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		var original = h.Sessions.GetCapturing(1)!;
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var starts = new List<string?>();
+		var calls = 0;
+		async ValueTask<CallState?> Callback()
+		{
+			if (nested && ++calls == 1)
+			{
+				await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "NESTED", MarkupText.Empty, TimeSpan.FromSeconds(60));
+				await h.Sessions.DeliverAsync(h.Parser, h.Sessions.GetCapturing(1)!, MarkupText.Empty);
+			}
+			else { entered.SetResult(); await release.Task; }
+			starts.Add(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "LATE", MarkupText.Empty, TimeSpan.FromSeconds(60)));
+			return CallState.Empty;
+		}
+		h.Parser.CommandListParse(Arg.Any<MarkupText>()).Returns(_ => Callback());
+		var delivery = h.Sessions.DeliverAsync(h.Parser, original, MarkupText.Empty).AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		if (externalBeforeCancel) await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "BEFORE", MarkupText.Empty, TimeSpan.FromSeconds(60));
+		if (cancellation == "escape") await Assert.That(await h.Sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel"))).IsTrue();
+		else if (cancellation == "cancel") await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
+		else { await h.Connections.Unbind(1); await h.Connections.Bind(1, h.Character.Object.DBRef); }
+		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
+		await Assert.That(await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "INDEPENDENT", MarkupText.Empty, TimeSpan.FromSeconds(60))).IsNull();
+		var independent = h.Sessions.GetCapturing(1)!.Id;
+		release.SetResult();
+		await delivery.WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(starts.All(result => result == InputSessionService.NotActive)).IsTrue();
+		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsEqualTo(independent);
+	}
+
+	[Test]
 	public async Task ExpiredExecutionBudgetEndsCaptureBeforeCallback()
 	{
 		var h = new Harness(); var session = await h.Start();
