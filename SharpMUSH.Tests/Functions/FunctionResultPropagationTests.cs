@@ -30,7 +30,6 @@ public class FunctionResultPropagationTests
 	{
 		var code = expression.Replace("{0}", @"ulambda(#lambda/\[)");
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(code));
-		Console.WriteLine($"{code}: {result?.HadErrors} {result?.Message}");
 		await Assert.That(result!.HadErrors).IsEqualTo(expected);
 	}
 

@@ -126,8 +126,7 @@ public class AttributeResultCoverageTests
 		};
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(id));
 		var result = await parser.FunctionParse(MarkupText.Plain(expression));
-		Console.WriteLine($"{kind}/{mode}: errors={result!.HadErrors}; text={result.Message}");
-		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
+		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
 		if (mode != "syntax")
 		{
 			if (selector && mode == "literal") await Assert.That(result.Message!.ToPlainText()).StartsWith("#-1");
@@ -172,8 +171,7 @@ public class AttributeResultCoverageTests
 		var original = (MUSHCodeParser)Factory.FunctionParser;
 		var parser = (original with { FunctionLibrary = functions.Get() }).FromState(ParserState.RootFor(id));
 		var result = await parser.FunctionParse(MarkupText.Plain($"{function}(me)"));
-		Console.WriteLine($"{function}/{mode}: errors={result!.HadErrors}; text={result.Message}");
-		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
+		await Assert.That(result!.HadErrors).IsEqualTo(mode == "syntax");
 		if (mode != "syntax") await Assert.That(result.Message!.ToPlainText()).IsEqualTo(value);
 	}
 }

@@ -167,7 +167,6 @@ public class SynchronousFunctionResultTests
 			expression = $"rendermarkdowncustom(**word**,{target.Object().DBRef})";
 		}
 		var result = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression)))!;
-		Console.WriteLine($"{kind}/{mode}: errors={result.HadErrors}; output={result.Message}");
 		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax" && kind != "markdown");
 		if (kind == "markdown" && mode == "syntax") await Assert.That(result.Message!.ToPlainText()).Contains("word");
 		if (kind is "fn" or "render" or "json" or "jsonlambda" && mode != "syntax")
