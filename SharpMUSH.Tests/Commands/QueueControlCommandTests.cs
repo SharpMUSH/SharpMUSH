@@ -11,6 +11,9 @@ namespace SharpMUSH.Tests.Commands;
 [NotInParallel]
 public class QueueControlCommandTests
 {
+	private static long RequirePid(QueueAdmissionResult admission)
+		=> admission.Pid ?? throw new InvalidOperationException($"Fixture admission rejected: {admission.Reason}");
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
 
@@ -26,14 +29,14 @@ public class QueueControlCommandTests
 			new SharpMUSH.Library.Models.DbRefAttribute(objid, ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
 		try
 		{
-			await queue.PausePending(job.Pid!.Value, "hold");
-			var before = queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay!.Value;
+			await queue.PausePending(RequirePid(job), "hold");
+			var before = queue.GetQueueEntry(RequirePid(job))!.RemainingDelay!.Value;
 			var result = await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@wait/pid {job.Pid}=+30"));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(job.Pid.Value.ToString());
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(30));
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(30));
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@wait/pid {job.Pid}=-20"));
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(10));
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(before + TimeSpan.FromSeconds(10));
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.State).IsEqualTo(QueueEntryState.Paused);
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }
 	}
@@ -55,19 +58,19 @@ public class QueueControlCommandTests
 			: await queue.AdmitCommandList(MarkupText.Plain("think later"), state, TimeSpan.FromHours(1));
 		try
 		{
-			await queue.PausePending(job.Pid!.Value, "hold");
+			await queue.PausePending(RequirePid(job), "hold");
 			var timestamp = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
 			var result = await Factory.CommandParser.CommandParse(1, connections,
 				MarkupText.Plain($"@wait/pid/until {job.Pid}={timestamp}"));
-			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(job.Pid.Value.ToString());
-			var remaining = queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay!.Value;
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(RequirePid(job).ToString());
+			var remaining = queue.GetQueueEntry(RequirePid(job))!.RemainingDelay!.Value;
 			await Assert.That(remaining.TotalSeconds).IsGreaterThan(290);
 			await Assert.That(remaining.TotalSeconds).IsLessThanOrEqualTo(300);
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.State).IsEqualTo(QueueEntryState.Paused);
 			var invalid = await Factory.CommandParser.CommandParse(1, connections,
 				MarkupText.Plain($"@wait/pid {job.Pid}=9223372036854775807"));
 			await Assert.That(invalid.Message!.ToPlainText()).IsEqualTo("#-1 INVALID TIME");
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.RemainingDelay).IsEqualTo(remaining);
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.RemainingDelay).IsEqualTo(remaining);
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }
 	}
@@ -84,7 +87,7 @@ public class QueueControlCommandTests
 		try
 		{
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@queue/pause {job.Pid}=Inspect timer"));
-			await Assert.That(queue.GetQueueEntry(job.Pid!.Value)!.State).IsEqualTo(QueueEntryState.Paused);
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.State).IsEqualTo(QueueEntryState.Paused);
 			var before = Factory.Notifications.CountFor(Factory.ExecutorDBRef);
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@queue/list {job.Pid}"));
 			var output = string.Join("\n", Factory.Notifications.For(Factory.ExecutorDBRef).Skip(before));
@@ -92,7 +95,7 @@ public class QueueControlCommandTests
 			await Assert.That(output.Contains("Inspect timer")).IsTrue();
 			await Assert.That(output.Contains("QueuePrivatePayload")).IsFalse();
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@queue/resume {job.Pid}"));
-			await Assert.That(queue.GetQueueEntry(job.Pid.Value)!.State).IsEqualTo(QueueEntryState.Pending);
+			await Assert.That(queue.GetQueueEntry(RequirePid(job))!.State).IsEqualTo(QueueEntryState.Pending);
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }
 	}
