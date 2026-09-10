@@ -17,7 +17,7 @@ public partial class TaskScheduler
 		public string Reason { get; init; } = "";
 		public long Generation { get; init; }
 		public bool ReleasePending { get; init; }
-		public bool ReleaseTimeout { get; init; }
+		public JobKey? CleanupJob { get; init; }
 	}
 	private readonly HashSet<long> _running = [];
 	private readonly SemaphoreSlim _deferredChanges = new(1, 1);
@@ -71,7 +71,8 @@ public partial class TaskScheduler
 	// Caller owns the admission lock. Every timer control uses the same repair exclusions.
 	private bool HasPendingCleanup(long pid)
 		=> _delayedRepairs.Contains(pid) || _semaphoreRepairs.ContainsKey(pid)
-			|| _semaphoreCommandReservations.Contains(pid);
+			|| _semaphoreCommandReservations.Contains(pid)
+			|| (_pendingEntries.TryGetValue(pid, out var entry) && entry.Deferred?.CleanupJob is not null);
 
 	public async ValueTask<QueueControlResult> PausePending(long pid, string reason)
 	{
@@ -132,7 +133,7 @@ public partial class TaskScheduler
 			deferred = entry.Deferred!;
 			_pendingEntries[pid] = entry with { Deferred = deferred with { Paused = false, Reason = "" } };
 		}
-		if (deferred.ReleasePending) await Activate(pid, deferred.ReleaseTimeout);
+		if (deferred.ReleasePending) await Activate(pid);
 		return QueueControlResult.Applied;
 	}
 
@@ -167,8 +168,19 @@ public partial class TaskScheduler
 	{
 		var key = new TriggerKey(entry.TriggerName, entry.Group);
 		var trigger = await _scheduler.GetTrigger(key, ExecutionBudget.CurrentToken);
+		JobKey? job;
+		lock (_admissionLock)
+		{
+			if (!_pendingEntries.TryGetValue(entry.Pid, out var current)) return;
+			job = current.Deferred?.CleanupJob ?? trigger?.JobKey;
+			if (current.Deferred is { } deferred)
+				_pendingEntries[entry.Pid] = current with { Deferred = deferred with { CleanupJob = job } };
+		}
 		await _scheduler.UnscheduleJob(key, ExecutionBudget.CurrentToken);
-		if (trigger is not null) await _scheduler.DeleteJob(trigger.JobKey, ExecutionBudget.CurrentToken);
+		if (job is not null) await _scheduler.DeleteJob(job, ExecutionBudget.CurrentToken);
+		lock (_admissionLock)
+			if (_pendingEntries.TryGetValue(entry.Pid, out var current) && current.Deferred is { } deferred)
+				_pendingEntries[entry.Pid] = current with { Deferred = deferred with { CleanupJob = null } };
 	}
 	private static TimeSpan Nonnegative(TimeSpan value) => value < TimeSpan.Zero ? TimeSpan.Zero : value;
 }

@@ -276,7 +276,7 @@ public partial class Functions
 			{
 				// Return positions of all matches (1-indexed)
 				var positions = splitList
-					.Select((item, index) => new { item, index })
+					.Select((item, index) => (item, index))
 					.Where(x => regex.IsMatch(x.item.ToPlainText()))
 					.Select(x => MarkupText.Plain((x.index + 1).ToString()));
 
@@ -285,11 +285,9 @@ public partial class Functions
 			else
 			{
 				// Return position of first match (1-indexed), or 0 if no match
-				var position = splitList
-					.Select((item, index) => new { item, index })
-					.FirstOrDefault(x => regex.IsMatch(x.item.ToPlainText()));
+				var position = Array.FindIndex(splitList, x => regex.IsMatch(x.ToPlainText()));
 
-				return ValueTask.FromResult(new CallState(position != null ? (position.index + 1).ToString() : "0"));
+				return ValueTask.FromResult(new CallState(position + 1));
 			}
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
@@ -378,10 +376,10 @@ public partial class Functions
 				}
 			}
 
-			if (results.Any())
+			if (results.Count > 0)
 			{
 				// PennMUSH concatenates results with no separator (like appending to a buffer)
-				return new CallState(MarkupText.Join(MarkupText.Empty, results));
+				return new CallState(MarkupText.Concat(results));
 			}
 
 			if (defaultValue != null)

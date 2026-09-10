@@ -80,9 +80,9 @@ public class SharpObject : IObjectShaped<SharpObject>
 
 	public async ValueTask WithoutFlag(string flagName, CancellationToken cancellationToken = default)
 	{
-		var flags = (await Flags.Value.ToListAsync(cancellationToken))
+		var flags = await Flags.Value
 			.Where(f => !f.Name.Equals(flagName, StringComparison.OrdinalIgnoreCase))
-			.ToList();
+			.ToListAsync(cancellationToken);
 		Flags = new(() => flags.ToAsyncEnumerable());
 	}
 
@@ -99,9 +99,9 @@ public class SharpObject : IObjectShaped<SharpObject>
 
 	public async ValueTask WithoutPower(string powerName, CancellationToken cancellationToken = default)
 	{
-		var powers = (await Powers.Value.ToListAsync(cancellationToken))
+		var powers = await Powers.Value
 			.Where(p => !string.Equals(p.Name, powerName, StringComparison.OrdinalIgnoreCase))
-			.ToList();
+			.ToListAsync(cancellationToken);
 		Powers = new(() => powers.ToAsyncEnumerable());
 	}
 

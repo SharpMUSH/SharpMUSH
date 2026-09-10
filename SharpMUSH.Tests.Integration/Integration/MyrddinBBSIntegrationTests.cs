@@ -590,6 +590,33 @@ public class MyrddinBBSIntegrationTests
 		return sliced.ToList();
 	}
 
+	/// <summary>
+	/// Waits until the notification stream goes quiet, so output produced by QUEUED work is
+	/// collected too. @switch and @select make their actions new queue entries (as PennMUSH
+	/// does), and the queue consumer is a background reader, so a command's visible output is
+	/// not complete the moment CommandParse returns.
+	/// </summary>
+	private async Task SettleQueueAsync(int quietMs = 150, int timeoutMs = 5000)
+	{
+		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+		var last = NotificationCount();
+		var quietSince = DateTime.UtcNow;
+
+		while (DateTime.UtcNow < deadline)
+		{
+			await Task.Delay(25);
+			var current = NotificationCount();
+			if (current != last)
+			{
+				last = current;
+				quietSince = DateTime.UtcNow;
+				continue;
+			}
+
+			if ((DateTime.UtcNow - quietSince).TotalMilliseconds >= quietMs) return;
+		}
+	}
+
 	/// <summary>Runs a command and collects all notifications it produces.</summary>
 	private async Task<IReadOnlyList<string>> RunAndCollect(string command, int delayMs = 0)
 	{
@@ -597,6 +624,7 @@ public class MyrddinBBSIntegrationTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 		if (delayMs > 0)
 			await Task.Delay(delayMs);
+		await SettleQueueAsync();
 		var after = NotificationCount();
 		return GetNotificationMessages(before, after);
 	}
@@ -608,6 +636,7 @@ public class MyrddinBBSIntegrationTests
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		if (delayMs > 0)
 			await Task.Delay(delayMs);
+		await SettleQueueAsync();
 		var after = NotificationCount();
 		return GetNotificationMessages(before, after);
 	}

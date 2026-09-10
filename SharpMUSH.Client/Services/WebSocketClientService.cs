@@ -304,7 +304,7 @@ public class WebSocketClientService : IWebSocketClientService
 
 				if (result.MessageType == WebSocketMessageType.Text && messageBuffer.Length > 0)
 				{
-					var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
+					var message = Encoding.UTF8.GetString(messageBuffer.GetBuffer(), 0, (int)messageBuffer.Length);
 					SurfaceMessage(message);
 				}
 			}

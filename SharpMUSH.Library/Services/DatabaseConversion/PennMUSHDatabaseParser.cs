@@ -9,7 +9,6 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 public partial class PennMUSHDatabaseParser
 {
 	private readonly ILogger<PennMUSHDatabaseParser> _logger;
-	private string? _nextLine;
 
 	public PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 	{
@@ -36,16 +35,19 @@ public partial class PennMUSHDatabaseParser
 		return await ParseAsync(stream, cancellationToken);
 	}
 
-	private async Task<PennMUSHDatabase> ParseAsync(StreamReader reader, CancellationToken cancellationToken)
+	private async Task<PennMUSHDatabase> ParseAsync(StreamReader streamReader, CancellationToken cancellationToken)
 	{
-		_nextLine = null;
+		// Per-parse, never a field: the parser is a singleton, so a one-line pushback buffer kept on
+		// it is shared with every other parse in flight, and one parse consumes the other's peeked
+		// line. See PennMUSHLineReader.
+		var reader = new PennMUSHLineReader(streamReader);
 
 		var database = new PennMUSHDatabase
 		{
 			Version = "Unknown"
 		};
 
-		var versionLine = await ReadLineAsync(reader, cancellationToken);
+		var versionLine = await reader.ReadLineAsync(cancellationToken);
 		if (versionLine != null)
 		{
 			database.Version = versionLine.Trim();
@@ -58,7 +60,7 @@ public partial class PennMUSHDatabaseParser
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			var line = await PeekLineAsync(reader, cancellationToken);
+			var line = await reader.PeekLineAsync(cancellationToken);
 
 			if (line == null)
 			{
@@ -80,7 +82,7 @@ public partial class PennMUSHDatabaseParser
 			}
 			else
 			{
-				await ReadLineAsync(reader, cancellationToken);
+				await reader.ReadLineAsync(cancellationToken);
 			}
 		}
 
@@ -88,39 +90,17 @@ public partial class PennMUSHDatabaseParser
 		return database;
 	}
 
-	private async Task<string?> ReadLineAsync(StreamReader reader, CancellationToken cancellationToken)
-	{
-		if (_nextLine != null)
-		{
-			var line = _nextLine;
-			_nextLine = null;
-			return line;
-		}
-
-		return await reader.ReadLineAsync(cancellationToken);
-	}
-
-	private async Task<string?> PeekLineAsync(StreamReader reader, CancellationToken cancellationToken)
-	{
-		if (_nextLine == null)
-		{
-			_nextLine = await reader.ReadLineAsync(cancellationToken);
-		}
-
-		return _nextLine;
-	}
-
-	private async Task ParseDatabaseHeaderAsync(StreamReader reader, PennMUSHDatabase database, CancellationToken cancellationToken)
+	private async Task ParseDatabaseHeaderAsync(PennMUSHLineReader reader, PennMUSHDatabase database, CancellationToken cancellationToken)
 	{
 		// PennMUSH databases may have configuration flags at the start
 		// Format varies by version, but typically includes flags like:
 		// +FLAGS, +POWERS, etc.
 
-		var line = await PeekLineAsync(reader, cancellationToken);
+		var line = await reader.PeekLineAsync(cancellationToken);
 
 		while (line != null && (line.StartsWith('+') || line.StartsWith('~')))
 		{
-			await ReadLineAsync(reader, cancellationToken);
+			await reader.ReadLineAsync(cancellationToken);
 
 			var parts = line.Split('|', 2);
 			if (parts.Length >= 1)
@@ -130,14 +110,14 @@ public partial class PennMUSHDatabaseParser
 				database.Configuration[key] = value;
 			}
 
-			line = await PeekLineAsync(reader, cancellationToken);
+			line = await reader.PeekLineAsync(cancellationToken);
 		}
 	}
 
-	private async Task<PennMUSHObject?> ParseObjectAsync(StreamReader reader, CancellationToken cancellationToken)
+	private async Task<PennMUSHObject?> ParseObjectAsync(PennMUSHLineReader reader, CancellationToken cancellationToken)
 	{
 		// PennMUSH object format starts with !<number>
-		var line = await ReadLineAsync(reader, cancellationToken);
+		var line = await reader.ReadLineAsync(cancellationToken);
 
 		if (string.IsNullOrWhiteSpace(line))
 		{
@@ -157,32 +137,32 @@ public partial class PennMUSHDatabaseParser
 			return null;
 		}
 
-		var name = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
-		var location = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var contents = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var exits = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var link = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var next = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
+		var name = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
+		var location = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var contents = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var exits = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var link = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var next = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
 
-		var lockLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
+		var lockLine = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
 		var locks = ParseLocks(lockLine);
 
-		var owner = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var parent = ParseDbRef(await ReadLineAsync(reader, cancellationToken));
-		var pennies = ParseInt(await ReadLineAsync(reader, cancellationToken));
+		var owner = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var parent = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
+		var pennies = ParseInt(await reader.ReadLineAsync(cancellationToken));
 
-		var flagsLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
+		var flagsLine = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
 		var (type, flags) = ParseFlagsAndType(flagsLine);
 
-		var powersLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
+		var powersLine = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
 		var powers = ParsePowers(powersLine);
 
 		// Warnings (if present in newer versions)
-		var warningsLine = (await ReadLineAsync(reader, cancellationToken))?.Trim() ?? "";
+		var warningsLine = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
 		var warnings = ParseWarnings(warningsLine);
 
-		var creationTime = ParseLong(await ReadLineAsync(reader, cancellationToken));
-		var modificationTime = ParseLong(await ReadLineAsync(reader, cancellationToken));
+		var creationTime = ParseLong(await reader.ReadLineAsync(cancellationToken));
+		var modificationTime = ParseLong(await reader.ReadLineAsync(cancellationToken));
 
 		var attributes = new List<PennMUSHAttribute>();
 		await ParseAttributesAsync(reader, attributes, cancellationToken);
@@ -217,7 +197,7 @@ public partial class PennMUSHDatabaseParser
 		return obj;
 	}
 
-	private async Task ParseAttributesAsync(StreamReader reader, List<PennMUSHAttribute> attributes, CancellationToken cancellationToken)
+	private async Task ParseAttributesAsync(PennMUSHLineReader reader, List<PennMUSHAttribute> attributes, CancellationToken cancellationToken)
 	{
 		// Attributes start with < marker
 		// Format: <name>^owner^flags^derefs
@@ -228,7 +208,7 @@ public partial class PennMUSHDatabaseParser
 
 		while (true)
 		{
-			var line = await PeekLineAsync(reader, cancellationToken);
+			var line = await reader.PeekLineAsync(cancellationToken);
 
 			if (line == null)
 			{
@@ -237,7 +217,7 @@ public partial class PennMUSHDatabaseParser
 
 			if (string.IsNullOrWhiteSpace(line))
 			{
-				await ReadLineAsync(reader, cancellationToken);
+				await reader.ReadLineAsync(cancellationToken);
 				continue;
 			}
 
@@ -248,7 +228,7 @@ public partial class PennMUSHDatabaseParser
 
 			if (line.StartsWith('<'))
 			{
-				await ReadLineAsync(reader, cancellationToken);
+				await reader.ReadLineAsync(cancellationToken);
 				var attr = await ParseAttributeAsync(reader, line, cancellationToken);
 				if (attr != null)
 				{
@@ -262,7 +242,7 @@ public partial class PennMUSHDatabaseParser
 		}
 	}
 
-	private async Task<PennMUSHAttribute?> ParseAttributeAsync(StreamReader reader, string headerLine, CancellationToken cancellationToken)
+	private async Task<PennMUSHAttribute?> ParseAttributeAsync(PennMUSHLineReader reader, string headerLine, CancellationToken cancellationToken)
 	{
 		// Parse attribute header: <name>^owner^flags^derefs
 		var header = headerLine.TrimStart('<');
@@ -293,13 +273,13 @@ public partial class PennMUSHDatabaseParser
 		};
 	}
 
-	private async Task<string> ReadAttributeValueAsync(StreamReader reader, CancellationToken cancellationToken)
+	private async Task<string> ReadAttributeValueAsync(PennMUSHLineReader reader, CancellationToken cancellationToken)
 	{
 		var valueLines = new List<string>();
 
 		while (true)
 		{
-			var line = await PeekLineAsync(reader, cancellationToken);
+			var line = await reader.PeekLineAsync(cancellationToken);
 
 			if (line == null)
 			{
@@ -311,7 +291,7 @@ public partial class PennMUSHDatabaseParser
 				break;
 			}
 
-			await ReadLineAsync(reader, cancellationToken);
+			await reader.ReadLineAsync(cancellationToken);
 			valueLines.Add(line);
 		}
 

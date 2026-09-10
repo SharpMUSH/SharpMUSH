@@ -370,6 +370,120 @@ public class WizardCommandTests
 				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// Everything connection <paramref name="handle"/> was sent while <paramref name="action"/> ran.
+	/// The wall commands address descriptors rather than objects, so their output is recorded by
+	/// handle; see <see cref="MessagesWhile"/> for why the window matters.
+	/// </summary>
+	private async Task<List<string>> HandleMessagesWhile(long handle, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountForHandle(handle);
+		await action();
+		return [.. recorder.ForHandle(handle).Skip(before)];
+	}
+
+	/// <summary>
+	/// A connected mortal, a connected ROYALTY and a connected WIZARD, for the wall audience tests.
+	/// </summary>
+	private async Task<(TestIsolationHelpers.TestPlayer Mortal, TestIsolationHelpers.TestPlayer Royal,
+		TestIsolationHelpers.TestPlayer Wizard)> CreateWallAudienceAsync(string prefix)
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Mortal");
+		var royal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Royal");
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, $"{prefix}Wizard");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {royal.DbRef}=ROYALTY"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+
+		return (mortal, royal, wizard);
+	}
+
+	/// <summary>
+	/// PennMUSH src/speech.c do_wall(): @wizwall broadcasts with flag mask "WIZARD", so a mortal
+	/// must never see it.
+	/// </summary>
+	[Test]
+	public async ValueTask WizwallReachesOnlyWizards()
+	{
+		var (mortal, royal, wizard) = await CreateWallAudienceAsync("WizwallAud");
+		var token = TestIsolationHelpers.GenerateUniqueName("WizwallAud");
+
+		var mortalMessages = new List<string>();
+		var royalMessages = new List<string>();
+		var wizardMessages = await HandleMessagesWhile(wizard.Handle, async () =>
+			royalMessages = await HandleMessagesWhile(royal.Handle, async () =>
+				mortalMessages = await HandleMessagesWhile(mortal.Handle, async () =>
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wizwall {token}")))));
+
+		await Assert.That(wizardMessages).Contains($"Broadcast: {token}");
+		await Assert.That(royalMessages.Any(x => x.Contains(token, StringComparison.Ordinal))).IsFalse();
+		await Assert.That(mortalMessages.Any(x => x.Contains(token, StringComparison.Ordinal))).IsFalse();
+	}
+
+	/// <summary>
+	/// PennMUSH src/speech.c do_wall(): @rwall broadcasts with flag mask "WIZARD ROYALTY", which
+	/// flaglist_check_long() treats as any-of, so wizards and royalty see it and mortals do not.
+	/// </summary>
+	[Test]
+	public async ValueTask RwallReachesOnlyRoyaltyAndWizards()
+	{
+		var (mortal, royal, wizard) = await CreateWallAudienceAsync("RwallAud");
+		var token = TestIsolationHelpers.GenerateUniqueName("RwallAud");
+
+		var mortalMessages = new List<string>();
+		var royalMessages = new List<string>();
+		var wizardMessages = await HandleMessagesWhile(wizard.Handle, async () =>
+			royalMessages = await HandleMessagesWhile(royal.Handle, async () =>
+				mortalMessages = await HandleMessagesWhile(mortal.Handle, async () =>
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@rwall {token}")))));
+
+		await Assert.That(wizardMessages).Contains($"Admin: {token}");
+		await Assert.That(royalMessages).Contains($"Admin: {token}");
+		await Assert.That(mortalMessages.Any(x => x.Contains(token, StringComparison.Ordinal))).IsFalse();
+	}
+
+	/// <summary>@wall has no flag mask, so every connected player gets it, mortals included.</summary>
+	[Test]
+	public async ValueTask WallReachesEveryone()
+	{
+		var (mortal, royal, wizard) = await CreateWallAudienceAsync("WallAud");
+		var token = TestIsolationHelpers.GenerateUniqueName("WallAud");
+
+		var mortalMessages = new List<string>();
+		var royalMessages = new List<string>();
+		var wizardMessages = await HandleMessagesWhile(wizard.Handle, async () =>
+			royalMessages = await HandleMessagesWhile(royal.Handle, async () =>
+				mortalMessages = await HandleMessagesWhile(mortal.Handle, async () =>
+					await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wall {token}")))));
+
+		await Assert.That(mortalMessages).Contains($"Announcement: {token}");
+		await Assert.That(royalMessages).Contains($"Announcement: {token}");
+		await Assert.That(wizardMessages).Contains($"Announcement: {token}");
+	}
+
+	/// <summary>
+	/// PennMUSH declares @wall/@rwall/@wizwall with the NOEVAL switch (src/command.c), which
+	/// suppresses evaluation of the message; without it the message is evaluated like any other
+	/// command argument.
+	/// </summary>
+	[Test]
+	public async ValueTask WallNoEvalSwitchLeavesMessageUnevaluated()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("WallNoEval");
+
+		var evaluated = await HandleMessagesWhile(1,
+			() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wall {token}[add(1,2)]")).AsTask());
+		var literal = await HandleMessagesWhile(1,
+			() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wall/noeval {token}[add(1,2)]")).AsTask());
+
+		await Assert.That(evaluated).Contains($"Announcement: {token}3");
+		await Assert.That(literal).Contains($"Announcement: {token}[add(1,2)]");
+	}
+
 	[Test]
 	[DependsOn(nameof(ReadCacheCommand))]
 	public async ValueTask PollCommand()

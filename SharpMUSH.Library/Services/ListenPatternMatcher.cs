@@ -47,9 +47,8 @@ public class ListenPatternMatcher(
 				var parent = parentAsync.Known;
 				var parentObject = parent.Object();
 
-				if (visitedObjects.Contains(parentObject.DBRef.Number))
+				if (!visitedObjects.Add(parentObject.DBRef.Number))
 					break;
-				visitedObjects.Add(parentObject.DBRef.Number);
 
 				var hasListenParent = await parentObject.Flags.Value.AnyAsync(f => f.Name == "LISTEN_PARENT");
 				if (!hasListenParent)
@@ -115,15 +114,9 @@ public class ListenPatternMatcher(
 			if (regexMatch is not { Success: true })
 				continue;
 
-			var capturedGroups = new string[regexMatch.Groups.Count];
-			for (int i = 0; i < regexMatch.Groups.Count; i++)
-			{
-				capturedGroups[i] = regexMatch.Groups[i].Value;
-			}
-
 			matches.Add(new ListenMatch(
 				listenAttr.Attribute,
-				capturedGroups,
+				regexMatch.Groups.Values.Select(group => group.Value).ToArray(),
 				listenAttr.Behavior
 			));
 		}

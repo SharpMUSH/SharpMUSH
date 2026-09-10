@@ -55,30 +55,44 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		var res = matchedCommandPatternAttributes.Select(match =>
 			(match.Obj,
 			 match.Attr,
-			 Arguments: match.Regex
-				.Matches(plainCommandString)
-				.SelectMany(matchResult => matchResult.Groups.Cast<Group>()
-					.Select((group, groupIndex) => (group, groupIndex))
-					.Skip(!match.IsRegex ? 1 : 0)) // Skip the first Group for Wildcard matches, which is the entire Match
-				.SelectMany<(Group group, int groupIndex), KeyValuePair<string, MString>>(x =>
-					match.IsRegex
-						// For regex patterns: generate both numeric index key and named capture group key
-						? [
-							new KeyValuePair<string, MString>(x.groupIndex.ToString(), trimmedCommandString.Substring(x.group.Index, x.group.Length)),
-							new KeyValuePair<string, MString>(x.group.Name, trimmedCommandString.Substring(x.group.Index, x.group.Length))
-							]
-						// For wildcard patterns: generate only numeric index key (0-based) to avoid key
-						// collisions between a group's auto-generated name (e.g. "1") and the next
-						// group's 0-based index key (also "1"), which would cause wrong %1, %2 values.
-						: [
-							new KeyValuePair<string, MString>((x.groupIndex - 1).ToString(), trimmedCommandString.Substring(x.group.Index, x.group.Length))
-							])
-				.GroupBy(kv => kv.Key)
-				.ToDictionary(kv => kv.Key, kv => new CallState(kv.First().Value, 0))
-			));
+			 Arguments: CaptureArguments(match.Regex, match.IsRegex, plainCommandString, trimmedCommandString)));
 
 		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
 			.FromOption(res);
+	}
+
+	/// <summary>
+	/// The registers a matched pattern binds, cut from the styled command text at the offsets the
+	/// plain-text match reported. A regexp pattern binds every group by index and by name; a
+	/// wildcard pattern binds its stars from %0 upward and skips group 0, the whole match, so that
+	/// a group's auto-generated name (e.g. "1") can never collide with the next star's index. The
+	/// first binding of a key wins, as an unnamed group's name is its own index.
+	/// </summary>
+	private static Dictionary<string, CallState> CaptureArguments(Regex regex, bool isRegex, string plain,
+		MString trimmed)
+	{
+		var arguments = new Dictionary<string, CallState>();
+		if (SoftcodeRegex.Match(regex, plain) is not { Success: true } match)
+		{
+			return arguments;
+		}
+
+		foreach (var (index, group) in match.Groups.Values.Index().Skip(isRegex ? 0 : 1))
+		{
+			var captured = trimmed.Substring(group.Index, group.Length);
+
+			if (isRegex)
+			{
+				arguments.TryAdd(index.ToString(), new CallState(captured, 0));
+				arguments.TryAdd(group.Name, new CallState(captured, 0));
+			}
+			else
+			{
+				arguments.TryAdd((index - 1).ToString(), new CallState(captured, 0));
+			}
+		}
+
+		return arguments;
 	}
 
 	/// <summary>

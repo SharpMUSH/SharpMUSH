@@ -9,9 +9,16 @@ public class SwitchFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	/// <summary>
+	/// switch() glob-matches through the same quick_wild as everything else, so it is
+	/// case-insensitive; verified against a live PennMUSH 1.8.8, where switch(ABC,abc,YES,NO) is
+	/// YES.
+	/// </summary>
 	[Test]
 	[Arguments("switch(a,a,1,b,2,0)", "1")]
 	[Arguments("switch(c,a,1,b,2,0)", "0")]
+	[Arguments("switch(ABC,abc,YES,NO)", "YES")]
+	[Arguments("switch(abc,AB*,YES,NO)", "YES")]
 	public async Task Switch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

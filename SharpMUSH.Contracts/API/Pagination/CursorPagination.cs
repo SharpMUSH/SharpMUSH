@@ -58,13 +58,14 @@ public static class CursorPaginationHelper
 	{
 		pageSize = Math.Clamp(pageSize, 1, 200);
 
-		var items = source.ToList();
+		// Enumerated once, by whichever slice below is taken.
+		var items = source;
 
 		if (after is not null)
 		{
 			var afterKey = DecodeCursor<TKey>(after);
 			if (afterKey is not null)
-				items = items.SkipWhile(i => keySelector(i).CompareTo(afterKey) <= 0).ToList();
+				items = items.SkipWhile(i => keySelector(i).CompareTo(afterKey) <= 0);
 		}
 
 		if (before is not null)
@@ -76,7 +77,8 @@ public static class CursorPaginationHelper
 				// boundary, kept in original order. Anything at or past the boundary is by
 				// definition a next page, and anything left over in front is a previous page.
 				var beforeItems = items.TakeWhile(i => keySelector(i).CompareTo(beforeKey) < 0).ToList();
-				var backPage = beforeItems.Skip(Math.Max(0, beforeItems.Count - pageSize)).ToList();
+				var skipped = Math.Max(0, beforeItems.Count - pageSize);
+				var backPage = beforeItems.GetRange(skipped, beforeItems.Count - skipped);
 
 				return new CursorPage<T>
 				{
@@ -90,9 +92,10 @@ public static class CursorPaginationHelper
 		}
 
 		// Request one extra item to detect whether a next page exists
-		var window = items.Take(pageSize + 1).ToList();
-		var hasNext = window.Count > pageSize;
-		var page = window.Take(pageSize).ToList();
+		var page = items.Take(pageSize + 1).ToList();
+		var hasNext = page.Count > pageSize;
+		if (hasNext)
+			page.RemoveAt(pageSize);
 
 		return new CursorPage<T>
 		{

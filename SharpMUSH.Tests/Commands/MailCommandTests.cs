@@ -75,6 +75,36 @@ public class MailCommandTests
 		await Assert.That(afterClear).Contains(m => m.Contains("updated"));
 	}
 
+	/// <summary>
+	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> lists the named player's mail. Both of its
+	/// guards were inverted: a non-blank name skipped the locate, and a successful list was read
+	/// through <c>AsError</c>, so the success path threw rather than printing anything. The
+	/// <c>all</c> msglist is also pinned here: it selected every folder as the source and then
+	/// fell through the filter as an invalid specification.
+	/// </summary>
+	[Test]
+	public async ValueTask ReviewListsTheNamedPlayersMail()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailReviewSender");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailReviewTarget");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Review Subject/Review body."));
+
+		var beforeReview = NotificationsTo(sender.DbRef).Length;
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail/review #{target.DbRef.Number}=all"));
+
+		var afterReview = string.Join("\n", NotificationsTo(sender.DbRef).Skip(beforeReview));
+
+		await Assert.That(afterReview).DoesNotContain("#-1 EXCEPTION: ");
+		await Assert.That(afterReview).Contains("Subject: Review Subject");
+	}
+
 	private string[] NotificationsTo(DBRef target) =>
 		NotifyService.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
