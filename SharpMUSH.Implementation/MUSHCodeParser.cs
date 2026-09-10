@@ -645,7 +645,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		if (ExceedsNestingLimit(bufferedTokenSpanStream, MaxParseNestingDepth, out _))
 		{
-			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)));
+			return () => ValueTask.FromResult<CallState?>(new CallState(MarkupText.Plain(ErrorMessages.Returns.Call)) { HadErrors = true });
 		}
 
 		SharpMUSHParser.StartCommandStringContext chatContext;
@@ -663,7 +663,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		if (errorListener.HasErrors)
 		{
 			var failureText = MarkupText.Plain(errorListener.Errors[0].ToMushFailureString());
-			return () => ValueTask.FromResult<CallState?>(new CallState(failureText));
+			return () => ValueTask.FromResult<CallState?>(new CallState(failureText) { HadErrors = true });
 		}
 
 		// Clear DirectInput for the same reason as CommandListParse: this visitor is always

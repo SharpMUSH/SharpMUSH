@@ -24,6 +24,18 @@ public class InputSessionCommandTests
 	private IMUSHCodeParser Parser => Factory.Services.GetRequiredService<IMUSHCodeParser>();
 	private ISharpDatabase Database => Factory.Services.GetRequiredService<ISharpDatabase>();
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task StrictCommandListVisitorMarksParserFailures(bool depthLimit)
+	{
+		var text = depthLimit ? new string('[', 1001) + "1" + new string(']', 1001) : "think [";
+		var result = await Parser.CommandListParseVisitor(MarkupText.Plain(text))();
+		await Assert.That(result).IsNotNull();
+		await Assert.That(result!.HadErrors).IsTrue();
+		if (depthLimit) await Assert.That(result.Message!.Text).IsEqualTo(SharpMUSH.Library.Definitions.ErrorMessages.Returns.Call);
+	}
+
 	private Task<TestIsolationHelpers.TestPlayer> Player() => TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 		Factory.Services, Factory.Services.GetRequiredService<IMediator>(), Connections, "InputSession");
 	private async Task<string?> Read(DBRef player, string name) =>
@@ -81,6 +93,10 @@ public class InputSessionCommandTests
 	[Arguments("switch", true)]
 	[Arguments("select", true)]
 	[Arguments("force", true)]
+	[Arguments("break-syntax", true)]
+	[Arguments("assert-syntax", true)]
+	[Arguments("break-literal", false)]
+	[Arguments("assert-literal", false)]
 	[Arguments("break", true)]
 	[Arguments("assert", true)]
 	[Arguments("teach", true)]
@@ -106,7 +122,7 @@ public class InputSessionCommandTests
 			_ =>
 			{
 				invocations++;
-				if (mode == "literal" || mode == "ifelse-literal") return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"));
+				if (mode is "literal" or "ifelse-literal" or "break-literal" or "assert-literal") return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(new CallState("#-1 EXCEPTION: ordinary text"));
 				if (mode.EndsWith("multiple", StringComparison.Ordinal) && invocations > 1) return ValueTask.FromResult<SharpMUSH.Library.DiscriminatedUnions.Option<CallState>>(CallState.Empty);
 				throw new InvalidOperationException("input callback failed");
 			}), true));
@@ -145,8 +161,10 @@ public class InputSessionCommandTests
 				"switch" => $"@switch/inline 1=1,{name}",
 				"select" => $"@select/inline 1=1,{name}",
 				"force" => $"@force me={{{name}}}",
-				"break" => $"@break 1={name}",
-				"assert" => $"@assert 0={name}",
+				"break" or "break-literal" => $"@break 1={name}",
+				"break-syntax" => "@break 1={think [}",
+				"assert-syntax" => "@assert 0={think [}",
+				"assert" or "assert-literal" => $"@assert 0={name}",
 				"teach" => $"teach {name}",
 				"teach-list" => $"teach/list {name}",
 				"dolist-multiple" => $"@dolist/inline a b={name}",
