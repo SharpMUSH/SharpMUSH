@@ -1199,4 +1199,211 @@ public class MovementParityTests
 
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.BadDestination)).IsTrue();
 	}
+
+	/// <summary>
+	/// <c>do_enter</c> hands the whole move to <c>safe_tel</c> (<c>src/move.c:962</c>), which reaches
+	/// <c>moveit</c>'s enter triad exactly once. A command that fires the triad itself as well shows
+	/// up here as a doubled message.
+	/// </summary>
+	[Test]
+	public async ValueTask EnteringAContainerFiresItsEnterTriadExactlyOnce()
+	{
+		var room = await Dig("EnterOnce");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EnterOnceMover");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "EnterBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ENTER {box}=You squeeze inside."));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"enter {box}")));
+
+		await Assert.That(seen.Count(m => m == "You squeeze inside.")).IsEqualTo(1);
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(box.ToString()));
+	}
+
+	/// <summary>
+	/// <c>fail_lock(player, thing, Enter_Lock, "Permission denied.", NOTHING)</c>
+	/// (<c>src/move.c:954</c>): the <c>EFAIL</c> attribute is evaluated, not echoed, and
+	/// <c>OEFAIL</c> reaches the room the mover is standing in.
+	/// </summary>
+	[Test]
+	public async ValueTask AFailedEnterLockRunsTheEnterFailureTriad()
+	{
+		var room = await Dig("EfailRoom");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EfailMover");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EfailWatch");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "EfailBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {watcher.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/enter {box}=#0"));
+		await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&EFAIL {box}=The lid is [switch(1,1,shut)]."));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&OEFAIL {box}=rattles the lid."));
+
+		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"enter {box}")));
+
+		await Assert.That(seen.Any(m => m == "The lid is shut.")).IsTrue();
+		await Assert.That(WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore)
+			.Any(m => m.Contains("rattles the lid."))).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// With no <c>EFAIL</c> to evaluate, <c>fail_lock</c>'s default is <c>"Permission denied."</c>
+	/// (<c>src/move.c:954</c>) — and a container that is neither <c>ENTER_OK</c> nor controlled takes
+	/// exactly that path rather than a separate message of its own (<c>move.c:952-955</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask EnteringSomethingNotEnterOkIsTheSameRefusalAsAFailedEnterLock()
+	{
+		var room = await Dig("NotEnterOkRoom");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NotEnterOkMover");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "NotEnterOkBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&EFAIL {box}=Not a chance."));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"enter {box}")));
+
+		await Assert.That(seen.Any(m => m == "Not a chance.")).IsTrue()
+			.Because("move.c:952-955 is one condition and one fail_lock, so EFAIL covers both halves");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>do_leave</c> is <c>enter_room(player, Location(loc), …)</c> (<c>src/move.c:986</c>), whose
+	/// leave triad fires once and whose automatic look is the command's only look.
+	/// </summary>
+	[Test]
+	public async ValueTask LeavingAContainerFiresItsLeaveTriadExactlyOnce()
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName("LeaveOnce");
+		var room = (await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {roomName}"))).Message!.ToPlainText().Trim();
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveOnceMover");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "LeaveBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LEAVE {box}=You climb out."));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={box}"));
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("leave")));
+
+		await Assert.That(seen.Count(m => m == "You climb out.")).IsEqualTo(1);
+
+		// enter_room's look is the only one: a trailing `look` in the command would name the room twice.
+		await Assert.That(seen.Count(m => m.StartsWith(roomName, StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>IsRoom(loc)</c>, <c>NoLeave(loc)</c> and a failed leave lock are the same
+	/// <c>fail_lock(player, loc, Leave_Lock, "You can't leave.", NOTHING)</c> (<c>src/move.c:981-983</c>),
+	/// so each runs the <c>LFAIL</c> triad rather than a message of its own.
+	/// </summary>
+	[Test]
+	[Arguments("NO_LEAVE")]
+	[Arguments(null)]
+	public async ValueTask LeavingSomethingThatRefusesRunsTheLeaveFailureTriad(string? flag)
+	{
+		var room = await Dig("LfailRoom");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LfailMover");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "LfailBox");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}=ENTER_OK"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&LFAIL {box}=The lid won't budge."));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={box}"));
+
+		if (flag is null)
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/leave {box}=#0"));
+		}
+		else
+		{
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {box}={flag}"));
+		}
+
+		var seen = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("leave")));
+
+		await Assert.That(seen.Any(m => m == "The lid won't budge.")).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(box.ToString()));
+	}
+
+	/// <summary>
+	/// <c>do_move</c>'s home branch (<c>src/move.c:407-418</c>): one broadcast to the room, three
+	/// identical lines to the mover, then <c>safe_tel</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask GoingHomeSaysSoThreeTimesAndTellsTheRoom()
+	{
+		var room = await Dig("HomeStart");
+		var home = await Dig("HomeTarget");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HomeMover");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HomeWatch");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {mover.DbRef}={home}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {watcher.DbRef}={room}"));
+
+		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("home")));
+
+		await Assert.That(moverSaw.Count(m => m == ErrorMessages.Notifications.NoPlaceLikeHome)).IsEqualTo(3);
+		await Assert.That(WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore)
+			.Any(m => m.Contains($"{mover.Name} goes home."))).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(home));
+	}
+
+	/// <summary>
+	/// <c>move.c:407</c> gates the broadcast on both the mover and the room it stands in being lit;
+	/// a Dark mover leaves without announcing it.
+	/// </summary>
+	[Test]
+	public async ValueTask ADarkMoverGoesHomeWithoutTellingTheRoom()
+	{
+		var room = await Dig("DarkHomeStart");
+		var home = await Dig("DarkHomeTarget");
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DarkHomeMover");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DarkHomeWatch");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link {mover.DbRef}={home}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {mover.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {watcher.DbRef}={room}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {mover.DbRef}=DARK"));
+
+		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
+
+		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("home"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore)
+			.Any(m => m.Contains("goes home."))).IsFalse();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(home));
+	}
 }

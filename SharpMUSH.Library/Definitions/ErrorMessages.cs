@@ -971,6 +971,16 @@ public static class ErrorMessages
 		public const string CantGoThatWayContainmentLoop = "You can't go that way - it would create a containment loop.";
 		public const string YouHaveBeenTeleported = "You have been teleported.";
 
+		/// <summary>PennMUSH <c>do_leave</c>'s <c>fail_lock</c> default (<c>src/move.c:983</c>).</summary>
+		public const string CantLeave = "You can't leave.";
+
+		/// <summary>PennMUSH <c>do_move</c>'s home branch (<c>src/move.c:415-417</c>), sent three times.</summary>
+		public const string NoPlaceLikeHome = "There's no place like home...";
+
+		/// <summary>PennMUSH <c>do_move</c>'s home broadcast (<c>src/move.c:409-412</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GoesHomeFormat = "{0} goes home.";
+
 		// Emit-family sender echoes, suppressed by /silent (PennMUSH speech.c, bsd.c).
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouPemitToObjectFormat = "You pemit \"{0}\" to {1}.";

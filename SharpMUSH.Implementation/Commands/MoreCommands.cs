@@ -26,12 +26,6 @@ public partial class Commands
 	private const string AttrDrop = "DROP";
 	private const string AttrODrop = "ODROP";
 	private const string AttrADrop = "ADROP";
-	private const string AttrLFail = "LFAIL";
-	private const string AttrOLFail = "OLFAIL";
-	private const string AttrALFail = "ALFAIL";
-	private const string AttrEFail = "EFAIL";
-	private const string AttrOEFail = "OEFAIL";
-	private const string AttrAEFail = "AEFAIL";
 	private const string AttrSuccess = "SUCCESS";
 	private const string AttrOSuccess = "OSUCCESS";
 	private const string AttrASuccess = "ASUCCESS";
@@ -1468,7 +1462,8 @@ public partial class Commands
 						return CallState.Empty;
 					}
 
-					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer));
+					await Mediator.Send(new MoveObjectCommand(contentToDrop, dropToContainer,
+						OldContainer: currentRoom.Object().DBRef));
 
 					await NotifyService.Notify(executor, $"Dropped. {objectToDrop.Object().Name} was sent to {dropToContainer.Object().Name}.", executor);
 					return CallState.Empty;
@@ -1589,7 +1584,8 @@ public partial class Commands
 					continue;
 				}
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination,
+					OldContainer: container.Object().DBRef));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
@@ -1625,7 +1621,8 @@ public partial class Commands
 					continue;
 				}
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, executor.AsContainer,
+					OldContainer: container.Object().DBRef));
 
 				var successAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrSuccess, IAttributeService.AttributeMode.Read, true);
 				if (successAttr.IsAttribute && successAttr.AsT0.Length > 0)
@@ -1655,7 +1652,8 @@ public partial class Commands
 					continue;
 				}
 
-				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination));
+				await Mediator.Send(new MoveObjectCommand(itemObj.AsContent, destination,
+					OldContainer: executor.Object().DBRef));
 
 				var dropAttr = await AttributeService.GetAttributeAsync(executor, itemObj, AttrDrop, IAttributeService.AttributeMode.Read, true);
 				if (dropAttr.IsAttribute && dropAttr.AsT0.Length > 0)
@@ -1724,69 +1722,40 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		bool canEnter = await PermissionService.Controls(executor, objectToEnter);
+		var currentLocation = await executor.Where();
 
-		if (!canEnter)
+		// move.c:952-955: one condition, one failure. The container must be ENTER_OK or controlled
+		// AND pass its enter lock; anything else is the same fail_lock, defaulting to
+		// "Permission denied.".
+		var mayEnter =
+			(await objectToEnter.HasFlag("ENTER_OK") || await PermissionService.Controls(executor, objectToEnter))
+			&& await PermissionService.PassesLock(executor, objectToEnter, LockType.Enter);
+
+		if (!mayEnter)
 		{
-			if (!await objectToEnter.HasFlag("ENTER_OK"))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return CallState.Empty;
-			}
-		}
-
-		if (!await LockService.Evaluate(LockType.Enter, objectToEnter, executor))
-		{
-			var efailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrEFail, IAttributeService.AttributeMode.Read, true);
-			if (efailAttr.IsAttribute && efailAttr.AsT0.Length > 0)
-			{
-				var efailMsg = efailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(efailMsg.ToPlainText()))
-				{
-					await NotifyService.Notify(executor, efailMsg, executor);
-				}
-			}
-			else
-			{
-				await NotifyService.Notify(executor, "You can't enter that.", executor);
-			}
-
-			var oefailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrOEFail, IAttributeService.AttributeMode.Read, true);
-			if (oefailAttr.IsAttribute && oefailAttr.AsT0.Length > 0)
-			{
-				var oefailMsg = oefailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(oefailMsg.ToPlainText()))
-				{
-					var currentLocation = await executor.Where();
-					await CommunicationService.SendToRoomAsync(
-						executor,
-						currentLocation,
-						_ => oefailMsg,
-						INotifyService.NotificationType.Emit,
-						excludeObjects: new[] { executor });
-				}
-			}
-
-			// Executor = the container whose enter-lock failed; enactor = player (PennMUSH @a* semantics)
-			var aefailAttr = await AttributeService.GetAttributeAsync(executor, objectToEnter, AttrAEFail, IAttributeService.AttributeMode.Read, true);
-			if (aefailAttr.IsAttribute && aefailAttr.AsT0.Length > 0)
-			{
-				var aefailActions = aefailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(aefailActions.ToPlainText()))
-				{
-					await parser.With(
-						state => state with { Executor = objectToEnter.Object().DBRef, Caller = state.Executor },
-						async p => await p.CommandParse(aefailActions));
-				}
-			}
-
+			await DidItService.FailLock(parser, executor, objectToEnter, LockType.Enter,
+				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied));
 			return CallState.Empty;
 		}
 
-		var executorAsContent = executor.AsContent;
-		var containerToEnter = objectToEnter.AsContainer;
-		await MoveService.MoveIt(parser, executorAsContent, containerToEnter, noMoveMsgs: false,
-			executor.Object().DBRef, "enter");
+		// move.c:962: do_enter teleports rather than plain enter_room, so a container owned by
+		// someone else strips the STICKY possessions the mover does not control.
+		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, objectToEnter.AsContainer,
+			noMoveMsgs: false, executor.Object().DBRef, "enter");
+
+		if (moveResult.IsT1)
+		{
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			return CallState.Empty;
+		}
+
+		// move.c:964-965: followers trail the leader only if the leader actually went somewhere.
+		var newLocation = await executor.Where();
+
+		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
+		{
+			await FollowerCommand(parser, executor, currentLocation, "ENTER", objectToEnter.Object().DBRef);
+		}
 
 		return CallState.Empty;
 	}
@@ -2094,7 +2063,8 @@ public partial class Commands
 		}
 
 		var contentToGive = objectToGive.AsContent;
-		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer));
+		await Mediator.Send(new MoveObjectCommand(contentToGive, recipientContainer,
+			OldContainer: objectLocation.Object().DBRef));
 
 		var giveAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrGive, IAttributeService.AttributeMode.Read, true);
 		if (giveAttr.IsAttribute && giveAttr.AsT0.Length > 0)
@@ -2200,9 +2170,11 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
+		// move.c:402-404: !Mobile, no home, a home the mover is carrying, and being its own home are
+		// one refusal — "Bad destination.".
 		if (!executor.IsPlayer && !executor.IsThing)
 		{
-			await NotifyService.Notify(executor, "Only players and things can go home.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
 			return CallState.Empty;
 		}
 
@@ -2210,33 +2182,44 @@ public partial class Commands
 		var homeLocation = (await executor.MinusRoom().Home()).WithoutNone();
 		var homeObj = homeLocation.Object();
 
-		if (homeObj.DBRef.Number < 0)
+		if (homeObj.DBRef.Number < 0
+				|| homeObj.DBRef.Equals(executor.Object().DBRef)
+				|| await MoveService.WouldCreateLoop(executor.AsContent, homeLocation))
 		{
-			await NotifyService.Notify(executor, "You have no home.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
 			return CallState.Empty;
 		}
 
 		var currentLocation = await executor.Where();
 
-		if (currentLocation.Object().DBRef.Equals(homeObj.DBRef))
+		// move.c:407-412: neither the mover nor the room it stands in may be Dark for the room to be
+		// told.
+		if (!await executor.IsDark() && !await currentLocation.WithExitOption().IsDark())
 		{
-			await NotifyService.Notify(executor, "You are already home.", executor);
-			return CallState.Empty;
+			await CommunicationService.SendToRoomAsync(
+				executor,
+				currentLocation,
+				_ => MarkupText.Plain(string.Format(ErrorMessages.Notifications.GoesHomeFormat, executor.Object().Name)),
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [executor],
+				interact: IPermissionService.InteractType.See);
 		}
 
-		if (await MoveService.WouldCreateLoop(executor.AsContent, homeLocation))
+		// PennMUSH sends all three (move.c:415-417); that is not a transcription slip.
+		for (var i = 0; i < 3; i++)
 		{
-			await NotifyService.Notify(executor, "You can't go home - it would create a containment loop.", executor);
-			return CallState.Empty;
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPlaceLikeHome), executor);
 		}
 
-		await Mediator.Send(new MoveObjectCommand(executor.AsContent, homeLocation));
+		// move.c:418. safe_tel steals the possessions the mover does not control, and the automatic
+		// look it reaches through enter_room is the only one the command needs.
+		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, homeLocation,
+			noMoveMsgs: false, executor.Object().DBRef, "home");
 
-		await NotifyService.Notify(executor, "There's no place like home...", executor);
-
-		if (executor.IsPlayer)
+		if (moveResult.IsT1)
 		{
-			await parser.CommandParse(MarkupText.Plain("look"));
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			return CallState.Empty;
 		}
 
 		return new CallState(homeObj.DBRef.ToString());
@@ -2289,13 +2272,6 @@ public partial class Commands
 		}
 
 		var currentLocation = await executor.Where();
-
-		if (!currentLocation.IsThing && !currentLocation.IsPlayer)
-		{
-			await NotifyService.Notify(executor, "You can't leave a room. Use an exit or HOME.", executor);
-			return CallState.Empty;
-		}
-
 		var container = currentLocation.WithExitOption();
 
 		var destinationLocation = await currentLocation.Match(
@@ -2303,55 +2279,33 @@ public partial class Commands
 			async room => await ValueTask.FromResult<AnySharpContainer>(room),
 			async thing => await thing.Location.WithCancellation(CancellationToken.None));
 
-		if (!await LockService.Evaluate(LockType.Leave, container, executor))
+		// move.c:981-983: standing in a room, a NO_LEAVE container, or one whose leave lock refuses,
+		// are one and the same refusal — fail_lock on the container, defaulting to "You can't leave.".
+		if (currentLocation.IsRoom
+				|| await container.HasFlag("NO_LEAVE")
+				|| !await PermissionService.PassesLock(executor, container, LockType.Leave))
 		{
-			var lfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrLFail, IAttributeService.AttributeMode.Read, true);
-			if (lfailAttr.IsAttribute && lfailAttr.AsT0.Length > 0)
-			{
-				var lfailMsg = lfailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(lfailMsg.ToPlainText()))
-				{
-					await NotifyService.Notify(executor, lfailMsg, executor);
-				}
-			}
-			else
-			{
-				await NotifyService.Notify(executor, "You can't leave.", executor);
-			}
-
-			var olfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrOLFail, IAttributeService.AttributeMode.Read, true);
-			if (olfailAttr.IsAttribute && olfailAttr.AsT0.Length > 0)
-			{
-				var olfailMsg = olfailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(olfailMsg.ToPlainText()))
-				{
-					await CommunicationService.SendToRoomAsync(executor, currentLocation, _ => olfailMsg,
-						INotifyService.NotificationType.Emit, excludeObjects: [executor]);
-				}
-			}
-
-			// Executor = the container whose leave-lock failed; enactor = player (PennMUSH @a* semantics)
-			var alfailAttr = await AttributeService.GetAttributeAsync(executor, container, AttrALFail, IAttributeService.AttributeMode.Read, true);
-			if (alfailAttr.IsAttribute && alfailAttr.AsT0.Length > 0)
-			{
-				var alfailActions = alfailAttr.AsT0[0].Value;
-				if (!string.IsNullOrEmpty(alfailActions.ToPlainText()))
-				{
-					await parser.With(
-						state => state with { Executor = container.Object().DBRef, Caller = state.Executor },
-						async p => await p.CommandParse(alfailActions));
-				}
-			}
-
+			await DidItService.FailLock(parser, executor, container, LockType.Leave,
+				MarkupText.Plain(ErrorMessages.Notifications.CantLeave));
 			return CallState.Empty;
 		}
 
-		await MoveService.MoveIt(parser, executor.AsContent, destinationLocation, noMoveMsgs: false,
-			executor.Object().DBRef, "leave");
+		// move.c:986. EnterRoom carries the automatic look, so the command adds none of its own.
+		var moveResult = await MoveService.EnterRoom(parser, executor.AsContent, destinationLocation,
+			noMoveMsgs: false, executor.Object().DBRef, "leave");
 
-		if (executor.IsPlayer)
+		if (moveResult.IsT1)
 		{
-			await parser.CommandParse(MarkupText.Plain("look"));
+			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			return CallState.Empty;
+		}
+
+		// move.c:987-988.
+		var newLocation = await executor.Where();
+
+		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
+		{
+			await FollowerCommand(parser, executor, currentLocation, "LEAVE", toward: null);
 		}
 
 		return new CallState(destinationLocation.Object().DBRef.ToString());

@@ -788,6 +788,15 @@
   <data name="YouHaveBeenTeleported" xml:space="preserve">
     <value>You have been teleported.</value>
   </data>
+  <data name="CantLeave" xml:space="preserve">
+    <value>You can't leave.</value>
+  </data>
+  <data name="NoPlaceLikeHome" xml:space="preserve">
+    <value>There's no place like home...</value>
+  </data>
+  <data name="GoesHomeFormat" xml:space="preserve">
+    <value>{0} goes home.</value>
+  </data>
 
   <!-- General game operations -->
   <data name="DontYouHaveAnythingToSay" xml:space="preserve">
