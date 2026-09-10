@@ -137,7 +137,59 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
+	[Arguments(QueueRejectionReason.OwnerLimit)]
+	[Arguments(QueueRejectionReason.GlobalLimit)]
 	[Arguments(QueueRejectionReason.ShuttingDown)]
+	public async Task MapSqlCompletionReservationReportsOneRealSchedulerRejection(QueueRejectionReason reason)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlSingleRejection");
+		var realParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		await realParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPSINGLE me=think row"));
+		var state = ParserState.RootFor(player.DbRef) with
+		{
+			Switches = ["NOTIFY"],
+			Arguments = new() { ["0"] = new CallState(player.DbRef + "/MAPSINGLE"), ["1"] = new CallState("SELECT 1") }
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var baseline = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with
+		{
+			Limit = baseline.Limit with
+			{
+				PlayerQueueLimit = reason == QueueRejectionReason.OwnerLimit ? 0u : 100u,
+				GlobalQueueLimit = reason == QueueRejectionReason.GlobalLimit ? 0u : 100u
+			}
+		});
+		var scheduler = new SharpMUSH.Library.Services.TaskScheduler(Parser, ConnectionService,
+			Substitute.For<Quartz.ISchedulerFactory>(), SqlWebAppFactoryArg.Services.GetRequiredService<IAttributeService>(),
+			Mediator, Microsoft.Extensions.Logging.Abstractions.NullLogger<SharpMUSH.Library.Services.TaskScheduler>.Instance,
+			options, NotifyService);
+		var stopped = reason == QueueRejectionReason.ShuttingDown;
+		try
+		{
+			if (stopped) await scheduler.DisposeAsync();
+			var admission = Substitute.For<IMediator>();
+			admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>())
+				.Returns(call => scheduler.ReserveCommandList(call.Arg<ReserveCommandListRequest>().Command, call.Arg<ReserveCommandListRequest>().State));
+			var sql = Substitute.For<ISqlService>();
+			sql.IsAvailable.Returns(true);
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, sql);
+			await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+			await NotifyService.Received(1).NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
+			await NotifyService.DidNotReceive().Notify(TestHelpers.MatchingObject(player.DbRef),
+				TestHelpers.MatchingMessage(new QueueAdmissionResult(null, reason).Error), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
+			sql.DidNotReceive().ExecuteStreamQueryAsync(Arg.Any<string>());
+			await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(0);
+		}
+		finally { if (!stopped) await scheduler.DisposeAsync(); }
+	}
+
+	[Test]
 	[Arguments(QueueRejectionReason.InvalidTarget)]
 	[Arguments(QueueRejectionReason.AlreadyReleased)]
 	public async Task MapSqlNotifyDoesNotBypassNonCapacityAdmissionFailures(QueueRejectionReason reason)
