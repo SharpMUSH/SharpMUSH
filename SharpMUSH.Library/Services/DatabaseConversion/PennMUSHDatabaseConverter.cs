@@ -306,7 +306,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		DBRef tempRoom0DbRef;
 		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 
-		if (existingRoom0.IsPlayer)
+		if (existingRoom0.IsPlayer && existingRoom0 is AnySharpObject reusedRoom0)
 		{
 			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
@@ -317,7 +317,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var room0Penn = pennDatabase.GetObject(0);
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				await _database.SetObjectName(existingRoom0.AsRoom, MarkupText.Plain(room0Penn.Name), cancellationToken);
+				await _database.SetObjectName(reusedRoom0, MarkupText.Plain(room0Penn.Name), cancellationToken);
 				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
 				dbrefMapping[0] = tempRoom0DbRef;
 				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
