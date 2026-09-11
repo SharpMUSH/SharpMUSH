@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.19.0
+version: 1.20.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -387,8 +387,15 @@ objects:
         [header([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,left)]%r[scenepose(%0,%1,content)]
       INC`RECALL: |-
         @pemit %#=[iter(sceneposes(%q<SceneID>,,%q<Count>),u(%!/FUN`RECALL`ENTRY,%q<SceneID>,%iL),%b,%r)]
+      # The count is validated here rather than left to sceneposes(), which rejects anything below 1
+      # with a sentinel this verb would then iterate the WORDS of -- one bogus pose lookup per word,
+      # printed at the player. `+scene/recall 0` failed differently and just as badly: "0" is falsy,
+      # so the bare @assert broke with no message at all, which is indistinguishable from a command
+      # that does not exist. isint() covers the non-numeric spelling, gt() the zero and negative ones.
+      DATA`DENY_BAD_COUNT: |-
+        How many poses? Give a whole number of 1 or more, or just +scene/recall for the last few.
       CMD`RECALL: |-
-        $+scene/recall *: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert setr(Count,%0); @include %!/INC`RECALL
+        $+scene/recall *: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert and(isint(%0),gt(%0,0))=@pemit %#=[get(%!/DATA`DENY_BAD_COUNT)]; @assert setr(Count,%0); @include %!/INC`RECALL
 
       # max(1,...) because sceneposes() rejects a count below 1: a scene whose cast has somehow
       # emptied would otherwise ask for zero poses and get an error instead of nothing.

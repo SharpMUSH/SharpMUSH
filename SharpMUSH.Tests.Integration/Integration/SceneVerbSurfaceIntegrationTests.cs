@@ -482,6 +482,38 @@ public class SceneVerbSurfaceIntegrationTests
 	}
 
 	/// <summary>
+	/// A count that is not a whole number of at least one is refused in words.
+	///
+	/// <para><c>sceneposes()</c> answers a sentinel for anything below 1, and the verb would then iterate
+	/// the WORDS of that sentinel — one bogus pose lookup per word, printed at the player. Zero failed
+	/// differently and just as badly: <c>"0"</c> is falsy, so the bare <c>@assert</c> broke with no
+	/// message, which is indistinguishable from a command that does not exist.</para>
+	/// </summary>
+	[Test]
+	[Arguments("0")]
+	[Arguments("-1")]
+	[Arguments("lots")]
+	public async Task Recall_WithAnImpossibleCount_SaysSo(string count)
+	{
+		await PutLoggerInMasterRoomAsync();
+		const long handle = 9564;
+		var who = await CreatePlayerAsync($"Ash{Tag}{count.Length}{count[0]}", handle);
+
+		await RunAs(handle, $"+scene/create Ash Scene {Tag} {count}");
+		var sceneId = await Eval($"scenefocus({Num(who)})");
+		await RunAs(handle, $"+scene/emit {sceneId}=A beat.");
+
+		var said = await RunAs(handle, $"+scene/recall {count}");
+
+		await Assert.That(said).IsNotEmpty()
+			.Because("a count the verb cannot use must be refused out loud, not silently");
+		await Assert.That(said.Any(m => m.Contains("#-1", StringComparison.Ordinal))).IsFalse()
+			.Because($"'+scene/recall {count}' leaked a sentinel into a player-facing message");
+		await Assert.That(said.Any(m => m.Contains("A beat.", StringComparison.Ordinal))).IsFalse()
+			.Because("a refused count must not fall through and print the log anyway");
+	}
+
+	/// <summary>
 	/// Bare <c>+scene/recall</c> without a focus says so, rather than printing the not-found sentinel
 	/// that <c>scenefocus()</c> answers with. Same guard the counted form now carries.
 	/// </summary>
