@@ -1,0 +1,1834 @@
++V-4199422
+dbversion 6
+savedtime "Fri Sep 11 16:52:20 2026"
++FLAGS LIST
+flagcount 64
+ name "CHOWN_OK"
+  letter "C"
+  type "ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "DARK"
+  letter "D"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "GOING"
+  letter "G"
+  type "PLAYER ROOM EXIT THING"
+  perms "internal"
+  negate_perms "internal"
+ name "HAVEN"
+  letter "H"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "TRUST"
+  letter "I"
+  type "PLAYER ROOM EXIT THING"
+  perms "trusted"
+  negate_perms "trusted"
+ name "LINK_OK"
+  letter "L"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "OPAQUE"
+  letter "O"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "QUIET"
+  letter "Q"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "STICKY"
+  letter "S"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "UNFINDABLE"
+  letter "U"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "VISUAL"
+  letter "V"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "WIZARD"
+  letter "W"
+  type "PLAYER ROOM EXIT THING"
+  perms "trusted wizard log"
+  negate_perms "trusted wizard"
+ name "SAFE"
+  letter "X"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "AUDIBLE"
+  letter "a"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "DEBUG"
+  letter "b"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "NO_WARN"
+  letter "w"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "ENTER_OK"
+  letter "e"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "HALT"
+  letter "h"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "NO_COMMAND"
+  letter "n"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "LIGHT"
+  letter "l"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "ROYALTY"
+  letter "r"
+  type "PLAYER ROOM EXIT THING"
+  perms "trusted royalty log"
+  negate_perms "trusted royalty"
+ name "TRANSPARENT"
+  letter "t"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "VERBOSE"
+  letter "v"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "ANSI"
+  letter "A"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "COLOR"
+  letter "C"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "MONITOR"
+  letter "M"
+  type "PLAYER ROOM THING"
+  perms ""
+  negate_perms ""
+ name "NOSPOOF"
+  letter "\""
+  type "PLAYER ROOM EXIT THING"
+  perms "odark"
+  negate_perms "odark"
+ name "SHARED"
+  letter "Z"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "TRACK_MONEY"
+  letter ""
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "CONNECTED"
+  letter "c"
+  type "PLAYER"
+  perms "internal"
+  negate_perms "internal"
+ name "GAGGED"
+  letter "g"
+  type "PLAYER"
+  perms "wizard"
+  negate_perms "wizard"
+ name "MYOPIC"
+  letter "m"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "TERSE"
+  letter "x"
+  type "PLAYER THING"
+  perms ""
+  negate_perms ""
+ name "JURY_OK"
+  letter "j"
+  type "PLAYER"
+  perms "royalty"
+  negate_perms "royalty"
+ name "JUDGE"
+  letter "J"
+  type "PLAYER"
+  perms "royalty"
+  negate_perms "royalty"
+ name "FIXED"
+  letter "F"
+  type "PLAYER"
+  perms "wizard"
+  negate_perms "wizard"
+ name "UNREGISTERED"
+  letter "?"
+  type "PLAYER"
+  perms "royalty"
+  negate_perms "royalty"
+ name "ON-VACATION"
+  letter "o"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "SUSPECT"
+  letter "s"
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard mdark log"
+  negate_perms "wizard mdark"
+ name "PARANOID"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "odark"
+  negate_perms "odark"
+ name "NOACCENTS"
+  letter "~"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "DESTROY_OK"
+  letter "d"
+  type "THING"
+  perms ""
+  negate_perms ""
+ name "PUPPET"
+  letter "p"
+  type "ROOM THING"
+  perms ""
+  negate_perms ""
+ name "NO_LEAVE"
+  letter "N"
+  type "THING"
+  perms ""
+  negate_perms ""
+ name "LISTEN_PARENT"
+  letter "^"
+  type "PLAYER ROOM THING"
+  perms ""
+  negate_perms ""
+ name "Z_TEL"
+  letter "Z"
+  type "ROOM THING"
+  perms ""
+  negate_perms ""
+ name "ABODE"
+  letter "A"
+  type "ROOM"
+  perms ""
+  negate_perms ""
+ name "FLOATING"
+  letter "F"
+  type "ROOM"
+  perms ""
+  negate_perms ""
+ name "JUMP_OK"
+  letter "J"
+  type "ROOM"
+  perms ""
+  negate_perms ""
+ name "NO_TEL"
+  letter "N"
+  type "ROOM"
+  perms ""
+  negate_perms ""
+ name "UNINSPECTED"
+  letter "u"
+  type "ROOM"
+  perms "royalty"
+  negate_perms "royalty"
+ name "CLOUDY"
+  letter "x"
+  type "EXIT"
+  perms ""
+  negate_perms ""
+ name "GOING_TWICE"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "internal dark"
+  negate_perms "internal dark"
+ name "KEEPALIVE"
+  letter "k"
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "NO_LOG"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard mdark log"
+  negate_perms "wizard mdark"
+ name "OPEN_OK"
+  letter ""
+  type "ROOM"
+  perms ""
+  negate_perms ""
+ name "MISTRUST"
+  letter "m"
+  type "ROOM EXIT THING"
+  perms "trusted"
+  negate_perms "trusted"
+ name "ORPHAN"
+  letter "i"
+  type "PLAYER ROOM EXIT THING"
+  perms ""
+  negate_perms ""
+ name "HEAVY"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "royalty"
+  negate_perms ""
+ name "LOUD"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "royalty"
+  negate_perms ""
+ name "HEAR_CONNECT"
+  letter ""
+  type "PLAYER"
+  perms "royalty"
+  negate_perms ""
+ name "CHAN_USEFIRSTMATCH"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "trusted"
+  negate_perms "trusted"
+ name "XTERM256"
+  letter ""
+  type "PLAYER"
+  perms ""
+  negate_perms ""
+ name "MONIKER"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "royalty"
+  negate_perms "royalty"
+flagaliascount 19
+ name "LISTEN_PARENT"
+  alias "^"
+ name "CHAN_USEFIRSTMATCH"
+  alias "CHAN_FIRSTMATCH"
+ name "CHAN_USEFIRSTMATCH"
+  alias "CHAN_MATCHFIRST"
+ name "XTERM256"
+  alias "COLOR256"
+ name "COLOR"
+  alias "COLOUR"
+ name "DESTROY_OK"
+  alias "DEST_OK"
+ name "TRUST"
+  alias "INHERIT"
+ name "JURY_OK"
+  alias "JURYOK"
+ name "MONITOR"
+  alias "LISTENER"
+ name "NO_COMMAND"
+  alias "NOCOMMAND"
+ name "NO_LEAVE"
+  alias "NOLEAVE"
+ name "NO_WARN"
+  alias "NOWARN"
+ name "JUMP_OK"
+  alias "TEL-OK"
+ name "JUMP_OK"
+  alias "TEL_OK"
+ name "JUMP_OK"
+  alias "TELOK"
+ name "DEBUG"
+  alias "TRACE"
+ name "ON-VACATION"
+  alias "VACATION"
+ name "MONITOR"
+  alias "WATCHER"
+ name "SHARED"
+  alias "ZONE"
++POWER LIST
+flagcount 35
+ name "Announce"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Boot"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Builder"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Chat_Privs"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Functions"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Guest"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Halt"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Hide"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Idle"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Immortal"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Link_Anywhere"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Login"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Long_Fingers"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "No_Pay"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "No_Quota"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Open_Anywhere"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Pemit_All"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Player_Create"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Poll"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Queue"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Quotas"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Search"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "See_All"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "See_Queue"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Tport_Anything"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Tport_Anywhere"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "Can_spoof"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms "wizard"
+ name "SQL_OK"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "Send_OOB"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "DEBIT"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "MANY_ATTRIBS"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "HOOK"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "CAN_DARK"
+  letter ""
+  type "PLAYER"
+  perms "wizard log"
+  negate_perms ""
+ name "PICK_DBREFS"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+ name "CAN_HTTP"
+  letter ""
+  type "PLAYER ROOM EXIT THING"
+  perms "wizard log"
+  negate_perms ""
+flagaliascount 9
+ name "Announce"
+  alias "@wall"
+ name "Can_spoof"
+  alias "Can_nspemit"
+ name "No_Quota"
+  alias "free_quota"
+ name "Send_OOB"
+  alias "PUEBLO_SEND"
+ name "DEBIT"
+  alias "steal_money"
+ name "Tport_Anything"
+  alias "tel_anything"
+ name "Tport_Anywhere"
+  alias "tel_anywhere"
+ name "SQL_OK"
+  alias "Use_SQL"
+ name "Announce"
+  alias "wall"
++ATTRIBUTES LIST
+attrcount 213
+ name "AAHEAR"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ABUY"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ACLONE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ACONNECT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ADESCRIBE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ADESTROY"
+  flags "no_inherit no_clone wizard prefixmatch"
+  creator #0
+  data ""
+ name "ADISCONNECT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ADROP"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AEFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AFAILURE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AFOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AGIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AHEAR"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AIDESCRIBE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ALEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ALFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ALIAS"
+  flags "no_command visual prefixmatch"
+  creator #0
+  data ""
+ name "AMAIL"
+  flags "wizard prefixmatch"
+  creator #0
+  data ""
+ name "AMHEAR"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AMOVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ANAME"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "APAYMENT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ARECEIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ASUCCESS"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ATPORT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AUFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AUNFOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AUSE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AWAY"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AZENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "AZLEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "BUY"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "CHARGES"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "CHATFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "COMMENT"
+  flags "no_command no_clone wizard mortal_dark prefixmatch"
+  creator #0
+  data ""
+ name "CONFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "COST"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "DEBUGFORWARDLIST"
+  flags "no_command no_inherit prefixmatch"
+  creator #0
+  data ""
+ name "DESCFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "DESCRIBE"
+  flags "no_command visual prefixmatch public nearby"
+  creator #0
+  data ""
+ name "DESTINATION"
+  flags "no_command"
+  creator #0
+  data ""
+ name "DOING"
+  flags "no_command no_inherit visual public"
+  creator #0
+  data ""
+ name "DROP"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "EALIAS"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "EFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "EXITFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "EXITTO"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "FAILURE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "FILTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "FOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "FOLLOWERS"
+  flags "no_command no_inherit no_clone wizard prefixmatch"
+  creator #0
+  data ""
+ name "FOLLOWING"
+  flags "no_command no_inherit no_clone wizard prefixmatch"
+  creator #0
+  data ""
+ name "FORWARDLIST"
+  flags "no_command no_inherit prefixmatch"
+  creator #0
+  data ""
+ name "GIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "HAVEN"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "IDESCFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "IDESCRIBE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "IDLE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "INFILTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "INPREFIX"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "INVFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "LALIAS"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "LAST"
+  flags "no_clone wizard visual locked prefixmatch"
+  creator #0
+  data ""
+ name "LASTFAILED"
+  flags "no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "LASTIP"
+  flags "no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "LASTLOGOUT"
+  flags "no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "LASTPAGED"
+  flags "no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "LASTSITE"
+  flags "no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "LEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "LFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "LISTEN"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "MAILCURF"
+  flags "no_command no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "MAILFILTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "MAILFILTERS"
+  flags "no_command no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "MAILFOLDERS"
+  flags "no_command no_clone wizard locked prefixmatch"
+  creator #0
+  data ""
+ name "MAILFORWARDLIST"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "MAILQUOTA"
+  flags "no_command no_clone wizard locked"
+  creator #0
+  data ""
+ name "MAILSIGNATURE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "MONIKER"
+  flags "no_command wizard visual locked"
+  creator #0
+  data ""
+ name "MOVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "NAMEACCENT"
+  flags "no_command visual prefixmatch"
+  creator #0
+  data ""
+ name "NAMEFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OBUY"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ODESCRIBE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ODROP"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OEFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OFAILURE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OFOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OGIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OIDESCRIBE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OLEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OLFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OMOVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ONAME"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OPAYMENT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ORECEIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OSUCCESS"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OTPORT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OUFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OUNFOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OUSE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OUTPAGEFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OXENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OXLEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OXMOVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OXTPORT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OZENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "OZLEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "PAGEFORMAT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "PAYMENT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "PREFIX"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "PRICELIST"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "QUEUE"
+  flags "no_inherit no_clone wizard"
+  creator #0
+  data ""
+ name "RECEIVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "REGISTERED_EMAIL"
+  flags "no_inherit no_clone wizard locked"
+  creator #0
+  data ""
+ name "RQUOTA"
+  flags "mortal_dark locked"
+  creator #0
+  data ""
+ name "RUNOUT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "SEMAPHORE"
+  flags "no_inherit no_clone locked"
+  creator #0
+  data ""
+ name "SEX"
+  flags "no_command visual prefixmatch"
+  creator #0
+  data ""
+ name "SPEECHMOD"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "STARTUP"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "SUCCESS"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "TFPREFIX"
+  flags "no_command no_inherit no_clone prefixmatch"
+  creator #0
+  data ""
+ name "TPORT"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "TZ"
+  flags "no_command visual"
+  creator #0
+  data ""
+ name "UFAIL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "UNFOLLOW"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "USE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "VA"
+  flags ""
+  creator #0
+  data ""
+ name "VB"
+  flags ""
+  creator #0
+  data ""
+ name "VC"
+  flags ""
+  creator #0
+  data ""
+ name "VD"
+  flags ""
+  creator #0
+  data ""
+ name "VE"
+  flags ""
+  creator #0
+  data ""
+ name "VF"
+  flags ""
+  creator #0
+  data ""
+ name "VG"
+  flags ""
+  creator #0
+  data ""
+ name "VH"
+  flags ""
+  creator #0
+  data ""
+ name "VI"
+  flags ""
+  creator #0
+  data ""
+ name "VJ"
+  flags ""
+  creator #0
+  data ""
+ name "VK"
+  flags ""
+  creator #0
+  data ""
+ name "VL"
+  flags ""
+  creator #0
+  data ""
+ name "VM"
+  flags ""
+  creator #0
+  data ""
+ name "VN"
+  flags ""
+  creator #0
+  data ""
+ name "VO"
+  flags ""
+  creator #0
+  data ""
+ name "VP"
+  flags ""
+  creator #0
+  data ""
+ name "VQ"
+  flags ""
+  creator #0
+  data ""
+ name "VR"
+  flags ""
+  creator #0
+  data ""
+ name "VRML_URL"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "VS"
+  flags ""
+  creator #0
+  data ""
+ name "VT"
+  flags ""
+  creator #0
+  data ""
+ name "VU"
+  flags ""
+  creator #0
+  data ""
+ name "VV"
+  flags ""
+  creator #0
+  data ""
+ name "VW"
+  flags ""
+  creator #0
+  data ""
+ name "VX"
+  flags ""
+  creator #0
+  data ""
+ name "VY"
+  flags ""
+  creator #0
+  data ""
+ name "VZ"
+  flags ""
+  creator #0
+  data ""
+ name "WA"
+  flags ""
+  creator #0
+  data ""
+ name "WB"
+  flags ""
+  creator #0
+  data ""
+ name "WC"
+  flags ""
+  creator #0
+  data ""
+ name "WD"
+  flags ""
+  creator #0
+  data ""
+ name "WE"
+  flags ""
+  creator #0
+  data ""
+ name "WF"
+  flags ""
+  creator #0
+  data ""
+ name "WG"
+  flags ""
+  creator #0
+  data ""
+ name "WH"
+  flags ""
+  creator #0
+  data ""
+ name "WI"
+  flags ""
+  creator #0
+  data ""
+ name "WJ"
+  flags ""
+  creator #0
+  data ""
+ name "WK"
+  flags ""
+  creator #0
+  data ""
+ name "WL"
+  flags ""
+  creator #0
+  data ""
+ name "WM"
+  flags ""
+  creator #0
+  data ""
+ name "WN"
+  flags ""
+  creator #0
+  data ""
+ name "WO"
+  flags ""
+  creator #0
+  data ""
+ name "WP"
+  flags ""
+  creator #0
+  data ""
+ name "WQ"
+  flags ""
+  creator #0
+  data ""
+ name "WR"
+  flags ""
+  creator #0
+  data ""
+ name "WS"
+  flags ""
+  creator #0
+  data ""
+ name "WT"
+  flags ""
+  creator #0
+  data ""
+ name "WU"
+  flags ""
+  creator #0
+  data ""
+ name "WV"
+  flags ""
+  creator #0
+  data ""
+ name "WW"
+  flags ""
+  creator #0
+  data ""
+ name "WX"
+  flags ""
+  creator #0
+  data ""
+ name "WY"
+  flags ""
+  creator #0
+  data ""
+ name "WZ"
+  flags ""
+  creator #0
+  data ""
+ name "XA"
+  flags ""
+  creator #0
+  data ""
+ name "XB"
+  flags ""
+  creator #0
+  data ""
+ name "XC"
+  flags ""
+  creator #0
+  data ""
+ name "XD"
+  flags ""
+  creator #0
+  data ""
+ name "XE"
+  flags ""
+  creator #0
+  data ""
+ name "XF"
+  flags ""
+  creator #0
+  data ""
+ name "XG"
+  flags ""
+  creator #0
+  data ""
+ name "XH"
+  flags ""
+  creator #0
+  data ""
+ name "XI"
+  flags ""
+  creator #0
+  data ""
+ name "XJ"
+  flags ""
+  creator #0
+  data ""
+ name "XK"
+  flags ""
+  creator #0
+  data ""
+ name "XL"
+  flags ""
+  creator #0
+  data ""
+ name "XM"
+  flags ""
+  creator #0
+  data ""
+ name "XN"
+  flags ""
+  creator #0
+  data ""
+ name "XO"
+  flags ""
+  creator #0
+  data ""
+ name "XP"
+  flags ""
+  creator #0
+  data ""
+ name "XQ"
+  flags ""
+  creator #0
+  data ""
+ name "XR"
+  flags ""
+  creator #0
+  data ""
+ name "XS"
+  flags ""
+  creator #0
+  data ""
+ name "XT"
+  flags ""
+  creator #0
+  data ""
+ name "XU"
+  flags ""
+  creator #0
+  data ""
+ name "XV"
+  flags ""
+  creator #0
+  data ""
+ name "XW"
+  flags ""
+  creator #0
+  data ""
+ name "XX"
+  flags ""
+  creator #0
+  data ""
+ name "XY"
+  flags ""
+  creator #0
+  data ""
+ name "XYXXY"
+  flags "no_command no_clone wizard locked internal"
+  creator #0
+  data ""
+ name "XZ"
+  flags ""
+  creator #0
+  data ""
+ name "ZENTER"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+ name "ZLEAVE"
+  flags "no_command prefixmatch"
+  creator #0
+  data ""
+attraliascount 8
+ name "AFAILURE"
+  alias "AFAIL"
+ name "ASUCCESS"
+  alias "ASUCC"
+ name "DESCRIBE"
+  alias "DESC"
+ name "FAILURE"
+  alias "FAIL"
+ name "IDESCRIBE"
+  alias "IDESC"
+ name "OFAILURE"
+  alias "OFAIL"
+ name "OSUCCESS"
+  alias "OSUCC"
+ name "SUCCESS"
+  alias "SUCC"
+~10
+!0
+name "Room Zero"
+location #-1
+contents #4
+exits #6
+next #-1
+parent #-1
+lockcount 0
+owner #1
+zone #-1
+pennies 0
+type 1
+flags "LINK_OK"
+powers ""
+warnings ""
+created 1789145410
+modified 1789145410
+attrcount 1
+ name "DESCRIBE"
+  owner #1
+  flags "no_command visual prefixmatch public nearby"
+  derefs 5
+  value "You are in Room Zero."
+!1
+name "One"
+location #0
+contents #9
+exits #0
+next #-1
+parent #-1
+lockcount 3
+ type "Basic"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#1"
+ type "Enter"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#1"
+ type "Use"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#1"
+owner #1
+zone #-1
+pennies 150
+type 8
+flags "WIZARD CONNECTED"
+powers ""
+warnings ""
+created 1789145410
+modified 0
+attrcount 9
+ name "DESCRIBE"
+  owner #1
+  flags "no_command visual prefixmatch public nearby"
+  derefs 2
+  value "You see Number One."
+ name "LAST"
+  owner #1
+  flags "no_clone wizard visual locked prefixmatch"
+  derefs 1
+  value "Fri Sep 11 11:52:20 2026"
+ name "LASTFAILED"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value " "
+ name "LASTIP"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "127.0.0.1"
+ name "LASTLOGOUT"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "Fri Sep 11 11:50:51 2026"
+ name "LASTSITE"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "localhost"
+ name "MAILCURF"
+  owner #1
+  flags "no_command wizard locked"
+  derefs 1
+  value "0"
+ name "MAILFOLDERS"
+  owner #1
+  flags "no_command no_clone wizard locked prefixmatch"
+  derefs 1
+  value "0:INBOX:0 "
+ name "RQUOTA"
+  owner #1
+  flags "mortal_dark locked"
+  derefs 1
+  value "11"
+!2
+name "Master Room"
+location #-1
+contents #-1
+exits #-1
+next #-1
+parent #-1
+lockcount 0
+owner #1
+zone #-1
+pennies 0
+type 1
+flags "FLOATING"
+powers ""
+warnings ""
+created 1789145410
+modified 1789145410
+attrcount 1
+ name "DESCRIBE"
+  owner #1
+  flags "no_command visual prefixmatch public nearby"
+  derefs 2
+  value "This is the master room. Any exit in here is considered global. The same is true for objects with $-commands placed here."
+!3
+name "Alice"
+location #0
+contents #-1
+exits #0
+next #1
+parent #-1
+lockcount 3
+ type "Basic"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#3"
+ type "Enter"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#3"
+ type "Use"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#3"
+owner #3
+zone #-1
+pennies 175
+type 8
+flags "ENTER_OK NO_COMMAND ANSI"
+powers ""
+warnings "normal "
+created 1789145415
+modified 0
+attrcount 8
+ name "LAST"
+  owner #1
+  flags "no_clone wizard visual locked prefixmatch"
+  derefs 1
+  value "Fri Sep 11 11:50:15 2026"
+ name "LASTFAILED"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value " "
+ name "LASTIP"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "None"
+ name "LASTSITE"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "None"
+ name "MAILCURF"
+  owner #1
+  flags "no_command no_clone wizard locked prefixmatch"
+  derefs 1
+  value "0"
+ name "MAILFOLDERS"
+  owner #1
+  flags "no_command no_clone wizard locked prefixmatch"
+  derefs 1
+  value "0:INBOX:0 "
+ name "RQUOTA"
+  owner #1
+  flags "mortal_dark locked"
+  derefs 1
+  value "20"
+ name "XYXXY"
+  owner #1
+  flags "no_command no_clone wizard locked internal"
+  derefs 1
+  value "2:sha512:1W86ad9dffc0c4a964cd70a3d5385e3669af9bc2d877f2e254a12be0e348e28a8866ef8e7995eec2d9f258345554a9cb0670d178753bc203121002ab96600737ec:1789145415"
+!4
+name "Bob"
+location #0
+contents #-1
+exits #0
+next #3
+parent #-1
+lockcount 3
+ type "Basic"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#4"
+ type "Enter"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#4"
+ type "Use"
+  creator #1
+  flags "no_inherit"
+  derefs 0
+  key "=#4"
+owner #4
+zone #-1
+pennies 150
+type 8
+flags "ENTER_OK NO_COMMAND ANSI"
+powers "See_All"
+warnings "normal "
+created 1789145416
+modified 0
+attrcount 8
+ name "LAST"
+  owner #1
+  flags "no_clone wizard visual locked prefixmatch"
+  derefs 1
+  value "Fri Sep 11 11:50:16 2026"
+ name "LASTFAILED"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value " "
+ name "LASTIP"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "None"
+ name "LASTSITE"
+  owner #1
+  flags "no_clone wizard locked prefixmatch"
+  derefs 1
+  value "None"
+ name "MAILCURF"
+  owner #1
+  flags "no_command no_clone wizard locked prefixmatch"
+  derefs 1
+  value "0"
+ name "MAILFOLDERS"
+  owner #1
+  flags "no_command no_clone wizard locked prefixmatch"
+  derefs 1
+  value "0:INBOX:0 "
+ name "RQUOTA"
+  owner #1
+  flags "mortal_dark locked"
+  derefs 1
+  value "20"
+ name "XYXXY"
+  owner #1
+  flags "no_command no_clone wizard locked internal"
+  derefs 1
+  value "2:sha512:j5dcae78a782f334d217e0ceb4b484c52515476e710b5f8aac41c35cd91bb143cfad6e8e482ffeda59b51d63ecc110dd133512b9925fe4678dfc6a582411040d50:1789145416"
+!5
+name "Oracle Hall"
+location #0
+contents #8
+exits #7
+next #-1
+parent #-1
+lockcount 0
+owner #1
+zone #-1
+pennies 0
+type 1
+flags "NO_COMMAND"
+powers ""
+warnings ""
+created 1789145417
+modified 1789145443
+attrcount 1
+ name "DESCRIBE"
+  owner #1
+  flags "no_command visual prefixmatch public nearby"
+  derefs 2
+  value "A hall for the oracle."
+!6
+name "North"
+location #5
+contents #-1
+exits #0
+next #-1
+parent #-1
+lockcount 0
+owner #1
+zone #-1
+pennies 0
+type 4
+flags ""
+powers ""
+warnings ""
+created 1789145417
+modified 1789145417
+attrcount 1
+ name "ALIAS"
+  owner #1
+  flags "no_command visual prefixmatch"
+  derefs 25
+  value "n"
+!7
+name "South"
+location #0
+contents #-1
+exits #5
+next #-1
+parent #-1
+lockcount 0
+owner #1
+zone #-1
+pennies 0
+type 4
+flags ""
+powers ""
+warnings ""
+created 1789145417
+modified 1789145417
+attrcount 1
+ name "ALIAS"
+  owner #1
+  flags "no_command visual prefixmatch"
+  derefs 1
+  value "s"
+!8
+name "Widget"
+location #5
+contents #-1
+exits #5
+next #-1
+parent #9
+lockcount 2
+ type "Basic"
+  creator #1
+  flags "no_inherit"
+  derefs 1
+  key "#3|#4"
+ type "Use"
+  creator #1
+  flags "no_inherit"
+  derefs 1
+  key "#1"
+owner #1
+zone #9
+pennies 10
+type 2
+flags "DARK NO_COMMAND"
+powers ""
+warnings "exit-unlinked "
+created 1789145417
+modified 1789145442
+attrcount 2
+ name "MULTI"
+  owner #1
+  flags ""
+  derefs 1
+  value "first line
+second line"
+ name "NOTE"
+  owner #1
+  flags "no_command visual"
+  derefs 2
+  value "He said \"hi\" \\ back"
+!9
+name "Gadget"
+location #1
+contents #-1
+exits #0
+next #-1
+parent #-1
+lockcount 1
+ type "Zone"
+  creator #1
+  flags "no_inherit"
+  derefs 9
+  key "#1"
+owner #1
+zone #-1
+pennies 10
+type 2
+flags "NO_COMMAND"
+powers ""
+warnings ""
+created 1789145418
+modified 1789145434
+attrcount 0
+***END OF DUMP***

@@ -432,10 +432,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
-							var aliases = ExtractAliases(pennObj.Name);
+							var (exitName, aliases) = ExitNameAndAliases(pennObj);
 							newDbRef = await _mediator.Send(new CreateExitCommand(
-								aliases.name,
-								aliases.aliases,
+								exitName,
+								aliases,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
 								ApplyDefaultFlags: false,
@@ -744,13 +744,16 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return count;
 	}
 
-	private static (string name, string[] aliases) ExtractAliases(string nameString)
+	/// <summary>
+	/// An exit's name and the aliases SharpMUSH matches it by. PennMUSH 1.8 keeps the aliases in the
+	/// ALIAS attribute, which the parser lifts into <see cref="PennMUSHObject.Aliases"/>; a name written
+	/// as <c>north;n</c>, as in <c>@open north;n</c>, carries its own.
+	/// </summary>
+	private static (string Name, string[] Aliases) ExitNameAndAliases(PennMUSHObject exit)
 	{
-		// PennMUSH exit names can be like "north;n;out;o"
-		var parts = nameString.Split(';', StringSplitOptions.RemoveEmptyEntries);
-		var name = parts.Length > 0 ? parts[0] : nameString;
-		var aliases = parts.Length > 1 ? parts[1..] : [];
-		return (name, aliases);
+		var parts = exit.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		var name = parts.Length > 0 ? parts[0] : exit.Name;
+		return (name, [.. parts.Skip(1).Concat(exit.Aliases).Distinct(StringComparer.OrdinalIgnoreCase)]);
 	}
 
 	/// <summary>

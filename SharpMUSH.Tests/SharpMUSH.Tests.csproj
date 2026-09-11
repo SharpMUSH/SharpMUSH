@@ -68,6 +68,9 @@
 		<Content Include="Integration\TestData\*.txt">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
+		<Content Include="Services\TestData\*.outdb">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 		<Content Include="..\SharpMUSH.Server\*.txt">
 			<Link>txt\%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
