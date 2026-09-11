@@ -76,10 +76,18 @@ public class NotifyService(
 	}
 
 	private static Outgoing Prepare(SharpMessage what)
-		=> new(what.Match(markup => markup, MarkupText.Plain));
+		=> new(what switch
+		{
+			MString markup => markup,
+			string str => MarkupText.Plain(str)
+		});
 
 	private static bool IsEmpty(SharpMessage what)
-		=> what.Match(markup => markup.Length == 0, str => str.Length == 0);
+		=> what switch
+		{
+			MString markup => markup.Length == 0,
+			string str => str.Length == 0
+		};
 
 	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
@@ -152,7 +160,11 @@ public class NotifyService(
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
 		if (httpOutputCapture?.TryCapture(who.Number,
-				what.Match(markupString => markupString.ToPlainText(), str => str)) == true)
+				what switch
+				{
+					MString markupString => markupString.ToPlainText(),
+					string str => str
+				}) == true)
 		{
 			return;
 		}
@@ -161,12 +173,13 @@ public class NotifyService(
 		{
 			try
 			{
-				var location = await sender.Match<ValueTask<DBRef>>(
-					async player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
-					room => ValueTask.FromResult(room.Object.DBRef),
-					async exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
-					async thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
-				);
+				var location = sender switch
+				{
+					SharpPlayer player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					SharpRoom room => room.Object.DBRef,
+					SharpExit exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					SharpThing thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
+				};
 
 				var notificationContext = new NotificationContext(
 					Target: who,

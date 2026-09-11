@@ -138,11 +138,14 @@ public sealed class InMemoryWikiService : IWikiService
 		var stampedLocale = string.Empty;
 		if (!string.IsNullOrWhiteSpace(sourceLocale))
 		{
-			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
-			if (normalizedSource.IsT1)
-				return Task.FromResult<Result<WikiPage>>(normalizedSource.AsT1);
-
-			stampedLocale = normalizedSource.AsT0;
+			switch (WikiHelpers.NormalizeLocale(sourceLocale))
+			{
+				case Error<string> error:
+					return Task.FromResult<Result<WikiPage>>(error);
+				case string normalizedSource:
+					stampedLocale = normalizedSource;
+					break;
+			}
 		}
 
 		var slug = Slugify(title);
@@ -387,10 +390,8 @@ public sealed class InMemoryWikiService : IWikiService
 			TranslationWriteResult value) => Task.FromResult(value);
 
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale.IsT1)
-			return Result(normalizedLocale.AsT1);
-
-		var normalized = normalizedLocale.AsT0;
+		if (normalizedLocale is not string normalized)
+			return Result((Error<string>)normalizedLocale.Value!);
 
 		if (!_pagesById.TryGetValue(pageId, out var page))
 			return Result(new Error<string>($"No wiki page with id '{pageId}'."));

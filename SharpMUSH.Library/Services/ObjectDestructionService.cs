@@ -63,14 +63,16 @@ public class ObjectDestructionService(
 		await mediator.Send(new HaltObjectQueueRequest(dbref), cancellationToken);
 
 		// Type-specific teardown, in PennMUSH's order: clear_* runs before the object is unlinked.
-		var cleared = await target.Match(
-			player => ClearPlayerAsync(parser, player, cancellationToken),
-			room => ClearRoomAsync(parser, room, cancellationToken),
+		var cleared = await (target switch
+		{
+			SharpPlayer player => ClearPlayerAsync(parser, player, cancellationToken),
+			SharpRoom room => ClearRoomAsync(parser, room, cancellationToken),
 			// clear_exit() only detaches the exit from its source's exit list and refunds the deposit.
 			// The detach is the AtLocation edge, which the storage delete removes, and SharpMUSH has no
 			// money to refund (money() is unsupported), so nothing is left to do here.
-			_ => ValueTask.FromResult(true),
-			thing => ClearThingAsync(parser, thing, cancellationToken));
+			SharpExit => ValueTask.FromResult(true),
+			SharpThing thing => ClearThingAsync(parser, thing, cancellationToken)
+		});
 
 		// DEVIATION: PennMUSH's empty_contents cannot fail — moveto is a pointer rewrite over an
 		// in-memory database. Here evacuating is a move that can be refused (a containment loop, the
@@ -293,7 +295,7 @@ public class ObjectDestructionService(
 			var moved = await moveService.EnterRoom(parser, content, destination, noMoveMsgs: false,
 				new DBRef(-1), "container destroyed");
 
-			if (!moved.IsT1)
+			if (moved is not Error<string> refused)
 			{
 				continue;
 			}
@@ -307,7 +309,7 @@ public class ObjectDestructionService(
 			{
 				logger.LogError(
 					"#{Content} could not be evacuated from #{Container}: {Reason}",
-					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value);
+					content.Object().DBRef.Number, containerDbRefNumber, refused.Value);
 				emptied = false;
 				continue;
 			}
@@ -315,13 +317,13 @@ public class ObjectDestructionService(
 			var rehoused = await moveService.EnterRoom(parser, content, fallback, noMoveMsgs: false,
 				new DBRef(-1), "container destroyed");
 
-			if (rehoused.IsT1)
+			if (rehoused is Error<string> fallbackRefused)
 			{
 				logger.LogError(
 					"#{Content} could not be evacuated from #{Container} to its home ({Reason}) nor to "
 					+ "default_home (#{DefaultHome}: {FallbackReason}).",
-					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value,
-					fallback.Object().DBRef.Number, rehoused.AsT1.Value);
+					content.Object().DBRef.Number, containerDbRefNumber, refused.Value,
+					fallback.Object().DBRef.Number, fallbackRefused.Value);
 				emptied = false;
 			}
 		}

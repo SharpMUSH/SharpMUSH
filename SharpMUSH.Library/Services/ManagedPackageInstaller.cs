@@ -114,7 +114,7 @@ public sealed class ManagedPackageInstaller(
 				+ "It loads on the next server boot.",
 				manifest.Name, manifest.Version, deployed.Count, targetDirectory);
 
-			return Result<IReadOnlyList<string>>.FromT0(deployed);
+			return new Result<IReadOnlyList<string>>(deployed);
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
@@ -132,12 +132,17 @@ public sealed class ManagedPackageInstaller(
 		// Unload first (if loaded + unloadable) so no assembly is pinned while we
 		// delete its DLL; a load-once plugin cannot be unloaded at runtime, but its
 		// directory is still removed so the next boot does not re-load it.
-		var unload = await pluginManager.UnloadAsync(packageId);
-		unload.Switch(
-			_ => logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", packageId),
-			error => logger.LogDebug(
-				"Managed package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
-				packageId, error.Value));
+		switch (await pluginManager.UnloadAsync(packageId))
+		{
+			case Success:
+				logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", packageId);
+				break;
+			case Error<string> error:
+				logger.LogDebug(
+					"Managed package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
+					packageId, error.Value);
+				break;
+		}
 
 		var targetDirectory = Path.Combine(_pluginsRoot, packageId);
 		try

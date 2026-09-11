@@ -21,9 +21,11 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessageContains(SharpMessage msg, string expected) =>
-		msg.Match(
-			ms => ms.Render(MarkupFormat.Ansi).Contains(expected),
-			s => s.Contains(expected));
+		msg switch
+		{
+			MString ms => ms.Render(MarkupFormat.Ansi).Contains(expected),
+			string s => s.Contains(expected)
+		};
 
 	/// <summary>
 	/// Checks if the plain-text content of a <see cref="SharpMessage"/> contains
@@ -31,18 +33,22 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessagePlainTextContains(SharpMessage msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText().Contains(expected),
-			s => s.Contains(expected));
+		msg switch
+		{
+			MString ms => ms.ToPlainText().Contains(expected),
+			string s => s.Contains(expected)
+		};
 
 	/// <summary>
 	/// Checks if a <see cref="SharpMessage"/> equals the expected text.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessageEquals(SharpMessage msg, string expected) =>
-		msg.Match(
-			ms => ms.ToString() == expected,
-			s => s == expected);
+		msg switch
+		{
+			MString ms => ms.ToString() == expected,
+			string s => s == expected
+		};
 
 	/// <summary>
 	/// Checks if the plain-text content of a <see cref="SharpMessage"/> equals
@@ -50,9 +56,11 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessagePlainTextEquals(SharpMessage msg, string expected) =>
-		msg.Match(
-			ms => ms.ToPlainText() == expected,
-			s => s == expected);
+		msg switch
+		{
+			MString ms => ms.ToPlainText() == expected,
+			string s => s == expected
+		};
 
 	/// <summary>
 	/// Checks if the plain-text content of a <see cref="SharpMessage"/> starts with
@@ -60,9 +68,11 @@ public static class TestHelpers
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool MessagePlainTextStartsWith(SharpMessage msg, string expectedPrefix) =>
-		msg.Match(
-			ms => ms.ToPlainText().StartsWith(expectedPrefix),
-			s => s.StartsWith(expectedPrefix));
+		msg switch
+		{
+			MString ms => ms.ToPlainText().StartsWith(expectedPrefix),
+			string s => s.StartsWith(expectedPrefix)
+		};
 
 	/// <summary>
 	/// Matches a notification by its TEXT, whichever form it arrived in.
@@ -359,7 +369,11 @@ public static class TestHelpers
 	}
 
 	private static string PlainText(SharpMessage msg) =>
-		msg.Match(ms => ms.ToPlainText(), s => s);
+		msg switch
+		{
+			MString ms => ms.ToPlainText(),
+			string s => s
+		};
 
 	/// <summary>
 	/// Polls the attribute service until the specified attribute exists on the target object,

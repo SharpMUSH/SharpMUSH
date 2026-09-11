@@ -31,12 +31,12 @@ public partial class PackageAuthoringService(
 		foreach (var objid in objids.Distinct())
 		{
 			var read = await ReadObjectAsync(objid, cancellationToken);
-			if (read.IsT1)
+			if (read is not AuthoringObject authored)
 			{
-				return read.AsT1;
+				return (Error<string>)read.Value!;
 			}
 
-			objects.Add(read.AsT0);
+			objects.Add(authored);
 		}
 
 		var selectedNumbers = objects
@@ -81,12 +81,12 @@ public partial class PackageAuthoringService(
 		foreach (var selection in request.Objects)
 		{
 			var read = await ReadObjectAsync(selection.Objid, cancellationToken);
-			if (read.IsT1)
+			if (read is not AuthoringObject authored)
 			{
-				return read.AsT1;
+				return (Error<string>)read.Value!;
 			}
 
-			selections.Add((selection, read.AsT0));
+			selections.Add((selection, authored));
 			var number = DbrefNumber(selection.Objid);
 			if (number is not null)
 			{
@@ -240,10 +240,12 @@ public partial class PackageAuthoringService(
 		// Round-trip through the parser: the exporter must never emit an invalid manifest.
 		var document = yaml.ToString();
 		var validation = manifests.ParseManifest(document);
-		return validation.Match<Result<string>>(
-			_ => document,
-			failure => new Error<string>(
-				$"Export produced an invalid manifest (bug): {string.Join("; ", failure.Errors.Select(e => e.ToString()))}"));
+		return validation switch
+		{
+			ParsedPackageManifest => document,
+			PackageManifestFailure failure => new Error<string>(
+				$"Export produced an invalid manifest (bug): {string.Join("; ", failure.Errors.Select(e => e.ToString()))}")
+		};
 	}
 
 	private async Task<Result<AuthoringObject>> ReadObjectAsync(
@@ -256,12 +258,12 @@ public partial class PackageAuthoringService(
 		}
 
 		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		if (node.IsNone())
+		if (node.IsNone)
 		{
 			return new Error<string>($"Object {objid} does not exist.");
 		}
 
-		var known = node.Known();
+		var known = node.Known;
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -284,7 +286,7 @@ public partial class PackageAuthoringService(
 		}
 
 		var parent = await sharpObject.Parent.WithCancellation(cancellationToken);
-		var parentObjid = parent.IsNone() ? null : parent.Known().Object().DBRef.ToString();
+		var parentObjid = parent.IsNone ? null : parent.Known.Object().DBRef.ToString();
 
 		return new AuthoringObject(
 			sharpObject.DBRef.ToString(),

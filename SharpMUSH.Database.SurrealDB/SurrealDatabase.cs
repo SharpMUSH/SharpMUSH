@@ -523,12 +523,14 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var located = await BuildTypedObjectFromKey(destKey, ct);
-		return located.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new InvalidOperationException($"Invalid location for {typedId}: Exit objects cannot be locations"),
-			thing => thing,
-			_ => throw new InvalidOperationException($"No location found for {typedId}"));
+		return located switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpExit => throw new InvalidOperationException($"Invalid location for {typedId}: Exit objects cannot be locations"),
+			SharpThing thing => thing,
+			None => throw new InvalidOperationException($"No location found for {typedId}")
+		};
 	}
 
 	public async ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken ct = default)
@@ -546,12 +548,14 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var homeObj = await BuildTypedObjectFromKey(destKey, ct);
-		return homeObj.Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
-			thing => thing,
-			_ => throw new InvalidOperationException($"No home found for {typedId}"));
+		return homeObj switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpExit => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
+			SharpThing thing => thing,
+			None => throw new InvalidOperationException($"No home found for {typedId}")
+		};
 	}
 
 	/// <summary>
@@ -573,12 +577,13 @@ public partial class SurrealDatabase(
 		}
 
 		var destination = await BuildTypedObjectFromKey(destKeys[0], ct);
-		return destination.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => new None(),
-			thing => thing,
-			_ => new None());
+		return destination switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpThing thing => thing,
+			SharpExit or None => new None()
+		};
 	}
 
 	public async ValueTask<AnyOptionalSharpContainer> GetDropToAsync(string roomId, CancellationToken ct = default)
@@ -594,12 +599,13 @@ public partial class SurrealDatabase(
 
 		var destKey = destKeys[0];
 		var dropToObj = await BuildTypedObjectFromKey(destKey, ct);
-		return dropToObj.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => new None(),
-			thing => thing,
-			_ => new None());
+		return dropToObj switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpThing thing => thing,
+			SharpExit or None => new None()
+		};
 	}
 
 	public async ValueTask<SharpPlayer> GetObjectOwnerAsync(string objectId, CancellationToken ct = default)

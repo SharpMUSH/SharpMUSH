@@ -298,10 +298,14 @@ public partial class LightningDatabase
 		var stampedLocale = string.Empty;
 		if (!string.IsNullOrWhiteSpace(sourceLocale))
 		{
-			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
-			if (normalizedSource.IsT1) return normalizedSource.AsT1;
-
-			stampedLocale = normalizedSource.AsT0;
+			switch (WikiHelpers.NormalizeLocale(sourceLocale))
+			{
+				case Error<string> error:
+					return error;
+				case string normalizedSource:
+					stampedLocale = normalizedSource;
+					break;
+			}
 		}
 
 		var nsStr = ns.ToString().ToLowerInvariant();
@@ -494,9 +498,8 @@ public partial class LightningDatabase
 		int? expectedRevisionNumber)
 	{
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+		if (normalizedLocale is not string normalized) return (Error<string>)normalizedLocale.Value!;
 
-		var normalized = normalizedLocale.AsT0;
 		var now = DateTimeOffset.UtcNow;
 		var stamp = WikiTimestamp(now);
 		var html = WikiRenderer.RenderToHtml(markdown);

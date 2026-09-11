@@ -234,17 +234,13 @@ public partial class SurrealDatabase
 		await UnlinkRoomAsync(room, cancellationToken);
 
 		var roomKey = ExtractKey(room.Id!);
-		var destKey = location.Match(
-		player => ExtractKey(player.Id!),
-		rm => ExtractKey(rm.Id!),
-		thing => ExtractKey(thing.Id!),
-		_ => throw new InvalidOperationException());
-
-		var destTable = location.Match(
-		_ => "player",
-		_ => "room",
-		_ => "thing",
-		_ => throw new InvalidOperationException());
+		var (destTable, destKey) = location switch
+		{
+			SharpPlayer player => ("player", ExtractKey(player.Id!)),
+			SharpRoom rm => ("room", ExtractKey(rm.Id!)),
+			SharpThing thing => ("thing", ExtractKey(thing.Id!)),
+			None => throw new InvalidOperationException()
+		};
 
 		var parameters = new Dictionary<string, object?>
 		{
@@ -922,18 +918,22 @@ public partial class SurrealDatabase
 
 	private static string GetContainerTable(AnySharpContainer container)
 	{
-		return container.Match(
-			_ => "player",
-			_ => "room",
-			_ => "thing");
+		return container switch
+		{
+			SharpPlayer => "player",
+			SharpRoom => "room",
+			SharpThing => "thing"
+		};
 	}
 
 	private static string GetContentTable(AnySharpContent content)
 	{
-		return content.Match(
-			_ => "player",
-			_ => "exit",
-			_ => "thing");
+		return content switch
+		{
+			SharpPlayer => "player",
+			SharpExit => "exit",
+			SharpThing => "thing"
+		};
 	}
 
 	#endregion

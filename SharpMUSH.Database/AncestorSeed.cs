@@ -45,20 +45,7 @@ public static class AncestorSeed
 	public static async ValueTask SeedAncestorPlayerFormatsAsync(ISharpDatabase database,
 		CancellationToken ct = default)
 	{
-		var godNode = await database.GetObjectNodeAsync(God, ct);
-		if (godNode.IsNone)
-		{
-			return;
-		}
-
-		var owner = godNode.Match(
-			player => player,
-			_ => null!,
-			_ => null!,
-			_ => null!,
-			_ => null!);
-
-		if (owner is null || string.IsNullOrEmpty(owner.Id))
+		if (await database.GetObjectNodeAsync(God, ct) is not SharpPlayer owner || string.IsNullOrEmpty(owner.Id))
 		{
 			return;
 		}

@@ -48,7 +48,7 @@ public class CommunicationService(
 
 		var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
 
-		return playerResult.IsNone()
+		return playerResult.IsNone
 			|| await permissionService.CanInteract(executor, playerResult.WithoutNone(), InteractType.Hear);
 	}
 
@@ -140,13 +140,17 @@ public class CommunicationService(
 
 		await foreach (var target in targets)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target switch
+			{
+				DBRef dbref => dbref.ToString(),
+				string name => name
+			};
 			var delivery = await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc,
 				notificationType, notifyOnPermissionFailure);
 
-			if (delivery.IsT0)
+			if (delivery is AnySharpObject delivered)
 			{
-				notified.Add(delivery.AsT0);
+				notified.Add(delivered);
 			}
 		}
 

@@ -335,7 +335,7 @@ public class MoveService(
 	private async ValueTask<AnySharpObject?> ZoneOf(AnySharpContainer container)
 	{
 		var zone = await container.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-		return zone.IsNone() ? null : zone.Known();
+		return zone.IsNone ? null : zone.Known;
 	}
 
 	/// <inheritdoc />

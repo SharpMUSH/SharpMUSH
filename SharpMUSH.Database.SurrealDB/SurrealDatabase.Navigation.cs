@@ -160,14 +160,14 @@ public partial class SurrealDatabase
 		if (lastValidContainerKey == null) return new None();
 
 		var typed = await BuildTypedObjectFromKey(lastValidContainerKey.Value, ct);
-		if (typed.IsNone) return new None();
-
-		return typed.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location: Exit"),
-			thing => thing,
-			_ => new None());
+		return typed switch
+		{
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpExit => throw new Exception("Invalid Location: Exit"),
+			SharpThing thing => thing,
+			None none => none
+		};
 	}
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -198,14 +198,13 @@ public partial class SurrealDatabase
 		foreach (var contentKey in records)
 		{
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
-			if (typed.IsNone) continue;
-
-			var content = typed.Match<AnySharpContent?>(
-				player => player,
-				_ => null, // Room cannot be content
-				exit => exit,
-				thing => thing,
-				_ => null);
+			AnySharpContent? content = typed switch
+			{
+				SharpPlayer player => player,
+				SharpExit exit => exit,
+				SharpThing thing => thing,
+				SharpRoom or None => null // Room cannot be content
+			};
 
 			if (content != null)
 				yield return content;

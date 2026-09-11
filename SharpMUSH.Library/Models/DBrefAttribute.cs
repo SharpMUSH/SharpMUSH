@@ -28,9 +28,9 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 	{
 		switch (HelperFunctions.SplitDBRefAndAttr(parse))
 		{
-			case { IsT0: true } split:
+			case DbRefAttribute split:
 				{
-					output = split.AsT0;
+					output = split;
 					return true;
 				}
 			default:

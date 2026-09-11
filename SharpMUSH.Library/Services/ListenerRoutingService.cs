@@ -78,7 +78,7 @@ public class ListenerRoutingService(
 			return;
 
 		var targetResult = await mediator.Send(new GetObjectNodeQuery(context.Target));
-		if (targetResult.IsNone())
+		if (targetResult.IsNone)
 			return;
 
 		var listener = targetResult.WithoutNone();
@@ -95,7 +95,7 @@ public class ListenerRoutingService(
 		else
 		{
 			var location = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
-			if (location.IsNone())
+			if (location.IsNone)
 			{
 				return;
 			}
@@ -106,10 +106,11 @@ public class ListenerRoutingService(
 		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
 			return;
 
-		var messageText = message.Match(
-			markupString => markupString.ToPlainText(),
-			str => str
-		);
+		var messageText = message switch
+		{
+			MString markupString => markupString.ToPlainText(),
+			string str => str
+		};
 
 		await ProcessListenPatternsAsync(listener, messageText, actualSender);
 
@@ -283,7 +284,11 @@ public class ListenerRoutingService(
 		// — which made a puppet a route for one player's text to format another player's screen.
 		var relayed = MarkupText.Concat(
 			MarkupText.Plain(prefix),
-			message.Match(markupString => markupString, MarkupText.Plain));
+			message switch
+			{
+				MString markupString => markupString,
+				string str => MarkupText.Plain(str)
+			});
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
 		foreach (var binding in bindings)

@@ -37,7 +37,7 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 			: await actor.IsPriv() || await actor.HasPower("SEE_QUEUE")) return true;
 		if (entry.Source is not { IsObjid: true } source) return false;
 		var target = await mediator.Send(new GetObjectNodeQuery(source), ct);
-		return !target.IsNone && target.Known().Object().DBRef == source && await permissions.Controls(actor, target.Known()).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
+		return !target.IsNone && target.Known.Object().DBRef == source && await permissions.Controls(actor, target.Known).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>Stops after the requested number of visible entries, without materializing the full ledger.</summary>
@@ -113,9 +113,9 @@ public sealed class QueueControlService(ITaskScheduler scheduler, IAdministrativ
 		var player = await mediator.Send(new GetObjectNodeQuery(actor.ActiveCharacter!.Value), ct);
 		var target = await mediator.Send(new GetObjectNodeQuery(source), ct);
 		if (!player.IsPlayer || player.AsPlayer.Object.DBRef != actor.ActiveCharacter || target.IsNone
-			|| target.Known().Object().DBRef != source) return false;
-		if ((await target.Known().Object().Owner.WithCancellation(ct)).Object.DBRef != owner) return false;
-		return await permissions.Controls(player.Known(), target.Known()).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
+			|| target.Known.Object().DBRef != source) return false;
+		if ((await target.Known.Object().Owner.WithCancellation(ct)).Object.DBRef != owner) return false;
+		return await permissions.Controls(player.Known, target.Known).AsTask().WaitAsync(ExecutionBudget.CurrentToken);
 	}
 
 }

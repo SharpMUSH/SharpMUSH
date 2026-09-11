@@ -396,7 +396,7 @@ public sealed partial class ObjectSnapshotService(
 				mutations.Add(async () =>
 				{
 					var cleared = await attributeService.ClearAttributeAsync(executor, obj, name, IAttributeService.AttributePatternMode.Exact);
-					if (cleared.IsT1) throw Error("write-failed", cleared.AsT1.Value);
+					if (cleared is Error<string> clearError) throw Error("write-failed", clearError.Value);
 				});
 				continue;
 			}
@@ -404,7 +404,7 @@ public sealed partial class ObjectSnapshotService(
 			mutations.Add(async () =>
 			{
 				var result = await attributeService.SetAttributeAsync(executor, obj, name, MarkupTextSerializer.Deserialize(saved.Markup));
-				if (result.IsT1) throw Error("write-failed", result.AsT1.Value);
+				if (result is Error<string> writeError) throw Error("write-failed", writeError.Value);
 			});
 			mutations.Add(async () =>
 			{
@@ -413,7 +413,7 @@ public sealed partial class ObjectSnapshotService(
 				var changes = flags.Except(saved.Flags).Select(f => "!" + f).Concat(saved.Flags.Except(flags)).ToArray();
 				if (changes.Length == 0) return;
 				var changed = await attributeService.SetAttributeFlagsAsync(executor, obj, name, changes);
-				if (changed.IsT1) throw Error("write-failed", changed.AsT1.Value);
+				if (changed is Error<string> flagError) throw Error("write-failed", flagError.Value);
 			});
 		}
 		if (selection.Locks)

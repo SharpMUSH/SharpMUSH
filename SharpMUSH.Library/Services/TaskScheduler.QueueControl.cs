@@ -173,12 +173,12 @@ public partial class TaskScheduler
 		if (entry.SemaphoreTarget is { } semaphoreTarget)
 		{
 			var semaphore = await mediator.Send(new GetObjectNodeQuery(semaphoreTarget), ExecutionBudget.CurrentToken);
-			if (semaphore.IsNone || semaphore.Known().Object().DBRef != semaphoreTarget) return false;
+			if (semaphore.IsNone || semaphore.Known.Object().DBRef != semaphoreTarget) return false;
 		}
 		if (entry.Executor is not { } executor) return true;
 		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		if (target.IsNone || target.Known().Object().DBRef != executor) return false;
-		return (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString() == entry.Owner;
+		if (target.IsNone || target.Known.Object().DBRef != executor) return false;
+		return (await target.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString() == entry.Owner;
 	}
 
 	// Caller owns the deferred mutation lease. Each replacement invalidates callbacks already

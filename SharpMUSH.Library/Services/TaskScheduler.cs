@@ -181,11 +181,11 @@ public partial class TaskScheduler(
 				diagnostics?.Rejected(executor, null, DiagnosticKind(group), QueueOutcome.InvalidTarget);
 				return Reject(QueueRejectionReason.InvalidTarget);
 			}
-			executor = target.Known().Object().DBRef;
-			executorIsPlayer = target.Known().IsPlayer;
-			if (await target.Known().IsWizard(ExecutionBudget.CurrentToken) || await target.Known().HasPower("Queue", ExecutionBudget.CurrentToken))
+			executor = target.Known.Object().DBRef;
+			executorIsPlayer = target.Known.IsPlayer;
+			if (await target.Known.IsWizard(ExecutionBudget.CurrentToken) || await target.Known.HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
-			owner = (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
+			owner = (await target.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
 		}
 		QueueAdmissionResult result;
 		lock (_admissionLock)
@@ -276,7 +276,7 @@ public partial class TaskScheduler(
 	private async ValueTask HaltRunaway(DBRef offender, string owner)
 	{
 		var node = await mediator.Send(new GetObjectNodeQuery(offender), ExecutionBudget.CurrentToken);
-		var name = node.IsNone ? offender.ToString() : node.Known().Object().Name;
+		var name = node.IsNone ? offender.ToString() : node.Known.Object().Name;
 
 		// The wipe has to happen: without it the backlog the object already built keeps running, each
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
@@ -286,10 +286,10 @@ public partial class TaskScheduler(
 		// dequeue re-check (:1136) each test !IsPlayer(executor) first. SharpMUSH's DidItService
 		// honours HALT on everyone, so the flag on a player would silence them outright. Admission
 		// already refuses to send a player down this path; this is the second lock on that door.
-		if (!node.IsNone && !node.Known().IsPlayer)
+		if (!node.IsNone && !node.Known.IsPlayer)
 		{
 			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"), ExecutionBudget.CurrentToken);
-			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(node.Known(), haltFlag), ExecutionBudget.CurrentToken);
+			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(node.Known, haltFlag), ExecutionBudget.CurrentToken);
 		}
 
 		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
@@ -349,8 +349,8 @@ public partial class TaskScheduler(
 					var source = await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken);
 					if (!source.IsNone)
 					{
-						executor = source.Known().Object().DBRef;
-						owner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+						executor = source.Known.Object().DBRef;
+						owner = (await source.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 					}
 				}
 				catch (Exception ex) when (ex is not OperationCanceledException)
@@ -745,7 +745,7 @@ public partial class TaskScheduler(
 	{
 		if (state.Executor is not { } executor) return state;
 		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		return target.IsNone ? state : state with { Executor = target.Known().Object().DBRef };
+		return target.IsNone ? state : state with { Executor = target.Known.Object().DBRef };
 	}
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
@@ -769,7 +769,7 @@ public partial class TaskScheduler(
 	{
 		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
-		dbAttribute = new DbRefAttribute(target.Known().Object().DBRef, dbAttribute.Attribute);
+		dbAttribute = new DbRefAttribute(target.Known.Object().DBRef, dbAttribute.Attribute);
 		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
 		return await Admit(async () =>
 		{
@@ -804,7 +804,7 @@ public partial class TaskScheduler(
 		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
 		if (target.IsNone) return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known().Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		lock (_admissionLock) _semaphorePublications.Add(pid);
@@ -827,7 +827,7 @@ public partial class TaskScheduler(
 		var counterCreated = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
-		var fullTarget = target.Known().Object().DBRef;
+		var fullTarget = target.Known.Object().DBRef;
 		try
 		{
 			if (manageSemaphoreCount)
@@ -1163,8 +1163,8 @@ public partial class TaskScheduler(
 		identity.Split(parts, '-');
 
 		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
-			? NameOrDbRef.FromT1(dbref!.Value)
-			: NameOrDbRef.FromT0(triggerName);
+			? dbref!.Value
+			: triggerName;
 	}
 
 	/// <summary>

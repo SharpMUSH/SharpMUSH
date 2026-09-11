@@ -273,7 +273,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.RoomDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "room-desc", "Room has no description.");
 				hasWarnings = true;
@@ -345,7 +345,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "exit-desc", "Exit has no description.");
 				hasWarnings = true;
@@ -358,14 +358,14 @@ public class WarningService(
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
 				hasWarnings = true;
 			}
 
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
 				hasWarnings = true;
@@ -444,7 +444,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
 				if (target.IsThing)
@@ -474,14 +474,14 @@ public class WarningService(
 			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || drop.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 				hasWarnings = true;
 			}
 
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
 				hasWarnings = true;
@@ -501,7 +501,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.PlayerDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "my-desc", "Player is missing description.");
 				hasWarnings = true;

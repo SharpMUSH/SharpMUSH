@@ -88,31 +88,29 @@ internal static class PackageToolApp
 		var label = DisplayLabel(manifestPath);
 		var result = service.ParseManifest(yaml);
 
-		return result.Match(
-			parsed =>
-			{
-				var warningsFail = strict && parsed.Warnings.Count > 0;
-				PrintIssues(label, parsed.Warnings);
+		if (result is PackageManifestFailure failure)
+		{
+			PrintIssues(label, failure.Issues);
+			Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
+			return false;
+		}
 
-				var binariesOk = VerifyBinaries(yaml, packageDir, label);
+		var parsed = (ParsedPackageManifest)result.Value!;
+		var warningsFail = strict && parsed.Warnings.Count > 0;
+		PrintIssues(label, parsed.Warnings);
 
-				if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
-				{
-					Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()})");
-				}
-				else if (binariesOk && !warningsFail)
-				{
-					Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}) — with warnings");
-				}
+		var binariesOk = VerifyBinaries(yaml, packageDir, label);
 
-				return binariesOk && !warningsFail;
-			},
-			failure =>
-			{
-				PrintIssues(label, failure.Issues);
-				Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
-				return false;
-			});
+		if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
+		{
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()})");
+		}
+		else if (binariesOk && !warningsFail)
+		{
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}) — with warnings");
+		}
+
+		return binariesOk && !warningsFail;
 	}
 
 	private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();

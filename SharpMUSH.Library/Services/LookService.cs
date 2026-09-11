@@ -35,7 +35,7 @@ public class LookService(
 		bool lookOutside = false)
 	{
 		// look_room (look.c:461): NOTHING is shown nothing.
-		if (viewing.IsNone())
+		if (viewing.IsNone)
 		{
 			return CallState.Empty;
 		}

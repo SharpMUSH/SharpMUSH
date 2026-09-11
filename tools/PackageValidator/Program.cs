@@ -43,18 +43,18 @@ foreach (var manifestPath in manifestPaths)
 {
 	var relative = Path.GetRelativePath(root, manifestPath);
 	var result = service.ParseManifest(await File.ReadAllTextAsync(manifestPath));
-	result.Switch(
-		parsed =>
-		{
+	switch (result)
+	{
+		case ParsedPackageManifest parsed:
 			Report(relative, parsed.Warnings);
 			manifestsByDir[Path.GetRelativePath(root, Path.GetDirectoryName(manifestPath)!)] = parsed.Manifest;
 			Console.WriteLine($"OK    {relative}: {parsed.Manifest.Name} {parsed.Manifest.Version}");
-		},
-		failure =>
-		{
+			break;
+		case PackageManifestFailure failure:
 			Report(relative, failure.Issues);
 			failed = true;
-		});
+			break;
+	}
 }
 
 // npm-style moniker rule: ids must remain distinct with punctuation stripped.
@@ -71,47 +71,49 @@ var indexPath = Path.Combine(root, "index.yaml");
 if (File.Exists(indexPath))
 {
 	var indexResult = service.ParseIndex(await File.ReadAllTextAsync(indexPath));
-	indexResult.Switch(
-		index =>
-		{
-			var indexedDirs = new HashSet<string>(StringComparer.Ordinal);
-			foreach (var entry in index.Packages)
+	switch (indexResult)
+	{
+		case PackageIndex index:
 			{
-				var dir = entry.Path.TrimEnd('/');
-				indexedDirs.Add(dir);
-				if (!manifestsByDir.TryGetValue(dir, out var manifest))
+				var indexedDirs = new HashSet<string>(StringComparer.Ordinal);
+				foreach (var entry in index.Packages)
 				{
-					failed = true;
-					Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' has no valid package.yaml.");
-					continue;
+					var dir = entry.Path.TrimEnd('/');
+					indexedDirs.Add(dir);
+					if (!manifestsByDir.TryGetValue(dir, out var manifest))
+					{
+						failed = true;
+						Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' has no valid package.yaml.");
+						continue;
+					}
+
+					if (entry.PackageId is not null && entry.PackageId != manifest.Name)
+					{
+						failed = true;
+						Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' says id '{entry.PackageId}' but manifest says '{manifest.Name}'.");
+					}
+
+					if (entry.Version is not null && entry.Version.CompareTo(manifest.Version) != 0)
+					{
+						failed = true;
+						Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' says version {entry.Version} but manifest says {manifest.Version}.");
+					}
 				}
 
-				if (entry.PackageId is not null && entry.PackageId != manifest.Name)
+				foreach (var missing in manifestsByDir.Keys.Where(d => !indexedDirs.Contains(d)))
 				{
 					failed = true;
-					Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' says id '{entry.PackageId}' but manifest says '{manifest.Name}'.");
+					Console.WriteLine($"ERROR index.yaml: package directory '{missing}/' is not listed in the index.");
 				}
 
-				if (entry.Version is not null && entry.Version.CompareTo(manifest.Version) != 0)
-				{
-					failed = true;
-					Console.WriteLine($"ERROR index.yaml: entry '{entry.Path}' says version {entry.Version} but manifest says {manifest.Version}.");
-				}
+				Console.WriteLine($"OK    index.yaml: {index.Packages.Count} entries");
+				break;
 			}
-
-			foreach (var missing in manifestsByDir.Keys.Where(d => !indexedDirs.Contains(d)))
-			{
-				failed = true;
-				Console.WriteLine($"ERROR index.yaml: package directory '{missing}/' is not listed in the index.");
-			}
-
-			Console.WriteLine($"OK    index.yaml: {index.Packages.Count} entries");
-		},
-		failure =>
-		{
+		case PackageManifestFailure failure:
 			Report("index.yaml", failure.Issues);
 			failed = true;
-		});
+			break;
+	}
 }
 
 // Community repo listings (community/*.yaml): each must parse, URLs must be unique.
@@ -130,24 +132,21 @@ if (Directory.Exists(communityDir))
 	{
 		var relative = Path.GetRelativePath(root, file);
 		var parsed = service.ParseCommunityListing(await File.ReadAllTextAsync(file));
-		parsed.Switch(
-			listing =>
-			{
-				if (urls.TryGetValue(listing.Url, out var existing))
-				{
-					failed = true;
-					Console.WriteLine($"ERROR {relative}: duplicate community repo URL '{listing.Url}' (also in {existing}).");
-					return;
-				}
-
+		switch (parsed)
+		{
+			case CommunityRepoListing listing when urls.TryGetValue(listing.Url, out var existing):
+				failed = true;
+				Console.WriteLine($"ERROR {relative}: duplicate community repo URL '{listing.Url}' (also in {existing}).");
+				break;
+			case CommunityRepoListing listing:
 				urls[listing.Url] = relative;
 				Console.WriteLine($"OK    {relative}: {listing.Name}");
-			},
-			failure =>
-			{
+				break;
+			case PackageManifestFailure failure:
 				Report(relative, failure.Issues);
 				failed = true;
-			});
+				break;
+		}
 	}
 
 	Console.WriteLine($"OK    community/: {urls.Count} listing(s)");

@@ -35,14 +35,14 @@ public partial class ValidateService(
 				=> false,
 			IValidateService.ValidationType.Name
 				=> ValidateName(value),
-			IValidateService.ValidationType.PlayerName when target is { IsT0: true }
-				=> await ValidatePlayerName(value, target.AsT0),
-			IValidateService.ValidationType.PlayerAlias when target is { IsT0: true }
-				=> ValidatePlayerAlias(value, target.AsT0),
+			IValidateService.ValidationType.PlayerName when target is AnySharpObject player
+				=> await ValidatePlayerName(value, player),
+			IValidateService.ValidationType.PlayerAlias when target is AnySharpObject player
+				=> ValidatePlayerAlias(value, player),
 			IValidateService.ValidationType.AttributeName
 				=> ValidateAttributeName(value.ToPlainText()),
-			IValidateService.ValidationType.AttributeValue when target is { IsT1: true }
-				=> ValidateAttributeValue(value, target.AsT1),
+			IValidateService.ValidationType.AttributeValue when target is SharpAttributeEntry entry
+				=> ValidateAttributeValue(value, entry),
 			IValidateService.ValidationType.AttributeValue
 				=> ValidateAttributeValueBasic(value),
 			IValidateService.ValidationType.ColorName
@@ -51,8 +51,8 @@ public partial class ValidateService(
 				=> true,
 			IValidateService.ValidationType.CommandName
 				=> ValidCommandNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.LockKey when target is { IsT0: true }
-				=> lockService.Validate(value.ToPlainText(), target.AsT0),
+			IValidateService.ValidationType.LockKey when target is AnySharpObject lockee
+				=> lockService.Validate(value.ToPlainText(), lockee),
 			IValidateService.ValidationType.LockType
 				=> ValidateLockType(value),
 			IValidateService.ValidationType.BoolExp
@@ -61,9 +61,9 @@ public partial class ValidateService(
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.PowerName
 				=> ValidAttributeNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName when target is { IsT3: true }
+			IValidateService.ValidationType.ChannelName when target is None
 				=> ChannelNameRegex().IsMatch(value.ToPlainText()),
-			IValidateService.ValidationType.ChannelName when target is { IsT2: true, AsT2: var channel }
+			IValidateService.ValidationType.ChannelName when target is SharpChannel channel
 				=> channel.Name.ToPlainText() == value.ToPlainText()
 					 || ChannelNameRegex().IsMatch(value.ToPlainText()),
 			IValidateService.ValidationType.Password

@@ -125,9 +125,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject obj => await foundFunc(obj)
 		};
 
 
@@ -136,9 +135,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => foundFunc(obj),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject obj => foundFunc(obj)
 		};
 
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
@@ -275,9 +273,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
 		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj.AsPlayer),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject obj => await foundFunc(obj.AsPlayer)
 		};
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker,
@@ -815,12 +812,13 @@ public partial class LocateService(
 
 	/// <summary>Resolves the containing location within an explicit read lifetime.</summary>
 	public static ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj, CancellationToken cancellationToken)
-		=> obj.Match<ValueTask<AnySharpContainer>>(
-			player => new(player.Location.WithCancellation(cancellationToken)),
-			room => ValueTask.FromResult<AnySharpContainer>(room),
-			exit => new(exit.Location.WithCancellation(cancellationToken)),
-			thing => new(thing.Location.WithCancellation(cancellationToken))
-		);
+		=> obj switch
+		{
+			SharpPlayer player => new(player.Location.WithCancellation(cancellationToken)),
+			SharpRoom room => ValueTask.FromResult<AnySharpContainer>(room),
+			SharpExit exit => new(exit.Location.WithCancellation(cancellationToken)),
+			SharpThing thing => new(thing.Location.WithCancellation(cancellationToken))
+		};
 
 	/// <summary>
 	/// PennMUSH's <c>nearby</c> (predicat.c:1251), which resolves each side with <c>where_is</c>.

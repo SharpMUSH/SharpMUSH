@@ -367,7 +367,7 @@ public partial class SurrealDatabase
 				Mute: record.mute,
 				Title: MarkupTextSerializer.Deserialize(record.title));
 
-			yield return new SharpChannel.MemberAndStatus(memberObj.Known(), status);
+			yield return new SharpChannel.MemberAndStatus(memberObj.Known, status);
 		}
 	}
 

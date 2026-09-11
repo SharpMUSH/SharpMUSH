@@ -358,20 +358,18 @@ public static partial class HelperFunctions
 	/// </summary>
 	public static DBRef? TypeAncestor(this AnySharpObject obj,
 		IOptionsWrapper<SharpMUSHOptions> configuration)
-		=> obj.Match(
-			_ => configuration.CurrentValue.Database.AncestorPlayer is null
-				? null
-				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorPlayer)),
-			_ => configuration.CurrentValue.Database.AncestorRoom is null
-				? null
-				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorRoom)),
-			_ => configuration.CurrentValue.Database.AncestorExit is null
-				? null
-				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorExit)),
-			_ => configuration.CurrentValue.Database.AncestorThing is null
-				? (DBRef?)null
-				: new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.AncestorThing))
-		);
+	{
+		var database = configuration.CurrentValue.Database;
+		var ancestor = obj switch
+		{
+			SharpPlayer => database.AncestorPlayer,
+			SharpRoom => database.AncestorRoom,
+			SharpExit => database.AncestorExit,
+			SharpThing => database.AncestorThing
+		};
+
+		return ancestor is null ? null : new DBRef(Convert.ToInt32(ancestor));
+	}
 
 	public static async ValueTask<DBRef?> Ancestor(this AnySharpObject obj,
 		IOptionsWrapper<SharpMUSHOptions> configuration)
