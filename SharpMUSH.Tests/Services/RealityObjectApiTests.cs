@@ -24,8 +24,8 @@ public class RealityObjectApiTests
 	public async Task ObjectMetadataRequiresCurrentLinkAndPerception(bool linked)
 	{
 		var objects = new TestObjectFactory();
-		var viewer = objects.CreatePlayer(10, "Viewer").AsPlayer;
-		var hidden = objects.CreateThing(11, "Secret", owner: viewer).AsThing;
+		var viewer = objects.CreatePlayer(10, "Viewer").Expect<SharpPlayer>();
+		var hidden = objects.CreateThing(11, "Secret", owner: viewer).Expect<SharpThing>();
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 			ValueTask.FromResult<AnyOptionalSharpObject>(call.Arg<GetObjectNodeQuery>().DBRef.Number == 10 ? viewer : hidden));

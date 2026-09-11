@@ -130,7 +130,7 @@ public class BanEnforcementServiceTests
 		// banned account's live character connection must still be disconnected purely by resolving
 		// the account's linked characters and matching on connection.Ref.
 		var factory = new TestObjectFactory();
-		var character = factory.CreatePlayer(555, "BannedAccountsChar").AsPlayer;
+		var character = factory.CreatePlayer(555, "BannedAccountsChar").Expect<SharpPlayer>();
 		var characterBoundConnection = MakeConnection(
 			701, accountId: null, ip: "4.4.4.4", characterRef: new DBRef(character.Object.Key, character.Object.CreationTime));
 		var unrelatedConnection = MakeConnection(702, accountId: null, ip: "5.5.5.5", characterRef: new DBRef(999));

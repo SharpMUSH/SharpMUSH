@@ -24,18 +24,19 @@ public class FunctionPermissionCancellationTests
 	public async Task BlockedFunctionOwnerCannotStrandQueue(FunctionFlags flags, bool halt)
 	{
 		var executor = new TestObjectFactory().CreatePlayer(15, "function executor");
+		var executorPlayer = executor.Expect<SharpPlayer>();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var following = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var cleanup = new CancellationTokenSource();
-		executor.AsPlayer.Object.Owner = new(async token =>
+		executorPlayer.Object.Owner = new(async token =>
 		{
 			entered.TrySetResult();
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cleanup.Token);
 			await Task.Delay(Timeout.InfiniteTimeSpan, linked.Token);
-			return executor.AsPlayer;
+			return executorPlayer;
 		});
 		var parser = Substitute.For<IMUSHCodeParser>();
-		parser.CurrentState.Returns(ParserState.RootFor(executor.AsPlayer.Object.DBRef));
+		parser.CurrentState.Returns(ParserState.RootFor(executor.Object().DBRef));
 		var notify = Substitute.For<INotifyService>();
 		var invoked = false;
 		var definition = new FunctionDefinition(new SharpFunctionAttribute

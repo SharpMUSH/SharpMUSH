@@ -31,7 +31,7 @@ public class InheritableOwnerTrustTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<AnySharpObject> Known(DBRef dbref)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	private async Task<DBRef> ThingOwnedBy(DBRef owner, string namePrefix)
 	{

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
@@ -124,7 +125,7 @@ public class PennMUSHDatabaseConverterTests
 
 		var godPlayer = await database.GetObjectNodeAsync(new Library.Models.DBRef(1));
 		await Assert.That(godPlayer.IsPlayer).IsTrue();
-		await Assert.That(godPlayer.AsPlayer.Object.Name).IsEqualTo("CustomGod");
+		await Assert.That(godPlayer.Expect<SharpPlayer>().Object.Name).IsEqualTo("CustomGod");
 	}
 
 	[Test]
@@ -162,7 +163,7 @@ public class PennMUSHDatabaseConverterTests
 
 		var room0 = await database.GetObjectNodeAsync(new Library.Models.DBRef(0));
 		await Assert.That(room0.IsRoom).IsTrue();
-		await Assert.That(room0.AsRoom.Object.Name).IsEqualTo("Custom Void");
+		await Assert.That(room0.Expect<SharpRoom>().Object.Name).IsEqualTo("Custom Void");
 	}
 
 	[Test]

@@ -28,7 +28,7 @@ public class VisibleWorldProjectionTests
 	public VisibleWorldProjectionTests()
 	{
 		_room = _objects.CreateRoom(10, "Visible room");
-		_player = _objects.CreatePlayer(11, "Viewer", _room).AsPlayer;
+		_player = _objects.CreatePlayer(11, "Viewer", _room).Expect<SharpPlayer>();
 		_actor = new("account", _player.Object.DBRef, _player.Object.DBRef);
 		_capabilities.GetGameActorAsync(_player.Object.DBRef, Arg.Any<CancellationToken>()).Returns(_actor);
 		_mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
@@ -52,9 +52,9 @@ public class VisibleWorldProjectionTests
 	[Test]
 	public async Task StateExcludesRealityHiddenAndNormallyInvisibleContents()
 	{
-		var visible = _objects.CreateThing(12, "Visible", _room).AsThing;
-		var hidden = _objects.CreateThing(13, "Other layer", _room).AsThing;
-		var dark = _objects.CreateThing(14, "Dark", _room).AsThing;
+		var visible = _objects.CreateThing(12, "Visible", _room).Expect<SharpThing>();
+		var hidden = _objects.CreateThing(13, "Other layer", _room).Expect<SharpThing>();
+		var dark = _objects.CreateThing(14, "Dark", _room).Expect<SharpThing>();
 		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new AnySharpContent[] { visible, hidden, dark }.ToAsyncEnumerable());
 		_reality.CanPerceiveAsync(_player.Object.DBRef, hidden.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
@@ -68,7 +68,7 @@ public class VisibleWorldProjectionTests
 	[Test]
 	public async Task RoomEventUsesCurrentReceiverLocationAndSourceIdentity()
 	{
-		var source = _objects.CreatePlayer(12, "Speaker", _room).AsPlayer;
+		var source = _objects.CreatePlayer(12, "Speaker", _room).Expect<SharpPlayer>();
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
 		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<IPermissionService.InteractType>()).Returns(true);
 		await Assert.That(await _projection.CanReceiveRoomEventAsync(_actor, _room.Object.DBRef, source.Object.DBRef, RoomEventType.Say)).IsTrue();
@@ -84,7 +84,7 @@ public class VisibleWorldProjectionTests
 	[Arguments(RoomEventType.Depart)]
 	public async Task DispatchCancellationBoundsInteractionWithoutAmbientBudget(RoomEventType type)
 	{
-		var source = _objects.CreatePlayer(12, "Speaker", _room).AsPlayer;
+		var source = _objects.CreatePlayer(12, "Speaker", _room).Expect<SharpPlayer>();
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
 		using var cancellation = new CancellationTokenSource();
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -106,7 +106,7 @@ public class VisibleWorldProjectionTests
 	[Test]
 	public async Task HiddenRoomDoesNotSuppressAPerceivedSpeaker()
 	{
-		var source = _objects.CreatePlayer(12, "Speaker", _room).AsPlayer;
+		var source = _objects.CreatePlayer(12, "Speaker", _room).Expect<SharpPlayer>();
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef == source.Object.DBRef), Arg.Any<CancellationToken>()).Returns(source);
 		_permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), IPermissionService.InteractType.Hear).Returns(true);
 		_reality.CanPerceiveAsync(_player.Object.DBRef, _room.Object.DBRef, Arg.Any<CancellationToken>()).Returns(false);
@@ -133,7 +133,7 @@ public class VisibleWorldProjectionTests
 		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>()).Returns(Revoke());
 		async IAsyncEnumerable<AnySharpContent> Revoke()
 		{
-			yield return _objects.CreateThing(12, "Visible", _room).AsThing;
+			yield return _objects.CreateThing(12, "Visible", _room).Expect<SharpThing>();
 			_capabilities.GetGameActorAsync(_player.Object.DBRef, Arg.Any<CancellationToken>()).Returns((CapabilityActor?)null);
 			await Task.CompletedTask;
 		}
@@ -144,7 +144,7 @@ public class VisibleWorldProjectionTests
 	public async Task StateCapsVisibleContentsWithoutMaterializingTheRoom()
 	{
 		var scanned = 0;
-		var item = _objects.CreateThing(12, "Visible", _room).AsThing;
+		var item = _objects.CreateThing(12, "Visible", _room).Expect<SharpThing>();
 		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>()).Returns(Contents());
 		async IAsyncEnumerable<AnySharpContent> Contents()
 		{

@@ -155,7 +155,7 @@ public class PluginManagerTests
 
 		var overridden = await interceptor.TryOverrideAsync(null!, "@over here");
 		await Assert.That(overridden).IsNotNull();
-		await Assert.That(overridden!.AsValue().Message!.ToString()).IsEqualTo("overridden");
+		await Assert.That(overridden!.Expect<CallState>().Message!.ToString()).IsEqualTo("overridden");
 
 		await Assert.That(await interceptor.TryOverrideAsync(null!, "look")).IsNull();
 

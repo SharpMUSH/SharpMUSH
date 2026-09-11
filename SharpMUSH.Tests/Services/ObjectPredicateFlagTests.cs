@@ -49,7 +49,7 @@ public class ObjectPredicateFlagTests
 			.IsEqualTo("1")
 			.Because($"the {flag} flag has to actually be set before the predicate means anything");
 
-		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}
 
 	[Test]
@@ -67,7 +67,7 @@ public class ObjectPredicateFlagTests
 	public async Task IsDark_IsFalseWithoutTheFlag()
 	{
 		var plain = (await Mediator.Send(new GetObjectNodeQuery(
-			await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "PredNotDark")))).Known;
+			await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "PredNotDark")))).Expect<AnySharpObject>();
 
 		await Assert.That(await plain.IsDark()).IsFalse();
 		await Assert.That(await plain.IsDarkLegal()).IsFalse();

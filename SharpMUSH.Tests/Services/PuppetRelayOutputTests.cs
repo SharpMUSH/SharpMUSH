@@ -114,7 +114,7 @@ public class PuppetRelayOutputTests
 
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>())
-			.Returns(new AnyOptionalSharpObject(puppet.AsThing));
+			.Returns(new AnyOptionalSharpObject(puppet));
 
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.CanInteract(
@@ -229,7 +229,7 @@ public class PuppetRelayOutputTests
 			if (stage.EndsWith("-flag", StringComparison.Ordinal)) puppet.Object().Flags = new(() => Flags());
 			if (stage == "owner") puppet.Object().Owner = new(async token => { await Block(token); return owner; });
 			if (stage == "owner-location") owner.Location = new(async token => { await Block(token); return new AnySharpContainer(Room()); });
-			if (stage == "puppet-location") puppet.AsThing.Location = new(async token => { await Block(token); return new AnySharpContainer(Room(99)); });
+			if (stage == "puppet-location") puppet.Expect<SharpThing>().Location = new(async token => { await Block(token); return new AnySharpContainer(Room(99)); });
 		}, policy: policy);
 		using var request = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, request.Token);

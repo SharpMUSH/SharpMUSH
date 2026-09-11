@@ -83,7 +83,7 @@ public class QueueDiagnosticBoundaryTests
 		if (ownerLookup)
 		{
 			var source = await mediator.Send(new GetObjectNodeQuery(executor));
-			source.AsPlayer.Object.Owner = new(_ => Task.FromException<SharpPlayer>(failure));
+			source.Expect<SharpPlayer>().Object.Owner = new(_ => Task.FromException<SharpPlayer>(failure));
 			mediator.Send(Arg.Is<GetObjectNodeQuery>(query => query.DBRef == executor), Arg.Any<CancellationToken>()).Returns(source);
 		}
 		else

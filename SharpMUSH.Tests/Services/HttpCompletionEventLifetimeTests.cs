@@ -41,7 +41,7 @@ public class HttpCompletionEventLifetimeTests
 				var stage = Interlocked.Increment(ref reads) switch { 1 => "handler", 2 => "lookup", _ => "enactor" };
 				if (stage == "lookup") EventLookups++;
 				await Visit(stage, call.Arg<CancellationToken>());
-				return (stage == "lookup" ? events : handler).AsThing;
+				return stage == "lookup" ? events : handler;
 			});
 			Attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), IAttributeService.AttributeMode.Execute, false)
 				.Returns(async ValueTask<OptionalSharpAttributeOrError> (call) =>

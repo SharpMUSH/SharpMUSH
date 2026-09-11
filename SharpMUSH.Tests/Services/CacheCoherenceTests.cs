@@ -88,7 +88,7 @@ public class CacheCoherenceTests
 		var thing = factory.CreateThing(7, "Probe Thing");
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds == thing.Object().CreationTime), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<AnyOptionalSharpObject>(thing.AsThing));
+			.Returns(new ValueTask<AnyOptionalSharpObject>(thing));
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds != thing.Object().CreationTime), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<AnyOptionalSharpObject>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, mediator);

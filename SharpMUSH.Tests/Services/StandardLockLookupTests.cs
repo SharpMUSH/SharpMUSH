@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -43,7 +44,7 @@ public class StandardLockLookupTests
 		await CommandParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@lock/{lockType} #{target.Number}=#TRUE"));
 
-		var reread = (await Mediator.Send(new GetObjectNodeQuery(target))).Known;
+		var reread = (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>();
 
 		await Assert.That(LockService.GetIfSet(lockType, reread))
 			.IsNotNull()

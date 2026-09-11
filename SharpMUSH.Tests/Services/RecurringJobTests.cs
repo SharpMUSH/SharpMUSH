@@ -37,10 +37,10 @@ public class RecurringJobTests
 	{
 		foreach (var runner in Factory.Services.GetServices<IHostedService>().OfType<RecurringJobRunner>()) await runner.StopAsync(default);
 		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]));
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var actor = await Get<IAdministrativeCapabilityService>().GetGameActorAsync(player.Object.DBRef);
 		var target = await Get<IMediator>().Send(new CreateRoomCommand("job-test-" + Guid.NewGuid().ToString("N"), player));
-		target = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().DBRef;
+		target = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Expect<AnySharpObject>().Object().DBRef;
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["RUN"], MarkupText.Plain($"&FIRED {target}=yes"), player));
 		var clock = new Clock();
 		var callbacks = new List<Func<ValueTask<CallState?>>>();
@@ -306,7 +306,7 @@ public class RecurringJobTests
 	{
 		var context = await Setup();
 		var mediator = Get<IMediator>();
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<SharpPlayer>();
 		var marker = "job-debug-" + Guid.NewGuid().ToString("N");
 		await mediator.Send(new SetAttributeCommand(context.Target, ["RUN"],
 			MarkupText.Plain($"@pemit me=[strcat({marker},add(13,17))]"), player));
@@ -335,7 +335,7 @@ public class RecurringJobTests
 	public async Task ScheduledAttributeHasRootQRegisters()
 	{
 		var context = await Setup();
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<SharpPlayer>();
 		await Get<IMediator>().Send(new SetAttributeCommand(context.Target, ["RUN"],
 			MarkupText.Plain($"@set {context.Target}=FIRED:[setq(0,stored)][r(0)]"), player));
 		await Create(context);
@@ -388,13 +388,13 @@ public class RecurringJobTests
 		else if (change == "revoke") context.Capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
 		else if (change == "missing-attribute")
 		{
-			var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Known;
-			var target = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Known;
+			var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<AnySharpObject>();
+			var target = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Expect<AnySharpObject>();
 			await Get<IAttributeService>().ClearAttributeAsync(player, target, "RUN", IAttributeService.AttributePatternMode.Exact);
 		}
 		else if (change is "halt-target" or "destroying-target")
 		{
-			var node = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Known;
+			var node = (await Get<IObjectStore>().GetObjectNodeAsync(context.Target)).Expect<AnySharpObject>();
 			var flag = await Get<IMediator>().Send(new GetObjectFlagQuery(change == "halt-target" ? "HALT" : "GOING"));
 			await Get<IMediator>().Send(new SetObjectFlagCommand(node, flag!));
 		}
@@ -513,7 +513,7 @@ public class RecurringJobTests
 	{
 		var context = await Setup();
 		var account = new SharpAccount { Id = context.Actor.AccountId, Username = "job-owner", PasswordHash = "", Status = AccountStatus.Active };
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<SharpPlayer>();
 		var accounts = Substitute.For<IAccountService>();
 		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
@@ -536,7 +536,7 @@ public class RecurringJobTests
 	{
 		var context = await Setup();
 		var account = new SharpAccount { Id = context.Actor.AccountId, Username = "job-owner", PasswordHash = "", Status = AccountStatus.Active };
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(context.Actor.ActiveCharacter!.Value)).Expect<SharpPlayer>();
 		var accounts = Substitute.For<IAccountService>();
 		accounts.GetByIdAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(account);
 		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));

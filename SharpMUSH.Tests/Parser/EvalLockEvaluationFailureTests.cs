@@ -43,7 +43,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvaluationThatThrows_IsReportedAsAFailure_NotAsAValue()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		var attributeService = Substitute.For<IAttributeService>();
 		attributeService.EvaluateAttributeFunctionAsync(
@@ -77,7 +77,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationFailed_DoesNotPass()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
@@ -98,7 +98,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationMatched_Passes()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())

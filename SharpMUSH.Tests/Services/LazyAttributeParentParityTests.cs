@@ -37,8 +37,7 @@ public class LazyAttributeParentParityTests
 	{
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
 		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
-		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
-		return node.Known;
+		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}
 
 	private async ValueTask<(AnySharpObject Child, AnySharpObject Parent)> BuildFixtureAsync(string label)
@@ -77,7 +76,7 @@ public class LazyAttributeParentParityTests
 	{
 		var result = await AttributeService.GetAttributePatternAsync(child, child, pattern, checkParents, mode);
 		await Assert.That(result.IsError).IsFalse();
-		return result.AsAttributes.Select(a => a.LongName!).Order(StringComparer.Ordinal).ToArray();
+		return result.Expect<SharpAttribute[]>().Select(a => a.LongName!).Order(StringComparer.Ordinal).ToArray();
 	}
 
 	private async ValueTask<string[]> LazyAsync(
@@ -85,7 +84,7 @@ public class LazyAttributeParentParityTests
 	{
 		var result = await AttributeService.LazilyGetAttributePatternAsync(child, child, pattern, checkParents, mode);
 		await Assert.That(result.IsError).IsFalse();
-		var names = await result.AsAttributes.Select(a => a.LongName).ToArrayAsync();
+		var names = await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToArrayAsync();
 		return names.Order(StringComparer.Ordinal).ToArray();
 	}
 
@@ -179,7 +178,7 @@ public class LazyAttributeParentParityTests
 			a, a, "LAZYCYCLE_*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
 
 		await Assert.That(result.IsError).IsFalse();
-		var names = await result.AsAttributes.Select(x => x.LongName).ToArrayAsync();
+		var names = await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(x => x.LongName).ToArrayAsync();
 		await Assert.That(names).Contains("LAZYCYCLE_HERE");
 	}
 }

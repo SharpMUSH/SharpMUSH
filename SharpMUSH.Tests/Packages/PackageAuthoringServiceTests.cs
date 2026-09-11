@@ -23,14 +23,14 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task ScanAndExport_RoundTripsToValidManifest()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known;
-		var pm = pmNode.AsPlayer;
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
 		var location = pmNode.AsContainer;
 
 		var coreDbref = await Database.CreateThingAsync("Author Core", location, pm, location);
 		var globalDbref = await Database.CreateThingAsync("Author Global", location, pm, location);
-		var core = (await Database.GetObjectNodeAsync(coreDbref)).Known.Object();
-		var global = (await Database.GetObjectNodeAsync(globalDbref)).Known.Object();
+		var core = (await Database.GetObjectNodeAsync(coreDbref)).Expect<AnySharpObject>().Object();
+		var global = (await Database.GetObjectNodeAsync(globalDbref)).Expect<AnySharpObject>().Object();
 
 		await Database.SetAttributeAsync(coreDbref, ["FN_FMT"], MarkupText.Plain("formatted output"), pm);
 		await Database.SetAttributeAsync(globalDbref, ["CMD_+AUTH"],
@@ -69,14 +69,14 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task FullRoundTrip_AuthorExportInstall_VerifyState()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known;
-		var pm = pmNode.AsPlayer;
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
 		var location = pmNode.AsContainer;
 
 		var sourceDbref = await Database.CreateThingAsync("Roundtrip Source", location, pm, location);
 		await Database.SetAttributeAsync(sourceDbref, ["FN_GREET"],
 			MarkupText.Plain($"Hello from #{sourceDbref.Number} near #0"), pm);
-		var sourceObjid = (await Database.GetObjectNodeAsync(sourceDbref)).Known.Object().DBRef.ToString();
+		var sourceObjid = (await Database.GetObjectNodeAsync(sourceDbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
 			"roundtrip-pkg", "1.0.0", "Round-trip test package", "MIT", ["Tester"],
@@ -103,7 +103,7 @@ public class PackageAuthoringServiceTests
 		await Assert.That(attribute!.Value.ToPlainText())
 			.IsEqualTo("Hello from [v(PM`REFS`RT_CORE)] near [v(PM`REFS`ROOM_ZERO)]");
 
-		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
+		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
 		var refCore = await Database.GetAttributeAsync(cloneDbref, ["PM", "REFS", "RT_CORE"]).LastOrDefaultAsync();
 		var refRoom = await Database.GetAttributeAsync(cloneDbref, ["PM", "REFS", "ROOM_ZERO"]).LastOrDefaultAsync();
 		await Assert.That(refCore!.Value.ToPlainText()).IsEqualTo(cloneObjid);
@@ -115,13 +115,13 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task Export_FailsOnUnclassifiedDbrefs()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known;
-		var pm = pmNode.AsPlayer;
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
 		var location = pmNode.AsContainer;
 
 		var dbref = await Database.CreateThingAsync("Author Loner", location, pm, location);
 		await Database.SetAttributeAsync(dbref, ["FN_X"], MarkupText.Plain("points at #4242 mysteriously"), pm);
-		var objid = (await Database.GetObjectNodeAsync(dbref)).Known.Object().DBRef.ToString();
+		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
 			"loner-pkg", "1.0.0", "x", null, [],
@@ -136,8 +136,8 @@ public class PackageAuthoringServiceTests
 	[Test, NotInParallel]
 	public async Task Export_BlankAndWhitespaceAttributeValues_ProduceValidManifest()
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known;
-		var pm = pmNode.AsPlayer;
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
 		var location = pmNode.AsContainer;
 
 		var dbref = await Database.CreateThingAsync("Whitespace Edge", location, pm, location);
@@ -147,7 +147,7 @@ public class PackageAuthoringServiceTests
 		await Database.SetAttributeAsync(dbref, ["WS_ONLY"], MarkupText.Plain("   "), pm);
 		await Database.SetAttributeAsync(dbref, ["LEADING"], MarkupText.Plain("  indented body"), pm);
 		await Database.SetAttributeAsync(dbref, ["NORMAL"], MarkupText.Plain("plain value"), pm);
-		var objid = (await Database.GetObjectNodeAsync(dbref)).Known.Object().DBRef.ToString();
+		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
 			"ws-edge", "1.0.0", "whitespace edge cases", null, ["Tester"],

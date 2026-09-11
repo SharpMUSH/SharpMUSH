@@ -3,6 +3,7 @@ using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
@@ -132,13 +133,13 @@ public class CachingBehaviorTests
 
 		var listed = (await mediator.CreateStream(new GetContentsQuery(room)).ToListAsync())
 			.Single(c => c.Object().DBRef.Number == thing.Number);
-		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known;
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
 
 		await Assert.That(ReferenceEquals(listed.Object(), node.Object())).IsTrue()
 			.Because("there is one instance of an object in the process: the node cache's");
 
 		var located = await node.Where();
-		var roomNode = (await mediator.Send(new GetObjectNodeQuery(room))).Known;
+		var roomNode = (await mediator.Send(new GetObjectNodeQuery(room))).Expect<AnySharpObject>();
 		await Assert.That(ReferenceEquals(located.Object(), roomNode.Object())).IsTrue()
 			.Because("a location answer is stored as a dbref and resolved through the same cache");
 	}
@@ -159,14 +160,14 @@ public class CachingBehaviorTests
 			MarkupText.Plain("@create FlagThroughLocation Thing"))).Message!.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel #{thing.Number}=#{room.Number}"));
 
-		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Known;
+		var occupant = (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
 		var before = await occupant.Where();
 		await Assert.That(before.Object().DBRef.Number).IsEqualTo(room.Number);
 		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{room.Number}=DARK"));
 
-		var after = await (await mediator.Send(new GetObjectNodeQuery(thing))).Known.Where();
+		var after = await (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().Where();
 		await Assert.That(await after.Object().HasFlag("DARK")).IsTrue()
 			.Because("the occupant's cached location embeds the room and carries its tag");
 	}
@@ -186,15 +187,15 @@ public class CachingBehaviorTests
 			MarkupText.Plain("@create FlagThroughParent Child"))).Message!.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent #{child.Number}=#{parent.Number}"));
 
-		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Known;
+		var node = (await mediator.Send(new GetObjectNodeQuery(child))).Expect<AnySharpObject>();
 		var before = await node.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(before.Known.Object().DBRef.Number).IsEqualTo(parent.Number);
-		await Assert.That(await before.Known.Object().HasFlag("DARK")).IsFalse();
+		await Assert.That(before.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(parent.Number);
+		await Assert.That(await before.Expect<AnySharpObject>().Object().HasFlag("DARK")).IsFalse();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{parent.Number}=DARK"));
 
 		var after = await node.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(await after.Known.Object().HasFlag("DARK")).IsTrue()
+		await Assert.That(await after.Expect<AnySharpObject>().Object().HasFlag("DARK")).IsTrue()
 			.Because("the same child instance resolves its parent afresh through the cache, which the flag write expired");
 	}
 
@@ -213,7 +214,7 @@ public class CachingBehaviorTests
 			MarkupText.Plain("@create FlagThroughHome Thing"))).Message!.ToPlainText()!);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@link #{thing.Number}=#{home.Number}"));
 
-		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Known.AsThing;
+		var node = (await mediator.Send(new GetObjectNodeQuery(thing))).Expect<SharpThing>();
 		var before = await node.Home.WithCancellation(CancellationToken.None);
 		await Assert.That(before.Object().DBRef.Number).IsEqualTo(home.Number);
 		await Assert.That(await before.Object().HasFlag("DARK")).IsFalse();
@@ -235,7 +236,7 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactory.Services, mediator, ConnectionService, "FlagThroughName");
-		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known.Object().Name;
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>().Object().Name;
 
 		var before = await mediator.CreateStream(new GetPlayerQuery(name)).ToListAsync();
 		await Assert.That(await before.Single().Object.HasFlag("DARK")).IsFalse();
@@ -258,7 +259,7 @@ public class CachingBehaviorTests
 		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactory.Services, mediator, ConnectionService, "PowerThroughName");
-		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known.Object().Name;
+		var name = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>().Object().Name;
 		var builder = await mediator.Send(new GetPowerQuery("Builder"));
 		await Assert.That(builder).IsNotNull();
 
@@ -498,8 +499,8 @@ public class CachingBehaviorTests
 			TestIsolationHelpers.GenerateUniqueName("TagDeclMover"), "TestPassword123",
 			source, source, (int)options.CurrentValue.Limit.StartingQuota));
 
-		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Known.AsContent;
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+		var moverContent = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>().AsContent;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
 
 		var command = new Library.Commands.Database.MoveObjectCommand(
 			moverContent, destinationContainer, OldContainer: source);
@@ -549,7 +550,7 @@ public class CachingBehaviorTests
 		var movers = new List<Library.Models.DBRef>();
 		for (var i = 0; i < 25; i++) movers.Add(await PopulateInto(source));
 
-		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+		var destinationContainer = (await mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
 
 		using var readersRun = new CancellationTokenSource();
 		var readers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
@@ -563,7 +564,7 @@ public class CachingBehaviorTests
 		var missing = new List<Library.Models.DBRef>();
 		foreach (var mover in movers)
 		{
-			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Known;
+			var moverObject = (await mediator.Send(new GetObjectNodeQuery(mover))).Expect<AnySharpObject>();
 			await moveService.MoveIt(Parser, moverObject.AsContent, destinationContainer, noMoveMsgs: true,
 				moverObject.Object().DBRef, "move");
 

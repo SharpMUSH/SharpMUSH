@@ -160,11 +160,12 @@ public class QueueAdmissionTests
 			await Block(token);
 			yield break;
 		}
-		target.AsPlayer.Object.Flags = new(() => Stream<SharpObjectFlag>());
-		target.AsPlayer.Object.Powers = new(() => Stream<SharpPower>());
-		target.AsPlayer.Object.Owner = new(async token => { await Block(token); return target.AsPlayer; });
+		var targetPlayer = target.Expect<SharpPlayer>();
+		target.Object().Flags = new(() => Stream<SharpObjectFlag>());
+		target.Object().Powers = new(() => Stream<SharpPower>());
+		target.Object().Owner = new(async token => { await Block(token); return targetPlayer; });
 		var mediator = Substitute.For<IMediator>();
-		async ValueTask<AnyOptionalSharpObject> ObjectRead(CancellationToken token) { await Block(token); return target.AsPlayer; }
+		async ValueTask<AnyOptionalSharpObject> ObjectRead(CancellationToken token) { await Block(token); return target; }
 		async ValueTask<bool> ChannelRead(CancellationToken token) { await Block(token); return true; }
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(c => ObjectRead(c.Arg<CancellationToken>()));
 		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.IsOnChannelQuery>(), Arg.Any<CancellationToken>()).Returns(c => ChannelRead(c.Arg<CancellationToken>()));
@@ -202,7 +203,7 @@ public class QueueAdmissionTests
 
 		if (expression == "FLAG^WIZARD")
 		{
-			target.AsPlayer.Object.Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }.ToAsyncEnumerable());
+			target.Object().Flags = new(() => new[] { new SharpObjectFlag { Name = "WIZARD", Symbol = "W", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = [] } }.ToAsyncEnumerable());
 			using var fresh = new ExecutionBudget(TimeSpan.FromSeconds(3));
 			using var scope = fresh.Enter();
 			await Assert.That(await compiled(target, target)).IsTrue();
@@ -330,11 +331,11 @@ public class QueueAdmissionTests
 			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
 			yield break;
 		}
-		if (powers) target.AsThing.Object.Powers = new(() => Block<SharpPower>());
-		else target.AsThing.Object.Flags = new(() => Block<SharpObjectFlag>());
+		if (powers) target.Object().Powers = new(() => Block<SharpPower>());
+		else target.Object().Flags = new(() => Block<SharpObjectFlag>());
 		var mediator = TargetMediator();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
-			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(target.AsThing));
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(target));
 		await using var queue = Create(global: 10, mediator: mediator, milliseconds: 200);
 		var following = Signal();
 		var ran = false;
@@ -667,7 +668,7 @@ public class QueueAdmissionTests
 		var service = new SharpMUSH.Library.Services.AttributeService(mediator, Substitute.For<IPermissionService>(),
 			Substitute.For<ILocateService>(), validation, Substitute.For<INotifyService>(),
 			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
-		var target = (await mediator.Send(new GetObjectNodeQuery(new DBRef(10)))).Known;
+		var target = (await mediator.Send(new GetObjectNodeQuery(new DBRef(10)))).Expect<AnySharpObject>();
 		using var budget = ExecutionBudget.FromMilliseconds(30000);
 		using var scope = budget.Enter();
 		await service.GetAttributeAsync(target, target, "SEMAPHORE", IAttributeService.AttributeMode.Execute, false);

@@ -46,7 +46,7 @@ public class LookServiceTests
 
 		var roomDbRef = DBRef.Parse(roomRef);
 		var room = await Mediator.Send(new GetObjectNodeQuery(roomDbRef));
-		var looker = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var looker = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		var terse = await MessagesWhile(player.DbRef, async () =>
 			await LookService.LookRoom(GodParser, looker, room, LookKey.Auto));

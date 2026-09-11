@@ -64,7 +64,7 @@ public class DatabaseLatencyTests
 		const int iterations = 100;
 		const int warmup = 10;
 
-		var masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
+		var masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
 
 		for (var i = 0; i < warmup; i++)
 			await ConsumeAsync(Database.GetContentsAsync(masterRoom));

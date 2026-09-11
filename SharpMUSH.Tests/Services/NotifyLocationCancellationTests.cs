@@ -37,9 +37,12 @@ public class NotifyLocationCancellationTests
 			await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token);
 			return room;
 		});
-		if (sender.IsPlayer) sender.AsPlayer.Location = location;
-		else if (sender.IsThing) sender.AsThing.Location = location;
-		else sender.AsExit.Location = location;
+		switch (sender)
+		{
+			case SharpPlayer player: player.Location = location; break;
+			case SharpThing thing: thing.Location = location; break;
+			case SharpExit exit: exit.Location = location; break;
+		}
 		var bus = Substitute.For<IMessageBus>();
 		var listeners = Substitute.For<IListenerRoutingService>();
 		var reality = Substitute.For<IRealityPolicy>();

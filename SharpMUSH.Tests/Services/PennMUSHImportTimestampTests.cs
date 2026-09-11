@@ -82,7 +82,7 @@ public class PennMUSHImportTimestampTests
 
 		await Assert.That(dbref.CreationMilliseconds).IsEqualTo(created);
 
-		var stored = (await Database.GetObjectNodeAsync(dbref)).Known;
+		var stored = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 		await Assert.That(stored.Object().CreationTime).IsEqualTo(created);
 		await Assert.That(stored.Object().ModifiedTime).IsEqualTo(modified);
 
@@ -103,7 +103,7 @@ public class PennMUSHImportTimestampTests
 
 		var dbref = await Database.CreateThingAsync("ImportStampedDefaultModified", limbo, god, limbo, created);
 
-		var stored = (await Database.GetObjectNodeAsync(dbref)).Known;
+		var stored = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 		await Assert.That(stored.Object().CreationTime).IsEqualTo(created);
 		await Assert.That(stored.Object().ModifiedTime).IsEqualTo(created);
 	}
@@ -118,7 +118,7 @@ public class PennMUSHImportTimestampTests
 		var dbref = await Database.CreateThingAsync("ImportUnstampedThing", limbo, god, limbo);
 
 		var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-		var stored = (await Database.GetObjectNodeAsync(dbref)).Known;
+		var stored = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 
 		await Assert.That(stored.Object().CreationTime).IsGreaterThanOrEqualTo(before).And.IsLessThanOrEqualTo(after);
 	}
@@ -131,11 +131,11 @@ public class PennMUSHImportTimestampTests
 
 		var room = await Database.CreateRoomAsync("ImportStampedRoom", god, created);
 		await Assert.That(room.CreationMilliseconds).IsEqualTo(created);
-		await Assert.That((await Database.GetObjectNodeAsync(room)).Known.Object().CreationTime).IsEqualTo(created);
+		await Assert.That((await Database.GetObjectNodeAsync(room)).Expect<AnySharpObject>().Object().CreationTime).IsEqualTo(created);
 
 		var exit = await Database.CreateExitAsync("ImportStampedExit", [], limbo, god, created);
 		await Assert.That(exit.CreationMilliseconds).IsEqualTo(created);
-		await Assert.That((await Database.GetObjectNodeAsync(exit)).Known.Object().CreationTime).IsEqualTo(created);
+		await Assert.That((await Database.GetObjectNodeAsync(exit)).Expect<AnySharpObject>().Object().CreationTime).IsEqualTo(created);
 	}
 
 	// ---- end to end through the converter -------------------------------------------------------
@@ -274,7 +274,7 @@ public class PennMUSHImportTimestampTests
 		const long modified = 1_010_101_020_000L;
 		await Database.SetObjectTimestampsAsync(dbref, created, modified);
 
-		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Known;
+		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Expect<AnySharpObject>();
 		await Assert.That(restamped.Object().CreationTime).IsEqualTo(created);
 		await Assert.That(restamped.Object().ModifiedTime).IsEqualTo(modified);
 		await Assert.That(restamped.Object().DBRef.ToString()).IsEqualTo($"#{dbref.Number}:{created}");
@@ -290,7 +290,7 @@ public class PennMUSHImportTimestampTests
 		const long created = 1_020_202_020_000L;
 		await Database.SetObjectTimestampsAsync(dbref, created);
 
-		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Known;
+		var restamped = (await Database.GetObjectNodeAsync(new DBRef(dbref.Number))).Expect<AnySharpObject>();
 		await Assert.That(restamped.Object().CreationTime).IsEqualTo(created);
 		await Assert.That(restamped.Object().ModifiedTime).IsEqualTo(created);
 	}
@@ -310,8 +310,8 @@ public class PennMUSHImportTimestampTests
 
 	private async Task<(AnySharpContainer Limbo, SharpPlayer God)> LimboAndGod()
 	{
-		var limbo = (await Database.GetObjectNodeAsync(new DBRef(0))).Known;
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
-		return (limbo.AsContainer, god.AsPlayer);
+		var limbo = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		return (limbo.AsContainer, god);
 	}
 }

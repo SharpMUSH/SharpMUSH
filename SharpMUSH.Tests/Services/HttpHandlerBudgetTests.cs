@@ -18,7 +18,7 @@ public class HttpHandlerBudgetTests
 	private static (HttpHandlerCommandService Service, IMUSHCodeParser Parser, HttpOutputCapture Capture) Create(
 		Func<ParserState, ValueTask<CallState?>> execute, uint milliseconds = 0, IAttributeService? attributeService = null, IMediator? handlerMediator = null)
 	{
-		var handler = new TestObjectFactory().CreateThing(8, "HTTP handler").AsThing;
+		var handler = new TestObjectFactory().CreateThing(8, "HTTP handler").Expect<SharpThing>();
 		var mediator = handlerMediator ?? Substitute.For<IMediator>();
 		if (handlerMediator is null) mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(handler);
 		var attributes = attributeService ?? Substitute.For<IAttributeService>();

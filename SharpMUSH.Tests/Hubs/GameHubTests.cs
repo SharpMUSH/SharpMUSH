@@ -77,7 +77,7 @@ public class GameHubTests
 			{
 				var actor = call.Arg<CapabilityActor>();
 				if (actor.ActiveCharacter is not { IsObjid: true } identity) return ValueTask.FromResult<SharpPlayer?>(null);
-				var player = new SharpMUSH.Tests.Services.TestObjectFactory().CreatePlayer(identity.Number, "Player").AsPlayer;
+				var player = new SharpMUSH.Tests.Services.TestObjectFactory().CreatePlayer(identity.Number, "Player").Expect<SharpPlayer>();
 				player.Object.CreationTime = identity.CreationMilliseconds!.Value;
 				return ValueTask.FromResult<SharpPlayer?>(player);
 			});

@@ -93,7 +93,7 @@ public class AttributeVisibilityCancellationTests
 			{
 				var result = await service.LazilyGetVisibleAttributesAsync(target, target, depth);
 				using var consumer = stage.StartsWith("consumer-") ? budget.Enter() : null;
-				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
+				await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
 			}
 		}
 		var operation = Read();
@@ -126,7 +126,7 @@ public class AttributeVisibilityCancellationTests
 		target.Object().LazyAttributes = new(() => new[] { node }.ToAsyncEnumerable());
 		var result = await service.LazilyGetVisibleAttributesAsync(target, target, depth);
 		// Take four bounds the old traversal without waiting for its non-terminating tail.
-		await Assert.That((await result.AsAttributes.Take(4).ToArrayAsync()).Length).IsEqualTo(depth);
+		await Assert.That((await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Take(4).ToArrayAsync()).Length).IsEqualTo(depth);
 	}
 
 	[Test]

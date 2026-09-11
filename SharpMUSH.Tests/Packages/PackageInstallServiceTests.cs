@@ -160,11 +160,11 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.ApplyAsync(upgraded, new PackageApplyRequest(Source("commit-2"), answers, []))).Value).IsTypeOf<PackageApplyResult>();
 		foreach (var (name, number) in new[] { ("ROOM_ZERO", 0), ("PACKAGE_MANAGER", 7), ("GOD", 1), ("PLAYER_START", 0), ("MASTER_ROOM", 2) })
 		{
-			var expected = (await Database.GetObjectNodeAsync(new DBRef(number))).Known.Object().DBRef.ToString();
+			var expected = (await Database.GetObjectNodeAsync(new DBRef(number))).Expect<AnySharpObject>().Object().DBRef.ToString();
 			await Assert.That(await ReadAttributeAsync(objid, $"PM`REFS`{name}")).IsEqualTo(expected);
 		}
 		await Assert.That((await Installer.PlanAsync(upgraded, answers)).Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(PackageInstallService.ParseObjid(objid)!.Value,
 			["PM", "REFS", "PACKAGE_MANAGER"], MarkupText.Empty, pm);
 		var beforeRepair = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
@@ -173,7 +173,7 @@ public class PackageInstallServiceTests
 		await Assert.That(repair.Attributes.Single(a => a.Attribute == "PM`REFS`PACKAGE_MANAGER").Action)
 			.IsEqualTo(PackageAttributeAction.AutoUpgrade);
 		await Assert.That((await Installer.ApplyAsync(upgraded, new PackageApplyRequest(Source("commit-3"), answers, []))).Value).IsTypeOf<PackageApplyResult>();
-		var expectedPm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known.Object().DBRef.ToString();
+		var expectedPm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>().Object().DBRef.ToString();
 		await Assert.That(await ReadAttributeAsync(objid, "PM`REFS`PACKAGE_MANAGER")).IsEqualTo(expectedPm);
 		var evaluated = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
 		await Assert.That(evaluated!.Message!.ToPlainText()).IsEqualTo(expectedPm);
@@ -194,9 +194,9 @@ public class PackageInstallServiceTests
 			""");
 		var answers = new Dictionary<string, string>();
 		await Assert.That((await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
-		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known.Object().DBRef.ToString();
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		var custom = pm.Object.DBRef.ToString();
 		const string isolated = "PM`ATTACHED_REFS`LEGACY-REF-PROBE`GOD";
 		// Seed the state left by the old installer, including a local re-point.
@@ -239,8 +239,8 @@ public class PackageInstallServiceTests
 		var answers = new Dictionary<string, string>();
 		await Assert.That((await Installer.ApplyAsync(first, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
 		await Assert.That((await Installer.ApplyAsync(second, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
-		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		var value = pm.Object.DBRef.ToString();
 		await Database.SetAttributeAsync(new DBRef(0), ["PM", "REFS", "SHARED"], MarkupText.Plain(value), pm);
 		foreach (var package in new[] { first.Name, second.Name })
@@ -262,9 +262,9 @@ public class PackageInstallServiceTests
 		const string other = "legacy-rollback-b";
 		const string restoredRef = "PM`REFS`ROLLBACK_RESTORE";
 		const string removedRef = "PM`REFS`ROLLBACK_REMOVE";
-		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known.Object().DBRef.ToString();
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().DBRef.ToString();
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		var liveRef = conflictingValue ? pm.Object.DBRef.ToString() : god;
 		foreach (var id in new[] { package, other })
 		{
@@ -321,9 +321,9 @@ public class PackageInstallServiceTests
 		var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 		var store = WebAppFactoryArg.Services.GetRequiredService<IObjectStore>();
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var player = (await store.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await store.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var target = await mediator.Send(new CreateRoomCommand("legacy-lock-rollback-" + Guid.NewGuid().ToString("N"), player));
-		var node = (await store.GetObjectNodeAsync(target)).Known;
+		var node = (await store.GetObjectNodeAsync(target)).Expect<AnySharpObject>();
 		var objid = node.Object().DBRef.ToString();
 		await store.SetLockAsync(node.Object(), nameof(LockType.Teleport), new SharpLockData("=#1"));
 
@@ -347,7 +347,7 @@ public class PackageInstallServiceTests
 		var rolledBack = await Installer.RollbackAsync(package, 1);
 
 		await Assert.That(rolledBack.Value).IsTypeOf<PackageRollbackResult>();
-		var locks = (await store.GetObjectNodeAsync(target)).Known.Object().Locks;
+		var locks = (await store.GetObjectNodeAsync(target)).Expect<AnySharpObject>().Object().Locks;
 		await Assert.That(locks.ContainsKey(nameof(LockType.Teleport))).IsTrue()
 			.Because("rolling back to a revision that carries the lock must not remove it");
 		await Assert.That(locks[nameof(LockType.Teleport)].LockString).IsEqualTo("=#1");
@@ -380,7 +380,7 @@ public class PackageInstallServiceTests
 		var appliedA = a.Expect<PackageApplyResult>();
 		var b = await Installer.ApplyAsync(second, new PackageApplyRequest(Source(), answers, []));
 		var appliedB = b.Expect<PackageApplyResult>();
-		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
+		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
 		await Assert.That(await ReadAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo("[v(PM`ATTACHED_REFS`REF-CONSUMER-A`HELP)]");
 		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-A`HELP")).IsEqualTo(appliedA.CreatedObjects["help"]);
 		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(appliedB.CreatedObjects["help"]);
@@ -397,7 +397,7 @@ public class PackageInstallServiceTests
 	[Test, NotInParallel]
 	public async Task InstallUpgradeRollbackUninstall_EndToEnd()
 	{
-		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
+		var roomZero = (await Database.GetObjectNodeAsync(new DBRef(0))).Expect<AnySharpObject>().Object().DBRef.ToString();
 		var answers = new Dictionary<string, string> { ["storage"] = roomZero };
 		var manifestV1 = Parse(ManifestV1);
 
@@ -416,7 +416,7 @@ public class PackageInstallServiceTests
 
 		var boardNode = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(boardObjid)!.Value);
 		await Assert.That(boardNode.IsNone).IsFalse();
-		await Assert.That(boardNode.Known.Object().Name).IsEqualTo("E2E Board");
+		await Assert.That(boardNode.Expect<AnySharpObject>().Object().Name).IsEqualTo("E2E Board");
 
 		// Code carries v(PM`REFS`...) recalls, never dbrefs (decision 20.21).
 		var cmd = await ReadAttributeAsync(boardObjid, "CMD_+E2E");
@@ -443,7 +443,7 @@ public class PackageInstallServiceTests
 		await Assert.That(idle.Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
 		await Assert.That(idle.HasConflicts).IsFalse();
 
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).AsPlayer;
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(
 			PackageInstallService.ParseObjid(boardObjid)!.Value, ["FN_FMT"],
 			MarkupText.Plain("my-custom-format"), pm);
@@ -499,14 +499,14 @@ public class PackageInstallServiceTests
 		// Attach mode (decision 20.3): a package that manages attributes on an
 		// object it does not own. Uses a {{?configure}} target so it's isolated
 		// from the shared http_handler. Mirrors how http-hooks attaches to #4.
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known;
-		var pm = pmNode.AsPlayer;
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
 		var location = pmNode.AsContainer;
 
 		// A pre-existing object the package will attach to (not created by it).
 		var hostDbref = await Database.CreateThingAsync("Attach Host", location, pm, location);
 		await Database.SetAttributeAsync(hostDbref, ["PRE_EXISTING"], MarkupText.Plain("untouched"), pm);
-		var hostObjid = (await Database.GetObjectNodeAsync(hostDbref)).Known.Object().DBRef.ToString();
+		var hostObjid = (await Database.GetObjectNodeAsync(hostDbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var manifest = Parse(
 			"""
@@ -784,7 +784,7 @@ public class PackageInstallServiceTests
 	{
 		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
 		var flags = new List<string>();
-		await foreach (var flag in node.Known.Object().Flags.Value)
+		await foreach (var flag in node.Expect<AnySharpObject>().Object().Flags.Value)
 		{
 			flags.Add(flag.Name);
 		}
@@ -795,7 +795,7 @@ public class PackageInstallServiceTests
 	private async Task<bool> HasLockAsync(string objid, string lockType)
 	{
 		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
-		return node.Known.Object().Locks.ContainsKey(lockType);
+		return node.Expect<AnySharpObject>().Object().Locks.ContainsKey(lockType);
 	}
 
 	/// <summary>
@@ -844,10 +844,10 @@ public class PackageInstallServiceTests
 
 		// Prime object:#N. From here on every cached read serves this snapshot until a write
 		// declaring the key removes it.
-		var before = (await Mediator.Send(new GetObjectNodeQuery(widget))).Known;
+		var before = (await Mediator.Send(new GetObjectNodeQuery(widget))).Expect<AnySharpObject>();
 		await Assert.That(before.Object().Name).IsEqualTo("Coherence Widget One");
 		await Assert.That((await before.Object().Parent.WithCancellation(CancellationToken.None))
-			.Known.Object().DBRef.Number).IsEqualTo(hallA.Number);
+			.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(hallA.Number);
 
 		var v2 = Parse(
 			"""
@@ -872,11 +872,11 @@ public class PackageInstallServiceTests
 		var upgrade = await Installer.ApplyAsync(v2, new PackageApplyRequest(Source("commit-2"), answers, []));
 		await Assert.That(upgrade.Value).IsTypeOf<PackageApplyResult>();
 
-		var after = (await Mediator.Send(new GetObjectNodeQuery(widget))).Known;
+		var after = (await Mediator.Send(new GetObjectNodeQuery(widget))).Expect<AnySharpObject>();
 		await Assert.That(after.Object().Name).IsEqualTo("Coherence Widget Two")
 			.Because("the rename must invalidate object:#N, not just land in the store");
 		await Assert.That((await after.Object().Parent.WithCancellation(CancellationToken.None))
-			.Known.Object().DBRef.Number).IsEqualTo(hallB.Number)
+			.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(hallB.Number)
 			.Because("the re-parent must invalidate object:#N, not just land in the store");
 		await Assert.That(after.Object().Locks.TryGetValue("use", out var useLock)).IsTrue();
 		await Assert.That(useLock!.LockString).Contains($"#{hallB.Number}")

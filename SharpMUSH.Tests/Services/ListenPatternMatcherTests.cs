@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -42,8 +43,8 @@ public class ListenPatternMatcherTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&LISTEN1 #{created.Number}=^* says *:think %0"));
 
-		var listener = (await Mediator.Send(new GetObjectNodeQuery(created))).Known;
-		var speaker = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		var listener = (await Mediator.Send(new GetObjectNodeQuery(created))).Expect<AnySharpObject>();
+		var speaker = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 
 		var matches = await ListenPatternMatcher.MatchListenPatternsAsync(listener, "God says hello", speaker);
 

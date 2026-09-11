@@ -26,7 +26,7 @@ public class SetupAutoCompleteTests
 		await Db.SetServerSetupCompletedAsync(false);
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var god = one.AsPlayer;
+		var god = one.Expect<SharpPlayer>();
 		// God has no password by default (see RoomContentsEventTests) — capture it so later
 		// tests that rely on password-less God login aren't broken by this test.
 		var originalPasswordHash = god.PasswordHash;
@@ -63,7 +63,7 @@ public class SetupAutoCompleteTests
 		await Db.SetServerSetupCompletedAsync(false);
 
 		var one = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var god = one.AsPlayer;
+		var god = one.Expect<SharpPlayer>();
 		var originalPasswordHash = god.PasswordHash;
 		var originalPasswordSalt = god.PasswordSalt;
 

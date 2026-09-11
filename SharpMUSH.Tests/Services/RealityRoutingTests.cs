@@ -26,8 +26,8 @@ public class RealityRoutingTests
 		var factory = new TestObjectFactory();
 		var actor = factory.CreatePlayer(61, "actor");
 		var target = factory.CreatePlayer(62, "target");
-		actor.AsPlayer.Id = "actor";
-		target.AsPlayer.Id = "target";
+		actor.Expect<SharpPlayer>().Id = "actor";
+		target.Expect<SharpPlayer>().Id = "target";
 		var reality = Substitute.For<IRealityPolicy>();
 		reality.CanPerceiveAsync(actor.Object().DBRef, target.Object().DBRef).Returns(true);
 		reality.CanPerceiveAsync(target.Object().DBRef, actor.Object().DBRef).Returns(false);
@@ -90,9 +90,9 @@ public class RealityRoutingTests
 		var executor = factory.CreatePlayer(40, "executor");
 		var source = factory.CreatePlayer(41, "source");
 		var receiver = factory.CreatePlayer(42, "receiver");
-		executor.AsPlayer.Id = "executor";
-		source.AsPlayer.Id = "source";
-		receiver.AsPlayer.Id = "receiver";
+		executor.Expect<SharpPlayer>().Id = "executor";
+		source.Expect<SharpPlayer>().Id = "source";
+		receiver.Expect<SharpPlayer>().Id = "receiver";
 		var reality = Substitute.For<IRealityPolicy>();
 		reality.CanPerceiveAsync(receiver.Object().DBRef, source.Object().DBRef).Returns(visible);
 		var locks = Substitute.For<ILockService>();

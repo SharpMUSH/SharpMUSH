@@ -48,8 +48,7 @@ public class AttributeReadParentCycleTests
 		await Assert.That(result.Message).IsNotNull();
 		await Assert.That(DBRef.TryParse(result.Message!.ToPlainText(), out _)).IsTrue();
 		var dbref = DBRef.Parse(result.Message.ToPlainText());
-		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
-		return node.Known;
+		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}
 
 	private async ValueTask<(AnySharpObject A, AnySharpObject B)> BuildDirectParentCycleAsync(string label)
@@ -77,7 +76,7 @@ public class AttributeReadParentCycleTests
 			a, a, "*", checkParents: true, IAttributeService.AttributePatternMode.Wildcard);
 
 		await Assert.That(result.IsError).IsFalse();
-		await Assert.That(result.AsAttributes.Any(attr => attr.LongName == "CYCLETEST")).IsTrue();
+		await Assert.That(result.Expect<SharpAttribute[]>().Any(attr => attr.LongName == "CYCLETEST")).IsTrue();
 	}
 
 	[Test]

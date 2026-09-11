@@ -26,8 +26,8 @@ public class RealityPolicyTests
 		receiver.Object().Id = "receiver";
 		target.Object().Id = "target";
 		var objects = Substitute.For<IObjectStore>();
-		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver.AsPlayer));
-		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target.AsPlayer));
+		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver));
+		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target));
 		var store = Substitute.For<IExpandedDataStore>();
 		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())
 			.Returns(new RealityConfiguration(1, true, ["normal"]));
@@ -86,8 +86,8 @@ public class RealityPolicyTests
 		receiver.Object().Id = "receiver";
 		target.Object().Id = "target";
 		var objects = Substitute.For<IObjectStore>();
-		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver.AsPlayer));
-		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target.AsPlayer));
+		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver));
+		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target));
 		var store = Substitute.For<IExpandedDataStore>();
 		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())
 			.Returns(new RealityConfiguration(1, true, ["normal", "ghost"]));
@@ -114,8 +114,8 @@ public class RealityPolicyTests
 		receiver.Object().Id = "seer";
 		target.Object().Id = "ghost";
 		var objects = Substitute.For<IObjectStore>();
-		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver.AsPlayer));
-		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target.AsPlayer));
+		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver));
+		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target));
 		var store = Substitute.For<IExpandedDataStore>();
 		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())
 			.Returns(new RealityConfiguration(1, true, removed ? ["normal"] : ["normal", "ghost"]));

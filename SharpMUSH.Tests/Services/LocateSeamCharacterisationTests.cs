@@ -89,7 +89,7 @@ public class LocateSeamCharacterisationTests
 	private static int Number(GetContentsQuery q) => (q.DBRef switch { DBRef d => d, AnySharpContainer c => c.Object().DBRef }).Number;
 
 	private static DBRef Found(AnyOptionalSharpObjectOrError result) =>
-		result.WithoutError().WithoutNone().Object().DBRef;
+		result.Expect<AnySharpObject>().Object().DBRef;
 
 	private async Task AssertNotified(string message) =>
 		await _notifyService.Received(1).Notify(
