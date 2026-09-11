@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -59,80 +60,63 @@ public partial class Functions
 			return errors.Complete(new CallState(isEvery ? "1" : "0"));
 		}
 
-		var failures = new List<MString>();
-		var sawPass = false;
-		var sawFail = false;
-
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			// Evaluate the lambda per item (not via the batch helper) so short-circuiting is honored:
 			// every() stops on the first failure and some() on the first success when no register is
 			// given. This also keeps predicate side-effects (e.g. setq) from firing past that point,
-			// matching the non-lambda branch below.
-			foreach (var item in list)
-			{
-				var result = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser, executor, rawAttrArg,
+			// matching the attribute path below.
+			return await EveryOrSomeVerdictAsync(parser, isEvery, registerName, delim, list, errors,
+				item => AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg,
 					new Dictionary<string, CallState> { { "0", new CallState(item) } }));
-
-				if (result.Truthy(parser))
-				{
-					sawPass = true;
-
-					// some() without a register can stop at the first success.
-					if (!isEvery && registerName is null)
-					{
-						break;
-					}
-				}
-				else
-				{
-					sawFail = true;
-					failures.Add(item);
-
-					// every() without a register can stop at the first failure.
-					if (isEvery && registerName is null)
-					{
-						break;
-					}
-				}
-			}
 		}
-		else
-		{
-			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
-			{
-				return errors.Complete(refusal);
-			}
 
-			foreach (var item in list)
-			{
-				var newParser = parser.Push(parser.CurrentState with
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
+		{
+			AttributeFunction function => await EveryOrSomeVerdictAsync(parser, isEvery, registerName, delim, list, errors,
+				item => AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
 				{
 					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
 					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-				});
+				}), function)),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
-				if (errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).Truthy(parser))
+	/// <summary>
+	/// every()/some()'s verdict: runs <paramref name="predicate"/> on each item in turn, stopping at
+	/// the first item that decides the answer unless the failures are being collected into
+	/// <paramref name="registerName"/>.
+	/// </summary>
+	private static async ValueTask<CallState> EveryOrSomeVerdictAsync(IMUSHCodeParser parser, bool isEvery,
+		string? registerName, MString delim, MString[] list, ListEvaluationErrors errors,
+		Func<MString, ValueTask<CallState>> predicate)
+	{
+		var failures = new List<MString>();
+		var sawPass = false;
+		var sawFail = false;
+
+		foreach (var item in list)
+		{
+			if (errors.Record(await predicate(item)).Truthy(parser))
+			{
+				sawPass = true;
+
+				// some() without a register can stop at the first success.
+				if (!isEvery && registerName is null)
 				{
-					sawPass = true;
-
-					// some() without a register can stop at the first success.
-					if (!isEvery && registerName is null)
-					{
-						break;
-					}
+					break;
 				}
-				else
-				{
-					sawFail = true;
-					failures.Add(item);
+			}
+			else
+			{
+				sawFail = true;
+				failures.Add(item);
 
-					// every() without a register can stop at the first failure.
-					if (isEvery && registerName is null)
-					{
-						break;
-					}
+				// every() without a register can stop at the first failure.
+				if (isEvery && registerName is null)
+				{
+					break;
 				}
 			}
 		}

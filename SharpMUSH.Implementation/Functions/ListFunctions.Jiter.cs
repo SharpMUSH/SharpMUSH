@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -36,22 +37,31 @@ public partial class Functions
 
 		foreach (var token in tokens)
 		{
-			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, token)).TryGetValue(out var function, out var refusal))
+			switch (await AttributeService.FetchAttributeFunctionAsync(parser, executor, token))
 			{
-				return errors.Complete(refusal);
+				case AttributeFunction function:
+					results.Add(await JiterStepAsync(parser, function, input, errors));
+					break;
+				case CallState refusal:
+					return errors.Complete(refusal);
 			}
-
-			var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
-
-			var stepParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState>(env),
-				EnvironmentRegisters = env
-			});
-
-			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function)));
 		}
 
 		return errors.Complete(new CallState(MarkupText.Join(osep, results)));
+	}
+
+	/// <summary>One attribute of jiter(): runs <paramref name="function"/> with the shared input as %0.</summary>
+	private async ValueTask<MString> JiterStepAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString input, ListEvaluationErrors errors)
+	{
+		var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
+
+		var stepParser = parser.Push(parser.CurrentState with
+		{
+			Arguments = new Dictionary<string, CallState>(env),
+			EnvironmentRegisters = env
+		});
+
+		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
 	}
 }

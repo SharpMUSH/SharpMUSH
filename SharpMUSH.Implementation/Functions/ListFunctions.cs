@@ -7,6 +7,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -153,36 +154,12 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
-
-		var environmentRegisters = new Dictionary<string, CallState>();
-		for (var i = 4; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
-		{
-			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
-		}
-
-		var result = new List<MString>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
-				{
-					["0"] = new CallState(item)
-				}
-			});
-
-			if (errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText() == "1")
-			{
-				result.Add(item);
-			}
-		}
-
-		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				await ItemsKeptByAttributeAsync(parser, function, list, errors, result => result.ToPlainText() == "1")))),
+			CallState refusal => errors.Complete(refusal),
+		};
 	}
 
 	// (attribute, list, delimiter, outsep) — arg 0 is the boolean predicate attribute, read below
@@ -211,36 +188,41 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				await ItemsKeptByAttributeAsync(parser, function, list, errors, result => result.Truthy(parser))))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
+	/// <summary>
+	/// filter() and filterbool() over a fetched attribute: the items whose result passes
+	/// <paramref name="keep"/>, in list order. Arguments from position 4 on reach the attribute as
+	/// %1, %2, ... beside the item as %0.
+	/// </summary>
+	private async ValueTask<IEnumerable<MString>> ItemsKeptByAttributeAsync(IMUSHCodeParser parser,
+		AttributeFunction function, MString[] list, ListEvaluationErrors errors, Func<MString, bool> keep)
+	{
+		var results = await CallAttributeForEachItemAsync(parser, function, list, errors, ExtraPredicateArguments(parser, 4));
+		return list.Zip(results)
+			.Where(pair => keep(pair.Second))
+			.Select(pair => pair.First);
+	}
+
+	/// <summary>
+	/// A predicate's extra arguments: the function's arguments from position <paramref name="first"/>
+	/// on, as the registers %1, %2, ...
+	/// </summary>
+	private static Dictionary<string, CallState> ExtraPredicateArguments(IMUSHCodeParser parser, int first)
+	{
 		var environmentRegisters = new Dictionary<string, CallState>();
-		for (var i = 4; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
+		for (var i = first; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
 		{
-			environmentRegisters[(i - 3).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
+			environmentRegisters[(i - first + 1).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
 		}
 
-		var result = new List<MString>();
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
-				{
-					["0"] = new CallState(item)
-				}
-			});
-
-			if (errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).Truthy(parser))
-			{
-				result.Add(item);
-			}
-		}
-
-		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
+		return environmentRegisters;
 	}
 
 	[SharpFunction(Name = "first", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -343,11 +325,23 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
+			AttributeFunction function => errors.Complete(new CallState(
+				await FoldByAttributeAsync(parser, function, list, startIndex, accumulator, errors))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
+	/// <summary>
+	/// fold() over a fetched attribute: folds the items from <paramref name="startIndex"/> on into
+	/// <paramref name="accumulator"/>, each call seeing the running value as %0, the item as %1 and
+	/// the step number as %2, and answers the final value.
+	/// </summary>
+	private async ValueTask<MString> FoldByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString[] list, int startIndex, MString accumulator, ListEvaluationErrors errors)
+	{
+		var iteration = 0;
 		for (var i = startIndex; i < list.Length; i++)
 		{
 			var newParser = parser.Push(parser.CurrentState with
@@ -369,7 +363,7 @@ public partial class Functions
 			iteration++;
 		}
 
-		return errors.Complete(new CallState(accumulator));
+		return accumulator;
 	}
 
 	/// <summary>
@@ -645,23 +639,12 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
-
-		var mapResult = new List<MString>(list.Length);
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState> { { "0", new CallState(item) } }
-			});
-			mapResult.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
-		}
-
-		return errors.Complete(new CallState(MarkupText.Join(sep, mapResult)));
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				await CallAttributeForEachItemAsync(parser, function, list, errors)))),
+			CallState refusal => errors.Complete(refusal),
+		};
 	}
 
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
@@ -772,13 +755,23 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(delimiter,
+				await MixByAttributeAsync(parser, function, lists, maxLength, errors)))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
+	/// <summary>
+	/// mix() over a fetched attribute: one call per position up to <paramref name="length"/>, each
+	/// list's element there as %0, %1, ..., a list that has run out giving an empty one.
+	/// </summary>
+	private async ValueTask<List<MString>> MixByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
+		List<MString[]> lists, int length, ListEvaluationErrors errors)
+	{
 		var attrResult = new List<MString>();
-		for (var i = 0; i < maxLength; i++)
+		for (var i = 0; i < length; i++)
 		{
 			var args = new Dictionary<string, CallState>();
 			var envRegs = new Dictionary<string, CallState>();
@@ -798,7 +791,7 @@ public partial class Functions
 			attrResult.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
 		}
 
-		return errors.Complete(new CallState(MarkupText.Join(delimiter, attrResult)));
+		return attrResult;
 	}
 
 	[SharpFunction(Name = "munge", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list1", "list2", "list3", "delimiter"])]
@@ -822,31 +815,42 @@ public partial class Functions
 			{ "1", new CallState(delim) }
 		};
 
-		MString transformedList1Str;
-
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			transformedList1Str = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
+			var transformedList1Str = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
 				parser, executor, rawAttrArg, mungeArgs));
+			return errors.Complete(new CallState(MarkupText.Join(sep,
+				MungeRearrange(list1, list2, MushText.SplitList(delim, transformedList1Str)))));
 		}
-		else
+
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
-			{
-				return errors.Complete(refusal);
-			}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep, MungeRearrange(list1, list2,
+				MushText.SplitList(delim, await MungeTransformByAttributeAsync(parser, function, mungeArgs, errors)))))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = mungeArgs,
-				EnvironmentRegisters = new Dictionary<string, CallState>(mungeArgs)
-			});
-			transformedList1Str = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function));
-		}
+	/// <summary>munge()'s one call of a fetched attribute: the transformation of list1, from <paramref name="mungeArgs"/>.</summary>
+	private async ValueTask<MString> MungeTransformByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Dictionary<string, CallState> mungeArgs, ListEvaluationErrors errors)
+	{
+		var newParser = parser.Push(parser.CurrentState with
+		{
+			Arguments = mungeArgs,
+			EnvironmentRegisters = new Dictionary<string, CallState>(mungeArgs)
+		});
+		return errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function));
+	}
 
-		var transformedList1 = MushText.SplitList(delim, transformedList1Str);
-
+	/// <summary>
+	/// munge()'s answer: <paramref name="list2"/> rearranged the way the transformation rearranged
+	/// <paramref name="list1"/>, each transformed element standing for the list2 element at its
+	/// original position, and one that stands for none dropped.
+	/// </summary>
+	private static List<MString> MungeRearrange(MString[] list1, MString[] list2, MString[] transformedList1)
+	{
 		// Create mapping from original list1 to list2
 		var mapping = new Dictionary<string, MString>();
 		for (var i = 0; i < Math.Min(list1.Length, list2.Length); i++)
@@ -864,7 +868,7 @@ public partial class Functions
 			}
 		}
 
-		return errors.Complete(new CallState(MarkupText.Join(sep, result)));
+		return result;
 	}
 
 	/// <summary>One entry of a namegrab() list: the dbref as the caller spelled it, and the object's name.</summary>
@@ -1122,31 +1126,36 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				await SortByComparisons(list, (a, b) => CompareViaAttributeAsync(parser, function, a, b, errors))))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
-		async Task<int> CompareViaAttribute(MString a, MString b)
+	/// <summary>
+	/// sortby()'s comparison through a fetched attribute: <paramref name="a"/> as %0, <paramref name="b"/>
+	/// as %1, and the sign of the integer it answers (0 when it answers none).
+	/// </summary>
+	private async Task<int> CompareViaAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString a, MString b, ListEvaluationErrors errors)
+	{
+		var newParser = parser.Push(parser.CurrentState with
 		{
-			var newParser = parser.Push(parser.CurrentState with
+			Arguments = new Dictionary<string, CallState>
 			{
-				Arguments = new Dictionary<string, CallState>
-				{
-					{ "0", new CallState(a) },
-					{ "1", new CallState(b) }
-				},
-				EnvironmentRegisters = new Dictionary<string, CallState>
-				{
-					["0"] = new CallState(a),
-					["1"] = new CallState(b)
-				}
-			});
-			var result = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText();
-			return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
-		}
-
-		return errors.Complete(new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaAttribute))));
+				{ "0", new CallState(a) },
+				{ "1", new CallState(b) }
+			},
+			EnvironmentRegisters = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(a),
+				["1"] = new CallState(b)
+			}
+		});
+		var result = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText();
+		return int.TryParse(result, out var cmp) ? Math.Sign(cmp) : 0;
 	}
 
 	/// <summary>
@@ -1184,39 +1193,26 @@ public partial class Functions
 		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["1"].Message!);
-		var keys = new List<string>(list.Length);
 
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			foreach (var item in list)
-			{
-				var keyResult = errors.Record(await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser,
-					executor,
-					rawAttrArg,
-					new Dictionary<string, CallState> { { "0", new CallState(item) } }));
-				keys.Add(keyResult.ToPlainText());
-			}
+			var lambdaKeys = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
+			return errors.Complete(new CallState(MarkupText.Join(sep, SortedByKeys(list, lambdaKeys, sortType))));
 		}
-		else
+
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
-			{
-				return errors.Complete(refusal);
-			}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				SortedByKeys(list, await CallAttributeForEachItemAsync(parser, function, list, errors), sortType)))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
 
-			foreach (var item in list)
-			{
-				var newParser = parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-				});
-				keys.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText());
-			}
-		}
-
+	/// <summary>sortkey()'s order: <paramref name="list"/> sorted by each item's key, as <paramref name="sortType"/> compares them.</summary>
+	private static IEnumerable<MString> SortedByKeys(MString[] list, List<MString> keyResults, MString sortType)
+	{
+		var keys = keyResults.Select(key => key.ToPlainText()).ToList();
 		var indexes = Enumerable.Range(0, list.Length);
 		var sortedIndexes = sortType.ToPlainText().ToLower() switch
 		{
@@ -1226,7 +1222,7 @@ public partial class Functions
 			_ => indexes.OrderBy(i => keys[i])
 		};
 
-		return errors.Complete(new CallState(MarkupText.Join(sep, sortedIndexes.Select(i => list[i]))));
+		return sortedIndexes.Select(i => list[i]);
 	}
 
 	[SharpFunction(Name = "splice", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "word", "delimiter"])]
@@ -1294,10 +1290,21 @@ public partial class Functions
 		}
 
 		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
+			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
+				await StepByAttributeAsync(parser, function, list, step, errors)))),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
+
+	/// <summary>
+	/// step() over a fetched attribute: one call per run of <paramref name="step"/> items, the run's
+	/// items as %0, %1, ... (the last run may be shorter).
+	/// </summary>
+	private async ValueTask<List<MString>> StepByAttributeAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString[] list, int step, ListEvaluationErrors errors)
+	{
 		var attrResult = new List<MString>();
 
 		for (var i = 0; i < list.Length; i += step)
@@ -1319,7 +1326,7 @@ public partial class Functions
 			attrResult.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
 		}
 
-		return errors.Complete(new CallState(MarkupText.Join(sep, attrResult)));
+		return attrResult;
 	}
 
 	/// <summary>
@@ -1700,6 +1707,34 @@ public partial class Functions
 				rawAttrArg,
 				new Dictionary<string, CallState> { { "0", new CallState(item) } });
 			results.Add(errors.Record(evaluated));
+		}
+
+		return results;
+	}
+
+	/// <summary>
+	/// Runs a fetched attribute for each item in a list, the item as %0 and
+	/// <paramref name="environmentRegisters"/>, when given, as the rest of the environment.
+	/// </summary>
+	private async ValueTask<List<MString>> CallAttributeForEachItemAsync(
+		IMUSHCodeParser parser,
+		AttributeFunction function,
+		MString[] list,
+		ListEvaluationErrors errors,
+		Dictionary<string, CallState>? environmentRegisters = null)
+	{
+		var results = new List<MString>(list.Length);
+		foreach (var item in list)
+		{
+			var newParser = parser.Push(parser.CurrentState with
+			{
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
+				EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters ?? [])
+				{
+					["0"] = new CallState(item)
+				}
+			});
+			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)));
 		}
 
 		return results;

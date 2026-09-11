@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -32,42 +33,35 @@ public partial class Functions
 			return errors.Complete(new CallState("{}"));
 		}
 
-		// Keys appear in first-seen order (JsonObject preserves insertion order); each key maps to
-		// a JSON array of the original elements that produced it.
-		var groups = new JsonObject();
-
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
-			foreach (var (item, keyResult) in list.Zip(lambdaResults, (item, keyResult) => (item, keyResult)))
-			{
-				AddToJsonGroup(groups, keyResult.ToPlainText(), item.ToPlainText());
-			}
-
-			return errors.Complete(new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions)));
+			return errors.Complete(new CallState(GroupedJson(list, lambdaResults)));
 		}
 
-		if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			return errors.Complete(refusal);
-		}
-
-		foreach (var item in list)
-		{
-			var newParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-				EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
-			});
-
-			var key = errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).ToPlainText();
-			AddToJsonGroup(groups, key, item.ToPlainText());
-		}
-
-		return errors.Complete(new CallState(groups.ToJsonString(JsonHelpers.RelaxedJsonOptions)));
+			AttributeFunction function => errors.Complete(new CallState(
+				GroupedJson(list, await CallAttributeForEachItemAsync(parser, function, list, errors)))),
+			CallState refusal => errors.Complete(refusal),
+		};
 	}
 
-	private void AddToJsonGroup(JsonObject groups, string key, string element)
+	/// <summary>json_group_by()'s answer: each item of <paramref name="list"/> grouped under the key it produced.</summary>
+	private static string GroupedJson(MString[] list, List<MString> keys)
+	{
+		// Keys appear in first-seen order (JsonObject preserves insertion order); each key maps to
+		// a JSON array of the original elements that produced it.
+		var groups = new JsonObject();
+		foreach (var (item, keyResult) in list.Zip(keys, (item, keyResult) => (item, keyResult)))
+		{
+			AddToJsonGroup(groups, keyResult.ToPlainText(), item.ToPlainText());
+		}
+
+		return groups.ToJsonString(JsonHelpers.RelaxedJsonOptions);
+	}
+
+	private static void AddToJsonGroup(JsonObject groups, string key, string element)
 	{
 		if (groups[key] is not JsonArray bucket)
 		{

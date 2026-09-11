@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -51,24 +52,14 @@ public partial class Functions
 		{
 			foreach (var token in tokens)
 			{
-				if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, token)).TryGetValue(out var function, out var refusal))
+				switch (await AttributeService.FetchAttributeFunctionAsync(parser, executor, token))
 				{
-					return errors.Complete(refusal);
+					case AttributeFunction function:
+						accumulator = await ChainStepAsync(parser, function, accumulator, sideArgs, wrappedIteration, errors);
+						break;
+					case CallState refusal:
+						return errors.Complete(refusal);
 				}
-
-				wrappedIteration.Value = accumulator;
-				wrappedIteration.Iteration++;
-
-				// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
-				var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
-
-				var stepParser = parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState>(env),
-					EnvironmentRegisters = env
-				});
-
-				accumulator = errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
 
 				// A step called ibreak(): stop the pipeline and return the value produced so far.
 				if (wrappedIteration.Break)
@@ -83,5 +74,28 @@ public partial class Functions
 		}
 
 		return errors.Complete(new CallState(accumulator));
+	}
+
+	/// <summary>
+	/// One step of chain(): runs <paramref name="function"/> on the running value and answers the
+	/// value it hands to the next step.
+	/// </summary>
+	private async ValueTask<MString> ChainStepAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString accumulator, Dictionary<string, CallState> sideArgs, IterationWrapper<MString> wrappedIteration,
+		ListEvaluationErrors errors)
+	{
+		wrappedIteration.Value = accumulator;
+		wrappedIteration.Iteration++;
+
+		// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
+		var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
+
+		var stepParser = parser.Push(parser.CurrentState with
+		{
+			Arguments = new Dictionary<string, CallState>(env),
+			EnvironmentRegisters = env
+		});
+
+		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
 	}
 }
