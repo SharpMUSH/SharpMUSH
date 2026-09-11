@@ -38,14 +38,11 @@ public partial class Commands
 		}
 
 		var objAttrStr = objAttrArg.Message?.ToPlainText() ?? string.Empty;
-		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
-		if (maybeObjAttr.IsT1)
+		if (HelperFunctions.SplitObjectAndAttr(objAttrStr) is not { Object: var targetObjRef, Attribute: var attrName })
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.InvalidObjectAttribute, executor);
 			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute);
 		}
-
-		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,

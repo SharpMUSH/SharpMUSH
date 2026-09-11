@@ -168,7 +168,7 @@ else
             return;
         }
 
-        OneOf.OneOf<WikiArticle, string> result;
+        MessageResult<WikiArticle> result;
 
         if (string.IsNullOrEmpty(draft.Slug))
         {

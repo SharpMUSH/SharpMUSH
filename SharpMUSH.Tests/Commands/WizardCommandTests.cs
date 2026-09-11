@@ -7,7 +7,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -83,7 +82,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -97,7 +96,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@ps")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -127,7 +126,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, token)),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, token)),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -273,7 +272,7 @@ public class WizardCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextContains(msg, "SharpMUSH Uptime:")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -352,7 +351,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Announcement: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -366,7 +365,7 @@ public class WizardCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(executor.Number, Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(executor.Number, Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"Broadcast: {token}")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

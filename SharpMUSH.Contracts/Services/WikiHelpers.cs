@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Globalization;
 
 namespace SharpMUSH.Library.Services;
@@ -68,7 +67,7 @@ public static class WikiHelpers
 	/// pseudo-culture, so junk like <c>qq</c> would become a "valid" locale and get persisted.
 	/// </para>
 	/// </remarks>
-	public static OneOf<string, Error<string>> NormalizeLocale(string? locale)
+	public static Result<string> NormalizeLocale(string? locale)
 	{
 		var normalized = NormalizeLocaleOrEmpty(locale);
 		return normalized.Length == 0

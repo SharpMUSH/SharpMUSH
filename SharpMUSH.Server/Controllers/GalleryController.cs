@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -221,7 +219,7 @@ public class GalleryController(
 		}
 	}
 
-	private async Task<OneOf<Success, Error<string>>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
+	private async Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
 	{
 		var json = JsonSerializer.Serialize(entries);
 		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json));

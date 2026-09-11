@@ -1,5 +1,5 @@
 using Mediator;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -227,11 +227,11 @@ public static partial class ArgHelpers
 	public static ValueTask<bool> HasObjectPowers(SharpObject obj, string power)
 		=> obj.HasPower(power);
 
-	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
+	public static IEnumerable<DbRefOrName> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
-				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+				? DbRefOrName.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
+				: DbRefOrName.FromT1(x.Groups["User"].Value));
 
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>

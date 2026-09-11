@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -238,7 +237,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 			? null
 			: args[1] switch
 			{
-				OneOf<MString, string> oneOf => oneOf.Match(m => m.ToString(), s => s),
+				SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
 				MString mstring => mstring.ToString(),
 				string text => text,
 				_ => null

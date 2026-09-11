@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -44,7 +43,7 @@ public interface IWorldBackupService
 	/// place only once complete, so a reader never sees a partial one. Reports a failure rather than
 	/// throwing, apart from cancellation.
 	/// </summary>
-	ValueTask<OneOf<WorldBackup, Error<string>>> CreateAsync(CancellationToken ct = default);
+	ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default);
 
 	/// <summary>The copies currently on disk, newest first. Empty when unsupported.</summary>
 	IReadOnlyList<WorldBackup> List();

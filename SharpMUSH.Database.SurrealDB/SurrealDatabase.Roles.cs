@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -59,10 +58,10 @@ public partial class SurrealDatabase : IRoleRegistryService
 		if (response.HasErrors) throw new InvalidOperationException("SurrealDB rejected the role write.");
 	}
 
-	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)
+	public Task<Found<SharpRole>> GetRoleAsync(string slug)
 		=> GetRoleAsync(slug, CancellationToken.None);
 
-	public async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
+	public async Task<Found<SharpRole>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {RoleFields} FROM role WHERE slug = $slug",

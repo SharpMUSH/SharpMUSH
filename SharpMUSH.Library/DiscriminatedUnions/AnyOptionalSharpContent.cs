@@ -1,40 +1,44 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing, None>
+[Union]
+public sealed partial class AnyOptionalSharpContent : IUnion
 {
-	public AnyOptionalSharpContent(OneOf<SharpPlayer, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpContent(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(None x) => new(x);
+	public AnyOptionalSharpContent(SharpPlayer value) => Value = value;
+	public AnyOptionalSharpContent(SharpExit value) => Value = value;
+	public AnyOptionalSharpContent(SharpThing value) => Value = value;
+	public AnyOptionalSharpContent(None value) => Value = value;
 
-	public bool IsPlayer => IsT0;
-	public bool IsExit => IsT1;
-	public bool IsThing => IsT2;
-	public bool IsNone => IsT3;
+	public object? Value { get; }
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpExit AsExit => AsT1;
-	public SharpThing AsThing => AsT2;
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpContent other && Equals(Value, other.Value);
 
-	public AnyOptionalSharpObject WithRoomOption()
-		=> Match<AnyOptionalSharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => none
-		);
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public AnySharpContent WithoutNone()
-		=> Match<AnySharpContent>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => throw new Exception("Cannot convert None to a valid object.")
-		);
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsExit => Value is SharpExit;
+	public bool IsThing => Value is SharpThing;
+	public bool IsNone => Value is None;
+
+	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
+	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
+	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
+
+	public AnyOptionalSharpObject WithRoomOption() => this switch
+	{
+		SharpPlayer player => player,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None none => none
+	};
+
+	public AnySharpContent WithoutNone() => this switch
+	{
+		SharpPlayer player => player,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None => throw new Exception("Cannot convert None to a valid object.")
+	};
 }

@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
@@ -67,7 +67,7 @@ public class LoginsConfigTests
 		await Parser.CommandParse(plebHandle, ConnectionService, MarkupText.Plain($"connect {plebName} pleb-password-1"));
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == plebHandle),
-			Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
+			Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
 			null, INotifyService.NotificationType.Announce);
 
 		// A private wizard can still connect with logins disabled.
@@ -81,7 +81,7 @@ public class LoginsConfigTests
 		await Parser.CommandParse(guestHandle, ConnectionService, MarkupText.Plain("connect guest"));
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == guestHandle),
-			Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
+			Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Logins are disabled.")),
 			null, INotifyService.NotificationType.Announce);
 	}
 }

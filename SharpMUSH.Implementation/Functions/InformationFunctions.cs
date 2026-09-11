@@ -315,13 +315,10 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (split.IsT1)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(arg0) is not { Object: var db, Attribute: var attr })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, "getpids");
 		}
-
-		var (db, attr) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, db, LocateFlags.All,

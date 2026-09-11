@@ -228,7 +228,7 @@ public class PluginUnloadTests
 
 		public IEnumerable<CommandDefinition> GetCommands() =>
 			[new CommandDefinition(new SharpCommandAttribute { Name = "+LOADONCE" },
-				_ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())))];
+				_ => ValueTask.FromResult(new Option<CallState>(new SharpMUSH.Library.DiscriminatedUnions.None())))];
 
 		public IEnumerable<PluginFlag> Flags =>
 			[new PluginFlag("LOADONCE_FLAG", "L", [], [], [], ["ROOM", "PLAYER", "EXIT", "THING"])];

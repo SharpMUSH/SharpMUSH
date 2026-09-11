@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -12,7 +11,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// softcode, travels with backups.
 /// </summary>
 /// <remarks>
-/// Single-fetch methods return <c>OneOf&lt;T, NotFound&gt;</c> rather than null,
+/// Single-fetch methods return <see cref="Found{T}"/> rather than null,
 /// matching <see cref="IWikiService"/> conventions.
 /// </remarks>
 public interface IPackageRegistryService
@@ -21,7 +20,7 @@ public interface IPackageRegistryService
 	Task UpsertInstalledPackageAsync(InstalledPackageRecord package);
 
 	/// <summary>Fetches one installed package by id.</summary>
-	Task<OneOf<InstalledPackageRecord, NotFound>> GetInstalledPackageAsync(string packageId);
+	Task<Found<InstalledPackageRecord>> GetInstalledPackageAsync(string packageId);
 
 	/// <summary>Lists all installed packages, ordered by id.</summary>
 	Task<IReadOnlyList<InstalledPackageRecord>> GetInstalledPackagesAsync();
@@ -82,7 +81,7 @@ public interface IPackageRegistryService
 	Task<IReadOnlyList<PackageRemoteRecord>> GetPackageRemotesAsync();
 
 	/// <summary>Fetches one remote by name.</summary>
-	Task<OneOf<PackageRemoteRecord, NotFound>> GetPackageRemoteAsync(string name);
+	Task<Found<PackageRemoteRecord>> GetPackageRemoteAsync(string name);
 
 	/// <summary>Removes a configured remote.</summary>
 	Task RemovePackageRemoteAsync(string name);
@@ -94,7 +93,7 @@ public interface IPackageRegistryService
 	Task<IReadOnlyList<PackageRevisionRecord>> GetPackageRevisionsAsync(string packageId);
 
 	/// <summary>Fetches one revision.</summary>
-	Task<OneOf<PackageRevisionRecord, NotFound>> GetPackageRevisionAsync(string packageId, int revision);
+	Task<Found<PackageRevisionRecord>> GetPackageRevisionAsync(string packageId, int revision);
 
 	/// <summary>Deletes all but the newest <paramref name="keep"/> revisions of a package.</summary>
 	Task PrunePackageRevisionsAsync(string packageId, int keep);

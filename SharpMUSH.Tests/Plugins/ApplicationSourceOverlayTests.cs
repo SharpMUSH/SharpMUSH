@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -162,9 +161,9 @@ public class ApplicationSourceOverlayTests
 			return Task.CompletedTask;
 		}
 
-		public Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug) =>
+		public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug) =>
 			Task.FromResult(_store.TryGetValue(slug, out var app)
-				? (OneOf<RegisteredApplication, NotFound>)app
+				? (Found<RegisteredApplication>)app
 				: new NotFound());
 
 		public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync() =>

@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -148,7 +147,7 @@ public class AttributeVisibilityCancellationTests
 		using var scope = budget.Enter();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		async Task Block(CancellationToken token) { entered.TrySetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token); }
-		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>())
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>())
 			.Returns(async ValueTask<bool> (_) => { if (!identity) await Block(CancellationToken.None); return true; });
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) => { await Block(call.Arg<CancellationToken>()); return new None(); });
 		var parser = Substitute.For<IMUSHCodeParser>();

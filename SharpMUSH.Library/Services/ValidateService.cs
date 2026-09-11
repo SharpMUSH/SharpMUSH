@@ -1,6 +1,4 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -30,7 +28,7 @@ public partial class ValidateService(
 	private static readonly HashSet<string> MagicCookiesIgnoreCase = new(MagicCookies, StringComparer.OrdinalIgnoreCase);
 
 	public async ValueTask<bool> Valid(IValidateService.ValidationType type, MString value,
-		OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None> target)
+		ValidationTarget target)
 		=> type switch
 		{
 			_ when value.Length == 0

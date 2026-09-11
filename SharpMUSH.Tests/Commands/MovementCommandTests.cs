@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -53,7 +52,7 @@ public class MovementCommandTests
 			.Any(c => c.GetMethodInfo().Name == "Notify"
 								&& c.GetArguments().Length >= 3
 								&& c.GetArguments()[0] is AnySharpObject who && who.Object().DBRef == receiver
-								&& c.GetArguments()[1] is OneOf<MString, string> msg
+								&& c.GetArguments()[1] is SharpMessage msg
 								&& TestHelpers.MessagePlainTextContains(msg, expected)
 								&& c.GetArguments()[2] is AnySharpObject said
 								&& said.Object().DBRef.Number == speaker.Number);

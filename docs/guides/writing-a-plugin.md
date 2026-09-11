@@ -376,7 +376,7 @@ authors: [You]
 description: "What it does"
 kind: managed
 binaries:
-  min_server_version: ">=1.0"   # the plugin/server contract version your DLL was built against
+  min_server_version: ">=3.0"   # the plugin/server contract version your DLL was built against
   files:
     - file: MyPlugin.dll
       sha256: <64-hex SHA-256 of MyPlugin.dll>

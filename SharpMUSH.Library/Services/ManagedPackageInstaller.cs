@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
@@ -28,7 +27,7 @@ public sealed class ManagedPackageInstaller(
 	private readonly string _pluginsRoot = pluginsRoot
 		?? Path.Combine(AppContext.BaseDirectory, "plugins");
 
-	public async Task<OneOf<IReadOnlyList<string>, Error<string>>> DeployAsync(
+	public async Task<Result<IReadOnlyList<string>>> DeployAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		IManagedPackageBinarySource binarySource,
@@ -115,7 +114,7 @@ public sealed class ManagedPackageInstaller(
 				+ "It loads on the next server boot.",
 				manifest.Name, manifest.Version, deployed.Count, targetDirectory);
 
-			return OneOf<IReadOnlyList<string>, Error<string>>.FromT0(deployed);
+			return Result<IReadOnlyList<string>>.FromT0(deployed);
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
@@ -125,7 +124,7 @@ public sealed class ManagedPackageInstaller(
 		}
 	}
 
-	public async Task<OneOf<Success, Error<string>>> RemoveAsync(
+	public async Task<Result<Success>> RemoveAsync(
 		string packageId,
 		IReadOnlyList<string> deployedFiles,
 		CancellationToken cancellationToken = default)

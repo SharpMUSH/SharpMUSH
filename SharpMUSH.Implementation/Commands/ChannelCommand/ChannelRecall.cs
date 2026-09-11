@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -42,7 +41,7 @@ public static class ChannelRecall
 	/// Everything both spellings do before they render: parse the counts, resolve the channel, apply the
 	/// access gate, take the window and drop the See_All-only lines the viewer may not read.
 	/// </summary>
-	public static async ValueTask<OneOf<RecallWindow, CallState>> SelectAsync(
+	public static async ValueTask<RecallSelection> SelectAsync(
 		IPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,

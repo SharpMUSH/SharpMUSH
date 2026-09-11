@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SceneModel = SharpMUSH.Plugins.Scene.Models.Scene;
 using SharpMUSH.Library.Plugins.Storage;
@@ -7,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;
 using SurrealDb.Net.Models.Response;
 using System.Text.Json;
-using OkNone = OneOf.Types.None;
+using OkNone = SharpMUSH.Library.DiscriminatedUnions.None;
 
 namespace SharpMUSH.Plugins.Scene.Storage;
 
@@ -172,7 +171,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			}, $"scene:{sceneId}", DbRefToString(ownerDbref), DbRefToString(ownerDbref), DbRefToString(roomDbref));
 	}
 
-	public async Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
+	public async Task<Found<SceneModel>> GetSceneAsync(string sceneId)
 	{
 		var keySegment = BareKey(SceneKey(sceneId));
 		var parameters = new Dictionary<string, object?> { ["k"] = keySegment };
@@ -189,7 +188,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return ProjectScene(rec, idKey, ownerDbref, starterDbref, roomDbref);
 	}
 
-	public async Task<OneOf<SceneModel, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
+	public async Task<Found<SceneModel>> SetSceneMetaAsync(string sceneId, string key, string value)
 	{
 		var existing = await GetSceneAsync(sceneId);
 		if (existing.IsT1)
@@ -295,7 +294,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await ProjectScenesAsync(rows);
 	}
 
-	public async Task<OneOf<SceneModel, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
+	public async Task<Found<SceneModel>> GetActiveSceneInRoomAsync(string roomDbref)
 	{
 		var roomKey = DbRefToKey(roomDbref);
 		if (roomKey is null)
@@ -315,7 +314,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return projected[0];
 	}
 
-	public async Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref,
+	public async Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref,
 		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
@@ -390,7 +389,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return pose.AsT0;
 	}
 
-	public async Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId)
+	public async Task<Found<ScenePose>> GetPoseAsync(string poseId)
 	{
 		var key = PoseKey(poseId);
 		var response = await _accessor.ExecuteAsync($"SELECT {ScenePoseFields} FROM $id",
@@ -401,7 +400,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await ProjectPoseAsync(rows[0]);
 	}
 
-	public async Task<OneOf<IReadOnlyList<ScenePose>, NotFound>> GetPosesAsync(string sceneId,
+	public async Task<Found<IReadOnlyList<ScenePose>>> GetPosesAsync(string sceneId,
 		string? authorDbref = null, int? count = null)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
@@ -424,10 +423,10 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		if (count is { } limit && limit >= 0 && result.Count > limit)
 			result.RemoveRange(0, result.Count - limit);
 
-		return OneOf<IReadOnlyList<ScenePose>, NotFound>.FromT0(result);
+		return Found<IReadOnlyList<ScenePose>>.FromT0(result);
 	}
 
-	public async Task<OneOf<ScenePose, NotFound>> SetPoseMetaAsync(string poseId, string key, string value)
+	public async Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -478,7 +477,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await GetPoseAsync(poseId);
 	}
 
-	public async Task<OneOf<ScenePose, NotFound>> EditPoseAsync(string poseId, string editorDbref, string content)
+	public async Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -523,7 +522,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await GetPoseAsync(poseId);
 	}
 
-	public async Task<OneOf<ScenePose, NotFound, Error<string>>> UndoPoseAsync(string poseId)
+	public async Task<FoundResult<ScenePose>> UndoPoseAsync(string poseId)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -546,7 +545,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return refreshed.AsT0;
 	}
 
-	public async Task<OneOf<ScenePose, NotFound, Error<string>>> RedoPoseAsync(string poseId)
+	public async Task<FoundResult<ScenePose>> RedoPoseAsync(string poseId)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -569,7 +568,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return refreshed.AsT0;
 	}
 
-	public async Task<OneOf<ScenePose, NotFound, Error<string>>> MovePoseAsync(string poseId, string afterPoseId)
+	public async Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -607,7 +606,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return refreshed.AsT0;
 	}
 
-	public async Task<OneOf<ScenePose, NotFound>> DeletePoseAsync(string poseId)
+	public async Task<Found<ScenePose>> DeletePoseAsync(string poseId)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -629,7 +628,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await GetPoseAsync(poseId);
 	}
 
-	public async Task<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>> GetPoseEditsAsync(string poseId)
+	public async Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId)
 	{
 		var existing = await GetPoseAsync(poseId);
 		if (existing.IsT1)
@@ -645,10 +644,10 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 				result.Add(edit);
 		}
 
-		return OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>.FromT0(result);
+		return Found<IReadOnlyList<ScenePoseEdit>>.FromT0(result);
 	}
 
-	public async Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role)
+	public async Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
 		if (sceneExisting.IsT1)
@@ -680,7 +679,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await GetMemberAsync(sceneId, playerDbref);
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> RemoveMemberAsync(string sceneId, string playerDbref)
+	public async Task<Found<OkNone>> RemoveMemberAsync(string sceneId, string playerDbref)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
 		if (sceneExisting.IsT1)
@@ -701,7 +700,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return new OkNone();
 	}
 
-	public async Task<OneOf<IReadOnlyList<SceneMember>, NotFound>> GetMembersAsync(string sceneId, string? role = null)
+	public async Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
 		if (sceneExisting.IsT1)
@@ -721,10 +720,10 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			parameters);
 		var rows = response.GetValue<List<SceneMemberEdgeRecord>>(0) ?? [];
 		var members = rows.Select(r => ProjectMember(r, sceneKey)).ToList();
-		return OneOf<IReadOnlyList<SceneMember>, NotFound>.FromT0(members);
+		return Found<IReadOnlyList<SceneMember>>.FromT0(members);
 	}
 
-	public async Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref)
+	public async Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref)
 	{
 		var sceneExisting = await GetSceneAsync(sceneId);
 		if (sceneExisting.IsT1)
@@ -746,7 +745,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return ProjectMember(rows[0], sceneKey);
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> SetFocusAsync(string playerDbref, string? sceneId = null)
+	public async Task<Found<OkNone>> SetFocusAsync(string playerDbref, string? sceneId = null)
 	{
 		var playerKey = DbRefToKey(playerDbref);
 		if (playerKey is null)
@@ -804,7 +803,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		}
 	}
 
-	public async Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)
+	public async Task<Found<SceneModel>> GetCurrentSceneAsync(string playerDbref)
 	{
 		var playerKey = DbRefToKey(playerDbref);
 		if (playerKey is null)
@@ -820,7 +819,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return await GetSceneAsync($"scene:{ids[0]}");
 	}
 
-	public async Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs)
+	public async Task<Found<SceneMember>> SetShowAsAsync(string sceneId, string playerDbref, string showAs)
 	{
 		var member = await GetMemberAsync(sceneId, playerDbref);
 		if (member.IsT1)
@@ -887,7 +886,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			: new ScenePlot(BareKey(plotKey), title ?? "", description ?? "", DbRefToString(ownerDbref), ownerName, now, now);
 	}
 
-	public async Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
+	public async Task<Found<ScenePlot>> GetPlotAsync(string plotId)
 	{
 		var key = PlotKey(plotId);
 		var response = await _accessor.ExecuteAsync($"SELECT {ScenePlotFields} FROM $id",
@@ -901,7 +900,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return new ScenePlot(BareKey(plotKey), rec.title, rec.description, ownerDbref, rec.ownerName, rec.createdAt, rec.updatedAt);
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId)
+	public async Task<Found<OkNone>> LinkSceneToPlotAsync(string plotId, string sceneId)
 	{
 		var plot = await GetPlotAsync(plotId);
 		if (plot.IsT1)
@@ -923,7 +922,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return new OkNone();
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId)
+	public async Task<Found<OkNone>> UnlinkSceneFromPlotAsync(string plotId, string sceneId)
 	{
 		var plot = await GetPlotAsync(plotId);
 		if (plot.IsT1)
@@ -941,7 +940,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 		return new OkNone();
 	}
 
-	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId)
+	public async Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId)
 	{
 		var posesResult = await GetPosesAsync(sceneId);
 		if (posesResult.IsT1)
@@ -953,10 +952,10 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			.Where(t => !string.IsNullOrWhiteSpace(t))
 			.Distinct(StringComparer.Ordinal)
 			.ToList();
-		return OneOf<IReadOnlyList<string>, NotFound>.FromT0(distinct);
+		return Found<IReadOnlyList<string>>.FromT0(distinct);
 	}
 
-	public async Task<OneOf<IReadOnlyList<string>, NotFound>> GetCastAsync(string sceneId)
+	public async Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId)
 	{
 		var posesResult = await GetPosesAsync(sceneId);
 		if (posesResult.IsT1)
@@ -968,7 +967,7 @@ public sealed class SurrealSceneStorage(ISurrealStorageAccessor _accessor) : ISc
 			.Where(n => !string.IsNullOrWhiteSpace(n))
 			.Distinct(StringComparer.Ordinal)
 			.ToList();
-		return OneOf<IReadOnlyList<string>, NotFound>.FromT0(distinct);
+		return Found<IReadOnlyList<string>>.FromT0(distinct);
 	}
 
 	#endregion

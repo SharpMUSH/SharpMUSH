@@ -1,5 +1,6 @@
 ﻿using Mediator;
-using OneOf;
+using System.Runtime.CompilerServices;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
@@ -14,26 +15,41 @@ public record RenameMailFolderCommand(SharpPlayer Owner, string FolderName, stri
 
 public record MoveMailFolderCommand(SharpMail Mail, string NewFolderName) : ICommand;
 
-[GenerateOneOf]
-public class MailUpdate : OneOfBase<bool?, bool?, bool?, bool?>
+/// <summary>
+/// One change to a mail's status flags. Each flag is its own case so the four can never be confused,
+/// although every one of them carries just the new setting.
+/// </summary>
+[Union]
+public sealed class MailUpdate : IUnion
 {
-	private MailUpdate(OneOf<bool?, bool?, bool?, bool?> input) : base(input) { }
+	public readonly record struct Read(bool Value);
+	public readonly record struct Cleared(bool Value);
+	public readonly record struct Tagged(bool Value);
+	public readonly record struct Urgent(bool Value);
 
-	public static MailUpdate ReadEdit(bool read) => new(OneOf<bool?, bool?, bool?, bool?>.FromT0(read));
-	public static MailUpdate ClearEdit(bool clear) => new(OneOf<bool?, bool?, bool?, bool?>.FromT1(clear));
-	public static MailUpdate TaggedEdit(bool tagged) => new(OneOf<bool?, bool?, bool?, bool?>.FromT2(tagged));
-	public static MailUpdate UrgentEdit(bool urgent) => new(OneOf<bool?, bool?, bool?, bool?>.FromT3(urgent));
+	public MailUpdate(Read value) => Value = value;
+	public MailUpdate(Cleared value) => Value = value;
+	public MailUpdate(Tagged value) => Value = value;
+	public MailUpdate(Urgent value) => Value = value;
 
-	public bool IsReadEdit => IsT0;
-	public bool IsClearEdit => IsT1;
-	public bool IsTaggedEdit => IsT2;
-	public bool IsUrgentEdit => IsT3;
+	public object? Value { get; }
 
-	public bool AsReadEdit => AsT0!.Value;
+	public override bool Equals(object? obj) => obj is MailUpdate other && Equals(Value, other.Value);
 
-	public bool AsClearEdit => AsT1!.Value;
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public bool AsTaggedEdit => AsT2!.Value;
+	public static MailUpdate ReadEdit(bool read) => new(new Read(read));
+	public static MailUpdate ClearEdit(bool clear) => new(new Cleared(clear));
+	public static MailUpdate TaggedEdit(bool tagged) => new(new Tagged(tagged));
+	public static MailUpdate UrgentEdit(bool urgent) => new(new Urgent(urgent));
 
-	public bool AsUrgentEdit => AsT3!.Value;
+	public bool IsReadEdit => Value is Read;
+	public bool IsClearEdit => Value is Cleared;
+	public bool IsTaggedEdit => Value is Tagged;
+	public bool IsUrgentEdit => Value is Urgent;
+
+	public bool AsReadEdit => Value is Read edit ? edit.Value : throw UnionCase.Mismatch<Read>(Value);
+	public bool AsClearEdit => Value is Cleared edit ? edit.Value : throw UnionCase.Mismatch<Cleared>(Value);
+	public bool AsTaggedEdit => Value is Tagged edit ? edit.Value : throw UnionCase.Mismatch<Tagged>(Value);
+	public bool AsUrgentEdit => Value is Urgent edit ? edit.Value : throw UnionCase.Mismatch<Urgent>(Value);
 }

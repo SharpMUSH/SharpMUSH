@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -497,7 +496,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1")) ||
 				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -511,7 +510,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1") && msg.AsT0.ToString().Contains("test_sql_row2")) ||
 				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -525,7 +524,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("200")) ||
 				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -539,7 +538,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("3")) ||
 				(msg.IsT1 && msg.AsT1.Contains("3"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -553,7 +552,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "") ||
 				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -573,7 +572,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_Basic")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_Basic"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -593,25 +592,25 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().StartsWith("Test_MapSql_WithMultipleRows: 0 ")) ||
 				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithMultipleRows: 0"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
@@ -633,13 +632,13 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3")) ||
 				(msg.IsT1 && msg.AsT1.StartsWith("Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -654,7 +653,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 INVALID OBJECT/ATTRIBUTE")) ||
 				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -668,7 +667,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 SQL ERROR")) ||
 				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -683,7 +682,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1")) ||
 				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -698,7 +697,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("test_sql_row1") && msg.AsT0.ToString().Contains("test_sql_row2")) ||
 				(msg.IsT1 && msg.AsT1.Contains("test_sql_row1") && msg.AsT1.Contains("test_sql_row2"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -713,7 +712,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("200")) ||
 				(msg.IsT1 && msg.AsT1.Contains("200"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -728,7 +727,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString() == "") ||
 				(msg.IsT1 && msg.AsT1 == "")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -748,7 +747,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_Basic")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_Basic"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -768,13 +767,13 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -789,7 +788,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 INVALID OBJECT/ATTRIBUTE")) ||
 				(msg.IsT1 && msg.AsT1.Contains("#-1 INVALID OBJECT/ATTRIBUTE"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -803,7 +802,7 @@ public class DatabaseCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("#-1 SQL ERROR")) ||
 				(msg.IsT1 && msg.AsT1.Contains("#-1 SQL ERROR"))), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}

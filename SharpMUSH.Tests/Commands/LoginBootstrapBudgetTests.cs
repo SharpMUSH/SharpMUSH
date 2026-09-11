@@ -2,7 +2,7 @@ using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.ParserInterfaces;
@@ -58,10 +58,10 @@ public class LoginBootstrapBudgetTests
 			catch (OperationCanceledException) when (budget.IsExpired) { }
 			await Assert.That(hookReached).IsTrue();
 			await Assert.That(budget.IsExpired).IsEqualTo(expire);
-			await notify.Received(1).Notify(handle, Arg.Is<OneOf<MString, string>>(x => x.IsT1 && x.AsT1 == "login-motd"), null, INotifyService.NotificationType.Announce);
+			await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => x.IsT1 && x.AsT1 == "login-motd"), null, INotifyService.NotificationType.Announce);
 			await Assert.That(connections.Get(handle)!.Ref).IsNotNull();
 			if (checkPreferences) await bus.Received(1).Publish(Arg.Is<UpdatePlayerPreferencesMessage>(x => x.Handle == handle), Arg.Any<CancellationToken>());
-			else await notify.Received(1).Notify(handle, Arg.Is<OneOf<MString, string>>(x => x.IsT1 && x.AsT1 == "wizard-motd"), null, INotifyService.NotificationType.Announce);
+			else await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => x.IsT1 && x.AsT1 == "wizard-motd"), null, INotifyService.NotificationType.Announce);
 		}
 		finally { await connections.Disconnect(handle); }
 	}

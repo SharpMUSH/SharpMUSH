@@ -2,7 +2,6 @@ using Mediator;
 using SharpMUSH.Tests.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Definitions;
@@ -106,7 +105,7 @@ public class DebugCompletionBudgetTests
 		}
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call => new ValueTask<AnyOptionalSharpObject>(ReadObject(call.Arg<CancellationToken>())));
 		var notify = Substitute.For<INotifyService>();
-		notify.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
+		notify.Notify(Arg.Any<AnySharpObject>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
 			.Returns(_ => new ValueTask(read("notification", ExecutionBudget.CurrentToken)));
 		var services = Substitute.For<IServiceProvider>();
 		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IMediator) ? mediator

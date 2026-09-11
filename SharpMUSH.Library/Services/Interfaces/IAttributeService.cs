@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -27,7 +25,7 @@ public interface IAttributeService
 
 	ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
-	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
+	ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
 
 	/// <summary>
 	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
@@ -36,8 +34,8 @@ public interface IAttributeService
 	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
 	/// is the only caller today.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value, SharpPlayer creator);
-	ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode);
+	ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value, SharpPlayer creator);
+	ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributePatternMode patternMode);
 
 	ValueTask<LazySharpAttributesOrError> LazilyGetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj, int depth = 1);
 
@@ -48,16 +46,16 @@ public interface IAttributeService
 
 	ValueTask<SharpAttributesOrError> GetAttributePatternAsync(AnySharpObject executor, AnySharpObject obj, string attributePattern, bool checkParents, AttributePatternMode mode = AttributePatternMode.Exact);
 
-	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
+	ValueTask<Result<Success>> SetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
 
-	ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
+	ValueTask<Result<Success>> UnsetAttributeFlagAsync(AnySharpObject executor, AnySharpObject obj, string attribute, string flag);
 
 	/// <summary>
 	/// Applies a whole list of <c>!</c>-prefixable flag tokens to one attribute as a single
 	/// operation - one permission check against the pre-batch state, covering every token.
 	/// See the implementation's remarks for why this must not be a loop of single-flag calls.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
+	ValueTask<Result<Success>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
 
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);

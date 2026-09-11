@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -90,7 +89,7 @@ public class HttpCommandTests
 		var notices = 0;
 		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>())
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
-		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<OneOf.OneOf<MarkupText, string>>(),
+		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<SharpMessage>(),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce)
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
 		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;

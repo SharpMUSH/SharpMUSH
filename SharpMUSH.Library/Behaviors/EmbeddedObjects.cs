@@ -1,7 +1,8 @@
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Library.Behaviors;
 
@@ -47,7 +48,7 @@ public static class EmbeddedObjects
 			case SharpThing t:
 				numbers.Add(t.Object.Key);
 				return;
-			case IOneOf union:
+			case IUnion union:
 				Collect(union.Value, numbers);
 				return;
 			case IEnumerable items:

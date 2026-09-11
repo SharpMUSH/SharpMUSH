@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using MarkupString;
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.ConnectionServer.Services;

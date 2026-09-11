@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Authorization;
@@ -48,15 +47,15 @@ public partial class LightningDatabase
 	public async Task UpsertRoleAsync(SharpRole role)
 		=> await Store.WriteAsync(tx => tx.Put(Tables.Role, Keys.Str(role.Slug), Codec.Serialize(ToRoleRecord(role))));
 
-	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug)
+	public Task<Found<SharpRole>> GetRoleAsync(string slug)
 		=> GetRoleAsync(slug, CancellationToken.None);
 
-	public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
+	public Task<Found<SharpRole>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		var role = Store.Read(tx => ReadRoleBySlug(tx, slug));
 		cancellationToken.ThrowIfCancellationRequested();
-		return Task.FromResult<OneOf<SharpRole, NotFound>>(role is null ? new NotFound() : role);
+		return Task.FromResult<Found<SharpRole>>(role is null ? new NotFound() : role);
 	}
 
 	public Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken cancellationToken = default)

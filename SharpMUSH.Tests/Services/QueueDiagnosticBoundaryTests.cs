@@ -1,8 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using Quartz;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -49,7 +47,7 @@ public class QueueDiagnosticBoundaryTests
 		var entered = new TaskCompletionSource<DateTimeOffset>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var notify = Substitute.For<INotifyService>();
-		notify.Notify(Arg.Any<long>(), Arg.Any<OneOf<MarkupText, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
+		notify.Notify(Arg.Any<long>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
 			.Returns(async ValueTask (_) =>
 			{
 				entered.TrySetResult(DateTimeOffset.UtcNow);

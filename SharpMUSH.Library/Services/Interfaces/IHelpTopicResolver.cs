@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -37,7 +36,7 @@ public interface IHelpTopicResolver
 	/// The entry when exactly one thing matches, the candidate list when several do, or
 	/// <see cref="None"/> when nothing does.
 	/// </returns>
-	ValueTask<OneOf<HelpEntry, HelpCandidates, None>> ResolveAsync(string corpus, string topic);
+	ValueTask<HelpResolution> ResolveAsync(string corpus, string topic);
 
 	/// <summary>Fetches one entry by its exact indexed name, without any fuzzy fallback.</summary>
 	ValueTask<HelpEntry?> GetExactAsync(string corpus, string topic);

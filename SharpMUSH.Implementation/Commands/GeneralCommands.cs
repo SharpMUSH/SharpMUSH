@@ -1,6 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
@@ -151,7 +149,7 @@ public partial class Commands
 	/// 2. If already set, must have numeric or empty value
 	/// 3. If not set, cannot be a built-in attribute (unless it is SEMAPHORE)
 	/// </summary>
-	private async ValueTask<OneOf<Success, Error<string>>> ValidateSemaphoreAttribute(
+	private async ValueTask<Result<Success>> ValidateSemaphoreAttribute(
 		AnySharpObject targetObject,
 		string[] attributePath)
 	{
@@ -265,14 +263,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
-		if (!pathSplit.TryPickT0(out var pathDetails, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(attributePath) is not { Object: var objSpec, Attribute: var attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPath);
 		}
 
-		var (objSpec, attrName) = pathDetails;
 		if (string.IsNullOrEmpty(attrName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
@@ -592,7 +588,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.CantSeeThroughThat);
 			}
 
-			viewing = (await container.Location()).WithRoomOption().Match<AnyOptionalSharpObject>(
+			viewing = (await container.Location()).WithExitOption().Match<AnyOptionalSharpObject>(
 				player => player,
 				room => room,
 				exit => exit,
@@ -640,11 +636,8 @@ public partial class Commands
 		if (args.Count == 1)
 		{
 			var argText = args["0"].Message!.ToPlainText();
-			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
-
-			if (split.TryPickT0(out var details, out _))
+			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var objectName, Attribute: var maybeAttributePattern })
 			{
-				var (objectName, maybeAttributePattern) = details;
 				attributePattern = maybeAttributePattern;
 
 				var locate = await LocateService.LocateAndNotifyIfInvalid(
@@ -1074,7 +1067,7 @@ public partial class Commands
 	/// home-linked exit sends the mover to <em>their own</em> home — which is why the mover is a separate
 	/// parameter from the executor — and otherwise it is the stored destination edge.
 	/// </summary>
-	private async ValueTask<OneOf<AnySharpContainer, ExitDestinationFailure>> ResolveExitDestination(
+	private async ValueTask<ExitDestination> ResolveExitDestination(
 		IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject mover, SharpExit exitObj, string typedName)
 	{
 		var exitObject = new AnySharpObject(exitObj);
@@ -1291,7 +1284,7 @@ public partial class Commands
 			await FollowerCommand(parser, executor, currentLocation, "GOTO", exitObj.Object.DBRef);
 		}
 
-		return new CallState(destination.ToString());
+		return new CallState(destination.Object().DBRef.ToString());
 	}
 
 	/// <summary>
@@ -1339,7 +1332,7 @@ public partial class Commands
 
 		var isList = parser.CurrentState.Switches.Contains("LIST");
 
-		IEnumerable<OneOf<DBRef, string>> toTeleportList;
+		IEnumerable<DbRefOrName> toTeleportList;
 		if (isList)
 		{
 			toTeleportList = ArgHelpers.NameList(toTeleport);
@@ -1564,7 +1557,7 @@ public partial class Commands
 			}
 		}
 
-		return new CallState(destination.ToString());
+		return new CallState(validDestination.Object().DBRef.ToString());
 	}
 
 	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
@@ -1837,14 +1830,12 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
-		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText()) is not { Object: var db, Attribute: var maybeAttributeString })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
 		}
 
-		var (db, maybeAttributeString) = objectAndAttribute.AsT0;
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 			db, LocateFlags.All);
 
@@ -2779,14 +2770,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
-		var maybeObjectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(arg0) is not { Object: var target, Attribute: var maybeAttribute })
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.CantSeeThat, executor);
 			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
-		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target,
 			LocateFlags.All);
 
@@ -3554,15 +3543,11 @@ public partial class Commands
 		}
 
 		var objAttrText = objAttrArg.Message.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.TryPickT0(out var details, out _) || string.IsNullOrEmpty(details.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrPattern })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
-
-		var (dbref, attrPattern) = details;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, dbref, LocateFlags.All);
@@ -5122,12 +5107,10 @@ public partial class Commands
 		}
 
 		string? attributePattern = null;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
 
-		if (split.TryPickT0(out var details, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec) is { Object: var objectName, Attribute: var maybeAttributePattern })
 		{
-			var (objectName, maybeAttributePattern) = details;
 			attributePattern = maybeAttributePattern;
 
 			var locate = await LocateService.LocateAndNotifyIfInvalid(
@@ -5897,13 +5880,13 @@ public partial class Commands
 			else
 			{
 				var location = await executor.AsContent.Location();
-				targetObject = location.WithRoomOption();
+				targetObject = location.WithExitOption();
 			}
 		}
 		else
 		{
 			var location = await executor.AsContent.Location();
-			targetObject = location.WithRoomOption();
+			targetObject = location.WithExitOption();
 		}
 
 		int? beginDbref = null;
@@ -5996,15 +5979,12 @@ public partial class Commands
 
 		var objAttrText = objAttrArg.Message!.ToPlainText();
 		var pattern = patternArg.Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.TryPickT0(out var details, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: var maybeAttributePattern })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		var (dbref, maybeAttributePattern) = details;
 		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -6806,7 +6786,7 @@ public partial class Commands
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var location = await executor.Where();
 		var locationObj = location.Object();
-		var locationAnyObject = location.WithRoomOption();
+		var locationAnyObject = location.WithExitOption();
 		var locationOwner = await locationObj.Owner.WithCancellation(CancellationToken.None);
 
 		if (!inventoryFlag && !exitsFlag)

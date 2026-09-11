@@ -21,6 +21,13 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- SharpMUSH.Contracts holds the union case types Option<T> and the command results use (None,
+		     Error<T>). The Library package ships it inside its lib folder; a ProjectReference does not flow
+		     it, so it is named here. Host-owned at runtime for the same reason as Library. -->
+		<ProjectReference Include="..\..\..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
 		<!-- MarkupString (MString used by command/function bodies). Named here rather than left to
 		     flow in through SharpMUSH.Library so the version this plugin compiles against is visible in the
 		     plugin's own file. Host-owned at runtime: ExcludeAssets="runtime" compiles against the assembly

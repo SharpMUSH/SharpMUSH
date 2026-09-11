@@ -3,8 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.JSInterop;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -345,7 +344,7 @@ public class AccountAuthService(
 	/// because "we could not ask" is a third answer a caller has to handle, and a null that a caller
 	/// may silently coalesce to false is exactly how the original defect got in.
 	/// </remarks>
-	public async Task<OneOf<bool, Error>> NeedsSetupAsync()
+	public async Task<ServerResult<bool>> NeedsSetupAsync()
 	{
 		try
 		{
@@ -594,10 +593,10 @@ public class AccountAuthService(
 	/// offered to create one. The failure is in the type so a consumer has to decide what to do
 	/// with it rather than inherit the old lie by accident.
 	/// </remarks>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> GetCharactersAsync()
+	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0([]);
+		if (AccountSessionToken is null) return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0([]);
 
 		try
 		{
@@ -606,7 +605,7 @@ public class AccountAuthService(
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
 			SetCharacters(characters ?? []);
-			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Characters);
+			return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0(Characters);
 		}
 		catch (Exception ex)
 		{

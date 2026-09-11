@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public partial class PackageAuthoringService(
 	[GeneratedRegex("[^a-z0-9_]+")]
 	private static partial Regex SlugCleanupRegex();
 
-	public async Task<OneOf<PackageAuthoringScan, Error<string>>> ScanAsync(
+	public async Task<Result<PackageAuthoringScan>> ScanAsync(
 		IReadOnlyList<string> objids, CancellationToken cancellationToken = default)
 	{
 		var objects = new List<AuthoringObject>();
@@ -74,7 +73,7 @@ public partial class PackageAuthoringService(
 				.ToList());
 	}
 
-	public async Task<OneOf<string, Error<string>>> ExportAsync(
+	public async Task<Result<string>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default)
 	{
 		var selections = new List<(AuthoringObjectSelection Selection, AuthoringObject Object)>();
@@ -241,13 +240,13 @@ public partial class PackageAuthoringService(
 		// Round-trip through the parser: the exporter must never emit an invalid manifest.
 		var document = yaml.ToString();
 		var validation = manifests.ParseManifest(document);
-		return validation.Match<OneOf<string, Error<string>>>(
+		return validation.Match<Result<string>>(
 			_ => document,
 			failure => new Error<string>(
 				$"Export produced an invalid manifest (bug): {string.Join("; ", failure.Errors.Select(e => e.ToString()))}"));
 	}
 
-	private async Task<OneOf<AuthoringObject, Error<string>>> ReadObjectAsync(
+	private async Task<Result<AuthoringObject>> ReadObjectAsync(
 		string objid, CancellationToken cancellationToken)
 	{
 		var dbref = PackageInstallService.ParseObjid(objid);

@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -47,7 +47,7 @@ public class SchedulerQueryOriginTests
 		scheduler.GetSemaphoreTasks(Arg.Any<DBRef>()).Returns(_ => Rows<SemaphoreTaskData>(default!, ExecutionBudget.CurrentToken));
 		scheduler.GetDelayTasks(Arg.Any<DBRef>()).Returns(_ => Rows(1L, ExecutionBudget.CurrentToken));
 		scheduler.GetEnqueueTasks(Arg.Any<DBRef>()).Returns(_ => Rows(1L, ExecutionBudget.CurrentToken));
-		scheduler.GetAllTasks().Returns(_ => Rows<(string, (DateTimeOffset, OneOf<string, DBRef>)[])>(("group", []), ExecutionBudget.CurrentToken));
+		scheduler.GetAllTasks().Returns(_ => Rows<(string, (DateTimeOffset, NameOrDbRef)[])>(("group", []), ExecutionBudget.CurrentToken));
 		Func<Task> consume;
 		using (origin.Enter()) consume = Capture(scheduler, kind);
 		var invocation = consume();

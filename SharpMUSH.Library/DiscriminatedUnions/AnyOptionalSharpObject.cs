@@ -1,37 +1,78 @@
-﻿using SharpMUSH.Library.Extensions;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>, IObjectShaped<AnyOptionalSharpObject>
+[Union]
+public sealed partial class AnyOptionalSharpObject : IUnion, IObjectShaped<AnyOptionalSharpObject>
 {
-	public AnyOptionalSharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpObject(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(None x) => new(x);
+	public AnyOptionalSharpObject(SharpPlayer value) => Value = value;
+	public AnyOptionalSharpObject(SharpRoom value) => Value = value;
+	public AnyOptionalSharpObject(SharpExit value) => Value = value;
+	public AnyOptionalSharpObject(SharpThing value) => Value = value;
+	public AnyOptionalSharpObject(None value) => Value = value;
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-	public bool IsNone => IsT4;
+	public object? Value { get; }
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
-	public AnySharpObject Known => Match(
-		player => new AnySharpObject(player),
-		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit),
-		thing => new AnySharpObject(thing),
-		_ => throw new ArgumentOutOfRangeException()
-		);
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpObject other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsRoom => Value is SharpRoom;
+	public bool IsExit => Value is SharpExit;
+	public bool IsThing => Value is SharpThing;
+	public bool IsNone => Value is None;
+
+	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
+	public SharpRoom AsRoom => Value as SharpRoom ?? throw UnionCase.Mismatch<SharpRoom>(Value);
+	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
+	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
+
+	public AnySharpObject Known => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None => throw new ArgumentOutOfRangeException()
+	};
+
+	public SharpObject? Object() => this switch
+	{
+		SharpPlayer player => player.Object,
+		SharpRoom room => room.Object,
+		SharpExit exit => exit.Object,
+		SharpThing thing => thing.Object,
+		None => null
+	};
+
+	public string? Id() => this switch
+	{
+		SharpPlayer player => player.Id,
+		SharpRoom room => room.Id,
+		SharpExit exit => exit.Id,
+		SharpThing thing => thing.Id,
+		None => null
+	};
+
+	public AnyOptionalSharpObjectOrError WithErrorOption() => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None none => none
+	};
+
+	public AnySharpObject WithoutNone() => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None => throw new ArgumentException("Cannot convert an None to a non-None value.")
+	};
 
 	public static DBRef? RefOf(AnyOptionalSharpObject value) => value.IsNone ? null : value.Known.Object().DBRef;
 

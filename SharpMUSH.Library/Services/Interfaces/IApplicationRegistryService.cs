@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Applications;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -10,7 +9,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// visible to softcode, travels with backups.
 /// </summary>
 /// <remarks>
-/// Single-fetch methods return <c>OneOf&lt;T, NotFound&gt;</c> rather than null, matching
+/// Single-fetch methods return <see cref="Found{T}"/> rather than null, matching
 /// <see cref="IPackageRegistryService"/> conventions.
 /// </remarks>
 public interface IApplicationRegistryService
@@ -19,7 +18,7 @@ public interface IApplicationRegistryService
 	Task UpsertApplicationAsync(RegisteredApplication application);
 
 	/// <summary>Fetches one registered application by slug.</summary>
-	Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug);
+	Task<Found<RegisteredApplication>> GetApplicationAsync(string slug);
 
 	/// <summary>Lists all registered applications, ordered by <see cref="RegisteredApplication.Order"/> then slug.</summary>
 	Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync();

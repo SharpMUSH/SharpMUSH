@@ -213,7 +213,15 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
 - **Line endings**: LF, pinned by `.gitattributes` (`* text=auto eol=lf`)
 - `TreatWarningsAsErrors` is enabled in most projects, but not all — notably `SharpMUSH.Tests.BUnit` and `SharpMUSH.Tests.ScenePlugin` do not set it (the source-generated projects and `templates/` don't either). `SharpMUSH.Tests`, `SharpMUSH.Tests.Infrastructure`, and `SharpMUSH.Tests.Integration` DO set it. Check the specific `.csproj` before assuming either way.
 - Prefer `var` throughout; no `this.` qualifier
-- Discriminated unions via `OneOf<T1, T2>` (never nullable returns from services)
+- Discriminated unions are C# 15 unions, never nullable returns from services. An inline result is a
+  `union` declaration (a struct): reuse `Result<T>` (value or `Error<string>`), `Found<T>` (value or
+  `NotFound`) or `FoundResult<T>` from `SharpMUSH.Contracts` before declaring one, and name a new one
+  for what it means. A union handed around as a nullable reference (`AnySharpObject?`, `Option<T>`)
+  is a `[Union] sealed partial class : IUnion`. The case primitives (`None`, `NotFound`, `Success`,
+  `Error`, `Error<T>`) are record structs in `SharpMUSH.Library.DiscriminatedUnions`. Consume a union
+  with patterns (`x switch { T0 a => …, T1 b => … }`, `x is T t`); the positional
+  `IsT0`/`AsT0`/`Match`/`Switch`/`FromT0` members in the `Compat/` folders are migration scaffolding
+  — add no new callers.
 - Source-generated `Mediator` (not MediatR) for command/query dispatching
 
 ### Formatting is enforced

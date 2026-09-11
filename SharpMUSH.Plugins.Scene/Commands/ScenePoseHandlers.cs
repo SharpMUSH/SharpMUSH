@@ -1,4 +1,3 @@
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -166,7 +165,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Contracts.ScenePose, NotFound> result,
+		Found<Contracts.ScenePose> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)
@@ -188,7 +187,7 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Contracts.ScenePose, NotFound, Error<string>> result,
+		FoundResult<Contracts.ScenePose> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)

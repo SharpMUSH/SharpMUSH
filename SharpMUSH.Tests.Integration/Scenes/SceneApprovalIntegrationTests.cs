@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -78,7 +77,7 @@ public class SceneApprovalIntegrationTests
 			case nameof(INotifyService.Notify) when args.Length >= 2:
 				return args[1] switch
 				{
-					OneOf<MString, string> oneOf => oneOf.Match(m => m.ToPlainText(), s => s),
+					SharpMessage oneOf => oneOf.Match(m => m.ToPlainText(), s => s),
 					string s => s,
 					MString m => m.ToPlainText(),
 					_ => null

@@ -180,7 +180,7 @@ public class PluginManagerTests
 
 	private static CommandDefinition MakeCommand(string name) =>
 		new(new SharpCommandAttribute { Name = name },
-			_ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())));
+			_ => ValueTask.FromResult(new Option<CallState>(new SharpMUSH.Library.DiscriminatedUnions.None())));
 
 	private static FunctionDefinition MakeFunction(string name) =>
 		new(new SharpFunctionAttribute { Name = name, Flags = FunctionFlags.Regular },

@@ -1,7 +1,5 @@
 using Mediator;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using System.Collections.Concurrent;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Configuration;
@@ -96,7 +94,7 @@ public class LocateSeamCharacterisationTests
 	private async Task AssertNotified(string message) =>
 		await _notifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(w => w.IsT1 && w.AsT1 == message),
+			Arg.Is<SharpMessage>(w => w.IsT1 && w.AsT1 == message),
 			Arg.Any<AnySharpObject>(),
 			Arg.Any<INotifyService.NotificationType>());
 

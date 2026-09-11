@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -30,7 +29,7 @@ public interface IManagedPackageInstaller
 	/// written nothing — when the trust gate is not satisfied, the server version
 	/// is too old, a carried file is missing, or a SHA-256 does not match.
 	/// </summary>
-	Task<OneOf<IReadOnlyList<string>, Error<string>>> DeployAsync(
+	Task<Result<IReadOnlyList<string>>> DeployAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		IManagedPackageBinarySource binarySource,
@@ -41,7 +40,7 @@ public interface IManagedPackageInstaller
 	/// and, when the plugin is currently loaded and unloadable, unloads it from the
 	/// live engine. Idempotent — a directory that is already gone is a no-op.
 	/// </summary>
-	Task<OneOf<Success, Error<string>>> RemoveAsync(
+	Task<Result<Success>> RemoveAsync(
 		string packageId,
 		IReadOnlyList<string> deployedFiles,
 		CancellationToken cancellationToken = default);

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Services;
@@ -50,7 +49,7 @@ public sealed class LightningWorldBackupService : IWorldBackupService
 
 	public TimeSpan ScheduledInterval => _writer.ScheduledInterval;
 
-	public ValueTask<OneOf<WorldBackup, Error<string>>> CreateAsync(CancellationToken ct = default)
+	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
 		=> _writer.CreateAsync(ct);
 
 	public IReadOnlyList<WorldBackup> List() => _writer.List();

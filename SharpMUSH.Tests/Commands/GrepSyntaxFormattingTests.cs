@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -38,7 +38,7 @@ public class GrepSyntaxFormattingTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
 
 	private int _notificationOffset;
-	private IEnumerable<OneOf<MString, string>> Messages =>
+	private IEnumerable<SharpMessage> Messages =>
 		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
 
 	private void BeginNotificationWindow() =>

@@ -1,32 +1,38 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class OptionalLazySharpAttributeOrError(OneOf<LazySharpAttribute[], None, Error<string>> input)
-	: OneOfBase<LazySharpAttribute[], None, Error<string>>(input)
+[Union]
+public sealed partial class OptionalLazySharpAttributeOrError : IUnion
 {
-	public static implicit operator OptionalLazySharpAttributeOrError(LazySharpAttribute[] x) => new(x);
-	public static implicit operator OptionalLazySharpAttributeOrError(None x) => new(x);
-	public static implicit operator OptionalLazySharpAttributeOrError(Error<string> x) => new(x);
+	public OptionalLazySharpAttributeOrError(LazySharpAttribute[] value) => Value = value;
+	public OptionalLazySharpAttributeOrError(None value) => Value = value;
+	public OptionalLazySharpAttributeOrError(Error<string> value) => Value = value;
 
-	public bool IsAttribute => IsT0;
-	public bool IsNone => IsT1;
-	public bool IsError => IsT2;
+	public object? Value { get; }
 
-	public LazySharpAttribute[] AsAttribute => AsT0;
-	public Error<string> AsError => AsT2;
+	public override bool Equals(object? obj) => obj is OptionalLazySharpAttributeOrError other && Equals(Value, other.Value);
 
-	public CallState AsCallStateError => IsT1
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsAttribute => Value is LazySharpAttribute[];
+	public bool IsNone => Value is None;
+	public bool IsError => Value is Error<string>;
+
+	public LazySharpAttribute[] AsAttribute => Value as LazySharpAttribute[] ?? throw UnionCase.Mismatch<LazySharpAttribute[]>(Value);
+	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
+
+	public CallState AsCallStateError => IsNone
 		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
-		: new CallState(AsT2.Value);
+		: new CallState(AsError.Value);
 
-	public async ValueTask<CallState> AsCallStateAsync() => await Match<ValueTask<CallState>>(
-			async attributes => await attributes.Last().Value.WithCancellation(CancellationToken.None),
-			none => ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchAttribute),
-			error => ValueTask.FromResult<CallState>(AsT2.Value));
+	public async ValueTask<CallState> AsCallStateAsync() => this switch
+	{
+		LazySharpAttribute[] attributes => await attributes.Last().Value.WithCancellation(CancellationToken.None),
+		None => ErrorMessages.Returns.NoSuchAttribute,
+		Error<string> error => error.Value
+	};
 }

@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Authorization;
@@ -55,12 +54,12 @@ public partial class LightningDatabase
 		=> await Store.WriteAsync(tx =>
 			tx.Put(Tables.App, Keys.Str(application.Slug), Codec.Serialize(ToApplicationRecord(application))));
 
-	public Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug)
+	public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug)
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.App, Keys.Str(slug), out var bytes)
 			? MapApplication(Codec.Deserialize<ApplicationRecord>(bytes))
 			: (RegisteredApplication?)null);
-		return Task.FromResult<OneOf<RegisteredApplication, NotFound>>(result is null ? new NotFound() : result);
+		return Task.FromResult<Found<RegisteredApplication>>(result is null ? new NotFound() : result);
 	}
 
 	public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync()

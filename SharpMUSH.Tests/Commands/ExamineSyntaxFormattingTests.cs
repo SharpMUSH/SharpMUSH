@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -55,7 +55,7 @@ public class ExamineSyntaxFormattingTests
 	}
 
 	private int _notificationOffset;
-	private IEnumerable<OneOf<MString, string>> Messages =>
+	private IEnumerable<SharpMessage> Messages =>
 		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
 
 	private void BeginNotificationWindow() =>

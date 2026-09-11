@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -20,7 +19,7 @@ public sealed class FileSystemPluginUiAssemblyProvider(
 	private readonly string _pluginsRoot = pluginsRoot
 		?? Path.Combine(AppContext.BaseDirectory, "plugins");
 
-	public async Task<OneOf<byte[], NotFound>> GetVerifiedAssemblyAsync(
+	public async Task<Found<byte[]>> GetVerifiedAssemblyAsync(
 		string pluginId, string assembly, CancellationToken cancellationToken = default)
 	{
 		// Reject any path-bearing identifiers up front: both segments must be flat file/dir names. This blocks

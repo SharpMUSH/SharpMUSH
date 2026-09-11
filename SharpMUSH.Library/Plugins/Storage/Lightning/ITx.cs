@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -28,7 +27,7 @@ public interface ITx
 	/// duplicate count rather than by reading the values out; zero for a key that is absent, or the
 	/// error LMDB reported when it could not count.
 	/// </summary>
-	OneOf<long, Error<string>> CountDups(TableDef table, ReadOnlySpan<byte> key);
+	Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key);
 	/// <summary>Deletes every entry under the prefix; returns how many.</summary>
 	int DeletePrefix(TableDef table, byte[] prefix);
 }

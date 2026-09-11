@@ -413,12 +413,12 @@ public class PackagesController(
 			error => BadRequest(error.Value));
 	}
 
-	private async Task<OneOf.OneOf<(PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source), ActionResult>>
+	private async Task<ValueOrResponse<(PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source)>>
 		FetchManifestAsync(string remoteName, string path, string? version, CancellationToken cancellationToken)
 	{
 		var isCatalogue = BundledPackages.IsCatalogueRemote(remoteName);
 
-		OneOf.OneOf<PackageManifestSource, ActionResult> fetched;
+		ValueOrResponse<PackageManifestSource> fetched;
 		if (isCatalogue)
 		{
 			fetched = FetchCatalogueManifest(path);
@@ -473,7 +473,7 @@ public class PackagesController(
 	/// package id (the catalogue has no directories); a trailing slash is tolerated because the
 	/// browse entries of a git remote carry one and the UI passes back whatever it was given.
 	/// </summary>
-	private OneOf.OneOf<PackageManifestSource, ActionResult> FetchCatalogueManifest(string path)
+	private ValueOrResponse<PackageManifestSource> FetchCatalogueManifest(string path)
 	{
 		var packageId = (path ?? "").Trim().Trim('/');
 		if (!BundledPackages.Contains(packageId))

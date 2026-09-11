@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -66,11 +67,11 @@ public partial class Commands
 		var isWildcard = topic.Contains('*') || topic.Contains('?');
 		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.News, topic);
 
-		if (resolution.TryPickT0(out var entry, out var notAnEntry))
+		if (resolution is HelpEntry entry)
 		{
 			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
 		}
-		else if (notAnEntry.TryPickT0(out var candidates, out _))
+		else if (resolution is HelpCandidates candidates)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NewsTopicsMatchingFormat), executor, topic);
 			await NotifyService.Notify(executor, string.Join(", ", candidates.Topics), executor);
@@ -148,11 +149,11 @@ public partial class Commands
 		var isWildcard = topic.Contains('*') || topic.Contains('?');
 		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.Admin, topic);
 
-		if (resolution.TryPickT0(out var entry, out var notAnEntry))
+		if (resolution is HelpEntry entry)
 		{
 			await NotifyService.Notify(executor, RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown), executor);
 		}
-		else if (notAnEntry.TryPickT0(out var candidates, out _))
+		else if (resolution is HelpCandidates candidates)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AhelpTopicsMatchingFormat), executor, topic);
 			await NotifyService.Notify(executor, string.Join(", ", candidates.Topics), executor);

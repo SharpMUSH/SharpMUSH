@@ -382,7 +382,7 @@
             // error, cold server, stale proxy, etc.) — leave _needsSetup as-is so the next
             // navigation retries instead of latching a false negative that would hide the wizard
             // for the rest of the session.
-            if ((await AccountAuth.NeedsSetupAsync()).TryPickT0(out var needsSetup, out _))
+            if (await AccountAuth.NeedsSetupAsync() is bool needsSetup)
                 _needsSetup = needsSetup;
 
             if (_needsSetup == true)

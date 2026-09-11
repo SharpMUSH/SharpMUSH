@@ -202,7 +202,7 @@ public interface IObjectStore
 	/// </summary>
 	/// <param name="dbref">Database Reference Number</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
-	/// <returns>A OneOf over the object being returned</returns>
+	/// <returns>A union over the object being returned</returns>
 	ValueTask<AnyOptionalSharpObject> GetObjectNodeAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
 	/// <summary>

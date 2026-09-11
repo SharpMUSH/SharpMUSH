@@ -4,8 +4,6 @@ using Antlr4.Runtime.Tree;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -1831,7 +1829,7 @@ public class SharpMUSHParserVisitor(
 				return CallState.Empty;
 			}
 
-			if (clearResult.TryPickT0(out _, out var clearError))
+			if (clearResult is not Error<string> clearError)
 			{
 				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared),
 					clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
@@ -1878,7 +1876,7 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		if (setResult.TryPickT0(out _, out var error))
+		if (setResult is not Error<string> error)
 		{
 			await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 				targetObject.Object().Name, matchedEntry.Name);
@@ -1899,13 +1897,14 @@ public class SharpMUSHParserVisitor(
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
 		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		if (splitResult is Error<string> splitError)
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
 
+		var argumentResults = splitResult.AsT0;
 		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
@@ -2286,13 +2285,14 @@ public class SharpMUSHParserVisitor(
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
 		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		if (splitResult is Error<string> splitError)
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
 
+		var argumentResults = splitResult.AsT0;
 		var arguments = argumentResults.Values;
 
 		var dispatchResult = await prs.With(state => state with
@@ -2355,13 +2355,14 @@ public class SharpMUSHParserVisitor(
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
 		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		if (splitResult is Error<string> splitError)
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
 
+		var argumentResults = splitResult.AsT0;
 		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
@@ -2403,7 +2404,7 @@ public class SharpMUSHParserVisitor(
 			? (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true }
 			: result;
 
-	private async ValueTask<OneOf<CommandArguments, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
+	private async ValueTask<Result<CommandArguments>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,

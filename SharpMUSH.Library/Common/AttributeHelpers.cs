@@ -155,12 +155,8 @@ public static class AttributeHelpers
 
 		if (evaluationAttribute is null) return defaultValue;
 
-		var split = HelperFunctions.SplitObjectAndAttr(evaluationAttribute);
-
-		// Is None
-		if (split.IsT1) return defaultValue;
-
-		var (obj, attr) = split.AsT0;
+		if (HelperFunctions.SplitObjectAndAttr(evaluationAttribute) is not { Object: var obj, Attribute: var attr })
+			return defaultValue;
 
 		var directObject = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(obj)));
 

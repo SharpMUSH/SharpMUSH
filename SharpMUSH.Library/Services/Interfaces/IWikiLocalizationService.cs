@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -38,7 +37,7 @@ public interface IWikiLocalizationService
 	/// </summary>
 	/// <param name="includeDrafts">True when the caller may see unpublished translations, i.e. may edit
 	/// the page. Ordinary readers pass false and fall back as though drafts were absent.</param>
-	Task<OneOf<LocalizedWikiPage, NotFound>> GetLocalizedBySlugAsync(
+	Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
 		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts);
 
 	/// <summary>Resolves an already-loaded page. Never fails.</summary>

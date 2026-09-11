@@ -1,8 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -214,7 +212,7 @@ public class ConnectionAnnounceServiceTests
 
 		await communicationService.Received(1).SendToRoomAsync(
 			player, player.AsContainer,
-			Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+			Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 			INotifyService.NotificationType.Announce,
 			null, null);
 
@@ -469,7 +467,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -505,7 +503,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -546,7 +544,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -580,7 +578,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));

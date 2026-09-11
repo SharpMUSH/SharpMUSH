@@ -53,6 +53,13 @@
 			<Private>false</Private>
 			<ExcludeAssets>runtime</ExcludeAssets>
 		</ProjectReference>
+		<!-- SharpMUSH.Contracts carries the union case types (None, NotFound, Error<T>) and the generic
+		     Found<T>/FoundResult<T> results the storage seam returns. Referenced directly for the same reason
+		     as Configuration; host-owned at runtime, and shared into the plugin's load context by the loader. -->
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
 		<!-- The source generator referenced as an analyzer: the plugin's [SharpCommand]/[SharpFunction]
 		     methods produce SharpMUSH.Implementation.Generated.CommandLibrary.Commands /
 		     FunctionLibrary.Functions inside THIS assembly, so PluginBase can reflect them. -->

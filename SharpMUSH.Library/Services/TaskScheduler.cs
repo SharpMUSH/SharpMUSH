@@ -3,7 +3,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Extensions;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using Quartz;
 using Quartz.Impl.Matchers;
 using SharpMUSH.Library.Models;
@@ -1114,10 +1114,10 @@ public partial class TaskScheduler(
 		}
 	}
 
-	public IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> GetAllTasks()
+	public IAsyncEnumerable<(string Group, (DateTimeOffset, NameOrDbRef)[])> GetAllTasks()
 		=> ReadAllTasks(ExecutionBudget.CurrentToken);
 
-	private async IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> ReadAllTasks(
+	private async IAsyncEnumerable<(string Group, (DateTimeOffset, NameOrDbRef)[])> ReadAllTasks(
 		[EnumeratorCancellation] CancellationToken cancellationToken)
 	{
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ExecutionBudget.CurrentToken);
@@ -1147,7 +1147,7 @@ public partial class TaskScheduler(
 	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
 	/// or the raw name when it does not carry one.
 	/// </summary>
-	private static OneOf<string, DBRef> DescribeTrigger(string triggerName)
+	private static NameOrDbRef DescribeTrigger(string triggerName)
 	{
 		var identity = triggerName.AsSpan();
 		if (identity.StartsWith("dbref:"))
@@ -1163,8 +1163,8 @@ public partial class TaskScheduler(
 		identity.Split(parts, '-');
 
 		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
-			? OneOf<string, DBRef>.FromT1(dbref!.Value)
-			: OneOf<string, DBRef>.FromT0(triggerName);
+			? NameOrDbRef.FromT1(dbref!.Value)
+			: NameOrDbRef.FromT0(triggerName);
 	}
 
 	/// <summary>

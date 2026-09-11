@@ -1,6 +1,4 @@
 using SharpMUSH.Library.Markup;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library;
@@ -73,12 +71,10 @@ public partial class Functions
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
-		if (!split.TryPickT0(out var details, out _))
+		if (split is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
-
-		var (dbref, attribute) = details;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
@@ -104,12 +100,10 @@ public partial class Functions
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (split is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
-
-		var (dbref, attribute) = details;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
@@ -142,14 +136,10 @@ public partial class Functions
 			var parsedResult = await objAndAttr.GetParsedResultAsync();
 			hadErrors |= parsedResult.HadErrors;
 			var parsedMessage = parsedResult.Message ?? MarkupText.Empty;
-			var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(parsedMessage.ToPlainText());
-
-			if (dbrefAndAttr is { IsT1: true })
+			if (HelperFunctions.SplitObjectAndAttr(parsedMessage.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 			{
 				return Preserve(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper())));
 			}
-
-			var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 				parser,
@@ -201,14 +191,10 @@ public partial class Functions
 			var parsedResult = await objAndAttr.GetParsedResultAsync();
 			hadErrors |= parsedResult.HadErrors;
 			var parsedMessage = parsedResult.Message ?? MarkupText.Empty;
-			var dbrefAndAttr = HelperFunctions.SplitObjectAndAttr(parsedMessage.ToPlainText());
-
-			if (dbrefAndAttr is { IsT1: true })
+			if (HelperFunctions.SplitObjectAndAttr(parsedMessage.ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 			{
 				return Preserve(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper())));
 			}
-
-			var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 				parser,
@@ -278,12 +264,10 @@ public partial class Functions
 		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
@@ -309,15 +293,10 @@ public partial class Functions
 	public async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
-		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
-
-		if (dbrefAndAttr is { IsT1: true })
+		if (HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
@@ -345,15 +324,10 @@ public partial class Functions
 	[SharpFunction(Name = "get_eval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbrefAndAttr =
-			HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
-
-		if (dbrefAndAttr.IsT1) // IsNone
+		if (HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(GetEval).ToUpper()));
 		}
-
-		var (dbref, attribute) = dbrefAndAttr.AsT0;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -531,24 +505,16 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objAndAttr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
-
-		if (!split.TryPickT0(out var details, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr) is not { Object: var db, Attribute: var attr })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(HasFlag)));
 		}
 
-		var (db, attr) = details;
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, db, LocateFlags.All, async realLocated =>
-			{
-				return split.AsT0 switch
-				{
-					(_, null) => await HasObjectFlag(realLocated),
-					_ => await HasAttributeFlag(realLocated)
-				};
-			});
+			parser, executor, executor, db, LocateFlags.All,
+			async realLocated => attr is null
+				? await HasObjectFlag(realLocated)
+				: await HasAttributeFlag(realLocated, attr));
 
 		async ValueTask<CallState> HasObjectFlag(AnySharpObject realLocated)
 		{
@@ -565,12 +531,12 @@ public partial class Functions
 				(f.Aliases ?? []).Any(a => string.Equals(a, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase)));
 		}
 
-		async ValueTask<CallState> HasAttributeFlag(AnySharpObject realLocated)
+		async ValueTask<CallState> HasAttributeFlag(AnySharpObject realLocated, string attribute)
 		{
 			var maybeAttr = await AttributeService.GetAttributeAsync(
 				executor,
 				realLocated,
-				attr!,
+				attribute,
 				IAttributeService.AttributeMode.Read,
 				false);
 
@@ -589,12 +555,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -620,12 +584,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -658,12 +620,10 @@ public partial class Functions
 		var dbrefAndAttr = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
@@ -692,12 +652,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -723,12 +681,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -829,7 +785,7 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
-		if (dbrefAndMaybeArg is { IsT1: true, AsT1: false })
+		if (dbrefAndMaybeArg is not { Object: var obj, Attribute: var attribute })
 		{
 			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
@@ -838,17 +794,15 @@ public partial class Functions
 			parser,
 			executor,
 			executor,
-			dbrefAndMaybeArg.AsT0.db,
+			obj,
 			LocateFlags.All,
 			async actualObject =>
 			{
-				if (dbrefAndMaybeArg.AsT0.Attribute is null)
+				if (attribute is null)
 				{
 					var objOwner = await actualObject.Object().Owner.WithCancellation(CancellationToken.None);
 					return new CallState($"#{objOwner.Object.DBRef.Number}");
 				}
-
-				var attribute = dbrefAndMaybeArg.AsT0.Attribute!;
 
 				var attributeObject = await AttributeService.GetAttributeAsync(executor, actualObject, attribute,
 					IAttributeService.AttributeMode.Read, false);
@@ -1087,12 +1041,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "reglattr".ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -1123,12 +1075,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -1159,12 +1109,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -1191,12 +1139,10 @@ public partial class Functions
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -1225,7 +1171,7 @@ public partial class Functions
 		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
@@ -1239,8 +1185,6 @@ public partial class Functions
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -1275,7 +1219,7 @@ public partial class Functions
 		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
@@ -1289,8 +1233,6 @@ public partial class Functions
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -1363,9 +1305,8 @@ public partial class Functions
 		var objectAndAttribute = selector.Message ?? MarkupText.Empty;
 		var split = HelperFunctions.SplitObjectAndAttr(objectAndAttribute.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (split.IsT1)
+		if (split is not { Object: var objectName, Attribute: var attributeName })
 			return Preserve(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpperInvariant())));
-		var (objectName, attributeName) = split.AsT0;
 		return Preserve(await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
 			objectName, LocateFlags.All, async actualObject =>
 			{
@@ -1580,7 +1521,7 @@ public partial class Functions
 			_ => new CallState(await ValidateService.Valid(validationType, str, new None()) ? "1" : "0")
 		};
 
-		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetChannel(string t)
+		async ValueTask<ValidationTarget> GetChannel(string t)
 		{
 			var channel = await Mediator.Send(new GetChannelQuery(t));
 			return channel is null
@@ -1588,7 +1529,7 @@ public partial class Functions
 				: channel;
 		}
 
-		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetAttributeEntry(string name)
+		async ValueTask<ValidationTarget> GetAttributeEntry(string name)
 		{
 			var entry = await Mediator.Send(new GetAttributeEntryQuery(name));
 			return entry is null
@@ -1611,12 +1552,10 @@ public partial class Functions
 		var victAttr = HelperFunctions.SplitDbRefAndOptionalAttr(victimAttribute);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (victAttr.IsT1)
+		if (victAttr is not { Object: var victim, Attribute: var attr })
 		{
 			return ErrorMessages.Returns.BadArgumentFormat;
 		}
-
-		var (victim, attr) = victAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, obj,
 			LocateFlags.All,
@@ -1710,7 +1649,7 @@ public partial class Functions
 		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
@@ -1724,8 +1663,6 @@ public partial class Functions
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,
@@ -1759,7 +1696,7 @@ public partial class Functions
 		var count = parser.CurrentState.Arguments["2"].Message!.ToPlainText()!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (dbrefAndAttr is { IsT1: true }) // IsNone
+		if (dbrefAndAttr is not { Object: var obj, Attribute: var attributePattern })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper());
 		}
@@ -1773,8 +1710,6 @@ public partial class Functions
 		{
 			return ErrorMessages.Returns.ArgRange;
 		}
-
-		var (obj, attributePattern) = dbrefAndAttr.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, obj, LocateFlags.All,

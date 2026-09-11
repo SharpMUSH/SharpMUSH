@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -10,9 +9,9 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// database implementations follow in a later phase.
 /// </summary>
 /// <remarks>
-/// All methods that might not find a resource return <c>OneOf&lt;T, NotFound&gt;</c> rather
+/// All methods that might not find a resource return <see cref="Found{T}"/> rather
 /// than <c>null</c>.  Methods that can fail due to a conflict (e.g. duplicate slug) return
-/// <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c> where <c>Error.Value</c> is a human-readable message.
+/// <see cref="Result{T}"/> where <c>Error.Value</c> is a human-readable message.
 /// </remarks>
 public interface IWikiService
 {
@@ -24,13 +23,13 @@ public interface IWikiService
 	/// <c>"Mannaz Byron"</c> and reach the page stored as <c>mannaz_byron</c>.
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);
+	Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main);
 
 	/// <summary>
 	/// Retrieves a wiki page by its storage ID.
 	/// Returns <c>NotFound</c> if no matching page exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id);
+	Task<Found<WikiPage>> GetByIdAsync(string id);
 
 	/// <summary>
 	/// Returns the most recently updated pages, ordered by <c>UpdatedAt</c> descending.
@@ -84,7 +83,7 @@ public interface IWikiService
 	/// Returns <c>Error&lt;string&gt;</c> when a page with the same (namespace, category, slug) already
 	/// exists, or when <paramref name="sourceLocale"/> is non-blank and not a recognised locale tag.
 	/// </summary>
-	Task<OneOf<WikiPage, Error<string>>> CreateAsync(
+	Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
@@ -97,7 +96,7 @@ public interface IWikiService
 	/// saves a revision snapshot, and re-renders HTML / plain text.
 	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> UpdateAsync(
+	Task<Found<WikiPage>> UpdateAsync(
 		string id,
 		string markdown,
 		string editorDbref,
@@ -107,14 +106,14 @@ public interface IWikiService
 	/// Deletes a wiki page, all its revisions, all its translations and those translations' revisions.
 	/// Returns <c>None</c> if a page was found and deleted; <c>NotFound</c> if not found.
 	/// </summary>
-	Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref);
+	Task<Found<None>> DeleteAsync(string id, string editorDbref);
 
 	/// <summary>
 	/// Sets the protection flag on a page.
 	/// Protected pages can only be edited by admin-level users.
 	/// Returns <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected);
+	Task<Found<None>> SetProtectionAsync(string id, bool isProtected);
 
 	/// <summary>
 	/// Sets the metadata fields (category, tags, published flag) on a page.
@@ -122,7 +121,7 @@ public interface IWikiService
 	/// Category and tags are normalised to lower-case; tags are de-duplicated.
 	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
-	Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+	Task<Found<WikiPage>> SetMetadataAsync(
 		string id,
 		string? category,
 		IReadOnlyList<string> tags,
@@ -145,7 +144,7 @@ public interface IWikiService
 	/// and its callers are the two rollback paths, which write the returned Markdown straight back onto the
 	/// source page. That would restore French prose over an English page.
 	/// </remarks>
-	Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber);
+	Task<Found<WikiRevision>> GetRevisionAsync(string pageId, int revisionNumber);
 
 	/// <summary>
 	/// Lists every translation of a page as a bodyless summary, including unpublished drafts.
@@ -171,7 +170,7 @@ public interface IWikiService
 	/// matched case-insensitively after normalisation.
 	/// Returns <c>NotFound</c> when no translation exists for that locale.
 	/// </summary>
-	Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale);
+	Task<Found<WikiTranslation>> GetTranslationAsync(string pageId, string locale);
 
 	/// <summary>
 	/// Creates or updates a translation. Mirrors <see cref="UpdateAsync"/>: bumps the per-locale
@@ -199,7 +198,7 @@ public interface IWikiService
 	/// <c>(pageId, locale)</c>, where no content can be lost.
 	/// </para>
 	/// </param>
-	Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
+	Task<TranslationWriteResult> UpsertTranslationAsync(
 		string pageId,
 		string locale,
 		string title,
@@ -214,7 +213,7 @@ public interface IWikiService
 	/// alone. Deleting the last translation is allowed.
 	/// Returns <c>None</c> on success; <c>NotFound</c> when that locale has no translation.
 	/// </summary>
-	Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref);
+	Task<Found<None>> DeleteTranslationAsync(string pageId, string locale, string editorDbref);
 
 	/// <summary>
 	/// Returns the revision history for one <c>(pageId, locale)</c> stream, newest first.
@@ -244,5 +243,5 @@ public interface IWikiService
 	/// stream, which is why <see cref="GetRevisionAsync"/> keeps its narrower contract.
 	/// </para>
 	/// </remarks>
-	Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber);
+	Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber);
 }

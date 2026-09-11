@@ -3,7 +3,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -47,7 +47,7 @@ public class MarkupSurvivesNotificationTests
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
 
 	/// <summary>Runs a command as an isolated player and returns only what it caused them to be told.</summary>
-	private async Task<IReadOnlyList<OneOf<MString, string>>> NotifiedByAsync(string command)
+	private async Task<IReadOnlyList<SharpMessage>> NotifiedByAsync(string command)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MarkupNotification");
@@ -72,11 +72,11 @@ public class MarkupSurvivesNotificationTests
 		}
 	}
 
-	private static bool CarriesEscapes(OneOf<MString, string> message) =>
+	private static bool CarriesEscapes(SharpMessage message) =>
 		message.Match(markup => markup.ToPlainText().Contains(Escape), text => text.Contains(Escape));
 
 	/// <summary>True when the message kept its markup rather than being flattened to a string.</summary>
-	private static bool IsMarkup(OneOf<MString, string> message) => message.IsT0;
+	private static bool IsMarkup(SharpMessage message) => message.IsT0;
 
 	[Test]
 	public async ValueTask Think_SendsMarkup_NotAnsiEscapes()

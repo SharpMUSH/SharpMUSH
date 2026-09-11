@@ -242,7 +242,7 @@ else
 
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
         {
-            if ((await AccountAuth.GetCharactersAsync()).TryPickT0(out var characters, out _))
+            if (await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> characters)
                 _needsCharacter = characters.Count == 0;
             else
                 _rosterFailed = true;

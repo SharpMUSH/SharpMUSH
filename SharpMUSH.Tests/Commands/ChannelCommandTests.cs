@@ -9,7 +9,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -75,7 +74,7 @@ public class ChannelCommandTests
 		// message as NotificationType.Emit regardless of the message's leading character.
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf.OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessageEquals(msg, "<TestCommandChannel> God says, \"ChatCommand: Test message\"")),
 				Arg.Any<AnySharpObject>(), INotifyService.NotificationType.Say);
 	}
@@ -91,7 +90,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Name  ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -103,7 +102,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
@@ -116,7 +115,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
@@ -142,7 +141,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, "CHAT: Renamed channel.")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
@@ -186,7 +185,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Name:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -213,7 +212,7 @@ public class ChannelCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Alias '")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

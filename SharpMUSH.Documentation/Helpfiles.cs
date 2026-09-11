@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -80,7 +79,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		}
 	}
 
-	public static OneOf<Dictionary<string, string>, Error<string>> Index(FileInfo file)
+	public static Result<Dictionary<string, string>> Index(FileInfo file)
 	{
 		if (!file.Exists)
 		{
@@ -111,7 +110,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
 
-	public static OneOf<Dictionary<string, string>, Error<string>> IndexMarkdown(FileInfo file)
+	public static Result<Dictionary<string, string>> IndexMarkdown(FileInfo file)
 	{
 		if (!file.Exists)
 		{
@@ -175,7 +174,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// that all share the same byte range (from the first alias header to the
 	/// end of the content block).
 	/// </summary>
-	public static OneOf<Dictionary<string, (long Start, long End)>, Error<string>> IndexMarkdownPositions(FileInfo file)
+	public static Result<Dictionary<string, (long Start, long End)>> IndexMarkdownPositions(FileInfo file)
 	{
 		if (!file.Exists)
 		{

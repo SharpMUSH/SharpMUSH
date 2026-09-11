@@ -1,6 +1,5 @@
 ﻿using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -226,7 +225,7 @@ public partial class Commands
 		var nameItem = nameItems.First();
 
 		var foundDB = await nameItem.Match(
-			async dbref => (await Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
+			async dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is SharpPlayer player
 				? player
 				: null,
 			async name => await (Mediator.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());

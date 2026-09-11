@@ -51,13 +51,12 @@ public partial class Functions
 		{
 			foreach (var objAttr in tokens.Select(HelperFunctions.SplitOptionalObjectAndAttr))
 			{
-				if (objAttr is { IsT1: true, AsT1: false })
+				if (objAttr is not { Object: var dbref, Attribute: var attrName })
 				{
 					return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 				}
 
-				var (dbref, attrName) = objAttr.AsT0;
-				dbref ??= executor.ToString();
+				dbref ??= executor.Object().DBRef.ToString();
 
 				var locate = await LocateService.LocateAndNotifyIfInvalid(
 					parser, executor, executor, dbref, LocateFlags.All);

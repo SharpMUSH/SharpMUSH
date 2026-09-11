@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Library.API;
 using System.Net.Http.Json;
@@ -20,7 +19,7 @@ namespace SharpMUSH.Client.Services;
 /// to be decoded on the way back.
 /// </para>
 /// <para>
-/// Every method returns <see cref="OneOf{T0,T1}"/> with <see cref="ApiFailure"/> on the failed arm,
+/// Every method returns <see cref="ApiResult{T}"/> with <see cref="ApiFailure"/> on the failed arm,
 /// matching <see cref="CharacterDirectoryService"/>. Nothing here throws for an unreachable server
 /// or a refused request: these are called straight from Blazor event handlers, where an escaping
 /// exception bypasses the page's error banner entirely.
@@ -44,10 +43,12 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	private static string AttrPath(int dbref, string attribute)
 		=> $"api/objects/{dbref}/attributes/{Uri.EscapeDataString(attribute)}";
 
-	public async Task<OneOf<MushObject, ApiFailure>> GetObjectAsync(int dbref)
+	public async Task<ApiResult<MushObject>> GetObjectAsync(int dbref)
 	{
 		var summary = await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}");
-		if (summary.TryPickT1(out var failure, out var dto)) return failure;
+		if (summary is ApiFailure failure) return failure;
+
+		var dto = summary.AsT0;
 
 		var attributes = await GetAttributesAsync(dbref);
 
@@ -64,12 +65,12 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		};
 	}
 
-	public async Task<OneOf<List<MushAttribute>, ApiFailure>> GetAttributesAsync(int dbref)
+	public async Task<ApiResult<List<MushAttribute>>> GetAttributesAsync(int dbref)
 	{
 		var result = await SendAsync<List<AttributeDto>>(
 			HttpMethod.Get, $"api/objects/{dbref}/attributes?depth={ListDepth}");
 
-		return result.Match<OneOf<List<MushAttribute>, ApiFailure>>(
+		return result.Match<ApiResult<List<MushAttribute>>>(
 			attributes => attributes.Select(a => new MushAttribute
 			{
 				Name = a.Name,
@@ -79,22 +80,22 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 			failure => failure);
 	}
 
-	public async Task<OneOf<string, ApiFailure>> GetAttributeAsync(int dbref, string attribute)
+	public async Task<ApiResult<string>> GetAttributeAsync(int dbref, string attribute)
 	{
 		var result = await SendAsync<AttributeDto>(HttpMethod.Get, AttrPath(dbref, attribute));
 
-		return result.Match<OneOf<string, ApiFailure>>(dto => dto.Value, failure => failure);
+		return result.Match<ApiResult<string>>(dto => dto.Value, failure => failure);
 	}
 
 	/// <summary>Stores <paramref name="value"/> verbatim — newlines included.</summary>
-	public async Task<OneOf<Success, ApiFailure>> SetAttributeAsync(int dbref, string attribute, string value)
+	public async Task<ApiResult<Success>> SetAttributeAsync(int dbref, string attribute, string value)
 		=> await SendAsync(HttpMethod.Put, AttrPath(dbref, attribute), new SetAttributeRequest(value));
 
-	public async Task<OneOf<Success, ApiFailure>> DeleteAttributeAsync(int dbref, string attribute)
+	public async Task<ApiResult<Success>> DeleteAttributeAsync(int dbref, string attribute)
 		=> await SendAsync(HttpMethod.Delete, AttrPath(dbref, attribute));
 
 	/// <summary>Creates an object, returning its dbref number.</summary>
-	public async Task<OneOf<int, ApiFailure>> CreateObjectAsync(string name, MushObjectType type)
+	public async Task<ApiResult<int>> CreateObjectAsync(string name, MushObjectType type)
 	{
 		var typeName = type switch
 		{
@@ -106,7 +107,9 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		var result = await SendAsync<CreatedObjectDto>(
 			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName));
 
-		if (result.TryPickT1(out var failure, out var created)) return failure;
+		if (result is ApiFailure failure) return failure;
+
+		var created = result.AsT0;
 
 		// '#N' or '#N:creationTime' — the browser addresses objects by number.
 		var number = created.Dbref.TrimStart('#').Split(':')[0];
@@ -117,7 +120,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	}
 
 	/// <summary>Sends a request whose success carries no body.</summary>
-	private async Task<OneOf<Success, ApiFailure>> SendAsync(HttpMethod method, string url, object? body = null)
+	private async Task<ApiResult<Success>> SendAsync(HttpMethod method, string url, object? body = null)
 	{
 		HttpResponseMessage response;
 		try
@@ -138,7 +141,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	}
 
 	/// <summary>Sends a request and deserializes its body.</summary>
-	private async Task<OneOf<T, ApiFailure>> SendAsync<T>(HttpMethod method, string url, object? body = null)
+	private async Task<ApiResult<T>> SendAsync<T>(HttpMethod method, string url, object? body = null)
 	{
 		HttpResponseMessage response;
 		try
@@ -165,7 +168,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 
 				return value is null
 					? new ApiFailure(ApiFailureKind.Unexpected, "The server returned an empty body.", response.StatusCode)
-					: OneOf<T, ApiFailure>.FromT0(value);
+					: ApiResult<T>.FromT0(value);
 			}
 			catch (Exception ex) when (IsBodyFailure(ex))
 			{

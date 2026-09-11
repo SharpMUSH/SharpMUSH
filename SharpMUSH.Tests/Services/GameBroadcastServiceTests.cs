@@ -7,7 +7,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
 using System.Text;
-using OneOf;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -45,11 +44,11 @@ public class GameBroadcastServiceTests
 				AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 				LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
 				Flags = new(() => AsyncEnumerable.Empty<SharpObjectFlag>()),
-				Parent = new(async ct => { await ValueTask.CompletedTask; return new OneOf.Types.None(); }),
-				Zone = new(async ct => { await ValueTask.CompletedTask; return new OneOf.Types.None(); }),
+				Parent = new(async ct => { await ValueTask.CompletedTask; return new SharpMUSH.Library.DiscriminatedUnions.None(); }),
+				Zone = new(async ct => { await ValueTask.CompletedTask; return new SharpMUSH.Library.DiscriminatedUnions.None(); }),
 				Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 			},
-			Location = new(async ct => { await ValueTask.CompletedTask; return new OneOf.Types.None(); })
+			Location = new(async ct => { await ValueTask.CompletedTask; return new SharpMUSH.Library.DiscriminatedUnions.None(); })
 		};
 
 		SharpPlayer? playerRef = null;
@@ -72,8 +71,8 @@ public class GameBroadcastServiceTests
 			AllAttributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),
 			LazyAllAttributes = new(() => AsyncEnumerable.Empty<LazySharpAttribute>()),
 			Flags = new(() => flagSet.ToAsyncEnumerable()),
-			Parent = new(async ct => { await ValueTask.CompletedTask; return new OneOf.Types.None(); }),
-			Zone = new(async ct => { await ValueTask.CompletedTask; return new OneOf.Types.None(); }),
+			Parent = new(async ct => { await ValueTask.CompletedTask; return new SharpMUSH.Library.DiscriminatedUnions.None(); }),
+			Zone = new(async ct => { await ValueTask.CompletedTask; return new SharpMUSH.Library.DiscriminatedUnions.None(); }),
 			Children = new(() => AsyncEnumerable.Empty<SharpObject>())
 		};
 
@@ -157,8 +156,8 @@ public class GameBroadcastServiceTests
 		await service.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", "GAME: Someone has connected.");
 
 		// Only the royalty player should receive the message (has ROYALTY from anyOfFlags and HEAR_CONNECT)
-		await notifyService.Received(1).Notify(1, Arg.Any<OneOf<MString, string>>());
-		await notifyService.DidNotReceive().Notify(2, Arg.Any<OneOf<MString, string>>());
+		await notifyService.Received(1).Notify(1, Arg.Any<SharpMessage>());
+		await notifyService.DidNotReceive().Notify(2, Arg.Any<SharpMessage>());
 	}
 
 	[Test]
@@ -199,7 +198,7 @@ public class GameBroadcastServiceTests
 
 		await service.BroadcastToFlagAsync("WIZARD", "GAME: A wizard has logged in.");
 
-		await notifyService.Received(1).Notify(1, Arg.Any<OneOf<MString, string>>());
+		await notifyService.Received(1).Notify(1, Arg.Any<SharpMessage>());
 	}
 
 	[Test]
@@ -241,7 +240,7 @@ public class GameBroadcastServiceTests
 		// Passing null for anyOfFlags should not require any flag from the first group
 		await service.BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Connection event.");
 
-		await notifyService.Received(1).Notify(1, Arg.Any<OneOf<MString, string>>());
+		await notifyService.Received(1).Notify(1, Arg.Any<SharpMessage>());
 	}
 
 	[Test]
@@ -284,6 +283,6 @@ public class GameBroadcastServiceTests
 		await service.BroadcastToFlagAsync(["ROYALTY"], "HEAR_CONNECT", "GAME: Connection event.");
 
 		// Player has ROYALTY but not HEAR_CONNECT, so should not receive the message
-		await notifyService.DidNotReceive().Notify(1, Arg.Any<OneOf<MString, string>>());
+		await notifyService.DidNotReceive().Notify(1, Arg.Any<SharpMessage>());
 	}
 }

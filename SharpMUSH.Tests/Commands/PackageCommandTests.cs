@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -34,7 +33,7 @@ public class PackageCommandTests
 	private async Task ExpectNotify(DBRef player, string contains)
 		=> await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
@@ -45,7 +44,7 @@ public class PackageCommandTests
 	private async Task ExpectNotifyAll(DBRef player, params string[] contains)
 		=> await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				contains.All(c => MessageContains(msg, c))), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
 
@@ -135,7 +134,7 @@ public class PackageCommandTests
 		// VEILED one entirely — matching what @decompile would show.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(god), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(god), Arg.Is<SharpMessage>(msg =>
 				MessageContains(msg, "----- BEGIN package.yaml -----") &&
 				MessageContains(msg, "PUBLICATTR") &&
 				!MessageContains(msg, "SECRETATTR") &&
@@ -143,7 +142,7 @@ public class PackageCommandTests
 				TestHelpers.MatchingObject(god), INotifyService.NotificationType.Announce);
 	}
 
-	private static bool MessageContains(OneOf<MString, string> msg, string contains)
+	private static bool MessageContains(SharpMessage msg, string contains)
 		=> (msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
 			 (msg.IsT1 && msg.AsT1.Contains(contains));
 

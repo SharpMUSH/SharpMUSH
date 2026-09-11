@@ -1,6 +1,5 @@
 using System.Globalization;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;
@@ -124,7 +123,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 			""", parameters);
 	}
 
-	public async Task<OneOf<InstalledPackageRecord, NotFound>> GetInstalledPackageAsync(string packageId)
+	public async Task<Found<InstalledPackageRecord>> GetInstalledPackageAsync(string packageId)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {SysPackageFields} FROM sys_package WHERE packageId = $pkg",
@@ -334,7 +333,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 		return results.Select(MapRemote).ToList();
 	}
 
-	public async Task<OneOf<PackageRemoteRecord, NotFound>> GetPackageRemoteAsync(string name)
+	public async Task<Found<PackageRemoteRecord>> GetPackageRemoteAsync(string name)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {SysRemoteFields} FROM sys_remote WHERE name = $name",
@@ -385,7 +384,7 @@ public partial class SurrealDatabase : IPackageRegistryService
 		return results.Select(MapRevision).ToList();
 	}
 
-	public async Task<OneOf<PackageRevisionRecord, NotFound>> GetPackageRevisionAsync(string packageId, int revision)
+	public async Task<Found<PackageRevisionRecord>> GetPackageRevisionAsync(string packageId, int revision)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {SysPackageRevisionFields} FROM sys_package_revision WHERE packageId = $pkg AND revision = $rev",

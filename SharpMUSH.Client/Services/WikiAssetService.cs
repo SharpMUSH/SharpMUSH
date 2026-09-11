@@ -1,4 +1,4 @@
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
@@ -31,7 +31,7 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 	/// Uploads an asset via multipart form data.
 	/// Returns the uploaded asset info or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<UploadedAssetInfo, string>> UploadAsync(
+	public async ValueTask<MessageResult<UploadedAssetInfo>> UploadAsync(
 		Stream content,
 		string fileName,
 		string contentType)
@@ -51,8 +51,8 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 			{
 				var dto = await response.Content.ReadFromJsonAsync<UploadedAssetInfo>();
 				return dto is null
-					? OneOf<UploadedAssetInfo, string>.FromT1("Server returned an empty response.")
-					: OneOf<UploadedAssetInfo, string>.FromT0(dto);
+					? MessageResult<UploadedAssetInfo>.FromT1("Server returned an empty response.")
+					: MessageResult<UploadedAssetInfo>.FromT0(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();

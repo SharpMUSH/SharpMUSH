@@ -445,7 +445,7 @@
         finally { _busy = false; }
     }
 
-    private void ReportBatchResult(OneOf.OneOf<WikiService.WikiBatchResult, string> result) =>
+    private void ReportBatchResult(MessageResult<WikiService.WikiBatchResult> result) =>
         result.Switch(
             ok =>
             {

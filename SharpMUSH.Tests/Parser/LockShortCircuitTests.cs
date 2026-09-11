@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -208,7 +207,7 @@ public class LockShortCircuitTests
 			get { lock (_evaluated) { return _evaluated.ToArray(); } }
 		}
 
-		public async ValueTask<OneOf<string, LockEvaluationFailure>> EvaluateAttributeAsync(
+		public async ValueTask<LockEvaluation> EvaluateAttributeAsync(
 			AnySharpObject gated, AnySharpObject unlocker, string attributeName)
 		{
 			lock (_evaluated)

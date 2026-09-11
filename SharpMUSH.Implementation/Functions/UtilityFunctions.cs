@@ -8,7 +8,6 @@ using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -2074,14 +2073,10 @@ public partial class Functions
 		// wipe(<object>[/<attribute pattern>]) - the same argument @wipe takes, because
 		// PennMUSH's fun_wipe hands it straight to do_wipe (src/set.c). The pattern half is not
 		// optional decoration: without it every call wiped the whole object.
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
-
-		if (!split.TryPickT0(out var details, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttr) is not { Object: var objectName, Attribute: var maybeAttribute })
 		{
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
-
-		var (objectName, maybeAttribute) = details;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,

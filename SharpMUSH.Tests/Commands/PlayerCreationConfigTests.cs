@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
@@ -49,7 +49,7 @@ public class PlayerCreationConfigTests
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
-			Arg.Is<OneOf<MString, string>>(s =>
+			Arg.Is<SharpMessage>(s =>
 				TestHelpers.MessagePlainTextEquals(s, "Player creation is disabled on this server.")),
 			null, INotifyService.NotificationType.Announce);
 	}
@@ -73,7 +73,7 @@ public class PlayerCreationConfigTests
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
 				null, INotifyService.NotificationType.Announce);
 		}
@@ -108,7 +108,7 @@ public class PlayerCreationConfigTests
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
-			Arg.Is<OneOf<MString, string>>(s =>
+			Arg.Is<SharpMessage>(s =>
 				TestHelpers.MessagePlainTextEquals(s, "Player creation is disabled on this server.")),
 			null, INotifyService.NotificationType.Announce);
 	}
@@ -141,7 +141,7 @@ public class PlayerCreationConfigTests
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
 				null, INotifyService.NotificationType.Announce);
 		}
