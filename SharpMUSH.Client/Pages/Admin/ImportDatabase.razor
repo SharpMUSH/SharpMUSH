@@ -253,7 +253,7 @@
 		}
 		catch (Exception ex)
 		{
-			Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile?.Name);
+			Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
 			_isUploading = false;
 		}
 	}

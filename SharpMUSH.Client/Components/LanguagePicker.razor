@@ -1,6 +1,7 @@
 @using SharpMUSH.Client.Resources
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
+@inject ILogger<LanguagePicker> Logger
 
 <MudMenu Icon="@Icons.Material.Filled.Language" Color="Color.Inherit" Dense="true" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
     @foreach (var lang in _languages)
@@ -36,8 +37,15 @@
     {
         if (locale == _currentLocale) return;
 
+        // The culture is read from storage at startup, so a locale that could not be stored would be
+        // lost to the reload below; stay on the current one instead.
+        if (!await JSRuntime.SetItemAsync(BrowserStore.Local, "locale", locale))
+        {
+            Logger.LogWarning("Could not store the locale {Locale}; keeping {Current}", locale, _currentLocale);
+            return;
+        }
+
         _currentLocale = locale;
-        await JSRuntime.SetItemAsync(BrowserStore.Local, "locale", locale);
 
         // Reload the app to apply new culture (Blazor WASM requires restart for culture change)
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);

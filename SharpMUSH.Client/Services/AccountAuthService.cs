@@ -28,6 +28,9 @@ public class AccountAuthService(
 	private const string PermissionsKey = "sharpmush.account.permissions";
 	private const string LoggedOutKey = "sharpmush.account.loggedOut";
 
+	private const string SessionNotSavedMessage =
+		"This browser tab could not save your session. Allow this site to store data, then sign in again.";
+
 	/// <summary><paramref name="IsActing"/> is the server's answer to "who is this tab?" — the acting
 	/// character is bound to the session token, which is opaque here, so the roster carries it.</summary>
 	public record CharacterSummary(int DbrefNumber, long CreationTime, string Name, string Flags, bool IsActing = false);
@@ -292,7 +295,8 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
+			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
+				return (false, SessionNotSavedMessage, []);
 			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
@@ -318,7 +322,8 @@ public class AccountAuthService(
 			var result = await response.Content.ReadFromJsonAsync<AccountLoginResponse>();
 			if (result is null) return (false, "Unexpected server response.", []);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
+			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
+				return (false, SessionNotSavedMessage, []);
 			SetCharacters(result.Characters);
 			return (true, null, result.Characters);
 		}
@@ -389,7 +394,9 @@ public class AccountAuthService(
 			if (string.IsNullOrEmpty(result.AccountSessionToken))
 				return (true, null, false);
 
-			await PersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions);
+			// Same for a session this tab cannot store: the claim stands, only the automatic sign-in is lost.
+			if (!await TryPersistSessionAsync(result.AccountSessionToken, result.Username, result.MustChangePassword, result.Role, result.Permissions))
+				return (true, null, false);
 			SetCharacters(result.Characters);
 			return (true, null, true);
 		}
@@ -426,7 +433,7 @@ public class AccountAuthService(
 	private async Task<DebugOttResponse?> GetDebugOttCoreAsync()
 	{
 		// Force a genuine suspension before touching any state, for exactly the reentrancy reason
-		// documented on InitCoreAsync above: PersistSessionAsync below can synchronously fire
+		// documented on InitCoreAsync above: TryPersistSessionAsync below can synchronously fire
 		// AuthStateChanged, which DebugAuthStateProvider handles by calling straight back into
 		// GetDebugOttAsync(). If every await in this method happened to complete synchronously (as
 		// a test fake IJSRuntime/HttpMessageHandler can), the whole method body — including that
@@ -446,7 +453,7 @@ public class AccountAuthService(
 
 		// Chokepoint for the explicit-logout latch: DebugAuthStateProvider.GetAuthenticationStateAsync
 		// is called on every auth-state query (every F5 / CascadingAuthenticationState evaluation), so
-		// without this guard HERE, that routine re-auth would call through to PersistSessionAsync below
+		// without this guard HERE, that routine re-auth would call through to TryPersistSessionAsync below
 		// and silently clear ExplicitlyLoggedOut, undoing an explicit logout on the very next reload.
 		if (ExplicitlyLoggedOut)
 		{
@@ -474,8 +481,12 @@ public class AccountAuthService(
 				return null;
 			}
 
-			if (result.AccountSessionToken is not null && result.AccountUsername is not null)
-				await PersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null);
+			if (result.AccountSessionToken is not null && result.AccountUsername is not null
+				&& !await TryPersistSessionAsync(result.AccountSessionToken, result.AccountUsername, result.AccountMustChangePassword, role: null, permissions: null))
+			{
+				_debugOttTask = null;
+				return null;
+			}
 
 			// Only a successful response is cached for the app lifetime; _debugOttTask stays set.
 			return result;
@@ -494,7 +505,7 @@ public class AccountAuthService(
 	/// </summary>
 	public async Task<string?> GetOttForCharacterAsync(CharacterSummary character)
 	{
-		// AccountSessionToken is only populated by InitAsync/PersistSessionAsync; hydrate first so
+		// AccountSessionToken is only populated by InitAsync/TryPersistSessionAsync; hydrate first so
 		// a pre-init caller doesn't misread a real stored session as "not logged in".
 		await InitAsync();
 		if (AccountSessionToken is null) return null;
@@ -529,7 +540,7 @@ public class AccountAuthService(
 	/// </summary>
 	public async Task<string?> SwitchCharacterAsync(CharacterSummary character)
 	{
-		// AccountSessionToken is only populated by InitAsync/PersistSessionAsync; hydrate first so
+		// AccountSessionToken is only populated by InitAsync/TryPersistSessionAsync; hydrate first so
 		// a pre-init caller doesn't misread a real stored session as "not logged in".
 		await InitAsync();
 		if (AccountSessionToken is null) return null;
@@ -556,7 +567,11 @@ public class AccountAuthService(
 			// is that character without the client asserting anything. The old token is left to lapse
 			// on its own TTL rather than revoked, because a tab opened from this one may still hold a
 			// copy of it.
-			await AdoptSessionTokenAsync(result.AccountSessionToken);
+			if (!await TryAdoptSessionTokenAsync(result.AccountSessionToken))
+			{
+				logger.LogWarning("Switch character failed: this tab could not store the new session");
+				return null;
+			}
 			SetActiveCharacter(character);
 			return result.Ott;
 		}
@@ -787,35 +802,53 @@ public class AccountAuthService(
 	/// Replaces this tab's session token with one the server minted. Only the token changes — the
 	/// account identity behind it is the same, so username/role/permissions are left alone.
 	/// </summary>
-	private async Task AdoptSessionTokenAsync(string token)
+	/// <returns>False, with nothing adopted, when this tab could not store the token.</returns>
+	private async Task<bool> TryAdoptSessionTokenAsync(string token)
 	{
-		// Storage first. A throwing interop call propagates to SwitchCharacterAsync, which reports the
-		// switch as failed — so the in-memory token must not have moved yet, or the tab would be acting
-		// as the new character while the caller believes it isn't and a reload would restore the old one.
-		await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token);
+		// Storage first. A write that fails leaves the in-memory token where it was, and the caller
+		// reports the switch as failed; otherwise the tab would be acting as the new character while
+		// the caller believes it isn't, and a reload would restore the old one.
+		if (!await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token))
+			return false;
 		AccountSessionToken = token;
+		return true;
 	}
 
-	private async Task PersistSessionAsync(
+	/// <summary>
+	/// Persists a freshly minted session, then adopts it. Storage first for the reason
+	/// <see cref="TryAdoptSessionTokenAsync"/> gives: a session this tab cannot keep is refused
+	/// outright, so the tab never runs as an account a reload would not bring back.
+	/// </summary>
+	/// <returns>False, with nothing adopted, when this tab could not store the session.</returns>
+	private async Task<bool> TryPersistSessionAsync(
 		string token, string username, bool mustChangePassword, string? role, IReadOnlyList<string>? permissions)
 	{
+		permissions ??= [];
+		var persisted = await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token)
+			&& await js.SetItemAsync(BrowserStore.Session, UsernameKey, username)
+			&& await js.SetItemAsync(BrowserStore.Session, MustChangePasswordKey, mustChangePassword.ToString())
+			&& (role is null
+				? await js.RemoveItemAsync(BrowserStore.Session, RoleKey)
+				: await js.SetItemAsync(BrowserStore.Session, RoleKey, role))
+			&& await js.SetItemAsync(BrowserStore.Session, PermissionsKey, JsonSerializer.Serialize(permissions))
+			// Any successful login/register/setup clears a prior explicit logout.
+			&& await js.RemoveItemAsync(BrowserStore.Session, LoggedOutKey);
+
+		if (!persisted)
+		{
+			// Hydration ignores every other key without a token, so dropping it abandons the partial write.
+			await js.RemoveItemAsync(BrowserStore.Session, SessionTokenKey);
+			return false;
+		}
+
 		AccountSessionToken = token;
 		Username = username;
+		MustChangePassword = mustChangePassword;
 		Role = role;
-		Permissions = permissions ?? [];
-		await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token);
-		await js.SetItemAsync(BrowserStore.Session, UsernameKey, username);
-		await SetMustChangePasswordAsync(mustChangePassword);
-		if (role is null)
-			await js.RemoveItemAsync(BrowserStore.Session, RoleKey);
-		else
-			await js.SetItemAsync(BrowserStore.Session, RoleKey, role);
-		await js.SetItemAsync(BrowserStore.Session, PermissionsKey, JsonSerializer.Serialize(Permissions));
-
-		// Any successful login/register/setup clears a prior explicit logout.
+		Permissions = permissions;
 		ExplicitlyLoggedOut = false;
-		await js.RemoveItemAsync(BrowserStore.Session, LoggedOutKey);
 		RaiseAuthStateChanged();
+		return true;
 	}
 
 	/// <summary>
