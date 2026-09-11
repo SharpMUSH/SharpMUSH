@@ -1148,26 +1148,10 @@ public class AttributeService(
 		foreach (var token in flagTokens)
 		{
 			var unset = token.StartsWith('!');
-			var name = unset ? token[1..] : token;
 
-			// A bare "!" survives MushText.SplitList (which only drops empty items), leaving an
-			// empty name. Without this guard the symbol comparison below matches `prefixmatch`
-			// (whose symbol is the empty string) and, failing that, StartsWith("") matches the
-			// shortest flag in the list - so `@set obj/attr=!` silently unset an arbitrary flag.
-			if (string.IsNullOrEmpty(name))
-			{
-				return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
-			}
-
-			var flag = flagList
-				.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-					|| (x.Symbol != null && x.Symbol.Equals(name, StringComparison.OrdinalIgnoreCase)));
-
-			// PennMUSH-compatible prefix matching: "wiz" matches "wizard"
-			flag ??= flagList
-				.Where(x => x.Name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
-				.OrderBy(x => x.Name.Length)
-				.FirstOrDefault();
+			// A bare "!" survives MushText.SplitList (which only drops empty items), leaving an empty
+			// name, which Named() refuses rather than letting `@set obj/attr=!` unset an arbitrary flag.
+			var flag = flagList.Named(unset ? token[1..] : token);
 
 			if (flag is null)
 			{

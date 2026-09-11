@@ -19,19 +19,16 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 {
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
-	private readonly IAttributeService _attributeService;
 	private readonly IMediator _mediator;
 	private readonly IOptionsWrapper<SharpMUSHOptions> _options;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
-		IAttributeService attributeService,
 		IMediator mediator,
 		IOptionsWrapper<SharpMUSHOptions> options,
 		ILogger<PennMUSHDatabaseConverter> logger)
 	{
 		_parser = parser;
-		_attributeService = attributeService;
 		_mediator = mediator;
 		_options = options;
 		_logger = logger;
@@ -742,6 +739,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await _mediator.Send(new SetObjectWarningsCommand(target, warnings), cancellationToken);
 	}
 
+	/// <summary>
+	/// Every object's attributes, as one <see cref="SetAttributesCommand"/> per object.
+	/// </summary>
+	/// <remarks>
+	/// <para>This loads a database; it is not a player typing <c>@set</c>. PennMUSH's loader applies each
+	/// attribute's stored flags and creator as they are, with no permission check, so a wizard-only attribute
+	/// on a mortal's object stays wizard-only and belongs to whoever set it. Two things are kept from
+	/// <c>@set</c>. Flag names are matched the same way. One name SharpMUSH does not know fails the
+	/// attribute's whole flag list, as it does in <c>string_to_atrflagsets</c>, so the attribute keeps its
+	/// value, takes none of its flags, and is reported.</para>
+	/// <para>One command per object means one cache invalidation and one store write per object. Doing it
+	/// per attribute, with a read before each write, cost the import most of its time.</para>
+	/// </remarks>
 	private async Task<int> CreateAttributesAsync(
 		PennMUSHDatabase pennDatabase,
 		PennMUSHConversionContext context,
@@ -753,6 +763,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Creating attributes");
 		var count = 0;
+		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
+			.ToArrayAsync(cancellationToken);
+		var creators = new Dictionary<int, SharpPlayer?>();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -776,6 +789,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					continue;
 				}
 
+				var objectOwner = await sharpObj.Object().Owner.WithCancellation(cancellationToken);
+				var writes = new List<(PennMUSHAttribute Source, AttributeWrite Write)>(pennObj.Attributes.Count);
+
 				foreach (var pennAttr in pennObj.Attributes)
 				{
 					if (pennObj.Type == PennMUSHObjectType.Player
@@ -786,52 +802,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 					try
 					{
+						var named = pennAttr.Flags.Select(flagTable.Named).ToArray();
+						SharpAttributeFlag[] flags = [.. named.OfType<SharpAttributeFlag>()];
+						if (flags.Length != named.Length)
+						{
+							warnings.Add(
+								$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
+								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
+							flags = [];
+						}
+
+						var creator = await CreatorAsync(pennAttr, dbrefMapping, creators, cancellationToken) ?? objectOwner;
 						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
-
-						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
-						{
-							_logger.LogTrace("Converted ANSI escape sequences from attribute {AttrName} on object #{DBRef}",
-								pennAttr.Name, pennObj.DBRef);
-						}
-
-						var result = await _attributeService.SetAttributeAsync(
-							sharpObj, // executor (system)
-							sharpObj, // object to set attribute on
-							pennAttr.Name,
-							value);
-
-						if (result is Error<string> setError)
-						{
-							warnings.Add($"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {setError.Value}");
-						}
-						else
-						{
-							count++;
-							_logger.LogTrace("Set attribute {AttrName} on object #{DBRef}", pennAttr.Name, pennObj.DBRef);
-
-							if (pennAttr.Flags.Count > 0)
-							{
-								// One batch, not one call per flag (Task 6 fix round 1, M3):
-								// applying imported flags one at a time re-checks permission
-								// after each mutation, so e.g. a converted attribute carrying
-								// both safe and wizard would silently lose wizard once safe
-								// landed first (the importing executor is the object itself,
-								// never God). Penn's own converter has no such per-flag gate.
-								// The batch is all-or-nothing (Penn's string_to_atrflagsets fails the
-								// whole argument on one unrecognized name), so a single unsupported
-								// imported flag silently leaves the attribute with NO flags at all.
-								// Surface it rather than reporting a clean conversion.
-								var flagResult = await _attributeService.SetAttributeFlagsAsync(sharpObj, sharpObj,
-									pennAttr.Name, pennAttr.Flags);
-
-								if (flagResult is Error<string> flagError)
-								{
-									warnings.Add(
-										$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
-										$"{pennAttr.Name} of #{pennObj.DBRef}: {flagError.Value}");
-								}
-							}
-						}
+						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags)));
 					}
 					catch (Exception ex)
 					{
@@ -839,6 +822,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						_logger.LogDebug(ex, "Attribute creation error");
 					}
 				}
+
+				count += await WriteAttributesAsync(pennObj, sharpDbRef, writes, warnings, cancellationToken);
 			}
 			catch (Exception ex)
 			{
@@ -850,6 +835,80 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
+	}
+
+	/// <summary>
+	/// The player who set an attribute in the source (PennMUSH's <c>AL_CREATOR</c>), or null when it names
+	/// no player that was imported. Remembered per source dbref, since a handful of players set nearly all
+	/// of a game's attributes.
+	/// </summary>
+	private async ValueTask<SharpPlayer?> CreatorAsync(PennMUSHAttribute pennAttr, IReadOnlyDictionary<int, DBRef> dbrefMapping,
+		Dictionary<int, SharpPlayer?> creators, CancellationToken cancellationToken)
+	{
+		if (pennAttr.Owner is not { } source)
+		{
+			return null;
+		}
+
+		if (!creators.TryGetValue(source, out var creator))
+		{
+			creator = dbrefMapping.TryGetValue(source, out var mapped)
+				&& await _mediator.Send(new GetObjectNodeQuery(mapped), cancellationToken) is AnySharpObject and SharpPlayer node
+					? node
+					: null;
+			creators[source] = creator;
+		}
+
+		return creator;
+	}
+
+	/// <summary>
+	/// One object's attributes in one write. Should that fail, each is written alone, so the warnings
+	/// name the attributes that did not arrive rather than the object's whole list.
+	/// </summary>
+	private async Task<int> WriteAttributesAsync(PennMUSHObject pennObj, DBRef target,
+		List<(PennMUSHAttribute Source, AttributeWrite Write)> writes, List<string> warnings,
+		CancellationToken cancellationToken)
+	{
+		if (writes.Count == 0)
+		{
+			return 0;
+		}
+
+		try
+		{
+			if (await _mediator.Send(new SetAttributesCommand(target, [.. writes.Select(w => w.Write)]), cancellationToken))
+			{
+				return writes.Count;
+			}
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogDebug(ex, "Batched attribute write for #{DBRef} failed; writing its attributes singly", pennObj.DBRef);
+		}
+
+		var written = 0;
+		foreach (var (source, write) in writes)
+		{
+			try
+			{
+				if (await _mediator.Send(new SetAttributesCommand(target, [write]), cancellationToken))
+				{
+					written++;
+				}
+				else
+				{
+					warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: the store refused it");
+				}
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: {ex.Message}");
+				_logger.LogDebug(ex, "Attribute creation error");
+			}
+		}
+
+		return written;
 	}
 
 	private async Task<int> CreateLocksAsync(

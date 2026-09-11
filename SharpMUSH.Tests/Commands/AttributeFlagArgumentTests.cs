@@ -263,6 +263,26 @@ public class AttributeFlagArgumentTests
 	}
 
 	/// <summary>
+	/// PennMUSH's attr_privs_set (<c>src/atr_tab.c</c>) also answers to <c>hidden</c> for
+	/// <c>mortal_dark</c>, <c>private</c> for <c>no_inherit</c>, and <c>no_name</c> and <c>no_space</c>
+	/// for <c>noname</c> and <c>nospace</c>, prefixes included.
+	/// </summary>
+	[Test]
+	public async ValueTask PennMUSHsFlagAliasesNameTheirFlags()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagArgAlias");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FA{uid} {obj}=value"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/FA{uid}=hidden priv no_name no_space"));
+
+		foreach (var flag in (string[])["mortal_dark", "no_inherit", "noname", "nospace"])
+		{
+			await Assert.That(await HasFlag(obj, $"FA{uid}", flag)).IsTrue().Because($"{flag} was named by its alias");
+		}
+	}
+
+	/// <summary>
 	/// <c>af_helper</c> applies <c>AL_FLAGS(atr) &amp;= ~clrf</c> and then
 	/// <c>AL_FLAGS(atr) |= setf</c> to the same live bitmask, so a flag named in both directions
 	/// ends SET regardless of the order it was typed.

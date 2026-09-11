@@ -236,16 +236,13 @@ public partial class LightningDatabase
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
 		CancellationToken cancellationToken = default)
 	{
-		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
-		if (path.Length == 0)
+		if (attribute.Length == 0)
 		{
 			return false;
 		}
 
 		var n = (long)dbref.Number;
-		var ownerDbref = (long)owner.Object.Key;
-		var serialized = Keys.Str(MarkupTextSerializer.Serialize(value));
-		var empty = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
+		var write = PreparedAttributeWrite.From(new AttributeWrite(attribute, value, owner, []));
 
 		return await Store.WriteAsync(tx =>
 		{
@@ -254,47 +251,104 @@ public partial class LightningDatabase
 				return false;
 			}
 
-			var longName = string.Empty;
-			for (var level = 0; level < path.Length; level++)
+			WriteAttributePath(tx, n, write);
+			return true;
+		}, cancellationToken);
+	}
+
+	public async ValueTask<bool> SetAttributesAsync(DBRef dbref, IReadOnlyList<AttributeWrite> attributes,
+		CancellationToken cancellationToken = default)
+	{
+		var n = (long)dbref.Number;
+		var writes = attributes
+			.Where(write => write.Path.Length > 0)
+			.Select(PreparedAttributeWrite.From)
+			.ToArray();
+
+		return await Store.WriteAsync(tx =>
+		{
+			if (ReadObject(tx, n) is null)
 			{
-				longName = level == 0 ? path[0] : $"{longName}`{path[level]}";
-				var key = Keys.Attr(n, longName);
-				var isLeaf = level == path.Length - 1;
-				var existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? Codec.Deserialize<AttrMetaRecord>(bytes) : null;
-				var entry = ReadAttributeEntryRecord(tx, longName);
+				return false;
+			}
 
-				var flags = new List<string>(existing?.Flags ?? []);
-				foreach (var flagName in entry?.DefaultFlags ?? [])
-				{
-					AddFlag(flags, flagName);
-				}
-
-				if (!isLeaf)
-				{
-					AddFlag(flags, BranchFlag);
-				}
-
-				tx.Put(Tables.AttrMeta, key, Codec.Serialize(new AttrMetaRecord
-				{
-					Owner = ownerDbref,
-					Flags = [.. flags],
-					Entry = entry?.Name ?? existing?.Entry
-				}));
-
-				// A node that already exists keeps its value unless it is the leaf being set — the same
-				// `value = value ?? ''` an ancestor upsert gets in the SurrealDB provider.
-				if (isLeaf)
-				{
-					tx.Put(Tables.AttrVal, key, serialized);
-				}
-				else if (existing is null)
-				{
-					tx.Put(Tables.AttrVal, key, empty);
-				}
+			foreach (var write in writes)
+			{
+				WriteAttributePath(tx, n, write);
 			}
 
 			return true;
 		}, cancellationToken);
+	}
+
+	/// <summary>
+	/// An <see cref="AttributeWrite"/> with its path upper-cased and its value serialized, so the writer
+	/// thread does neither.
+	/// </summary>
+	private readonly record struct PreparedAttributeWrite(string[] Path, byte[] Value, long Owner, string[] Flags)
+	{
+		public static PreparedAttributeWrite From(AttributeWrite write) => new(
+			[.. write.Path.Select(segment => segment.ToUpperInvariant())],
+			Keys.Str(MarkupTextSerializer.Serialize(write.Value)),
+			write.Owner.Object.Key,
+			[.. write.Flags.Select(flag => flag.Name)]);
+	}
+
+	private static readonly byte[] EmptyAttributeValue = Keys.Str(MarkupTextSerializer.Serialize(MarkupText.Empty));
+
+	/// <summary>
+	/// One attribute set, as <see cref="SetAttributeAsync"/> describes it, inside the caller's transaction.
+	/// The write's own flags land on its leaf alongside the entry's defaults.
+	/// </summary>
+	private static void WriteAttributePath(ITx tx, long n, PreparedAttributeWrite write)
+	{
+		var path = write.Path;
+		var longName = string.Empty;
+
+		for (var level = 0; level < path.Length; level++)
+		{
+			longName = level == 0 ? path[0] : $"{longName}`{path[level]}";
+			var key = Keys.Attr(n, longName);
+			var isLeaf = level == path.Length - 1;
+			var existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? Codec.Deserialize<AttrMetaRecord>(bytes) : null;
+			var entry = ReadAttributeEntryRecord(tx, longName);
+
+			var flags = new List<string>(existing?.Flags ?? []);
+			foreach (var flagName in entry?.DefaultFlags ?? [])
+			{
+				AddFlag(flags, flagName);
+			}
+
+			if (isLeaf)
+			{
+				foreach (var flagName in write.Flags)
+				{
+					AddFlag(flags, flagName);
+				}
+			}
+			else
+			{
+				AddFlag(flags, BranchFlag);
+			}
+
+			tx.Put(Tables.AttrMeta, key, Codec.Serialize(new AttrMetaRecord
+			{
+				Owner = write.Owner,
+				Flags = [.. flags],
+				Entry = entry?.Name ?? existing?.Entry
+			}));
+
+			// A node that already exists keeps its value unless it is the leaf being set — the same
+			// `value = value ?? ''` an ancestor upsert gets in the SurrealDB provider.
+			if (isLeaf)
+			{
+				tx.Put(Tables.AttrVal, key, write.Value);
+			}
+			else if (existing is null)
+			{
+				tx.Put(Tables.AttrVal, key, EmptyAttributeValue);
+			}
+		}
 	}
 
 	/// <summary>
