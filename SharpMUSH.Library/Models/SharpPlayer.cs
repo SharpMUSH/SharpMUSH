@@ -32,7 +32,13 @@ public class SharpPlayer : IObjectShaped<SharpPlayer>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out SharpPlayer value)
 	{
-		value = node.IsPlayer ? node.AsPlayer : null!;
-		return node.IsPlayer;
+		if (node is AnySharpObject and SharpPlayer player)
+		{
+			value = player;
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

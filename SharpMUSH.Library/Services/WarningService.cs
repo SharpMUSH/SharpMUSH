@@ -292,15 +292,16 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ExitUnlinked))
 		{
-			if (target.IsExit)
+			if (target is SharpExit linkedExit)
 			{
 				// One read of the destination edge serves both checks below.
 				int? destinationNumber = null;
 				var destinationReadable = true;
 				try
 				{
-					var destination = await target.AsExit.Home.WithCancellation(CancellationToken.None);
-					destinationNumber = destination.IsNone ? null : destination.WithoutNone().Object().DBRef.Number;
+					destinationNumber = await linkedExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+						? destination.Object().DBRef.Number
+						: null;
 				}
 				catch
 				{
@@ -373,18 +374,16 @@ public class WarningService(
 		}
 
 		// These require topology analysis
-		if (target.IsExit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
+		if (target is SharpExit exit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
 		{
-			var exit = target.AsExit;
 			try
 			{
 				var maybeDestination = await exit.Home.WithCancellation(CancellationToken.None);
 				var source = await exit.Location.WithCancellation(CancellationToken.None);
 
 				// An unlinked exit has no topology to analyse: it is neither one-way nor duplicated.
-				if (!maybeDestination.IsNone)
+				if (maybeDestination is AnySharpContainer destination)
 				{
-					var destination = maybeDestination.WithoutNone();
 					var destObj = destination.Object();
 					var sourceObj = source.Object();
 
@@ -397,8 +396,8 @@ public class WarningService(
 						{
 							try
 							{
-								var returnDest = await returnExit.Home.WithCancellation(CancellationToken.None);
-								if (!returnDest.IsNone && returnDest.WithoutNone().Object().DBRef.Equals(sourceObj.DBRef))
+								if (await returnExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer returnDest
+										&& returnDest.Object().DBRef.Equals(sourceObj.DBRef))
 								{
 									returnExitCount++;
 								}
@@ -447,9 +446,8 @@ public class WarningService(
 			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
-				if (target.IsThing)
+				if (target is SharpThing thing)
 				{
-					var thing = target.AsThing;
 					var location = await thing.Location.WithCancellation(CancellationToken.None);
 					var isInInventory = location.IsPlayer;
 

@@ -105,7 +105,7 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 			var packageManager = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
 				.CurrentValue.Database.PackageManager ?? 7;
 			var owner = (await Database.GetObjectNodeAsync(new DBRef((int)packageManager)))
-				.Known.AsPlayer;
+				.Expect<SharpPlayer>();
 			await Database.SetAttributeAsync(probe, ["PROBE", "ORIGINAL"], MarkupText.Plain("admin-edit"), owner);
 
 			// v1.1.0: adds a route AND changes the value the admin edited, so the upgrade produces both

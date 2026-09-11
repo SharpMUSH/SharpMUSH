@@ -40,11 +40,9 @@ public class ListenPatternMatcher(
 
 			while (depth < maxParentDepth)
 			{
-				var parentAsync = await currentObject.Object().Parent.WithCancellation(CancellationToken.None);
-				if (parentAsync.IsNone)
+				if (await currentObject.Object().Parent.WithCancellation(CancellationToken.None) is not AnySharpObject parent)
 					break;
 
-				var parent = parentAsync.Known;
 				var parentObject = parent.Object();
 
 				if (!visitedObjects.Add(parentObject.DBRef.Number))

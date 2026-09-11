@@ -70,8 +70,13 @@ public sealed class AnySharpContent : IUnion, IObjectShaped<AnySharpContent>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContent value)
 	{
-		var content = !node.IsNone && node.Known.IsContent;
-		value = content ? node.Known.AsContent : null!;
-		return content;
+		if (node is AnySharpObject { IsContent: true } found)
+		{
+			value = found.AsContent;
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

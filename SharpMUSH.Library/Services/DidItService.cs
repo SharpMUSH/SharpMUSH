@@ -204,12 +204,12 @@ public class DidItService(
 		var attr = await attributeService.GetAttributeAsync(
 			thing, thing, request.AWhat!, IAttributeService.AttributeMode.Execute, parent: true);
 
-		if (!attr.IsAttribute || attr.AsAttribute.Length == 0)
+		if (attr is not SharpAttribute[] { Length: > 0 } action)
 		{
 			return false;
 		}
 
-		var command = StripCommandPrefix(attr.AsAttribute.Last().Value);
+		var command = StripCommandPrefix(action.Last().Value);
 
 		// queue_attribute_base (src/cque.c:786-795) returns 1 as soon as the attribute is found, so a
 		// present-but-empty action attribute still counts as used for fail_lock's return value even
@@ -222,7 +222,7 @@ public class DidItService(
 		var executor = thing.Object().DBRef;
 		var enactor = request.Player.Object().DBRef;
 		var args = BuildArgs(request);
-		var attributePath = attr.AsAttribute.Last().LongName!.Split("`");
+		var attributePath = action.Last().LongName!.Split("`");
 		var baseState = parser.CurrentState;
 
 		// queue_attribute_useatr queues with PE_INFO_DEFAULT (src/cque.c:867), which gives the action

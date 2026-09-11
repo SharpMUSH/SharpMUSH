@@ -259,9 +259,10 @@ public class ObjectsController(
 	/// </summary>
 	private async Task<AnySharpObject?> ResolveTargetAsync(AnySharpObject executor, int dbref, CancellationToken ct)
 	{
-		var result = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct);
-		return result.IsNone || !await reality.CanPerceiveAsync(executor.Object().DBRef, result.Known.Object().DBRef, ct)
-			? null : result.Known;
+		return await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is AnySharpObject target
+			&& await reality.CanPerceiveAsync(executor.Object().DBRef, target.Object().DBRef, ct)
+				? target
+				: null;
 	}
 
 	private static AttributeDto ToDto(SharpAttribute attribute) => new(

@@ -40,7 +40,7 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 	/// <summary>A controller acting as <paramref name="actor"/>, wired exactly as DI would build it.</summary>
 	private async Task<ObjectsController> ControllerAs(DBRef actor)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(actor))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(actor))).Expect<SharpPlayer>();
 		var fullIdentity = player.Object.DBRef;
 		var accounts = factory.Services.GetRequiredService<IAccountService>();
 		var account = await accounts.GetAccountForCharacterAsync(fullIdentity);
@@ -167,8 +167,8 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var snooper = await NewPlayerAsync("ObjApiExamineSnooper");
 
 		var permissions = factory.Services.GetRequiredService<IPermissionService>();
-		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(owner))).Known;
-		var snooperObject = (await Mediator.Send(new GetObjectNodeQuery(snooper))).Known;
+		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(owner))).Expect<AnySharpObject>();
+		var snooperObject = (await Mediator.Send(new GetObjectNodeQuery(snooper))).Expect<AnySharpObject>();
 
 		// Only meaningful while the engine actually refuses this pairing.
 		var mayExamine = await permissions.CanExamine(snooperObject, ownerObject);

@@ -129,8 +129,8 @@ public class SceneApprovalIntegrationTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var manipulate = WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
 		DBRef.TryParse(playerDbref, out var parsed);
-		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
-		var target = (await mediator.Send(new GetObjectNodeQuery(parsed!.Value))).Known;
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var target = (await mediator.Send(new GetObjectNodeQuery(parsed!.Value))).Expect<AnySharpObject>();
 		await manipulate.SetPower(god, target, "Guest", false);
 	}
 

@@ -46,10 +46,8 @@ public class CommunicationService(
 			return true;
 		}
 
-		var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-
-		return playerResult.IsNone
-			|| await permissionService.CanInteract(executor, playerResult.WithoutNone(), InteractType.Hear);
+		return await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value)) is not AnySharpObject player
+			|| await permissionService.CanInteract(executor, player, InteractType.Hear);
 	}
 
 	public async ValueTask SendToRoomAsync(
@@ -100,18 +98,26 @@ public class CommunicationService(
 		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
-	{
-		var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
-			parser, enactor, enactor, targetName, LocateFlags.All);
-
-		if (maybeLocateTarget.IsError)
+		=> await locateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor, targetName, LocateFlags.All) switch
 		{
-			await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-			return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
-		}
+			AnySharpObject target => await DeliverToTargetAsync(executor, target, messageFunc, notificationType,
+				notifyOnPermissionFailure),
+			Error<CallState> error => await TargetNotFoundAsync(executor, error.Value)
+		};
 
-		var target = maybeLocateTarget.AsSharpObject;
+	private async ValueTask<DeliveryResult> TargetNotFoundAsync(AnySharpObject executor, CallState error)
+	{
+		await notifyService.Notify(executor, error.Message!);
+		return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
+	}
 
+	private async ValueTask<DeliveryResult> DeliverToTargetAsync(
+		AnySharpObject executor,
+		AnySharpObject target,
+		Func<AnySharpObject, SharpMessage> messageFunc,
+		INotifyService.NotificationType notificationType,
+		bool notifyOnPermissionFailure)
+	{
 		if (!await permissionService.CanInteract(executor, target, InteractType.Hear))
 		{
 			if (notifyOnPermissionFailure)

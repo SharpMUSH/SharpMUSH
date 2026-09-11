@@ -64,8 +64,13 @@ public sealed class AnySharpContainer : IUnion, IObjectShaped<AnySharpContainer>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContainer value)
 	{
-		var container = !node.IsNone && node.Known.IsContainer;
-		value = container ? node.Known.AsContainer : null!;
-		return container;
+		if (node is AnySharpObject { IsContainer: true } found)
+		{
+			value = found.AsContainer;
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

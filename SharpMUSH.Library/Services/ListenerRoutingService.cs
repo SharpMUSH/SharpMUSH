@@ -77,11 +77,8 @@ public class ListenerRoutingService(
 		if (context.ExcludedObjects.Contains(context.Target))
 			return;
 
-		var targetResult = await mediator.Send(new GetObjectNodeQuery(context.Target));
-		if (targetResult.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(context.Target)) is not AnySharpObject listener)
 			return;
-
-		var listener = targetResult.WithoutNone();
 
 		// Only when there is no speaker at all, which NotifyService never does: it routes nothing
 		// without one. The location stands in for the speaker, as it did when this walked the room —
@@ -94,13 +91,12 @@ public class ListenerRoutingService(
 		}
 		else
 		{
-			var location = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
-			if (location.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(context.Location.Value)) is not AnySharpObject location)
 			{
 				return;
 			}
 
-			actualSender = location.WithoutNone();
+			actualSender = location;
 		}
 
 		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
@@ -129,10 +125,10 @@ public class ListenerRoutingService(
 			IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		if (!listenAttr.IsAttribute)
+		if (listenAttr is not SharpAttribute[] listen)
 			return;
 
-		var listenPattern = listenAttr.AsAttribute.Last().Value.ToPlainText();
+		var listenPattern = listen.Last().Value.ToPlainText();
 		if (string.IsNullOrWhiteSpace(listenPattern))
 			return;
 
@@ -271,8 +267,8 @@ public class ListenerRoutingService(
 			IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		var prefix = prefixAttr.IsAttribute
-			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
+		var prefix = prefixAttr is SharpAttribute[] prefixChain
+			? prefixChain.Last().Value.ToPlainText()
 			: $"{puppet.Object().Name}> ";
 
 		// The relay stays an MString all the way to the ConnectionServer, which owns the wire format

@@ -124,13 +124,18 @@ public partial class SurrealDatabase
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-		=> (await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken)).WithoutNone();
+		=> await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {obj.Object().DBRef}")
+		};
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
-	{
-		var result = await GetLocationFromTypedIdAsync(id, depth, cancellationToken);
-		return result.WithoutNone();
-	}
+		=> await GetLocationFromTypedIdAsync(id, depth, cancellationToken) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {id}")
+		};
 
 	private async ValueTask<AnyOptionalSharpContainer> GetLocationFromTypedIdAsync(string typedId, int depth, CancellationToken ct)
 	{
@@ -220,11 +225,10 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
-		if (baseObject.IsNone) yield break;
+		if (await GetObjectNodeAsync(obj, cancellationToken) is not AnySharpObject baseObject) yield break;
 
 		await foreach (var exit in GetExitsForKeyAsync(
-			ExtractTable(baseObject.Known.Id()!), ExtractKey(baseObject.Known.Id()!), cancellationToken))
+			ExtractTable(baseObject.Id()!), ExtractKey(baseObject.Id()!), cancellationToken))
 			yield return exit;
 	}
 
@@ -301,7 +305,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var self = (await GetObjectNodeAsync(obj, cancellationToken)).WithoutNone();
+		if (await GetObjectNodeAsync(obj, cancellationToken) is not AnySharpObject self) yield break;
 		var location = await self.Where();
 
 		yield return self;

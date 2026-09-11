@@ -39,9 +39,7 @@ public class EventService(
 			}
 
 			var eventHandlerRef = new DBRef((int)eventHandlerDbRef.Value, null);
-			var eventHandlerResult = await mediator.Send(new GetObjectNodeQuery(eventHandlerRef), ExecutionBudget.CurrentToken);
-
-			if (eventHandlerResult.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(eventHandlerRef), ExecutionBudget.CurrentToken) is not AnySharpObject eventHandler)
 			{
 				logger.LogWarning(
 					"Event handler object #{EventHandlerDbRef} not found for event {EventName}",
@@ -50,7 +48,6 @@ public class EventService(
 				return;
 			}
 
-			var eventHandler = eventHandlerResult.Known;
 			var handlerRef = eventHandler.Object().DBRef;
 
 			var attributeResult = await attributeService.GetAttributeAsync(
@@ -62,7 +59,7 @@ public class EventService(
 
 			// If the attribute doesn't exist, return early (no handler for this event)
 			// This is not an error - not all events need handlers
-			if (!attributeResult.IsAttribute)
+			if (attributeResult is not SharpAttribute[] handler)
 			{
 				return;
 			}
@@ -151,7 +148,7 @@ public class EventService(
 			// This allows commands such as & (attribute set), @emit, @switch, etc.
 			// Convert to plain text then re-wrap (matching @include's behaviour) so that any
 			// markup encoding in the stored MString does not interfere with ANTLR parsing.
-			var attributeText = attributeResult.AsAttribute.Last().Value.ToPlainText();
+			var attributeText = handler.Last().Value.ToPlainText();
 
 			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
 			ExecutionBudget.Current?.ThrowIfExceeded();

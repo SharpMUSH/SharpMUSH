@@ -189,7 +189,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		await Assert.That(await MasterRoomContentsAsync()).Contains(created.Number);
 
 		var node = (await factory.Services.GetRequiredService<IMediator>()
-			.Send(new GetObjectNodeQuery(created))).Known;
+			.Send(new GetObjectNodeQuery(created))).Expect<AnySharpObject>();
 		await Assert.That(await node.HasFlag("NO_COMMAND")).IsFalse();
 	}
 

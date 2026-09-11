@@ -420,8 +420,8 @@ public class PermissionService(
 		// If zone_control_zmp_only is false, check if target has a zone and if who passes the Zone_Lock
 		if (!options.CurrentValue.Database.ZoneControlZmpOnly)
 		{
-			var targetZone = await target.Object().Zone.WithCancellation(token);
-			if (!targetZone.IsNone && await lockService.Evaluate(LockType.Zone, targetZone.Known, who))
+			if (await target.Object().Zone.WithCancellation(token) is AnySharpObject targetZone
+					&& await lockService.Evaluate(LockType.Zone, targetZone, who))
 			{
 				return true;
 			}
@@ -522,8 +522,8 @@ public class PermissionService(
 	public ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing)
 		=> thing switch
 		{
-			{ IsNone: true } => ValueTask.FromResult(false),
-			_ => PassesLock(who, thing.Known, LockType.Basic)
+			AnySharpObject found => PassesLock(who, found, LockType.Basic),
+			None => ValueTask.FromResult(false)
 		};
 
 	/// <summary>

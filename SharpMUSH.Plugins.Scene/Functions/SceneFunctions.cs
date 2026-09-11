@@ -72,8 +72,9 @@ public static class SceneFunctions
 			return dbref ?? string.Empty;
 
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		var node = await mediator.Send(new GetObjectNodeQuery(reference));
-		return node.IsNone ? dbref : node.Known.Object().DBRef.ToString();
+		return await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject node
+			? node.Object().DBRef.ToString()
+			: dbref;
 	}
 
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>

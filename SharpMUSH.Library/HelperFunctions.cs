@@ -37,7 +37,9 @@ public static partial class HelperFunctions
 	private static readonly Regex AttributeNameValidationRegex = AttributeNameValidation();
 
 	public static async ValueTask<AnySharpObject> GetGod(IMediator mediator)
-		=> (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		=> await mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is AnySharpObject god
+			? god
+			: throw new InvalidOperationException("God (#1) does not exist.");
 
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x)
@@ -268,13 +270,7 @@ public static partial class HelperFunctions
 
 		var attrs = await attributes.GetAttributePatternAsync(obj, obj, "*", true,
 			IAttributeService.AttributePatternMode.Wildcard);
-		if (!attrs.IsAttribute)
-		{
-			return false;
-		}
-
-		return attrs.AsAttributes
-			.Any(x => x.IsCommand());
+		return attrs is SharpAttribute[] all && all.Any(x => x.IsCommand());
 	}
 
 	public static bool HasType(this AnySharpObject obj, string validType) =>

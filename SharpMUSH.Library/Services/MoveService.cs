@@ -34,30 +34,23 @@ public class MoveService(
 	/// <inheritdoc />
 	public async ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj)
 	{
-		if (obj.IsRoom)
+		if (obj is SharpRoom room)
 		{
-			return obj.AsRoom;
-		}
-
-		if (!obj.IsContent)
-		{
-			return null;
+			return room;
 		}
 
 		// The walk starts at an exit's home — its destination — and at everything else's location
 		// (utils.c:802). Only the seed uses home; the walk out of the containers uses location.
 		AnySharpContainer current;
 
-		if (obj.IsExit)
+		if (obj is SharpExit exit)
 		{
-			var home = await obj.AsExit.Home.WithCancellation(CancellationToken.None);
-
-			if (home.IsNone)
+			if (await exit.Home.WithCancellation(CancellationToken.None) is not AnySharpContainer home)
 			{
 				return null;
 			}
 
-			current = home.WithoutNone();
+			current = home;
 		}
 		else
 		{
@@ -273,13 +266,13 @@ public class MoveService(
 		var oldLocationNode = await mediator.Send(new GetObjectNodeQuery(oldLocation), ExecutionBudget.CurrentToken);
 		var newLocationNode = await mediator.Send(new GetObjectNodeQuery(newLocation), ExecutionBudget.CurrentToken);
 
-		if (oldLocationNode.IsNone || newLocationNode.IsNone)
+		if (oldLocationNode is not AnySharpObject oldLocationObject || newLocationNode is not AnySharpObject newLocationObject)
 		{
 			return;
 		}
 
-		var oldName = oldLocationNode.Known.Object().Name;
-		var newName = newLocationNode.Known.Object().Name;
+		var oldName = oldLocationObject.Object().Name;
+		var newName = newLocationObject.Object().Name;
 
 		foreach (var rider in riders)
 		{
@@ -335,7 +328,7 @@ public class MoveService(
 	private async ValueTask<AnySharpObject?> ZoneOf(AnySharpContainer container)
 	{
 		var zone = await container.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-		return zone.IsNone ? null : zone.Known;
+		return zone is AnySharpObject found ? found : null;
 	}
 
 	/// <inheritdoc />
@@ -406,15 +399,13 @@ public class MoveService(
 			// move.c:270-273: a STICKY room a Dropper just left empties through its drop-to, which for
 			// a room is its own location.
 			if (!oldContainer.Object().DBRef.Equals(where.Object().DBRef)
-					&& oldContainer.IsRoom
+					&& oldContainer is SharpRoom oldRoom
 					&& await IsDropper(mover)
 					&& await oldContainer.WithExitOption().HasFlag("STICKY"))
 			{
-				var dropTo = await oldContainer.AsRoom.Location.WithCancellation(CancellationToken.None);
-
-				if (!dropTo.IsNone)
+				if (await oldRoom.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo)
 				{
-					await MaybeDropTo(parser, oldContainer, dropTo.WithoutNone(), enactor);
+					await MaybeDropTo(parser, oldContainer, dropTo, enactor);
 				}
 			}
 
@@ -483,16 +474,12 @@ public class MoveService(
 				continue;
 			}
 
-			var home = await item.Home();
-
 			// An item with no home has nowhere to be sent; it stays where it is rather than being
 			// pushed at dbref -1.
-			if (home.IsNone)
+			if (await item.Home() is not AnySharpContainer homeContainer)
 			{
 				continue;
 			}
-
-			var homeContainer = home.WithoutNone();
 
 			if (homeContainer.Object().DBRef.Equals(mover.Object().DBRef))
 			{
@@ -552,14 +539,12 @@ public class MoveService(
 
 			if (await thing.HasFlag("STICKY"))
 			{
-				var home = await content.Home();
-
-				if (home.IsNone)
+				if (await content.Home() is not AnySharpContainer home)
 				{
 					continue;
 				}
 
-				destination = home.WithoutNone();
+				destination = home;
 			}
 
 			// Penn attributes this move to SYSEVENT (move.c:187). SharpMUSH has no such dbref, so the
@@ -588,7 +573,7 @@ public class MoveService(
 	/// <inheritdoc />
 	public async ValueTask<bool> RescueFromVoidAsync(AnySharpObject player, DBRef fallbackHome)
 	{
-		if (!player.IsPlayer)
+		if (player is not SharpPlayer character)
 		{
 			return false;
 		}
@@ -603,7 +588,7 @@ public class MoveService(
 
 		try
 		{
-			var location = await player.AsPlayer.Location.WithCancellation(CancellationToken.None);
+			var location = await character.Location.WithCancellation(CancellationToken.None);
 			var locationDbRef = location.Object().DBRef;
 			oldContainer = locationDbRef;
 
@@ -623,7 +608,7 @@ public class MoveService(
 
 		try
 		{
-			var home = await player.AsPlayer.Home.WithCancellation(CancellationToken.None);
+			var home = await character.Home.WithCancellation(CancellationToken.None);
 			var homeDbRef = home.Object().DBRef;
 
 			if (homeDbRef.Number >= 0)
@@ -646,22 +631,18 @@ public class MoveService(
 		// Fall back to configured PlayerStart / DefaultHome
 		try
 		{
-			var fallbackResult = await mediator.Send(new GetObjectNodeQuery(fallbackHome));
-			if (!fallbackResult.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(fallbackHome)) is AnySharpObject fallbackObj
+					&& (fallbackObj.IsRoom || fallbackObj.IsThing || fallbackObj.IsPlayer))
 			{
-				var fallbackObj = fallbackResult.Known;
-				if (fallbackObj.IsRoom || fallbackObj.IsThing || fallbackObj.IsPlayer)
-				{
-					var fallbackContainer = await fallbackObj.Where();
-					await mediator.Send(new MoveObjectCommand(
-						player.AsContent,
-						fallbackContainer,
-						oldContainer,
-						Enactor: null,
-						IsSilent: true,
-						Cause: "void_rescue"));
-					return true;
-				}
+				var fallbackContainer = await fallbackObj.Where();
+				await mediator.Send(new MoveObjectCommand(
+					player.AsContent,
+					fallbackContainer,
+					oldContainer,
+					Enactor: null,
+					IsSilent: true,
+					Cause: "void_rescue"));
+				return true;
 			}
 		}
 		catch

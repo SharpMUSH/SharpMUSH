@@ -130,7 +130,13 @@ public class SharpObject : IObjectShaped<SharpObject>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out SharpObject value)
 	{
-		value = node.IsNone ? null! : node.Known.Object();
-		return !node.IsNone;
+		if (node is AnySharpObject found)
+		{
+			value = found.Object();
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

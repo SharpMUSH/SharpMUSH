@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
+
+namespace SharpMUSH.Library.Models;
 
 public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 	: IEquatable<DbRefAttribute>
@@ -42,5 +44,9 @@ public readonly struct DbRefAttribute(DBRef dbref, string[] attribute)
 	}
 
 	public static DbRefAttribute Parse(string parse)
-		=> HelperFunctions.SplitDBRefAndAttr(parse).AsValue();
+		=> HelperFunctions.SplitDBRefAndAttr(parse) switch
+		{
+			DbRefAttribute split => split,
+			None => throw new FormatException($"'{parse}' is not an object/attribute reference.")
+		};
 }

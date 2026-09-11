@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -61,12 +62,12 @@ public static class StartupAttributeRunner
 		var attr = await attributeService.GetAttributeAsync(
 			caller, obj, attribute, IAttributeService.AttributeMode.Read, parent: false);
 
-		if (!attr.IsAttribute)
+		if (attr is not SharpAttribute[] chain)
 		{
 			return false;
 		}
 
-		var value = attr.AsAttribute.Last().Value;
+		var value = chain.Last().Value;
 		if (value.Length == 0)
 		{
 			return false;

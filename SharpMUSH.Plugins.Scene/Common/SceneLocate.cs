@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -60,7 +61,8 @@ public static class SceneLocate
 		var locate = parser.ServiceProvider.GetRequiredService<ILocateService>();
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		var located = await locate.Locate(parser, enactor, enactor, name, flags);
-		return located.IsAnyObject ? located.AsAnyObject.Object().DBRef.ToString() : null;
+		return await locate.Locate(parser, enactor, enactor, name, flags) is AnySharpObject located
+			? located.Object().DBRef.ToString()
+			: null;
 	}
 }

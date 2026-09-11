@@ -35,12 +35,10 @@ public class LookService(
 		bool lookOutside = false)
 	{
 		// look_room (look.c:461): NOTHING is shown nothing.
-		if (viewing.IsNone)
+		if (viewing is not AnySharpObject realViewing)
 		{
 			return CallState.Empty;
 		}
-
-		var realViewing = viewing.Known;
 
 		// Deviation from PennMUSH: the reality layer has no Penn counterpart. A room the looker
 		// cannot perceive answers as no match rather than as a room with nothing in it.
@@ -93,8 +91,8 @@ public class LookService(
 		{
 			var layerAttribute = await attributeService.GetAttributeAsync(looker, realViewing, layerDescription,
 				IAttributeService.AttributeMode.Read, true);
-			if (layerAttribute.IsAttribute
-					&& await permissionService.CanExecuteAttribute(looker, realViewing, layerAttribute.AsAttribute))
+			if (layerAttribute is SharpAttribute[] layerChain
+					&& await permissionService.CanExecuteAttribute(looker, realViewing, layerChain))
 			{
 				customDescription = true;
 				descriptionAttributeName = layerDescription;
@@ -107,13 +105,13 @@ public class LookService(
 			{
 				var idescResult = await attributeService.GetAttributeAsync(god, realViewing, "IDESCRIBE",
 					IAttributeService.AttributeMode.Read, true);
-				if (idescResult.IsAttribute)
+				if (idescResult is SharpAttribute[] idescChain)
 				{
 					// A blank @idescribe is meaningful (help @idescribe suggests it to trigger
 					// @aidescribe without text), so an empty value stays empty here.
 					usedIdesc = true;
 					descriptionAttributeName = "IDESCRIBE";
-					baseDesc = idescResult.AsAttribute.Last().Value;
+					baseDesc = idescChain.Last().Value;
 				}
 			}
 
@@ -121,10 +119,10 @@ public class LookService(
 			{
 				var descResult = await attributeService.GetAttributeAsync(god, realViewing, "DESCRIBE",
 					IAttributeService.AttributeMode.Read, true);
-				if (descResult.IsAttribute)
+				if (descResult is SharpAttribute[] descChain)
 				{
 					descriptionAttributeName = "DESCRIBE";
-					baseDesc = descResult.AsAttribute.Last().Value;
+					baseDesc = descChain.Last().Value;
 				}
 				else
 				{
@@ -334,10 +332,7 @@ public class LookService(
 					foreach (var exit in visibleExits)
 					{
 						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit
-							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new SharpMUSH.Library.DiscriminatedUnions.None());
-						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
+						var destName = await DestinationNameAsync(exit);
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);
 
@@ -367,10 +362,7 @@ public class LookService(
 					foreach (var exit in visibleExits)
 					{
 						var exitObj = exit.WithRoomOption().Object();
-						var destination = exit.IsExit
-							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new SharpMUSH.Library.DiscriminatedUnions.None());
-						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
+						var destName = await DestinationNameAsync(exit);
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);
 
@@ -398,6 +390,11 @@ public class LookService(
 
 		return new CallState(viewingObject.DBRef.ToString());
 	}
+
+	private static async ValueTask<string> DestinationNameAsync(AnySharpContent exit)
+		=> exit is SharpExit linked && await linked.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+			? destination.Object().Name
+			: "*UNLINKED*";
 
 	/// <summary>
 	/// Wraps an exit name in a &lt;send&gt; HtmlMarkup tag for Pueblo/MXP clients.

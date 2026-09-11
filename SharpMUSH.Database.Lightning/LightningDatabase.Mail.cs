@@ -224,11 +224,10 @@ public partial class LightningDatabase
 			// clear/tag/urgent are status changes a player makes deliberately and don't touch it.
 			var updated = commandMail switch
 			{
-				{ IsReadEdit: true } => record with { Read = commandMail.AsReadEdit, Fresh = false },
-				{ IsClearEdit: true } => record with { Cleared = commandMail.AsClearEdit },
-				{ IsTaggedEdit: true } => record with { Tagged = commandMail.AsTaggedEdit },
-				{ IsUrgentEdit: true } => record with { Urgent = commandMail.AsUrgentEdit },
-				_ => record
+				MailUpdate.Read read => record with { Read = read.Value, Fresh = false },
+				MailUpdate.Cleared cleared => record with { Cleared = cleared.Value },
+				MailUpdate.Tagged tagged => record with { Tagged = tagged.Value },
+				MailUpdate.Urgent urgent => record with { Urgent = urgent.Value }
 			};
 
 			tx.Put(Tables.Mail, MailKey(id), Codec.Serialize(updated));

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -61,7 +62,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		var node = await factory.Services.GetRequiredService<ISharpDatabase>()
 			.GetObjectNodeAsync(loggerDbref);
 		var flags = new List<string>();
-		await foreach (var flag in node.Known.Object().Flags.Value)
+		await foreach (var flag in node.Expect<AnySharpObject>().Object().Flags.Value)
 		{
 			flags.Add(flag.Name);
 		}

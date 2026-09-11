@@ -471,9 +471,9 @@ public partial class SurrealDatabase
 				_ => new None()
 			};
 
-			if (!typed.IsNone)
+			if (typed is AnySharpObject found)
 			{
-				yield return typed.WithoutNone();
+				yield return found;
 			}
 		}
 	}
@@ -620,20 +620,18 @@ public partial class SurrealDatabase
 		// query, so it is linear either way rather than quadratic like the `WHERE ... IN (subquery)`
 		// forms nearby — but object destruction calls it per object destroyed, and a room takes its
 		// exits with it, so the constant matters.
-		var homeNode = await GetObjectNodeAsync(home, cancellationToken);
-		if (homeNode.IsNone) yield break;
+		if (await GetObjectNodeAsync(home, cancellationToken) is not AnySharpObject homeNode) yield break;
 
-		var homeTable = ExtractTable(homeNode.Known.Id()!);
+		var homeTable = ExtractTable(homeNode.Id()!);
 		var response = await ExecuteAsync(
 			$"SELECT VALUE in.key FROM has_home WHERE out = {homeTable}:$homeKey",
 			new Dictionary<string, object?> { ["homeKey"] = home.Number }, cancellationToken);
 
 		foreach (var key in response.GetValue<List<int>>(0) ?? [])
 		{
-			var candidate = await GetObjectNodeAsync(new DBRef(key), cancellationToken);
-			if (candidate.IsNone || candidate.IsRoom) continue;
+			if (await GetObjectNodeAsync(new DBRef(key), cancellationToken) is not AnySharpObject candidate || candidate.IsRoom) continue;
 
-			yield return candidate.Known.AsContent;
+			yield return candidate.AsContent;
 		}
 	}
 
@@ -646,10 +644,9 @@ public partial class SurrealDatabase
 		// engine over databases of 50 / 150 / 300 objects, it cost 10ms / 71ms / 238ms while returning
 		// nothing at all. Index-backed comparison alone only brought that to 179ms; the LET makes it
 		// 2ms / 1ms / 2ms.
-		var destinationNode = await GetObjectNodeAsync(destination, cancellationToken);
-		if (destinationNode.IsNone) yield break;
+		if (await GetObjectNodeAsync(destination, cancellationToken) is not AnySharpObject destinationNode) yield break;
 
-		var destinationTable = ExtractTable(destinationNode.Known.Id()!);
+		var destinationTable = ExtractTable(destinationNode.Id()!);
 		var parameters = new Dictionary<string, object?> { ["destKey"] = destination.Number };
 
 		// Find exits whose destination (has_home) points to the target.
@@ -849,13 +846,11 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default)
 	{
-		var node = await GetObjectNodeAsync(dbref, cancellationToken);
-		if (node.IsNone)
+		if (await GetObjectNodeAsync(dbref, cancellationToken) is not AnySharpObject known)
 		{
 			return false;
 		}
 
-		var known = node.Known;
 		var name = known.Object().Name;
 		var table = ExtractTable(known.Id()!);
 		var key = dbref.Number;

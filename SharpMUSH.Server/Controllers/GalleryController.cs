@@ -194,20 +194,19 @@ public class GalleryController(
 	{
 		if (User.GetActingCharacter() is not { } character) return null;
 
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsNone ? null : result.Known;
+		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject viewer ? viewer : null;
 	}
 
 	private async Task<IReadOnlyList<GalleryEntry>> ReadGalleryAsync(AnySharpObject character)
 	{
 		var result = await attributeService.GetAttributeAsync(
 			character, character, GalleryAttribute, IAttributeService.AttributeMode.Read, parent: false);
-		if (!result.IsAttribute)
+		if (result is not SharpAttribute[] gallery)
 		{
 			return [];
 		}
 
-		var json = result.AsAttribute.Last().Value.ToString();
+		var json = gallery.Last().Value.ToString();
 		if (string.IsNullOrWhiteSpace(json))
 		{
 			return [];

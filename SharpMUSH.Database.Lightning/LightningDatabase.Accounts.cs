@@ -190,7 +190,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(dbref => ReadObject(tx, dbref))
 			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypePlayer)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsPlayer)
+			.Select(found => HydratePlayer(found!.Value.Dbref, found.Value.Record))
 			.ToList());
 		return ValueTask.FromResult<IReadOnlyList<SharpPlayer>>(result);
 	}

@@ -119,7 +119,13 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpObject value)
 	{
-		value = node.IsNone ? null! : node.Known;
-		return !node.IsNone;
+		if (node is AnySharpObject found)
+		{
+			value = found;
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

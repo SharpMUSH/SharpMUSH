@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -42,13 +43,10 @@ public class GameBroadcastService(
 
 			try
 			{
-				var playerResult = await mediator.Send(new GetObjectNodeQuery(conn.Ref.Value));
-				if (playerResult.IsNone)
+				if (await mediator.Send(new GetObjectNodeQuery(conn.Ref.Value)) is not AnySharpObject player)
 				{
 					continue;
 				}
-
-				var player = playerResult.Known;
 
 				if (anyOfFlags is not null
 						&& !await anyOfFlags.ToAsyncEnumerable().AnyAsync(async (flag, _) => await player.HasFlag(flag)))

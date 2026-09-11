@@ -260,13 +260,12 @@ public class AttributeService(
 	{
 		var chain = await ParentChainAsync(obj);
 
-		var ancestorNode = await mediator.Send(new GetObjectNodeQuery(ancestorRef), ExecutionBudget.CurrentToken);
-		if (ancestorNode.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(ancestorRef), ExecutionBudget.CurrentToken) is not AnySharpObject ancestor)
 		{
 			return chain;
 		}
 
-		foreach (var target in await ParentChainAsync(ancestorNode.Known))
+		foreach (var target in await ParentChainAsync(ancestor))
 		{
 			if (!chain.Any(seen => seen.SameObjectAs(target)))
 			{
@@ -414,24 +413,19 @@ public class AttributeService(
 
 		if (ignorePermissions)
 		{
-			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-			realExecutor = maybeOne.Known;
+			realExecutor = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject one
+				? one
+				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
 		}
 
-		var attr = await GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute,
-			evalParent);
-		if (attr.IsError)
+		return await GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent) switch
 		{
-			return new CallState(attr.AsError.Value);
-		}
-
-		if (attr.IsNone)
-		{
-			return CallState.Empty;
-		}
-
-		var function = new AttributeFunction(obj, attr.AsAttribute.Last().LongName.ToUpper(), attr.AsAttribute.Last().Value);
-		return await RunAsOwnerAsync(parser, function, s => s with { Arguments = args, EnvironmentRegisters = args });
+			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
+				new AttributeFunction(obj, chain.Last().LongName.ToUpper(), chain.Last().Value),
+				s => s with { Arguments = args, EnvironmentRegisters = args }),
+			None => CallState.Empty,
+			Error<string> error => new CallState(error.Value)
+		};
 	}
 
 	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
@@ -537,12 +531,11 @@ public class AttributeService(
 
 		var located = await locateService.LocateAndNotifyIfInvalid(parser, executor, executor,
 			objectName ?? executor.Object().DBRef.ToString(), LocateFlags.All);
-		if (!located.IsValid())
+		if (located is not AnySharpObject owner)
 		{
 			return CallState.Empty;
 		}
 
-		var owner = located.WithoutError().WithoutNone();
 		return await GetAttributeAsync(executor, owner, attributeName, IAttributeService.AttributeMode.Execute, parent: true) switch
 		{
 			SharpAttribute[] chain => new AttributeFunction(owner, chain.Last().LongName.ToUpper(), chain.Last().Value),
@@ -583,8 +576,9 @@ public class AttributeService(
 
 		if (ignorePermissions)
 		{
-			var maybeOne = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-			realExecutor = maybeOne.Known;
+			realExecutor = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject one
+				? one
+				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
 		}
 
 		if (applyPredicate && !ignoreLambda)
@@ -665,8 +659,8 @@ public class AttributeService(
 
 		return maybeObject switch
 		{
-			{ IsError: true } => maybeObject.AsError,
-			_ => await EvaluateAttributeFunctionResultAsync(parser, executor, maybeObject.AsSharpObject, attribute.ToPlainText(),
+			Error<CallState> error => error.Value,
+			AnySharpObject found => await EvaluateAttributeFunctionResultAsync(parser, executor, found, attribute.ToPlainText(),
 				args, evalParent, ignorePermissions)
 		};
 	}
@@ -840,10 +834,9 @@ public class AttributeService(
 
 		for (var count = 0; count < maxParents; count++)
 		{
-			var parent = await current.Parent.WithCancellation(cancellationToken);
-			if (parent.IsNone) return false;
+			if (await current.Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) return false;
 
-			var parentObj = parent.Known.Object();
+			var parentObj = parent.Object();
 
 			// A pre-existing cycle isn't this method's concern (SafeToAddParent's reachability
 			// check owns that); stop rather than spin so this can't itself hang on legacy/bad data.
@@ -1138,17 +1131,17 @@ public class AttributeService(
 		// object's own attributes (atr_iter_get), never a parent's, so this must not resolve
 		// (and then gate/flag) an inherited attribute that doesn't actually live on `obj`
 		// (Task 6 fix round 1, M4).
-		var returnedAttribute = await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet, false);
-		if (returnedAttribute.IsError)
+		return await GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.SystemSet, false) switch
 		{
-			return returnedAttribute.AsError;
-		}
+			SharpAttribute[] chain => await ApplyAttributeFlagsAsync(executor, obj, chain, flagTokens),
+			None => new Error<string>(ErrorMessages.Returns.ObjectAttributeString),
+			Error<string> error => error
+		};
+	}
 
-		if (returnedAttribute.IsNone)
-		{
-			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
-		}
-
+	private async ValueTask<Result<Success>> ApplyAttributeFlagsAsync(AnySharpObject executor,
+		AnySharpObject obj, SharpAttribute[] chain, IReadOnlyList<string> flagTokens)
+	{
 		var flagList = await mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 
 		var resolved = new List<(SharpAttributeFlag Flag, bool Unset)>(flagTokens.Count);
@@ -1205,7 +1198,7 @@ public class AttributeService(
 			return new Error<string>(ErrorMessages.Returns.UnrecognizedAttributeFlag);
 		}
 
-		var target = returnedAttribute.AsAttribute.Last();
+		var target = chain.Last();
 
 		// Penn's af_helper (src/set.c:509-511) requires the normal, safe-obeying Can_Write_Attr
 		// UNLESS the batch clears SAFE itself, in which case it falls back to
@@ -1214,8 +1207,8 @@ public class AttributeService(
 		// attribute that happens to carry safe) still obeys it.
 		var clearingSafe = resolved.Any(r => r.Unset && r.Flag.Name.Equals("SAFE", StringComparison.OrdinalIgnoreCase));
 		var permitted = clearingSafe
-			? await ps.CanSetIgnoringSafe(executor, obj, returnedAttribute.AsAttribute)
-			: await ps.CanSet(executor, obj, returnedAttribute.AsAttribute);
+			? await ps.CanSetIgnoringSafe(executor, obj, chain)
+			: await ps.CanSet(executor, obj, chain);
 
 		if (!permitted)
 		{

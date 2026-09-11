@@ -164,20 +164,20 @@ public partial class SurrealDatabase
 
 		switch (commandMail)
 		{
-			case { IsReadEdit: true }:
-				parameters["val"] = commandMail.AsReadEdit;
+			case MailUpdate.Read read:
+				parameters["val"] = read.Value;
 				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET read = $val, fresh = false", parameters, cancellationToken);
 				return;
-			case { IsClearEdit: true }:
-				parameters["val"] = commandMail.AsClearEdit;
+			case MailUpdate.Cleared cleared:
+				parameters["val"] = cleared.Value;
 				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET cleared = $val", parameters, cancellationToken);
 				return;
-			case { IsTaggedEdit: true }:
-				parameters["val"] = commandMail.AsTaggedEdit;
+			case MailUpdate.Tagged tagged:
+				parameters["val"] = tagged.Value;
 				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET tagged = $val", parameters, cancellationToken);
 				return;
-			case { IsUrgentEdit: true }:
-				parameters["val"] = commandMail.AsUrgentEdit;
+			case MailUpdate.Urgent urgent:
+				parameters["val"] = urgent.Value;
 				await ExecuteAsync("UPDATE mail:⟨$key⟩ SET urgent = $val", parameters, cancellationToken);
 				return;
 		}

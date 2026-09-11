@@ -44,9 +44,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 	private async Task<(string Name, string Objid)> GodIdentity()
 	{
 		var mediator = factory.Services.GetRequiredService<IMediator>();
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)));
-		await Assert.That(god.IsNone).IsFalse();
-		var obj = god.Known.Object();
+		var obj = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<AnySharpObject>().Object();
 		return (obj.Name, $"#{obj.Key}:{obj.CreationTime}");
 	}
 

@@ -536,14 +536,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
-				if (sharpObjResult.IsNone)
+				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for relationship setup");
 					continue;
 				}
-
-				var sharpObj = sharpObjResult;
 
 				// Handle location for content objects (players, things, exits)
 				if (pennObj.Type != PennMUSHObjectType.Room && pennObj.Location >= 0)
@@ -556,9 +553,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						if (container != null)
 						{
 							// Rooms aren't content
-							if (sharpObj.Known.IsContent)
+							if (sharpObj.IsContent)
 							{
-								var content = sharpObj.Known.AsContent;
+								var content = sharpObj.AsContent;
 
 								// A conversion is building a world out of a dump, not moving anyone: there is no
 								// actor, no parser and nobody present to notify, so this places the object
@@ -584,9 +581,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						var destObj = await _database.GetObjectNodeAsync(destDbRef, cancellationToken);
 						var container = TryGetContainer(destObj);
 
-						if (container != null && sharpObj.IsExit)
+						if (container != null && sharpObj is SharpExit exit)
 						{
-							await _database.LinkExitAsync(sharpObj.AsExit, container, cancellationToken);
+							await _database.LinkExitAsync(exit, container, cancellationToken);
 							_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
 						}
 					}
@@ -594,10 +591,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				if (pennObj.Parent >= 0 && dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
-					var parentObj = await _database.GetObjectNodeAsync(parentDbRef, cancellationToken);
-					if (!parentObj.IsNone)
+					if (await _database.GetObjectNodeAsync(parentDbRef, cancellationToken) is AnySharpObject parentObj)
 					{
-						await _database.SetObjectParent(sharpObj.Known, parentObj.Known, cancellationToken);
+						await _database.SetObjectParent(sharpObj, parentObj, cancellationToken);
 						_logger.LogDebug("Set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
 					}
 					else
@@ -608,10 +604,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				if (pennObj.Zone >= 0 && dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
-					var zoneObj = await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken);
-					if (!zoneObj.IsNone)
+					if (await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken) is AnySharpObject zoneObj)
 					{
-						await _database.SetObjectZone(sharpObj.Known, zoneObj.Known, cancellationToken);
+						await _database.SetObjectZone(sharpObj, zoneObj, cancellationToken);
 						_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
 					}
 					else
@@ -657,14 +652,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
-				if (sharpObjResult.IsNone)
+				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for attribute creation");
 					continue;
 				}
-
-				var sharpObj = sharpObjResult.Known;
 
 				foreach (var pennAttr in pennObj.Attributes)
 				{
@@ -764,14 +756,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				var sharpObjResult = await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken);
-				if (sharpObjResult.IsNone)
+				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for lock creation");
 					continue;
 				}
-
-				var sharpObj = sharpObjResult.Known;
 
 				foreach (var (lockName, lockString) in pennObj.Locks)
 				{

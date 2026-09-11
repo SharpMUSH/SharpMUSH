@@ -218,13 +218,12 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		async ValueTask<TimeSpan> ConnectionTime(string name,
 			Func<IConnectionService.ConnectionData, TimeSpan?> selector, CancellationToken ct)
 		{
-			var located = await locateService.Locate(parser, executor, executor, name, LocateFlags.All);
-			if (!located.IsPlayer)
+			if (await locateService.Locate(parser, executor, executor, name, LocateFlags.All) is not (AnySharpObject and SharpPlayer player))
 			{
 				return TimeSpan.MaxValue;
 			}
 
-			var connection = await connectionService.Get(located.AsPlayer.Object.DBRef).FirstOrDefaultAsync(ct);
+			var connection = await connectionService.Get(player.Object.DBRef).FirstOrDefaultAsync(ct);
 			return connection is null ? TimeSpan.MaxValue : selector(connection) ?? TimeSpan.MaxValue;
 		}
 	}

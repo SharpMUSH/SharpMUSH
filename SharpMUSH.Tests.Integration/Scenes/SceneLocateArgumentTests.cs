@@ -31,12 +31,12 @@ public class SceneLocateArgumentTests
 		var objects = WebAppFactory.Services.GetRequiredService<IObjectStore>();
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactory.Services, mediator, Connections, "SceneReference");
-		var actor = (await objects.GetObjectNodeAsync(_player.DbRef)).AsPlayer;
+		var actor = (await objects.GetObjectNodeAsync(_player.DbRef)).Expect<SharpPlayer>();
 		_playerName = actor.Object.Name;
 		var roomId = await mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("SceneReferenceRoom"), actor));
 		_roomId = roomId;
-		var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
+		var room = (await objects.GetObjectNodeAsync(roomId)).Expect<SharpRoom>();
 		var origin = await actor.Location.WithCancellation(default);
 		await mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 		await WebAppFactory.CommandParser.CommandParse(1, Connections,

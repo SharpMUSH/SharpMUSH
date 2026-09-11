@@ -158,13 +158,13 @@ public sealed partial class ObjectSnapshotService(
 		ct.ThrowIfCancellationRequested();
 		if (!target.IsObjid || actor.ActiveCharacter is not { IsObjid: true } active ||
 			!await capabilities.AuthorizeAsync(actor, scope, ct)) throw Error("denied", "A linked active player with the required capability is required.");
-		var executor = await objects.GetObjectNodeAsync(active, ct);
-		var obj = await objects.GetObjectNodeAsync(target, ct);
-		if (!executor.IsPlayer || executor.AsPlayer.Object.DBRef != active || obj.IsNone || obj.Known.Object().DBRef != target)
+		if (await objects.GetObjectNodeAsync(active, ct) is not AnySharpObject executor
+			|| executor is not SharpPlayer player || player.Object.DBRef != active
+			|| await objects.GetObjectNodeAsync(target, ct) is not AnySharpObject obj || obj.Object().DBRef != target)
 			throw Error("missing", "The player or object identity no longer exists.");
 		if (obj.IsPlayer) throw Error("invalid", "Player objects, credentials and account relationships are excluded from snapshots.");
-		if (!await permissions.Controls(executor.Known, obj.Known)) throw Error("denied", "The active player must control the object.");
-		return (executor.Known, obj.Known);
+		if (!await permissions.Controls(executor, obj)) throw Error("denied", "The active player must control the object.");
+		return (executor, obj);
 	}
 
 	private async Task<ObjectSnapshot> Capture(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, string description, int retain, CancellationToken ct, SnapshotSelection? selection = null, IEnumerable<string>? lockNames = null, ReadContext? reads = null)
@@ -300,8 +300,8 @@ public sealed partial class ObjectSnapshotService(
 				{
 					if (!DBRef.TryParse(reference.Value, out var objid) || objid is not { IsObjid: true } full)
 						throw Error("invalid", "A lock reference lacks a stable creation identity.");
-					var referred = await objects.GetObjectNodeAsync(full, ct);
-					if (referred.IsNone || referred.Known.Object().DBRef != full) throw Error("missing", "A lock references a missing object.");
+					if (await objects.GetObjectNodeAsync(full, ct) is not AnySharpObject referred || referred.Object().DBRef != full)
+						throw Error("missing", "A lock references a missing object.");
 				}
 				if (!locks.Validate(value.Expression, obj)) throw Error("invalid", "Invalid lock expression: " + name);
 				// Do not use snapshots to remove a lock's privileged write protection.
@@ -326,10 +326,10 @@ public sealed partial class ObjectSnapshotService(
 		public async Task<SharpPlayer> Owner(DBRef identity, CancellationToken ct)
 		{
 			if (owners.TryGetValue(identity, out var cached)) return cached;
-			var found = await objects.GetObjectNodeAsync(identity, ct);
-			if (!found.IsPlayer || !found.AsPlayer.Object.DBRef.Equals(identity))
+			if (await objects.GetObjectNodeAsync(identity, ct) is not (AnySharpObject and SharpPlayer found)
+				|| !found.Object.DBRef.Equals(identity))
 				throw Error("missing", "An attribute creator no longer exists.");
-			return owners[identity] = found.AsPlayer;
+			return owners[identity] = found;
 		}
 		public async Task<SharpAttributeFlag> Flag(string name, CancellationToken ct)
 		{

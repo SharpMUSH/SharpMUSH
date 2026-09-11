@@ -260,13 +260,11 @@ public partial class PackageAuthoringService(
 			return new Error<string>($"'{objid}' is not a valid objid.");
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		if (node.IsNone)
+		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
 		{
 			return new Error<string>($"Object {objid} does not exist.");
 		}
 
-		var known = node.Known;
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -288,8 +286,9 @@ public partial class PackageAuthoringService(
 			flags.Add(flag.Name);
 		}
 
-		var parent = await sharpObject.Parent.WithCancellation(cancellationToken);
-		var parentObjid = parent.IsNone ? null : parent.Known.Object().DBRef.ToString();
+		var parentObjid = await sharpObject.Parent.WithCancellation(cancellationToken) is AnySharpObject parent
+			? parent.Object().DBRef.ToString()
+			: null;
 
 		return new AuthoringObject(
 			sharpObject.DBRef.ToString(),

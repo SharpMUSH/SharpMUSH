@@ -60,7 +60,9 @@ public partial class LightningDatabase
 	{
 		var found = ReadObject(tx, ownerDbref)
 			?? throw new InvalidOperationException($"No owner found for channel '{channelName}'");
-		return Hydrate(found.Dbref, found.Record).AsPlayer;
+		return Hydrate(found.Dbref, found.Record) is SharpPlayer owner
+			? owner
+			: throw new InvalidOperationException($"The owner of channel '{channelName}' is not a player");
 	});
 
 	private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersCoreAsync(byte[] key,

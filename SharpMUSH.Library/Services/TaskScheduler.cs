@@ -175,17 +175,16 @@ public partial class TaskScheduler(
 		var executorIsPlayer = false;
 		if (executor is not null)
 		{
-			var target = await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken);
-			if (target.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is not AnySharpObject target)
 			{
 				diagnostics?.Rejected(executor, null, DiagnosticKind(group), QueueOutcome.InvalidTarget);
 				return Reject(QueueRejectionReason.InvalidTarget);
 			}
-			executor = target.Known.Object().DBRef;
-			executorIsPlayer = target.Known.IsPlayer;
-			if (await target.Known.IsWizard(ExecutionBudget.CurrentToken) || await target.Known.HasPower("Queue", ExecutionBudget.CurrentToken))
+			executor = target.Object().DBRef;
+			executorIsPlayer = target.IsPlayer;
+			if (await target.IsWizard(ExecutionBudget.CurrentToken) || await target.HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
-			owner = (await target.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
+			owner = (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
 		}
 		QueueAdmissionResult result;
 		lock (_admissionLock)
@@ -276,7 +275,7 @@ public partial class TaskScheduler(
 	private async ValueTask HaltRunaway(DBRef offender, string owner)
 	{
 		var node = await mediator.Send(new GetObjectNodeQuery(offender), ExecutionBudget.CurrentToken);
-		var name = node.IsNone ? offender.ToString() : node.Known.Object().Name;
+		var name = node is AnySharpObject found ? found.Object().Name : offender.ToString();
 
 		// The wipe has to happen: without it the backlog the object already built keeps running, each
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
@@ -286,10 +285,10 @@ public partial class TaskScheduler(
 		// dequeue re-check (:1136) each test !IsPlayer(executor) first. SharpMUSH's DidItService
 		// honours HALT on everyone, so the flag on a player would silence them outright. Admission
 		// already refuses to send a player down this path; this is the second lock on that door.
-		if (!node.IsNone && !node.Known.IsPlayer)
+		if (node is AnySharpObject haltable and not SharpPlayer)
 		{
 			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"), ExecutionBudget.CurrentToken);
-			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(node.Known, haltFlag), ExecutionBudget.CurrentToken);
+			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(haltable, haltFlag), ExecutionBudget.CurrentToken);
 		}
 
 		if (notifyService is not null && DBRef.TryParse(owner, out var ownerRef))
@@ -346,11 +345,10 @@ public partial class TaskScheduler(
 			{
 				try
 				{
-					var source = await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken);
-					if (!source.IsNone)
+					if (await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken) is AnySharpObject source)
 					{
-						executor = source.Known.Object().DBRef;
-						owner = (await source.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+						executor = source.Object().DBRef;
+						owner = (await source.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 					}
 				}
 				catch (Exception ex) when (ex is not OperationCanceledException)
@@ -420,12 +418,11 @@ public partial class TaskScheduler(
 		var attribute = await Read();
 		if (attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out var original)) return;
 		var expected = original > 0 ? original - 1 : 0;
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-		if (!god.IsPlayer) return;
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is not (AnySharpObject and SharpPlayer god)) return;
 		async ValueTask Write()
 		{
 			if (!await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-				MarkupString.MarkupText.Plain(expected.ToString()), god.AsPlayer), ExecutionBudget.CurrentToken))
+				MarkupString.MarkupText.Plain(expected.ToString()), god), ExecutionBudget.CurrentToken))
 				throw new InvalidOperationException("Semaphore count update failed.");
 			ExecutionBudget.Current?.ThrowIfExceeded();
 		}
@@ -475,12 +472,14 @@ public partial class TaskScheduler(
 		var original = 0;
 		var accounted = attribute is null || !int.TryParse(attribute.Value.ToPlainText(), out original);
 		var expected = original > 0 ? original - 1 : 0;
-		var god = accounted ? default : await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken);
-		accounted = accounted || god?.IsPlayer != true;
+		SharpPlayer? god = null;
+		if (!accounted && await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is AnySharpObject and SharpPlayer player)
+			god = player;
+		accounted = accounted || god is null;
 		JobKey? transportJob = null;
 		async ValueTask<QueueAdmissionResult> Complete(bool retry)
 		{
-			if (!accounted)
+			if (!accounted && god is not null)
 			{
 				var current = original;
 				if (retry)
@@ -491,7 +490,7 @@ public partial class TaskScheduler(
 						throw new InvalidOperationException("Semaphore changed during uncertain timeout accounting.");
 				}
 				if ((!retry || current != expected) && !await mediator.Send(new SetAttributeCommand(semaphore.DbRef, semaphore.Attribute,
-					MarkupString.MarkupText.Plain(expected.ToString()), god!.AsPlayer), ExecutionBudget.CurrentToken))
+					MarkupString.MarkupText.Plain(expected.ToString()), god), ExecutionBudget.CurrentToken))
 					throw new InvalidOperationException("Semaphore timeout count update failed.");
 				accounted = true;
 			}
@@ -540,7 +539,7 @@ public partial class TaskScheduler(
 	}
 	private async ValueTask<CallState?> ExecuteList(MString command, ParserState state)
 	{
-		if (state.Executor is not null && (await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken)).IsNone) return null;
+		if (state.Executor is not null && await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken) is None) return null;
 		// Deferred bodies cannot consume the submitting command list's break/include state.
 		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null }).CommandListParse(command);
 	}
@@ -744,8 +743,9 @@ public partial class TaskScheduler(
 	private async ValueTask<ParserState> CaptureExecutor(ParserState state)
 	{
 		if (state.Executor is not { } executor) return state;
-		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		return target.IsNone ? state : state with { Executor = target.Known.Object().DBRef };
+		return await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is AnySharpObject target
+			? state with { Executor = target.Object().DBRef }
+			: state;
 	}
 	public async ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state)
 	{
@@ -767,21 +767,20 @@ public partial class TaskScheduler(
 
 	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null)
 	{
-		var target = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
-		if (target.IsNone) return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
-		dbAttribute = new DbRefAttribute(target.Known.Object().DBRef, dbAttribute.Attribute);
+		if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
+			return await RejectInvalidTarget(executor ?? dbAttribute.DbRef, EnqueueGroup);
+		dbAttribute = new DbRefAttribute(target.Object().DBRef, dbAttribute.Attribute);
 		executor = (await CaptureExecutor(ParserState.Empty with { Executor = executor ?? dbAttribute.DbRef })).Executor;
 		return await Admit(async () =>
 		{
-			if (executor is not null && (await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken)).IsNone) return null;
-			var obj = await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken);
-			if (obj.IsNone) return null;
+			if (executor is not null && await mediator.Send(new GetObjectNodeQuery(executor.Value), ExecutionBudget.CurrentToken) is None) return null;
+			if (await mediator.Send(new GetObjectNodeQuery(dbAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject obj) return null;
 			var parserState = await function();
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			var actor = await parserState.KnownExecutorObject(mediator);
-			var attr = await attributeService.GetAttributeAsync(actor, obj.Known, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
-			if (!attr.IsAttribute) return new CallState("#-1");
-			return await ExecuteList(attr.AsAttribute.Last().Value, parserState);
+			var attr = await attributeService.GetAttributeAsync(actor, obj, string.Join('`', dbAttribute.Attribute), IAttributeService.AttributeMode.Execute);
+			if (attr is not SharpAttribute[] chain) return new CallState("#-1");
+			return await ExecuteList(chain.Last().Value, parserState);
 		}, $"async:{dbAttribute}", EnqueueGroup, executor, sourceAttribute: dbAttribute.DbRef == executor ? string.Join('`', dbAttribute.Attribute) : null);
 	}
 
@@ -801,10 +800,10 @@ public partial class TaskScheduler(
 		using var mutation = await EnterSemaphoreMutationAsync();
 		using var lease = await LockDeferred();
 		state = await CaptureExecutor(state);
-		var target = await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken);
-		if (target.IsNone) return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
+		if (await mediator.Send(new GetObjectNodeQuery(dbRefAttribute.DbRef), ExecutionBudget.CurrentToken) is not AnySharpObject target)
+			return await RejectInvalidTarget(state.Executor, SemaphoreGroup);
 		var group = $"{SemaphoreGroup}:{dbRefAttribute}";
-		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Known.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
+		var admission = await Admit(() => ExecuteList(command, state), $"dbref:{state.Executor}", group, state.Executor, ready: false, semaphoreTarget: target.Object().DBRef, sourceAttribute: SourceAttribute(state), managesSemaphoreCount: manageSemaphoreCount);
 		if (!admission.Accepted) return admission;
 		var pid = admission.Pid!.Value;
 		lock (_admissionLock) _semaphorePublications.Add(pid);
@@ -827,7 +826,7 @@ public partial class TaskScheduler(
 		var counterCreated = false;
 		var currentCount = oldValue;
 		SharpPlayer? god = null;
-		var fullTarget = target.Known.Object().DBRef;
+		var fullTarget = target.Object().DBRef;
 		try
 		{
 			if (manageSemaphoreCount)
@@ -848,7 +847,9 @@ public partial class TaskScheduler(
 					Release(admission.Pid!.Value, QueueOutcome.InvalidTarget);
 					return Reject(QueueRejectionReason.InvalidTarget);
 				}
-				god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken)).AsPlayer;
+				if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)), ExecutionBudget.CurrentToken) is not (AnySharpObject and SharpPlayer godPlayer))
+					throw new InvalidOperationException("God (#1) must exist as a player to write a semaphore count.");
+				god = godPlayer;
 				var nextCount = checked(currentCount + 1);
 				// A cancelled acknowledgement does not prove the provider failed to commit.
 				counterWriteAttempted = true;

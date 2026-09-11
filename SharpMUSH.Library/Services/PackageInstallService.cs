@@ -219,13 +219,11 @@ public class PackageInstallService(
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		if (node.IsNone)
+		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
 		{
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
 
-		var known = node.Known;
 		var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var attribute in attributes)
@@ -260,10 +258,9 @@ public class PackageInstallService(
 
 		async Task AddAsync(string name, uint? number, uint fallback)
 		{
-			var node = await database.GetObjectNodeAsync(new DBRef((int)(number ?? fallback)), cancellationToken);
-			if (!node.IsNone)
+			if (await database.GetObjectNodeAsync(new DBRef((int)(number ?? fallback)), cancellationToken) is AnySharpObject node)
 			{
-				map[name] = node.Known.Object().DBRef.ToString();
+				map[name] = node.Object().DBRef.ToString();
 			}
 		}
 
@@ -740,8 +737,12 @@ public class PackageInstallService(
 				return new Error<string>($"Object type '{spec.Type}' is not supported by the apply engine.");
 		}
 
-		var node = await database.GetObjectNodeAsync(createdDbref, cancellationToken);
-		var objid = node.Known.Object().DBRef.ToString();
+		if (await database.GetObjectNodeAsync(createdDbref, cancellationToken) is not AnySharpObject created)
+		{
+			return new Error<string>($"Internal error: object {{{{{spec.Ref}}}}} ({createdDbref}) vanished during apply.");
+		}
+
+		var objid = created.Object().DBRef.ToString();
 		notes.Add($"Created {spec.Type.ToString().ToLowerInvariant()} {{{{{spec.Ref}}}}} as {objid}.");
 		return objid;
 	}
@@ -769,8 +770,12 @@ public class PackageInstallService(
 				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
 			}
 
-			await mediator.Send(new LinkExitCommand(
-				node.AsExit, destination), cancellationToken);
+			if (node is not SharpExit exit)
+			{
+				return $"Internal error: exit {{{{{spec.Ref}}}}} ({objid}) is not an exit.";
+			}
+
+			await mediator.Send(new LinkExitCommand(exit, destination), cancellationToken);
 		}
 
 		// Name updates for metadata drift.
@@ -1455,8 +1460,7 @@ public class PackageInstallService(
 			return null;
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		return node.IsNone ? null : node.Known;
+		return await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is AnySharpObject node ? node : null;
 	}
 
 	/// <summary>

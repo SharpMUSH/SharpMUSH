@@ -60,14 +60,11 @@ public class HttpHandlerCommandService(
 			try
 			{
 				budget.ThrowIfExceeded();
-				var handlerResult = await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), budget.Token);
-				if (handlerResult.IsNone)
+				if (await mediator.Send(new GetObjectNodeQuery(new DBRef((int)handlerDbRef.Value, null)), budget.Token) is not AnySharpObject handler)
 				{
 					logger.LogWarning("Configured http_handler #{HandlerDbRef} not found.", handlerDbRef.Value);
 					return new NotFound();
 				}
-
-				var handler = handlerResult.Known;
 				handlerRef = handler.Object().DBRef;
 				budget.ThrowIfExceeded();
 				using var capture = outputCapture.BeginCapture(handlerRef.Value.Number, context);
@@ -77,7 +74,7 @@ public class HttpHandlerCommandService(
 				var attributeName = method.ToUpperInvariant();
 				var attributeResult = await attributeService.GetAttributeAsync(
 					handler, handler, attributeName, IAttributeService.AttributeMode.Execute, parent: false);
-				if (!attributeResult.IsAttribute)
+				if (attributeResult is not SharpAttribute[] entryPoint)
 				{
 					return new NotFound();
 				}
@@ -96,7 +93,7 @@ public class HttpHandlerCommandService(
 					HttpResponse = context
 				});
 
-				var attributeValue = attributeResult.AsAttribute.Last().Value;
+				var attributeValue = entryPoint.Last().Value;
 				budget.ThrowIfExceeded();
 				await evalParser.CommandListParse(attributeValue);
 			}

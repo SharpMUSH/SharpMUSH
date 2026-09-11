@@ -72,12 +72,12 @@ public static class AttributeHelpers
 				IAttributeService.AttributeMode.Read,
 				checkParents);
 
-			if (attrResult.IsError || attrResult.IsNone)
+			if (attrResult is not SharpAttribute[] chain)
 			{
 				return defaultValue;
 			}
 
-			var attribute = attrResult.AsAttribute.Last();
+			var attribute = chain.Last();
 			if (attribute.Value.Length == 0)
 			{
 				return defaultValue;
@@ -130,8 +130,8 @@ public static class AttributeHelpers
 			string.IsNullOrWhiteSpace(attr) ? "SEX" : attr,
 			IAttributeService.AttributeMode.Read);
 
-		return attribute.IsAttribute
-			? attribute.AsAttribute.Last().Value.ToPlainText()
+		return attribute is SharpAttribute[] chain
+			? chain.Last().Value.ToPlainText()
 			: "N";
 	}
 
@@ -158,11 +158,7 @@ public static class AttributeHelpers
 		if (HelperFunctions.SplitObjectAndAttr(evaluationAttribute) is not { Object: var obj, Attribute: var attr })
 			return defaultValue;
 
-		var directObject = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(obj)));
-
-		if (directObject.IsNone) return defaultValue;
-
-		var known = directObject.Known;
+		if (await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(obj))) is not AnySharpObject known) return defaultValue;
 
 		return await attributeService.EvaluateAttributeFunctionResultAsync(
 			parser, executor, known, attr,

@@ -202,13 +202,13 @@ public partial class LightningDatabase
 
 	public async ValueTask<bool> LinkRoomAsync(SharpRoom room, AnyOptionalSharpContainer location, CancellationToken cancellationToken = default)
 	{
-		if (location.IsNone)
+		if (location is not AnySharpContainer destination)
 		{
 			return await UnlinkRoomAsync(room, cancellationToken);
 		}
 
 		var dbref = (long)room.Object.Key;
-		var destKey = (long)location.WithoutNone().Object().Key;
+		var destKey = (long)destination.Object().Key;
 		await Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Home, dbref, destKey), cancellationToken);
 		return true;
 	}
@@ -339,7 +339,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(dbref => ReadObject(tx, dbref))
 			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypePlayer)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsPlayer)
+			.Select(found => HydratePlayer(found!.Value.Dbref, found.Value.Record))
 			.ToList());
 
 		foreach (var player in players)
@@ -504,7 +504,7 @@ public partial class LightningDatabase
 			}
 
 			var dbref = Keys.ReadDbref(key);
-			yield return Hydrate(dbref, record).AsPlayer;
+			yield return HydratePlayer(dbref, record);
 		}
 	}
 
@@ -776,6 +776,18 @@ public partial class LightningDatabase
 		};
 	}
 
+	/// <summary>
+	/// <see cref="Hydrate"/> for a record the caller has already checked is a player, typed as one.
+	/// </summary>
+	internal SharpPlayer HydratePlayer(long dbref, ObjectRecord record)
+		=> BuildPlayer(dbref, record, MapToSharpObject(dbref, record));
+
+	/// <summary>
+	/// <see cref="Hydrate"/> for a record the caller has already checked is an exit, typed as one.
+	/// </summary>
+	internal SharpExit HydrateExit(long dbref, ObjectRecord record)
+		=> BuildExit(dbref, record, MapToSharpObject(dbref, record));
+
 	private SharpObject MapToSharpObject(long dbref, ObjectRecord record)
 	{
 		var type = record.Type;
@@ -898,7 +910,9 @@ public partial class LightningDatabase
 			?? throw new InvalidOperationException($"No owner found for #{dbref}");
 		var found = ReadObject(tx, ownerDbref)
 			?? throw new InvalidOperationException($"No object record found for owner of #{dbref}");
-		return Hydrate(found.Dbref, found.Record).AsPlayer;
+		return Hydrate(found.Dbref, found.Record) is SharpPlayer owner
+			? owner
+			: throw new InvalidOperationException($"The owner of #{dbref} is not a player");
 	});
 
 	private AnyOptionalSharpObject GetOptionalRelatedCore(TableDef forward, long dbref) => Store.Read<AnyOptionalSharpObject>(tx =>

@@ -106,7 +106,7 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null && found.Value.Record.Type == DatabaseConstants.TypeExit)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsExit)
+			.Select(found => HydrateExit(found!.Value.Dbref, found.Value.Record))
 			.ToList());
 
 		foreach (var exit in exits)
@@ -143,7 +143,10 @@ public partial class LightningDatabase
 
 	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsFromDbRefCoreAsync(DBRef obj, [EnumeratorCancellation] CancellationToken ct)
 	{
-		var self = (await GetObjectNodeAsync(obj, ct)).WithoutNone();
+		if (await GetObjectNodeAsync(obj, ct) is not AnySharpObject self)
+		{
+			yield break;
+		}
 
 		await foreach (var item in GetNearbyObjectsCoreAsync(self, ct))
 		{
@@ -200,10 +203,18 @@ public partial class LightningDatabase
 	}
 
 	public ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, obj.Object().Key, depth)).WithoutNone());
+		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, obj.Object().Key, depth)) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {obj.Object().DBRef}")
+		});
 
 	public ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, ParseDbref(id), depth)).WithoutNone());
+		=> ValueTask.FromResult(Store.Read(tx => GetLocationFromKey(tx, ParseDbref(id), depth)) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {id}")
+		});
 
 	/// <summary>
 	/// Walks the location chain from <paramref name="startKey"/>, exactly <paramref name="depth"/> hops
@@ -287,7 +298,9 @@ public partial class LightningDatabase
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
 			.Where(found => found is not null)
-			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record).AsExit)
+			.Select(found => Hydrate(found!.Value.Dbref, found.Value.Record) is SharpExit exit
+				? exit
+				: throw new InvalidOperationException($"#{found.Value.Dbref} is listed as an exit of #{containerKey} but is not one"))
 			.ToList());
 
 		foreach (var exit in exits)

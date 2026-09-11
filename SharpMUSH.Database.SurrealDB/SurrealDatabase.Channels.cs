@@ -342,8 +342,9 @@ public partial class SurrealDatabase
 			throw new InvalidOperationException($"No owner found for channel '{channelName}'");
 
 		var ownerKey = ownerKeys[0];
-		var typed = await BuildTypedObjectFromKey(ownerKey, ct);
-		return typed.AsPlayer;
+		return await BuildTypedObjectFromKey(ownerKey, ct) is AnySharpObject and SharpPlayer owner
+			? owner
+			: throw new InvalidOperationException($"The owner of channel '{channelName}' is not a player");
 	}
 
 	private async IAsyncEnumerable<SharpChannel.MemberAndStatus> GetChannelMembersAsync(string channelName, [EnumeratorCancellation] CancellationToken ct = default)
@@ -357,8 +358,7 @@ public partial class SurrealDatabase
 		foreach (var record in records)
 		{
 			var memberKey = record.memberKey;
-			var memberObj = await BuildTypedObjectFromKey(memberKey, ct);
-			if (memberObj.IsNone) continue;
+			if (await BuildTypedObjectFromKey(memberKey, ct) is not AnySharpObject member) continue;
 
 			var status = new SharpChannelStatus(
 				Combine: record.combine,
@@ -367,7 +367,7 @@ public partial class SurrealDatabase
 				Mute: record.mute,
 				Title: MarkupTextSerializer.Deserialize(record.title));
 
-			yield return new SharpChannel.MemberAndStatus(memberObj.Known, status);
+			yield return new SharpChannel.MemberAndStatus(member, status);
 		}
 	}
 
