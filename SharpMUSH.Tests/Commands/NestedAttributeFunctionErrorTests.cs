@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -37,7 +38,7 @@ public class NestedAttributeFunctionErrorTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var registry = Factory.Services.GetRequiredService<IUserDefinedFunctionService>();
-		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var owner = (await actor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 		var name = "nestederror" + Guid.NewGuid().ToString("N");
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "valid" };

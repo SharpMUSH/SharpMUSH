@@ -65,7 +65,7 @@ public class AttributeSingleReadAncestorWalkTests
 	}
 
 	private async Task<AnySharpObject> Known(DBRef dbref)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	private static string Uid() => Guid.NewGuid().ToString("N")[..8].ToUpper();
 

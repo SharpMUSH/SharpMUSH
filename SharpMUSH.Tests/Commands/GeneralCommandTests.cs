@@ -311,9 +311,8 @@ public class GeneralCommandTests
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "FlagSetTest");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=DEBUG"));
 
-		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var thingObj = thing.AsThing;
-		var flags = await thingObj.Object.Flags.Value.ToArrayAsync();
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<SharpThing>();
+		var flags = await thing.Object.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Count(x => x.Name == "DEBUG")).IsEqualTo(1);
 	}
@@ -597,12 +596,12 @@ public class GeneralCommandTests
 		await Assert.That(entry!.DefaultFlags.Contains("NO_COMMAND")).IsTrue();
 
 		// Use SetAttributeCommand directly to bypass & command test issues
-		var player = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)));
+		var player = (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		var success = await Mediator.Send(new Library.Commands.Database.SetAttributeCommand(
 			new DBRef(1),
 			["TESTATTR2"],
 			MarkupText.Plain("test value"),
-			player.AsPlayer));
+			player));
 
 		await Assert.That(success).IsTrue();
 
@@ -889,11 +888,10 @@ public class GeneralCommandTests
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
-		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
-		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
+		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 
-		await Assert.That(destination.IsNone).IsFalse();
-		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
+		await Assert.That(destination.Object().DBRef.ToString()).IsEqualTo(thingDbRef);
 	}
 
 	/// <summary>
@@ -923,8 +921,8 @@ public class GeneralCommandTests
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
-		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
-		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
+		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 		await Assert.That(destination.IsNone).IsTrue()
 			.Because("the exit must be left unlinked when the executor cannot link to the destination");
@@ -955,10 +953,9 @@ public class GeneralCommandTests
 			MarkupText.Plain($"@open {exitName}={thingDbRef}"));
 
 		DBRef.TryParse(exitResult.Message!.ToPlainText()!.Trim(), out var exitRef);
-		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
-		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
+		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
 
-		await Assert.That(destination.IsNone).IsFalse();
-		await Assert.That(destination.WithoutNone().Object().DBRef.ToString()).IsEqualTo(thingDbRef);
+		await Assert.That(destination.Object().DBRef.ToString()).IsEqualTo(thingDbRef);
 	}
 }

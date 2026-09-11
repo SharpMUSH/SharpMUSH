@@ -31,31 +31,25 @@ public class CommunicationCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private SharpChannel? _testChannel;
-	private SharpPlayer? _testPlayer;
 
 	[Before(Test)]
 	public async Task SetupTestChannel()
 	{
-		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
-
-		if (_testPlayer == null)
-		{
-			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
-		}
+		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef)))
+			.Expect<SharpPlayer>($"test player #{TestPlayerDbRef} exists");
 
 		await Mediator.Send(new CreateChannelCommand(
 			MarkupText.Plain(TestChannelName),
 			[TestChannelPrivilege],
-			_testPlayer
+			player
 		));
 
 		var channelQuery = new GetChannelQuery(TestChannelName);
 		_testChannel = await Mediator.Send(channelQuery);
 
-		if (_testChannel != null && playerNode.IsPlayer)
+		if (_testChannel != null)
 		{
-			await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+			await Mediator.Send(new AddUserToChannelCommand(_testChannel, player));
 		}
 	}
 

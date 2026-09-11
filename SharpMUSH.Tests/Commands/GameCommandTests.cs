@@ -147,7 +147,7 @@ public class GameCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		return new TeachPlayer(player.DbRef, player.Handle, playerObject.Object().Name);
 	}

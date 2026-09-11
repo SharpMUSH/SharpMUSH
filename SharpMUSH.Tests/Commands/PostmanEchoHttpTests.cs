@@ -54,7 +54,7 @@ public class PostmanEchoHttpTests
 	/// </summary>
 	private async Task SetCallbackAttribute(string attributeName, string uniqueToken)
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(
 			playerOne.Object.DBRef,
 			[attributeName],
@@ -67,7 +67,7 @@ public class PostmanEchoHttpTests
 	/// </summary>
 	private async Task SetCallbackAttributeWithContent(string attributeName, string mushCode)
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(
 			playerOne.Object.DBRef,
 			[attributeName],

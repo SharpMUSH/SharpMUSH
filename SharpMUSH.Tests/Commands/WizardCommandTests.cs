@@ -215,15 +215,14 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
-		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, attrName, 10000);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, attrName, 10000);
 
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
-			IAttributeService.AttributeMode.Read, false);
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, attrName,
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("@wait callback should have set the attribute");
 
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because("@wait callback should have set the attribute");
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2")
+		await Assert.That(attr.Last().Value.ToPlainText()).IsEqualTo("2")
 			.Because("@wait should evaluate [add(1,1)] to 2 when the callback fires");
 	}
 
@@ -248,15 +247,14 @@ public class WizardCommandTests
 
 		// Poll until the @wait callback sets the attribute (or 10s timeout).
 		// Polling replaces a fixed Task.Delay so the test isn't fragile against
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
-		await TestHelpers.WaitForAttribute(AttributeService, obj.Known, resultAttr, 10000);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		await TestHelpers.WaitForAttribute(AttributeService, obj, resultAttr, 10000);
 
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, resultAttr,
-			IAttributeService.AttributeMode.Read, false);
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, resultAttr,
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("@wait callback should have set the attribute");
 
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because("@wait callback should have set the attribute");
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("hello_world")
+		await Assert.That(attr.Last().Value.ToPlainText()).IsEqualTo("hello_world")
 			.Because("@wait callback should see %0 from the enclosing $command pattern, not @wait's delay arg");
 	}
 

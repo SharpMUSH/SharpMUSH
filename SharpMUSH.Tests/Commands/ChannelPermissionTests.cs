@@ -82,7 +82,7 @@ public class ChannelPermissionTests
 	/// <summary>Creates a channel owned by God with exactly the given privileges.</summary>
 	private async Task<SharpChannel> CreateChannel(string name, params string[] privileges)
 	{
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privileges, god));
 		return (await Mediator.Send(new GetChannelQuery(name)))!;
 	}
@@ -175,11 +175,11 @@ public class ChannelPermissionTests
 		var mortal = await CreateMortal("ChanPermSpeaker");
 		// Put the mortal on the channel behind the gate's back, so the refusal under test is the SPEAK
 		// gate and not merely "you are not on that channel".
-		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, mortalObject));
 
 		var wizard = await CreateFlagged("ChanPermSpeakerWiz", "WIZARD");
-		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
 
 		var before = await MessageCount(name);
@@ -220,7 +220,7 @@ public class ChannelPermissionTests
 		var chatPrivs = await Mediator.Send(new GetPowerQuery("Chat_Privs"));
 		await Assert.That(chatPrivs).IsNotNull();
 
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new SetObjectPowerCommand(playerObject, chatPrivs!));
 
 		await Run(player, $"@channel/on {name}");
@@ -262,7 +262,7 @@ public class ChannelPermissionTests
 		var live = await CreateChannel(liveName, "Player");
 
 		var wizard = await CreateFlagged("ChanPermDeadWiz", "WIZARD");
-		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
 		await Mediator.Send(new AddUserToChannelCommand(live, wizardObject));
 
@@ -311,7 +311,7 @@ public class ChannelPermissionTests
 
 		foreach (var player in new[] { passing, failing })
 		{
-			var obj = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+			var obj = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			await Mediator.Send(new AddUserToChannelCommand(channel, obj));
 		}
 
@@ -340,7 +340,7 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player");
 
 		var loud = await CreateFlagged("ChanPermLoud", "LOUD");
-		var loudObject = (await Mediator.Send(new GetObjectNodeQuery(loud.DbRef))).Known;
+		var loudObject = (await Mediator.Send(new GetObjectNodeQuery(loud.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, loudObject));
 
 		// A lock nobody passes: the channel owner is #1, and the speaker is not.
@@ -361,7 +361,7 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player", "NoCemit");
 
 		var player = await CreateMortal("ChanPermNoCemit");
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, playerObject));
 
 		// The speak gate lets them through — only the cemit gate should not.
@@ -385,7 +385,7 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player");
 
 		var thingDbRef = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ChanPermThing");
-		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Known;
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(PermissionService.ChannelOkType(thing, channel)).IsFalse();
 
@@ -410,7 +410,7 @@ public class ChannelPermissionTests
 		var plain = await CreateChannel(plainName, "Player");
 
 		var player = await CreateMortal("ChanPermHide");
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(hideOk, playerObject));
 		await Mediator.Send(new AddUserToChannelCommand(plain, playerObject));
 
@@ -564,7 +564,7 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player", "Wizard");
 
 		var wizard = await CreateFlagged("ChanPermCwhoWiz", "WIZARD");
-		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
 
 		var mortal = await CreateMortal("ChanPermCwho");
@@ -626,12 +626,12 @@ public class ChannelPermissionTests
 		var shared = await CreateChannel(sharedName, "Player");
 
 		var wizard = await CreateFlagged("ChanPermChansWiz", "WIZARD");
-		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Known;
+		var wizardObject = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, wizardObject));
 		await Mediator.Send(new AddUserToChannelCommand(shared, wizardObject));
 
 		var mortal = await CreateMortal("ChanPermChans");
-		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(shared, mortalObject));
 
 		var parser = FunctionParserFor(mortal.DbRef);
@@ -676,7 +676,7 @@ public class ChannelPermissionTests
 		var visible = await CreateChannel(visibleName, "Player");
 
 		var mortal = await CreateMortal($"ChanPermBulk{switchName}");
-		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(visible, mortalObject));
 
 		var messages = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/{switchName}"));
@@ -705,9 +705,9 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player");
 		var mortal = await CreateMortal($"ChanPermUn{setSwitch}");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
-		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 		bool Flag(SharpChannelStatus status) => setSwitch switch
 		{
 			"gag" => status.Gagged ?? false,
@@ -743,11 +743,11 @@ public class ChannelPermissionTests
 		foreach (var player in new[] { bystander, muter })
 		{
 			await Mediator.Send(new AddUserToChannelCommand(channel,
-				(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known));
+				(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>()));
 		}
 
 		// The second argument is the yes/no answer, not a target: naming a player is not a way to mute them.
-		var bystanderObject = (await Mediator.Send(new GetObjectNodeQuery(bystander.DbRef))).Known;
+		var bystanderObject = (await Mediator.Send(new GetObjectNodeQuery(bystander.DbRef))).Expect<AnySharpObject>();
 		await Run(muter, $"@channel/mute {name}={bystanderObject.Object().Name}");
 
 		var bystanderStatus = await ChannelHelper.ChannelMemberStatus(bystanderObject,
@@ -758,7 +758,7 @@ public class ChannelPermissionTests
 		await Run(muter, $"@channel/mute {name}");
 
 		var muterStatus = await ChannelHelper.ChannelMemberStatus(
-			(await Mediator.Send(new GetObjectNodeQuery(muter.DbRef))).Known,
+			(await Mediator.Send(new GetObjectNodeQuery(muter.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(muterStatus!.Status.Mute ?? false).IsTrue();
 	}
@@ -846,7 +846,7 @@ public class ChannelPermissionTests
 		var channel = await CreateChannel(name, "Player");
 
 		var meddler = await CreateMortal("ChanPermClockMeddler");
-		var meddlerObject = (await Mediator.Send(new GetObjectNodeQuery(meddler.DbRef))).Known;
+		var meddlerObject = (await Mediator.Send(new GetObjectNodeQuery(meddler.DbRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, meddlerObject));
 
 		await Assert.That(await PermissionService.ChannelCanModifyAsync(meddlerObject, channel)).IsFalse();

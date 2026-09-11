@@ -45,14 +45,14 @@ public class InputUserCommandResultTests
 		var objects = Get<IObjectStore>();
 		var connections = Get<IConnectionService>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, connections, "InputUserCommand");
-		var actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
-		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command room", god)))).AsRoom;
+		var actor = (await objects.GetObjectNodeAsync(player.DbRef)).Expect<SharpPlayer>();
+		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command room", god)))).Expect<SharpRoom>();
 		var actorOrigin = await actor.Location.WithCancellation(default);
 		await mediator.Send(new MoveObjectCommand(actor, room, actorOrigin.Object().DBRef, IsSilent: true));
-		actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
+		actor = (await objects.GetObjectNodeAsync(player.DbRef)).Expect<SharpPlayer>();
 		var masterId = await mediator.Send(new CreateRoomCommand("input command master", god));
-		var master = (await objects.GetObjectNodeAsync(masterId)).Known;
+		var master = (await objects.GetObjectNodeAsync(masterId)).Expect<AnySharpObject>();
 		using var configuration = TestOptionsOverride.Scope(options => options with
 		{
 			Database = options.Database with { MasterRoom = (uint)masterId.Number }
@@ -60,12 +60,12 @@ public class InputUserCommandResultTests
 		await Assert.That(Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom)
 			.IsEqualTo((uint)masterId.Number)
 			.Because("the shared options wrapper must retain its async-flow override instead of a prior test's fixed configuration");
-		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Known;
+		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Expect<AnySharpObject>();
 		if (scope == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (scope == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));
 		AnySharpContainer container = scope is "zone" or "personal" ? zone.AsContainer : scope == "global-contents" ? master.AsContainer : room;
 		AnySharpObject host = scope == "location" ? room : scope == "global-room" ? master
-				: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("input command host", container, actor, room)))).Known;
+				: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("input command host", container, actor, room)))).Expect<AnySharpObject>();
 		var suffix = Guid.NewGuid().ToString("N");
 		var word = "inputmatch" + suffix;
 		var attribute = "CMD_" + suffix;

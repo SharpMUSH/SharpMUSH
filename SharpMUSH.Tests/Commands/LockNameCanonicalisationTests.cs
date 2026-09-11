@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -37,18 +38,17 @@ public class LockNameCanonicalisationTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@lock/{switchName} #{obj.Number}=#FALSE"));
 
-		var found = await Mediator.Send(new GetObjectNodeQuery(obj));
-		await Assert.That(found.IsNone).IsFalse();
+		var found = (await Mediator.Send(new GetObjectNodeQuery(obj))).Expect<AnySharpObject>();
 
 		// @lock answers CallState.Empty on success, so its response text proves nothing either way —
 		// the stored lock is the only evidence the setup took before the gate is asked about it.
-		await Assert.That(found.Known.Object().Locks.Keys).Contains(lockType.ToString());
+		await Assert.That(found.Object().Locks.Keys).Contains(lockType.ToString());
 
-		var player = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 
 		// #FALSE passes nobody. Before the fix the gate looked the lock up under the enum spelling,
 		// found nothing, and read that as "unlocked" — which passes everybody.
-		await Assert.That(await LockService.Evaluate(lockType, found.Known, player.Known)).IsFalse();
+		await Assert.That(await LockService.Evaluate(lockType, found, player)).IsFalse();
 	}
 
 	[Test]
@@ -64,8 +64,8 @@ public class LockNameCanonicalisationTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@lock/{switchName} #{obj.Number}=#FALSE"));
 
-		var found = await Mediator.Send(new GetObjectNodeQuery(obj));
-		var locks = found.Known.Object().Locks;
+		var found = (await Mediator.Send(new GetObjectNodeQuery(obj))).Expect<AnySharpObject>();
+		var locks = found.Object().Locks;
 
 		await Assert.That(locks.Keys).Contains(lockType.ToString());
 		await Assert.That(locks.Count(pair => string.Equals(pair.Key, lockType.ToString(),

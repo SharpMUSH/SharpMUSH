@@ -184,7 +184,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(destDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	[Test]
@@ -380,7 +380,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(destDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	/// <summary>
@@ -412,7 +412,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(destDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	/// <summary>
@@ -444,7 +444,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(destDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	/// <summary>
@@ -481,7 +481,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(southDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(southDbRef);
 	}
 
 	/// <summary>
@@ -511,7 +511,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(homeDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(homeDbRef);
 	}
 
 	/// <summary>
@@ -567,7 +567,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(destDbRef);
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
 	/// <summary>
@@ -593,7 +593,7 @@ public class MovementCommandTests
 
 		var location = await Mediator.Send(new GetLocationQuery(player.DbRef));
 
-		await Assert.That(location.WithExitOption().Known.Object().DBRef.ToString()).IsEqualTo(homeDbRef)
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(homeDbRef)
 			.Because("the exit is linked to home, and the mover is the player, not the executor");
 	}
 }

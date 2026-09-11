@@ -1,7 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -34,11 +36,11 @@ public class MessageFormatResultTests
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
-		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var owner = await actor.Object().Owner.WithCancellation(CancellationToken.None);
 		var name = "messageformat" + Guid.NewGuid().ToString("N");
-		var room = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateRoomCommand(name, owner))))).AsRoom;
-		var target = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateThingCommand(name, room, owner, room))))).Known;
+		var room = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateRoomCommand(name, owner))))).Expect<SharpRoom>();
+		var target = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateThingCommand(name, room, owner, room))))).Expect<AnySharpObject>();
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "valid" };
 		if (mode != "missing") await attributes.SetAttributeAsync(actor, target, name, MarkupText.Plain(value));
 		var reference = target.Object().DBRef;

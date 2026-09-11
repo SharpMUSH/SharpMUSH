@@ -207,7 +207,7 @@ public class UserDefinedFunctionTests
 		// Run that startup body as a command list under God, exactly as the boot pass would.
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
-		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		await StartupAttributeRunner.RunObjectAttributeAsync(CommandParser, attributeService, god, startupAttr, god);
 
 		await Assert.That(await Eval($"{fn}()")).IsEqualTo("booted");

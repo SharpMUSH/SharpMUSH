@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Attributes;
 using Mediator;
@@ -44,7 +45,7 @@ public class LocalFunctionTests
 		{
 			var result = await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@function/local/alias {alias}={name}"));
 			await Assert.That(result.Message?.ToPlainText()).Contains("NOT FOUND");
-			var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+			var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 			var owner = (await god.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 			await Assert.That(Factory.Services.GetRequiredService<IUserDefinedFunctionService>().Get(alias, owner)).IsNull();
 		}
@@ -102,9 +103,9 @@ public class LocalFunctionTests
 		await Cmd($"&STARTUP {startupObject}=@function/local {name}=me,CODE");
 		var registry = SharpMUSH.Tests.Services.UserFunctionRegistryCompatibilityTests.CreateLegacyRegistry();
 		var parser = (MUSHCodeParser)Factory.CommandParser with { ServiceProvider = new RegistryOverride(Factory.Services, registry) };
-		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		await StartupAttributeRunner.RunObjectAttributeAsync(parser, Factory.Services.GetRequiredService<IAttributeService>(),
-			(await Mediator.Send(new GetObjectNodeQuery(startupObject))).Known, "STARTUP", god);
+			(await Mediator.Send(new GetObjectNodeQuery(startupObject))).Expect<AnySharpObject>(), "STARTUP", god);
 		await Assert.That((int)registry.GetType().GetField("DefinitionCalls")!.GetValue(registry)!).IsEqualTo(0);
 	}
 
@@ -163,9 +164,9 @@ public class LocalFunctionTests
 		await Assert.That(await EvalAs(first.DbRef, $"fn(localfun,{name})")).IsEqualTo(first.DbRef.ToString());
 		await Assert.That(await Eval($"localfun({name})")).Contains("NOT FOUND");
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "LocalExecutor");
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known;
-		var firstPlayer = (await Mediator.Send(new GetObjectNodeQuery(first.DbRef))).AsPlayer;
-		var secondPlayer = (await Mediator.Send(new GetObjectNodeQuery(second.DbRef))).AsPlayer;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		var firstPlayer = (await Mediator.Send(new GetObjectNodeQuery(first.DbRef))).Expect<SharpPlayer>();
+		var secondPlayer = (await Mediator.Send(new GetObjectNodeQuery(second.DbRef))).Expect<SharpPlayer>();
 		await Mediator.Send(new SetObjectOwnerCommand(obj, firstPlayer));
 		await Assert.That(await EvalAs(thing, $"localfun({name})")).Contains("NO PERMISSION TO GET ATTRIBUTE");
 		await Cmd($"@set {first.DbRef}/CODE=VISUAL");
@@ -180,7 +181,7 @@ public class LocalFunctionTests
 	public async Task DeletedAndReownedBackingObjectsInvalidateLocalAliases()
 	{
 		var registry = Factory.Services.GetRequiredService<IUserDefinedFunctionService>();
-		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var owner = (await god.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 		foreach (var delete in new[] { true, false })
 		{
@@ -194,8 +195,8 @@ public class LocalFunctionTests
 			else
 			{
 				var newOwner = await Mediator.Send(new CreatePlayerCommand("LocalNewOwner" + Guid.NewGuid().ToString("N"), "password", new DBRef(0), new DBRef(0), 100));
-				await Mediator.Send(new SetObjectOwnerCommand((await Mediator.Send(new GetObjectNodeQuery(thing))).Known,
-					(await Mediator.Send(new GetObjectNodeQuery(newOwner))).AsPlayer));
+				await Mediator.Send(new SetObjectOwnerCommand((await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>(),
+					(await Mediator.Send(new GetObjectNodeQuery(newOwner))).Expect<SharpPlayer>()));
 			}
 			await Assert.That(registry.Get(name, owner)).IsNull();
 			await Assert.That(registry.Get(name + "alias", owner)).IsNull();
@@ -221,10 +222,10 @@ public class LocalFunctionTests
 			provider.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 			provider.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			provider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(), provider, ParserState.RootFor(Factory.ExecutorDBRef));
-		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var owner = (await god.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
 		await Assert.That(registry.Get(name, owner)).IsNull();
-		await StartupAttributeRunner.RunObjectAttributeAsync(parser, provider.GetRequiredService<IAttributeService>(), (await Mediator.Send(new GetObjectNodeQuery(startupObject))).Known, "STARTUP", god);
+		await StartupAttributeRunner.RunObjectAttributeAsync(parser, provider.GetRequiredService<IAttributeService>(), (await Mediator.Send(new GetObjectNodeQuery(startupObject))).Expect<AnySharpObject>(), "STARTUP", god);
 		await Assert.That(registry.Get(name, owner)).IsNotNull();
 		var local = (await parser.FunctionParse(MarkupText.Plain($"strcat(setq(A,before),localfun({name}),r(A))")))!.Message!.ToPlainText();
 		var ordinary = await Eval($"strcat(setq(A,before),u({startupObject}/{name}),r(A))");
@@ -255,7 +256,7 @@ public class LocalFunctionTests
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "LocalSameOwner");
 		await Cmd($"&CODE {thing}=unchanged");
 		await Cmd($"@function/local {name}={thing},CODE");
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
 		await Mediator.Send(new SetObjectOwnerCommand(obj, await obj.Object().Owner.WithCancellation(CancellationToken.None)));
 		await Assert.That(await Eval($"localfun({name})")).IsEqualTo("unchanged");
 	}

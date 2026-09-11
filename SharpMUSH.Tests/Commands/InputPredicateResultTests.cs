@@ -58,7 +58,7 @@ public class InputPredicateResultTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, connections, "InputPredicate");
 		try
 		{
-			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			var attributes = Get<IAttributeService>();
 			await attributes.SetAttributeAsync(actor, actor, "PREDICATE", MarkupText.Plain(mode switch
 			{
@@ -130,7 +130,7 @@ public class InputPredicateResultTests
 		var parser = new MUSHCodeParser(original.Logger, original.FunctionLibrary, commands, original.Configuration, Factory.Services);
 		try
 		{
-			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			var attributes = Get<IAttributeService>();
 			await attributes.SetAttributeAsync(actor, actor, "PREDICATE", MarkupText.Plain(mode switch
 			{

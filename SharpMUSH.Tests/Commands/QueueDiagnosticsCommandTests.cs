@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Server.Controllers;
 using Mediator;
@@ -34,7 +35,7 @@ public class QueueDiagnosticsCommandTests
 	public async Task UnsupportedSchedulerDiagnosticsRemainAuthorized(string path, bool allowed)
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.Object().DBRef;
+		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>().Object().DBRef;
 		var actor = new CapabilityActor("diagnostics", full, full);
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGameActorAsync(full, Arg.Any<CancellationToken>()).Returns(actor);
@@ -97,7 +98,7 @@ public class QueueDiagnosticsCommandTests
 		var recorder = Factory.Services.GetRequiredService<QueueDiagnosticsRecorder>();
 		var service = Factory.Services.GetRequiredService<IQueueDiagnosticsService>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.Object().DBRef;
+		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>().Object().DBRef;
 		var actor = await Factory.Services.GetRequiredService<IAdministrativeCapabilityService>().GetGameActorAsync(full);
 		await Assert.That(actor).IsNotNull();
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain("@profile/start 60"));

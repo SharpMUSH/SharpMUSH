@@ -60,7 +60,7 @@ public class SetPasswordConnectTests
 		// dbref-keyed object query (NOT the name-keyed GetPlayerQuery that connect uses, so we
 		// don't cache a pre-set snapshot of the player's PasswordHash).
 		var dbref = await Mediator.Send(new CreatePlayerCommand(name, "initial-throwaway-pw", defaultHome, defaultHome, startingQuota));
-		var player = (await Mediator.Send(new GetObjectNodeQuery(dbref))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<SharpPlayer>();
 
 		// Set a NEW password the way production does: hash the plaintext first, then hand the
 		// already-hashed value to the setter (salt == null). This exercises

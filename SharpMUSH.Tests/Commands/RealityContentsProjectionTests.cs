@@ -43,12 +43,12 @@ public class RealityContentsProjectionTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("projection room", god)))).AsRoom;
+		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("projection room", god)))).Expect<SharpRoom>();
 		var suffix = Guid.NewGuid().ToString("N")[..12];
-		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand("Projection" + suffix, "test-password", room.Object.DBRef, room.Object.DBRef, 20)))).AsPlayer;
+		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand("Projection" + suffix, "test-password", room.Object.DBRef, room.Object.DBRef, 20)))).Expect<SharpPlayer>();
 		var home = await actor.Location.WithCancellation(default);
-		room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("owned projection room", actor)))).AsRoom;
+		room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("owned projection room", actor)))).Expect<SharpRoom>();
 		var visibleName = "Visible" + suffix;
 		var hiddenName = "Hidden" + suffix;
 		var inInventory = projection is "inventory" or "@sweep/inventory";
@@ -61,8 +61,8 @@ public class RealityContentsProjectionTests
 				return await mediator.Send(new CreateExitCommand(name, [], room, actor));
 			return await mediator.Send(new CreateThingCommand(name, container, actor, room));
 		}
-		var visible = (await objects.GetObjectNodeAsync(await Create(visibleName))).Known;
-		var hidden = (await objects.GetObjectNodeAsync(await Create(hiddenName))).Known;
+		var visible = (await objects.GetObjectNodeAsync(await Create(visibleName))).Expect<AnySharpObject>();
+		var hidden = (await objects.GetObjectNodeAsync(await Create(hiddenName))).Expect<AnySharpObject>();
 		await policy.SaveObjectAsync(hidden.Object().Id!, ObjectReality.Default(hidden.Object().DBRef) with { Transmit = ["ghost"] }, default);
 		if (projection == "@sweep/exits")
 		{

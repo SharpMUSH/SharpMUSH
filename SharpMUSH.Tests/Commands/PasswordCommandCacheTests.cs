@@ -41,15 +41,15 @@ public class PasswordCommandCacheTests
 			startingQuota));
 
 		// Populate the object cache the same way a game read (LocateService) would, before the mutation.
-		var before = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var originalHash = before.AsPlayer.PasswordHash;
+		var before = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		var originalHash = before.PasswordHash;
 
 		const string newHash = "already-hashed-marker-value";
-		await Mediator.Send(new SetPlayerPasswordCommand(before.AsPlayer, newHash, Salt: "fixed-salt"));
+		await Mediator.Send(new SetPlayerPasswordCommand(before, newHash, Salt: "fixed-salt"));
 
 		// Re-read via the SAME cached path — must reflect the new hash, not the stale cached one.
-		var after = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(after.AsPlayer.PasswordHash).IsEqualTo(newHash);
-		await Assert.That(after.AsPlayer.PasswordHash).IsNotEqualTo(originalHash);
+		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		await Assert.That(after.PasswordHash).IsEqualTo(newHash);
+		await Assert.That(after.PasswordHash).IsNotEqualTo(originalHash);
 	}
 }

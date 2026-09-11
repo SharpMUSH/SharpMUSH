@@ -46,28 +46,25 @@ public class ZoneCommandTests
 		var zoneName = TestIsolationHelpers.GenerateUniqueName("ZoneMaster");
 		var zoneResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {zoneName}"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
-		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
+		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
-		await Assert.That(zoneObject.IsNone).IsFalse();
-		await Assert.That(zoneObject.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zoneObject.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		var objName = TestIsolationHelpers.GenerateUniqueName("ZonedObject");
 		var objResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {objName}"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		var zonedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var zonedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
-		await Assert.That(zonedObject.IsNone).IsFalse();
-		await Assert.That(zonedObject.Known.Object().DBRef.Number).IsEqualTo(objDbRef.Number);
+		await Assert.That(zonedObject.Object().DBRef.Number).IsEqualTo(objDbRef.Number);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor, executor)).IsTrue();
 
-		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var updatedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var zone = (await updatedObject.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
 
-		await Assert.That(zone.IsNone).IsFalse();
-		await Assert.That(zone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(zone.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
@@ -92,8 +89,8 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
-		var withZone = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zoneCheck = await withZone.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var withZone = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var zoneCheck = await withZone.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zoneCheck.IsNone).IsFalse();
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}=none"));
@@ -105,8 +102,8 @@ public class ZoneCommandTests
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 
-		var updatedObject = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updatedObject.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var updatedObject = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var zone = await updatedObject.Object().Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
 	}
@@ -114,8 +111,8 @@ public class ZoneCommandTests
 	/// <summary>Power names currently granted to an object.</summary>
 	private async Task<string[]> PowerNamesOf(DBRef dbref)
 	{
-		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
-		var powers = await node.Known.Object().Powers.Value.ToArrayAsync();
+		var node = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+		var powers = await node.Object().Powers.Value.ToArrayAsync();
 		return powers.Select(p => p.Name).ToArray();
 	}
 
@@ -212,7 +209,7 @@ public class ZoneCommandTests
 		// LockService.SystemLocks, which spells it "Chzone", while every LockType.ChZone read spells
 		// it "ChZone" against a case-sensitive lock dictionary. @CHZONE writes "ChZone", so that is
 		// the spelling the gate actually reads.
-		var newZoneNode = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Known;
+		var newZoneNode = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Expect<AnySharpObject>();
 		await Mediator.Send(new SetLockCommand(newZoneNode.Object(), nameof(LockType.ChZone), $"=#{mover.DbRef.Number}"));
 		await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@lock/zone {newZone}==#{owner.DbRef.Number}"));
@@ -227,19 +224,18 @@ public class ZoneCommandTests
 		// The scenario stands on `mover` controlling the object through the old zone and not through
 		// the new one; assert that rather than trusting the setup.
 		var permissionService = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
-		var moverObj = (await Mediator.Send(new GetObjectNodeQuery(mover.DbRef))).Known;
-		var victimObj = (await Mediator.Send(new GetObjectNodeQuery(victim))).Known;
-		var newZoneObj = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Known;
+		var moverObj = (await Mediator.Send(new GetObjectNodeQuery(mover.DbRef))).Expect<AnySharpObject>();
+		var victimObj = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		var newZoneObj = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Expect<AnySharpObject>();
 		await Assert.That(await permissionService.Controls(moverObj, victimObj)).IsTrue();
 		await Assert.That(await permissionService.Controls(moverObj, newZoneObj)).IsFalse();
 
 		await Parser.CommandParse(mover.Handle, ConnectionService,
 			MarkupText.Plain($"@chzone {victim}={newZone}"));
 
-		var moved = await Mediator.Send(new GetObjectNodeQuery(victim));
-		var zone = await moved.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(zone.IsNone).IsFalse();
-		await Assert.That(zone.Known.Object().DBRef.Number).IsEqualTo(newZone.Number);
+		var moved = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		var zone = (await moved.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(zone.Object().DBRef.Number).IsEqualTo(newZone.Number);
 
 		// The move went through, so the powers have to have gone with it.
 		await Assert.That(await PowerNamesOf(victim)).IsEmpty();
@@ -266,8 +262,8 @@ public class ZoneCommandTests
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor, executor)).IsTrue();
 
-		var updated = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var zone = await updated.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var updated = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var zone = await updated.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(zone.IsNone).IsFalse();
 	}
 
@@ -338,10 +334,9 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@chzone {room1DbRef}={zmrDbRef}"));
 
-		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(room1DbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(roomZone.IsNone).IsFalse();
-		await Assert.That(roomZone.Known.Object().DBRef.Number).IsEqualTo(zmrDbRef.Number);
+		var zonedRoom = (await Mediator.Send(new GetObjectNodeQuery(room1DbRef))).Expect<AnySharpObject>();
+		var roomZone = (await zonedRoom.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(roomZone.Object().DBRef.Number).IsEqualTo(zmrDbRef.Number);
 
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
 
@@ -375,8 +370,8 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
 
-		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zonedRoom = (await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef))).Expect<AnySharpObject>();
+		var roomZone = await zonedRoom.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
 
 		var cmdObjName = TestIsolationHelpers.GenerateUniqueName("ZMRCmdObj");
@@ -422,10 +417,9 @@ public class ZoneCommandTests
 		// Set the TEST PLAYER'S zone to the ZMR (this is the "personal zone" concept)
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@chzone me={personalZMRDbRef}"));
 
-		var playerObj = await Mediator.Send(new GetObjectNodeQuery(testPlayer.DbRef));
-		var playerZone = await playerObj.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(playerZone.IsNone).IsFalse();
-		await Assert.That(playerZone.Known.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
+		var playerObj = (await Mediator.Send(new GetObjectNodeQuery(testPlayer.DbRef))).Expect<AnySharpObject>();
+		var playerZone = (await playerObj.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(playerZone.Object().DBRef.Number).IsEqualTo(personalZMRDbRef.Number);
 
 		var personalCmdObjName = TestIsolationHelpers.GenerateUniqueName("PersonalCmdObj");
 		var personalCmdObjResult = await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {personalCmdObjName}"));
@@ -486,8 +480,8 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@chzone {zonedRoomDbRef}={zmrDbRef}"));
 
-		var zonedRoom = await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef));
-		var roomZone = await zonedRoom.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		var zonedRoom = (await Mediator.Send(new GetObjectNodeQuery(zonedRoomDbRef))).Expect<AnySharpObject>();
+		var roomZone = await zonedRoom.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(roomZone.IsNone).IsFalse();
 
 		// Set a $-command directly on the ZMR itself with unique command name (should be ignored per spec).

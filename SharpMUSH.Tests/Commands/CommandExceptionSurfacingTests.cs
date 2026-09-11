@@ -179,13 +179,10 @@ public class CommandExceptionSurfacingTests
 	/// <summary>
 	/// A connection whose executor cannot be resolved — bound to a dbref that is not in the
 	/// database — has nobody to notify by object, so the report goes to the raw socket instead.
-	/// This used to be demonstrated with pre-login <c>WHO</c>, which threw
-	/// <see cref="ArgumentNullException"/> out of <c>KnownExecutorObject()</c>; that was a bug in
-	/// <c>WHO</c> and is fixed, so the handle-targeted path is exercised here instead.
-	/// <para>The throw comes from the visitor's own <c>WithoutNone()</c> on the unresolvable
-	/// executor, before the command body runs — a separate robustness gap that is only visible at
-	/// all because of the surfacing this class covers. What is asserted here is the delivery
-	/// target, not which line threw.</para>
+	/// <para>The throw comes from the visitor resolving the unresolvable executor, before the
+	/// command body runs — a separate robustness gap that is only visible at all because of the
+	/// surfacing this class covers. What is asserted here is the delivery target, not which line
+	/// threw.</para>
 	/// </summary>
 	[Test]
 	public async Task ACommandWithNoResolvableExecutorNotifiesTheConnectionHandle()

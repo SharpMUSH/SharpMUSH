@@ -26,7 +26,7 @@ public class RealityProjectionCancellationTests
 		var actor = objects.CreatePlayer(41, "actor", room);
 		var target = objects.CreateThing(42, "target", room);
 		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(actor.AsPlayer));
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(actor));
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new[] { target.MinusRoom() }.ToAsyncEnumerable());
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);

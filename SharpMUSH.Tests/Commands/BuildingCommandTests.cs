@@ -28,12 +28,12 @@ public class BuildingCommandTests
 	public async Task SetUpActor()
 	{
 		Actor = await CreatePlayer("BuildingActor");
-		var actor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).AsPlayer;
+		var actor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(actor, wizard!))).IsTrue();
 		var roomRef = await Mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("BuildingRoom"), actor));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomRef))).AsRoom;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomRef))).Expect<SharpRoom>();
 		var origin = await actor.Location.WithCancellation(CancellationToken.None);
 		await Mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 	}
@@ -66,11 +66,11 @@ public class BuildingCommandTests
 	private async Task AssertDigNotifications(string roomName, DBRef source, DBRef room,
 		SharpExit forward, SharpExit back)
 	{
-		var forwardDestination = await forward.Home.WithCancellation(CancellationToken.None);
-		var backDestination = await back.Home.WithCancellation(CancellationToken.None);
-		await Assert.That(forwardDestination.WithoutNone().Object().DBRef).IsEqualTo(room);
-		var sourceObject = (await Mediator.Send(new GetObjectNodeQuery(source))).Known;
-		await Assert.That(backDestination.WithoutNone().Object().DBRef).IsEqualTo(sourceObject.Object().DBRef);
+		var forwardDestination = (await forward.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
+		var backDestination = (await back.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
+		await Assert.That(forwardDestination.Object().DBRef).IsEqualTo(room);
+		var sourceObject = (await Mediator.Send(new GetObjectNodeQuery(source))).Expect<AnySharpObject>();
+		await Assert.That(backDestination.Object().DBRef).IsEqualTo(sourceObject.Object().DBRef);
 		await NotifyService.Received(1).NotifyLocalized(Actor.DbRef,
 			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), TestHelpers.MatchingObject(Actor.DbRef),
 			Arg.Is<object[]>(args => args.Length == 2 && args[0].ToString() == roomName && Equals(args[1], room.Number)));
@@ -206,9 +206,9 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@link {exitDbRef}={roomDbRef}"));
 
-		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitDbRef))).AsExit;
-		var destination = await exit.Home.WithCancellation(CancellationToken.None);
-		await Assert.That(destination.WithoutNone().Object().DBRef).IsEqualTo(roomDbRef);
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitDbRef))).Expect<SharpExit>();
+		var destination = (await exit.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
+		await Assert.That(destination.Object().DBRef).IsEqualTo(roomDbRef);
 		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
 			nameof(ErrorMessages.Notifications.LinkedExitToRoom), TestHelpers.MatchingObject(executor),
 			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], exitDbRef.Number) &&
@@ -242,19 +242,17 @@ public class BuildingCommandTests
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
 		var parentObj = await Mediator.Send(new GetObjectNodeQuery(parentDbRef));
-		var childObj = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var childObj = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
 		await Assert.That(parentObj.IsNone).IsFalse();
-		await Assert.That(childObj.IsNone).IsFalse();
 
-		var initialParent = await childObj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var initialParent = await childObj.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(initialParent.IsNone).IsTrue();
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 
-		var updatedChild = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var setParent = await updatedChild.Known.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(setParent.IsNone).IsFalse();
-		await Assert.That(setParent.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		var updatedChild = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
+		var setParent = (await updatedChild.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(setParent.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
 	}
 
 	[Test]
@@ -268,14 +266,14 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 
-		var childWithParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentSet = await childWithParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var childWithParent = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
+		var parentSet = await childWithParent.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentSet.IsNone).IsFalse();
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}=none"));
 
-		var childNoParent = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentCleared = await childNoParent.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var childNoParent = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
+		var parentCleared = await childNoParent.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentCleared.IsNone).IsTrue();
 	}
 
@@ -291,16 +289,15 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objADbRef}={objBDbRef}"));
 
-		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		var objA = (await Mediator.Send(new GetObjectNodeQuery(objADbRef))).Expect<AnySharpObject>();
+		var parentOfA = (await objA.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(parentOfA.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
 
 		// Try to set B's parent to A (would create direct cycle: A -> B -> A)
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objBDbRef}={objADbRef}"));
 
-		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var objB = (await Mediator.Send(new GetObjectNodeQuery(objBDbRef))).Expect<AnySharpObject>();
+		var parentOfB = await objB.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfB.IsNone).IsTrue();
 
 		// Cycle through the chain (A -> B, then B -> A attempted) - Penn's "You are not allowed to
@@ -325,21 +322,19 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objADbRef}={objBDbRef}"));
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objBDbRef}={objCDbRef}"));
 
-		var objA = await Mediator.Send(new GetObjectNodeQuery(objADbRef));
-		var parentOfA = await objA.Known.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(parentOfA.IsNone).IsFalse();
-		await Assert.That(parentOfA.Known.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
+		var objA = (await Mediator.Send(new GetObjectNodeQuery(objADbRef))).Expect<AnySharpObject>();
+		var parentOfA = (await objA.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(parentOfA.Object().DBRef.Number).IsEqualTo(objBDbRef.Number);
 
-		var objB = await Mediator.Send(new GetObjectNodeQuery(objBDbRef));
-		var parentOfB = await objB.Known.Object().Parent.WithCancellation(CancellationToken.None);
-		await Assert.That(parentOfB.IsNone).IsFalse();
-		await Assert.That(parentOfB.Known.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
+		var objB = (await Mediator.Send(new GetObjectNodeQuery(objBDbRef))).Expect<AnySharpObject>();
+		var parentOfB = (await objB.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(parentOfB.Object().DBRef.Number).IsEqualTo(objCDbRef.Number);
 
 		// Try to set C's parent to A (would create indirect cycle: A -> B -> C -> A)
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objCDbRef}={objADbRef}"));
 
-		var objC = await Mediator.Send(new GetObjectNodeQuery(objCDbRef));
-		var parentOfC = await objC.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var objC = (await Mediator.Send(new GetObjectNodeQuery(objCDbRef))).Expect<AnySharpObject>();
+		var parentOfC = await objC.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOfC.IsNone).IsTrue();
 
 		// Indirect cycle (A -> B -> C, then C -> A attempted) - same Penn message as a direct cycle.
@@ -356,8 +351,8 @@ public class BuildingCommandTests
 		// Try to set object as its own parent (self-cycle)
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objDbRef}={objDbRef}"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var parent = await obj.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 
 		// Self-reference (@parent obj=obj) - Penn's "A thing cannot be its own ancestor!"
@@ -384,17 +379,16 @@ public class BuildingCommandTests
 
 		for (int i = 0; i < 4; i++)
 		{
-			var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[i]));
-			var parent = await obj.Known.Object().Parent.WithCancellation(CancellationToken.None);
-			await Assert.That(parent.IsNone).IsFalse();
-			await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
+			var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRefs[i]))).Expect<AnySharpObject>();
+			var parent = (await obj.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+			await Assert.That(parent.Object().DBRef.Number).IsEqualTo(objDbRefs[i + 1].Number);
 		}
 
 		// Try to set 4's parent to 0 (would create long cycle: 0 -> 1 -> 2 -> 3 -> 4 -> 0)
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {objDbRefs[4]}={objDbRefs[0]}"));
 
-		var obj4 = await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]));
-		var parentOf4 = await obj4.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var obj4 = (await Mediator.Send(new GetObjectNodeQuery(objDbRefs[4]))).Expect<AnySharpObject>();
+		var parentOf4 = await obj4.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parentOf4.IsNone).IsTrue();
 
 		// 5-object cycle wrapping back on itself - still a cycle-through-chain, not self-reference.
@@ -408,8 +402,8 @@ public class BuildingCommandTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "ChownOwner");
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chown {item}={owner}"));
 
-		var changed = await Mediator.Send(new GetObjectNodeQuery(item));
-		var actualOwner = await changed.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var changed = (await Mediator.Send(new GetObjectNodeQuery(item))).Expect<AnySharpObject>();
+		var actualOwner = await changed.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(actualOwner.Object.DBRef).IsEqualTo(owner);
 	}
 
@@ -439,7 +433,7 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {recycleDbRef}"));
 
-		var recycled = (await Mediator.Send(new GetObjectNodeQuery(recycleDbRef))).Known;
+		var recycled = (await Mediator.Send(new GetObjectNodeQuery(recycleDbRef))).Expect<AnySharpObject>();
 		await Assert.That(await recycled.Object().Flags.Value.AnyAsync(flag => flag.Name == "GOING")).IsTrue();
 
 		// Implementation sends: string.Format(ObjectScheduledDestroyedFormat, name)
@@ -465,8 +459,8 @@ public class BuildingCommandTests
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@unlink {exitName}"));
 
 		DBRef.TryParse(openResult.Message!.ToPlainText()!.Trim(), out var exitRef);
-		var exit = await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value));
-		var destination = await exit.AsExit.Home.WithCancellation(CancellationToken.None);
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitRef!.Value))).Expect<SharpExit>();
+		var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
 		await Assert.That(destination.IsNone).IsTrue();
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
@@ -480,9 +474,8 @@ public class BuildingCommandTests
 		var thingDbRef = await CreateFixtureThing("SetFlagTest");
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=MONITOR"));
 
-		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var thingObj = thing.AsThing;
-		var flags = await thingObj.Object.Flags.Value.ToArrayAsync();
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<SharpThing>();
+		var flags = await thing.Object.Flags.Value.ToArrayAsync();
 
 		await Assert.That(flags.Any(x => x.Name == "MONITOR")).IsTrue();
 	}
@@ -497,7 +490,7 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock {objDbRef}=#TRUE"));
 
-		var locked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Known;
+		var locked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(locked.Object().Locks["Basic"].LockString).IsEqualTo("#TRUE");
 
 		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
@@ -518,7 +511,7 @@ public class BuildingCommandTests
 
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@unlock {objDbRef}"));
 
-		var unlocked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Known;
+		var unlocked = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		await Assert.That(unlocked.Object().Locks.ContainsKey("Basic")).IsFalse();
 
 		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
@@ -539,8 +532,7 @@ public class BuildingCommandTests
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DescEvalTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Assert.That(obj.IsNone).IsFalse();
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// @desc should match DESCRIBE (not DESCFORMAT) due to length sorting in prefix matching
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=[add(47119,82)]"));
@@ -550,12 +542,11 @@ public class BuildingCommandTests
 			Arg.Is<object[]>(args => args.Length == 2 && Equals(args[0], "DescEvalTestObject") && Equals(args[1], "DESCRIBE")));
 
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
-		var descAttr = await attributeService.GetAttributeAsync(
-			obj.Known, obj.Known, "DESCRIBE",
-			IAttributeService.AttributeMode.Read, false);
+		var descAttr = (await attributeService.GetAttributeAsync(
+			obj, obj, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
-		await Assert.That(descAttr.IsAttribute).IsTrue();
-		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		var storedValue = descAttr.Last().Value.ToPlainText();
 		await Assert.That(storedValue).IsEqualTo("[add(47119,82)]");
 	}
 
@@ -568,19 +559,17 @@ public class BuildingCommandTests
 		var objResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create DescPrefixMatchTestObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Assert.That(obj.IsNone).IsFalse();
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// Use @desc (prefix) - should match DESCRIBE, not DESCFORMAT, due to shorter name
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@desc {objDbRef}=Test description text"));
 
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
-		var descAttr = await attributeService.GetAttributeAsync(
-			obj.Known, obj.Known, "DESCRIBE",
-			IAttributeService.AttributeMode.Read, false);
+		var descAttr = (await attributeService.GetAttributeAsync(
+			obj, obj, "DESCRIBE",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
-		await Assert.That(descAttr.IsAttribute).IsTrue();
-		var storedValue = descAttr.AsAttribute.Last().Value.ToPlainText();
+		var storedValue = descAttr.Last().Value.ToPlainText();
 		await Assert.That(storedValue).IsEqualTo("Test description text");
 	}
 
@@ -645,8 +634,8 @@ public class BuildingCommandTests
 		var roomDbRef = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel me={roomDbRef}"));
 
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomDbRef))).Known;
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomDbRef))).Expect<AnySharpObject>();
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 		await attributeService.SetAttributeAsync(playerObject, room, "DESCRIBE", MarkupText.Plain("[add(47119,82)]"));
 		await attributeService.SetAttributeAsync(playerObject, room, "DESCFORMAT", MarkupText.Plain($"evaluated_{token}:%0"));

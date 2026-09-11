@@ -45,10 +45,10 @@ public class MovementParityTests
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	private async Task<AnySharpObject> Node(string reference)
-		=> (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(reference)))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(reference)))).Expect<AnySharpObject>();
 
 	private async Task<AnySharpObject> Node(DBRef reference)
-		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
 
 	private async Task<string> LocationOf(string reference)
 	{
@@ -878,8 +878,8 @@ public class MovementParityTests
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "TagThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={origin}"));
 
-		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known.AsContent;
-		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().AsContent;
+		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
 
 		var move = new MoveObjectCommand(mover, into, origin);
 

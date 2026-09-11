@@ -31,7 +31,7 @@ public class AttributeTreeWipeBranchTests
 	public async ValueTask Wipe_ShouldClearEntireTree()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "WipeTree");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}=baz"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
@@ -39,11 +39,11 @@ public class AttributeTreeWipeBranchTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wipe {objDbRef}/FOO"));
 
-		var fooAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
+		var fooAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO",
 			IAttributeService.AttributeMode.Read, false);
-		var barAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
+		var barAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO`BAR",
 			IAttributeService.AttributeMode.Read, false);
-		var bazAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR`BAZ",
+		var bazAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO`BAR`BAZ",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(fooAttr.IsAttribute).IsFalse()

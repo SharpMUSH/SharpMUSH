@@ -28,12 +28,12 @@ public class ExamineSyntaxFormattingTests
 	{
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting");
-		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
 		var roomId = await Mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("ExamineRoom"), player));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).Expect<SharpRoom>();
 		var origin = await player.Location.WithCancellation(CancellationToken.None);
 		await Mediator.Send(new MoveObjectCommand(player, room, origin.Object().DBRef, IsSilent: true));
 	}

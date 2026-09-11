@@ -78,9 +78,8 @@ public class ObjectDestructionTests
 
 		await RunAsync($"@destroy {thing}");
 
-		var afterFirst = await Mediator.Send(new GetObjectNodeQuery(thing));
-		await Assert.That(afterFirst.IsNone).IsFalse();
-		await Assert.That(await afterFirst.Known.HasFlag("GOING")).IsTrue();
+		var afterFirst = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await Assert.That(await afterFirst.HasFlag("GOING")).IsTrue();
 
 		await RunAsync($"@destroy {thing}");
 
@@ -133,16 +132,15 @@ public class ObjectDestructionTests
 		await RunAsync($"@link {occupant}={home}");
 		await RunAsync($"@tel {occupant}={container}");
 
-		var beforeLocation = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Known.AsContent;
+		var beforeLocation = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Expect<AnySharpObject>().AsContent;
 		await Assert.That((await beforeLocation.Location()).Object().DBRef.Number).IsEqualTo(container.Number);
 
 		await RunAsync($"@destroy {container}");
 		await RunAsync($"@destroy {container}");
 
-		var survivor = await Mediator.Send(new GetObjectNodeQuery(occupant));
-		await Assert.That(survivor.IsNone).IsFalse();
+		var survivor = (await Mediator.Send(new GetObjectNodeQuery(occupant))).Expect<AnySharpObject>();
 
-		var location = await survivor.Known.AsContent.Location();
+		var location = await survivor.AsContent.Location();
 		await Assert.That(location.Object().DBRef.Number).IsEqualTo(home.Number);
 	}
 
@@ -195,12 +193,10 @@ public class ObjectDestructionTests
 		await RunAsync($"@destroy {doomed}");
 		await RunAsync($"@destroy {doomed}");
 
-		var survivor = await Mediator.Send(new GetObjectNodeQuery(entrance));
-		await Assert.That(survivor.IsNone).IsFalse();
+		var survivor = (await Mediator.Send(new GetObjectNodeQuery(entrance))).Expect<SharpExit>();
 
-		var destination = await survivor.AsExit.Home.WithCancellation(CancellationToken.None);
-		await Assert.That(destination.IsNone).IsFalse();
-		await Assert.That(destination.WithoutNone().Object().DBRef.Number).IsEqualTo(source.Number);
+		var destination = (await survivor.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>();
+		await Assert.That(destination.Object().DBRef.Number).IsEqualTo(source.Number);
 	}
 
 	/// <summary>
@@ -219,13 +215,11 @@ public class ObjectDestructionTests
 		await RunAsync($"@destroy {home}");
 		await RunAsync($"@destroy {home}");
 
-		var survivor = await Mediator.Send(new GetObjectNodeQuery(resident));
-		await Assert.That(survivor.IsNone).IsFalse();
+		var survivor = (await Mediator.Send(new GetObjectNodeQuery(resident))).Expect<AnySharpObject>();
 
 		// Resolving Home at all is the assertion: a missing home edge throws.
-		var newHome = await survivor.Known.AsContent.Home();
-		await Assert.That(newHome.IsNone).IsFalse();
-		await Assert.That(newHome.WithoutNone().Object().DBRef.Number).IsNotEqualTo(home.Number);
+		var newHome = (await survivor.AsContent.Home()).Expect<AnySharpContainer>();
+		await Assert.That(newHome.Object().DBRef.Number).IsNotEqualTo(home.Number);
 	}
 
 	/// <summary>
@@ -242,7 +236,7 @@ public class ObjectDestructionTests
 		var eventHandler = new DBRef(EventHandlerDbRefNumber);
 
 		var thing = await CreateThingAsync("DestroyEvent");
-		var thingName = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known.Object().Name;
+		var thingName = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().Object().Name;
 
 		try
 		{
@@ -281,9 +275,8 @@ public class ObjectDestructionTests
 	{
 		await RunAsync("@destroy #0");
 
-		var roomZero = await Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
-		await Assert.That(roomZero.IsNone).IsFalse();
-		await Assert.That(await roomZero.Known.HasFlag("GOING")).IsFalse();
+		var roomZero = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Expect<AnySharpObject>();
+		await Assert.That(await roomZero.HasFlag("GOING")).IsFalse();
 	}
 
 	/// <summary>
@@ -306,11 +299,10 @@ public class ObjectDestructionTests
 
 		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsTrue();
 
-		var survivor = await Mediator.Send(new GetObjectNodeQuery(possession));
-		await Assert.That(survivor.IsNone).IsFalse();
+		var survivor = (await Mediator.Send(new GetObjectNodeQuery(possession))).Expect<AnySharpObject>();
 
 		// Resolving Owner at all is the assertion: a severed ownership edge throws.
-		var owner = await survivor.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await survivor.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
@@ -327,9 +319,8 @@ public class ObjectDestructionTests
 
 		await RunAsync("@purge");
 
-		var afterFirstPurge = await Mediator.Send(new GetObjectNodeQuery(thing));
-		await Assert.That(afterFirstPurge.IsNone).IsFalse();
-		await Assert.That(await afterFirstPurge.Known.HasFlag("GOING_TWICE")).IsTrue();
+		var afterFirstPurge = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await Assert.That(await afterFirstPurge.HasFlag("GOING_TWICE")).IsTrue();
 
 		await RunAsync("@purge");
 
@@ -346,9 +337,8 @@ public class ObjectDestructionTests
 		await RunAsync("@purge");
 		await RunAsync("@purge");
 
-		var survivor = await Mediator.Send(new GetObjectNodeQuery(bystander));
-		await Assert.That(survivor.IsNone).IsFalse();
-		await Assert.That(await survivor.Known.HasFlag("GOING_TWICE")).IsFalse();
+		var survivor = (await Mediator.Send(new GetObjectNodeQuery(bystander))).Expect<AnySharpObject>();
+		await Assert.That(await survivor.HasFlag("GOING_TWICE")).IsFalse();
 	}
 
 	/// <summary>
@@ -418,7 +408,7 @@ public class ObjectDestructionTests
 		var service = DestructionServiceWith(
 			MoveServiceAnswering(_ => new Error<string>("Injected evacuation failure"), attempted));
 
-		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Known;
+		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Expect<AnySharpObject>();
 		var freed = await service.FreeObjectAsync(Parser, target);
 
 		await Assert.That(freed).IsFalse();
@@ -455,7 +445,7 @@ public class ObjectDestructionTests
 				: new Success(),
 			attempted));
 
-		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Known;
+		var target = (await Mediator.Send(new GetObjectNodeQuery(container))).Expect<AnySharpObject>();
 		var freed = await service.FreeObjectAsync(Parser, target);
 
 		await Assert.That(freed).IsTrue();

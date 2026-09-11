@@ -37,11 +37,11 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle origin", actor)))).AsRoom;
-		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle destination", actor)))).AsRoom;
-		var vehicle = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality vehicle", origin, actor, origin)))).AsThing;
-		var occupant = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("vehicle occupant", vehicle, actor, origin)))).AsThing;
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle origin", actor)))).Expect<SharpRoom>();
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("vehicle destination", actor)))).Expect<SharpRoom>();
+		var vehicle = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality vehicle", origin, actor, origin)))).Expect<SharpThing>();
+		var occupant = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("vehicle occupant", vehicle, actor, origin)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveObjectAsync(vehicle.Object.Id!, ObjectReality.Default(vehicle.Object.DBRef) with
@@ -71,10 +71,10 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var executor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var executor = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var home = await executor.Location.WithCancellation(default);
-		var sender = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality source", home, executor, home)))).AsThing;
-		var recipient = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality receiver", home, executor, home)))).AsThing;
+		var sender = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality source", home, executor, home)))).Expect<SharpThing>();
+		var recipient = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("spoof reality receiver", home, executor, home)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveObjectAsync(recipient.Object.Id!, ObjectReality.Default(recipient.Object.DBRef) with { Receive = ["ghost"] }, default);
@@ -98,11 +98,11 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality origin", actor)))).AsRoom;
-		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality destination", actor)))).AsRoom;
-		var mover = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden mover", origin, actor, origin)))).AsThing;
-		var observer = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality observer", arriving ? destination : origin, actor, origin)))).AsThing;
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var origin = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality origin", actor)))).Expect<SharpRoom>();
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality destination", actor)))).Expect<SharpRoom>();
+		var mover = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden mover", origin, actor, origin)))).Expect<SharpThing>();
+		var observer = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality observer", arriving ? destination : origin, actor, origin)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveObjectAsync(observer.Object.Id!, ObjectReality.Default(observer.Object.DBRef) with { Receive = ["ghost"] }, default);
@@ -128,9 +128,9 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var actor = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var home = await actor.Location.WithCancellation(default);
-		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality follower", home, actor, home)))).AsThing;
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality follower", home, actor, home)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost"]), default);
@@ -154,11 +154,11 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var originalProfile = (await policy.ReadObjectAsync(player.Object.DBRef))!;
 		var home = await player.Location.WithCancellation(default);
-		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("tel ghost room", player)))).AsRoom;
-		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("tel normal item", home, player, home)))).AsThing;
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("tel ghost room", player)))).Expect<SharpRoom>();
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("tel normal item", home, player, home)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -166,7 +166,7 @@ public class RealityGameTests
 			await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
 			await Factory.FunctionParser.FromState(ParserState.RootFor(player.Object.DBRef)).FunctionParse(
 				MarkupText.Plain($"tel({item.Object.DBRef},{destination.Object.DBRef})"));
-			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).Expect<SharpThing>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(home.Object().DBRef);
 		}
 		finally
@@ -187,10 +187,10 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var home = await player.Location.WithCancellation(default);
 		var name = "RealityPager" + Guid.NewGuid().ToString("N")[..12];
-		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand(name, "TestPassword123!", home.Object().DBRef, home.Object().DBRef, 10)))).AsPlayer;
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand(name, "TestPassword123!", home.Object().DBRef, home.Object().DBRef, 10)))).Expect<SharpPlayer>();
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -214,18 +214,18 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var home = await player.Location.WithCancellation(default);
 		var name = "RealityReceiver" + Guid.NewGuid().ToString("N")[..12];
-		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, home, player, home)))).AsThing;
-		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality gift", player, player, home)))).AsThing;
+		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, home, player, home)))).Expect<SharpThing>();
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality gift", player, player, home)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
 			await policy.SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Receive = ["ghost"] }, default);
 			await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(
 				MarkupText.Plain($"give {(byName ? name : target.Object.DBRef.ToString())}={item.Object.DBRef}"));
-			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).Expect<SharpThing>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(target.Object.DBRef);
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
@@ -238,13 +238,13 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var originalConfiguration = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var originalLocation = await player.Location.WithCancellation(default);
 		var roomRef = await mediator.Send(new CreateRoomCommand("reality room", player));
-		var room = (await objects.GetObjectNodeAsync(roomRef)).AsRoom;
+		var room = (await objects.GetObjectNodeAsync(roomRef)).Expect<SharpRoom>();
 		var name = "reality-twin-" + Guid.NewGuid().ToString("N");
 		var visible = await mediator.Send(new CreateThingCommand(name, room, player, room));
-		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).Known;
+		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).Expect<AnySharpObject>();
 		await policy.SaveObjectAsync(hidden.Object().Id!, ObjectReality.Default(hidden.Object().DBRef) with { Transmit = ["ghost"] }, default);
 		await mediator.Send(new MoveObjectCommand(player, room, originalLocation.Object().DBRef));
 		try
@@ -278,7 +278,7 @@ public class RealityGameTests
 	{
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var parser = Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef));
 		var name = "layer_" + Guid.NewGuid().ToString("N")[..12];
 		try
@@ -302,12 +302,12 @@ public class RealityGameTests
 		var original = await policy.ConfigurationAsync();
 		var objects = Get<IObjectStore>();
 		var mediator = Get<IMediator>();
-		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var roomRef = await mediator.Send(new CreateRoomCommand("layer execution permissions", owner));
-		var room = (await objects.GetObjectNodeAsync(roomRef)).Known;
+		var room = (await objects.GetObjectNodeAsync(roomRef)).Expect<AnySharpObject>();
 		await mediator.Send(new SetObjectFlagCommand(room, (await mediator.Send(new GetObjectFlagQuery("WIZARD")))!));
 		var viewerRef = await mediator.Send(new CreatePlayerCommand($"LayerViewer{Guid.NewGuid():N}", "testpass", roomRef, roomRef, 20));
-		var viewer = (await objects.GetObjectNodeAsync(viewerRef)).AsPlayer;
+		var viewer = (await objects.GetObjectNodeAsync(viewerRef)).Expect<SharpPlayer>();
 		await mediator.Send(new SetAttributeCommand(roomRef, ["DESCRIBE"], MarkupText.Plain("ordinary-description"), owner));
 		await mediator.Send(new SetAttributeCommand(roomRef, ["LAYERDESC"], MarkupText.Plain("custom-description-[add(1,2)]"), owner));
 		var store = Get<IAttributeStore>();
@@ -337,9 +337,9 @@ public class RealityGameTests
 	{
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var roomRef = await Get<IMediator>().Send(new CreateRoomCommand("layer description", player));
-		var room = (await Get<IObjectStore>().GetObjectNodeAsync(roomRef)).Known;
+		var room = (await Get<IObjectStore>().GetObjectNodeAsync(roomRef)).Expect<AnySharpObject>();
 		await Get<IMediator>().Send(new SetAttributeCommand(room.Object().DBRef, ["LAYERDESC"], MarkupText.Plain("layer-secret-[add(1,2)]"), player));
 		await policy.SaveObjectAsync(room.Object().Id!, ObjectReality.Default(room.Object().DBRef) with
 		{ Descriptions = new() { ["normal"] = "LAYERDESC" } }, default);
@@ -371,11 +371,11 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var originalLocation = await player.Location.WithCancellation(default);
-		var start = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality start", player)))).AsRoom;
-		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality destination", player)))).AsRoom;
-		var exit = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateExitCommand("way", [], start, player)))).AsExit;
+		var start = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality start", player)))).Expect<SharpRoom>();
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("reality destination", player)))).Expect<SharpRoom>();
+		var exit = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateExitCommand("way", [], start, player)))).Expect<SharpExit>();
 		await mediator.Send(new LinkExitCommand(exit, destination));
 		if (hiddenDestination) await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		else await mediator.Send(new SetLockCommand(exit.Object, "Basic", "#FALSE", player));
@@ -384,7 +384,7 @@ public class RealityGameTests
 		{
 			await policy.SaveConfigurationAsync(new(1, hiddenDestination, ["normal", "ghost"]), default);
 			await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain("goto way"));
-			var current = (await objects.GetObjectNodeAsync(player.Object.DBRef)).AsPlayer;
+			var current = (await objects.GetObjectNodeAsync(player.Object.DBRef)).Expect<SharpPlayer>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(start.Object.DBRef);
 		}
 		finally
@@ -401,11 +401,11 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var home = await player.Location.WithCancellation(default);
 		var bagName = "reality-bag-" + Guid.NewGuid().ToString("N");
-		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(bagName, player, player, home)))).AsThing;
-		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden item", bag, player, home)))).AsThing;
+		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(bagName, player, player, home)))).Expect<SharpThing>();
+		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden item", bag, player, home)))).Expect<SharpThing>();
 		await policy.SaveObjectAsync(hidden.Object.Id!, ObjectReality.Default(hidden.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		try
 		{
@@ -413,7 +413,7 @@ public class RealityGameTests
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(player.Object.Key, output))
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"empty {bagName}"));
-			var current = (await objects.GetObjectNodeAsync(hidden.Object.DBRef)).AsThing;
+			var current = (await objects.GetObjectNodeAsync(hidden.Object.DBRef)).Expect<SharpThing>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(bag.Object.DBRef);
 			// do_empty always prints the tally and has no "already empty" form (move.c:906-911), so a
 			// bag whose only item is hidden reports removing none of them.
@@ -429,13 +429,13 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var originalLocation = await player.Location.WithCancellation(default);
-		var start = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("drop start", player)))).AsRoom;
-		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("secret-drop-destination", player)))).AsRoom;
+		var start = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("drop start", player)))).Expect<SharpRoom>();
+		var destination = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("secret-drop-destination", player)))).Expect<SharpRoom>();
 		await mediator.Send(new LinkRoomCommand(start, destination));
 		var name = "reality-drop-" + Guid.NewGuid().ToString("N");
-		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, player, player, start)))).AsThing;
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, player, player, start)))).Expect<SharpThing>();
 		await policy.SaveObjectAsync(destination.Object.Id!, ObjectReality.Default(destination.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		await policy.SaveObjectAsync(item.Object.Id!, ObjectReality.Default(item.Object.DBRef) with { Receive = ["normal", "ghost"] }, default);
 		await mediator.Send(new MoveObjectCommand(player, start, originalLocation.Object().DBRef));
@@ -445,7 +445,7 @@ public class RealityGameTests
 			var output = new HttpResponseContext();
 			using (Get<IHttpOutputCapture>().BeginCapture(player.Object.Key, output))
 				await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"drop {name}"));
-			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).Expect<SharpThing>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(destination.Object.DBRef);
 			await Assert.That(output.Body.ToString()).DoesNotContain(destination.Object.Name);
 		}
@@ -463,19 +463,19 @@ public class RealityGameTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var originalLocation = await player.Location.WithCancellation(default);
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("empty target", player)))).AsRoom;
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("empty target", player)))).Expect<SharpRoom>();
 		var name = "empty-bag-" + Guid.NewGuid().ToString("N");
-		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).AsThing;
-		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("item", bag, player, room)))).AsThing;
+		var bag = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand(name, room, player, room)))).Expect<SharpThing>();
+		var item = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("item", bag, player, room)))).Expect<SharpThing>();
 		await policy.SaveObjectAsync(room.Object.Id!, ObjectReality.Default(room.Object.DBRef) with { Transmit = ["ghost"] }, default);
 		await mediator.Send(new MoveObjectCommand(player, room, originalLocation.Object().DBRef));
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
 			await Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)).CommandListParse(MarkupText.Plain($"empty {name}"));
-			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).AsThing;
+			var current = (await objects.GetObjectNodeAsync(item.Object.DBRef)).Expect<SharpThing>();
 			await Assert.That((await current.Location.WithCancellation(default)).Object().DBRef).IsEqualTo(bag.Object.DBRef);
 		}
 		finally
@@ -489,9 +489,9 @@ public class RealityGameTests
 	public async Task CorruptProfileProducesAnAdministrativeError()
 	{
 		var objects = Get<IObjectStore>();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var location = await player.Location.WithCancellation(default);
-		var target = (await objects.GetObjectNodeAsync(await Get<IMediator>().Send(new CreateThingCommand("corrupt reality", player, player, location)))).AsThing;
+		var target = (await objects.GetObjectNodeAsync(await Get<IMediator>().Send(new CreateThingCommand("corrupt reality", player, player, location)))).Expect<SharpThing>();
 		try
 		{
 			await Get<RealityPolicy>().SaveObjectAsync(target.Object.Id!, ObjectReality.Default(target.Object.DBRef) with { Version = 2 }, default);

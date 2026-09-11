@@ -190,7 +190,7 @@ public class MailCommandTests
 			MarkupText.Plain("@mail me=and//or/The body."));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("and/or");
@@ -213,7 +213,7 @@ public class MailCommandTests
 			MarkupText.Plain($"@mail me={body}"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo(new string('x', 60));
@@ -257,7 +257,7 @@ public class MailCommandTests
 			MarkupText.Plain("think [mailsend(me,Fn Subject/Fn body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("Fn Subject");
@@ -298,7 +298,7 @@ public class MailCommandTests
 			MarkupText.Plain("think [mailsend(me,Sig Subject/Sig body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Content.ToPlainText()).Contains("-- Regards");

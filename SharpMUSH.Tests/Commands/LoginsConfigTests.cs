@@ -55,7 +55,7 @@ public class LoginsConfigTests
 		await Mediator.Send(new CreatePlayerCommand(plebName, "pleb-password-1", defaultHome, defaultHome, startingQuota));
 		var staffName = TestIsolationHelpers.GenerateUniqueName("LoginsStaff");
 		var staffId = await Mediator.Send(new CreatePlayerCommand(staffName, "staff-password-1", defaultHome, defaultHome, startingQuota));
-		var staff = (await Mediator.Send(new GetObjectNodeQuery(staffId))).Known;
+		var staff = (await Mediator.Send(new GetObjectNodeQuery(staffId))).Expect<AnySharpObject>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(staff, wizard!))).IsTrue();
 

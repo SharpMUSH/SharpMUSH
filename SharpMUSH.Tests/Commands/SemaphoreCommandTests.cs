@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -44,14 +45,14 @@ public class SemaphoreCommandTests
 		target.Object().Flags = new(() => Flags());
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
-			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor.AsPlayer));
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor));
 		var locate = Substitute.For<ILocateService>();
 		locate.LocateAndNotifyIfInvalidWithCallState(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
 			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
 			.Returns(ValueTask.FromResult<AnySharpObjectOrErrorCallState>(target));
 		locate.LocateAndNotifyIfInvalid(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
 			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
-			.Returns(ValueTask.FromResult<AnyOptionalSharpObjectOrError>(target.AsThing));
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObjectOrError>(target));
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(false);
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
@@ -88,7 +89,7 @@ public class SemaphoreCommandTests
 	[Arguments("delay")]
 	public async Task WaitCancellationReachesBlockedPreflightAndQueueRequest(string phase)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("wait-cancel-" + Guid.NewGuid().ToString("N"), player));
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -159,7 +160,7 @@ public class SemaphoreCommandTests
 	{
 		using var budget = ExecutionBudget.FromMilliseconds(30000);
 		using var scope = budget.Enter();
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("notify-repair-" + Guid.NewGuid().ToString("N"), player));
 		string[] path = ["CUSTOM_COUNTER"];
 		var mediator = Substitute.For<IMediator>();
@@ -244,7 +245,7 @@ public class SemaphoreCommandTests
 	[Arguments(true)]
 	public async Task QueuedMalformedSemaphoreCommandNotifiesTheExecutor(bool drain)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("invalid-notice-" + Guid.NewGuid().ToString("N"), player));
 		var value = "invalid-" + Guid.NewGuid().ToString("N");
 		await Assert.That(await Mediator.Send(new SharpMUSH.Library.Commands.Database.SetAttributeCommand(target, ["SEMAPHORE"], MarkupText.Plain(value), player))).IsTrue();
@@ -268,7 +269,7 @@ public class SemaphoreCommandTests
 	[Arguments(true, "2147483648")]
 	public async Task InvalidDefaultCounterReturnsACommandErrorWithoutChangingQueue(bool drain, string value)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("invalid-counter-" + Guid.NewGuid().ToString("N"), player));
 		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
 		var state = ParserState.RootFor(player.Object.DBRef);
@@ -284,9 +285,8 @@ public class SemaphoreCommandTests
 			parser.CurrentState.Returns(state with { Arguments = new() { ["0"] = new(target + "/SEMAPHORE") } });
 			var metadata = (SharpMUSH.Library.Attributes.SharpCommandAttribute)Attribute.GetCustomAttribute(
 				typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod(drain ? "Drain" : "Notify")!, typeof(SharpMUSH.Library.Attributes.SharpCommandAttribute))!;
-			var result = drain ? await commands.Drain(parser, metadata) : await commands.Notify(parser, metadata);
-			await Assert.That(result.IsSome()).IsTrue();
-			await Assert.That(result.AsValue().Message!.ToPlainText()).Contains("Semaphore attribute must have a numeric or empty value");
+			var result = (drain ? await commands.Drain(parser, metadata) : await commands.Notify(parser, metadata)).Expect<CallState>();
+			await Assert.That(result.Message!.ToPlainText()).Contains("Semaphore attribute must have a numeric or empty value");
 			await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(usage);
 			await Assert.That((await Mediator.CreateStream(new GetAttributeQuery(target, ["SEMAPHORE"])).LastAsync()).Value.ToPlainText()).IsEqualTo(value);
 			using var lease = await Scheduler.EnterSemaphoreMutationAsync();
@@ -298,7 +298,7 @@ public class SemaphoreCommandTests
 	[Test]
 	public async Task DrainOfAnAbsentSemaphoreIsANoOp()
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("empty-drain-" + Guid.NewGuid().ToString("N"), player));
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
@@ -322,7 +322,7 @@ public class SemaphoreCommandTests
 	[Arguments(true)]
 	public async Task RejectedCommandCounterWriteRetainsTheWaitingEntry(bool drain)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(new SharpMUSH.Library.Models.DBRef(1)))).Expect<SharpPlayer>();
 		var target = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateRoomCommand("command-accounting-" + Guid.NewGuid().ToString("N"), player));
 		var semaphore = new SharpMUSH.Library.Models.DbRefAttribute(target, ["SEMAPHORE"]);
 		var state = ParserState.RootFor(player.Object.DBRef);
@@ -626,20 +626,16 @@ public class SemaphoreCommandTests
 
 		await Task.Delay(3000);
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
 
-		var attrResultA = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrA,
-			IAttributeService.AttributeMode.Read, false);
-		var attrResultB = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrB,
-			IAttributeService.AttributeMode.Read, false);
+		var attrResultA = (await AttributeService.GetAttributeAsync(obj, obj, attrA,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"First command in @wait callback should set {attrA}");
+		var attrResultB = (await AttributeService.GetAttributeAsync(obj, obj, attrB,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"Second command in @wait callback should set {attrB}");
 
-		await Assert.That(attrResultA.IsAttribute).IsTrue()
-			.Because($"First command in @wait callback should set {attrA}");
-		await Assert.That(attrResultA.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("valueA");
+		await Assert.That(attrResultA.Last().Value.ToPlainText()).IsEqualTo("valueA");
 
-		await Assert.That(attrResultB.IsAttribute).IsTrue()
-			.Because($"Second command in @wait callback should set {attrB}");
-		await Assert.That(attrResultB.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("valueB");
+		await Assert.That(attrResultB.Last().Value.ToPlainText()).IsEqualTo("valueB");
 	}
 
 	/// <summary>
@@ -714,12 +710,11 @@ public class SemaphoreCommandTests
 
 		// PennMUSH evaluates [add(1,1)] → "2" before storing the attribute.
 		// SharpMUSH currently stores the literal "[add(1,1)]" instead (the bug).
-		var obj = await Mediator.Send(new GetObjectNodeQuery(testObj));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, uniqueAttr,
-			IAttributeService.AttributeMode.Read, false);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(testObj))).Expect<AnySharpObject>();
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, uniqueAttr,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
-		await Assert.That(attr.IsAttribute).IsTrue();
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("2");
+		await Assert.That(attr.Last().Value.ToPlainText()).IsEqualTo("2");
 	}
 
 	/// <summary>
@@ -745,14 +740,11 @@ public class SemaphoreCommandTests
 
 		await Task.Delay(3000);
 
-		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
-		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, uniqueAttr,
-			IAttributeService.AttributeMode.Read, false);
+		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, uniqueAttr,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{uniqueAttr} should have been set by the @wait callback");
 
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because($"&{uniqueAttr} should have been set by the @wait callback");
-
-		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		var attrValue = attr.Last().Value.ToPlainText();
 		await Assert.That(attrValue).StartsWith("#")
 			.Because($"num(%0) in the @wait callback should resolve to a dbref like #N, but got: {attrValue}");
 		await Assert.That(attrValue).DoesNotContain("-1")
@@ -781,14 +773,11 @@ public class SemaphoreCommandTests
 
 		await Task.Delay(3000);
 
-		var storeObjNode = await Mediator.Send(new GetObjectNodeQuery(storeObj));
-		var attr = await AttributeService.GetAttributeAsync(storeObjNode.Known, storeObjNode.Known, grpAttr,
-			IAttributeService.AttributeMode.Read, false);
+		var storeObjNode = (await Mediator.Send(new GetObjectNodeQuery(storeObj))).Expect<AnySharpObject>();
+		var attr = (await AttributeService.GetAttributeAsync(storeObjNode, storeObjNode, grpAttr,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{grpAttr} should have been set by the @wait callback's @switch non-#-1 branch");
 
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because($"&{grpAttr} should have been set by the @wait callback's @switch non-#-1 branch");
-
-		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		var attrValue = attr.Last().Value.ToPlainText();
 		await Assert.That(attrValue).StartsWith("#")
 			.Because($"The groups attribute should contain a dbref, but got: {attrValue}");
 		await Assert.That(attrValue).DoesNotContain("-1")
@@ -800,17 +789,17 @@ public class SemaphoreCommandTests
 		var semObj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SemBudgetCount");
 		var name = "COUNT_" + Guid.NewGuid().ToString("N");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wait {semObj}/{name}=think timeout"));
-		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
-		var initial = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
-		await Assert.That(initial.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("1");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(semObj))).Expect<AnySharpObject>();
+		var initial = (await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(initial.Last().Value.ToPlainText()).IsEqualTo("1");
 		var tasks = await Scheduler.GetSemaphoreTasks(new SharpMUSH.Library.Models.DbRefAttribute(semObj, [name])).ToArrayAsync();
 		await Scheduler.RescheduleSemaphoreTask(tasks.Single().Pid, TimeSpan.Zero);
 		var count = "1";
 		for (var attempt = 0; attempt < 50 && count != "0"; attempt++)
 		{
 			await Task.Delay(100);
-			var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
-			count = current.AsAttribute.Last().Value.ToPlainText();
+			var current = (await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+			count = current.Last().Value.ToPlainText();
 		}
 		var diagnostic = "the semaphore timeout should decrement its counter";
 		if (count != "0")
@@ -836,9 +825,9 @@ public class SemaphoreCommandTests
 		var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		await Scheduler.AdmitWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "reset-drained", "test");
 		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		var obj = await Mediator.Send(new GetObjectNodeQuery(semObj));
-		var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
-		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(semObj))).Expect<AnySharpObject>();
+		var current = (await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(current.Last().Value.ToPlainText()).IsEqualTo("0");
 	}
 
 	[Test]
@@ -855,15 +844,15 @@ public class SemaphoreCommandTests
 		var admitted = await Scheduler.AdmitCommandList(MarkupText.Plain("think ignored"), ParserState.RootFor(executor), attribute, 1, TimeSpan.FromHours(1));
 		await Assert.That(admitted.Accepted).IsTrue();
 		var haltedObject = haltTarget ? semaphore : executor;
-		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(haltedObject))).AsThing.Object.DBRef;
+		var incarnation = (await Mediator.Send(new GetObjectNodeQuery(haltedObject))).Expect<SharpThing>().Object.DBRef;
 		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number, incarnation.CreationMilliseconds + 1));
 		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before + 1);
 		await Scheduler.Halt(new SharpMUSH.Library.Models.DBRef(haltedObject.Number));
 		await Assert.That(Scheduler.GetQueueUsage().Total).IsEqualTo(before);
 		await Assert.That((await Scheduler.GetSemaphoreTasks(attribute).ToArrayAsync()).Length).IsEqualTo(0);
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(semaphore))).Known;
-		var current = await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false);
-		await Assert.That(current.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("0");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(semaphore))).Expect<AnySharpObject>();
+		var current = (await AttributeService.GetAttributeAsync(obj, obj, name, IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(current.Last().Value.ToPlainText()).IsEqualTo("0");
 	}
 
 

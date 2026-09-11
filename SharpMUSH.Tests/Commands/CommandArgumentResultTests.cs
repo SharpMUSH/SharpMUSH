@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -23,7 +24,7 @@ public class CommandArgumentResultTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "CommandResult");
-		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Known;
+		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
 		await attributes.SetAttributeAsync(actor, actor, "BODY", MarkupText.Plain(mode switch
 		{
 			"syntax" => "[",

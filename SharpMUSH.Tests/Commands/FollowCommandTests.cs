@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -36,19 +37,18 @@ public class FollowCommandTests
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	private async Task<string> NameOf(DBRef dbRef)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Known.Object().Name;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Expect<AnySharpObject>().Object().Name;
 
 	private async Task<AttributeReadResult> FollowingOf(DBRef who)
 	{
-		var obj = await Mediator.Send(new GetObjectNodeQuery(who));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOLLOWING",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(who))).Expect<AnySharpObject>();
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "FOLLOWING",
 			IAttributeService.AttributeMode.Read, false);
 
-		return new AttributeReadResult(
-			attr.IsAttribute,
-			attr.IsAttribute ? attr.AsAttribute.Last().Value.ToPlainText() : null,
-			attr.IsAttribute && attr.AsAttribute.Last().Flags
-				.Any(f => f.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase)));
+		return attr is SharpAttribute[] chain
+			? new AttributeReadResult(true, chain.Last().Value.ToPlainText(),
+				chain.Last().Flags.Any(f => f.Name.Equals("wizard", StringComparison.OrdinalIgnoreCase)))
+			: new AttributeReadResult(false, null, false);
 	}
 
 	private record AttributeReadResult(bool Exists, string? Value, bool IsWizardFlagged);

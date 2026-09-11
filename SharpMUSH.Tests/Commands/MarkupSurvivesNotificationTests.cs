@@ -55,10 +55,10 @@ public class MarkupSurvivesNotificationTests
 		try
 		{
 			var objects = WebAppFactoryArg.Services.GetRequiredService<IObjectStore>();
-			var actor = (await objects.GetObjectNodeAsync(player.DbRef)).AsPlayer;
+			var actor = (await objects.GetObjectNodeAsync(player.DbRef)).Expect<SharpPlayer>();
 			var roomId = await Mediator.Send(new CreateRoomCommand(
 				TestIsolationHelpers.GenerateUniqueName("MarkupRoom"), actor));
-			var room = (await objects.GetObjectNodeAsync(roomId)).AsRoom;
+			var room = (await objects.GetObjectNodeAsync(roomId)).Expect<SharpRoom>();
 			var origin = await actor.Location.WithCancellation(default);
 			await Mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 			var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);

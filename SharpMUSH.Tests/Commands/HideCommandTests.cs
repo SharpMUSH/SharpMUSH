@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
@@ -28,10 +29,10 @@ public class HideCommandTests
 	// Fixture privilege must not depend on the shared God connection remaining logged in.
 	private async Task GrantWizardAsync(DBRef reference)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(reference))).Known;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
-		await Assert.That(await (await Mediator.Send(new GetObjectNodeQuery(reference))).Known.CanHide()).IsTrue();
+		await Assert.That(await (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>().CanHide()).IsTrue();
 	}
 
 	[Test]
@@ -149,7 +150,7 @@ public class HideCommandTests
 		// and the assertions below would be vacuous.
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsEqualTo(playerDbRef);
 
-		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		await Assert.That(await connectedPlayer.HasFlag("DARK")).IsEqualTo(expectDark);
 		await Assert.That(ConnectionService.Get(handle)?.IsHidden).IsEqualTo(expectHidden);
 	}
@@ -176,7 +177,7 @@ public class HideCommandTests
 		// assertion would be vacuous.
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsEqualTo(playerDbRef);
 
-		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		var connectedPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		await Assert.That(await connectedPlayer.HasFlag("DARK")).IsFalse();
 	}
 
@@ -206,7 +207,7 @@ public class HideCommandTests
 		// reused for a new login at the connect screen) and must not inherit the hidden state.
 		var secondPlayerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "HideLogoutSecond");
-		var secondPlayerName = (await Mediator.Send(new GetObjectNodeQuery(secondPlayerDbRef))).Known.Object().Name;
+		var secondPlayerName = (await Mediator.Send(new GetObjectNodeQuery(secondPlayerDbRef))).Expect<AnySharpObject>().Object().Name;
 
 		await Parser.CommandParse(firstPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"CONNECT {secondPlayerName} TestPassword123"));

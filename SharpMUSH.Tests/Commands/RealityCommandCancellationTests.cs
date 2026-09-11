@@ -35,7 +35,7 @@ public class RealityCommandCancellationTests
 		player.Object().Id = "admin";
 		var actor = new CapabilityActor("admin", player.Object().DBRef, player.Object().DBRef);
 		var objects = Substitute.For<IObjectStore>();
-		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player.AsPlayer));
+		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player));
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGameActorAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(actor);
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(true);
@@ -69,7 +69,7 @@ public class RealityCommandCancellationTests
 		var administration = new RealityAdministration(new(store, objects), capabilities, objects, permissions, Substitute.For<IValidateService>());
 		using var services = new ServiceCollection().AddSingleton(capabilities).AddSingleton(administration).BuildServiceProvider();
 		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player.AsPlayer));
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player));
 		var state = ParserState.RootFor(player.Object().DBRef) with
 		{
 			Switches = [stage.StartsWith("profile", StringComparison.Ordinal) ? "RX" : "ENABLE"],

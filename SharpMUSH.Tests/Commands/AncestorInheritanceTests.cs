@@ -35,7 +35,7 @@ public class AncestorInheritanceTests
 	private static readonly DBRef God = new(1);
 
 	private async Task<AnySharpObject> Known(DBRef dbref)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	[Test]
 	[NotInParallel]
@@ -48,11 +48,10 @@ public class AncestorInheritanceTests
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncInheritPlain");
 		var thing = await Known(thingRef);
 
-		var attr = await AttributeService.GetAttributeAsync(thing, thing, "ANCESTOR_ONLY_ATTR",
-			IAttributeService.AttributeMode.Read, true);
+		var attr = (await AttributeService.GetAttributeAsync(thing, thing, "ANCESTOR_ONLY_ATTR",
+			IAttributeService.AttributeMode.Read, true)).Expect<SharpAttribute[]>();
 
-		await Assert.That(attr.IsAttribute).IsTrue();
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("from ancestor");
+		await Assert.That(attr.Last().Value.ToPlainText()).IsEqualTo("from ancestor");
 	}
 
 	[Test]
@@ -67,11 +66,10 @@ public class AncestorInheritanceTests
 			MarkupText.Plain($"&SHADOW_ATTR {thingRef}=own value"));
 		var thing = await Known(thingRef);
 
-		var attr = await AttributeService.GetAttributeAsync(thing, thing, "SHADOW_ATTR",
-			IAttributeService.AttributeMode.Read, true);
+		var attr = (await AttributeService.GetAttributeAsync(thing, thing, "SHADOW_ATTR",
+			IAttributeService.AttributeMode.Read, true)).Expect<SharpAttribute[]>();
 
-		await Assert.That(attr.IsAttribute).IsTrue();
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("own value");
+		await Assert.That(attr.Last().Value.ToPlainText()).IsEqualTo("own value");
 	}
 
 	[Test]
@@ -124,11 +122,10 @@ public class AncestorInheritanceTests
 
 		// Proves the type-ancestor fall-through reaches a nested leaf at all, so the miss below
 		// is the no_inherit flag rather than tree attributes never inheriting through ANCESTOR_*.
-		var control = await AttributeService.GetAttributeAsync(thing, thing, $"ANCOK{uid}`LEAF",
-			IAttributeService.AttributeMode.Read, true);
-		await Assert.That(control.IsAttribute).IsTrue()
-			.Because("a nested leaf on the type ancestor is inherited by a plain thing");
-		await Assert.That(control.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("okleaf");
+		var control = (await AttributeService.GetAttributeAsync(thing, thing, $"ANCOK{uid}`LEAF",
+			IAttributeService.AttributeMode.Read, true))
+			.Expect<SharpAttribute[]>("a nested leaf on the type ancestor is inherited by a plain thing");
+		await Assert.That(control.Last().Value.ToPlainText()).IsEqualTo("okleaf");
 
 		var attr = await AttributeService.GetAttributeAsync(thing, thing, $"ANCNI{uid}`LEAF",
 			IAttributeService.AttributeMode.Read, true);
@@ -197,11 +194,10 @@ public class AncestorInheritanceTests
 			WebAppFactoryArg.Services, Mediator, "AncFormatPlayer");
 		var player = await Known(playerRef);
 
-		var attr = await AttributeService.GetAttributeAsync(player, player, "FORMAT`SAY",
-			IAttributeService.AttributeMode.Read, true);
+		var attr = (await AttributeService.GetAttributeAsync(player, player, "FORMAT`SAY",
+			IAttributeService.AttributeMode.Read, true)).Expect<SharpAttribute[]>();
 
-		await Assert.That(attr.IsAttribute).IsTrue();
-		await Assert.That(attr.AsAttribute.Last().Value.ToPlainText()).Contains("You say");
+		await Assert.That(attr.Last().Value.ToPlainText()).Contains("You say");
 	}
 
 	[Test]

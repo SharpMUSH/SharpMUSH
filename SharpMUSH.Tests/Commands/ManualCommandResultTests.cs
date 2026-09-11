@@ -2,6 +2,8 @@ using Mediator;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
@@ -36,7 +38,7 @@ public class ManualCommandResultTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "ManualResult");
-		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Known;
+		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
 		var calls = 0;
 		var value = mode switch { "throw" => "manualfailure()", "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "OUTPUT" };
 		await attributes.SetAttributeAsync(actor, actor, "BODY", MarkupText.Plain(value));
@@ -56,14 +58,14 @@ public class ManualCommandResultTests
 		await Assert.That(result!.HadErrors).IsEqualTo((mode is "syntax" or "throw") && kind is not ("invalid" or "unmatched"));
 		if (kind != "attribute" && mode is not ("syntax" or "throw") || kind is "invalid" or "unmatched" or "check")
 		{
-			var attr = await attributes.GetAttributeAsync(actor, actor, "TARGET", IAttributeService.AttributeMode.Read);
+			var attr = (await attributes.GetAttributeAsync(actor, actor, "TARGET", IAttributeService.AttributeMode.Read)).Expect<SharpAttribute[]>();
 			var expected = kind is "invalid" or "unmatched" or "check" ? "xx" : kind == "all" ? value + value : value + "x";
-			await Assert.That(attr.AsAttribute.Last().Value.Text).IsEqualTo(expected);
+			await Assert.That(attr.Last().Value.Text).IsEqualTo(expected);
 		}
 		if (kind == "attribute" && mode == "success")
 		{
-			var attr = await attributes.GetAttributeAsync(actor, actor, "OUTPUTOUTPUT", IAttributeService.AttributeMode.Read);
-			await Assert.That(attr.AsAttribute.Last().Value.Text).IsEqualTo("stored");
+			var attr = (await attributes.GetAttributeAsync(actor, actor, "OUTPUTOUTPUT", IAttributeService.AttributeMode.Read)).Expect<SharpAttribute[]>();
+			await Assert.That(attr.Last().Value.Text).IsEqualTo("stored");
 		}
 		if (mode == "throw") await Assert.That(calls).IsEqualTo(1);
 	}

@@ -138,8 +138,8 @@ public class InputSessionCommandTests
 			commands, original.Configuration, provider);
 		try
 		{
-			var actor = await Factory.Services.GetRequiredService<IMediator>().Send(
-				new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef));
+			var actor = (await Factory.Services.GetRequiredService<IMediator>().Send(
+				new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			var callback = mode == "syntax" ? "think [" : mode == "throw-list" ? name + "; think done" : mode == "speech" ? "\"hello" : name;
 			if (mode.StartsWith("nested-", StringComparison.Ordinal))
 			{
@@ -148,7 +148,7 @@ public class InputSessionCommandTests
 				var attribute = new SharpAttribute("nested", "NESTED", "NESTED", [], 0, "NESTED", null!, null!, null!)
 				{ Value = MarkupText.Plain(body) };
 				matches = Enumerable.Range(0, mode == "nested-multiple" ? 2 : 1)
-					.Select(_ => (actor.Known, attribute, new Dictionary<string, CallState>()));
+					.Select(_ => (actor, attribute, new Dictionary<string, CallState>()));
 			}
 			callback = mode switch
 			{
@@ -175,9 +175,9 @@ public class InputSessionCommandTests
 				_ => callback
 			};
 			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
-				actor.Known, actor.Known, "NESTEDBODY", MarkupText.Plain(name));
+				actor, actor, "NESTEDBODY", MarkupText.Plain(name));
 			await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(
-				actor.Known, actor.Known, "CALLBACK", MarkupText.Plain(callback));
+				actor, actor, "CALLBACK", MarkupText.Plain(callback));
 			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
 			var session = Sessions.GetCapturing(player.Handle);
 			await Assert.That(session).IsNotNull();

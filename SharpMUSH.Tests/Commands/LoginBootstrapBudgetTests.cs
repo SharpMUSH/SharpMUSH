@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -28,7 +29,7 @@ public class LoginBootstrapBudgetTests
 		var services = Factory.Services;
 		var connections = services.GetRequiredService<IConnectionService>();
 		var mediator = services.GetRequiredService<IMediator>();
-		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.AsPlayer;
+		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<SharpPlayer>();
 		var handle = Random.Shared.NextInt64(80000000, 90000000);
 		await connections.Register(handle, "localhost", "localhost", "telnet", _ => ValueTask.CompletedTask,
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8);

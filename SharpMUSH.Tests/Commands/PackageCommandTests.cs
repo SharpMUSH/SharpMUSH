@@ -50,14 +50,14 @@ public class PackageCommandTests
 	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#7) — mirrors the authoring service tests.</summary>
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known.AsPlayer;
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		AnySharpContainer location = pm;
 		return await Database.CreateThingAsync(name, location, pm, location);
 	}
 
 	private async Task SetAttrAsync(DBRef target, string attr, string value)
 	{
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known.AsPlayer;
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(target, [attr], MarkupText.Plain(value), pm);
 	}
 

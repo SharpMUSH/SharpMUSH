@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -46,9 +47,8 @@ public class HookCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attr} #1=think captured"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override {cmd}=#1,{attr}"));
 
-		var hook = await HookService.GetHookAsync(cmd, "OVERRIDE");
-		await Assert.That(hook.IsSome()).IsTrue();
-		await Assert.That(hook.AsValue().AttributeName.ToUpperInvariant()).IsEqualTo(attr);
+		var hook = (await HookService.GetHookAsync(cmd, "OVERRIDE")).Expect<CommandHook>();
+		await Assert.That(hook.AttributeName.ToUpperInvariant()).IsEqualTo(attr);
 	}
 
 	[Test]

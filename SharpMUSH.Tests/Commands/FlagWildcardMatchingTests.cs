@@ -31,8 +31,8 @@ public class FlagWildcardMatchingTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=no_com"));
 
-		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<SharpThing>();
+		var flags = await thing.Object.Flags.Value.ToArrayAsync();
 		var hasNoCommandFlag = flags.Any(x => x.Name == "NO_COMMAND");
 
 		await Assert.That(hasNoCommandFlag).IsTrue();
@@ -74,8 +74,8 @@ public class FlagWildcardMatchingTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=vis"));
 
-		var thing = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var flags = await thing.AsThing.Object.Flags.Value.ToArrayAsync();
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<SharpThing>();
+		var flags = await thing.Object.Flags.Value.ToArrayAsync();
 		var hasVisualFlag = flags.Any(x => x.Name == "VISUAL");
 
 		await Assert.That(hasVisualFlag).IsTrue();
