@@ -23,11 +23,12 @@ public class InMemoryWikiServiceTests
 		string title = "Test Page",
 		WikiNamespace ns = WikiNamespace.Main,
 		string markdown = "Hello **world**.",
-		string editor = "#1")
+		string editor = "#1",
+		string? category = null)
 	{
-		var result = await svc.CreateAsync(title, markdown, editor, ns);
-		await Assert.That(result.IsT0).IsTrue();
-		return result.AsT0;
+		var result = await svc.CreateAsync(title, markdown, editor, ns, category);
+		var page = await Assert.That(result.Value).IsTypeOf<WikiPage>();
+		return page!;
 	}
 
 	[Test]
@@ -97,8 +98,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.CreateAsync("Duplicate", "content", "#1", WikiNamespace.Main);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -116,12 +116,14 @@ public class InMemoryWikiServiceTests
 	{
 		// Category is part of identity, so the same slug may live in different categories.
 		var svc = BuildService();
-		var lore = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
-		var rules = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "rules")).AsT0;
+		var lore = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
+		var rules = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "rules");
 
 		await Assert.That(lore.Id).IsNotEqualTo(rules.Id);
-		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.Id);
-		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).AsT0.Id).IsEqualTo(rules.Id);
+		var foundLore = await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
+		await Assert.That(foundLore!.Id).IsEqualTo(lore.Id);
+		var foundRules = await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
+		await Assert.That(foundRules!.Id).IsEqualTo(rules.Id);
 	}
 
 	[Test]
@@ -132,33 +134,34 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.CreateAsync("Dragons", "more", "#1", WikiNamespace.Main, "lore");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
 	public async Task SetMetadata_ChangingCategory_RekeysPage()
 	{
 		var svc = BuildService();
-		var page = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
+		var page = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
 
 		await svc.SetMetadataAsync(page.Id, "rules", [], true);
 
-		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).IsT0).IsTrue();
-		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).IsT1).IsTrue();
+		await Assert.That((await svc.GetBySlugAsync("dragons", "rules", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
+		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
 	public async Task SetMetadata_ChangingCategoryToExisting_IsRejected()
 	{
 		var svc = BuildService();
-		var lore = (await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "lore")).AsT0;
+		var lore = await CreatePageAsync(svc, "Dragons", markdown: "content", category: "lore");
 		await svc.CreateAsync("Dragons", "content", "#1", WikiNamespace.Main, "rules");
 
 		// Moving the lore page into "rules" would collide with the existing rules page.
 		var result = await svc.SetMetadataAsync(lore.Id, "rules", [], true);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.Id);
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
+		var unmoved = await Assert.That((await svc.GetBySlugAsync("dragons", "lore", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
+		await Assert.That(unmoved!.Id).IsEqualTo(lore.Id);
 	}
 
 	[Test]
@@ -169,8 +172,8 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetBySlugAsync("find_me", "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		var page = await Assert.That(result.Value).IsTypeOf<WikiPage>();
+		await Assert.That(page!.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -184,8 +187,8 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		var page = await Assert.That(result.Value).IsTypeOf<WikiPage>();
+		await Assert.That(page!.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -198,8 +201,8 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetBySlugAsync(lookup, "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		var page = await Assert.That(result.Value).IsTypeOf<WikiPage>();
+		await Assert.That(page!.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -208,7 +211,7 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var result = await svc.GetBySlugAsync("nonexistent", "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -219,7 +222,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetBySlugAsync("ns_test", "general", WikiNamespace.Help);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -230,8 +233,8 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetByIdAsync(created.Id);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		var page = await Assert.That(result.Value).IsTypeOf<WikiPage>();
+		await Assert.That(page!.Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -240,7 +243,7 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var result = await svc.GetByIdAsync("id_that_does_not_exist");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -251,9 +254,8 @@ public class InMemoryWikiServiceTests
 
 		var updateResult = await svc.UpdateAsync(created.Id, "Updated content.", "#2", "v2");
 
-		await Assert.That(updateResult.IsT0).IsTrue();
-		var updated = updateResult.AsT0;
-		await Assert.That(updated.RevisionNumber).IsEqualTo(2);
+		var updated = await Assert.That(updateResult.Value).IsTypeOf<WikiPage>();
+		await Assert.That(updated!.RevisionNumber).IsEqualTo(2);
 		await Assert.That(updated.MarkdownSource).IsEqualTo("Updated content.");
 		await Assert.That(updated.LastEditorDbref).IsEqualTo("#2");
 	}
@@ -264,10 +266,8 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "# Old");
 
-		var updateResult = await svc.UpdateAsync(created.Id, "# New Heading", "#1", "rework");
-
-		await Assert.That(updateResult.IsT0).IsTrue();
-		await Assert.That(updateResult.AsT0.RenderedHtml).Contains("New Heading");
+		var updated = await Assert.That((await svc.UpdateAsync(created.Id, "# New Heading", "#1", "rework")).Value).IsTypeOf<WikiPage>();
+		await Assert.That(updated!.RenderedHtml).Contains("New Heading");
 	}
 
 	[Test]
@@ -277,7 +277,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpdateAsync("ghost_id", "content", "#1");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -288,9 +288,9 @@ public class InMemoryWikiServiceTests
 
 		var deleteResult = await svc.DeleteAsync(created.Id, "#1");
 
-		await Assert.That(deleteResult.IsT0).IsTrue();
+		await Assert.That(deleteResult.Value).IsTypeOf<None>();
 		var getResult = await svc.GetByIdAsync(created.Id);
-		await Assert.That(getResult.IsT1).IsTrue();
+		await Assert.That(getResult.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -311,7 +311,7 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var result = await svc.DeleteAsync("ghost_id", "#1");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -346,11 +346,8 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "First edition.");
 
-		var revResult = await svc.GetRevisionAsync(created.Id, 1);
-
-		await Assert.That(revResult.IsT0).IsTrue();
-		var rev = revResult.AsT0;
-		await Assert.That(rev.RevisionNumber).IsEqualTo(1);
+		var rev = await Assert.That((await svc.GetRevisionAsync(created.Id, 1)).Value).IsTypeOf<WikiRevision>();
+		await Assert.That(rev!.RevisionNumber).IsEqualTo(1);
 		await Assert.That(rev.MarkdownSource).IsEqualTo("First edition.");
 	}
 
@@ -362,7 +359,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetRevisionAsync(created.Id, 99);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -374,10 +371,9 @@ public class InMemoryWikiServiceTests
 
 		var protResult = await svc.SetProtectionAsync(created.Id, true);
 
-		await Assert.That(protResult.IsT0).IsTrue();
-		var fetchResult = await svc.GetByIdAsync(created.Id);
-		await Assert.That(fetchResult.IsT0).IsTrue();
-		await Assert.That(fetchResult.AsT0.IsProtected).IsTrue();
+		await Assert.That(protResult.Value).IsTypeOf<None>();
+		var fetched = await Assert.That((await svc.GetByIdAsync(created.Id)).Value).IsTypeOf<WikiPage>();
+		await Assert.That(fetched!.IsProtected).IsTrue();
 	}
 
 	[Test]
@@ -387,7 +383,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.SetProtectionAsync("ghost_id", true);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -443,14 +439,14 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var created = await CreatePageAsync(svc, markdown: "**original**");
 
-		var before = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
-		await Assert.That(before.RenderedHtml).Contains("original");
+		var before = await Assert.That((await svc.GetBySlugAsync(created.Slug, "general")).Value).IsTypeOf<WikiPage>();
+		await Assert.That(before!.RenderedHtml).Contains("original");
 
 		var updateResult = await svc.UpdateAsync(created.Id, "**updated**", "#1", "edit");
-		await Assert.That(updateResult.IsT0).IsTrue();
+		await Assert.That(updateResult.Value).IsTypeOf<WikiPage>();
 
-		var after = (await svc.GetBySlugAsync(created.Slug, "general")).AsT0;
-		await Assert.That(after.RenderedHtml).Contains("updated");
+		var after = await Assert.That((await svc.GetBySlugAsync(created.Slug, "general")).Value).IsTypeOf<WikiPage>();
+		await Assert.That(after!.RenderedHtml).Contains("updated");
 		await Assert.That(after.RenderedHtml).DoesNotContain("original");
 	}
 
@@ -466,9 +462,8 @@ public class InMemoryWikiServiceTests
 			page.Id, "fr", "Dragons (fr)", "corps **fr**", "#2", "première traduction",
 			published: true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT0).IsTrue();
-		var translation = result.AsT0;
-		await Assert.That(translation.Locale).IsEqualTo("fr");
+		var translation = await Assert.That(result.Value).IsTypeOf<WikiTranslation>();
+		await Assert.That(translation!.Locale).IsEqualTo("fr");
 		await Assert.That(translation.Title).IsEqualTo("Dragons (fr)");
 		await Assert.That(translation.RevisionNumber).IsEqualTo(1);
 		await Assert.That(translation.RenderedHtml).Contains("<strong>fr</strong>");
@@ -487,7 +482,7 @@ public class InMemoryWikiServiceTests
 			var written = await svc.UpsertTranslationAsync(
 				page.Id, locale, $"{page.Title} ({locale})", $"corps {page.Slug} {locale}", "#2", null,
 				published: true, expectedRevisionNumber: null);
-			await Assert.That(written.IsT0).IsTrue();
+			await Assert.That(written.Value).IsTypeOf<WikiTranslation>();
 		}
 
 		var all = await svc.GetAllTranslationsAsync(0, 50);
@@ -529,9 +524,9 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
 
-		var result = await svc.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		var translation = await Assert.That((await svc.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null)).Value).IsTypeOf<WikiTranslation>();
 
-		await Assert.That(result.AsT0.Locale).IsEqualTo("fr-CA");
+		await Assert.That(translation!.Locale).IsEqualTo("fr-CA");
 	}
 
 	[Test]
@@ -541,12 +536,12 @@ public class InMemoryWikiServiceTests
 		var page = await CreatePageAsync(svc, "Dragons");
 		await svc.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
-		var second = await svc.UpsertTranslationAsync(
-			page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1);
+		var second = await Assert.That((await svc.UpsertTranslationAsync(
+			page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1)).Value).IsTypeOf<WikiTranslation>();
 
-		await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
-		await Assert.That(second.AsT0.MarkdownSource).IsEqualTo("corps v2");
-		await Assert.That(second.AsT0.LastEditorDbref).IsEqualTo("#3");
+		await Assert.That(second!.RevisionNumber).IsEqualTo(2);
+		await Assert.That(second.MarkdownSource).IsEqualTo("corps v2");
+		await Assert.That(second.LastEditorDbref).IsEqualTo("#3");
 		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count)
 			.IsEqualTo(1)
 			.Because("upsert must not create a second row for the same (PageId, Locale)");
@@ -562,10 +557,11 @@ public class InMemoryWikiServiceTests
 		var again = await svc.UpsertTranslationAsync(
 			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(again.AsT1)
+		await Assert.That(again.Value)
 			.IsEqualTo(WikiWriteConflict.AlreadyExists)
 			.Because("a caller who passed null believed it was creating a translation, not overwriting one");
-		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+		var stored = await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<WikiTranslation>();
+		await Assert.That(stored!.MarkdownSource)
 			.IsEqualTo("corps v1");
 	}
 
@@ -581,8 +577,9 @@ public class InMemoryWikiServiceTests
 		var stale = await svc.UpsertTranslationAsync(
 			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
 
-		await Assert.That(stale.AsT1).IsEqualTo(WikiWriteConflict.StaleRevision);
-		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+		await Assert.That(stale.Value).IsEqualTo(WikiWriteConflict.StaleRevision);
+		var stored = await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<WikiTranslation>();
+		await Assert.That(stored!.MarkdownSource)
 			.IsEqualTo("corps v2")
 			.Because("the winner's prose must survive; the loser reloads and the human decides");
 		var revisions = await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
@@ -606,9 +603,8 @@ public class InMemoryWikiServiceTests
 		var orphaned = await svc.UpsertTranslationAsync(
 			page.Id, "fr", "v2", "corps v2", "#2", null, true, expectedRevisionNumber: 1);
 
-		await Assert.That(orphaned.AsT1).IsEqualTo(WikiWriteConflict.TranslationGone);
-		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).IsT1)
-			.IsTrue()
+		await Assert.That(orphaned.Value).IsEqualTo(WikiWriteConflict.TranslationGone);
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<NotFound>()
 			.Because("a compare-and-swap must not resurrect a row somebody deliberately deleted");
 	}
 
@@ -620,8 +616,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpsertTranslationAsync(page.Id, "not a locale", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT2)
-			.IsTrue()
+		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("a malformed locale is the caller's mistake to fix, not a race it lost");
 	}
 
@@ -629,13 +624,11 @@ public class InMemoryWikiServiceTests
 	public async Task UpsertTranslationAsync_RejectsShadowingTheSourceLocale()
 	{
 		var svc = BuildService();
-		var createResult = await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en");
-		var page = createResult.AsT0;
+		var page = await Assert.That((await svc.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
 
-		var result = await svc.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		var result = await svc.UpsertTranslationAsync(page!.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT2)
-			.IsTrue()
+		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("no row may shadow the source; the page itself is edited instead");
 	}
 
@@ -646,7 +639,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.UpsertTranslationAsync("ghost", "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT2).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -657,7 +650,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.GetTranslationAsync(page.Id, "de");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -707,11 +700,9 @@ public class InMemoryWikiServiceTests
 		var page = await CreatePageAsync(svc, "Dragons", markdown: "en v1");
 		await svc.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		var revision = await svc.GetRevisionAsync(page.Id, 1);
-
-		await Assert.That(revision.IsT0).IsTrue();
-		await Assert.That(revision.AsT0.Locale).IsEqualTo(string.Empty);
-		await Assert.That(revision.AsT0.MarkdownSource)
+		var revision = await Assert.That((await svc.GetRevisionAsync(page.Id, 1)).Value).IsTypeOf<WikiRevision>();
+		await Assert.That(revision!.Locale).IsEqualTo(string.Empty);
+		await Assert.That(revision.MarkdownSource)
 			.IsEqualTo("en v1")
 			.Because("a rollback must restore the source body, never a translation's");
 	}
@@ -729,11 +720,11 @@ public class InMemoryWikiServiceTests
 		var french = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 1);
 		var source = await svc.GetRevisionForLocaleAsync(page.Id, string.Empty, 1);
 
-		await Assert.That(french.IsT0).IsTrue();
-		await Assert.That(french.AsT0.Locale).IsEqualTo("fr");
-		await Assert.That(french.AsT0.MarkdownSource).IsEqualTo("corps fr");
-		await Assert.That(source.IsT0).IsTrue();
-		await Assert.That(source.AsT0.MarkdownSource)
+		var frenchRevision = await Assert.That(french.Value).IsTypeOf<WikiRevision>();
+		await Assert.That(frenchRevision!.Locale).IsEqualTo("fr");
+		await Assert.That(frenchRevision.MarkdownSource).IsEqualTo("corps fr");
+		var sourceRevision = await Assert.That(source.Value).IsTypeOf<WikiRevision>();
+		await Assert.That(sourceRevision!.MarkdownSource)
 			.IsEqualTo("en v1")
 			.Because("the empty stream is the source's, and the two rows share a revision number");
 	}
@@ -749,8 +740,7 @@ public class InMemoryWikiServiceTests
 		// Source revision 2 exists; French stops at 1.
 		var result = await svc.GetRevisionForLocaleAsync(page.Id, "fr", 2);
 
-		await Assert.That(result.IsT1)
-			.IsTrue()
+		await Assert.That(result.Value).IsTypeOf<NotFound>()
 			.Because("a missing revision in one locale must not fall through to another locale's row");
 	}
 
@@ -763,8 +753,8 @@ public class InMemoryWikiServiceTests
 
 		var deleted = await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
 
-		await Assert.That(deleted.IsT0).IsTrue();
-		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).IsT1).IsTrue();
+		await Assert.That(deleted.Value).IsTypeOf<None>();
+		await Assert.That((await svc.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<NotFound>();
 		await Assert.That((await svc.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20)).Count).IsEqualTo(0);
 	}
 
@@ -778,8 +768,7 @@ public class InMemoryWikiServiceTests
 		await svc.DeleteTranslationAsync(page.Id, "fr", "#2");
 
 		await Assert.That((await svc.GetTranslationsAsync(page.Id)).Count).IsEqualTo(0);
-		await Assert.That((await svc.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main)).IsT0)
-			.IsTrue()
+		await Assert.That((await svc.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main)).Value).IsTypeOf<WikiPage>()
 			.Because("removing the last translation must not remove the page");
 	}
 
@@ -789,7 +778,7 @@ public class InMemoryWikiServiceTests
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Dragons");
 
-		await Assert.That((await svc.DeleteTranslationAsync(page.Id, "fr", "#2")).IsT1).IsTrue();
+		await Assert.That((await svc.DeleteTranslationAsync(page.Id, "fr", "#2")).Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -812,9 +801,9 @@ public class InMemoryWikiServiceTests
 	{
 		var svc = BuildService();
 
-		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "fr-CA");
+		var page = await Assert.That((await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "fr-CA")).Value).IsTypeOf<WikiPage>();
 
-		await Assert.That(result.AsT0.SourceLocale).IsEqualTo("fr-CA");
+		await Assert.That(page!.SourceLocale).IsEqualTo("fr-CA");
 	}
 
 	[Test]
@@ -824,8 +813,7 @@ public class InMemoryWikiServiceTests
 
 		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "not a locale");
 
-		await Assert.That(result.IsT1)
-			.IsTrue()
+		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("SourceLocale is materialised and authoritative, so a junk tag must not reach storage");
 	}
 
@@ -834,9 +822,9 @@ public class InMemoryWikiServiceTests
 	{
 		var svc = BuildService();
 
-		var result = await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "PT-br");
+		var page = await Assert.That((await svc.CreateAsync("Dragons", "body", "#1", WikiNamespace.Main, "general", "PT-br")).Value).IsTypeOf<WikiPage>();
 
-		await Assert.That(result.AsT0.SourceLocale).IsEqualTo("pt-BR");
+		await Assert.That(page!.SourceLocale).IsEqualTo("pt-BR");
 	}
 
 	[Test]
@@ -844,9 +832,9 @@ public class InMemoryWikiServiceTests
 	{
 		var svc = BuildService();
 
-		var result = await svc.CreateAsync("Dragons", "body", "#1");
+		var page = await Assert.That((await svc.CreateAsync("Dragons", "body", "#1")).Value).IsTypeOf<WikiPage>();
 
-		await Assert.That(result.AsT0.SourceLocale)
+		await Assert.That(page!.SourceLocale)
 			.IsEqualTo(string.Empty)
 			.Because("null means 'not stamped', a transient state the Tasks 7-9 backfill closes. It is NOT a "
 				+ "read-time synonym for Wiki.DefaultLocale — the two real create paths (Tasks 12 and 20) "

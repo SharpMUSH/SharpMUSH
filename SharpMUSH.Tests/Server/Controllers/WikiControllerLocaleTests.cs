@@ -37,8 +37,8 @@ public class WikiControllerLocaleTests
 	public async Task GetPage_WithLangServesAPublishedTranslation()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -54,8 +54,8 @@ public class WikiControllerLocaleTests
 	public async Task GetPage_DraftTranslationDoesNotLeakToAnAnonymousReader()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -73,8 +73,8 @@ public class WikiControllerLocaleTests
 	public async Task GetPage_DraftTranslationIsVisibleToAnEditor()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -92,8 +92,8 @@ public class WikiControllerLocaleTests
 		// not happen is the reverse: a plain reader with neither scope seeing one. That is the case above;
 		// this one pins that wiki.read is deliberately included rather than accidentally.
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiRead);
-		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -104,8 +104,8 @@ public class WikiControllerLocaleTests
 	public async Task GetPage_DraftTranslationDoesNotLeakToAnAuthenticatedReaderWithNoWikiScopes()
 	{
 		var (controller, storage) = BuildWithClaims();
-		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetPage("main", "general", "dragons", lang: "fr");
 
@@ -137,8 +137,8 @@ public class WikiControllerLocaleTests
 	public async Task GetPage_UnpublishedPageStillReturns404ForAnonymousReaders()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Secret", "hidden", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.SetMetadataAsync(page.Id, "general", [], published: false);
+		var page = await Assert.That((await storage.CreateAsync("Secret", "hidden", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.SetMetadataAsync(page!.Id, "general", [], published: false);
 
 		var result = await controller.GetPage("main", "general", "secret", lang: "fr");
 
@@ -150,9 +150,9 @@ public class WikiControllerLocaleTests
 	public async Task GetCharacterPage_WithLangServesTheTranslation()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync(
-			"Mannaz", "en bio", "#1", WikiNamespace.Character, WikiHelpers.DefaultCategory, "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Mannaz (fr)", "bio fr", "#2", null, published: true, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync(
+			"Mannaz", "en bio", "#1", WikiNamespace.Character, WikiHelpers.DefaultCategory, "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Mannaz (fr)", "bio fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.GetCharacterPage("mannaz", lang: "fr");
 
@@ -165,9 +165,9 @@ public class WikiControllerLocaleTests
 	public async Task GetRecentChanges_WithLangReturnsLocalizedTitlesOneRowPerPage()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var alpha = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		var alpha = await Assert.That((await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
 		await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en");
-		await storage.UpsertTranslationAsync(alpha.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
+		await storage.UpsertTranslationAsync(alpha!.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.GetRecentChanges(count: 20, lang: "fr");
 
@@ -199,8 +199,8 @@ public class WikiControllerLocaleTests
 	public async Task ListNamespacePages_DraftTranslationDoesNotChangeAListedTitle()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Help Intro", "h", "#1", WikiNamespace.Help, "general", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Intro (brouillon)", "h-fr", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Help Intro", "h", "#1", WikiNamespace.Help, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Intro (brouillon)", "h-fr", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.ListNamespacePages("help", skip: 0, take: 50, lang: "fr");
 
@@ -214,8 +214,8 @@ public class WikiControllerLocaleTests
 	public async Task ListCategoryPages_WithLangReturnsLocalizedTitles()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "lore", "en")).AsT0;
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
+		var page = await Assert.That((await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "lore", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.UpsertTranslationAsync(page!.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.ListCategoryPages("lore", skip: 0, take: 50, lang: "fr");
 
@@ -227,8 +227,8 @@ public class WikiControllerLocaleTests
 	public async Task ListTagPages_WithLangReturnsLocalizedTitles()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.SetMetadataAsync(page.Id, "general", ["dragons"], published: true);
+		var page = await Assert.That((await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.SetMetadataAsync(page!.Id, "general", ["dragons"], published: true);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, published: true, expectedRevisionNumber: null);
 
 		var result = await controller.ListTagPages("dragons", skip: 0, take: 50, lang: "fr");
@@ -243,8 +243,8 @@ public class WikiControllerLocaleTests
 		// LocalizedListAsync must keep calling FilterVisible first; a localized listing that forgot the
 		// page-level gate would leak drafts while every locale assertion stayed green.
 		var (controller, storage) = BuildAnonymous();
-		var draft = (await storage.CreateAsync("Secret", "s", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		await storage.SetMetadataAsync(draft.Id, "general", [], published: false);
+		var draft = await Assert.That((await storage.CreateAsync("Secret", "s", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		await storage.SetMetadataAsync(draft!.Id, "general", [], published: false);
 		await storage.CreateAsync("Public", "p", "#1", WikiNamespace.Main, "general", "en");
 
 		var result = await controller.ListNamespacePages("main", skip: 0, take: 50, lang: "fr");

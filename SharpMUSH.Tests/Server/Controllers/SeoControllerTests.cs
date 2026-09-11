@@ -50,26 +50,25 @@ public class SeoControllerTests
 	public async Task Sitemap_PublishedMainPage_IncludedWithWikiUrl()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await wiki.CreateAsync("Getting Started", "# hello", "#1");
-		var page = created.AsT0;
+		var page = await Assert.That((await wiki.CreateAsync("Getting Started", "# hello", "#1")).Value).IsTypeOf<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
 		await Assert.That(xml).Contains("<?xml");
-		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{page.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{page!.Slug}");
 	}
 
 	[Test]
 	public async Task Sitemap_UnpublishedPage_Excluded()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var published = (await wiki.CreateAsync("Visible Page", "# visible", "#1")).AsT0;
-		var draft = (await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).AsT0;
-		await wiki.SetMetadataAsync(draft.Id, null, [], published: false);
+		var published = await Assert.That((await wiki.CreateAsync("Visible Page", "# visible", "#1")).Value).IsTypeOf<WikiPage>();
+		var draft = await Assert.That((await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).Value).IsTypeOf<WikiPage>();
+		await wiki.SetMetadataAsync(draft!.Id, null, [], published: false);
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
-		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{published.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/wiki/main/general/{published!.Slug}");
 		await Assert.That(xml).DoesNotContain(draft.Slug);
 	}
 
@@ -77,11 +76,11 @@ public class SeoControllerTests
 	public async Task Sitemap_Lastmod_UsesIsoDateFormat()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var page = (await wiki.CreateAsync("Dated Page", "# dated", "#1")).AsT0;
+		var page = await Assert.That((await wiki.CreateAsync("Dated Page", "# dated", "#1")).Value).IsTypeOf<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
-		var expected = $"<lastmod>{page.UpdatedAt:yyyy-MM-dd}</lastmod>";
+		var expected = $"<lastmod>{page!.UpdatedAt:yyyy-MM-dd}</lastmod>";
 		await Assert.That(xml).Contains(expected);
 		await Assert.That(Regex.IsMatch(xml, @"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>")).IsTrue();
 	}
@@ -90,11 +89,11 @@ public class SeoControllerTests
 	public async Task Sitemap_CharacterNamespacePage_MapsToCharacterUrl()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var page = (await wiki.CreateAsync("Aria Stormwind", "# bio", "#1", WikiNamespace.Character)).AsT0;
+		var page = await Assert.That((await wiki.CreateAsync("Aria Stormwind", "# bio", "#1", WikiNamespace.Character)).Value).IsTypeOf<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
-		await Assert.That(xml).Contains($"https://example.com/character/{page.Slug}");
+		await Assert.That(xml).Contains($"https://example.com/character/{page!.Slug}");
 	}
 
 	[Test]

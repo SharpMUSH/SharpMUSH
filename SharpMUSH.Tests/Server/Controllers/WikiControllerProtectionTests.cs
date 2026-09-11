@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
@@ -49,8 +50,10 @@ public class WikiControllerProtectionTests
 	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedProtectedPage(bool isProtected)
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await wiki.CreateAsync("Protected Page", "# original", "#1");
-		var page = created.AsT0;
+		if (await wiki.CreateAsync("Protected Page", "# original", "#1") is not WikiPage page)
+		{
+			throw new InvalidOperationException("Seeding the protected page failed.");
+		}
 		if (isProtected)
 		{
 			await wiki.SetProtectionAsync(page.Id, true);
@@ -68,8 +71,8 @@ public class WikiControllerProtectionTests
 
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
-		var page = await wiki.GetBySlugAsync(slug, "general");
-		await Assert.That(page.AsT0.MarkdownSource).IsEqualTo("# original");
+		var page = await Assert.That((await wiki.GetBySlugAsync(slug, "general")).Value).IsTypeOf<WikiPage>();
+		await Assert.That(page!.MarkdownSource).IsEqualTo("# original");
 	}
 
 	[Test]

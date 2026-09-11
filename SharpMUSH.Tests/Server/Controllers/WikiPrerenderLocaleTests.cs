@@ -38,8 +38,11 @@ public class WikiPrerenderLocaleTests
 		string? requestedLocale, bool withFrench)
 	{
 		var (storage, localization) = Build();
-		var page = (await storage.CreateAsync(
-			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		if (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")
+			is not WikiPage page)
+		{
+			throw new InvalidOperationException("Seeding the source page failed.");
+		}
 
 		if (withFrench)
 		{
@@ -168,10 +171,10 @@ public class WikiPrerenderLocaleTests
 	public async Task DraftTranslation_IsNeitherServedNorAdvertised()
 	{
 		var (storage, localization) = Build();
-		var page = (await storage.CreateAsync(
-			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		var page = await Assert.That((await storage.CreateAsync(
+			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
 		await storage.UpsertTranslationAsync(
-			page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false,
+			page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false,
 			expectedRevisionNumber: null);
 
 		var localized = await localization.LocalizeAsync(page, "fr", includeDrafts: false);

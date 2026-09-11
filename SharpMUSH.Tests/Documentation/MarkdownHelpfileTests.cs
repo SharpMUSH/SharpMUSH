@@ -24,13 +24,9 @@ This is another topic.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
-
-			await Assert.That(indexes.Count).IsEqualTo(3);
+			await Assert.That(indexes!.Count).IsEqualTo(3);
 			await Assert.That(indexes).ContainsKey("help");
 			await Assert.That(indexes).ContainsKey("test topic");
 			await Assert.That(indexes).ContainsKey("another topic");
@@ -65,12 +61,8 @@ The look command allows you to see your surroundings.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
-
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
-			var lookEntry = indexes["look"];
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
+			var lookEntry = indexes!["look"];
 
 			await Assert.That(lookEntry).Contains("# look");
 			await Assert.That(lookEntry).Contains("The look command allows you to see your surroundings.");
@@ -102,13 +94,9 @@ Displays the description of an object.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
 
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
-
-			await Assert.That(indexes.Count).IsEqualTo(2);
+			await Assert.That(indexes!.Count).IsEqualTo(2);
 			await Assert.That(indexes).ContainsKey("look");
 			await Assert.That(indexes).ContainsKey("read");
 
@@ -265,18 +253,14 @@ The look command lets you examine your surroundings.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
-
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
 
 			await Assert.That(indexes).ContainsKey("Getting Started");
 			await Assert.That(indexes).ContainsKey("GS");
 			await Assert.That(indexes).ContainsKey("Walkthrough");
 			await Assert.That(indexes).ContainsKey("GS MOVING");
 
-			await Assert.That(indexes["Getting Started"]).Contains("quick walkthrough");
+			await Assert.That(indexes!["Getting Started"]).Contains("quick walkthrough");
 			await Assert.That(indexes["GS"]).Contains("quick walkthrough");
 			await Assert.That(indexes["Walkthrough"]).Contains("quick walkthrough");
 
@@ -317,17 +301,13 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
-
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
 
 			await Assert.That(indexes).ContainsKey("WHO");
 			await Assert.That(indexes).ContainsKey("DOING");
 			await Assert.That(indexes).ContainsKey("WHO2");
 
-			await Assert.That(indexes["WHO"]).Contains("displays a list of players currently connected");
+			await Assert.That(indexes!["WHO"]).Contains("displays a list of players currently connected");
 			await Assert.That(indexes["DOING"]).Contains("displays a list of players currently connected");
 
 			await Assert.That(indexes["WHO2"]).Contains("softcoded");
@@ -366,17 +346,13 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
-
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
 
 			await Assert.That(indexes).ContainsKey("FUNCTION LIST");
 			await Assert.That(indexes).ContainsKey("FUNCTION TYPES");
 			await Assert.That(indexes).ContainsKey("Attribute functions");
 
-			await Assert.That(indexes["FUNCTION LIST"]).Contains("Several major variants");
+			await Assert.That(indexes!["FUNCTION LIST"]).Contains("Several major variants");
 			await Assert.That(indexes["FUNCTION TYPES"]).Contains("Several major variants");
 
 			await Assert.That(indexes["Attribute functions"]).Contains("stored in attributes");
@@ -458,17 +434,13 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
-
-			await Assert.That(maybePositions.IsT0).IsTrue();
-
-			var positions = maybePositions.AsT0;
+			var positions = await Assert.That(Helpfiles.IndexMarkdownPositions(fileInfo).Value).IsTypeOf<Dictionary<string, (long Start, long End)>>();
 
 			await Assert.That(positions).ContainsKey("WHO");
 			await Assert.That(positions).ContainsKey("DOING");
 			await Assert.That(positions).ContainsKey("WHO2");
 
-			await Assert.That(positions["WHO"].Start).IsEqualTo(positions["DOING"].Start);
+			await Assert.That(positions!["WHO"].Start).IsEqualTo(positions["DOING"].Start);
 			await Assert.That(positions["WHO"].End).IsEqualTo(positions["DOING"].End);
 
 			await Assert.That(positions["WHO2"].Start).IsNotEqualTo(positions["WHO"].Start);
@@ -509,11 +481,7 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
-
-			await Assert.That(maybePositions.IsT0).IsTrue();
-
-			var positions = maybePositions.AsT0;
+			var positions = await Assert.That(Helpfiles.IndexMarkdownPositions(fileInfo).Value).IsTypeOf<Dictionary<string, (long Start, long End)>>();
 
 			await Assert.That(positions).ContainsKey("help");
 			await Assert.That(positions).ContainsKey("newbie");
@@ -521,7 +489,7 @@ Existing games which have softcoded 'who' commands.
 
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
-			var newbieStart = (int)positions["newbie"].Start;
+			var newbieStart = (int)positions!["newbie"].Start;
 			var newbieEnd = (int)positions["newbie"].End;
 			var newbieContent = System.Text.Encoding.UTF8.GetString(fileBytes, newbieStart, newbieEnd - newbieStart);
 			await Assert.That(newbieContent).StartsWith("# newbie\r\n");
@@ -561,18 +529,14 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
-
-			await Assert.That(maybePositions.IsT0).IsTrue();
-
-			var positions = maybePositions.AsT0;
+			var positions = await Assert.That(Helpfiles.IndexMarkdownPositions(fileInfo).Value).IsTypeOf<Dictionary<string, (long Start, long End)>>();
 
 			await Assert.That(positions).ContainsKey("help");
 			await Assert.That(positions).ContainsKey("topic2");
 
 			var fileBytes = await File.ReadAllBytesAsync(testFilePath);
 
-			var helpStart = (int)positions["help"].Start;
+			var helpStart = (int)positions!["help"].Start;
 			var helpEnd = (int)positions["help"].End;
 			var helpContent = System.Text.Encoding.UTF8.GetString(fileBytes, helpStart, helpEnd - helpStart);
 			await Assert.That(helpContent).StartsWith("# help\n");
@@ -605,13 +569,9 @@ Existing games which have softcoded 'who' commands.
 		try
 		{
 			var fileInfo = new FileInfo(testFilePath);
-			var maybePositions = Helpfiles.IndexMarkdownPositions(fileInfo);
+			var positions = await Assert.That(Helpfiles.IndexMarkdownPositions(fileInfo).Value).IsTypeOf<Dictionary<string, (long Start, long End)>>();
 
-			await Assert.That(maybePositions.IsT0).IsTrue();
-
-			var positions = maybePositions.AsT0;
-
-			await Assert.That(positions["FUNCTION LIST"].Start).IsEqualTo(positions["FUNCTION TYPES"].Start);
+			await Assert.That(positions!["FUNCTION LIST"].Start).IsEqualTo(positions["FUNCTION TYPES"].Start);
 			await Assert.That(positions["FUNCTION LIST"].End).IsEqualTo(positions["FUNCTION TYPES"].End);
 
 			await Assert.That(positions["FUNCTIONS2"].Start).IsNotEqualTo(positions["FUNCTION LIST"].Start);
@@ -652,12 +612,8 @@ Existing games which have softcoded 'who' commands.
 		foreach (var filePath in mdFiles)
 		{
 			var fileInfo = new FileInfo(filePath);
-			var maybeIndexes = Helpfiles.IndexMarkdown(fileInfo);
-
-			await Assert.That(maybeIndexes.IsT0).IsTrue();
-
-			var indexes = maybeIndexes.AsT0;
-			if (indexes.Count == 0)
+			var indexes = await Assert.That(Helpfiles.IndexMarkdown(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
+			if (indexes!.Count == 0)
 			{
 				continue;
 			}

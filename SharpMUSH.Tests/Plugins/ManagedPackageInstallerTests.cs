@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
@@ -59,7 +60,11 @@ public class ManagedPackageInstallerTests
 		      sha256: {dllSha}
 		""";
 
-	private static PackageManifest Parse(string yaml) => new PackageManifestService().ParseManifest(yaml).AsT0.Manifest;
+	private static PackageManifest Parse(string yaml) => new PackageManifestService().ParseManifest(yaml) switch
+	{
+		ParsedPackageManifest parsed => parsed.Manifest,
+		PackageManifestFailure failure => throw new InvalidOperationException(string.Join("; ", failure.Issues))
+	};
 
 	private static ManagedPackageInstaller NewInstaller(string pluginsRoot, ManagedPackageTrustOptions trust)
 	{
@@ -126,7 +131,7 @@ public class ManagedPackageInstallerTests
 			    type: room
 			    name: Nope
 			""");
-		await Assert.That(result.IsT1).IsTrue().Because("a managed package may not declare softcode objects");
+		await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>().Because("a managed package may not declare softcode objects");
 	}
 
 	[Test]
@@ -140,8 +145,9 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			await Assert.That(result.IsT0).IsTrue().Because("trust opt-in + allow-list + matching hash should deploy");
-			await Assert.That(result.AsT0).Contains("CommandOnlyPlugin.dll");
+			var deployedFiles = await Assert.That(result.Value).IsTypeOf<IReadOnlyList<string>>()
+				.Because("trust opt-in + allow-list + matching hash should deploy");
+			await Assert.That(deployedFiles).Contains("CommandOnlyPlugin.dll");
 
 			var depositedDll = Path.Combine(pluginsRoot, PackageId, "CommandOnlyPlugin.dll");
 			await Assert.That(File.Exists(depositedDll)).IsTrue();
@@ -173,7 +179,7 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: false), new DirectoryBinarySource(sourceDir));
 
-			await Assert.That(result.IsT1).IsTrue().Because("no per-apply opt-in must refuse a managed install");
+			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("no per-apply opt-in must refuse a managed install");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse()
 				.Because("a refused install must not write any binaries");
 		}
@@ -195,7 +201,7 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			await Assert.That(result.IsT1).IsTrue().Because("a package absent from the server allow-list must be refused");
+			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a package absent from the server allow-list must be refused");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}
 		finally
@@ -217,8 +223,8 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(wrongSha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			await Assert.That(result.IsT1).IsTrue().Because("a SHA-256 mismatch must reject the deploy");
-			await Assert.That(result.AsT1.Value).Contains("SHA-256 mismatch");
+			var error = await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a SHA-256 mismatch must reject the deploy");
+			await Assert.That(error.Value).Contains("SHA-256 mismatch");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}
 		finally
@@ -249,7 +255,7 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(yaml), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			await Assert.That(result.IsT1).IsTrue().Because("a future min_server_version must refuse the install");
+			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a future min_server_version must refuse the install");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}
 		finally
@@ -269,11 +275,11 @@ public class ManagedPackageInstallerTests
 			var installer = NewInstaller(pluginsRoot, new ManagedPackageTrustOptions(true, []));
 			var deploy = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
-			await Assert.That(deploy.IsT0).IsTrue();
+			var deployedFiles = await Assert.That(deploy.Value).IsTypeOf<IReadOnlyList<string>>();
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsTrue();
 
-			var removed = await installer.RemoveAsync(PackageId, deploy.AsT0);
-			await Assert.That(removed.IsT0).IsTrue().Because("uninstall removes the deposited directory");
+			var removed = await installer.RemoveAsync(PackageId, deployedFiles!);
+			await Assert.That(removed.Value).IsTypeOf<Success>().Because("uninstall removes the deposited directory");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}
 		finally

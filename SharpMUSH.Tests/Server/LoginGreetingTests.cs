@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
 using SharpMUSH.Library.Definitions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -115,7 +114,7 @@ public class LoginGreetingTests
 	}
 
 	private async ValueTask<string> NameOfAsync(DBRef dbref) =>
-		(await Mediator.Send(new GetObjectNodeQuery(dbref))).Known().Object().Name;
+		(await Mediator.Send(new GetObjectNodeQuery(dbref))).Known.Object().Name;
 
 	/// <summary>The resource key of the last greeting sent to <paramref name="handle"/>.</summary>
 	private string? GreetingKeyTo(long handle) => GreetingCallTo(handle)?.GetArguments()[1] as string;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using PM = SharpMUSH.Implementation.Services.PluginManager;
@@ -54,7 +55,7 @@ public class PluginChangeNotificationTests
 		await Assert.That(notifier.Count).IsEqualTo(0).Because("loading a plugin must not force a reload");
 
 		var result = await manager.UnloadAsync(loaded.Plugin.Id);
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(notifier.Count).IsEqualTo(1).Because("a successful unload fires the generic plugins-changed signal");
 	}
 
@@ -70,7 +71,7 @@ public class PluginChangeNotificationTests
 		manager.RegisterPlugin(loaded.Plugin);
 
 		var result = await manager.ReloadAsync("command-only");
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(notifier.Count).IsGreaterThanOrEqualTo(1).Because("a reload swaps the running DLL and forces a refresh");
 	}
 
@@ -81,7 +82,7 @@ public class PluginChangeNotificationTests
 		var manager = NewManager(notifier, out _, out _);
 
 		var result = await manager.UnloadAsync("does-not-exist");
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 		await Assert.That(notifier.Count).IsEqualTo(0).Because("a refused unload must not signal a change");
 	}
 

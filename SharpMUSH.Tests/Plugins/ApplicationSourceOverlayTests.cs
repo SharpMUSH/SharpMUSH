@@ -83,9 +83,8 @@ public class ApplicationSourceOverlayTests
 		var merged = await withPlugin.GetApplicationsAsync();
 		await Assert.That(merged.Select(a => a.Slug)).IsEquivalentTo(new[] { "plugin-page", "db-page" });
 
-		var single = await withPlugin.GetApplicationAsync("plugin-page");
-		await Assert.That(single.IsT0).IsTrue();
-		await Assert.That(single.AsT0.Slug).IsEqualTo("plugin-page");
+		var single = await Assert.That((await withPlugin.GetApplicationAsync("plugin-page")).Value).IsTypeOf<RegisteredApplication>();
+		await Assert.That(single!.Slug).IsEqualTo("plugin-page");
 	}
 
 	[Test]
@@ -102,9 +101,8 @@ public class ApplicationSourceOverlayTests
 		await Assert.That(all.Count).IsEqualTo(1).Because("the colliding plugin overlay is skipped");
 		await Assert.That(all[0].DisplayName).IsEqualTo("DB Owns This");
 
-		var single = await decorator.GetApplicationAsync("shared");
-		await Assert.That(single.IsT0).IsTrue();
-		await Assert.That(single.AsT0.DisplayName).IsEqualTo("DB Owns This");
+		var single = await Assert.That((await decorator.GetApplicationAsync("shared")).Value).IsTypeOf<RegisteredApplication>();
+		await Assert.That(single!.DisplayName).IsEqualTo("DB Owns This");
 	}
 
 	[Test]
@@ -116,19 +114,18 @@ public class ApplicationSourceOverlayTests
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
 		await decorator.UpsertApplicationAsync(DbApp("editable", order: 2));
-		await Assert.That((await decorator.GetApplicationAsync("editable")).IsT0).IsTrue();
-		await Assert.That((await inner.GetApplicationAsync("editable")).IsT0).IsTrue();
+		await Assert.That((await decorator.GetApplicationAsync("editable")).Value).IsTypeOf<RegisteredApplication>();
+		await Assert.That((await inner.GetApplicationAsync("editable")).Value).IsTypeOf<RegisteredApplication>();
 		await decorator.RemoveApplicationAsync("editable");
-		await Assert.That((await inner.GetApplicationAsync("editable")).IsT1).IsTrue();
+		await Assert.That((await inner.GetApplicationAsync("editable")).Value).IsTypeOf<NotFound>();
 
 		await decorator.UpsertApplicationAsync(DbApp(PluginSlug, order: 7, display: "Admin Tried To Edit"));
-		await Assert.That((await inner.GetApplicationAsync(PluginSlug)).IsT1).IsTrue()
+		await Assert.That((await inner.GetApplicationAsync(PluginSlug)).Value).IsTypeOf<NotFound>()
 			.Because("a plugin-owned slug must not be persisted");
 
 		await decorator.RemoveApplicationAsync(PluginSlug);
-		var stillThere = await decorator.GetApplicationAsync(PluginSlug);
-		await Assert.That(stillThere.IsT0).IsTrue();
-		await Assert.That(stillThere.AsT0.DisplayName).IsEqualTo("Plugin Demo");
+		var stillThere = await Assert.That((await decorator.GetApplicationAsync(PluginSlug)).Value).IsTypeOf<RegisteredApplication>();
+		await Assert.That(stillThere!.DisplayName).IsEqualTo("Plugin Demo");
 	}
 
 	private static RegisteredApplication DbApp(string slug, int order, string? display = null) =>
