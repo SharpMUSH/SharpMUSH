@@ -118,4 +118,80 @@ public class ExamplePackageTests
 				.Because($"{entry.Path} has no browse blurb, which is half of what the index is for");
 		}
 	}
+
+	/// <summary>
+	/// A <c>REGEXP</c> <c>$</c>-command is matched against the command line after evaluation, so a
+	/// <c>%r</c> in it is a real line break by then. Without the <c>s</c> flag <c>.</c> stops at that
+	/// break, the pattern does not match, and the command falls through to the built-in — the text
+	/// still reaches its audience and is silently never captured. Nothing reports it, so the rule is
+	/// enforced here instead.
+	///
+	/// <para>Scoped to the patterns that use <c>.</c> as a wildcard to take a remainder — <c>.*</c> or
+	/// <c>.+</c>, since <c>+help/delete</c> and the <c>/source</c> pair spell theirs the second way —
+	/// which are the ones whose argument can hold a line break. A pattern that only recognises a bare
+	/// verb (plus-help's <c>^\+help\s*$</c>) has no remainder to lose and needs nothing.</para>
+	/// </summary>
+	[Test]
+	public async Task EveryRegexpCommandPattern_ThatTakesARemainder_SpansNewlines()
+	{
+		var root = ExamplesRoot();
+
+		foreach (var path in Directory.GetFiles(root, "package.yaml", SearchOption.AllDirectories))
+		{
+			var manifest = _service.ParseManifest(await File.ReadAllTextAsync(path)).AsT0.Manifest;
+
+			foreach (var obj in manifest.Objects)
+			{
+				foreach (var (name, spec) in obj.Attributes)
+				{
+					if (!spec.Flags.Any(f => f.Equals("REGEXP", StringComparison.OrdinalIgnoreCase))) continue;
+					if (!spec.Value.StartsWith('$')) continue;
+					if (!spec.Value.Contains(".*", StringComparison.Ordinal)
+							&& !spec.Value.Contains(".+", StringComparison.Ordinal)) continue;
+
+					var flags = InlineRegexFlags(spec.Value);
+					await Assert.That(flags).Contains('s')
+						.Because($"{Path.GetFileName(Path.GetDirectoryName(path))}/{obj.Ref}/{name} cannot match a multi-line command");
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// The letters a leading <c>(?…)</c> group switches ON, or empty when there is none.
+	/// </summary>
+	/// <remarks>
+	/// Only what precedes a <c>-</c> counts: <c>(?i-s)</c> names <c>s</c> while switching it OFF, and a
+	/// scan that took the whole group would read that as declaring the flag. It stops at <c>:</c> too,
+	/// for the scoped <c>(?s:…)</c> spelling, so the group's own pattern text is never scanned — a
+	/// stray <c>s</c> in it would otherwise read as a flag.
+	/// </remarks>
+	private static string InlineRegexFlags(string attributeValue)
+	{
+		var pattern = attributeValue.AsSpan(1);
+		if (!pattern.StartsWith("(?")) return string.Empty;
+
+		var flags = pattern[2..];
+		var end = flags.IndexOfAny('-', ':', ')');
+		return end < 0 ? string.Empty : flags[..end].ToString();
+	}
+
+	/// <summary>
+	/// The guard above is worth only as much as its reading of the flags, so that reading is pinned
+	/// here against what <see cref="System.Text.RegularExpressions.Regex"/> actually does.
+	///
+	/// <para>Two spellings would otherwise wave through a pattern that cannot cross a newline at all.
+	/// Verified directly: <c>(?i-s)^@emit (.*)$</c> and <c>(?-s)^@emit (.*)$</c> both fail to match
+	/// <c>"@emit alpha\nbeta"</c>, while <c>(?is)</c> and the scoped <c>(?s:…)</c> match it.</para>
+	/// </summary>
+	[Test]
+	[Arguments("$(?is)^x (.*)$", "is")]
+	[Arguments("$(?s)^x (.*)$", "s")]
+	[Arguments("$(?i)^x (.*)$", "i")]
+	[Arguments("$(?i-s)^x (.*)$", "i")]
+	[Arguments("$(?-s)^x (.*)$", "")]
+	[Arguments("$(?s:^x (.*))$", "s")]
+	[Arguments("$^x (.*)$", "")]
+	public async Task InlineRegexFlags_ReadsOnlyTheFlagsThatAreSwitchedOn(string value, string expected)
+		=> await Assert.That(InlineRegexFlags(value)).IsEqualTo(expected);
 }

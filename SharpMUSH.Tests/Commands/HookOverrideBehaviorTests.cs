@@ -157,4 +157,41 @@ public class HookOverrideBehaviorTests
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
 		}
 	}
+
+	/// <summary>
+	/// A regexp <c>$</c>-command is matched against the command line AFTER evaluation, so a <c>%r</c> in
+	/// what the player typed is a REAL line break by the time the pattern runs. <c>.</c> does not cross
+	/// one without the <c>s</c> flag, which makes the difference between a pattern that captures a
+	/// multi-line emit and one that does not fire at all — and "does not fire" is invisible, because the
+	/// built-in still runs when no <c>$</c>-command matches. That is exactly how multi-line poses went
+	/// missing from the scene archive while still reaching the room.
+	/// </summary>
+	/// <remarks>
+	/// The two patterns are held in one test so the contrast is the assertion. Both are written the way
+	/// the bundled scene package writes them, which is what this is here to protect.
+	/// </remarks>
+	[Test]
+	[Arguments("(?i)", "UNSET")]
+	[Arguments("(?is)", "alpha\nbeta")]
+	public async ValueTask RegexpOverride_SpansANewlineOnlyWithTheSingleLineFlag(string flags, string expected)
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookOvrMulti");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&OVR {obj}=${flags}^@emit (.*)$:&RESULT {obj}=%1"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override @EMIT={obj},OVR"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RESULT {obj}=UNSET"));
+
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit alpha%rbeta"));
+
+			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo(expected)
+				.Because($"'{flags}' decides whether the override sees a two-line emit at all");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
+		}
+	}
 }

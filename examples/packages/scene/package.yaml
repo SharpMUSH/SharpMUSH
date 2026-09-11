@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.18.0
+version: 1.20.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -10,6 +10,11 @@ requires_server: ">=0.1"
 
 # +help carries the topics below. The dependency is what makes {{plus-help/librarian}} a legal
 # attach target, and it is what makes uninstalling scene take its help registration with it.
+#
+# common-functions supplies header() and footer(), which the capture frame, the info card and
+# +scene/recall all evaluate. They are global @functions registered by that package's STARTUP, so
+# without it every rule this package draws renders as the literal text of a call to a function that
+# does not exist — and nothing would say why.
 depends:
   - package: plus-help
     version: ">=1.0 <2.0"
@@ -17,6 +22,14 @@ depends:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/plus-help/
       branch: main
+  - package: common-functions
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/common-functions/
+      branch: main
+      # common-functions ships here, not in SharpMUSH.Packages, so this points
+      # at the server repo where the other examples point at the package repo.
 
 # Create mode: a single owned WIZARD thing carries the capture hooks and the
 # +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
@@ -149,6 +162,15 @@ objects:
       #   4. @if %q<WillCaptureAsPose> ⇒ emit the CAP_FOOTER rule.
       # So a CAPTURED pose is framed (header + pose + footer with the Scene/Pose ids); an uncaptured
       # one is a plain pose. The header must come AFTER addpose because it reads the new pose id.
+      #
+      # EVERY capture pattern carries BOTH inline flags, `(?is)`, and the `s` is not decoration.
+      # $-commands are matched against the command line AFTER evaluation, so a multi-line pose --
+      # `@emit one%rtwo`, or anything the portal's compose box sends, where a newline travels as %r --
+      # reaches the matcher with a REAL line break in it. Without `s`, `.` does not cross that break,
+      # `^@emit (.*)$` cannot match, and the override silently does not fire: the emit still reaches
+      # the room (the built-in runs when no $-command matches) and is never recorded. The failure
+      # looks like nothing at all, which is why it survived so long -- only multi-line poses go
+      # missing from the archive, and only from the scene, never from the room.
 
       # When a pose IS captured, frame the room line. The emit LOGIC is factored into INC`CAP_HEADER /
       # INC`CAP_FOOTER and the four capture hooks @include them, so there is no replicated @remit (they
@@ -166,26 +188,26 @@ objects:
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
         value: |-
-          $(?i)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?is)^(pose |\:)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,pose,,[name(%#)] %2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] %2,%#/FORMAT`POSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
       # and "<name> says, \"<msg>\"" to everyone else in the room.
       CMD`CAPTURE`SAY:
         value: |-
-          $(?i)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?is)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI:
         value: |-
-          $(?i)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?is)^(semipose |;)(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,semipose,,[name(%#)]%2; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)]%2,%#/FORMAT`SEMIPOSE,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in @EMIT emits "<message>" verbatim (no name) to the room.
       CMD`CAPTURE`EMIT:
         value: |-
-          $(?i)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?is)^@emit (.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,emit,,%1; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=%1,%#/FORMAT`EMIT,%1,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # ---- web compose ----------------------------------------------------------
@@ -197,13 +219,20 @@ objects:
       # is standing in its room -- and before this existed, a pose typed there was emitted into
       # whatever room the character happened to be in and silently never recorded.
       #
-      # So these take the id explicitly and record regardless of focus or location. Three consequences,
+      # So these take the id explicitly and record regardless of location. Four consequences,
       # each deliberate:
       #   * a poser who is not in the cast is added to it -- a recorded pose whose author is missing
       #     from the info card's cast would leave that card lying about who was in the scene. Guarded on
       #     them having no role YET, because @scene/member sets the role outright: writing it on
       #     every pose demoted an owner to participant in their own scene, and every ownership verb
       #     (+scene/public, /finish, /pitch) is gated on FUN`OWNS, so it locked them out of it;
+      #   * the poser is FOCUSED on the scene they just posed into. Posing is the act that says "I am
+      #     in this one" -- and without it a pose composed on a scene's page landed there while the
+      #     character's focus stayed wherever it had been, so the very next line they typed in a
+      #     client went to a different scene, or to none. Everything else about that page says they
+      #     are in this scene; the focus has to agree. Harmless when they are elsewhere: a room pose
+      #     is captured only when focus matches the scene of the room they are standing in, so a
+      #     focus pointing at a remote scene simply captures nothing;
       #   * the room emit is CONDITIONAL on the poser actually being there. Recording from anywhere is
       #     the point; speaking into a room you are not standing in would put words in front of people
       #     you are not with;
@@ -227,18 +256,24 @@ objects:
       # scene the reader could already see.
       # Multi-line poses need nothing special here. The portal sends newlines as `%r`, which is
       # expanded before the $-command pattern is matched, and a wildcard spans a newline -- so `*=*`
-      # matches a two-line pose and %1 arrives with real line breaks in it.
+      # matches a two-line pose and %1 arrives with real line breaks in it. (A REGEXP pattern is not
+      # so lucky: see the `(?is)` note above the capture hooks.)
+      #
+      # Whitespace inside %1 arrives intact for the same reason it has to be spelled out to get here:
+      # the compose box sends every space run, indent and line break as %b / %t / %r, and a
+      # substitution is expanded AFTER the parser has finished eating the whitespace it eats. Nothing
+      # in the verbs may put a Trim() back in front of the content, on either side of the wire.
       CMD`WEB`EMIT: |-
-        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%1,%#/FORMAT`EMIT,%1,##}
+        $+scene/emit *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],emit,,%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=%1,%#/FORMAT`EMIT,%1,##}
 
       CMD`WEB`POSE: |-
-        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] %1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %1,%#/FORMAT`POSE,%1,##}
+        $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] %1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %1,%#/FORMAT`POSE,%1,##}
 
       CMD`WEB`SAY: |-
-        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
+        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
 
       CMD`WEB`SEMIPOSE: |-
-        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
+        $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
 
       # ---- create / lifecycle ---------------------------------------------------
       # NOTE: capture the new scene id into %q<SceneID> with @assert (it both sets the register and
@@ -322,8 +357,50 @@ objects:
       # sceneposes() returns a SPACE-separated id list, so iter() must use the default
       # space input delimiter (an `@` input delim collapsed the whole list into one bogus
       # id → #-1). %r is the output separator (one pose content per line).
+      #
+      # Two spellings. `+scene/recall <n>` asks for a count; bare `+scene/recall` asks for "enough
+      # to see where we are", which is a function of how many people are posing: one round of the
+      # room is words(scenemembers()), and DATA`RECALL_ROUNDS rounds of it is what someone who just
+      # walked in needs. Both go through INC`RECALL so the two cannot render differently — it reads
+      # %q<SceneID> and %q<Count>, which each verb sets before including it.
+      #
+      # The guard is what makes bare recall safe: sceneposes() answers "#-1 NOT FOUND" for a scene
+      # that does not exist, and an unfocused player's scenefocus() IS that string, so without it
+      # the verb printed the sentinel back at them.
+      DATA`RECALL_ROUNDS: |-
+        2
+
+      # One ENTRY per pose: a left rule naming who posed and the pose's id, then the pose itself.
+      # Recall used to print bare content lines, which ran together into an undifferentiated block --
+      # an @emit carries no name of its own, a multi-line pose reads as several separate ones, and
+      # there was no id on screen to hand to +scene/edit or +scene/undo.
+      #
+      # Attribution comes off the POSE, not off current membership: showas is recorded at write time,
+      # so a log read back later shows the name each pose actually went out under rather than whatever
+      # persona its author happens to wear now. firstof() falls through to the author's name for a
+      # pose written without one.
+      #
+      # header()'s width argument is left EMPTY, which makes common-functions measure width(%#) —
+      # right here, because recall is a @pemit to one player. The capture hooks pass 78 instead for
+      # the opposite reason: they emit to a room and have no single recipient to measure.
+      FUN`RECALL`ENTRY: |-
+        [header([firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname))] [chr(183)] pose %1,,left)]%r[scenepose(%0,%1,content)]
+      INC`RECALL: |-
+        @pemit %#=[iter(sceneposes(%q<SceneID>,,%q<Count>),u(%!/FUN`RECALL`ENTRY,%q<SceneID>,%iL),%b,%r)]
+      # The count is validated here rather than left to sceneposes(), which rejects anything below 1
+      # with a sentinel this verb would then iterate the WORDS of -- one bogus pose lookup per word,
+      # printed at the player. `+scene/recall 0` failed differently and just as badly: "0" is falsy,
+      # so the bare @assert broke with no message at all, which is indistinguishable from a command
+      # that does not exist. isint() covers the non-numeric spelling, gt() the zero and negative ones.
+      DATA`DENY_BAD_COUNT: |-
+        How many poses? Give a whole number of 1 or more, or just +scene/recall for the last few.
       CMD`RECALL: |-
-        $+scene/recall *: @pemit %#=[iter(sceneposes(scenefocus(%#),,%0),scenepose(scenefocus(%#),%iL,content),%b,%r)]
+        $+scene/recall *: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert and(isint(%0),gt(%0,0))=@pemit %#=[get(%!/DATA`DENY_BAD_COUNT)]; @assert setr(Count,%0); @include %!/INC`RECALL
+
+      # max(1,...) because sceneposes() rejects a count below 1: a scene whose cast has somehow
+      # emptied would otherwise ask for zero poses and get an error instead of nothing.
+      CMD`RECALL`DEFAULT: |-
+        $+scene/recall: @assert not(strmatch(setr(SceneID,scenefocus(%#)),#-1*))=@pemit %#=[get(%!/DATA`DENY_NO_FOCUS)]; @assert setr(Count,max(1,mul([get(%!/DATA`RECALL_ROUNDS)],words(scenemembers(%q<SceneID>))))); @include %!/INC`RECALL
 
       # ---- pose tracker (+pot): query-on-run turn tracker for the focused scene --
       # No hooks, no state: rebuilt each run from the recorded poses. A member's last
@@ -534,7 +611,10 @@ objects:
         - `+scene/as <name>` — pose under a different name from here on
         - `+scene/edit <id>=<old>^^^<new>` — fix a typo in your own pose
         - `+scene/undo <id>` · `+scene/redo <id>`
-        - `+scene/recall <n>` — the last `<n>` poses of your focused scene
+        - `+scene/recall <n>` — the last `<n>` poses of your focused scene; bare `+scene/recall`
+          gives you two rounds of the room \(twice the size of the cast\). Each pose is introduced
+          by a rule naming who posed it and its id, which is the id `+scene/edit` and `+scene/undo`
+          take
       HELP`SCENE`PITCH: |-
         `+scene/pitch <text>` sets the one-line summary shown beside a scene in `+scene` and on its
         card. It is how someone browsing decides whether to come.

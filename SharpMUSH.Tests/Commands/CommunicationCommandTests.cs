@@ -60,18 +60,36 @@ public class CommunicationCommandTests
 		}
 	}
 
+	/// <summary>
+	/// Runs <paramref name="command"/> as God and returns only what #1 was notified of while it ran.
+	/// </summary>
+	/// <remarks>
+	/// The three <c>@pemit</c> cases below all address #1, which is not a recipient this class owns —
+	/// every suite in the session notifies God. <c>Received(1)</c> counts against the notify
+	/// substitute, which <see cref="ServerWebAppFactory"/> shares for the whole session, so a broad
+	/// matcher ("a message to #1 reading 3", "one starting #-1 PARSER FAILURE") also counts a matching
+	/// call some other suite made: these passed alone and failed in a full run. Clearing the substitute
+	/// is not the fix — it deletes calls a concurrently running class is about to assert on, which
+	/// <c>[NotInParallel]</c> does not prevent, since it serialises this class only against other
+	/// <c>[NotInParallel]</c> ones. The windowed recorder is what the rest of the suite uses
+	/// (<c>ConnectionAnnounceIntegrationTests</c>) and it never touches NSubstitute state.
+	/// </remarks>
+	private async Task<IReadOnlyList<string>> NotifiedGodWhile(string command)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var before = WebAppFactoryArg.Notifications.CountFor(executor);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		return [.. WebAppFactoryArg.Notifications.For(executor).Skip(before)];
+	}
+
 	[Test]
 	[Arguments("@pemit #1=Test message", "Test message")]
 	[Arguments("@pemit #1=Another test", "Another test")]
 	public async ValueTask PemitBasic(string command, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
 		TestDiagnostics.WriteLine("Testing: {0}", command);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(await NotifiedGodWhile(command)).Contains(expected);
 	}
 
 	/// <summary>
@@ -84,14 +102,7 @@ public class CommunicationCommandTests
 	[Arguments("@pemit #1=[add(1,2)]", "3")]
 	[Arguments("@pemit #1=[add(1,[mul(2,3)])]", "7")]
 	public async ValueTask PemitWithFunctionCallInArgument(string command, string expected)
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
+		=> await Assert.That(await NotifiedGodWhile(command)).Contains(expected);
 
 	/// <summary>
 	/// Regression test for the command-argument subtree-reuse optimization (ArgumentSplit /
@@ -109,19 +120,14 @@ public class CommunicationCommandTests
 	[Test]
 	public async ValueTask PemitWithUnclosedParenInArgument_ReportsParseFailure()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-
 		// Missing the closing ')' on add(1,2 — matches the exact malformed input already proven
 		// to produce "#-1 PARSER FAILURE: Expected ) or , at end of expression" via FunctionParse
 		// (see SharpMUSH.Tests/Parser/ParserFailureTests.cs and FunctionUnitTests.cs).
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@pemit me=add(1,2"));
+		var said = await NotifiedGodWhile("@pemit me=add(1,2");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
-					msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(said.Any(message => message.StartsWith("#-1 PARSER FAILURE", StringComparison.Ordinal)))
+			.IsTrue()
+			.Because("a malformed argument must report the parse failure rather than a best-effort value");
 	}
 
 	[Test]

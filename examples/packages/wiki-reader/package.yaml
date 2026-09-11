@@ -1,6 +1,6 @@
 format: 1
 package: wiki-reader
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -190,7 +190,7 @@ objects:
 
       CMD`READ:
         value: |-
-          $^\+wiki\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`ARTICLE,%q<ref>)]
+          $(?s)^\+wiki\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`ARTICLE,%q<ref>)]
         flags: [regexp, cmdsyntax]
 
       CMD`LIST:
@@ -200,7 +200,7 @@ objects:
 
       CMD`SEARCH:
         value: |-
-          $^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
+          $(?s)^\+wiki/search\s+(?<q>\S.*?)(?\:=(?<page>\d+))?$:think [setq(query,r(q,args),page,strfirstof(r(page,args),1))]; think [setq(refs,wikisearch(%q<query>),title,Search: %q<query>,hint,+wiki/search %q<query>)]; @include %!/INC`DO`LISTING=%q<title>,%q<refs>,%q<page>,FUN`DISPLAY`ROW,%q<hint>
         flags: [regexp, cmdsyntax]
 
       CMD`RECENT:
@@ -210,7 +210,7 @@ objects:
 
       CMD`INFO:
         value: |-
-          $^\+wiki/info\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
+          $(?s)^\+wiki/info\s+(?<ref>\S.*)$:think [setq(ref,trim(r(ref,args)))]; @include %!/INC`IS`PAGE; @pemit %#=[u(%!/FUN`DISPLAY`FIELDS,%q<ref>)]
         flags: [regexp, cmdsyntax]
 
       CMD`USAGE:
