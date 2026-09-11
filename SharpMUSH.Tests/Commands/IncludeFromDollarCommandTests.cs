@@ -129,11 +129,8 @@ public class IncludeFromDollarCommandTests
 
 		// Assert the whole value, not just that a newline exists somewhere: this is the
 		// byte-for-byte storage contract, so position and surrounding text matter.
-		//
-		// '%#' appears as '#1' because @set evaluates its RHS — the same evaluation that turns the
-		// %r into the real newline this test is about. The enactor is #1 (God) via Cmd's handle.
 		var stored = (await Parser.FunctionParse(MarkupText.Plain($"[get({obj}/DO_NL_{tag})]")))?.Message?.ToPlainText();
-		await Assert.That(stored).IsEqualTo($"${token}:@pemit #1=FIRST_{tag};\n@pemit #1=SECOND_{tag}")
+		await Assert.That(stored).IsEqualTo($"${token}:@pemit %#=FIRST_{tag};\n@pemit %#=SECOND_{tag}")
 			.Because($"a real newline must follow the ';' and nothing else may have been rewritten; stored: [{stored}]");
 
 		var msgs = await TriggerAndCollect(token);

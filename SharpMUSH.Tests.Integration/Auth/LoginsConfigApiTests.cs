@@ -1,12 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Headers;
@@ -21,9 +18,8 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// The equivalent gate on <c>api/auth/switch-character</c> is covered by
 /// <c>SwitchCharacterTests.SwitchCharacter_WhenLoginsDisabled_NonStaff403</c>.
 ///
-/// The tests re-stub the shared <see cref="IOptionsWrapper{SharpMUSHOptions}"/> substitute's
-/// <c>CurrentValue</c> around the call under test and restore it in a finally block —
-/// <c>[NotInParallel("ConfigMutation")]</c> keeps them from racing other suites that do the same.
+/// Logins are disabled through <see cref="TestOptionsOverride"/>, which reaches the requests the
+/// test sends and no other test's.
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class LoginsConfigApiTests(ServerWebAppFactory factory)
@@ -77,73 +73,49 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
 
-	private static (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) DisableLogins(ServerWebAppFactory factory)
+	private static IDisposable DisableLogins() => TestOptionsOverride.Scope(options => options with
 	{
-		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { Net = original.Net with { Logins = false } });
-		return (options, original);
-	}
+		Net = options.Net with { Logins = false }
+	});
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_WhenLoginsDisabled_NonStaff403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Pleb"), Password);
 
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/account-login",
-				new AccountLoginRequest(account.Username, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = DisableLogins();
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(account.Username, Password));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task GetMushToken_ViaAccountSession_WhenLoginsDisabled_NonStaff403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Pleb"), Password);
 
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
-				new MushTokenRequest(null, null, account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = DisableLogins();
+		using var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			new MushTokenRequest(null, null, account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task GetMushToken_ViaCharacterCredentials_WhenLoginsDisabled_NonStaff403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var charName = UniqueName("Pleb");
 		await CreateCharacterAsync(http, account.AccountSessionToken, charName, Password);
 
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
-				new MushTokenRequest(charName, Password, null, null, null));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = DisableLogins();
+		using var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			new MushTokenRequest(charName, Password, null, null, null));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_WhenLoginsDisabled_StaffAccountAllowed()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -155,16 +127,9 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var characterNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(character.DbrefNumber, character.CreationTime)));
 		await mediator.Send(new SetObjectFlagCommand(new AnySharpObject(characterNode.AsPlayer), wizardFlag!));
 
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/account-login",
-				new AccountLoginRequest(account.Username, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = DisableLogins();
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(account.Username, Password));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 }

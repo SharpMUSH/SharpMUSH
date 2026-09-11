@@ -23,10 +23,8 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// the REST surfaces (<c>AuthController</c>, <c>SetupController</c>) and the telnet surface
 /// (<c>SocketCommands.Connect</c>/<c>HandleGuestLogin</c>).
 ///
-/// The REST tests re-stub the shared <see cref="IOptionsWrapper{SharpMUSHOptions}"/> substitute's
-/// <c>CurrentValue</c> around the call under test and restore it in a finally block —
-/// <c>[NotInParallel("ConfigMutation")]</c> keeps them from racing other suites that do the same
-/// (see <c>LoginsConfigApiTests</c>).
+/// Each test installs its rules through <see cref="TestOptionsOverride"/>, which reaches the
+/// requests and commands that test sends and no other test's.
 ///
 /// The sitelock rule in each blocking test targets the literal client IP the TestServer's
 /// in-process HttpClient resolves to (discovered per-test via the dev-only
@@ -116,34 +114,21 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		return (await response.Content.ReadFromJsonAsync<CreatedCharacterResponse>())!;
 	}
 
-	/// <summary>Re-stubs the shared options substitute's SitelockRules; caller restores in a finally block.</summary>
-	private (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) StubSitelockRules(
-		Dictionary<string, string[]> rules)
-	{
-		var options = Options;
-		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { SitelockRules = new SitelockRulesOptions(rules) });
-		return (options, original);
-	}
+	/// <summary>Replaces the sitelock rules this test sees until the returned scope is disposed.</summary>
+	private static IDisposable OverrideSitelockRules(Dictionary<string, string[]> rules)
+		=> TestOptionsOverride.Scope(options => options with { SitelockRules = new SitelockRulesOptions(rules) });
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_FromSitelockedIp_Returns403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Pleb"), Password);
 
 		var clientIp = await GetClientIpAsync(http);
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/account-login",
-				new AccountLoginRequest(account.Username, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(account.Username, Password));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
 	/// <summary>
@@ -153,42 +138,28 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 	/// is not guaranteed to exist in the test build's output; <c>/health</c> is a reliable stand-in
 	/// for "any non-auth page GET" that proves the sitelock guard was never even consulted.
 	/// </summary>
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AnonymousHealthCheck_StillReturns200_WhenBroadSitelockRuleConfigured()
 	{
 		var http = CreateClient();
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { ["*"] = ["!connect", "!create", "!guest"] });
-		try
-		{
-			using var response = await http.GetAsync("health");
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-			await Assert.That(await response.Content.ReadAsStringAsync()).IsEqualTo("healthy");
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { ["*"] = ["!connect", "!create", "!guest"] });
+		using var response = await http.GetAsync("health");
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(await response.Content.ReadAsStringAsync()).IsEqualTo("healthy");
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountRegister_FromCreateSitelockedIp_Returns403()
 	{
 		var http = CreateClient();
 		var clientIp = await GetClientIpAsync(http);
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!create"] });
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/account-register",
-				new AccountRegisterRequest(UniqueName("blocked"), null, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!create"] });
+		using var response = await http.PostAsJsonAsync("api/auth/account-register",
+			new AccountRegisterRequest(UniqueName("blocked"), null, Password));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_FromNonMatchingIp_LogsInFine()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -196,64 +167,47 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 
 		// The rule targets a documentation-range IP (RFC 5737) that can never be the TestServer's
 		// real client IP, so this login must succeed exactly as if no sitelock rule existed.
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [NonMatchingHost] = ["!connect"] });
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/account-login",
-				new AccountLoginRequest(account.Username, Password));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [NonMatchingHost] = ["!connect"] });
+		using var response = await http.PostAsJsonAsync("api/auth/account-login",
+			new AccountLoginRequest(account.Username, Password));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task GetMushToken_FromSitelockedIp_Returns403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Ott"), Password);
 
 		var clientIp = await GetClientIpAsync(http);
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
-		try
-		{
-			using var response = await http.PostAsJsonAsync("api/auth/mush-token",
-				new MushTokenRequest(null, null, account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
+		using var response = await http.PostAsJsonAsync("api/auth/mush-token",
+			new MushTokenRequest(null, null, account.AccountSessionToken, character.DbrefNumber, character.CreationTime));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
 	/// <summary>
-	/// Shares <c>SetupFlowTests</c>' <c>"SetupFlow"</c> serialization domain (it flips the same
-	/// game-wide <c>ServerState.SetupCompleted</c> flag) as well as <c>"ConfigMutation"</c> (the
-	/// sitelock rule re-stub) — both keys are required so this test never races either family.
-	/// Uses a high explicit Order so it always runs after every other <c>"SetupFlow"</c> test
-	/// (max existing Order is 6), leaving setup completed again afterward for the rest of the suite.
+	/// Shares <c>SetupFlowTests</c>' <c>"SetupFlow"</c> serialization domain: it flips the same
+	/// game-wide <c>ServerState.SetupCompleted</c> flag. Uses a high explicit Order so it always runs
+	/// after every other <c>"SetupFlow"</c> test, leaving setup completed again afterward for the rest
+	/// of the suite.
 	/// </summary>
-	[Test, NotInParallel(["SetupFlow", "ConfigMutation"], Order = 50)]
+	[Test, NotInParallel("SetupFlow", Order = 50)]
 	public async Task SetupComplete_FromCreateSitelockedIp_Returns403()
 	{
 		var db = factory.Services.GetRequiredService<ISharpDatabase>();
 		await db.SetServerSetupCompletedAsync(false);
-
-		var http = CreateClient();
-		var clientIp = await GetClientIpAsync(http);
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!create"] });
 		try
 		{
+			var http = CreateClient();
+			var clientIp = await GetClientIpAsync(http);
+			using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!create"] });
 			using var response = await http.PostAsJsonAsync("api/setup/complete",
 				new SetupCompleteRequest(UniqueName("sitelocked"), "claimed-password-1"));
 			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 		}
 		finally
 		{
-			options.CurrentValue.Returns(original);
 			await db.SetServerSetupCompletedAsync(true);
 		}
 	}
@@ -289,72 +243,51 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 		return playerName;
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task TelnetConnect_FromSitelockedIp_Refused()
 	{
 		var playerName = await CreateTelnetPlayerAsync("SLPleb", "pleb-password-1");
 
 		const string blockedIp = "198.51.100.7"; // RFC 5737 TEST-NET-2, never a real connecting IP
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!connect"] });
-		try
-		{
-			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!connect"] });
+		var handle = await RegisterTelnetHandleAsync(blockedIp);
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
 
-			await NotifyService.Received(1).Notify(
-				Arg.Is<long>(h => h == handle),
-				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-				null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(
+			Arg.Is<long>(h => h == handle),
+			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+			null, INotifyService.NotificationType.Announce);
 
-			// Never bound to the player: the connection must still be anonymous.
-			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		// Never bound to the player: the connection must still be anonymous.
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task TelnetConnect_FromNonMatchingIp_LogsInFine()
 	{
 		var playerName = await CreateTelnetPlayerAsync("SLOk", "pleb-password-1");
 
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [NonMatchingHost] = ["!connect"] });
-		try
-		{
-			var handle = await RegisterTelnetHandleAsync("192.0.2.9"); // RFC 5737 TEST-NET-1, does not match NonMatchingHost
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [NonMatchingHost] = ["!connect"] });
+		var handle = await RegisterTelnetHandleAsync("192.0.2.9"); // RFC 5737 TEST-NET-1, does not match NonMatchingHost
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"connect {playerName} pleb-password-1"));
 
-			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNotNull();
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task TelnetGuestLogin_FromGuestSitelockedIp_Refused()
 	{
 		const string blockedIp = "203.0.113.77"; // RFC 5737 TEST-NET-3
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!guest"] });
-		try
-		{
-			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("connect guest"));
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!guest"] });
+		var handle = await RegisterTelnetHandleAsync(blockedIp);
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("connect guest"));
 
-			await NotifyService.Received(1).Notify(
-				Arg.Is<long>(h => h == handle),
-				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-				null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(
+			Arg.Is<long>(h => h == handle),
+			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+			null, INotifyService.NotificationType.Announce);
 
-			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
 
 	/// <summary>
@@ -365,27 +298,20 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 	/// unrelated to this gate — see PlayerCreationConfigTests, which likewise reaches REGISTER/MAKE's
 	/// pre-arg checks via CommandParse). We assert the block message fires and no account is created.
 	/// </summary>
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task TelnetRegister_FromCreateSitelockedIp_Refused()
 	{
 		const string blockedIp = "198.51.100.33"; // RFC 5737 TEST-NET-2
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!create"] });
-		try
-		{
-			var handle = await RegisterTelnetHandleAsync(blockedIp);
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register SitelockedAcct somepassword"));
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [blockedIp] = ["!create"] });
+		var handle = await RegisterTelnetHandleAsync(blockedIp);
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("register SitelockedAcct somepassword"));
 
-			await NotifyService.Received(1).Notify(
-				Arg.Is<long>(h => h == handle),
-				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
-				null, INotifyService.NotificationType.Announce);
+		await NotifyService.Received(1).Notify(
+			Arg.Is<long>(h => h == handle),
+			Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+			null, INotifyService.NotificationType.Announce);
 
-			// The gate returned before any account mutation: the connection never entered AccountMode.
-			await Assert.That(ConnectionService.Get(handle)?.State).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		// The gate returned before any account mutation: the connection never entered AccountMode.
+		await Assert.That(ConnectionService.Get(handle)?.State).IsNotEqualTo(IConnectionService.ConnectionState.AccountMode);
 	}
 }

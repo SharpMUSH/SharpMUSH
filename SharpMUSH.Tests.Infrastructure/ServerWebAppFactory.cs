@@ -52,12 +52,17 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// </summary>
 	public HttpClient CreateHttpClient()
 	{
-		var client = _server!.CreateClient();
+		HttpClient client;
+		// WebApplicationFactory records every client it creates in a plain List<T> and disposes them
+		// on teardown. Parallel tests adding to it concurrently leave null slots that fault DisposeAsync.
+		lock (_createClientLock)
+			client = _server!.CreateClient();
 		// Exercise the endpoint directly; HTTP-to-HTTPS redirect behavior has dedicated coverage.
 		client.BaseAddress = new Uri("https://localhost");
 		return client;
 	}
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
+	private readonly Lock _createClientLock = new();
 	private DBRef _one;
 
 	/// <summary>

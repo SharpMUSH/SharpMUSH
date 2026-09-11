@@ -484,9 +484,9 @@ public class UtilityCommandTests
 		// Things are created NO_COMMAND, so nothing on them is scanned until the flag comes off.
 		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(createdDbref));
 
-		// \\: survives attribute-set evaluation as \:, the form PennMUSH stores.
+		// A client-typed & stores its value as written, so the pattern keeps its \:.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($@"&{attrName} {createdDbref}=${commandWord}\\:go *:think scan colon triggered"));
+			MarkupText.Plain($@"&{attrName} {createdDbref}=${commandWord}\:go *:think scan colon triggered"));
 
 		var scanResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@scan {commandWord}:go north"));

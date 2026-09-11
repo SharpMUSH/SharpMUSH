@@ -2697,26 +2697,11 @@ public class SharpMUSHParserVisitor(
 		bool emitSubstDebug,
 		bool splitHadErrors)
 	{
-		// Escaped text (`\x`, grammar rule `escapedText: ESCAPE ANY;`, the ONLY entry point being a
-		// literal backslash — SharpMUSHLexer.g4) is a hard correctness trap for subtree reuse:
-		// VisitEscapedText (below) strips the backslash and returns the escaped character as plain
-		// text UNCONDITIONALLY — it does not check ParseMode. Under the original re-lex pipeline,
-		// this meant an escaped substitution like `\%#` decoded to bare `%#` during the NoParse
-		// boundary-finding pass, and THEN got a second, fresh lex — where the now-bare `%#` is
-		// tokenized as a live substitution and evaluates (e.g. to "#1"). Re-visiting the SAME
-		// retained EscapedTextContext node instead can never reach that second tokenization: the
-		// node's grammar rule was fixed as "escaped text" at the original lex time, so it always
-		// re-decodes to literal text no matter what ParseMode the revisit runs under — confirmed by
-		// IncludeFromDollarCommandTests.MultiLineBody_SemicolonAtLineEnd_RunsEveryCommand, which
-		// stores `\%#` via @set (EqSplit, no NoParse/RSNoParse -> eager RHS evaluation) and asserts
-		// it comes out as "#1", not "%#". Fall back to the original re-lex pipeline whenever the
-		// retained subtree contains an escape anywhere, so this argument gets byte-identical
-		// treatment to pre-optimization behavior. Same fallback for a syntax error anywhere in the
-		// split (splitHadErrors) — see the parameter doc above and CallState.HadErrors.
+		// A syntax error anywhere in the split (splitHadErrors) falls back to the strict re-parse —
+		// see the parameter doc above and CallState.HadErrors.
 		if (retainedContext is not EvaluationStringContext ctx
 				|| prs is not MUSHCodeParser mushParser
-				|| splitHadErrors
-				|| ContainsEscapedText(ctx))
+				|| splitHadErrors)
 		{
 			return await prs.FunctionParse(argument, emitSubstDebug);
 		}
@@ -2741,31 +2726,6 @@ public class SharpMUSHParserVisitor(
 		}
 
 		return result;
-	}
-
-	/// <summary>
-	/// Depth-first search for any <see cref="EscapedTextContext"/> node in <paramref name="node"/>'s
-	/// subtree (inclusive). See the comment in <see cref="EvaluateArgumentSubtree"/> for why this
-	/// gates the subtree-reuse fast path.
-	/// </summary>
-	private static bool ContainsEscapedText(IParseTree node)
-	{
-		if (node is EscapedTextContext)
-		{
-			return true;
-		}
-
-		for (var i = 0; i < node.ChildCount; i++)
-		{
-			ExecutionBudget.Current?.ThrowIfExceeded();
-			var child = node.GetChild(i);
-			if (child is not null && ContainsEscapedText(child))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
@@ -3106,10 +3066,24 @@ public class SharpMUSHParserVisitor(
 		return new CallState(GetContextText(context), context.Depth());
 	}
 
+	/// <summary>
+	/// Decodes <c>\x</c> to <c>x</c> — but only in an evaluating pass. A NoParse/NoEval pass keeps the
+	/// backslash, exactly as it keeps <c>%#</c> and <c>[fn()]</c> raw: its text is either shown or stored
+	/// as written (<c>]think</c>, <c>/noeval</c>, <c>&amp;</c>) or evaluated later, and that later
+	/// evaluation is the one that decodes. Decoding in both would decode every escape in a command
+	/// argument twice: <c>think \[</c> would reach its evaluation as <c>[</c> and fail to parse.
+	/// </summary>
 	public override async ValueTask<CallState?> VisitEscapedText([NotNull] EscapedTextContext context)
-		=> await VisitChildren(context)
-			 ?? new CallState(
-				 source.Substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1), context.Depth());
+	{
+		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
+		{
+			return new CallState(GetContextText(context), context.Depth());
+		}
+
+		return await VisitChildren(context)
+					 ?? new CallState(
+						 source.Substring(context.Start.StartIndex + 1, context.Stop.StopIndex - context.Start.StartIndex + 1 - 1), context.Depth());
+	}
 
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="SharpMUSHParser.startPlainSingleCommandArg"/>.
