@@ -1,30 +1,27 @@
-﻿using Mediator;
+using Mediator;
 using Microsoft.AspNetCore.Identity;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Buffers;
+using SharpMUSH.Library.Services.Passwords;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// Password service that supports both modern PBKDF2 hashes and legacy PennMUSH SHA1 passwords.
-/// 
-/// PennMUSH password format: V:ALGO:HASH:TIMESTAMP
-/// - V: Version number (currently 2)
-/// - ALGO: Digest algorithm (SHA1 for PennMUSH)
-/// - HASH: Salted hash (first 2 characters are the salt, prepended to plaintext before hashing)
-/// - TIMESTAMP: Unix timestamp when password was set
-/// 
-/// The salt characters are from: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
-/// 
-/// When verifying, if the hash is in PennMUSH format, SHA1 verification is used.
-/// New passwords are always hashed using the modern PBKDF2 algorithm.
+/// Hashes passwords with ASP.NET Core Identity's PBKDF2, and still verifies every stored-password
+/// shape an imported PennMUSH database can hold (see <see cref="PennMUSHPasswords"/>). A legacy
+/// password that verifies is rehashed onto PBKDF2 by the caller (<see cref="NeedsRehash"/>).
 /// </summary>
 public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) : IPasswordService
 {
+	/// <summary>
+	/// The stored password of a character that cannot log in until a wizard sets one, such as a player
+	/// imported without a password. Nothing matches a stored value beginning with '!', the Unix shadow
+	/// file's mark for a locked account and a character no hash above ever produces.
+	/// </summary>
+	public const string LockedHash = "!locked";
+
 	private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 	public string GenerateRandomPassword()
@@ -35,12 +32,14 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 
 	public bool PasswordIsValid(string user, string pw, string hash)
 	{
-		if (string.IsNullOrEmpty(hash))
-			return false;
-
-		if (TryParsePennMUSHHash(hash, out var algo, out var saltedHash))
+		if (string.IsNullOrEmpty(hash) || hash.StartsWith('!'))
 		{
-			return VerifyPennMUSHPassword(pw, algo, saltedHash);
+			return false;
+		}
+
+		if (!IsIdentityHash(hash))
+		{
+			return PennMUSHPasswords.Verify(hash, pw);
 		}
 
 		try
@@ -49,95 +48,7 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		}
 		catch (FormatException)
 		{
-			// Invalid hash format (not a valid Base-64 string)
 			return false;
-		}
-	}
-
-	/// <summary>
-	/// Determines if a password hash is in PennMUSH format.
-	/// PennMUSH format: V:ALGO:HASH:TIMESTAMP (e.g., "2:SHA1:abXYZ123...:1234567890")
-	/// </summary>
-	private static bool IsPennMUSHPasswordFormat(string hash)
-		=> !string.IsNullOrEmpty(hash) && TryParsePennMUSHHash(hash, out _, out _);
-
-	/// <summary>
-	/// Splits a PennMUSH-format hash (<c>V:ALGO:SALTEDHASH:TIMESTAMP</c>) into the algorithm and the
-	/// salted hash without allocating the parts. Fails on a version other than 1 or 2, an unknown
-	/// algorithm, or fewer than three fields; a trailing timestamp is optional and ignored.
-	/// </summary>
-	private static bool TryParsePennMUSHHash(string hash, out ReadOnlySpan<char> algo, out ReadOnlySpan<char> saltedHash)
-	{
-		algo = default;
-		saltedHash = default;
-
-		var text = hash.AsSpan();
-		Span<System.Range> fields = stackalloc System.Range[4];
-		if (text.Split(fields, ':') < 3)
-			return false;
-
-		if (!int.TryParse(text[fields[0]], out var version) || version < 1 || version > 2)
-			return false;
-
-		var candidateAlgo = text[fields[1]];
-		if (!IsSha1(candidateAlgo) && !IsSha256(candidateAlgo))
-			return false;
-
-		algo = candidateAlgo;
-		saltedHash = text[fields[2]];
-		return true;
-	}
-
-	private static bool IsSha1(ReadOnlySpan<char> algo)
-		=> algo.Equals("SHA1", StringComparison.OrdinalIgnoreCase) || algo.Equals("SHA-1", StringComparison.OrdinalIgnoreCase);
-
-	private static bool IsSha256(ReadOnlySpan<char> algo)
-		=> algo.Equals("SHA256", StringComparison.OrdinalIgnoreCase) || algo.Equals("SHA-256", StringComparison.OrdinalIgnoreCase);
-
-	/// <summary>
-	/// Verifies a password against the parts of a PennMUSH-format hash.
-	/// The first 2 characters of <paramref name="saltedHash"/> are the salt, prepended to the plaintext
-	/// before hashing; the rest is the hex digest, in either case.
-	/// </summary>
-	private static bool VerifyPennMUSHPassword(string plaintext, ReadOnlySpan<char> algo, ReadOnlySpan<char> saltedHash)
-	{
-		// The salt is the first 2 characters of the stored hash
-		if (saltedHash.Length < 3)
-			return false;
-
-		var salt = saltedHash[..2];
-		var expectedHash = saltedHash[2..];
-
-		var saltedPlaintext = string.Concat(salt, plaintext);
-		var byteCount = Encoding.UTF8.GetByteCount(saltedPlaintext);
-		var rented = ArrayPool<byte>.Shared.Rent(byteCount);
-		try
-		{
-			var input = rented.AsSpan(0, Encoding.UTF8.GetBytes(saltedPlaintext, rented));
-			Span<byte> digest = stackalloc byte[SHA256.HashSizeInBytes];
-			int digestLength;
-
-			if (IsSha1(algo))
-			{
-				digestLength = SHA1.HashData(input, digest);
-			}
-			else if (IsSha256(algo))
-			{
-				digestLength = SHA256.HashData(input, digest);
-			}
-			else
-			{
-				return false;
-			}
-
-			// Compare hashes (case-insensitive as hex can be upper or lower)
-			return expectedHash.Equals(Convert.ToHexString(digest[..digestLength]), StringComparison.OrdinalIgnoreCase);
-		}
-		finally
-		{
-			// The pooled buffer held the salted plaintext.
-			CryptographicOperations.ZeroMemory(rented.AsSpan(0, byteCount));
-			ArrayPool<byte>.Shared.Return(rented);
 		}
 	}
 
@@ -146,15 +57,40 @@ public class PasswordService(IMediator mediator, PasswordHasher<string> hasher) 
 		await mediator.Send(new SetPlayerPasswordCommand(user, hashedPassword));
 	}
 
+	/// <summary>Anything that verified and is not already a PBKDF2 hash came from an imported database.</summary>
 	public bool NeedsRehash(string hash)
-	{
-		return IsPennMUSHPasswordFormat(hash);
-	}
+		=> !string.IsNullOrEmpty(hash) && !hash.StartsWith('!') && !IsIdentityHash(hash);
 
 	public async ValueTask RehashPasswordAsync(SharpPlayer player, string plaintext)
 	{
 		var userKey = $"#{player.Object.Key}:{player.Object.CreationTime}";
 		var newHash = HashPassword(userKey, plaintext);
 		await mediator.Send(new SetPlayerPasswordCommand(player, newHash, Salt: null));
+	}
+
+	/// <summary>
+	/// Whether <paramref name="hash"/> is what <see cref="PasswordHasher{TUser}"/> writes: base64 of a
+	/// format marker, 0x00 (version 2: marker, 16-byte salt, 32-byte subkey) or 0x01 (version 3: marker
+	/// and a 12-byte header before salt and subkey). No PennMUSH or TinyMUX format decodes to either.
+	/// </summary>
+	private static bool IsIdentityHash(string hash)
+	{
+		if (hash.Length > 256)
+		{
+			return false;
+		}
+
+		Span<byte> decoded = stackalloc byte[hash.Length];
+		if (!Convert.TryFromBase64String(hash, decoded, out var length) || length == 0)
+		{
+			return false;
+		}
+
+		return decoded[0] switch
+		{
+			0x00 => length == 49,
+			0x01 => length >= 13,
+			_ => false
+		};
 	}
 }
