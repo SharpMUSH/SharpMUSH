@@ -342,14 +342,33 @@ public class GeneralCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.WhereIsCanOnlyLocatePlayers), executor, executor)).IsTrue();
 	}
 
+	/// <summary>
+	/// Restarting a player restarts the player and everything they own.
+	/// </summary>
+	/// <remarks>
+	/// The player is one this test makes. Restarting God would halt the queue of God and of every
+	/// object God owns, which in the session-wide scheduler is whatever other suites have queued as
+	/// God or on the things they made.
+	/// </remarks>
 	[Test]
 	public async ValueTask Restart_ValidObject_Restarts()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@restart #1"));
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "RestartTarget");
 
-		// @restart #1 targets the God player (#1 is a player) → RestartedPlayerAndObjectsFormat is always sent.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, executor)).IsTrue();
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@restart {player.DbRef}"));
+
+			await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
+				nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat),
+				string.Format(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat, player.Name), executor)).IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(player.Handle);
+		}
 	}
 
 	[Test]
