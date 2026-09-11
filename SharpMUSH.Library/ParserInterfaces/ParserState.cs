@@ -170,6 +170,11 @@ public class HttpResponseContext
 	/// Response body content
 	/// </summary>
 	public StringBuilder Body { get; } = new();
+
+	/// <summary>
+	/// Whether captured output exceeded the shared UTF-16 output limit.
+	/// </summary>
+	public bool OutputLimitExceeded { get; internal set; }
 }
 
 public class IterationWrapper<T>

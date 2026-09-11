@@ -25,8 +25,9 @@ public interface IHttpOutputCapture
 
 	/// <summary>
 	/// Offers a piece of output to the active capture frame. Returns <c>true</c> when the
-	/// output was directed at the captured handler and has been appended to the response
-	/// body (the caller should then skip normal connection delivery), <c>false</c> otherwise.
+	/// output was directed at the captured handler (the caller should then skip normal connection
+	/// delivery), <c>false</c> otherwise. A write that exceeds the response limit marks the context
+	/// as failed instead of appending a partial message.
 	/// </summary>
 	bool TryCapture(int dbref, string text);
 }

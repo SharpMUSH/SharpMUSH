@@ -16,7 +16,7 @@ Immediately when the `@include` finishes, the http request is complete. Any queu
 - *%0* will be the pathname **with the `/http` prefix stripped** — a request to `/http/path/to?foo=bar` arrives as *%0* = "/path/to?foo=bar". So *%0* is "/", "/path/to", "/foo?bar=baz", etc.
 - *%1* will be the body of the request. If it's json, use json_query to deal with it. If it's form-encoded, look at [formdecode()]
 
-Anything sent to the HTTP Handler player during evaluation of this code is included in the body sent to the HTTP Client. There is a maximum size of BUFFER_LEN for the body of the response.
+Anything sent to the HTTP Handler player during evaluation of this code is included in the body sent to the HTTP Client. SharpMUSH buffers up to 5,242,880 UTF-16 code units, including the newline appended to each captured message. The buffer grows as output arrives; the limit does not preallocate its maximum size. If the handler exceeds the limit, SharpMUSH discards the partial response and returns **500 Internal Server Error** with `#-1 OUTPUT EXCEEDED MAXIMUM SIZE`.
 
 To modify the response headers, use the command `@respond`
 
@@ -50,13 +50,13 @@ Handler evaluation shares the configured `queue_entry_cpu_time` elapsed-time lim
 - [http3]
 
 # HTTP3
-HTTP connections to SharpMUSH are limited to BUFFER_LEN in header and body size.
+Inbound request body and header limits come from ASP.NET Core, Kestrel, and any reverse proxy in front of SharpMUSH. They do not use the MUSH response-capture limit described below.
 
 Incoming headers will be set in Q-registers: *%q<headers>* contains a list of all headers by name. Individual headers will be set in *%q<hdr.[name]>*, prefixed with hdr. e.g: *%q<hdr.host>* to obtain the value to the Host: header. Or *%q<hdr.Cookie>* for Cookies.
 
 Multiple header lines will be added to the same q-register name, but %r-delimited. So two "Cookie:" lines becomes *%q<Cookies>* with two %r-delimited lines.
 
-HTTP Responses are limited to BUFFER_LEN in response size. Anything sent to the HTTPHandler player, whether it uses think or is `@pemitted`, is added to the response buffer.
+HTTP responses are limited to 5,242,880 UTF-16 code units, the same ceiling used for function output. This is a character-buffer limit rather than a UTF-8 wire-byte limit. Anything sent to the HTTP Handler player, whether it uses `think` or `@pemit`, is added to the response buffer. Captured messages include a trailing newline. Exceeding the limit discards the partial body, status, content type, and custom headers and returns a complete plain-text 500 response.
 
 
 **See Also:**

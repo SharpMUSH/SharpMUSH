@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -107,6 +108,28 @@ public class HttpHandlerBudgetTests
 			await Assert.That(capture.TryCapture(8, "late output")).IsFalse();
 		}
 		finally { release.Cancel(); }
+	}
+
+	[Test]
+	public async Task OutputLimitReturnsCompleteErrorInsteadOfPartialSuccess()
+	{
+		HttpOutputCapture? activeCapture = null;
+		var (service, _, capture) = Create(state =>
+		{
+			state.HttpResponse!.StatusLine = "200 OK";
+			state.HttpResponse.ContentType = "application/json";
+			state.HttpResponse.Headers.Add(("X-Partial", "discard"));
+			activeCapture!.TryCapture(8, new string('x', FunctionLimits.MaxOutputCodeUnits));
+			return ValueTask.FromResult<CallState?>(CallState.Empty);
+		});
+		activeCapture = capture;
+
+		var result = (await service.DispatchAsync("GET", "/large", "", [])).AsT0;
+
+		await Assert.That(result.Status).IsEqualTo(500);
+		await Assert.That(result.ContentType).IsEqualTo("text/plain");
+		await Assert.That(result.Body).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
+		await Assert.That(result.Headers.Count).IsEqualTo(0);
 	}
 
 	[Test]

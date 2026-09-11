@@ -1,4 +1,5 @@
 using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -78,21 +79,50 @@ public class NotifyServiceHttpCaptureTests
 	}
 
 	[Test]
-	public async Task Capture_IsCappedAtMaxBodyLength()
+	public async Task Capture_AllowsResponseAbovePennMushBufferLength()
 	{
 		var capture = new HttpOutputCapture();
 		var context = new HttpResponseContext();
 
 		using (capture.BeginCapture(42, context))
 		{
-			var chunk = new string('x', 3000);
-			for (var i = 0; i < 5; i++)
-			{
-				capture.TryCapture(42, chunk);
-			}
+			capture.TryCapture(42, new string('x', 10_000));
 		}
 
-		await Assert.That(context.Body.Length).IsEqualTo(HttpOutputCapture.MaxBodyLength);
+		await Assert.That(context.Body.Length).IsEqualTo(10_001);
+	}
+
+	[Test]
+	public async Task Capture_CountsTheTrailingNewlineAtTheExactLimit()
+	{
+		var capture = new HttpOutputCapture();
+		var context = new HttpResponseContext();
+
+		using (capture.BeginCapture(42, context))
+		{
+			capture.TryCapture(42, new string('x', FunctionLimits.MaxOutputCodeUnits - 1));
+		}
+
+		await Assert.That(context.Body.Length).IsEqualTo(FunctionLimits.MaxOutputCodeUnits);
+		await Assert.That(context.Body[^1]).IsEqualTo('\n');
+		await Assert.That(context.OutputLimitExceeded).IsFalse();
+	}
+
+	[Test]
+	public async Task Capture_OverflowDiscardsPartialBodyAndLaterWrites()
+	{
+		var capture = new HttpOutputCapture();
+		var context = new HttpResponseContext();
+
+		using (capture.BeginCapture(42, context))
+		{
+			capture.TryCapture(42, new string('x', FunctionLimits.MaxOutputCodeUnits - 2));
+			capture.TryCapture(42, "y");
+			capture.TryCapture(42, "later output");
+		}
+
+		await Assert.That(context.OutputLimitExceeded).IsTrue();
+		await Assert.That(context.Body.Length).IsEqualTo(0);
 	}
 
 	[Test]

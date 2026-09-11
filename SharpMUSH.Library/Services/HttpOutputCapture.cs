@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
@@ -8,10 +9,10 @@ namespace SharpMUSH.Library.Services;
 public class HttpOutputCapture : IHttpOutputCapture
 {
 	/// <summary>
-	/// Maximum HTTP response body size, mirroring PennMUSH's BUFFER_LEN cap on the
-	/// <c>http_request.response</c> buffer. Output past this point is silently dropped.
+	/// Maximum HTTP response body size in UTF-16 code units. HTTP capture shares the
+	/// evaluator's output ceiling instead of PennMUSH's legacy BUFFER_LEN.
 	/// </summary>
-	public const int MaxBodyLength = 8192;
+	public const int MaxBodyLength = FunctionLimits.MaxOutputCodeUnits;
 
 	// A stack (rather than a single frame) keeps nested captures well-defined if a handler's
 	// softcode ever triggers another in-process dispatch; only the innermost frame captures.
@@ -37,20 +38,26 @@ public class HttpOutputCapture : IHttpOutputCapture
 		{
 			return false;
 		}
+		if (context.OutputLimitExceeded)
+		{
+			return true;
+		}
 
 		// Penn appends each queued write verbatim; our notify layer hands us whole messages,
 		// so terminate each with a newline to keep multi-think output line-shaped.
+		var required = text.Length + 1L;
 		var remaining = MaxBodyLength - context.Body.Length;
-		if (remaining > text.Length)
+		if (required <= remaining)
 		{
 			context.Body.Append(text).Append('\n');
 		}
-		else if (remaining > 0)
+		else
 		{
-			context.Body.Append(text, 0, remaining);
+			context.OutputLimitExceeded = true;
+			context.Body.Clear();
 		}
 
-		// Even when the buffer is full we report captured: the output was directed at the
+		// Even after the limit is exceeded we report captured: the output was directed at the
 		// HTTP handler and must not leak to a connection that does not exist.
 		return true;
 	}
