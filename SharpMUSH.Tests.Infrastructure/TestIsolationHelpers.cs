@@ -20,12 +20,19 @@ public static class TestIsolationHelpers
 	/// (handle 1 = God, handle 2 = BBS tester) to avoid collisions.
 	/// </summary>
 	private static long _nextHandle = 100;
+
+	/// <summary>Allocates a connection handle shared by all helpers and connection-level tests.</summary>
+	public static long GenerateUniqueHandle() => Interlocked.Increment(ref _nextHandle);
+
+	private static long _nextName;
+	private static readonly string RunId = System.Buffers.Text.Base64Url.EncodeToString(
+		System.Security.Cryptography.RandomNumberGenerator.GetBytes(8));
 	/// <summary>
-	/// Generates a unique name by combining <paramref name="prefix"/> with the current
-	/// UTC Unix-millisecond timestamp and a random four-digit number.
+	/// Generates a unique name from the readable prefix, a process-run identifier, and an
+	/// atomic sequence. Parallel calls never reuse a suffix within the run.
 	/// </summary>
 	public static string GenerateUniqueName(string prefix) =>
-		$"{prefix}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{Random.Shared.Next(1000, 9999)}";
+		$"{prefix}_{RunId}_{Interlocked.Increment(ref _nextName):x}";
 
 	/// <summary>
 	/// Creates a fresh, isolated player through the database layer, so tests never mutate
@@ -95,7 +102,7 @@ public static class TestIsolationHelpers
 	{
 		var name = GenerateUniqueName(namePrefix);
 		var playerDbRef = await CreateNamedTestPlayerAsync(services, mediator, name);
-		var handle = Interlocked.Increment(ref _nextHandle);
+		var handle = GenerateUniqueHandle();
 
 		await connectionService.Register(
 			handle, "localhost", "localhost", "test",

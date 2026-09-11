@@ -1,7 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using OneOf;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -24,8 +28,14 @@ public class ExamineSyntaxFormattingTests
 	{
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting");
-		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@set {_player.DbRef}=WIZARD"));
+		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).AsPlayer;
+		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
+		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
+		var roomId = await Mediator.Send(new CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("ExamineRoom"), player));
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var origin = await player.Location.WithCancellation(CancellationToken.None);
+		await Mediator.Send(new MoveObjectCommand(player, room, origin.Object().DBRef, IsSilent: true));
 	}
 
 	[After(Test)]
@@ -36,6 +46,13 @@ public class ExamineSyntaxFormattingTests
 	}
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
+
+	private async Task<DBRef> CreateThingAsync(string prefix)
+	{
+		var result = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService,
+			TestIsolationHelpers.GenerateUniqueName(prefix), _player.Handle);
+		return DBRef.Parse(result.Message!.ToPlainText());
+	}
 
 	private int _notificationOffset;
 	private IEnumerable<OneOf<MString, string>> Messages =>
@@ -60,7 +77,7 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask FlaggedAttribute_IsBrokenAcrossLines()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtOn");
+		var obj = await CreateThingAsync("ExamFmtOn");
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
@@ -79,7 +96,7 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask UnflaggedAttribute_RendersVerbatim()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtOff");
+		var obj = await CreateThingAsync("ExamFmtOff");
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 
@@ -92,7 +109,7 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask FlaggedAttribute_LosesNoCharacters()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtIntact");
+		var obj = await CreateThingAsync("ExamFmtIntact");
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));
@@ -110,7 +127,7 @@ public class ExamineSyntaxFormattingTests
 	[Test]
 	public async ValueTask FlaggedAttribute_WithEmptyValue_EmitsNoStrayBlankLine()
 	{
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtEmpty");
+		var obj = await CreateThingAsync("ExamFmtEmpty");
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&EMPTYFN {obj}="));
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/EMPTYFN=funsyntax"));
@@ -148,7 +165,7 @@ public class ExamineSyntaxFormattingTests
 		// SoftcodeLayout.Compute clamp to width 1.
 		ConnectionService.Update(_player.Handle, "WIDTH", "0");
 
-		var obj = await TestIsolationHelpers.CreateTestThingAsync(WebAppFactoryArg.CommandParser, ConnectionService, "ExamFmtWidth0Obj");
+		var obj = await CreateThingAsync("ExamFmtWidth0Obj");
 
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"&LONGFN {obj}={LongCode}"));
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@set {obj}/LONGFN=funsyntax"));

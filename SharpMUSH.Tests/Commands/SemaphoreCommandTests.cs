@@ -813,7 +813,16 @@ public class SemaphoreCommandTests
 			var current = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, name, IAttributeService.AttributeMode.Read, false);
 			count = current.AsAttribute.Last().Value.ToPlainText();
 		}
-		await Assert.That(count).IsEqualTo("0");
+		var diagnostic = "the semaphore timeout should decrement its counter";
+		if (count != "0")
+		{
+			var quartz = await WebAppFactoryArg.Services.GetRequiredService<Quartz.ISchedulerFactory>().GetScheduler();
+			var running = await quartz.GetCurrentlyExecutingJobs();
+			var details = string.Join("; ", running.Select(job =>
+				$"{job.JobDetail.JobType.Name} trigger={job.Trigger.Key} fired={job.FireTimeUtc:O} refires={job.RefireCount}"));
+			diagnostic = $"scheduler={quartz.SchedulerName}, started={quartz.IsStarted}, standby={quartz.InStandbyMode}, shutdown={quartz.IsShutdown}; running: {details}";
+		}
+		await Assert.That(count).IsEqualTo("0").Because(diagnostic);
 	}
 
 	[Test]

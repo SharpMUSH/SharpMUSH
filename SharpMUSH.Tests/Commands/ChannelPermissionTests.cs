@@ -73,7 +73,7 @@ public class ChannelPermissionTests
 	/// Channel names must be unique across the whole session — <see cref="ServerWebAppFactory"/> is
 	/// <see cref="SharedType.PerTestSession"/>, so every test in this class shares one database, and
 	/// several of these tests create channels in a loop. A bare random suffix collides often enough to
-	/// matter; <c>GenerateUniqueName</c> adds a millisecond timestamp. Its underscores are stripped only
+	/// matter; <c>GenerateUniqueName</c> combines a run identifier and atomic sequence. Underscores are stripped only
 	/// to keep the names readable in refusal messages — <c>IsValidChannelName</c> accepts them.
 	/// </summary>
 	private static string UniqueChannel(string prefix)

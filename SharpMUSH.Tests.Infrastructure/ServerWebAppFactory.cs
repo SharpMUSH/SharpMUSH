@@ -17,12 +17,11 @@ using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Text;
-using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
 
-public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Program>, IAsyncInitializer, IAsyncDisposable
+public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
@@ -36,16 +35,29 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	[ClassDataSource<MySqlTestServer>(Shared = SharedType.PerTestSession)]
 	public required MySqlTestServer MySqlTestServer { get; init; }
 
+	// Shared by every host variant; TUnit disposes storage after all consuming hosts.
+	[ClassDataSource<TestDatabaseStorage>(Shared = SharedType.PerTestSession)]
+	public required TestDatabaseStorage DatabaseStorage { get; init; }
+
 	/// <summary>Integration fixtures can retain the production sender/perception pipeline.</summary>
 	protected virtual bool UseRealNotifications => false;
 
-	public new IServiceProvider Services => _server!.Services;
+	/// <summary>Secondary session hosts reuse the primary host's database and cache.</summary>
+	protected virtual IServiceProvider? SharedWorldServices => null;
+
+	public IServiceProvider Services => _server!.Services;
 
 	/// <summary>
 	/// Returns an <see cref="HttpClient"/> that targets the in-process test server directly,
 	/// bypassing real network I/O. Use this for controller-level HTTP integration tests.
 	/// </summary>
-	public HttpClient CreateHttpClient() => _server!.CreateClient();
+	public HttpClient CreateHttpClient()
+	{
+		var client = _server!.CreateClient();
+		// Exercise the endpoint directly; HTTP-to-HTTPS redirect behavior has dedicated coverage.
+		client.BaseAddress = new Uri("https://localhost");
+		return client;
+	}
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private DBRef _one;
 
@@ -67,8 +79,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	// Metrics collected via MeterListener — static so they persist across all factory instances
 	// and can be written from the ProcessExit handler regardless of disposal order.
 	private MeterListener? _meterListener;
-	/// <summary>Set when this run created its own Lightning data directory (no SHARPMUSH_LIGHTNING_PATH was already set), so DisposeAsync can delete it. Null when a caller supplied their own path — that one outlives the factory.</summary>
-	private string? _ownLightningPath;
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _functionDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -76,8 +86,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 	static ServerWebAppFactory()
 	{
 		// Register once at process exit to write telemetry regardless of disposal order.
-		// AppDomain.ProcessExit fires reliably when the dotnet process exits normally,
-		// bypassing any IAsyncDisposable interface-dispatch issues in the test framework.
+		// Keep the report after all host variants have contributed their final measurements.
 		AppDomain.CurrentDomain.ProcessExit += (_, _) => WriteTelemetryFile();
 	}
 
@@ -201,18 +210,6 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 					SurrealDbTestServer.IsEnabled ? SurrealDbTestServer.Endpoint : "mem://");
 			}
 		}
-		else
-		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
-			// No container, no shared server: LMDB is a plain directory. Give each run its own unless a
-			// caller already pinned one (e.g. to inspect the data after the test), and clean up only the
-			// directory this run created itself.
-			if (Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
-			{
-				_ownLightningPath = Path.Combine(Path.GetTempPath(), "sharpmush-lightning-tests-" + Guid.NewGuid().ToString("N"));
-				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", _ownLightningPath);
-			}
-		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 
@@ -224,7 +221,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
 			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications),
-			_sqlPlatform);
+			_sqlPlatform, SharedWorldServices);
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();
@@ -243,50 +240,13 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 		}
 	}
 
-	public new async ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
 		_meterListener?.Dispose();
-
-		// Both the world and the hot-backup root the server derives from its path (<world>.backups).
-		string[] ownedPaths = _ownLightningPath is null
-			? []
-			: [_ownLightningPath, _ownLightningPath + ".backups"];
-		foreach (var owned in ownedPaths)
-		{
-			if (!Directory.Exists(owned)) continue;
-			try
-			{
-				Directory.Delete(owned, recursive: true);
-			}
-			catch (IOException)
-			{
-				// Best-effort: a lingering LMDB lock file (mdb.lck) can outlive the writer thread's join
-				// by a few milliseconds under load. Leaving the temp directory behind costs disk, not
-				// correctness, and the next run gets its own directory regardless.
-			}
-		}
-
-		if (_server?.Services != null)
-		{
-			var schedulerFactory = _server.Services.GetService<ISchedulerFactory>();
-			if (schedulerFactory != null)
-			{
-				var scheduler = await schedulerFactory.GetScheduler();
-				if (scheduler.IsStarted)
-				{
-					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-					try
-					{
-						await scheduler.Shutdown(waitForJobsToComplete: false, cts.Token);
-					}
-					catch (OperationCanceledException)
-					{
-						// Timeout occurred, forcefully stop
-					}
-				}
-			}
-		}
-
+		// The factory stops hosted services (including Quartz) and disposes its service provider.
+		// Its shared TestDatabaseStorage dependency outlives every host using that database.
+		if (Interlocked.Exchange(ref _server, null) is { } server)
+			await server.DisposeAsync();
 		GC.SuppressFinalize(this);
 	}
 
@@ -299,8 +259,7 @@ public class ServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.Server.Pr
 
 	/// <summary>
 	/// Writes the telemetry summary file. Called from <see cref="AppDomain.ProcessExit"/> so it
-	/// runs synchronously and is guaranteed to execute even if <see cref="DisposeAsync"/> is
-	/// bypassed by TUnit's interface-based disposal.
+	/// runs synchronously after fixture shutdown, including measurements from all host variants.
 	/// </summary>
 	private static void WriteTelemetryFile()
 	{

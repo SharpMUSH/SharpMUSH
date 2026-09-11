@@ -43,7 +43,7 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 
 	public WikiBodyWidgetTests()
 	{
-		var apiClient = Track(new HttpClient(_handler) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(_handler, disposeHandler: false) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -57,6 +57,9 @@ public class WikiBodyWidgetTests : TrackingBunitContext
 		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
+
+	[After(Test)]
+	public void DisposeHandler() => _handler.Dispose();
 
 	private BunitAuthorizationContext Auth { get; }
 

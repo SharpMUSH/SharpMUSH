@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
@@ -18,11 +19,11 @@ public static class TestDiagnostics
 		Environment.GetEnvironmentVariable("SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING") is { } value
 		&& (value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1");
 
-	private static readonly ILoggerFactory ContainerLoggerFactory = LoggerFactory.Create(builder =>
+	private static readonly ILoggerFactory DiagnosticLoggerFactory = LoggerFactory.Create(builder =>
 		builder.AddSerilog(CreateLogger(), dispose: true));
 
 	public static Microsoft.Extensions.Logging.ILogger ContainerLogger { get; } =
-		ContainerLoggerFactory.CreateLogger("Testcontainers");
+		DiagnosticLoggerFactory.CreateLogger("Testcontainers");
 
 	public static Serilog.Core.Logger CreateLogger() => new LoggerConfiguration()
 		.MinimumLevel.Is(Enabled ? LogEventLevel.Verbose : LogEventLevel.Fatal)
@@ -50,11 +51,15 @@ public static class TestDiagnostics
 				builder.UseSetting($"Serilog:MinimumLevel:Override:{category}", "Fatal");
 		}
 
-		builder.ConfigureTestServices(services => services.AddLogging(logging =>
+		builder.ConfigureTestServices(services =>
 		{
-			logging.ClearProviders();
-			logging.AddSerilog(CreateLogger(), dispose: true);
-		}));
+			// Quartz stores its logger factory process-wide and requests a new logger for every
+			// delayed job. A host-owned factory would be disposed while other session hosts still
+			// run. Share the existing diagnostics factory; registering the instance leaves its
+			// process lifetime outside each host's disposal ownership.
+			services.RemoveAll<ILoggerFactory>();
+			services.AddSingleton(DiagnosticLoggerFactory);
+		});
 	}
 
 	public static void WriteLine()

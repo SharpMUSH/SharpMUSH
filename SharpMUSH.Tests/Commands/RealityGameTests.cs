@@ -13,7 +13,11 @@ namespace SharpMUSH.Tests.Commands;
 
 public class RealityGameServerFactory : ServerWebAppFactory
 {
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory Primary { get; init; }
+
 	protected override bool UseRealNotifications => true;
+	protected override IServiceProvider SharedWorldServices => Primary.Services;
 }
 
 public class RealityGameTests

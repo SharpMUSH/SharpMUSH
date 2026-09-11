@@ -46,7 +46,9 @@ jobs:
         with:
           global-json-file: global.json
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
 
       - name: Test portal startup helpers
         run: node --test tools/client-tests/*.test.mjs
@@ -128,7 +130,9 @@ jobs:
         with:
           global-json-file: global.json
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
 
       - name: Download test build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -160,7 +164,7 @@ jobs:
           max_attempts: 2
           # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
           # Keep the existing concurrency and execution deadlines.
-          command: dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --parallelism-strategy fixed --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
+          command: dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
 
       - name: Upload unit test results
         if: always()
@@ -205,7 +209,9 @@ jobs:
         with:
           global-json-file: global.json
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
 
       - name: Download test build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -258,7 +264,9 @@ jobs:
         with:
           global-json-file: global.json
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
 
       - name: Download test build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -310,7 +318,9 @@ jobs:
         with:
           global-json-file: global.json
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
 
       - name: Download test build output
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -339,7 +349,7 @@ jobs:
         with:
           timeout_minutes: 10
           max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8 --parallelism-strategy fixed
+          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8
 
       - name: Upload integration test results
         if: always()
