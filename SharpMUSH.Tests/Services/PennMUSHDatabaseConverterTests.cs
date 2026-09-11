@@ -265,6 +265,39 @@ public class PennMUSHDatabaseConverterTests
 	}
 
 	/// <summary>
+	/// A source with no creation time keeps the seeded object's, and with it the objid, but its
+	/// modification time still carries over.
+	/// </summary>
+	[Test]
+	public async ValueTask ASeededObjectTakesTheModificationTimeEvenWithoutACreationTime()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var seededCreation = (await world.Database.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().Object().CreationTime;
+		const long modifiedSeconds = 1_400_000_000L;
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject
+				{
+					DBRef = 2,
+					Name = "Undated Master",
+					Type = PennMUSHObjectType.Room,
+					ModificationTime = modifiedSeconds
+				}
+			]
+		});
+
+		await Assert.That(result.Errors).IsEmpty();
+
+		var room2 = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(2)))).Expect<AnySharpObject>().Object();
+		await Assert.That(room2.CreationTime).IsEqualTo(seededCreation);
+		await Assert.That(room2.ModifiedTime).IsEqualTo(modifiedSeconds * 1000);
+	}
+
+	/// <summary>
 	/// The seeded #0 is a room, so only a source room can take it over; anything else at #0 is created
 	/// like every other object and the seeded room stays as the import's Limbo.
 	/// </summary>
