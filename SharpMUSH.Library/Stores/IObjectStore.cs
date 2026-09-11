@@ -222,13 +222,11 @@ public interface IObjectStore
 	/// anything holding the old one stops resolving. It exists for the importer, which reuses
 	/// <c>#0</c>, <c>#1</c> and <c>#2</c> from the migration seed rather than creating them and so
 	/// cannot stamp them at creation.
-	/// <para><b>Importer only, and unsafe on a live object.</b> This is a raw store write below the
-	/// Mediator layer and does not invalidate the number-keyed cache <c>GetObjectNodeByNumberQuery</c>
-	/// fills; a cached copy keeps the old creation time, and the objid check in
-	/// <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to the
-	/// object stops resolving. A conversion runs at startup before the cache is populated, as do the
-	/// other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent, SetObjectZone). Any
-	/// other caller needs a Mediator command carrying <c>ICacheInvalidating</c>.</para>
+	/// <para><b>Unsafe on a cached object; send <c>SetObjectTimestampsCommand</c> instead.</b> This is a
+	/// raw store write below the Mediator layer and does not invalidate the number-keyed cache
+	/// <c>GetObjectNodeByNumberQuery</c> fills; a cached copy keeps the old creation time, and the objid
+	/// check in <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to
+	/// the object stops resolving.</para>
 	/// </remarks>
 	/// <param name="target">Object to restamp</param>
 	/// <param name="creationTime">Creation time in Unix milliseconds</param>

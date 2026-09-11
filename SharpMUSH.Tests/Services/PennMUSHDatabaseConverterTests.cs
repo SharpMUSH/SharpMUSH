@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
@@ -212,6 +213,113 @@ public class PennMUSHDatabaseConverterTests
 
 		var widget = await FindNamedAsync(world, "Widget Two");
 		await Assert.That(widget.Key).IsNotEqualTo(2);
+	}
+
+	/// <summary>
+	/// The seeded objects are the ones a live game has already read, so their new names and objids have
+	/// to reach the engine's object cache and not only the store beneath it.
+	/// </summary>
+	[Test]
+	public async ValueTask ReusedSeededObjectsAreFreshThroughTheEngineCache()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		foreach (var number in (int[])[0, 1, 2])
+		{
+			await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(number)));
+		}
+
+		const long createdSeconds = 1_300_000_000L;
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject
+				{
+					DBRef = 0, Name = "Cached Void", Type = PennMUSHObjectType.Room,
+					CreationTime = createdSeconds, ModificationTime = createdSeconds
+				},
+				new PennMUSHObject
+				{
+					DBRef = 1, Name = "CachedGod", Type = PennMUSHObjectType.Player,
+					CreationTime = createdSeconds, ModificationTime = createdSeconds
+				},
+				new PennMUSHObject
+				{
+					DBRef = 2, Name = "Cached Master", Type = PennMUSHObjectType.Room,
+					CreationTime = createdSeconds, ModificationTime = createdSeconds
+				}
+			]
+		});
+
+		await Assert.That(result.Errors).IsEmpty();
+
+		string[] names = ["Cached Void", "CachedGod", "Cached Master"];
+		foreach (var (number, name) in names.Index())
+		{
+			var cached = await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(number, createdSeconds * 1000)));
+			await Assert.That(cached.IsNone).IsFalse()
+				.Because($"#{number}'s new objid did not resolve through the engine");
+			await Assert.That(cached.Expect<AnySharpObject>().Object().Name).IsEqualTo(name);
+		}
+	}
+
+	/// <summary>
+	/// The seeded #0 is a room, so only a source room can take it over; anything else at #0 is created
+	/// like every other object and the seeded room stays as the import's Limbo.
+	/// </summary>
+	[Test]
+	public async ValueTask ASourceObjectZeroThatIsNotARoomDoesNotTakeOverRoomZero()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject { DBRef = 0, Name = "Widget Zero", Type = PennMUSHObjectType.Thing },
+				new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player }
+			]
+		});
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.ThingsConverted).IsEqualTo(1);
+		await Assert.That(result.RoomsConverted).IsEqualTo(0);
+
+		var room0 = await world.Database.GetObjectNodeAsync(new DBRef(0));
+		await Assert.That(room0.IsRoom).IsTrue();
+		await Assert.That(room0.Expect<SharpRoom>().Object.Name).IsEqualTo("Room Zero");
+		await Assert.That((await FindNamedAsync(world, "Widget Zero")).Key).IsNotEqualTo(0);
+	}
+
+	/// <summary>
+	/// PennMUSH hardcodes God as #1, so a source #1 that is not a player is a damaged database; it is
+	/// still imported as what it is rather than folded into God along with its attributes and locks.
+	/// </summary>
+	[Test]
+	public async ValueTask ASourceObjectOneThatIsNotAPlayerDoesNotTakeOverGod()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+				new PennMUSHObject { DBRef = 1, Name = "Widget One", Type = PennMUSHObjectType.Thing, Location = 0 }
+			]
+		});
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.ThingsConverted).IsEqualTo(1);
+		await Assert.That(result.PlayersConverted).IsEqualTo(0);
+
+		var god = await world.Database.GetObjectNodeAsync(new DBRef(1));
+		await Assert.That(god.IsPlayer).IsTrue();
+		await Assert.That(god.Expect<SharpPlayer>().Object.Name).IsEqualTo("God");
+		await Assert.That((await FindNamedAsync(world, "Widget One")).Key).IsNotEqualTo(1);
 	}
 
 	/// <summary>
