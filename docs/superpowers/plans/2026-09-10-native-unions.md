@@ -288,3 +288,19 @@ deleted; the solution builds without them. Two conventions came out of it:
   pattern; they call `TestHelpers.MessageIsString` / `MessageIsMarkup` / `MessagePlainText*`.
 
 The last tuple case became `OpenedWikiAsset`; `WikiCommandHelper.LocaleTarget` replaced the other.
+
+## Accessors and the optional object unions
+
+The object and attribute unions came over from OneOf with check-then-take accessors: a bool the
+compiler forgets (`IsPlayer`, `IsNone`, `IsValid()`) followed by a member that throws on the wrong case
+(`AsPlayer`, `Known`, `WithoutNone()`, `WithoutError()`, `AsAttribute`, `AsError`, …). They were
+swept (≈2,240 call sites) and deleted; every caller asks with a type pattern instead. The flat optional
+unions were the root of most of them — no single case meant "found an object" — so they nest the object
+union now: `AnyOptionalSharpObject(AnySharpObject, None)`,
+`AnyOptionalSharpObjectOrError(AnySharpObject, None, Error<string>)`,
+`AnyOptionalSharpContainer(AnySharpContainer, None)`, `AnyOptionalSharpContent(AnySharpContent, None)`.
+Matching an inner kind directly against the outer union is CS8121; bind through it
+(`found is AnySharpObject and SharpPlayer player`). User-defined implicit conversions from each model
+type keep construction (`return player;`) unchanged. What stays: the `Is*` bools used as conditions,
+conversions between unions (`AsContainer`, `MinusExit`, `With*Option`), the total `AsCallState`, and
+`Option<T>.TryGetValue(out T)`, the compiler's own access member.

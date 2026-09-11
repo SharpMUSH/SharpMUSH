@@ -224,6 +224,10 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
   point the result is produced, with the rest of the work extracted into a method named for it:
   `return await CreateAsync(…) switch { SharpAccount account => await RegisteredAsync(account), Error<string> error => Conflict(error.Value) };`.
   When the failure's contents are not needed, a guard is enough: `if (x is not SharpAccount account) return NotFound();`.
+  The optional object unions nest the object union (`AnyOptionalSharpObject(AnySharpObject, None)`, and the
+  `…OrError`/`…Container`/`…Content` variants), so a lookup reads `if (found is not AnySharpObject obj) return …;`,
+  and a concrete kind binds through the nesting: `found is AnySharpObject and SharpPlayer player`. Unions carry no
+  member that throws on the wrong case — ask with a pattern, which binds the case in the same step.
   Tests bind the case they expect with `x.Expect<T>()` (Tests.Infrastructure), not `IsTypeOf<T>()` plus `!`.
 - Source-generated `Mediator` (not MediatR) for command/query dispatching
 
