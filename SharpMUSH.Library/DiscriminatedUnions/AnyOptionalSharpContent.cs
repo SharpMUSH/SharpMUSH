@@ -3,42 +3,48 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
+/// <summary>
+/// A content object, or none. Found contents are one case, so <c>x is AnySharpContent found</c> binds
+/// the content.
+/// </summary>
 [Union]
 public sealed class AnyOptionalSharpContent : IUnion
 {
-	public AnyOptionalSharpContent(SharpPlayer value) => Value = value;
-	public AnyOptionalSharpContent(SharpExit value) => Value = value;
-	public AnyOptionalSharpContent(SharpThing value) => Value = value;
+	public AnyOptionalSharpContent(AnySharpContent value) => Value = value;
 	public AnyOptionalSharpContent(None value) => Value = value;
+
+	public static implicit operator AnyOptionalSharpContent(SharpPlayer value) => new(new AnySharpContent(value));
+	public static implicit operator AnyOptionalSharpContent(SharpExit value) => new(new AnySharpContent(value));
+	public static implicit operator AnyOptionalSharpContent(SharpThing value) => new(new AnySharpContent(value));
 
 	public object? Value { get; }
 
+	/// <summary>
+	/// Equal when both are none, or both hold contents <see cref="AnySharpContent"/> calls equal: the
+	/// same model instance.
+	/// </summary>
 	public override bool Equals(object? obj) => obj is AnyOptionalSharpContent other && Equals(Value, other.Value);
 
 	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public bool IsPlayer => Value is SharpPlayer;
-	public bool IsExit => Value is SharpExit;
-	public bool IsThing => Value is SharpThing;
-	public bool IsNone => Value is None;
+	public bool IsPlayer => this is AnySharpContent and SharpPlayer;
+	public bool IsExit => this is AnySharpContent and SharpExit;
+	public bool IsThing => this is AnySharpContent and SharpThing;
+	public bool IsNone => this is None;
 
-	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
-	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
+	public SharpPlayer AsPlayer => this is AnySharpContent found ? found.AsPlayer : throw UnionCase.Mismatch<SharpPlayer>(Value);
+	public SharpExit AsExit => this is AnySharpContent found ? found.AsExit : throw UnionCase.Mismatch<SharpExit>(Value);
+	public SharpThing AsThing => this is AnySharpContent found ? found.AsThing : throw UnionCase.Mismatch<SharpThing>(Value);
 
 	public AnyOptionalSharpObject WithRoomOption() => this switch
 	{
-		SharpPlayer player => player,
-		SharpExit exit => exit,
-		SharpThing thing => thing,
+		AnySharpContent found => found.WithRoomOption(),
 		None none => none
 	};
 
 	public AnySharpContent WithoutNone() => this switch
 	{
-		SharpPlayer player => player,
-		SharpExit exit => exit,
-		SharpThing thing => thing,
+		AnySharpContent found => found,
 		None => throw new Exception("Cannot convert None to a valid object.")
 	};
 }

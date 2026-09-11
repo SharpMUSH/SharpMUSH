@@ -1505,9 +1505,9 @@ public class PackageInstallService(
 		var node = await database.GetObjectNodeAsync(new DBRef(number), cancellationToken);
 		return node switch
 		{
-			SharpPlayer player => player,
-			None => throw new InvalidOperationException($"Package Manager wizard #{number} does not exist."),
-			SharpRoom or SharpExit or SharpThing => throw new InvalidOperationException($"#{number} is not a player.")
+			AnySharpObject and SharpPlayer player => player,
+			AnySharpObject => throw new InvalidOperationException($"#{number} is not a player."),
+			None => throw new InvalidOperationException($"Package Manager wizard #{number} does not exist.")
 		};
 	}
 

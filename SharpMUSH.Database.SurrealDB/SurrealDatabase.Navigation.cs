@@ -162,10 +162,13 @@ public partial class SurrealDatabase
 		var typed = await BuildTypedObjectFromKey(lastValidContainerKey.Value, ct);
 		return typed switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpExit => throw new Exception("Invalid Location: Exit"),
-			SharpThing thing => thing,
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpExit => throw new Exception("Invalid Location: Exit"),
+				SharpThing thing => thing
+			},
 			None none => none
 		};
 	}
@@ -200,10 +203,14 @@ public partial class SurrealDatabase
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
 			AnySharpContent? content = typed switch
 			{
-				SharpPlayer player => player,
-				SharpExit exit => exit,
-				SharpThing thing => thing,
-				SharpRoom or None => null // Room cannot be content
+				AnySharpObject found => found switch
+				{
+					SharpPlayer player => player,
+					SharpExit exit => exit,
+					SharpThing thing => thing,
+					SharpRoom => null // Room cannot be content
+				},
+				None => null
 			};
 
 			if (content != null)

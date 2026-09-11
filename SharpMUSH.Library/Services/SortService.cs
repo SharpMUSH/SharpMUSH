@@ -140,10 +140,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 					=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
 					{
-						SharpPlayer player => player.Object.Name,
-						SharpRoom room => room.Object.Name,
-						SharpExit exit => exit.Object.Name,
-						SharpThing thing => thing.Object.Name,
+						AnySharpObject found => found.Object().Name,
 						None or Error<string> => await keySelector(key, ct)
 					}, StringComparer.Ordinal, direction),
 
@@ -152,10 +149,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct),
 								LocateFlags.All) switch
 						{
-							SharpPlayer player => player.Object.Name,
-							SharpRoom room => room.Object.Name,
-							SharpExit exit => exit.Object.Name,
-							SharpThing thing => thing.Object.Name,
+							AnySharpObject found => found.Object().Name,
 							None or Error<string> => await keySelector(key, ct)
 						}, StringComparer.OrdinalIgnoreCase,
 					direction),
@@ -174,10 +168,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
 						{
-							SharpPlayer player => (await player.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							SharpRoom room => (await room.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							SharpExit exit => (await exit.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							SharpThing thing => (await thing.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+							AnySharpObject found => (await found.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
 							None or Error<string> => -1
 						},
 					direction),
@@ -186,10 +177,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
 						{
-							SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
-							SharpRoom room => room.Object.DBRef.Number,
-							SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
-							SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
+							AnySharpObject found => (await found.Where()).Object().DBRef.Number,
 							None or Error<string> => -1
 						},
 					direction),
@@ -198,10 +186,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
 						{
-							SharpPlayer player => player.Object.CreationTime,
-							SharpRoom room => room.Object.CreationTime,
-							SharpExit exit => exit.Object.CreationTime,
-							SharpThing thing => thing.Object.CreationTime,
+							AnySharpObject found => found.Object().CreationTime,
 							None or Error<string> => -1
 						},
 					direction),
@@ -210,10 +195,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 				.OrderByAwait(async (key, ct)
 						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
 						{
-							SharpPlayer player => player.Object.ModifiedTime,
-							SharpRoom room => room.Object.ModifiedTime,
-							SharpExit exit => exit.Object.ModifiedTime,
-							SharpThing thing => thing.Object.ModifiedTime,
+							AnySharpObject found => found.Object().ModifiedTime,
 							None or Error<string> => -1
 						},
 					direction),

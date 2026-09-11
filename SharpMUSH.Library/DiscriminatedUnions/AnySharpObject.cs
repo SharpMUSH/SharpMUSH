@@ -113,13 +113,7 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 		SharpThing thing => thing.Id
 	};
 
-	public AnyOptionalSharpObject WithNoneOption() => this switch
-	{
-		SharpPlayer player => player,
-		SharpRoom room => room,
-		SharpExit exit => exit,
-		SharpThing thing => thing
-	};
+	public AnyOptionalSharpObject WithNoneOption() => this;
 
 	public static DBRef? RefOf(AnySharpObject value) => value.Object().DBRef;
 

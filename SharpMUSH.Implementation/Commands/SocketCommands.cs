@@ -226,7 +226,7 @@ public partial class Commands
 
 		var foundDB = nameItem switch
 		{
-			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is SharpPlayer player
+			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject and SharpPlayer player
 				? player
 				: null,
 			string name => await Mediator.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync()

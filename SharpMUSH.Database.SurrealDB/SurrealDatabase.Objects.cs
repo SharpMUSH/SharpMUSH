@@ -236,9 +236,9 @@ public partial class SurrealDatabase
 		var roomKey = ExtractKey(room.Id!);
 		var (destTable, destKey) = location switch
 		{
-			SharpPlayer player => ("player", ExtractKey(player.Id!)),
-			SharpRoom rm => ("room", ExtractKey(rm.Id!)),
-			SharpThing thing => ("thing", ExtractKey(thing.Id!)),
+			AnySharpContainer and SharpPlayer player => ("player", ExtractKey(player.Id!)),
+			AnySharpContainer and SharpRoom rm => ("room", ExtractKey(rm.Id!)),
+			AnySharpContainer and SharpThing thing => ("thing", ExtractKey(thing.Id!)),
 			None => throw new InvalidOperationException()
 		};
 

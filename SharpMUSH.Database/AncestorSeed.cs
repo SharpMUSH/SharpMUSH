@@ -1,5 +1,6 @@
 using MarkupString;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Database;
@@ -45,7 +46,7 @@ public static class AncestorSeed
 	public static async ValueTask SeedAncestorPlayerFormatsAsync(ISharpDatabase database,
 		CancellationToken ct = default)
 	{
-		if (await database.GetObjectNodeAsync(God, ct) is not SharpPlayer owner || string.IsNullOrEmpty(owner.Id))
+		if (await database.GetObjectNodeAsync(God, ct) is not (AnySharpObject and SharpPlayer owner) || string.IsNullOrEmpty(owner.Id))
 		{
 			return;
 		}

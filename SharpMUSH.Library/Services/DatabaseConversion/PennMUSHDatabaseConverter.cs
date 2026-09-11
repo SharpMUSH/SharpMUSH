@@ -227,7 +227,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// Check if default objects from migration already exist (#0, #1, #2)
 		// If they do, we'll reuse them instead of creating new ones
 		DBRef tempGodDbRef;
-		if (await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken) is SharpPlayer existingPlayer1)
+		if (await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken) is AnySharpObject and SharpPlayer existingPlayer1)
 		{
 			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
@@ -296,7 +296,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
-		if (godPlayerObj is not SharpPlayer godPlayerWrapped)
+		if (godPlayerObj is not (AnySharpObject and SharpPlayer godPlayerWrapped))
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
@@ -452,7 +452,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								room0 = room0Obj is SharpRoom limbo
+								room0 = room0Obj is AnySharpObject and SharpRoom limbo
 									? limbo
 									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
@@ -475,7 +475,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								room0 = room0Obj is SharpRoom limbo
+								room0 = room0Obj is AnySharpObject and SharpRoom limbo
 									? limbo
 									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
@@ -823,10 +823,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		return obj switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpThing thing => thing,
-			SharpExit or None => null
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpThing thing => thing,
+				SharpExit => null
+			},
+			None => null
 		};
 	}
 

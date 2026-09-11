@@ -46,12 +46,7 @@ public sealed class AnySharpContent : IUnion, IObjectShaped<AnySharpContent>
 		SharpThing thing => thing
 	};
 
-	public AnyOptionalSharpContent WithNoneOption() => this switch
-	{
-		SharpPlayer player => player,
-		SharpExit exit => exit,
-		SharpThing thing => thing
-	};
+	public AnyOptionalSharpContent WithNoneOption() => this;
 
 	public async ValueTask<AnySharpContainer> Location() => this switch
 	{

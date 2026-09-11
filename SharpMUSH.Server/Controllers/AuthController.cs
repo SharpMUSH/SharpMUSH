@@ -325,7 +325,7 @@ public class AuthController(
 		if (!environment.IsDevelopment())
 			return NotFound();
 
-		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not SharpPlayer player)
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not (AnySharpObject and SharpPlayer player))
 		{
 			logger.LogWarning("Debug OTT: #1 is not a player or does not exist");
 			return NotFound("Player #1 not found.");

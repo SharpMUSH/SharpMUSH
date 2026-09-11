@@ -525,10 +525,13 @@ public partial class SurrealDatabase(
 		var located = await BuildTypedObjectFromKey(destKey, ct);
 		return located switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpExit => throw new InvalidOperationException($"Invalid location for {typedId}: Exit objects cannot be locations"),
-			SharpThing thing => thing,
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpExit => throw new InvalidOperationException($"Invalid location for {typedId}: Exit objects cannot be locations"),
+				SharpThing thing => thing
+			},
 			None => throw new InvalidOperationException($"No location found for {typedId}")
 		};
 	}
@@ -550,10 +553,13 @@ public partial class SurrealDatabase(
 		var homeObj = await BuildTypedObjectFromKey(destKey, ct);
 		return homeObj switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpExit => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
-			SharpThing thing => thing,
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpExit => throw new InvalidOperationException($"Invalid home for {typedId}: Exit objects cannot be homes"),
+				SharpThing thing => thing
+			},
 			None => throw new InvalidOperationException($"No home found for {typedId}")
 		};
 	}
@@ -579,10 +585,14 @@ public partial class SurrealDatabase(
 		var destination = await BuildTypedObjectFromKey(destKeys[0], ct);
 		return destination switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpThing thing => thing,
-			SharpExit or None => new None()
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpThing thing => thing,
+				SharpExit => new None()
+			},
+			None none => none
 		};
 	}
 
@@ -601,10 +611,14 @@ public partial class SurrealDatabase(
 		var dropToObj = await BuildTypedObjectFromKey(destKey, ct);
 		return dropToObj switch
 		{
-			SharpPlayer player => player,
-			SharpRoom room => room,
-			SharpThing thing => thing,
-			SharpExit or None => new None()
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpThing thing => thing,
+				SharpExit => new None()
+			},
+			None none => none
 		};
 	}
 

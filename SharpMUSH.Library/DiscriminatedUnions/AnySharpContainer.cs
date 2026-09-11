@@ -26,12 +26,7 @@ public sealed class AnySharpContainer : IUnion, IObjectShaped<AnySharpContainer>
 		SharpThing thing => thing
 	};
 
-	public AnyOptionalSharpContainer WithNoneOption() => this switch
-	{
-		SharpPlayer player => player,
-		SharpRoom room => room,
-		SharpThing thing => thing
-	};
+	public AnyOptionalSharpContainer WithNoneOption() => this;
 
 	public string Id => this switch
 	{

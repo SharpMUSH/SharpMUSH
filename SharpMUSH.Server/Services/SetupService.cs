@@ -102,7 +102,7 @@ public class SetupService(
 	{
 		try
 		{
-			if (await objects.GetObjectNodeAsync(new DBRef(1), ct) is not SharpPlayer player)
+			if (await objects.GetObjectNodeAsync(new DBRef(1), ct) is not (AnySharpObject and SharpPlayer player))
 			{
 				logger.LogError(
 					"First-run setup: #1 is not a player, so no character password could be set on it. "
