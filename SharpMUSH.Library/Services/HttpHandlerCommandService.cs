@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OneOf;
 using OneOf.Types;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -181,6 +182,16 @@ public class HttpHandlerCommandService(
 	/// </summary>
 	private static HttpHandlerResult AssembleResult(HttpResponseContext context)
 	{
+		if (context.OutputLimitExceeded)
+		{
+			return new HttpHandlerResult(
+				500,
+				"Internal Server Error",
+				"text/plain",
+				[],
+				ErrorMessages.Returns.OutputTooLarge);
+		}
+
 		var statusLine = string.IsNullOrWhiteSpace(context.StatusLine) ? "200 OK" : context.StatusLine!.Trim();
 		var spaceIndex = statusLine.IndexOf(' ');
 		var codeText = spaceIndex > 0 ? statusLine[..spaceIndex] : statusLine;

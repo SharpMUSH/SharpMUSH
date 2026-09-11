@@ -6,6 +6,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
+using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Http;
 
@@ -96,6 +97,23 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		await Assert.That(response.Headers.TryGetValues("X-Powered-By", out var values)).IsTrue();
 		await Assert.That(values!.First()).IsEqualTo("MUSHCode");
 		await Assert.That(body).Contains("\"ok\":true");
+	}
+
+	[Test]
+	public async Task LargeResponse_ReturnsCompleteUnicodeJsonAbovePennMushBufferLength()
+	{
+		await SeedHandlerAttribute("LARGE",
+			"@respond/type application/json; think json(array,json(string,repeat(界,9000)))");
+
+		var http = factory.CreateHttpClient();
+		using var request = new HttpRequestMessage(new HttpMethod("LARGE"), "http/large");
+		var response = await http.SendAsync(request);
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That((int)response.StatusCode).IsEqualTo(200);
+		await Assert.That(body.Length).IsGreaterThan(8192);
+		using var document = JsonDocument.Parse(body);
+		await Assert.That(document.RootElement[0].GetString()!.Length).IsEqualTo(9000);
 	}
 
 	// NOTE on verb allocation: the bootstrap seeds default routers for GET/POST/PUT/DELETE/PATCH/
