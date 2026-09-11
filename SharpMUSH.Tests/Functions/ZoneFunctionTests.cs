@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -15,20 +14,58 @@ public class ZoneFunctionTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
-	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser FunctionParser
+	{
+		get
+		{
+			var parser = WebAppFactoryArg.FunctionParserFor(Actor.DbRef);
+			return parser.FromState(parser.CurrentState with { Handle = Actor.Handle });
+		}
+	}
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParserFor(Actor.DbRef, Actor.Handle);
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+	private TestIsolationHelpers.TestPlayer Actor { get; set; } = null!;
+
+	[Before(Test)]
+	public async Task SetUpActor()
+	{
+		Actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZoneActor");
+		var actor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).AsPlayer;
+		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
+		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(actor, wizard!))).IsTrue();
+		var roomId = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ZoneRoom"), actor));
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var origin = await actor.Location.WithCancellation(CancellationToken.None);
+		await Mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
+	}
+
+	[After(Test)]
+	public async Task DisconnectActor()
+	{
+		if (Actor is not null)
+			await ConnectionService.Disconnect(Actor.Handle);
+	}
 
 	private async ValueTask<CallState> CreateFixtureAsync(string name)
 	{
 		// Graph behavior is independent of the production per-command deadline.
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
-		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {name}"));
-		await Assert.That(result.Message).IsNotNull();
-		await Assert.That(DBRef.TryParse(result.Message!.ToPlainText(), out _)).IsTrue();
+		var fixtureName = TestIsolationHelpers.GenerateUniqueName(name);
+		var notificationStart = WebAppFactoryArg.Notifications.CountFor(Actor.DbRef);
+		var result = await CommandParser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@create {fixtureName}"));
+		var output = result.Message?.ToPlainText();
+		var notifications = string.Join(" | ", WebAppFactoryArg.Notifications.For(Actor.DbRef).Skip(notificationStart));
+		await Assert.That(DBRef.TryParse(output, out var created)).IsTrue()
+			.Because($"@create {fixtureName} returned '{output}'; actor {Actor.DbRef}; notifications: {notifications}");
+		var createdDbRef = created ?? throw new InvalidOperationException("Successful DBRef parsing returned no value.");
+		await Assert.That(createdDbRef.Number).IsGreaterThan(0);
+		var persisted = await Mediator.Send(new GetObjectNodeQuery(createdDbRef));
+		await Assert.That(persisted.IsNone).IsFalse()
+			.Because($"@create {fixtureName} returned {created}; actor {Actor.DbRef}; notifications: {notifications}");
 		return result;
 	}
 
@@ -47,7 +84,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetNoZone))]
 	public async Task ZoneGetWithZone()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneFuncMaster");
@@ -56,16 +92,17 @@ public class ZoneFunctionTests
 		var objResult = await CreateFixtureAsync("ZoneFuncTest2");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
-		var resultDbRef = DBRef.Parse(result.ToPlainText()!);
+		await Assert.That(DBRef.TryParse(result.ToPlainText(), out var resultDbRef)).IsTrue()
+			.Because($"zone({objDbRef}) should return {zoneDbRef}; received '{result.ToPlainText()}'; " +
+				$"actor notifications: {string.Join(" | ", WebAppFactoryArg.Notifications.For(Actor.DbRef))}");
 
-		await Assert.That(resultDbRef.Number).IsEqualTo(zoneDbRef.Number);
+		await Assert.That(resultDbRef!.Value.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneGetWithZone))]
 	public async Task ZoneSetWithFunction()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneFuncSetMaster");
@@ -90,7 +127,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneSetWithFunction))]
 	public async Task ZoneClearWithFunction()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneFuncClearMaster");
@@ -110,7 +146,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneClearWithFunction))]
 	public async Task ZoneInvalidObject()
 	{
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(#99999)")))?.Message!;
@@ -119,7 +154,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneInvalidObject))]
 	public async Task ZoneNoPermissionToExamine()
 	{
 		// Create an object that player can examine (they created it)
@@ -138,27 +172,24 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneNoPermissionToExamine))]
 	public async Task ZoneOnPlayer()
 	{
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%#)")))?.Message!;
 
-		// #-1 (no zone) or a zone dbref
-		await Assert.That(result.ToPlainText()).Matches("^(#-1|#[0-9]+:[0-9]+)$");
+		// The private fixture has no zone.
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnPlayer))]
 	public async Task ZoneOnRoom()
 	{
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%l)")))?.Message!;
 
-		// #-1 (no zone) or a zone dbref
-		await Assert.That(result.ToPlainText()).Matches("^(#-1|#[0-9]+:[0-9]+)$");
+		// The private fixture has no zone.
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneOnRoom))]
 	public async Task ZoneChainTest()
 	{
 		// Create a hierarchy: Zone -> Object
@@ -186,7 +217,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneChainTest))]
 	public async Task ZfindListsObjectsInZone()
 	{
 		// Create a zone master and clear any inherited zone
@@ -200,13 +230,13 @@ public class ZoneFunctionTests
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
 		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(obj1.Known));
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {obj1DbRef}={zoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {obj1DbRef}={zoneDbRef}"));
 
 		var obj2Result = await CreateFixtureAsync("ZfindObj2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
 		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
 		await Mediator.Send(new UnsetObjectZoneCommand(obj2.Known));
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {obj2DbRef}={zoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {obj2DbRef}={zoneDbRef}"));
 
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zfind({zoneDbRef})")))?.Message!;
 		var resultText = result.ToPlainText()!;
@@ -217,7 +247,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZfindListsObjectsInZone))]
 	public async Task ZoneHierarchyTraversal()
 	{
 		// Create a zone hierarchy: ZoneA <- ZoneB <- Object
@@ -232,8 +261,8 @@ public class ZoneFunctionTests
 		var objResult = await CreateFixtureAsync("ZoneHierarchyObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {zoneBDbRef}={zoneADbRef}"));
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneBDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {zoneBDbRef}={zoneADbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneBDbRef}"));
 
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var zoneChain = new List<int>();
@@ -253,24 +282,31 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneHierarchyTraversal))]
 	public async Task ZoneAttributeInheritance()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneAttrMaster");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TEST_ZONE_ATTR {zoneDbRef}=Zone Master Value"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&TEST_ZONE_ATTR {zoneDbRef}=Zone Master Value"));
 
 		var objResult = await CreateFixtureAsync("ZoneAttrObj");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
+
+		var stored = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		await Assert.That(stored.IsNone).IsFalse();
+		var storedZone = await stored.Known.Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(storedZone.IsNone).IsFalse();
+		await Assert.That(storedZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		var zoneAttribute = await Mediator.CreateStream(new GetAttributeQuery(zoneDbRef, ["TEST_ZONE_ATTR"])).SingleAsync();
+		await Assert.That(zoneAttribute.Value.ToPlainText()).IsEqualTo("Zone Master Value");
 
 		// hasattrp checks parents/zones
 		var hasAttr = (await FunctionParser.FunctionParse(MarkupText.Plain($"hasattrp({objDbRef},TEST_ZONE_ATTR)")))?.Message!;
 		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("1");
 
 		// Directly test AttributeService to verify zone attribute inheritance
-		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var executor = await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef));
 		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
@@ -286,7 +322,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritance))]
 	public async Task ZoneAttributeInheritanceWithParent()
 	{
 		// parent attributes take precedence over zone attributes
@@ -294,17 +329,17 @@ public class ZoneFunctionTests
 		var zoneResult = await CreateFixtureAsync("ZoneParentPrecedenceZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {zoneDbRef}=From Zone"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {zoneDbRef}=From Zone"));
 
 		var parentResult = await CreateFixtureAsync("ZoneParentPrecedenceParent");
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {parentDbRef}=From Parent"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&ZONE_PREC_TEST {parentDbRef}=From Parent"));
 
 		var childResult = await CreateFixtureAsync("ZoneParentPrecedenceChild");
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
 
-		var setParentResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
+		var setParentResult = await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 
 		var setViaFunction = (await FunctionParser.FunctionParse(MarkupText.Plain($"parent({childDbRef},{parentDbRef})")))?.Message!;
 
@@ -314,7 +349,7 @@ public class ZoneFunctionTests
 		await Assert.That(parentFromDB.IsNone).IsFalse();
 		await Assert.That(parentFromDB.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
 
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={zoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={zoneDbRef}"));
 
 		var childZoneFromDB = await childFromDB.Known.Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(childZoneFromDB.IsNone).IsFalse();
@@ -327,7 +362,6 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	[DependsOn(nameof(ZoneAttributeInheritanceWithParent))]
 	public async Task ZoneAttributeInheritanceParentHasDifferentZone()
 	{
 		// Test that each parent can have a different zone
@@ -335,22 +369,22 @@ public class ZoneFunctionTests
 
 		var childZoneResult = await CreateFixtureAsync("ChildZoneMaster");
 		var childZoneDbRef = DBRef.Parse(childZoneResult.Message!.ToPlainText()!);
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&CHILD_ZONE_ATTR {childZoneDbRef}=From Child Zone"));
 
 		var parentZoneResult = await CreateFixtureAsync("ParentZoneMaster");
 		var parentZoneDbRef = DBRef.Parse(parentZoneResult.Message!.ToPlainText()!);
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&PARENT_ZONE_ATTR {parentZoneDbRef}=From Parent Zone"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"&PARENT_ZONE_ATTR {parentZoneDbRef}=From Parent Zone"));
 
 		var parentResult = await CreateFixtureAsync("MultiZoneParent");
 		var parentDbRef = DBRef.Parse(parentResult.Message!.ToPlainText()!);
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {parentDbRef}={parentZoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {parentDbRef}={parentZoneDbRef}"));
 
 		var childResult = await CreateFixtureAsync("MultiZoneChild");
 		var childDbRef = DBRef.Parse(childResult.Message!.ToPlainText()!);
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
-		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={childZoneDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={childZoneDbRef}"));
 
-		var executor = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
+		var executor = await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef));
 		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 

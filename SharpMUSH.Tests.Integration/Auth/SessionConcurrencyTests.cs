@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -56,12 +57,21 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 		return (http, account!);
 	}
 
+	private async Task<string> CreateAccountAsync(string prefix)
+	{
+		var account = await factory.Services.GetRequiredService<IAccountService>()
+			.CreateAccountAsync(UniqueName(prefix), null, Password);
+		await Assert.That(account.IsT0).IsTrue();
+		return account.AsT0.Id!;
+	}
+
 	[Test]
 	public async Task ConcurrentAuthenticatedRequests_OnOneSessionToken_AllSucceed()
 	{
 		var (http, account) = await RegisterAccountAsync();
+		using var ownedHttp = http;
 
-		var gate = new SemaphoreSlim(0, ConcurrentRequests);
+		using var gate = new SemaphoreSlim(0, ConcurrentRequests);
 		var calls = Enumerable.Range(0, ConcurrentRequests).Select(async _ =>
 		{
 			await gate.WaitAsync();
@@ -84,34 +94,48 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 	public async Task RollingWindow_StillSlides_PastTheOriginalExpiry()
 	{
 		var store = new DatabaseAccountSessionStore(Db);
+		var accountId = await CreateAccountAsync("rolling");
 		var ttl = TimeSpan.FromSeconds(2);
-		var token = await store.CreateTokenAsync("node_accounts/1", ttl, "203.0.113.71");
-		var originalExpiry = (await Db.GetSessionAsync(token))!.ExpiryUnixMs;
-
-		// Steady use across the whole original window, then past its end.
-		for (var i = 0; i < 12; i++)
+		var token = await store.CreateTokenAsync(accountId, ttl, "203.0.113.71");
+		try
 		{
-			await Task.Delay(250);
-			await Assert.That((await store.ValidateAsync(token))?.AccountId).IsEqualTo("node_accounts/1");
+			var originalExpiry = (await Db.GetSessionAsync(token))!.ExpiryUnixMs;
+
+			// Steady use across the whole original window, then past its end.
+			for (var i = 0; i < 12; i++)
+			{
+				await Task.Delay(250);
+				await Assert.That((await store.ValidateAsync(token))?.AccountId).IsEqualTo(accountId);
+			}
+
+			await Assert.That(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).IsGreaterThan(originalExpiry)
+				.Because("the test must actually outlive the session's original expiry for this to prove anything");
+			await Assert.That((await Db.GetSessionAsync(token))!.ExpiryUnixMs).IsGreaterThan(originalExpiry);
 		}
-
-		await Assert.That(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()).IsGreaterThan(originalExpiry)
-			.Because("the test must actually outlive the session's original expiry for this to prove anything");
-		await Assert.That((await Db.GetSessionAsync(token))!.ExpiryUnixMs).IsGreaterThan(originalExpiry);
-
-		await store.RevokeAsync(token);
+		finally
+		{
+			await store.RevokeAsync(token);
+		}
 	}
 
 	[Test]
 	public async Task ExpiredSession_IsRejectedAndDeleted()
 	{
 		var store = new DatabaseAccountSessionStore(Db);
-		var token = await store.CreateTokenAsync("node_accounts/1", TimeSpan.FromMilliseconds(150), "203.0.113.72");
-		await Assert.That(await Db.GetSessionAsync(token)).IsNotNull();
+		var accountId = await CreateAccountAsync("expiry");
+		var token = await store.CreateTokenAsync(accountId, TimeSpan.FromMilliseconds(150), "203.0.113.72");
+		try
+		{
+			await Assert.That(await Db.GetSessionAsync(token)).IsNotNull();
 
-		await Task.Delay(500);
+			await Task.Delay(500);
 
-		await Assert.That(await store.ValidateAsync(token)).IsNull();
-		await Assert.That(await Db.GetSessionAsync(token)).IsNull();
+			await Assert.That(await store.ValidateAsync(token)).IsNull();
+			await Assert.That(await Db.GetSessionAsync(token)).IsNull();
+		}
+		finally
+		{
+			await store.RevokeAsync(token);
+		}
 	}
 }

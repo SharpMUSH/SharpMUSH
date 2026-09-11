@@ -159,17 +159,14 @@ public static class TestHelpers
 		/// Waits until <paramref name="who"/> receives a message containing
 		/// <paramref name="containsText"/>, or fails after <paramref name="timeout"/>.
 		/// </summary>
-		public async Task WaitForAsync(DBRef who, string containsText, TimeSpan? timeout = null)
+		public async Task WaitForAsync(
+			DBRef who, string containsText, TimeSpan? timeout = null,
+			CancellationToken cancellationToken = default, int startIndex = 0)
 		{
-			var started = System.Diagnostics.Stopwatch.GetTimestamp();
-			var limit = timeout ?? TimeSpan.FromSeconds(5);
-			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
-			{
-				if (For(who).Any(message => message.Contains(containsText, StringComparison.Ordinal))) return;
-				await Task.Delay(50);
-			}
-
-			throw new TimeoutException($"No notification containing '{containsText}' arrived for {who} within {limit}.");
+			await Assert.That(() => For(who).Skip(startIndex))
+				.WaitsFor(messages => messages.Contains((string message) => message.Contains(containsText, StringComparison.Ordinal)),
+					timeout: timeout ?? TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(50),
+					cancellationToken: cancellationToken.CanBeCanceled ? cancellationToken : TestContext.Current?.Execution.CancellationToken ?? default);
 		}
 
 		/// <summary>
@@ -180,20 +177,14 @@ public static class TestHelpers
 			DBRef who,
 			string containsText,
 			DBRef sender,
-			TimeSpan? timeout = null)
+			TimeSpan? timeout = null,
+			CancellationToken cancellationToken = default, int startIndex = 0)
 		{
-			var started = System.Diagnostics.Stopwatch.GetTimestamp();
-			var limit = timeout ?? TimeSpan.FromSeconds(5);
-			while (System.Diagnostics.Stopwatch.GetElapsedTime(started) < limit)
-			{
-				if (DeliveriesFor(who).Any(delivery =>
-					delivery.Sender == sender
-					&& delivery.Message.Contains(containsText, StringComparison.Ordinal))) return;
-				await Task.Delay(50);
-			}
-
-			throw new TimeoutException(
-				$"No notification containing '{containsText}' arrived for {who} from {sender} within {limit}.");
+			await Assert.That(() => DeliveriesFor(who).Skip(startIndex))
+				.WaitsFor(deliveries => deliveries.Contains((Delivery delivery) => delivery.Sender == sender
+					&& delivery.Message.Contains(containsText, StringComparison.Ordinal)),
+					timeout: timeout ?? TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(50),
+					cancellationToken: cancellationToken.CanBeCanceled ? cancellationToken : TestContext.Current?.Execution.CancellationToken ?? default);
 		}
 
 		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>

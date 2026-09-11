@@ -1,3 +1,7 @@
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
@@ -13,21 +17,40 @@ public class AccountAdminCommandTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_actor!.DbRef, _actor.Handle);
+	private TestIsolationHelpers.TestPlayer? _actor;
+	private readonly string _username = TestIsolationHelpers.GenerateUniqueName("account");
+	private readonly string _email = $"{Guid.NewGuid():N}@example.com";
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Before(Test)]
+	public async Task CreateAdministrator()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, mediator, ConnectionService, "AccountAdmin");
+		var player = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).AsPlayer;
+		var wizard = await mediator.Send(new GetObjectFlagQuery("WIZARD"));
+		await Assert.That(await mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
+	}
+
+	[After(Test)]
+	public async Task DisconnectAdministrator()
+	{
+		if (_actor is not null) await ConnectionService.Disconnect(_actor.Handle);
+	}
+
+	[Test]
 	public async ValueTask AccountNewPassword_SetsPasswordAndFlag()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		var accountSessionStore = WebAppFactoryArg.Services.GetRequiredService<IAccountSessionStore>();
-		var createResult = await accountService.CreateAccountAsync("cmd-reset-user", null, "old-password-1");
+		var createResult = await accountService.CreateAccountAsync(_username, null, "old-password-1");
 		var accountId = createResult.AsT0.Id!;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "0.0.0.0");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/newpassword cmd-reset-user=temp-password-9"));
-		await Task.Delay(200);
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=temp-password-9"));
 
-		var authenticated = await accountService.AuthenticateAsync("cmd-reset-user", "temp-password-9");
+		var authenticated = await accountService.AuthenticateAsync(_username, "temp-password-9");
 		await Assert.That(authenticated).IsNotNull();
 		await Assert.That(authenticated!.MustChangePassword).IsTrue();
 
@@ -35,84 +58,78 @@ public class AccountAdminCommandTests
 		await Assert.That(await accountSessionStore.ValidateAsync(sessionToken)).IsNull();
 	}
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Test]
 	public async ValueTask AccountDisable_BlocksLogin_EnableRestores()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
-		await accountService.CreateAccountAsync("cmd-disable-user", null, "some-password-1");
+		await accountService.CreateAccountAsync(_username, null, "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/disable cmd-disable-user"));
-		await Task.Delay(200);
-		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNull();
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/disable {_username}"));
+		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/enable cmd-disable-user"));
-		await Task.Delay(200);
-		await Assert.That(await accountService.AuthenticateAsync("cmd-disable-user", "some-password-1")).IsNotNull();
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/enable {_username}"));
+		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNotNull();
 	}
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Test]
 	public async ValueTask AccountClose_BlocksLoginAndRetainsTheRecord()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
-		await accountService.CreateAccountAsync("cmd-close-user", "close@example.com", "some-password-1");
+		await accountService.CreateAccountAsync(_username, _email, "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/close cmd-close-user"));
-		await Task.Delay(200);
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/close {_username}"));
 
-		await Assert.That(await accountService.AuthenticateAsync("cmd-close-user", "some-password-1")).IsNull();
+		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
 
-		var reloaded = await accountService.GetByUsernameAsync("cmd-close-user");
+		var reloaded = await accountService.GetByUsernameAsync(_username);
 		await Assert.That(reloaded).IsNotNull();
 		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Closed);
-		await Assert.That(reloaded.Email).IsEqualTo("close@example.com");
+		await Assert.That(reloaded.Email).IsEqualTo(_email);
 		await Assert.That(reloaded.PasswordHash).IsNotEmpty();
 	}
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Test]
 	public async ValueTask AccountDelete_BlocksLoginAndRetainsTheRecord()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
-		await accountService.CreateAccountAsync("cmd-delete-user", "delete@example.com", "some-password-1");
+		await accountService.CreateAccountAsync(_username, _email, "some-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/delete cmd-delete-user"));
-		await Task.Delay(200);
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/delete {_username}"));
 
-		await Assert.That(await accountService.AuthenticateAsync("cmd-delete-user", "some-password-1")).IsNull();
+		await Assert.That(await accountService.AuthenticateAsync(_username, "some-password-1")).IsNull();
 
-		var reloaded = await accountService.GetByUsernameAsync("cmd-delete-user");
+		var reloaded = await accountService.GetByUsernameAsync(_username);
 		await Assert.That(reloaded).IsNotNull();
 		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Deleted);
-		await Assert.That(reloaded.Email).IsEqualTo("delete@example.com");
+		await Assert.That(reloaded.Email).IsEqualTo(_email);
 		await Assert.That(reloaded.PasswordHash).IsNotEmpty();
 	}
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Test]
 	public async ValueTask AccountClose_SystemAccount_IsRefused()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		var system = await accountService.GetOrCreateSystemAccountAsync();
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@account/close {SystemAccount.Username}"));
-		await Task.Delay(200);
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/close {SystemAccount.Username}"));
 
 		var reloaded = await accountService.GetByIdAsync(system.Id!);
 		await Assert.That(reloaded!.Status).IsEqualTo(AccountStatus.Active);
 	}
 
-	[Test, NotInParallel(nameof(AccountAdminCommandTests))]
+	[Test]
 	public async ValueTask AccountNewPassword_TooShort_RefusesAndLeavesPasswordUnchanged()
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
-		await accountService.CreateAccountAsync("cmd-shortpw-user", null, "old-password-1");
+		await accountService.CreateAccountAsync(_username, null, "old-password-1");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@account/newpassword cmd-shortpw-user=short"));
-		await Task.Delay(200);
+		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=short"));
 
 		// The refusal must not change the password.
-		var authenticated = await accountService.AuthenticateAsync("cmd-shortpw-user", "old-password-1");
+		var authenticated = await accountService.AuthenticateAsync(_username, "old-password-1");
 		await Assert.That(authenticated).IsNotNull();
 		await Assert.That(authenticated!.MustChangePassword).IsFalse();
 
-		await Assert.That(await accountService.AuthenticateAsync("cmd-shortpw-user", "short")).IsNull();
+		await Assert.That(await accountService.AuthenticateAsync(_username, "short")).IsNull();
 	}
 }

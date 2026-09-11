@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -25,6 +26,34 @@ public class AttributeFlagArgumentTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+
+	private readonly List<TestIsolationHelpers.TestPlayer> _players = [];
+	private DBRef _startingRoom;
+
+	private async Task<TestIsolationHelpers.TestPlayer> CreateOwner(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		_players.Add(player);
+		var actor = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer;
+		var origin = await actor.Location.WithCancellation(CancellationToken.None);
+		_startingRoom = origin.Object().DBRef;
+		var roomId = await Mediator.Send(new CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("FlagArgRoom"), actor));
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		await Mediator.Send(new MoveObjectCommand(actor, room, _startingRoom, IsSilent: true));
+		return player;
+	}
+
+	[After(Test)]
+	public async Task DisconnectPlayers()
+	{
+		foreach (var player in _players)
+			await ConnectionService.Disconnect(player.Handle);
+	}
+
+	private IMUSHCodeParser ParserFor(TestIsolationHelpers.TestPlayer player) =>
+		WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 
 	/// <summary>
 	/// Reads <paramref name="attribute"/> as God, so that a <c>mortal_dark</c> attribute is still
@@ -63,11 +92,10 @@ public class AttributeFlagArgumentTests
 	public async ValueTask MortalNamingWizard_LeavesTheFlagUnset()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgWiz");
+		var mortal = await CreateOwner("FlagArgWiz");
 
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FW{uid} me=value"));
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FW{uid}=wizard"));
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FW{uid} me=value"));
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FW{uid}=wizard"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FW{uid}", "wizard")).IsFalse()
 			.Because("a player without See_All may not name the wizard flag in either direction");
@@ -89,11 +117,10 @@ public class AttributeFlagArgumentTests
 	public async ValueTask MortalNamingMortalDark_LeavesTheFlagUnset()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgMDark");
+		var mortal = await CreateOwner("FlagArgMDark");
 
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FM{uid} me=value"));
-		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FM{uid}=mortal_dark"));
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FM{uid} me=value"));
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FM{uid}=mortal_dark"));
 
 		await Assert.That(await HasFlag(mortal.DbRef, $"FM{uid}", "mortal_dark")).IsFalse()
 			.Because("a player without Hasprivs may not name mortal_dark in either direction");
@@ -122,17 +149,16 @@ public class AttributeFlagArgumentTests
 		// on a "#-1 ..." notification, and several unrelated suites assert that #1 never receives
 		// one anywhere in the session. `case` carries no privilege requirement, so a mortal can
 		// name it.
-		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgBang");
+		var owner = await CreateOwner("FlagArgBang");
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FB{uid} me=value"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FB{uid}=case"));
+		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FB{uid} me=value"));
+		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FB{uid}=case"));
 
 		await Assert.That(await HasFlag(owner.DbRef, $"FB{uid}", "case")).IsTrue()
 			.Because("precondition: `case` is the shortest flag name, so it is what StartsWith(\"\") selects");
 
 		var messages = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService,
+			ParserFor(owner).CommandParse(owner.Handle, ConnectionService,
 				MarkupText.Plain($"@set me/FB{uid}=!")).AsTask());
 
 		await Assert.That(messages).Contains(ErrorMessages.Returns.UnrecognizedAttributeFlag)
@@ -149,20 +175,46 @@ public class AttributeFlagArgumentTests
 	/// per-flag "already set" / "is not set" wording anywhere in Penn.
 	/// </summary>
 	[Test]
-	public async ValueTask FlagBatch_IsReportedAsOneLinePerHalf()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async ValueTask FlagBatch_IsReportedAsOneLinePerHalf(bool broadcastInStartingRoom)
 	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var initialRoom = await Mediator.Send(new CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("FlagInitialRoom"), god));
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Database = options.Database with { DefaultHome = checked((uint)initialRoom.Number) }
+		});
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
-		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgReport");
+		var owner = await CreateOwner("FlagArgReport");
 		var ownerName = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Known.Object().Name;
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FR{uid} me=value"));
-		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FR{uid}=case"));
+		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FR{uid} me=value"));
+		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FR{uid}=case"));
 
-		// `nospace` is not set, `case` is: Penn reports both in one "reset." line regardless.
-		var messages = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService,
-				MarkupText.Plain($"@set me/FR{uid}=!case !nospace regexp")).AsTask());
+		var noise = TestIsolationHelpers.GenerateUniqueName("UnrelatedBroadcast");
+		TestIsolationHelpers.TestPlayer? witness = null;
+		if (broadcastInStartingRoom)
+		{
+			witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagWitness");
+			_players.Add(witness);
+		}
+
+		// Owner and witness start in a test-owned room; the owner must leave it before assertions.
+		// A real broadcast there must not pollute this exact-count check.
+		// Keep the full recipient window; filtering expected text would hide extra flag reports.
+		var messages = await MessagesWhile(owner.DbRef, async () =>
+		{
+			if (broadcastInStartingRoom)
+				await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit {_startingRoom}={noise}"));
+			// `nospace` is not set, `case` is: report both in one reset line regardless.
+			await ParserFor(owner).CommandParse(owner.Handle, ConnectionService,
+				MarkupText.Plain($"@set me/FR{uid}=!case !nospace regexp"));
+		});
+		if (witness is not null)
+			await Assert.That(WebAppFactoryArg.Notifications.For(witness.DbRef)).Contains(noise);
 
 		await Assert.That(messages).Contains($"{ownerName}/FR{uid} - case nospace reset.")
 			.Because("one line per half, naming the whole requested list in flag-table order");
@@ -184,15 +236,14 @@ public class AttributeFlagArgumentTests
 	public async ValueTask QuietPlayer_GetsNoFlagReport()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
-		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagArgQuiet");
+		var owner = await CreateOwner("FlagArgQuiet");
 
-		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FQ{uid} me=value"));
+		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FQ{uid} me=value"));
 
 		// Control: without QUIET the same command does report, so the silence below is the flag's
 		// doing and not the command failing.
 		var loud = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService,
+			ParserFor(owner).CommandParse(owner.Handle, ConnectionService,
 				MarkupText.Plain($"@set me/FQ{uid}=regexp")).AsTask());
 
 		await Assert.That(loud).IsNotEmpty()
@@ -201,7 +252,7 @@ public class AttributeFlagArgumentTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {owner.DbRef}=QUIET"));
 
 		var quiet = await MessagesWhile(owner.DbRef, () =>
-			Parser.CommandParse(owner.Handle, ConnectionService,
+			ParserFor(owner).CommandParse(owner.Handle, ConnectionService,
 				MarkupText.Plain($"@set me/FQ{uid}=!regexp")).AsTask());
 
 		await Assert.That(quiet).IsEmpty()

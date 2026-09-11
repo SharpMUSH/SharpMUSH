@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using System.Threading.RateLimiting;
 
 namespace SharpMUSH.Tests.Server.Middleware;
@@ -25,6 +27,8 @@ public class RateLimiterSmokeTests
 	{
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
+		builder.Logging.ClearProviders();
+		builder.Logging.AddSerilog(TestDiagnostics.CreateLogger(), dispose: true);
 
 		builder.Services.AddRateLimiter(opts =>
 		{

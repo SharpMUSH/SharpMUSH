@@ -64,12 +64,12 @@ file sealed class SceneHubFactory(Exception? onInvoke) : IGameHubConnectionFacto
 public class SceneHubGroupTeardownTests
 {
 	/// <summary>What SignalR answers a connection that closed, disposed, or cancelled underneath the call.</summary>
-	public static IEnumerable<Exception> TransportFaults() =>
+	public static IEnumerable<Func<Exception>> TransportFaults() =>
 	[
-		new InvalidOperationException("The 'InvokeCoreAsync' method cannot be called if the connection is not active."),
-		new ObjectDisposedException(nameof(HubConnection)),
-		new TaskCanceledException("The underlying connection was closed."),
-		new OperationCanceledException("Connection closed."),
+		() => new InvalidOperationException("The 'InvokeCoreAsync' method cannot be called if the connection is not active."),
+		() => new ObjectDisposedException(nameof(HubConnection)),
+		() => new TaskCanceledException("The underlying connection was closed."),
+		() => new OperationCanceledException("Connection closed."),
 	];
 
 	private static async Task<ISceneHubControl> ConnectedServiceAsync(IGameHubConnectionFactory factory)

@@ -57,6 +57,9 @@ public class InputUserCommandResultTests
 		{
 			Database = options.Database with { MasterRoom = (uint)masterId.Number }
 		});
+		await Assert.That(Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom)
+			.IsEqualTo((uint)masterId.Number)
+			.Because("the shared options wrapper must retain its async-flow override instead of a prior test's fixed configuration");
 		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("input command zone", god)))).Known;
 		if (scope == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (scope == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));

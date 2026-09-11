@@ -40,7 +40,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(c,0)][u({objDbRef}/RECURSE_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 		var hasRecursion = output.Contains("RECURSION");
 		var hasInvocation = output.Contains("INVOCATION");
@@ -65,7 +66,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain(nestedCalls));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		TestDiagnostics.WriteLine($"Stack depth test result: {output}");
 
 		await Assert.That(output).IsEqualTo("1");
@@ -96,8 +98,10 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(result10).IsNotNull();
 		await Assert.That(result11).IsNotNull();
 
-		var output10 = result10!.Message.ToPlainText();
-		var output11 = result11!.Message.ToPlainText();
+		await Assert.That(result10!.Message).IsNotNull();
+		var output10 = result10!.Message!.ToPlainText();
+		await Assert.That(result11!.Message).IsNotNull();
+		var output11 = result11!.Message!.ToPlainText();
 
 		TestDiagnostics.WriteLine($"10-deep result: {output10}");
 		TestDiagnostics.WriteLine($"11-deep result: {output11}");
@@ -120,7 +124,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(a,0,b,0)][u({objDbRef}/FUNC_A_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -139,7 +144,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain(nested));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -166,7 +172,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(input);
 
 		await Assert.That(result).IsNotNull();
-		await Assert.That(result!.Message.ToPlainText()).IsEqualTo("11");
+		await Assert.That(result!.Message).IsNotNull();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo("11");
 	}
 
 	/// <summary>
@@ -184,7 +191,8 @@ public class RecursionAndInvocationLimitTests
 		var result = await FunctionParser.FunctionParse(MarkupText.Plain($"[setq(w,0,i,0)][u({objDbRef}/WRAP_LIM_UNIQUE)]"));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		await Assert.That(output).Contains("#-1");
 	}
 
@@ -225,8 +233,10 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(recursionResult).IsNotNull();
 		await Assert.That(stackResult).IsNotNull();
 
-		var recursionError = recursionResult!.Message.ToPlainText();
-		var stackOutput = stackResult!.Message.ToPlainText();
+		await Assert.That(recursionResult!.Message).IsNotNull();
+		var recursionError = recursionResult!.Message!.ToPlainText();
+		await Assert.That(stackResult!.Message).IsNotNull();
+		var stackOutput = stackResult!.Message!.ToPlainText();
 
 		await Assert.That(recursionError).Contains("#-1");
 
@@ -262,9 +272,12 @@ public class RecursionAndInvocationLimitTests
 		await Assert.That(ufunResult).IsNotNull();
 		await Assert.That(ulocalResult).IsNotNull();
 
-		var uOutput = uResult!.Message.ToPlainText();
-		var ufunOutput = ufunResult!.Message.ToPlainText();
-		var ulocalOutput = ulocalResult!.Message.ToPlainText();
+		await Assert.That(uResult!.Message).IsNotNull();
+		var uOutput = uResult!.Message!.ToPlainText();
+		await Assert.That(ufunResult!.Message).IsNotNull();
+		var ufunOutput = ufunResult!.Message!.ToPlainText();
+		await Assert.That(ulocalResult!.Message).IsNotNull();
+		var ulocalOutput = ulocalResult!.Message!.ToPlainText();
 
 		TestDiagnostics.WriteLine($"u() recursion test: {uOutput}");
 		TestDiagnostics.WriteLine($"ufun() recursion test: {ufunOutput}");
@@ -421,7 +434,8 @@ public class RecursionAndInvocationLimitTests
 			MarkupText.Plain($"strcat([u({objDbRef}/NESTED_REC_UNIQUE)],tail)"));
 
 		await Assert.That(result).IsNotNull();
-		var output = result!.Message.ToPlainText();
+		await Assert.That(result!.Message).IsNotNull();
+		var output = result!.Message!.ToPlainText();
 		await Assert.That(output).Contains("#-1 FUNCTION RECURSION LIMIT EXCEEDED");
 		await Assert.That(output).DoesNotContain("INVOCATION LIMIT");
 	}

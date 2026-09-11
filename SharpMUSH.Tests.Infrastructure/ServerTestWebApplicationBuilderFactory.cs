@@ -1,15 +1,20 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Quartz;
 using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using TUnit.AspNetCore;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests;
 
@@ -17,9 +22,12 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
 	INotifyService? notifier,
-	string sqlPlatform = "mysql") :
+	string sqlPlatform = "mysql",
+	IServiceProvider? sharedWorldServices = null) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
+	private readonly string _schedulerName = $"sharpmush-tests-{Guid.NewGuid():N}";
+
 	/// <summary>
 	/// Lifecycle Step 4: Runs BEFORE Program.cs startup.
 	/// Use this for configuration that Program.cs needs during its initialization.
@@ -36,7 +44,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 	/// <summary>
 	/// Lifecycle Step 3: Shared configuration for all tests (runs once per test session).
-	/// Use ConfigureServices (NOT ConfigureTestServices) here for shared service registration.
+	/// Use ConfigureServices for startup configuration and ConfigureTestServices for final overrides.
 	/// </summary>
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
@@ -53,6 +61,36 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = TestDiagnostics.CreateLogger();
 		TestDiagnostics.ConfigureHost(builder);
+		// The delayed advisor only emits configuration warnings and can outlive a short test host.
+		// Disable that diagnostic task for both named and default caches in session fixtures.
+		builder.ConfigureTestServices(services => services.PostConfigureAll<FusionCacheOptions>(
+			options => options.EnableBestPracticesAdvisor = false));
+
+		if (sharedWorldServices is not null)
+		{
+			builder.ConfigureTestServices(services =>
+			{
+				// Opening a second LMDB environment on one path in the same process is unsafe.
+				// Reuse every registered provider contract as an externally owned instance, so
+				// secondary-host disposal cannot close the primary host's database through an alias.
+				var database = sharedWorldServices.GetRequiredService<ISharpDatabase>();
+				var providerTypes = database.GetType().GetInterfaces().Append(database.GetType())
+					.Where(type => type != typeof(IApplicationRegistryService)
+						&& services.Any(descriptor => !descriptor.IsKeyedService && descriptor.ServiceType == type))
+					.ToArray();
+				foreach (var type in providerTypes)
+				{
+					services.RemoveAll(type);
+					services.AddSingleton(type, database);
+				}
+				// Keep the application-registry decorator host-local, wrapping the shared provider.
+				// All Mediator readers/writers must use one cache and invalidation version ledger.
+				services.RemoveAll<IFusionCache>();
+				services.AddSingleton(sharedWorldServices.GetRequiredService<IFusionCache>());
+				services.RemoveAll<ObjectVersions>();
+				services.AddSingleton(sharedWorldServices.GetRequiredService<ObjectVersions>());
+			});
+		}
 
 		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))
@@ -71,11 +109,13 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 			}
 		}
 
-		// IMPORTANT: Use ConfigureServices (not ConfigureTestServices) in ConfigureWebHost
-		// This is shared configuration that runs once per test session (step 3)
-		// ConfigureTestServices should be reserved for per-test overrides (step 7)
+		// Configure the existing shared host before startup resolves these services.
 		builder.ConfigureServices(sc =>
 			{
+				// Quartz registers schedulers by name process-wide. Each existing session host
+				// must own its scheduler so disposing one cannot stop another host's queue.
+				sc.AddQuartz(options => options.SchedulerName = _schedulerName);
+
 				var substitute = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 				var config = ReadPennMushConfig.Create(configFile);
 

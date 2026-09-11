@@ -1,4 +1,3 @@
-using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
 
 namespace SharpMUSH.Tests;
@@ -7,7 +6,7 @@ namespace SharpMUSH.Tests;
 /// Integration test factory for SharpMUSH.ConnectionServer.
 /// Manages test infrastructure lifecycle and provides access to services.
 /// </summary>
-public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH.ConnectionServer.Program>, IAsyncInitializer, IAsyncDisposable
+public class ConnectionServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 {
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
@@ -15,20 +14,22 @@ public class ConnectionServerWebAppFactory : TestWebApplicationFactory<SharpMUSH
 	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer NatsTestServer { get; init; }
 
-	public new IServiceProvider Services => _server!.Services;
+	public IServiceProvider Services => _server!.Services;
 	private ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>? _server;
 
-	public virtual async Task InitializeAsync()
+	public virtual Task InitializeAsync()
 	{
 		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var natsUrl = $"nats://localhost:{natsPort}";
 
 		_server = new ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>(natsUrl);
+		return Task.CompletedTask;
 	}
 
-	public new async ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
+		if (Interlocked.Exchange(ref _server, null) is { } server)
+			await server.DisposeAsync();
 		GC.SuppressFinalize(this);
-		await ValueTask.CompletedTask;
 	}
 }
