@@ -136,12 +136,12 @@ public partial class Commands
 				var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute, true);
 
-				if (!maybeAttribute.IsAttribute)
+				if (maybeAttribute is not SharpAttribute[] attributeChain)
 				{
 					return maybeAttribute.AsCallState;
 				}
 
-				var attribute = maybeAttribute.AsAttribute.Last();
+				var attribute = attributeChain.Last();
 
 				try
 				{

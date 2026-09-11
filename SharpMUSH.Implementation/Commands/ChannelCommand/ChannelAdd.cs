@@ -7,6 +7,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -66,18 +68,30 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.TooManyChannels);
 		}
 
-		var parsedPrivileges = ChannelHelper.StringToChannelPrivileges(privileges, []);
-		if (parsedPrivileges.IsError)
+		return ChannelHelper.StringToChannelPrivileges(privileges, []) switch
 		{
-			await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", parsedPrivileges.AsError.Value)}.", executor);
-			return new CallState(ErrorMessages.Returns.InvalidPrivileges);
-		}
+			string[] parsedPrivileges => await CreateAsync(PermissionService, Mediator, NotifyService, executor,
+				executorOwner, channelName, parsedPrivileges),
+			Error<string[]> invalid => await RefuseInvalidPrivilegesAsync(NotifyService, executor, invalid.Value)
+		};
+	}
 
+	private static async ValueTask<CallState> RefuseInvalidPrivilegesAsync(INotifyService NotifyService,
+		AnySharpObject executor, string[] invalid)
+	{
+		await NotifyService.Notify(executor, $"Invalid privileges: {string.Join(", ", invalid)}.", executor);
+		return new CallState(ErrorMessages.Returns.InvalidPrivileges);
+	}
+
+	private static async ValueTask<CallState> CreateAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, SharpPlayer executorOwner, MString channelName,
+		string[] parsedPrivileges)
+	{
 		// extchat.c:1736 — `if (!Chan_Can(player, type))`. You cannot create a channel of a type you could
 		// not yourself use, which includes a DISABLED one: Chan_Can is false for that bit for everybody,
 		// wizards included. A wizard disables an existing channel through @channel/privs instead, where
 		// Chan_Can_Priv's `Wizard(p) ||` escape applies.
-		if (!await PermissionService.ChannelStandardCan(executor, parsedPrivileges.AsPrivileges))
+		if (!await PermissionService.ChannelStandardCan(executor, parsedPrivileges))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatCannotCreateThatType, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
@@ -85,7 +99,7 @@ public static class ChannelAdd
 
 		// The check above raced; this one cannot. CreateChannelAsync tests the name inside the same storage
 		// transaction that writes the channel, so the loser is refused rather than duplicating the winner
-		var creation = await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges.AsPrivileges, executorOwner));
+		var creation = await Mediator.Send(new CreateChannelCommand(channelName, parsedPrivileges, executorOwner));
 
 		if (creation.IsNameTaken)
 		{

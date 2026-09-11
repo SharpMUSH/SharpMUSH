@@ -82,7 +82,7 @@ public partial class Commands
 	{
 		// This will come in as arg[0] = <attr>, arg[1]: <object> and arg[2] as [value]
 		var args = parser.CurrentState.Arguments;
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		// The attribute name (arg["0"]) is extracted from the raw command token (e.g. &hdr_%q1 obj=val
 		// → attr="hdr_%q1"). In PennMUSH, the attribute name IS evaluated so that register

@@ -248,12 +248,11 @@ public partial class Commands
 		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
 
 		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
-		if (!playerNode.IsPlayer)
+		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
 		{
 			await NotifyService.Notify(handle, "Character creation succeeded but could not resolve player.");
 			return new None();
 		}
-		var foundPlayer = playerNode.AsPlayer;
 
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
 

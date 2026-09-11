@@ -74,10 +74,9 @@ public partial class Commands
 
 			// GoodObject first, and unconditionally: a handle can outlive the object it is bound to, and
 			// such a descriptor is not a connected player under any counting rule.
-			var found = await Mediator.Send(new GetObjectNodeQuery(reference));
-			if (found.IsNone) continue;
+			if (await Mediator.Send(new GetObjectNodeQuery(reference)) is not AnySharpObject found) continue;
 
-			if (!countAll && await found.Known.IsDark()) continue;
+			if (!countAll && await found.IsDark()) continue;
 
 			count++;
 		}

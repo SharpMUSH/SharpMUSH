@@ -3,6 +3,8 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -19,16 +21,18 @@ public static class ChannelBuffer
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await ResizeAsync(PermissionService, Mediator, NotifyService, executor, channel, lines),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	/// <summary>Sets how many lines the channel keeps for <c>@channel/recall</c>.</summary>
+	private static async ValueTask<CallState> ResizeAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, SharpChannel channel, MString lines)
+	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, "You cannot modify this channel.", executor);

@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -74,6 +75,26 @@ public class VerbCommandTests
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "VerbArgs_Value_91605")),
 				TestHelpers.MatchingObject(verbObj),
 				INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// An <c>awhat</c> naming an attribute the victim does not have queues nothing, as in PennMUSH's
+	/// <c>do_verb</c>; the verb's messages are still delivered and nothing is raised.
+	/// </summary>
+	[Test]
+	public async ValueTask VerbWithAMissingAwhatRunsNothing()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<IMediator>(), ConnectionService,
+			"VerbNoAwhat");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain("@verb me=me,,VerbNoAwhat_What_31907,,,NO_SUCH_AWHAT_31907"));
+
+		var messages = WebAppFactoryArg.Notifications.For(player.DbRef);
+		await Assert.That(messages.Any(message => message.StartsWith("#-1 EXCEPTION:"))).IsFalse();
+		await Assert.That(messages).Contains("VerbNoAwhat_What_31907");
 	}
 
 	[Test]

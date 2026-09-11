@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Globalization;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -16,14 +17,16 @@ public static class ListMail
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
 		var line = MarkupText.Plain("-").Repeat(78);
 
-		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
-
-		if (filteredList is not IAsyncEnumerable<SharpMail> list)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor) switch
 		{
-			await notifyService!.Notify(executor, filteredList.AsError);
-			return MarkupText.Plain(filteredList.AsError);
-		}
+			IAsyncEnumerable<SharpMail> list => await ListAsync(notifyService!, executor, line, list),
+			Error<string> error => await MessageListHelper.RefuseAsync(notifyService!, executor, error.Value)
+		};
+	}
 
+	private static async ValueTask<MString> ListAsync(INotifyService notifyService, AnySharpObject executor,
+		MString line, IAsyncEnumerable<SharpMail> list)
+	{
 		var foundAny = false;
 		await foreach (var folder in list.GroupBy(x => x.Folder))
 		{
@@ -37,7 +40,7 @@ public static class ListMail
 				.. folderTasks,
 				line
 			];
-			await notifyService!.Notify(executor, MarkupText.Join(MarkupText.NewLine, builder));
+			await notifyService.Notify(executor, MarkupText.Join(MarkupText.NewLine, builder));
 
 			foundAny = true;
 		}
@@ -47,7 +50,7 @@ public static class ListMail
 			return MarkupText.Empty;
 		}
 
-		await notifyService!.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
+		await notifyService.Notify(executor, "MAIL: You have no matching mail in that mail folder.");
 		return MarkupText.Plain("MAIL: You have no matching mail in that mail folder.");
 	}
 

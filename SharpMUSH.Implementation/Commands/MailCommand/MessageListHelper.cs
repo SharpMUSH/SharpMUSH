@@ -52,8 +52,21 @@ public static class MessageListHelper
 		return mailData.ActiveFolder!;
 	}
 
+	/// <summary>Tells the executor why a message list could not be read, and answers with the same words.</summary>
+	public static async ValueTask<MString> RefuseAsync(INotifyService notifyService, AnySharpObject executor,
+		string error)
+	{
+		await notifyService.Notify(executor, error);
+		return MarkupText.Plain(error);
+	}
+
 	public static async ValueTask<ErrorOrMailList> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor)
 	{
+		if (executor is not SharpPlayer player)
+		{
+			throw new InvalidOperationException("Only a player has a mail list.");
+		}
+
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
 		var rangeSplit = msgList.Split('-');
@@ -61,17 +74,17 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, folderSplit[0]));
+			mailList = mediator!.CreateStream(new GetMailListQuery(player, folderSplit[0]));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
+			mailList = mediator!.CreateStream(new GetAllMailListQuery(player));
 		}
 		else
 		{
 			var currentFolder = await CurrentMailFolder(parser, objectDataService, executor);
-			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, currentFolder));
+			mailList = mediator!.CreateStream(new GetMailListQuery(player, currentFolder));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
@@ -190,7 +203,7 @@ public static class MessageListHelper
 		var locateService = parser.ServiceProvider.GetRequiredService<ILocateService>();
 		var locateResult = await locateService.Locate(parser, executor, executor, personName, LocateFlags.PlayersPreference);
 
-		if (!locateResult.IsValid() || !locateResult.IsPlayer)
+		if (locateResult is not (AnySharpObject and SharpPlayer targetPlayer))
 		{
 			return ErrorOrMailList.FromAsyncEnumerable(mailList
 				.Where(async (x, _) =>
@@ -200,7 +213,7 @@ public static class MessageListHelper
 				}));
 		}
 
-		var targetPlayerDbref = locateResult.AsPlayer.Object.DBRef;
+		var targetPlayerDbref = targetPlayer.Object.DBRef;
 		return ErrorOrMailList.FromAsyncEnumerable(mailList
 			.Where(async (x, _) =>
 			{

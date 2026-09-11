@@ -4,6 +4,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -15,7 +17,10 @@ public static class ReviewMail
 		var line = MarkupText.Plain("-").Repeat(78);
 		var name = arg0?.ToPlainText() ?? "all";
 
-		var target = executor.AsPlayer;
+		if (executor is not SharpPlayer target)
+		{
+			throw new InvalidOperationException("@mail/review is run by a player.");
+		}
 
 		if (!string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
 		{
@@ -28,23 +33,25 @@ public static class ReviewMail
 				LocateFlags.OnlyMatchTypePreference |
 				LocateFlags.AbsoluteMatch);
 
-			if (!actualPlayer.IsPlayer)
+			if (actualPlayer is not (AnySharpObject and SharpPlayer located))
 			{
 				await notifyService.Notify(executor, $"MAIL: {name} not found.", executor);
 				return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			target = actualPlayer.AsPlayer;
+			target = located;
 		}
 
-		var maybeMailList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgListArg, target);
-
-		if (maybeMailList.IsError)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgListArg, target) switch
 		{
-			return MarkupText.Plain(maybeMailList.AsError);
-		}
+			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(notifyService, executor, line, mailList),
+			Error<string> error => MarkupText.Plain(error.Value)
+		};
+	}
 
-		var mailList = maybeMailList.AsMailList;
+	private static async ValueTask<MString> ReviewAsync(INotifyService notifyService, AnySharpObject executor,
+		MString line, IAsyncEnumerable<SharpMail> mailList)
+	{
 		var i = 0;
 
 		await foreach (var actualMail in mailList)

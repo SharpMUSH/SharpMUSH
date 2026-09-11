@@ -20,7 +20,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> RecurringJob(IMUSHCodeParser parser, SharpCommandAttribute command)
 	{
 		var ct = ExecutionBudget.CurrentToken;
-		var executor = (await Mediator.Send(new GetObjectNodeQuery(parser.CurrentState.Executor!.Value), ct)).Known;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var output = "";
 		try
 		{

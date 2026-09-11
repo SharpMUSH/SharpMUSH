@@ -5,6 +5,8 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -25,15 +27,17 @@ public static class ChannelTitle
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await TitleAsync(Mediator, NotifyService, Configuration, executor, channel, title),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
+	private static async ValueTask<CallState> TitleAsync(IMediator Mediator, INotifyService NotifyService,
+		IOptionsWrapper<SharpMUSHOptions> Configuration, AnySharpObject executor, SharpChannel channel, MString? title)
+	{
 		var channelLabel = channel.Name.ToPlainText();
 
 		var memberStatus = await ChannelHelper.ChannelMemberStatus(executor, channel);

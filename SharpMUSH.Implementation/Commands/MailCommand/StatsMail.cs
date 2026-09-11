@@ -20,7 +20,10 @@ public static class StatsMail
 		MString? arg0, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var target = executor;
+		if (executor is not SharpPlayer target)
+		{
+			throw new InvalidOperationException("@mail reads a player's own mail, and its dispatcher routes only players here.");
+		}
 
 		if (!string.IsNullOrEmpty(arg0?.ToPlainText()))
 		{
@@ -34,26 +37,25 @@ public static class StatsMail
 				return errorResult.Message!;
 			}
 
-			var maybeTarget = await locateService.LocateAndNotifyIfInvalid(
+			switch (await locateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, arg0.ToPlainText(),
-				LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
-
-			if (maybeTarget.IsError)
+				LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference))
 			{
-				return MarkupText.Plain(maybeTarget.AsError.Value);
+				case AnySharpObject and SharpPlayer located:
+					target = located;
+					break;
+				case AnySharpObject:
+					throw new InvalidOperationException("A lookup restricted to players found something that is not a player.");
+				case None:
+					var noTargetError = await notifyService.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.NoSuchObject,
+						notifyMessage: ErrorMessages.Notifications.CantSeeThat,
+						shouldNotify: true);
+					return noTargetError.Message!;
+				case Error<string> error:
+					return MarkupText.Plain(error.Value);
 			}
-
-			if (maybeTarget.IsNone)
-			{
-				var noTargetError = await notifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.NoSuchObject,
-					notifyMessage: ErrorMessages.Notifications.CantSeeThat,
-					shouldNotify: true);
-				return noTargetError.Message!;
-			}
-
-			target = maybeTarget.AsPlayer;
 		}
 
 		switch (switches)
@@ -62,9 +64,9 @@ public static class StatsMail
 				return await CStats(parser, objectDataService, mediator, notifyService, executor, target);
 		}
 
-		var allSentMail = mediator.CreateStream(new GetAllSentMailListQuery(target.Object()));
-		var allReceivedMail = mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer));
-		var targetName = target.Object().Name;
+		var allSentMail = mediator.CreateStream(new GetAllSentMailListQuery(target.Object));
+		var allReceivedMail = mediator.CreateStream(new GetAllMailListQuery(target));
+		var targetName = target.Object.Name;
 
 		return switches switch
 		{
@@ -78,10 +80,10 @@ public static class StatsMail
 	private static async Task<MString> CStats(IMUSHCodeParser parser,
 		IExpandedObjectDataService objectDataService,
 		IMediator mediator,
-		INotifyService notifyService, AnySharpObject executor, AnySharpObject target)
+		INotifyService notifyService, AnySharpObject executor, SharpPlayer target)
 	{
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
-		var stats = await mediator.CreateStream(new GetMailListQuery(target.AsPlayer, currentFolder)).ToArrayAsync();
+		var stats = await mediator.CreateStream(new GetMailListQuery(target, currentFolder)).ToArrayAsync();
 		var unread = stats.Count(x => !x.Read);
 		var cleared = stats.Count(x => x.Cleared);
 

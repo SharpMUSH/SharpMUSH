@@ -83,16 +83,27 @@ public static class ChannelRecall
 			startLine = Math.Max(parsedStart - 1, 0);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
-			notifyService, executor, channelName, notify);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+			notifyService, executor, channelName, notify) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await SelectWindowAsync(permissionService, mediator, notifyService, executor, channel, requested,
+				startLine, hasStart, notify),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	/// <summary>Applies the access gate to the resolved channel and takes the window of its buffer.</summary>
+	private static async ValueTask<RecallSelection> SelectWindowAsync(
+		IPermissionService permissionService,
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		SharpChannel channel,
+		int requested,
+		int startLine,
+		bool hasStart,
+		bool notify)
+	{
 		// extchat.c:4050 — membership is not required; being ABLE to join is. A player who could join the
 		// channel may read its history, which is what makes recall usable for deciding whether to join.
 		if (!await ChannelHelper.IsMemberOfChannel(executor, channel)

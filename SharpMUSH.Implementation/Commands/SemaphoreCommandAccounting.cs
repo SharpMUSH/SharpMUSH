@@ -31,7 +31,11 @@ public partial class Commands
 		var originalValue = original?.Value.ToPlainText();
 		if (!string.IsNullOrEmpty(originalValue) && !int.TryParse(originalValue, out oldCount))
 			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {originalValue}");
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)), token)).AsPlayer;
+		if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)), token) is not (AnySharpObject and SharpPlayer god))
+		{
+			throw new InvalidOperationException("God (#1) must exist and be a player.");
+		}
+
 		int? expected = null;
 		CreatedCommandSemaphore? createdIdentity = null;
 		var observedFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -88,9 +88,9 @@ public static class SendMail
 			var located = await locateService.Locate(parser, sender, sender, name, RecipientMatchFlags);
 
 			// extmail.c:1382 — an unmatched name is reported, not skipped.
-			if (located.IsValid() && located.WithoutError().WithoutNone() is { IsPlayer: true } found)
+			if (located is AnySharpObject and SharpPlayer found)
 			{
-				knownPlayerList.Add(found.AsPlayer);
+				knownPlayerList.Add(found);
 				continue;
 			}
 
@@ -168,9 +168,9 @@ public static class SendMail
 					IAttributeService.AttributeMode.Read,
 					false);
 
-				if (amailAttr.IsAttribute)
+				if (amailAttr is SharpAttribute[] amailChain)
 				{
-					var attribute = amailAttr.AsAttribute.Last();
+					var attribute = amailChain.Last();
 					await parser.With(state => state with
 					{
 						Executor = player.Object.DBRef,

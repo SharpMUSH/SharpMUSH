@@ -61,8 +61,8 @@ public partial class Commands
 			// Bulk selection uses only inspectable records; each mutation independently rechecks control.
 			if (pause || resume) entries = await service.ListAsync(actor, ct);
 			var found = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, selection, LocateFlags.All);
-			if (!found.IsValid()) return new CallState(ErrorMessages.Returns.InvalidTarget);
-			var target = found.WithoutError().WithoutNone().Object().DBRef;
+			if (found is not AnySharpObject foundObject) return new CallState(ErrorMessages.Returns.InvalidTarget);
+			var target = foundObject.Object().DBRef;
 			entries = entries.Where(e => (owner ? e.Owner : e.Source) == target);
 			if (pause || resume) entries = entries.Where(e => e.State == (pause ? QueueEntryState.Pending : QueueEntryState.Paused));
 		}

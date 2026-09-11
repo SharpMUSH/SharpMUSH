@@ -5,6 +5,8 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -26,16 +28,17 @@ public static class ChannelWipe
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await WipeAsync(PermissionService, Mediator, NotifyService, executor, channel),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	private static async ValueTask<CallState> WipeAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, SharpChannel channel)
+	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatWipeThatSillyGrin, executor);

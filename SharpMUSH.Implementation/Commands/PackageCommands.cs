@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -71,18 +72,11 @@ public partial class Commands
 		foreach (var token in tokens)
 		{
 			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, token, LocateFlags.All);
-			if (!locate.IsValid())
+			if (locate is not AnySharpObject known)
 			{
 				return new None();
 			}
 
-			var found = locate.WithoutError();
-			if (found.IsNone)
-			{
-				return new None();
-			}
-
-			var known = found.Known;
 			if (!await PermissionService.CanExamine(executor, known))
 			{
 				await NotifyService.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
@@ -127,9 +121,9 @@ public partial class Commands
 			if (knownByObjid.TryGetValue(obj.Objid, out var known))
 			{
 				var visible = await AttributeService.GetVisibleAttributesAsync(executor, known);
-				if (visible.IsAttribute)
+				if (visible is SharpAttribute[] visibleAttributes)
 				{
-					foreach (var attr in visible.AsAttributes)
+					foreach (var attr in visibleAttributes)
 					{
 						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
 						{

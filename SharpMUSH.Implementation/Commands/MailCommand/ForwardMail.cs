@@ -6,6 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -19,28 +20,33 @@ public static class ForwardMail
 		int mailNumber, string target)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
+		if (executor is not SharpPlayer executorPlayer)
+		{
+			throw new InvalidOperationException("@mail reads a player's own mail, and its dispatcher routes only players here.");
+		}
+
 		var maybeLocate = await locateService!.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 		var currentFolder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 
-		if (maybeLocate.IsError)
+		return maybeLocate switch
 		{
-			return maybeLocate.AsError.Message!;
-		}
+			AnySharpObject and SharpPlayer targetPlayer => await ForwardAsync(permissionService!, mediator!, executorPlayer,
+				targetPlayer, mailNumber, currentFolder),
+			AnySharpObject => MarkupText.Plain("MAIL: Cannot forward to non-player."),
+			Error<CallState> error => error.Value.Message!
+		};
+	}
 
-		if (!maybeLocate.AsSharpObject.IsPlayer)
-		{
-			return MarkupText.Plain("MAIL: Cannot forward to non-player.");
-		}
-
-		var targetPlayer = maybeLocate.AsSharpObject.AsPlayer;
-
-		if (!await permissionService!.PassesLock(executor, targetPlayer, LockType.Mail))
+	private static async ValueTask<MString> ForwardAsync(IPermissionService permissionService, IMediator mediator,
+		SharpPlayer executor, SharpPlayer targetPlayer, int mailNumber, string currentFolder)
+	{
+		if (!await permissionService.PassesLock(executor, targetPlayer, LockType.Mail))
 		{
 			return MarkupText.Plain($"MAIL: {targetPlayer.Object.Name} does not wish to receive mail from you.");
 		}
 
-		var mail = await mediator!.Send(new GetMailQuery(executor.AsPlayer, mailNumber, currentFolder));
+		var mail = await mediator.Send(new GetMailQuery(executor, mailNumber, currentFolder));
 
 		if (mail is null)
 		{
@@ -51,7 +57,7 @@ public static class ForwardMail
 		mail.Subject = MarkupText.Concat(MarkupText.Plain("Fwd: "), mail.Subject);
 		mail.DateSent = DateTimeOffset.UtcNow;
 
-		await mediator.Send(new SendMailCommand(executor.Object(), targetPlayer, mail));
+		await mediator.Send(new SendMailCommand(executor.Object, targetPlayer, mail));
 
 		return MarkupText.Plain(targetPlayer.Object.DBRef.ToString());
 	}

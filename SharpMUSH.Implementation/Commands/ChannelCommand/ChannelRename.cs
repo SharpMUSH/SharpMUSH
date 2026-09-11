@@ -5,6 +5,8 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -27,16 +29,19 @@ public static class ChannelRename
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await RenameAsync(PermissionService, Mediator, NotifyService, Configuration, executor, channel,
+				newChannelName),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	private static async ValueTask<CallState> RenameAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, IOptionsWrapper<SharpMUSHOptions> Configuration, AnySharpObject executor,
+		SharpChannel channel, MString newChannelName)
+	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, "You are not the owner of the channel.", executor);

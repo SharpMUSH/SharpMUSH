@@ -4,6 +4,8 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -21,14 +23,17 @@ public static class ChannelWho
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		// extchat.c:1210 gates the WHO branch of do_channel on Chan_Can_See before it will list a member.
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
-			notifyService, executor, channelName, notify: true);
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+			notifyService, executor, channelName, notify: true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await ListMembersAsync(notifyService, connectionService, executor, channel),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
+	private static async ValueTask<CallState> ListMembersAsync(INotifyService notifyService,
+		IConnectionService connectionService, AnySharpObject executor, SharpChannel channel)
+	{
 		var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
 
 		var listed = (await ChannelHelper.ChannelMembers(connectionService, channel))

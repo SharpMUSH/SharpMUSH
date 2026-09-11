@@ -6,6 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -31,18 +32,16 @@ public static class ChannelOff
 		{
 			var targetName = arg1.ToPlainText();
 
-			var maybeTarget =
-				await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
-
-			switch (maybeTarget)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName))
 			{
-				case { IsError: true }:
-					return new CallState(maybeTarget.AsError.Value);
-				case { IsNone: true }:
+				case AnySharpObject found:
+					target = found;
+					break;
+				case None:
 					return new CallState(ErrorMessages.Returns.PlayerNotFound);
+				case Error<string> error:
+					return new CallState(error.Value);
 			}
-
-			target = maybeTarget.AsAnyObject;
 		}
 
 		// extchat.c:1387 vs :1209 — leaving oneself resolves the name against the channels one is ON, so
@@ -52,12 +51,17 @@ public static class ChannelOff
 			: await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 				NotifyService, executor, channelName, true);
 
-		if (maybeChannel.IsError)
+		return maybeChannel switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await LeaveAsync(PermissionService, Mediator, NotifyService, executor, target, channel),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
+	/// <summary>Takes <paramref name="target"/> off the channel, if the executor may and it is on it.</summary>
+	private static async ValueTask<CallState> LeaveAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
+	{
 		var channelLabel = channel.Name.ToPlainText();
 
 		// extchat.c:1289 — "You must control either the victim or the channel". Without this, any mortal

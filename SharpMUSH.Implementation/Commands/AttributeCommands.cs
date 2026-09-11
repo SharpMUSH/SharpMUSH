@@ -32,20 +32,19 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All);
-
-		if (locate.IsError)
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		executor, executor, dbref, LocateFlags.All) switch
 		{
-			return locate.AsError;
-		}
+			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var targetObject = locate.AsSharpObject;
-
-		var attribute = await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-		IAttributeService.AttributeMode.Read);
-
-		if (!attribute.IsAttribute)
+	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
+		Dictionary<string, CallState> args, string attrName)
+	{
+		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
+				IAttributeService.AttributeMode.Read) is not SharpAttribute[] attribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
@@ -53,7 +52,7 @@ public partial class Commands
 
 		if (!args.TryGetValue("1", out var valueArg))
 		{
-			var isLocked = attribute.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
+			var isLocked = attribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 			await NotifyService.NotifyLocalized(executor,
 				isLocked
 					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
@@ -92,7 +91,7 @@ public partial class Commands
 
 			if (executor.IsPlayer)
 			{
-				var currentValue = attribute.AsAttribute.Last().Value;
+				var currentValue = attribute.Last().Value;
 				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 			}
 
@@ -129,26 +128,26 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
-		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, sourceDbref, LocateFlags.All);
-
-		if (sourceLocate.IsError)
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		executor, executor, sourceDbref, LocateFlags.All) switch
 		{
-			return sourceLocate.AsError;
-		}
+			AnySharpObject sourceObject => await CopyAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
+				sourceAttr),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var sourceObject = sourceLocate.AsSharpObject;
-
-		var sourceAttribute = await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
-		IAttributeService.AttributeMode.Read);
-
-		if (!sourceAttribute.IsAttribute)
+	private async ValueTask<Option<CallState>> CopyAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
+	{
+		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
+				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var sourceLeaf = sourceAttribute.AsAttribute.Last();
+		var sourceLeaf = sourceAttribute.Last();
 		var attrValue = sourceLeaf.Value;
 		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
 
@@ -172,16 +171,12 @@ public partial class Commands
 
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, destDbref, LocateFlags.All);
-
-			if (destLocate.IsError)
+			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
 			}
-
-			var destObject = destLocate.AsSharpObject;
 
 			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
@@ -246,26 +241,26 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
 
-		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, sourceDbref, LocateFlags.All);
-
-		if (sourceLocate.IsError)
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		executor, executor, sourceDbref, LocateFlags.All) switch
 		{
-			return sourceLocate.AsError;
-		}
+			AnySharpObject sourceObject => await MoveAttributeFromAsync(parser, executor, sourceObject, args, copyFlags,
+				sourceAttr),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var sourceObject = sourceLocate.AsSharpObject;
-
-		var sourceAttribute = await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
-		IAttributeService.AttributeMode.Read);
-
-		if (!sourceAttribute.IsAttribute)
+	private async ValueTask<Option<CallState>> MoveAttributeFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject sourceObject, Dictionary<string, CallState> args, bool copyFlags, string sourceAttr)
+	{
+		if (await AttributeService.GetAttributeAsync(executor, sourceObject, sourceAttr,
+				IAttributeService.AttributeMode.Read) is not SharpAttribute[] sourceAttribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFoundOnSourceFormat), executor, sourceAttr);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		var sourceLeaf = sourceAttribute.AsAttribute.Last();
+		var sourceLeaf = sourceAttribute.Last();
 		var attrValue = sourceLeaf.Value;
 		var attrFlagNames = sourceLeaf.Flags.Select(flag => flag.Name).ToList();
 
@@ -289,16 +284,12 @@ public partial class Commands
 
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
-			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor, executor, destDbref, LocateFlags.All);
-
-			if (destLocate.IsError)
+			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor, executor, destDbref, LocateFlags.All) is not AnySharpObject destObject)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CouldNotFindDestination), executor, destDbref);
 				continue;
 			}
-
-			var destObject = destLocate.AsSharpObject;
 
 			var canSet = await PermissionService.CanSet(executor, destObject);
 			if (!canSet)
@@ -371,47 +362,47 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
 
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All);
-
-		if (locate.IsError)
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		executor, executor, dbref, LocateFlags.All) switch
 		{
-			return locate.AsError;
-		}
+			AnySharpObject targetObject => await ChangeAttributeOwnerAsync(parser, executor, targetObject, ownerArg, attrName),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var targetObject = locate.AsSharpObject;
-
-		var attribute = await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-		IAttributeService.AttributeMode.Read);
-
-		if (!attribute.IsAttribute)
+	private async ValueTask<Option<CallState>> ChangeAttributeOwnerAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject targetObject, CallState ownerArg, string attrName)
+	{
+		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
+				IAttributeService.AttributeMode.Read) is not SharpAttribute[] attribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
 		var newOwnerText = ownerArg.Message!.ToPlainText();
-		var ownerLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, newOwnerText, LocateFlags.All);
 
-		if (ownerLocate.IsError)
+		// A thing, room or exit named as the new owner stands for its own owner.
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor, executor, newOwnerText, LocateFlags.All) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantFindThatPlayer), executor);
-			return ownerLocate.AsError;
-		}
+			AnySharpObject and SharpPlayer newOwnerPlayer => await ChownAttributeToAsync(executor, targetObject, attrName,
+				attribute, newOwnerPlayer),
+			AnySharpObject newOwnerObject => await ChownAttributeToAsync(executor, targetObject, attrName, attribute,
+				await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None)),
+			Error<CallState> error => await NewOwnerNotFoundAsync(executor, error.Value)
+		};
+	}
 
-		var newOwnerObject = ownerLocate.AsSharpObject;
+	private async ValueTask<Option<CallState>> NewOwnerNotFoundAsync(AnySharpObject executor, CallState error)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantFindThatPlayer), executor);
+		return error;
+	}
 
-		SharpPlayer newOwnerPlayer;
-		if (newOwnerObject.IsPlayer)
-		{
-			newOwnerPlayer = newOwnerObject.AsPlayer;
-		}
-		else
-		{
-			newOwnerPlayer = await newOwnerObject.Object().Owner.WithCancellation(CancellationToken.None);
-		}
-
+	private async ValueTask<Option<CallState>> ChownAttributeToAsync(AnySharpObject executor,
+		AnySharpObject targetObject, string attrName, SharpAttribute[] attribute, SharpPlayer newOwnerPlayer)
+	{
 		// Mortals can only chown to themselves; wizards can chown to anyone.
 		var isWizard = await executor.HasPower("WIZARD") || await executor.HasFlag("WIZARD");
 		var canSet = await PermissionService.CanSet(executor, targetObject);
@@ -424,12 +415,15 @@ public partial class Commands
 
 		if (!isWizard)
 		{
-			if (executor.IsPlayer && newOwnerPlayer.Object.DBRef != executor.AsPlayer.Object.DBRef)
+			if (executor is SharpPlayer executorPlayer)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				if (newOwnerPlayer.Object.DBRef != executorPlayer.Object.DBRef)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CanOnlyChownToYourself), executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
 			}
-			else if (!executor.IsPlayer)
+			else
 			{
 				var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 				if (executorOwner.Object.DBRef != newOwnerPlayer.Object.DBRef)
@@ -440,7 +434,7 @@ public partial class Commands
 			}
 		}
 
-		var currentValue = attribute.AsAttribute.Last().Value;
+		var currentValue = attribute.Last().Value;
 		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
 		if (setResult is Error<string> error)
@@ -473,19 +467,20 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor,
 		executor,
 		dbref,
-		LocateFlags.All);
-
-		if (locate.IsError)
+		LocateFlags.All) switch
 		{
-			return locate.AsError;
-		}
+			AnySharpObject targetObject => await WipeAsync(executor, targetObject, maybeAttribute),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var targetObject = locate.AsSharpObject;
-
+	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
+		string? maybeAttribute)
+	{
 		var canModify = await PermissionService.Controls(executor, targetObject);
 		if (!canModify)
 		{

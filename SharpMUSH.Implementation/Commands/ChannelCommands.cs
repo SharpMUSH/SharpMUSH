@@ -64,16 +64,16 @@ public partial class Commands
 		var channelName = arg0CallState!.Message!;
 		var message = arg1CallState!.Message!;
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await ChatAsync(executor, channel, message),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	private async ValueTask<Option<CallState>> ChatAsync(AnySharpObject executor, SharpChannel channel, MString message)
+	{
 		// extchat.c:1533-1546 — the type gate, then Chan_Can_Speak, which LOUD bypasses.
 		if (await ChannelHelper.SpeechRefusal(PermissionService, executor, channel) is { } refusal)
 		{
@@ -147,15 +147,16 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await AddComAsync(executor, alias, channel),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	private async ValueTask<Option<CallState>> AddComAsync(AnySharpObject executor, string alias, SharpChannel channel)
+	{
 		var isMember = await ChannelHelper.IsMemberOfChannel(executor, channel);
 		if (!isMember)
 		{
@@ -215,22 +216,19 @@ public partial class Commands
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
-
-		if (maybeAttribute.IsNone)
+		return await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
-			return new CallState($"#-1 Alias '{alias}' not found.");
-		}
+			SharpAttribute[] aliasAttribute => await DeleteChannelAliasAsync(executor, alias, attributeName,
+				aliasAttribute.Last().Value),
+			None => await ChannelAliasNotFoundAsync(executor, alias),
+			Error<string> error => await ChannelAliasUnreadableAsync(executor, error.Value)
+		};
+	}
 
-		if (maybeAttribute.IsError)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
-			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
-		}
-
-		var channelName = maybeAttribute.AsAttribute.Last().Value;
-
+	/// <summary>Removes the alias, and takes the executor off its channel when no other alias names it.</summary>
+	private async ValueTask<Option<CallState>> DeleteChannelAliasAsync(AnySharpObject executor, string alias,
+		string attributeName, MString channelName)
+	{
 		var clearResult = await AttributeService.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
 
 		if (clearResult is Error<string> error)
@@ -241,9 +239,9 @@ public partial class Commands
 
 		var allAliases = await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
 
-		if (!allAliases.IsError)
+		if (allAliases is SharpAttribute[] remainingAliases)
 		{
-			var hasOtherAlias = allAliases.AsAttributes.Any(attr => attr.Value.ToPlainText().Equals(channelName.ToPlainText(), StringComparison.OrdinalIgnoreCase));
+			var hasOtherAlias = remainingAliases.Any(attr => attr.Value.ToPlainText().Equals(channelName.ToPlainText(), StringComparison.OrdinalIgnoreCase));
 
 			if (!hasOtherAlias)
 			{
@@ -254,10 +252,9 @@ public partial class Commands
 				// send RemoveUserFromChannelCommand, and delcom answers "Alias deleted." either way. There is
 				// no observable difference to leak. A visible lookup would instead strand a membership the
 				// player can no longer reach — leaving them on a channel they just removed their alias for.
-				var maybeChannel = await ChannelHelper.GetChannelOrError(Mediator, channelName);
-				if (!maybeChannel.IsError)
+				if (await ChannelHelper.GetChannelOrError(Mediator, channelName) is SharpChannel channel)
 				{
-					await Mediator.Send(new RemoveUserFromChannelCommand(maybeChannel.AsChannel, executor));
+					await Mediator.Send(new RemoveUserFromChannelCommand(channel, executor));
 				}
 			}
 		}
@@ -310,31 +307,40 @@ public partial class Commands
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
-		var maybeAttribute = await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read);
-
-		if (maybeAttribute.IsNone)
+		return await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
-			return new CallState($"#-1 Alias '{alias}' not found.");
-		}
+			SharpAttribute[] aliasAttribute => await SetAliasTitleAsync(parser, executor, alias, aliasAttribute.Last().Value,
+				title),
+			None => await ChannelAliasNotFoundAsync(executor, alias),
+			Error<string> error => await ChannelAliasUnreadableAsync(executor, error.Value)
+		};
+	}
 
-		if (maybeAttribute.IsError)
+	private async ValueTask<Option<CallState>> ChannelAliasNotFoundAsync(AnySharpObject executor, string alias)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasNotFoundFormat), executor, alias);
+		return new CallState($"#-1 Alias '{alias}' not found.");
+	}
+
+	private async ValueTask<Option<CallState>> ChannelAliasUnreadableAsync(AnySharpObject executor, string error)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, error);
+		return new CallState($"#-1 Error reading alias: {error}");
+	}
+
+	/// <summary>Sets the executor's title on the channel <paramref name="alias"/> names.</summary>
+	private async ValueTask<Option<CallState>> SetAliasTitleAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string alias, MString channelName, MString title)
+		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+				NotifyService, executor, channelName, true) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasFormat), executor, maybeAttribute.AsError.Value);
-			return new CallState($"#-1 Error reading alias: {maybeAttribute.AsError.Value}");
-		}
+			SharpChannel channel => await SetTitleOnChannelAsync(parser, executor, alias, channelName, channel, title),
+			Error<CallState> error => error.Value
+		};
 
-		var channelName = maybeAttribute.AsAttribute.Last().Value;
-
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
+	private async ValueTask<Option<CallState>> SetTitleOnChannelAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string alias, MString channelName, SharpChannel channel, MString title)
+	{
 		var result = await ChannelTitle.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
 			Configuration, channelName, title);
 
@@ -351,16 +357,22 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var allAliases = await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);
-
-		if (allAliases.IsError)
+		return await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false,
+				IAttributeService.AttributePatternMode.Wildcard) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasesFormat), executor, allAliases.AsError.Value);
-			return new CallState($"#-1 Error reading aliases: {allAliases.AsError.Value}");
-		}
+			SharpAttribute[] aliases => await ListChannelAliasesAsync(executor, aliases),
+			Error<string> error => await ChannelAliasesUnreadableAsync(executor, error.Value)
+		};
+	}
 
-		var aliases = allAliases.AsAttributes;
+	private async ValueTask<Option<CallState>> ChannelAliasesUnreadableAsync(AnySharpObject executor, string error)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorReadingAliasesFormat), executor, error);
+		return new CallState($"#-1 Error reading aliases: {error}");
+	}
 
+	private async ValueTask<Option<CallState>> ListChannelAliasesAsync(AnySharpObject executor, SharpAttribute[] aliases)
+	{
 		if (aliases.Length == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.YouHaveNoChannelAliases), executor);

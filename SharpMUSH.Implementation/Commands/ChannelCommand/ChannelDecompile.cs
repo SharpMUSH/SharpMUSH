@@ -1,6 +1,8 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -23,15 +25,19 @@ public static class ChannelDecompile
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await DecompileAsync(PermissionService, NotifyService, ConnectionService, executor,
+				channel, switches),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
+	private static async ValueTask<CallState> DecompileAsync(IPermissionService PermissionService,
+		INotifyService NotifyService, IConnectionService ConnectionService, AnySharpObject executor, SharpChannel channel,
+		string[] switches)
+	{
 		var name = channel.Name.ToPlainText();
 
 		// extchat.c:2824 — Chan_Can_Decomp, and the refusal names the channel because the viewer can
