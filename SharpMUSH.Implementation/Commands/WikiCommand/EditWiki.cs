@@ -181,13 +181,26 @@ public static class EditWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var split = WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText());
-		if (!split.TryGetValue(out var target, out var splitError))
+		return WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText()) switch
 		{
-			await notifyService.Notify(executor, $"WIKI: {splitError.Value}", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
-		}
+			WikiCommandHelper.LocaleTarget target =>
+				await WriteTranslation(wikiService, localization, notifyService, executor, target, contentArg),
+			Error<string> splitError => await RefuseTranslateTarget(notifyService, executor, splitError.Value),
+		};
+	}
 
+	/// <summary>
+	/// Writes the translation <see cref="Translate"/> was asked for, once its target has split into a page
+	/// and a canonical locale.
+	/// </summary>
+	private static async ValueTask<MString> WriteTranslation(
+		IWikiService wikiService,
+		IWikiLocalizationService localization,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		WikiCommandHelper.LocaleTarget target,
+		MString contentArg)
+	{
 		var (pageTarget, locale) = target;
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(pageTarget);
 
@@ -248,6 +261,14 @@ public static class EditWiki
 
 		await notifyService.Notify(executor, message, executor);
 		return returned;
+	}
+
+	/// <summary>Tells the executor why a <c>@wiki/translate</c> target names no page and locale.</summary>
+	private static async ValueTask<MString> RefuseTranslateTarget(
+		INotifyService notifyService, AnySharpObject executor, string reason)
+	{
+		await notifyService.Notify(executor, $"WIKI: {reason}", executor);
+		return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 	}
 
 	/// <summary>

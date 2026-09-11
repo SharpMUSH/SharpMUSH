@@ -68,8 +68,15 @@ public partial class Commands
 		var actor = await parser.ServiceProvider.GetRequiredService<IAdministrativeCapabilityService>()
 			.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken);
 		if (actor is null) return await DiagnosticFailure(parser, DiagnosticsError.PermissionDenied);
-		var result = await parser.ServiceProvider.GetRequiredService<IQueueDiagnosticsService>().InspectAsync(actor, limit, ct: ExecutionBudget.CurrentToken);
-		if (!result.TryGetValue(out var report, out var error)) return await DiagnosticFailure(parser, error);
+		return await parser.ServiceProvider.GetRequiredService<IQueueDiagnosticsService>().InspectAsync(actor, limit, ct: ExecutionBudget.CurrentToken) switch
+		{
+			QueueDiagnosticsReport report => await ReportQueueHistory(executor, report),
+			DiagnosticsError error => await DiagnosticFailure(parser, error),
+		};
+	}
+
+	private async ValueTask<Option<CallState>> ReportQueueHistory(AnySharpObject executor, QueueDiagnosticsReport report)
+	{
 		var rows = string.Join('\n', report.Recent.Select(row =>
 			$"{row.Pid?.ToString() ?? "-"} {row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Owner ?? "?"} {row.Kind} {row.Status} " +
 			$"{row.WaitDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} " +

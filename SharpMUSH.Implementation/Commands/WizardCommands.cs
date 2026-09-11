@@ -2235,16 +2235,26 @@ public partial class Commands
 		// wedged command.
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
 
-		var result = await WorldBackupService.CreateAsync();
-		if (result.TryGetValue(out var written, out var failure))
+		return await WorldBackupService.CreateAsync() switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
-				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
-			return new CallState(written.Name);
-		}
+			WorldBackup written => await BackupWrittenAsync(executor, written),
+			Error<string> failure => await BackupFailedAsync(executor, failure.Value),
+		};
+	}
 
+	/// <summary>Reports a finished <c>@backup</c> copy and returns its name.</summary>
+	private async ValueTask<Option<CallState>> BackupWrittenAsync(AnySharpObject executor, WorldBackup written)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
+			executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
+		return new CallState(written.Name);
+	}
+
+	/// <summary>Reports why <c>@backup</c> wrote no copy.</summary>
+	private async ValueTask<Option<CallState>> BackupFailedAsync(AnySharpObject executor, string reason)
+	{
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
-			failure.Value);
+			reason);
 		return new None();
 	}
 

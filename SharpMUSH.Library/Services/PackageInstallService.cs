@@ -381,14 +381,15 @@ public class PackageInstallService(
 			is PackageObjectAction.Create or PackageObjectAction.RecreateMissing))
 		{
 			var spec = manifestByRef[change.Ref];
-			var createdRef = await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken);
-			if (!createdRef.TryGetValue(out var createdObjid, out var error))
+			switch (await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken))
 			{
-				return error;
+				case string createdObjid:
+					objidByRef[change.Ref] = createdObjid;
+					created[change.Ref] = createdObjid;
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			objidByRef[change.Ref] = createdObjid;
-			created[change.Ref] = createdObjid;
 		}
 
 		// Pass 2: exits link, parents, name updates (flags/locks/powers come later).
@@ -560,14 +561,15 @@ public class PackageInstallService(
 		// as objects/attributes, so {{?configure}} settings land here too.
 		if (manifest is { Kind: PackageKind.Application, Application: not null })
 		{
-			var built = BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve);
-			if (!built.TryGetValue(out var application, out var error))
+			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve))
 			{
-				return error;
+				case RegisteredApplication application:
+					await applications.UpsertApplicationAsync(application);
+					notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			await applications.UpsertApplicationAsync(application);
-			notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
 		}
 
 		// Lifecycle hooks (decision 20.x): after a successful apply, run AINSTALL on
@@ -598,12 +600,22 @@ public class PackageInstallService(
 				$"Managed package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
 		}
 
-		var deployResult = await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken);
-		if (!deployResult.TryGetValue(out var deployed, out var error))
+		return await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken) switch
 		{
-			return error;
-		}
+			IReadOnlyList<string> deployed => await RecordManagedDeploymentAsync(manifest, request, deployed),
+			Error<string> error => error,
+		};
+	}
 
+	/// <summary>
+	/// Records a managed package whose binaries <see cref="IManagedPackageInstaller"/> has deposited: the
+	/// install row with the deployed file list, its dependencies, and a revision.
+	/// </summary>
+	private async Task<PackageApplyResult> RecordManagedDeploymentAsync(
+		PackageManifest manifest,
+		PackageApplyRequest request,
+		IReadOnlyList<string> deployed)
+	{
 		var installed = await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord found ? found : null;
 		var revision = (installed?.CurrentRevision ?? 0) + 1;
 

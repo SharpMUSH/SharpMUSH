@@ -97,13 +97,27 @@ public partial class Commands
 
 		var authoring = parser.ServiceProvider.GetRequiredService<IPackageAuthoringService>();
 
-		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
-		if (!scan.TryGetValue(out var scanResult, out var scanError))
+		return await authoring.ScanAsync(objids.Distinct().ToList()) switch
 		{
-			await NotifyService.Notify(executor, $"PACKAGE: {scanError.Value}", executor);
-			return new CallState(string.Empty);
-		}
+			PackageAuthoringScan scanResult =>
+				await ReportOrExportScanAsync(args, switches, executor, objectList, knownByObjid, authoring, scanResult),
+			Error<string> scanError => await PackageReplyAsync(executor, $"PACKAGE: {scanError.Value}"),
+		};
+	}
 
+	/// <summary>
+	/// The rest of <c>@package</c> once the selection has scanned: the <c>/scan</c> report, or the exported
+	/// manifest.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ReportOrExportScanAsync(
+		Dictionary<string, CallState> args,
+		IEnumerable<string> switches,
+		AnySharpObject executor,
+		string objectList,
+		Dictionary<string, AnySharpObject> knownByObjid,
+		IPackageAuthoringService authoring,
+		PackageAuthoringScan scanResult)
+	{
 		// Attribute visibility matches @decompile: keep only the attributes the
 		// executor may see (GetVisibleAttributesAsync), minus VEILED. Everything else
 		// is excluded from the export and ignored when judging self-containment.
@@ -229,31 +243,43 @@ public partial class Commands
 			selections.Add(new AuthoringObjectSelection(obj.Objid, refName, excluded));
 		}
 
-		var export = await authoring.ExportAsync(new PackageAuthoringRequest(
+		var reply = await authoring.ExportAsync(new PackageAuthoringRequest(
 			packageId, version, description, null, [executor.Object().Name],
 			selections,
 			new Dictionary<string, string>(),
-			new Dictionary<string, AuthoringConfigureClassification>()));
-
-		if (export is Error<string> exportError)
+			new Dictionary<string, AuthoringConfigureClassification>())) switch
 		{
-			var error = exportError.Value;
+			string manifest => ManifestListing(manifest),
+			Error<string> exportError => ExportRefusal(exportError.Value),
+		};
+		return await PackageReplyAsync(executor, reply);
+
+		string ManifestListing(string manifest)
+		{
+			var output = new StringBuilder();
+			output.AppendLine($"PACKAGE: Generated manifest for '{packageId}' v{version} ({selections.Count} object(s)).");
+			output.AppendLine("Copy everything between the markers into a package.yaml:");
+			output.AppendLine("----- BEGIN package.yaml -----");
+			output.AppendLine(manifest.TrimEnd());
+			output.Append("----- END package.yaml -----");
+			return output.ToString();
+		}
+
+		static string ExportRefusal(string error)
+		{
 			// Unclassified dbrefs mean the selection isn't self-contained — point the
 			// user at the web panel where they can classify them.
 			var hint = error.StartsWith("Unclassified", StringComparison.Ordinal)
 				? "\nThese objects reference the outside world — finish this package at: /admin/packages/author"
 				: string.Empty;
-			await NotifyService.Notify(executor, $"PACKAGE: {error}{hint}", executor);
-			return new CallState(string.Empty);
+			return $"PACKAGE: {error}{hint}";
 		}
+	}
 
-		var output = new StringBuilder();
-		output.AppendLine($"PACKAGE: Generated manifest for '{packageId}' v{version} ({selections.Count} object(s)).");
-		output.AppendLine("Copy everything between the markers into a package.yaml:");
-		output.AppendLine("----- BEGIN package.yaml -----");
-		output.AppendLine(((string)export.Value!).TrimEnd());
-		output.Append("----- END package.yaml -----");
-		await NotifyService.Notify(executor, output.ToString(), executor);
+	/// <summary>Says <paramref name="message"/> to the executor; <c>@package</c> always returns empty.</summary>
+	private async ValueTask<Option<CallState>> PackageReplyAsync(AnySharpObject executor, string message)
+	{
+		await NotifyService.Notify(executor, message, executor);
 		return new CallState(string.Empty);
 	}
 

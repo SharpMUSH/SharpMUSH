@@ -1896,13 +1896,22 @@ public class SharpMUSHParserVisitor(
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
-		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
-		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
+		return await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults => await DispatchInternalCommand(prs, src, rootCommand, switches,
+				libraryCommandDefinition, singleArgument, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
+
+	/// <summary>
+	/// Runs a built-in command whose arguments have split: its hooks, plugin interceptors, switch and lock
+	/// checks, then the command itself.
+	/// </summary>
+	private async ValueTask<Option<CallState>> DispatchInternalCommand(IMUSHCodeParser prs, MString src,
+		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
+		CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
@@ -2282,13 +2291,18 @@ public class SharpMUSHParserVisitor(
 		// set the prefix to "OUTPUTPREFIX" instead of clearing it, and bare SOCKSET asked for an option
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
-		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
-		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
+		return await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults =>
+				await DispatchSocketCommand(prs, command, librarySocketCommandDefinition, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
+
+	/// <summary>Runs a socket command whose arguments have split.</summary>
+	private static async ValueTask<Option<CallState>> DispatchSocketCommand(IMUSHCodeParser prs, string command,
+		CommandDefinition librarySocketCommandDefinition, CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		var dispatchResult = await prs.With(state => state with
@@ -2298,6 +2312,17 @@ public class SharpMUSHParserVisitor(
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
 		return PreserveArgumentErrors(dispatchResult, argumentResults);
+	}
+
+	/// <summary>
+	/// Tells the handle that typed the command why its arguments would not split, and runs nothing. Shared by
+	/// every command pattern that splits arguments.
+	/// </summary>
+	private async ValueTask<Option<CallState>> RefuseArgumentSplit(IMUSHCodeParser prs, string reason)
+	{
+		if (prs.CurrentState.Handle.HasValue)
+			await NotifyService.Notify(prs.CurrentState.Handle.Value, reason);
+		return new None();
 	}
 
 	/// <summary>
@@ -2350,13 +2375,21 @@ public class SharpMUSHParserVisitor(
 		// The root command must be passed so the no-space branch strips the token: without it, a bare
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
-		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
-		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
+		return await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults => await DispatchSingleTokenCommand(prs, singleRootCommand, rest,
+				singleLibraryCommandDefinition, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
+
+	/// <summary>
+	/// Runs a single-token command whose arguments have split, with the text glued to the token as <c>%0</c>.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> DispatchSingleTokenCommand(IMUSHCodeParser prs,
+		string singleRootCommand, string rest, CommandDefinition singleLibraryCommandDefinition,
+		CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.

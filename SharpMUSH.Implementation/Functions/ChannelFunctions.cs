@@ -372,21 +372,23 @@ public partial class Functions
 		MString Argument(string key)
 			=> arguments.TryGetValue(key, out var value) ? value.Message! : MarkupText.Empty;
 
-		var selection = await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
-			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false);
-
-		if (!selection.TryGetWindow(out var window, out var refusal))
+		return await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
+			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false) switch
 		{
-			return refusal;
+			ChannelRecall.RecallWindow window => RecalledLines(window, arguments),
+			CallState refusal => refusal,
+		};
+
+		static CallState RecalledLines(ChannelRecall.RecallWindow window, Dictionary<string, CallState> arguments)
+		{
+			var separator = arguments.TryGetValue("3", out var osep) ? osep.Message! : MarkupText.Space;
+			var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
+
+			var messages = window.Lines
+				.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message);
+
+			return new CallState(MarkupText.Join(separator, messages));
 		}
-
-		var separator = arguments.TryGetValue("3", out var osep) ? osep.Message! : MarkupText.Space;
-		var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
-
-		var messages = window.Lines
-			.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message);
-
-		return new CallState(MarkupText.Join(separator, messages));
 	}
 
 	[SharpFunction(Name = "cstatus", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "channel"])]

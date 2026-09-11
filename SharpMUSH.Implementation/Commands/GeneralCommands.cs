@@ -1898,9 +1898,22 @@ public partial class Commands
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
 		if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
-			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
-		if (!accounting.TryGetValue(out var counted, out var accountingError)) return await ReportSemaphoreCommandError(executor, accountingError.Value);
+		return await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
+			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false) switch
+		{
+			SemaphoreAccounting counted => await NotifySemaphoreAsync(parser, executor, scheduler, dbRefAttribute, notifyType,
+				notifyCount, qRegisters, counted),
+			Error<string> accountingError => await ReportSemaphoreCommandError(executor, accountingError.Value),
+		};
+	}
+
+	/// <summary>
+	/// The half of <c>@notify</c> that releases the waiting tasks, once the semaphore's count has been accounted for.
+	/// </summary>
+	private async ValueTask<Option<CallState>> NotifySemaphoreAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		ITaskScheduler scheduler, DbRefAttribute dbRefAttribute, string notifyType, int notifyCount,
+		Dictionary<string, MString>? qRegisters, SemaphoreAccounting counted)
+	{
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			counted.Persist, counted.Reconcile, qRegisters);
@@ -2822,9 +2835,16 @@ public partial class Commands
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
 			if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
-			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
-				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
-			if (!accounting.TryGetValue(out var counted, out var accountingError)) return await ReportSemaphoreCommandError(executor, accountingError.Value);
+			return await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
+				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true) switch
+			{
+				SemaphoreAccounting counted => await DrainCounted(target, counted),
+				Error<string> accountingError => await ReportSemaphoreCommandError(executor, accountingError.Value),
+			};
+		}
+
+		async ValueTask<CallState?> DrainCounted(DbRefAttribute target, SemaphoreAccounting counted)
+		{
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, counted.Persist, counted.Reconcile);
 			return null;

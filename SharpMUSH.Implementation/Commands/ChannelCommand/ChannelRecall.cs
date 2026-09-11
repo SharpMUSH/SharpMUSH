@@ -130,14 +130,21 @@ public static class ChannelRecall
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var selection = await SelectAsync(PermissionService, Mediator, NotifyService, executor, channelName,
-			lines, start, notify: true);
-
-		if (!selection.TryGetWindow(out var window, out var refusal))
+		return await SelectAsync(PermissionService, Mediator, NotifyService, executor, channelName,
+			lines, start, notify: true) switch
 		{
-			return refusal;
-		}
+			RecallWindow window => await RecallAsync(NotifyService, executor, window, switches),
+			CallState refusal => refusal,
+		};
+	}
 
+	/// <summary>
+	/// Shows the executor the window <see cref="SelectAsync"/> chose, framed the way <c>do_chan_recall</c>
+	/// frames it.
+	/// </summary>
+	private static async ValueTask<CallState> RecallAsync(INotifyService notifyService, AnySharpObject executor,
+		RecallWindow window, string[] switches)
+	{
 		var (channel, selected, showedEverything) = window;
 		var quiet = switches.Contains("QUIET");
 		var channelLabel = channel.Name.ToPlainText();
@@ -156,7 +163,7 @@ public static class ChannelRecall
 		];
 
 		var message = MarkupText.Join(MarkupText.NewLine, framed);
-		await NotifyService.Notify(executor, message, executor);
+		await notifyService.Notify(executor, message, executor);
 		return new CallState(message);
 	}
 

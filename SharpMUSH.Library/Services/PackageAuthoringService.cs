@@ -30,13 +30,14 @@ public partial class PackageAuthoringService(
 		var objects = new List<AuthoringObject>();
 		foreach (var objid in objids.Distinct())
 		{
-			var read = await ReadObjectAsync(objid, cancellationToken);
-			if (!read.TryGetValue(out var authored, out var error))
+			switch (await ReadObjectAsync(objid, cancellationToken))
 			{
-				return error;
+				case AuthoringObject authored:
+					objects.Add(authored);
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			objects.Add(authored);
 		}
 
 		var selectedNumbers = objects
@@ -80,13 +81,15 @@ public partial class PackageAuthoringService(
 		var tokenByNumber = new Dictionary<int, string>();
 		foreach (var selection in request.Objects)
 		{
-			var read = await ReadObjectAsync(selection.Objid, cancellationToken);
-			if (!read.TryGetValue(out var authored, out var error))
+			switch (await ReadObjectAsync(selection.Objid, cancellationToken))
 			{
-				return error;
+				case AuthoringObject authored:
+					selections.Add((selection, authored));
+					break;
+				case Error<string> error:
+					return error;
 			}
 
-			selections.Add((selection, authored));
 			var number = DbrefNumber(selection.Objid);
 			if (number is not null)
 			{

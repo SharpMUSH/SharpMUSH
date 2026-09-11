@@ -74,12 +74,16 @@ public partial class Commands
 			return new None();
 		}
 
-		var result = await AccountService.CreateAccountAsync(username, email, password);
-		if (!result.TryGetValue(out var account, out var error))
+		return await AccountService.CreateAccountAsync(username, email, password) switch
 		{
-			await NotifyService.Notify(handle, error.Value);
-			return new None();
-		}
+			SharpAccount account => await RegisteredAsync(handle, account),
+			Error<string> error => await RegistrationRefusedAsync(handle, error.Value),
+		};
+	}
+
+	/// <summary>Binds the socket to the account <c>register</c> just created and says what to do next.</summary>
+	private async ValueTask<Option<CallState>> RegisteredAsync(long handle, SharpAccount account)
+	{
 		await ConnectionService.BindAccount(handle, account.Id!);
 
 		await NotifyService.Notify(handle,
@@ -87,6 +91,13 @@ public partial class Commands
 			"You have no characters yet.\n" +
 			"Use: make <character-name> <password>    to create your first character.");
 		return new CallState(account.Id!);
+	}
+
+	/// <summary>Tells the socket why the account service would not create the account.</summary>
+	private async ValueTask<Option<CallState>> RegistrationRefusedAsync(long handle, string reason)
+	{
+		await NotifyService.Notify(handle, reason);
+		return new None();
 	}
 
 	/// <summary>

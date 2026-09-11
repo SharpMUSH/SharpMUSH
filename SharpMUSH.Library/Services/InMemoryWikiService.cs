@@ -384,22 +384,34 @@ public sealed class InMemoryWikiService : IWikiService
 		string editorDbref,
 		string? editSummary,
 		bool published,
+		int? expectedRevisionNumber) =>
+		Task.FromResult<TranslationWriteResult>(WikiHelpers.NormalizeLocale(locale) switch
+		{
+			string normalized => WriteTranslation(
+				pageId, normalized, title, markdown, editorDbref, editSummary, published, expectedRevisionNumber),
+			Error<string> error => error,
+		});
+
+	/// <summary>
+	/// Writes one translation row by compare-and-swap, under a locale already reduced to its canonical tag.
+	/// </summary>
+	private TranslationWriteResult WriteTranslation(
+		string pageId,
+		string normalized,
+		string title,
+		string markdown,
+		string editorDbref,
+		string? editSummary,
+		bool published,
 		int? expectedRevisionNumber)
 	{
-		static Task<TranslationWriteResult> Result(
-			TranslationWriteResult value) => Task.FromResult(value);
-
-		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (!normalizedLocale.TryGetValue(out var normalized, out var error))
-			return Result(error);
-
 		if (!_pagesById.TryGetValue(pageId, out var page))
-			return Result(new Error<string>($"No wiki page with id '{pageId}'."));
+			return new Error<string>($"No wiki page with id '{pageId}'.");
 
 		if (page.SourceLocale.Length > 0
 			&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
-			return Result(new Error<string>(
-				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation."));
+			return new Error<string>(
+				$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
 
 		var key = (PageId: pageId, Locale: normalized);
 		var now = DateTimeOffset.UtcNow;
@@ -427,17 +439,17 @@ public sealed class InMemoryWikiService : IWikiService
 
 			// Create-only: an existing row is a conflict, not something to overwrite.
 			if (!_translations.TryAdd(key, updated))
-				return Result(WikiWriteConflict.AlreadyExists);
+				return WikiWriteConflict.AlreadyExists;
 		}
 		else
 		{
 			// A translation the caller loaded and somebody then deleted. Still a lost write, not a bad
 			// request: re-creating it here would resurrect a row somebody deliberately removed.
 			if (!_translations.TryGetValue(key, out var existing))
-				return Result(WikiWriteConflict.TranslationGone);
+				return WikiWriteConflict.TranslationGone;
 
 			if (existing.RevisionNumber != expectedRevisionNumber.Value)
-				return Result(WikiWriteConflict.StaleRevision);
+				return WikiWriteConflict.StaleRevision;
 
 			updated = existing with
 			{
@@ -454,12 +466,12 @@ public sealed class InMemoryWikiService : IWikiService
 			// TryUpdate's comparison value is the CAS: a writer who won the race between TryGetValue and
 			// here has already replaced `existing`, so this fails and no revision is appended.
 			if (!_translations.TryUpdate(key, updated, existing))
-				return Result(WikiWriteConflict.StaleRevision);
+				return WikiWriteConflict.StaleRevision;
 		}
 
 		SaveTranslationRevisionSnapshot(updated, editorDbref, editSummary);
 
-		return Result(updated);
+		return updated;
 	}
 
 	public Task<Found<None>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
