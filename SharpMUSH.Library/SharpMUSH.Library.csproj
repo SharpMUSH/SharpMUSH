@@ -39,11 +39,11 @@
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Library</PackageId>
-		<!-- Version is aligned to PluginContractVersion.Current (2.0.0). Bump both together when the
+		<!-- Version is aligned to PluginContractVersion.Current (3.0.0). Bump both together when the
 		     plugin contract surface changes. -->
-		<Version>2.0.0</Version>
+		<Version>3.0.0</Version>
 		<Authors>SharpMUSH Contributors</Authors>
-		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 2.0.0.</Description>
+		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 3.0.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>

@@ -11,15 +11,15 @@
        This is a content-only NuGet (PackageType=Template) — it ships the template trees under
        content/ and builds no assembly. NoDefaultExcludes keeps the .template.config and .github
        folders (NuGet strips dotfiles otherwise). Published via Trusted Publishing (see
-       publish-templates.yml); version is aligned to PluginContractVersion.Current (2.0.0). -->
+       publish-templates.yml); version is aligned to PluginContractVersion.Current (3.0.0). -->
 
   <PropertyGroup>
     <PackageType>Template</PackageType>
     <PackageId>SharpMUSH.Templates</PackageId>
-    <Version>2.0.0</Version>
+    <Version>3.0.0</Version>
     <Title>SharpMUSH Extension Templates</Title>
     <Authors>SharpMUSH Contributors</Authors>
-    <Description>`dotnet new` templates for SharpMUSH extensions: a softcode package (sharpmush-softcode), a Dynamic Application (sharpmush-application), and a C# DLL plugin (sharpmush-plugin). Aligned to PluginContractVersion 2.0.0.</Description>
+    <Description>`dotnet new` templates for SharpMUSH extensions: a softcode package (sharpmush-softcode), a Dynamic Application (sharpmush-application), and a C# DLL plugin (sharpmush-plugin). Aligned to PluginContractVersion 3.0.0.</Description>
     <PackageTags>dotnet-new;templates;sharpmush;mush;plugin;softcode;dynamic-application</PackageTags>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/SharpMUSH/SharpMUSH</PackageProjectUrl>
