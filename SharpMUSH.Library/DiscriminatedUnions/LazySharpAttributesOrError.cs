@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [Union]
-public sealed partial class LazySharpAttributesOrError : IUnion
+public sealed class LazySharpAttributesOrError : IUnion
 {
 	public LazySharpAttributesOrError(IAsyncEnumerable<LazySharpAttribute> value) => Value = value;
 	public LazySharpAttributesOrError(Error<string> value) => Value = value;

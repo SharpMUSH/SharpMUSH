@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [Union]
-public sealed partial class SharpAttributesOrError : IUnion
+public sealed class SharpAttributesOrError : IUnion
 {
 	public SharpAttributesOrError(SharpAttribute[] value) => Value = value;
 	public SharpAttributesOrError(Error<string> value) => Value = value;

@@ -5,4 +5,4 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// <summary>
 /// An object named by a name, or by its <see cref="DBRef"/>.
 /// </summary>
-public partial union NameOrDbRef(string, DBRef);
+public union NameOrDbRef(string, DBRef);

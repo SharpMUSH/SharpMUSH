@@ -12,7 +12,7 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// <c>Value</c>.
 /// </remarks>
 [Union]
-public sealed partial class Option<T> : IUnion
+public sealed class Option<T> : IUnion
 {
 	public Option(T value) => Value = value;
 	public Option(None value) => Value = value;

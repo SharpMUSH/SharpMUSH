@@ -6,4 +6,4 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// A translation upsert: the translation as written, the conflict that refused it, or the message of
 /// a storage failure.
 /// </summary>
-public partial union TranslationWriteResult(WikiTranslation, WikiWriteConflict, Error<string>);
+public union TranslationWriteResult(WikiTranslation, WikiWriteConflict, Error<string>);

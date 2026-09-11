@@ -275,12 +275,14 @@ Six agents rewrote every positional call site to patterns (≈2,400, counted by 
 members `[Obsolete]` and building), and the `Compat/` folders and `ObjectUnionExtensions` were then
 deleted; the solution builds without them. Two conventions came out of it:
 
-- **No cast to reach a case.** C# does not narrow a union after `if (x is not T value)`, so an early
-  return that needs the failure used to read `(Error<string>)x.Value!`. The success-or-failure unions
-  (`Result`, `PackageManifestResult`, `DiagnosticsResult`, `ApiResult`, `MessageResult`,
-  `ServerResult`, `ValueOrResponse`) carry `TryGetValue(out T value, out TFailure failure)` instead, and
-  `RecallSelection` carries `TryGetWindow`. Two out parameters on purpose: a single-parameter
-  `TryGetValue` is the compiler's own union access pattern.
+- **No cast to reach a case, and no helper that stands in for one.** C# does not narrow a union after
+  `if (x is not T value)`, and has no let-else, so an early return that needs the failure is written
+  as *switch and extract*: match the result once, where it is produced, with an exhaustive switch; the
+  failure arms produce the response and the success arm calls a method holding the rest of the work
+  (`RegisteredAsync(account)`, `DispatchInternalCommand(…)`). A switch *statement* is used only where a
+  case must return from inside a loop or partway through a method. No union carries a two-out
+  `TryGetValue(out value, out failure)`: `TryGetValue(out T)` is the compiler's own non-boxing union
+  access pattern, and the docs consume unions with `switch` and `is`.
 - **Tests bind the expected case with `Expect<T>()`** (`SharpMUSH.Tests.Infrastructure/UnionExpectations.cs`),
   which fails naming the case it got. NSubstitute matchers are expression trees and cannot hold a
   pattern; they call `TestHelpers.MessageIsString` / `MessageIsMarkup` / `MessagePlainText*`.

@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [Union]
-public sealed partial class AnySharpContent : IUnion, IObjectShaped<AnySharpContent>
+public sealed class AnySharpContent : IUnion, IObjectShaped<AnySharpContent>
 {
 	public AnySharpContent(SharpPlayer value) => Value = value;
 	public AnySharpContent(SharpExit value) => Value = value;

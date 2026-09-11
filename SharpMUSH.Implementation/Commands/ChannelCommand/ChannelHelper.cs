@@ -14,7 +14,7 @@ using SharpMUSH.Library.Definitions;
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 [Union]
-public sealed partial class ChannelOrError : IUnion
+public sealed class ChannelOrError : IUnion
 {
 	public ChannelOrError(SharpChannel value) => Value = value;
 	public ChannelOrError(Error<CallState> value) => Value = value;
@@ -36,7 +36,7 @@ public sealed partial class ChannelOrError : IUnion
 }
 
 [Union]
-public sealed partial class PrivilegeOrError : IUnion
+public sealed class PrivilegeOrError : IUnion
 {
 	public PrivilegeOrError(string[] value) => Value = value;
 	public PrivilegeOrError(Error<string[]> value) => Value = value;

@@ -12,7 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 [Union]
-public sealed partial class ErrorOrMailList : IUnion
+public sealed class ErrorOrMailList : IUnion
 {
 	public ErrorOrMailList(Error<string> value) => Value = value;
 	public ErrorOrMailList(IAsyncEnumerable<SharpMail> value) => Value = value;

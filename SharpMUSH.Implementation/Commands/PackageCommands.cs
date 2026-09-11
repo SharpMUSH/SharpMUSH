@@ -54,7 +54,6 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var objectList = args["0"].Message?.ToPlainText() ?? string.Empty;

@@ -6,4 +6,4 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// Which semaphore tasks to select: by process id, by the object they wait on, or by the exact
 /// object/attribute semaphore.
 /// </summary>
-public partial union SemaphoreTarget(long, DBRef, DbRefAttribute);
+public union SemaphoreTarget(long, DBRef, DbRefAttribute);

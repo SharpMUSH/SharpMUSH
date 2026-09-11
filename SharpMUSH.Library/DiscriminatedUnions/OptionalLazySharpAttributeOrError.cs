@@ -6,7 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [Union]
-public sealed partial class OptionalLazySharpAttributeOrError : IUnion
+public sealed class OptionalLazySharpAttributeOrError : IUnion
 {
 	public OptionalLazySharpAttributeOrError(LazySharpAttribute[] value) => Value = value;
 	public OptionalLazySharpAttributeOrError(None value) => Value = value;

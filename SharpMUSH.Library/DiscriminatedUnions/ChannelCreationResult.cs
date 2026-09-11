@@ -20,7 +20,7 @@ public readonly record struct ChannelNameTaken;
 /// read as success to the caller.
 /// </remarks>
 [Union]
-public sealed partial class ChannelCreationResult : IUnion
+public sealed class ChannelCreationResult : IUnion
 {
 	public ChannelCreationResult(Success value) => Value = value;
 	public ChannelCreationResult(ChannelNameTaken value) => Value = value;

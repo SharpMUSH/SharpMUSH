@@ -6,4 +6,4 @@ namespace SharpMUSH.Library.DiscriminatedUnions;
 /// What a value is being validated for: an object, an attribute entry, a channel, or nothing in
 /// particular.
 /// </summary>
-public partial union ValidationTarget(AnySharpObject, SharpAttributeEntry, SharpChannel, None);
+public union ValidationTarget(AnySharpObject, SharpAttributeEntry, SharpChannel, None);

@@ -6,4 +6,4 @@ namespace SharpMUSH.Client.Services;
 /// The objid a character name resolved to, <see cref="NotFound"/>, or <see cref="Error"/> when the
 /// directory could not be read.
 /// </summary>
-public partial union ObjidResolution(string, NotFound, Error);
+public union ObjidResolution(string, NotFound, Error);

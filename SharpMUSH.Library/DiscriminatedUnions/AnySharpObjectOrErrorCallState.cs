@@ -4,7 +4,7 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
 [Union]
-public sealed partial class AnySharpObjectOrErrorCallState : IUnion
+public sealed class AnySharpObjectOrErrorCallState : IUnion
 {
 	public AnySharpObjectOrErrorCallState(AnySharpObject value) => Value = value;
 	public AnySharpObjectOrErrorCallState(Error<CallState> value) => Value = value;
