@@ -283,8 +283,16 @@
 
     private async Task CopyUrlAsync(string url)
     {
-        await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
-        Snackbar.Add(Loc["WkUrlCopied"], Severity.Info);
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            Snackbar.Add(Loc["WkUrlCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
     }
 
     private static string AssetKind(string contentType) => contentType switch

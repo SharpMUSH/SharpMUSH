@@ -3,7 +3,7 @@
 @attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @inject AdminConfigService AdminConfigService
-@inject IJSRuntime JSRuntime
+@inject ILogger<ImportConfig> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -100,18 +100,15 @@
 			}
 			catch (Exception ex)
 			{
-				await JSRuntime.InvokeVoidAsync("console.error", $"Error reading file: {ex.Message}");
+				Logger.LogError(ex, "Error reading configuration file {FileName}", file.Name);
 			}
 		}
-		
-		StateHasChanged();
 	}
 
 	private void ClearSelection()
 	{
 		_selectedFile = null;
 		_fileContent = null;
-		StateHasChanged();
 	}
 
 	private async Task ImportConfiguration()
@@ -120,7 +117,6 @@
 			return;
 
 		_isImporting = true;
-		StateHasChanged();
 
 		try
 		{
@@ -129,12 +125,11 @@
 		}
 		catch (Exception ex)
 		{
-			await JSRuntime.InvokeVoidAsync("console.error", $"Error importing configuration: {ex.Message}");
+			Logger.LogError(ex, "Error importing configuration");
 		}
 		finally
 		{
 			_isImporting = false;
-			StateHasChanged();
 		}
 	}
 }

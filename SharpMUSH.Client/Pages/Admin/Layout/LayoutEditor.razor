@@ -232,8 +232,18 @@
     {
         // Below the narrow-viewport breakpoint the zone collapses to one column, so there is no
         // column width to drag against. The keyboard path still works there; pointer resize does not.
-        var columnWidth = await JS.InvokeAsync<double>(
-            "sharpmushLayout.gridColumnWidth", ZoneElementId(Enum.Parse<WidgetZone>(item.Zone)), GridColumns);
+        double columnWidth;
+        try
+        {
+            columnWidth = await JS.InvokeAsync<double>(
+                "sharpmushLayout.gridColumnWidth", ZoneElementId(Enum.Parse<WidgetZone>(item.Zone)), GridColumns);
+        }
+        catch (JSException)
+        {
+            // No measurement is the narrow-viewport case again: keyboard resize only.
+            return;
+        }
+
         if (columnWidth <= 0)
         {
             return;
@@ -244,7 +254,14 @@
         _resizeStartX = e.ClientX;
         _resizeColumnWidth = columnWidth;
 
-        await JS.InvokeVoidAsync("sharpmushLayout.capturePointer", ResizeGripId(item), e.PointerId);
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.capturePointer", ResizeGripId(item), e.PointerId);
+        }
+        catch (JSException)
+        {
+            // Uncaptured, the drag still tracks for as long as the pointer stays over the grip.
+        }
     }
 
     private void OnResizeMove(EditItem item, PointerEventArgs e)

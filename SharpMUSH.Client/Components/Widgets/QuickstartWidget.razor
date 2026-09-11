@@ -76,6 +76,5 @@
         // account whose characters haven't loaded yet must not be mistaken for the anonymous state.
         // GetCharactersAsync no-ops (no HTTP) for an anonymous tab and guards against nulls itself.
         await AccountAuth.GetCharactersAsync();
-        StateHasChanged();
     }
 }

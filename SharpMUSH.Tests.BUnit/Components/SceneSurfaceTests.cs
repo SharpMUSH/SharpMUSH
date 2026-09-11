@@ -154,7 +154,7 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
-	public event Action? OnPluginsChanged;
+	public event Action? OnPluginsChanged { add { } remove { } }
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
 	public Task ConnectAsync()

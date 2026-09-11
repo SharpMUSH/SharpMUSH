@@ -142,7 +142,7 @@ builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHand
 var app = builder.Build();
 
 var jsRuntime = app.Services.GetRequiredService<IJSRuntime>();
-var storedLocale = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", "locale");
+var storedLocale = await jsRuntime.GetItemAsync(BrowserStore.Local, "locale");
 CultureInfo culture;
 try
 {
@@ -151,7 +151,7 @@ try
 catch (CultureNotFoundException)
 {
 	culture = new CultureInfo("en");
-	await jsRuntime.InvokeVoidAsync("localStorage.removeItem", "locale");
+	await jsRuntime.RemoveItemAsync(BrowserStore.Local, "locale");
 }
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
@@ -159,7 +159,15 @@ CultureInfo.DefaultThreadCurrentUICulture = culture;
 // index.html is served with a static lang="en", so without this the document keeps
 // claiming English whichever locale was picked: custom.css selects the CJK mono stack on
 // :lang(zh), and a screen reader chooses its voice from the same attribute. The picker
-// reloads the page on switch, so stamping it once at startup is enough.
-await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
+// reloads the page on switch, so stamping it once at startup is enough. Failing to stamp it
+// leaves the static "en", which is no reason to keep the portal from starting.
+try
+{
+	await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
+}
+catch (JSException ex)
+{
+	app.Services.GetRequiredService<ILogger<Program>>().LogWarning(ex, "Could not set the document language to {Culture}", culture.Name);
+}
 
 await app.RunAsync();

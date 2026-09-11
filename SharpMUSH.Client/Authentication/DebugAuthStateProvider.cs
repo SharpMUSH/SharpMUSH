@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Authorization;
 
@@ -28,6 +28,7 @@ namespace SharpMUSH.Client.Authentication;
 /// so this path should only be hit by a very late/unlucky bootstrap race, and it must not
 /// paper over that with a fake "DebugAdmin" identity.
 /// </summary>
+[SuppressMessage("Usage", "BL0013", Justification = "The provider hands its own freshly computed state to NotifyAuthenticationStateChanged; it caches nothing that could go stale.")]
 public class DebugAuthStateProvider : AuthenticationStateProvider
 {
 	private readonly IAccountAuthState _accountAuth;

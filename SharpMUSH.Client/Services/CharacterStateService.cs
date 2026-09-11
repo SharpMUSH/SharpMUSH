@@ -40,19 +40,8 @@ public sealed class CharacterStateService : ICharacterStateService
 		_currentCharacterDbref = dbref;
 		_currentCharacterName = name;
 
-		try
-		{
-			// Persist as "dbref|name" for simplicity (no JSON dependency in client services)
-			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, $"{dbref}|{name}");
-		}
-		catch (JSException)
-		{
-			// localStorage unavailable in some environments — ignore
-		}
-		catch (JSDisconnectedException)
-		{
-			// Circuit disconnected — ignore
-		}
+		// Persist as "dbref|name" for simplicity (no JSON dependency in client services)
+		await _js.SetItemAsync(BrowserStore.Local, LocalStorageKey, $"{dbref}|{name}");
 
 		OnCharacterChanged?.Invoke();
 	}
@@ -68,26 +57,11 @@ public sealed class CharacterStateService : ICharacterStateService
 	/// <inheritdoc/>
 	public async Task InitializeAsync()
 	{
-		try
+		var stored = await _js.GetItemAsync(BrowserStore.Local, LocalStorageKey);
+		if (stored?.IndexOf('|') is int sep and > 0)
 		{
-			var stored = await _js.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
-			if (stored is not null)
-			{
-				var sep = stored.IndexOf('|');
-				if (sep > 0)
-				{
-					_currentCharacterDbref = stored[..sep];
-					_currentCharacterName = stored[(sep + 1)..];
-				}
-			}
-		}
-		catch (JSException)
-		{
-			// localStorage unavailable — use defaults
-		}
-		catch (JSDisconnectedException)
-		{
-			// Circuit disconnected — use defaults
+			_currentCharacterDbref = stored[..sep];
+			_currentCharacterName = stored[(sep + 1)..];
 		}
 	}
 }

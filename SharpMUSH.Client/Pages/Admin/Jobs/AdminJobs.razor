@@ -5,7 +5,6 @@
 @attribute [Authorize]
 @implements IDisposable
 @inject IHttpClientFactory ClientFactory
-@inject AuthenticationStateProvider Authentication
 @inject IAuthorizationService Authorization
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -63,11 +62,16 @@
     private string _editSchedule = "", _editZone = "";
     private string? _error, _selected;
     private bool _all, _busy;
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
     protected override async Task OnInitializedAsync()
     {
-        var user = (await Authentication.GetAuthenticationStateAsync()).User;
-        _all = !(await Authorization.AuthorizeAsync(user, "jobs.manage.own")).Succeeded
-            && (await Authorization.AuthorizeAsync(user, "jobs.manage")).Succeeded;
+        // Only the starting position of the "all jobs" toggle, which the user can then flip.
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            _all = !(await Authorization.AuthorizeAsync(user, "jobs.manage.own")).Succeeded
+                && (await Authorization.AuthorizeAsync(user, "jobs.manage")).Succeeded;
+        }
         await Load();
     }
     private static string Time(long? value) => value is { } time ? DateTimeOffset.FromUnixTimeMilliseconds(time).ToString("u") : "—";

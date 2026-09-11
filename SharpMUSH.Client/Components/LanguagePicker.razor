@@ -28,7 +28,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var stored = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "locale");
+        var stored = await JSRuntime.GetItemAsync(BrowserStore.Local, "locale");
         _currentLocale = stored ?? "en";
     }
 
@@ -37,7 +37,7 @@
         if (locale == _currentLocale) return;
 
         _currentLocale = locale;
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "locale", locale);
+        await JSRuntime.SetItemAsync(BrowserStore.Local, "locale", locale);
 
         // Reload the app to apply new culture (Blazor WASM requires restart for culture change)
         NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);

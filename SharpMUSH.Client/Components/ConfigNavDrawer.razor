@@ -68,10 +68,14 @@
             return;
         }
 
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval",
-            $"var a=document.createElement('a');a.href='data:application/json;base64,{base64}';a.download='sharpmush-config.json';a.click()");
-        Snackbar.Add(Loc["ConfigurationExported"].Value, Severity.Success);
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.Files.saveText", "sharpmush-config.json", "application/json", json);
+            Snackbar.Add(Loc["ConfigurationExported"].Value, Severity.Success);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["ExportFailed"].Value, Severity.Error);
+        }
     }
 }

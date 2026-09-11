@@ -12,6 +12,7 @@
 @inject ApplicationRegistryClient Registry
 @inject ServerInfoService ServerInfo
 @inject IJSRuntime JS
+@inject ILogger<NavMenu> Logger
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -297,7 +298,6 @@
 
         _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
         _gameName = await ServerInfo.GameNameAsync();
-        StateHasChanged();
     }
 
     private void OnConnectionChanged(bool connected)
@@ -363,7 +363,16 @@
     /// ambiguous across a recycled object, and SwitchCharacterRequest needs both anyway.
     /// </summary>
     private async Task HandleOpenInNewTabAsync(AccountAuthService.CharacterSummary character)
-        => await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("open", $"/?as={character.DbrefNumber}-{character.CreationTime}", "_blank");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not open a new tab as #{Dbref}", character.DbrefNumber);
+        }
+    }
 
     private async Task HandleLogoutAsync()
     {

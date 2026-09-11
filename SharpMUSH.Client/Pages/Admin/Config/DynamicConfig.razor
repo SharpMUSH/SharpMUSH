@@ -668,7 +668,6 @@
     {
         _saving = true;
         _validationErrors.Clear();
-        StateHasChanged();
 
         try
         {
@@ -742,7 +741,6 @@
         finally
         {
             _saving = false;
-            StateHasChanged();
         }
     }
 
@@ -757,7 +755,6 @@
         _hasChanges = false;
         _changedCount = 0;
         _validationErrors.Clear();
-        StateHasChanged();
     }
 
     private void ResetToDefaults()
@@ -769,7 +766,6 @@
         _dictDrafts.Clear();
         _listDrafts.Clear();
         RecalculateChanges();
-        StateHasChanged();
         Snackbar.Add(Loc["DefaultsRestored"].Value, Severity.Info);
     }
 

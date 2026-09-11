@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
+@inject ILogger<WikiEdit> Logger
 @inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -249,7 +250,17 @@
         : ByteDelta.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     private async Task Wrap(string before, string after, bool block)
-        => await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);
+        }
+        catch (JSException ex)
+        {
+            // The toolbar is a convenience over typing the markdown by hand, which still works.
+            Logger.LogWarning(ex, "Wiki editor toolbar could not wrap the selection");
+        }
+    }
 
     private void AddTag()
     {

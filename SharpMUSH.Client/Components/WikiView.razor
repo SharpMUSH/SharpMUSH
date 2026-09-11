@@ -218,7 +218,6 @@ else
     private void HandleArticleRestored(WikiArticle restored)
     {
         _article = restored;
-        StateHasChanged();
     }
 
     private void HandleCancel()
@@ -226,7 +225,6 @@ else
         _editDraft = null;
         _saveError = null;
         Mode = WikiMode.View;
-        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()

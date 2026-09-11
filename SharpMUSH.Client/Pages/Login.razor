@@ -163,14 +163,12 @@
             return;
         }
         _busy = true;
-        StateHasChanged();
         var (success, error, characters) = await AccountAuth.LoginAsync(_loginIdentifier, _loginPassword);
         _busy = false;
         if (success)
             Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
         else
             _error = error ?? Loc["AuthLoginFailed"];
-        StateHasChanged();
     }
 
     private async Task RegisterAsync()
@@ -182,7 +180,6 @@
             return;
         }
         _busy = true;
-        StateHasChanged();
         // A fresh account never has a character, so registration always continues into onboarding.
         var (success, error, characters) = await AccountAuth.RegisterAsync(_regUsername, _regEmail, _regPassword);
         _busy = false;
@@ -190,7 +187,6 @@
             Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SuccessUrl());
         else
             _error = error ?? Loc["AuthRegistrationFailed"];
-        StateHasChanged();
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)

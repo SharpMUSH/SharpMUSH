@@ -196,8 +196,8 @@ public class AccountAuthService(
 			// InitAsync caches the TASK, not its result, so a hydration that throws is latched for the
 			// life of the tab: GlobalTerminal, MainLayout, both auth-state providers and the bearer
 			// handler all await this same task, and every one of them would rethrow forever — a portal
-			// that cannot render any page rather than one page degrading. Storage that cannot be read
-			// (JSException on a blocked sessionStorage; a corrupted permissions blob) is indistinguishable
+			// that cannot render any page rather than one page degrading. State that cannot be restored
+			// (a corrupted permissions blob; blocked storage already reads as empty) is indistinguishable
 			// from a tab with no session, and "no session" is a state the whole portal already handles.
 			logger.LogError(ex, "Account session hydration failed; treating this tab as signed out");
 			ClearSessionState();
@@ -210,10 +210,10 @@ public class AccountAuthService(
 
 	private async Task HydrateFromStorageAsync()
 	{
-		var loggedOutFlag = await js.InvokeAsync<string?>("sessionStorage.getItem", LoggedOutKey);
+		var loggedOutFlag = await js.GetItemAsync(BrowserStore.Session, LoggedOutKey);
 		ExplicitlyLoggedOut = string.Equals(loggedOutFlag, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 
-		AccountSessionToken = await js.InvokeAsync<string?>("sessionStorage.getItem", SessionTokenKey);
+		AccountSessionToken = await js.GetItemAsync(BrowserStore.Session, SessionTokenKey);
 		if (AccountSessionToken is null || ExplicitlyLoggedOut)
 		{
 			// No session in this tab (sessionStorage is tab-scoped): don't restore Username/Role/
@@ -224,8 +224,8 @@ public class AccountAuthService(
 			return;
 		}
 
-		Username = await js.InvokeAsync<string?>("sessionStorage.getItem", UsernameKey);
-		var mustChangePassword = await js.InvokeAsync<string?>("sessionStorage.getItem", MustChangePasswordKey);
+		Username = await js.GetItemAsync(BrowserStore.Session, UsernameKey);
+		var mustChangePassword = await js.GetItemAsync(BrowserStore.Session, MustChangePasswordKey);
 		MustChangePassword = string.Equals(mustChangePassword, bool.TrueString, StringComparison.OrdinalIgnoreCase);
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
@@ -707,7 +707,7 @@ public class AccountAuthService(
 		if (success)
 		{
 			Username = newUsername;
-			await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, newUsername);
+			await js.SetItemAsync(BrowserStore.Session, UsernameKey, newUsername);
 		}
 		return (success, error);
 	}
@@ -764,16 +764,16 @@ public class AccountAuthService(
 		// A fresh intentional login later must mint (and redeem) its own token, not resurrect the
 		// previous boot's cached debug-OTT response.
 		_debugOttTask = null;
-		await js.InvokeVoidAsync("sessionStorage.removeItem", SessionTokenKey);
-		await js.InvokeVoidAsync("sessionStorage.removeItem", UsernameKey);
-		await js.InvokeVoidAsync("sessionStorage.removeItem", MustChangePasswordKey);
-		await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
-		await js.InvokeVoidAsync("sessionStorage.removeItem", PermissionsKey);
+		await js.RemoveItemAsync(BrowserStore.Session, SessionTokenKey);
+		await js.RemoveItemAsync(BrowserStore.Session, UsernameKey);
+		await js.RemoveItemAsync(BrowserStore.Session, MustChangePasswordKey);
+		await js.RemoveItemAsync(BrowserStore.Session, RoleKey);
+		await js.RemoveItemAsync(BrowserStore.Session, PermissionsKey);
 
 		// Explicit-logout latch: sticks until the next successful login/register/setup in this
 		// tab, so dev-mode debug re-auth (or any other silent re-persist) can't undo the logout.
 		ExplicitlyLoggedOut = true;
-		await js.InvokeVoidAsync("sessionStorage.setItem", LoggedOutKey, bool.TrueString);
+		await js.SetItemAsync(BrowserStore.Session, LoggedOutKey, bool.TrueString);
 
 		// Every storage mutation above (session/role/permission removal and the loggedOut latch
 		// write) is complete before the event fires. This ordering is load-bearing: the event
@@ -792,7 +792,7 @@ public class AccountAuthService(
 		// Storage first. A throwing interop call propagates to SwitchCharacterAsync, which reports the
 		// switch as failed — so the in-memory token must not have moved yet, or the tab would be acting
 		// as the new character while the caller believes it isn't and a reload would restore the old one.
-		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
+		await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token);
 		AccountSessionToken = token;
 	}
 
@@ -803,18 +803,18 @@ public class AccountAuthService(
 		Username = username;
 		Role = role;
 		Permissions = permissions ?? [];
-		await js.InvokeVoidAsync("sessionStorage.setItem", SessionTokenKey, token);
-		await js.InvokeVoidAsync("sessionStorage.setItem", UsernameKey, username);
+		await js.SetItemAsync(BrowserStore.Session, SessionTokenKey, token);
+		await js.SetItemAsync(BrowserStore.Session, UsernameKey, username);
 		await SetMustChangePasswordAsync(mustChangePassword);
 		if (role is null)
-			await js.InvokeVoidAsync("sessionStorage.removeItem", RoleKey);
+			await js.RemoveItemAsync(BrowserStore.Session, RoleKey);
 		else
-			await js.InvokeVoidAsync("sessionStorage.setItem", RoleKey, role);
-		await js.InvokeVoidAsync("sessionStorage.setItem", PermissionsKey, JsonSerializer.Serialize(Permissions));
+			await js.SetItemAsync(BrowserStore.Session, RoleKey, role);
+		await js.SetItemAsync(BrowserStore.Session, PermissionsKey, JsonSerializer.Serialize(Permissions));
 
 		// Any successful login/register/setup clears a prior explicit logout.
 		ExplicitlyLoggedOut = false;
-		await js.InvokeVoidAsync("sessionStorage.removeItem", LoggedOutKey);
+		await js.RemoveItemAsync(BrowserStore.Session, LoggedOutKey);
 		RaiseAuthStateChanged();
 	}
 
@@ -839,7 +839,7 @@ public class AccountAuthService(
 	private async Task SetMustChangePasswordAsync(bool value)
 	{
 		MustChangePassword = value;
-		await js.InvokeVoidAsync("sessionStorage.setItem", MustChangePasswordKey, value.ToString());
+		await js.SetItemAsync(BrowserStore.Session, MustChangePasswordKey, value.ToString());
 	}
 
 	private async Task<(bool Success, string? Error)> PutAsync<T>(string path, T body)

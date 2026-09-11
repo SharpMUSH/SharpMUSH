@@ -106,4 +106,19 @@
         },
     };
 
+    // ── File downloads ─────────────────────────────────────────────────────────
+    // Hands text generated in .NET to the browser as a download, through a Blob URL.
+    // The URL is released on a delay, not straight after the click: some browsers
+    // start reading the blob asynchronously and drop a download revoked under them.
+    window.SharpMUSH.Files = {
+        saveText: function (fileName, mimeType, text) {
+            var url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        },
+    };
+
 })();

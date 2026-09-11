@@ -9,6 +9,7 @@
 @inject MushQueryService QueryService
 @inject ObjectApiService ObjectApi
 @inject IJSRuntime JsRuntime
+@inject ILogger<SoftcodeEditor> Logger
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
@@ -391,7 +392,6 @@
     private async Task LoadEditorAssetsAsync()
     {
         _editorAssetsFailed = false;
-        StateHasChanged();
 
         try
         {
@@ -405,7 +405,6 @@
             _editorAssetsFailed = true;
         }
 
-        StateHasChanged();
     }
     private ObjectBrowser? _objectBrowser;
     private HelpDrawer? _helpDrawer;
@@ -516,7 +515,17 @@
     };
 
     private async Task OnEditorInitAsync()
-        => await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Monaco.initEditor", "mush-editor");
+        }
+        catch (JSException ex)
+        {
+            // The editor still edits; it only loses MUSH highlighting and completion.
+            Logger.LogWarning(ex, "Monaco MUSH language setup failed");
+        }
+    }
 
     private async Task SetEditorValueAsync(string value)
     {
@@ -549,7 +558,6 @@
         if (dirty == ActiveTab.IsDirty) return;
 
         ActiveTab.IsDirty = dirty;
-        StateHasChanged();
     }
 
     private async Task OnAttributeSelected(MushAttribute? attr)
@@ -753,7 +761,6 @@
             _saveSeverity = Severity.Success;
         }
 
-        StateHasChanged();
     }
 
     private async Task DeleteAsync()
@@ -784,7 +791,6 @@
             _saveSeverity = Severity.Info;
         }
 
-        StateHasChanged();
     }
 
     private async Task EvalAsync()
@@ -792,7 +798,6 @@
         if (_monacoEditor is null || ActiveTab is null) return;
         _evalLoading = true;
         _evalOutput = null;
-        StateHasChanged();
         try
         {
             var lines = await QueryService.EvalAsync($"#{ActiveTab.Obj.Dbref}", ActiveTab.Attr.Name);
@@ -807,7 +812,6 @@
         finally
         {
             _evalLoading = false;
-            StateHasChanged();
         }
     }
 
