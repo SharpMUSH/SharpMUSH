@@ -14,7 +14,8 @@ public class CreateRoomCommandHandler(
 {
 	public async ValueTask<DBRef> Handle(CreateRoomCommand request, CancellationToken cancellationToken)
 	{
-		var created = await database.CreateRoomAsync(request.Name, request.Creator, cancellationToken: cancellationToken);
+		var created = await database.CreateRoomAsync(request.Name, request.Creator, request.CreationTime, request.ModifiedTime,
+			cancellationToken);
 
 		if (request.ApplyDefaultFlags)
 		{

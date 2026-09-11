@@ -9,10 +9,17 @@ namespace SharpMUSH.Library.Commands.Database;
 /// <summary>Creates an exit and stamps the configured default exit flags on it.</summary>
 /// <param name="ApplyDefaultFlags">
 /// Whether the configured default flags for this type are stamped on the new object. True for
-/// anything a player creates. False for a package install, where the manifest is the whole truth
-/// about the object's flags: <c>exit_flags</c> defaults to nothing by default, but a game may set it.
+/// anything a player creates. False for an import, whose objects are the source database's rather
+/// than new ones here, and for a package install, where the manifest is the whole truth about the
+/// object's flags: <c>exit_flags</c> defaults to nothing by default, but a game may set it.
 /// </param>
-public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator, bool ApplyDefaultFlags = true)
+/// <param name="CreationTime">
+/// Creation time in Unix milliseconds, or <c>null</c> for now. An import passes the source's, since the
+/// objid is <c>#N:&lt;creation time&gt;</c> and softcode in the imported database holds those.
+/// </param>
+/// <param name="ModifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match the creation time.</param>
+public record CreateExitCommand(string Name, string[] Aliases, AnySharpContainer Location, SharpPlayer Creator, bool ApplyDefaultFlags = true,
+	long? CreationTime = null, long? ModifiedTime = null)
 	: ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Location.Object().DBRef), Definitions.CacheKeys.Object(Creator.Object.DBRef)];

@@ -14,7 +14,8 @@ public class CreateThingCommandHandler(
 {
 	public async ValueTask<DBRef> Handle(CreateThingCommand request, CancellationToken cancellationToken)
 	{
-		var created = await database.CreateThingAsync(request.Name, request.Where, request.Owner, request.Home, cancellationToken: cancellationToken);
+		var created = await database.CreateThingAsync(request.Name, request.Where, request.Owner, request.Home,
+			request.CreationTime, request.ModifiedTime, cancellationToken);
 
 		if (request.ApplyDefaultFlags)
 		{
