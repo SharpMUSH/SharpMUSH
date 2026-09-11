@@ -16,7 +16,7 @@ cover the two runtime layers plus the portal:
 |---|---|---|---|
 | [`plugin-softcode/`](plugin-softcode/) | `sharpmush-softcode` | `kind: softcode` | A YAML package of objects + attributes + a global `@function`. Game **policy**, no C#, no recompile. |
 | [`plugin-application/`](plugin-application/) | `sharpmush-application` | `kind: application` (+ softcode routes) | A Dynamic Application (Area 21): softcode schema/submit routes plus a portal page registration. |
-| [`plugin-dll/`](plugin-dll/) | `sharpmush-plugin` | C# DLL (`kind: managed`) | A compiled `net10.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a managed package. |
+| [`plugin-dll/`](plugin-dll/) | `sharpmush-plugin` | C# DLL (`kind: managed`) | A compiled `net11.0` plugin: `[SharpPlugin] : PluginBase` with a command + function, distributed as a managed package. |
 
 Authoring background:
 

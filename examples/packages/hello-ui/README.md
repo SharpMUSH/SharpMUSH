@@ -45,7 +45,7 @@ dotnet build examples/plugins/hello-ui/HelloUiPlugin.csproj -c Release
 #    (The .dll/.deps.json digests are build-environment specific; a deterministic-build CI normally
 #    rewrites this block before tagging. The manifest parser validates only the 64-hex SHAPE — the
 #    installer verifies the bytes actually match at install time.)
-cd examples/plugins/hello-ui/bin/Release/net10.0
+cd examples/plugins/hello-ui/bin/Release/net11.0
 sha256sum HelloUiPlugin.dll HelloUiPlugin.deps.json plugin.json
 
 # 3. Install through the package manager with the two-part managed-code trust opt-in:

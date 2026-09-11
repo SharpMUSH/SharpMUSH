@@ -161,7 +161,7 @@ dotnet run --project SharpMUSH.Tests
 **Note**: By default, test output is minimized to reduce noise. Metrics and logs are collected by Prometheus during tests and can be queried via the Prometheus API or viewed in Grafana. Enable console logging only when debugging specific test issues.
 
 ## Build Requirements
-- .NET 10 (as specified in global.json)
+- .NET 11 (as specified in global.json)
 - Build with: `dotnet build`
 - Test with: `dotnet test` (runs via `dotnet run --project SharpMUSH.Tests`)
 - Main entry point: `SharpMUSH.Server`

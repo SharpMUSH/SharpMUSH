@@ -4,26 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-SharpMUSH is a modern .NET 10 MUSH server (text-based multiplayer role-playing) targeting PennMUSH compatibility. The repository contains both the game engine and a Blazor WASM web portal. This branch (`feature/web-portal-design`) is focused on the web portal.
+SharpMUSH is a modern .NET 11 MUSH server (text-based multiplayer role-playing) targeting PennMUSH compatibility. The repository contains both the game engine and a Blazor WASM web portal.
 
 ## Build & Test Commands
 
-`global.json` pins the SDK to the **10.0.4xx** feature band with `allowPrerelease: false`, so a
-10.0.3xx SDK or a .NET 11 preview will not satisfy it — `dotnet` fails with "A compatible .NET SDK
-was not found" before any project is read. Install 10.0.400 or newer within that band:
+`global.json` pins the SDK to **11.0.100-rc.1** (`allowPrerelease: true`, rolling forward within
+the 11.0.1xx band), so a .NET 10 SDK or an older 11.0 preview will not satisfy it — `dotnet` fails
+with "A compatible .NET SDK was not found" before any project is read. Install it with:
 
 ```bash
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.400
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 11.0.100-rc.1.26425.128
 ```
 
-The pin is not cosmetic: the two source-generator projects reference `Microsoft.CodeAnalysis.CSharp`
-5.9.0, which is the Roslyn that ships inside 10.0.400. An older SDK carries an older compiler and
-rejects the generators with CS9057.
+The source-generator projects reference `Microsoft.CodeAnalysis.CSharp` 5.9.0; the compiler that
+loads them must be at least that version, and 11.0.100-rc.1 carries Roslyn 5.11. An SDK with an
+older compiler rejects the generators with CS9057.
 
 `global.json` is the only place the SDK version is written down. Every workflow resolves it with
-`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping the band is a one-line change
-here; the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:10.0` tag and fail loudly
-against `global.json` if that tag ever lags the pin.
+`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping it is a one-line change here;
+the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:11.0` tag and fail loudly against
+`global.json` if that tag ever lags the pin. The runtime-versioned packages (`Microsoft.AspNetCore.*`,
+`Microsoft.Extensions.*`, `Microsoft.Data.Sqlite`) share one version, `$(DotNetPackageVersion)` in
+`Directory.Build.props`, which moves with it.
 
 ```bash
 # Build everything

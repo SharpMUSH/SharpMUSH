@@ -35,7 +35,23 @@ public class CentrallyPinnedPackageTests
 		("MarkupString", "MarkupStringVersion"),
 		("MarkupString.Ansi", "MarkupStringVersion"),
 		("MarkupString.Html", "MarkupStringVersion"),
-		("TelnetNegotiationCore", "TelnetNegotiationCoreVersion")
+		("TelnetNegotiationCore", "TelnetNegotiationCoreVersion"),
+		// Versioned with the runtime: one a release behind the shared framework is an NU1605 downgrade.
+		("Microsoft.AspNetCore.Components.Authorization", "DotNetPackageVersion"),
+		("Microsoft.AspNetCore.Components.WebAssembly", "DotNetPackageVersion"),
+		("Microsoft.AspNetCore.Components.WebAssembly.DevServer", "DotNetPackageVersion"),
+		("Microsoft.AspNetCore.Components.WebAssembly.Server", "DotNetPackageVersion"),
+		("Microsoft.AspNetCore.Mvc.Testing", "DotNetPackageVersion"),
+		("Microsoft.AspNetCore.SignalR.Client", "DotNetPackageVersion"),
+		("Microsoft.Data.Sqlite", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Caching.Memory", "DotNetPackageVersion"),
+		("Microsoft.Extensions.DependencyInjection", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Http", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Identity.Core", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Logging", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Logging.Abstractions", "DotNetPackageVersion"),
+		("Microsoft.Extensions.Logging.Console", "DotNetPackageVersion"),
+		("System.Configuration.ConfigurationManager", "DotNetPackageVersion")
 	];
 
 	[Test]

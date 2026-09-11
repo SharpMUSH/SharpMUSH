@@ -46,7 +46,7 @@ together.**
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <!-- Emits a .deps.json and marks this as a dynamically-loadable plugin. -->
     <EnableDynamicLoading>true</EnableDynamicLoading>

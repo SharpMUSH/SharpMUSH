@@ -5,7 +5,7 @@
   "identity": "SharpMUSH.Plugin.Dll",
   "name": "SharpMUSH C# DLL plugin",
   "shortName": "sharpmush-plugin",
-  "description": "A starter SharpMUSH compiled C# plugin (net10.0, EnableDynamicLoading): [SharpPlugin] : PluginBase with a sample command + function, a kind:managed package.yaml, and a deterministic build/SHA-256/release CI.",
+  "description": "A starter SharpMUSH compiled C# plugin (net11.0, EnableDynamicLoading): [SharpPlugin] : PluginBase with a sample command + function, a kind:managed package.yaml, and a deterministic build/SHA-256/release CI.",
   "tags": {
     "language": "C#",
     "type": "project"
