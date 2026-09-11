@@ -81,6 +81,24 @@ public class PennMUSHDumpImportTests
 		await Assert.That(note.Single().Value.ToPlainText()).IsEqualTo("He said \"hi\" \\ back");
 	}
 
+	/// <summary>The flags, powers, homes and drop-to the oracle's world was built with.</summary>
+	[Test]
+	public async Task FlagsPowersHomesAndDropTosArrive()
+	{
+		await using var world = await ImportAsync();
+
+		var widget = await FindAsync(world, "Widget");
+		var hall = await FindAsync(world, "Oracle Hall");
+		var bob = await FindAsync(world, "Bob");
+
+		var widgetFlags = await widget.Object().Flags.Value.Select(f => f.Name).ToListAsync();
+		await Assert.That(widgetFlags).Contains("DARK").And.Contains("NO_COMMAND");
+		await Assert.That(await bob.Object().Powers.Value.Select(p => p.Name).ToListAsync()).Contains("See_All");
+		await Assert.That((await widget.Expect<SharpThing>().Home.WithCancellation(CancellationToken.None)).Object().Key)
+			.IsEqualTo(hall.Object().Key);
+		await Assert.That((await hall.Expect<SharpRoom>().Location.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(0);
+	}
+
 	private static async Task<IsolatedImportWorld> ImportAsync()
 	{
 		var world = await IsolatedImportWorld.CreateAsync();
