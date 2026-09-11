@@ -61,8 +61,9 @@ public class ZoneFunctionTests
 		var notifications = string.Join(" | ", WebAppFactoryArg.Notifications.For(Actor.DbRef).Skip(notificationStart));
 		await Assert.That(DBRef.TryParse(output, out var created)).IsTrue()
 			.Because($"@create {fixtureName} returned '{output}'; actor {Actor.DbRef}; notifications: {notifications}");
-		await Assert.That(created!.Value.Number).IsGreaterThan(0);
-		var persisted = await Mediator.Send(new GetObjectNodeQuery(created.Value));
+		var createdDbRef = created ?? throw new InvalidOperationException("Successful DBRef parsing returned no value.");
+		await Assert.That(createdDbRef.Number).IsGreaterThan(0);
+		var persisted = await Mediator.Send(new GetObjectNodeQuery(createdDbRef));
 		await Assert.That(persisted.IsNone).IsFalse()
 			.Because($"@create {fixtureName} returned {created}; actor {Actor.DbRef}; notifications: {notifications}");
 		return result;

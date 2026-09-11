@@ -17,7 +17,7 @@ public sealed class TestDatabaseStorage : IAsyncInitializer, IAsyncDisposable
 				StringComparison.OrdinalIgnoreCase)
 			&& Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
 		{
-			_ownedPath = Path.Combine(Path.GetTempPath(), $"sharpmush-lightning-tests-{Guid.NewGuid():N}");
+			_ownedPath = Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{Guid.NewGuid():N}");
 			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", _ownedPath);
 		}
 		return Task.CompletedTask;
@@ -30,8 +30,8 @@ public sealed class TestDatabaseStorage : IAsyncInitializer, IAsyncDisposable
 
 		try
 		{
-			foreach (var path in new[] { ownedPath, ownedPath + ".backups" })
-				if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+			foreach (var path in new[] { ownedPath, ownedPath + ".backups" }.Where(Directory.Exists))
+				Directory.Delete(path, recursive: true);
 		}
 		finally
 		{

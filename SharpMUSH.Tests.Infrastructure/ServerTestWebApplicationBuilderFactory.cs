@@ -61,6 +61,10 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 
 		Log.Logger = TestDiagnostics.CreateLogger();
 		TestDiagnostics.ConfigureHost(builder);
+		// The delayed advisor only emits configuration warnings and can outlive a short test host.
+		// Disable that diagnostic task for both named and default caches in session fixtures.
+		builder.ConfigureTestServices(services => services.PostConfigureAll<FusionCacheOptions>(
+			options => options.EnableBestPracticesAdvisor = false));
 
 		if (sharedWorldServices is not null)
 		{

@@ -29,7 +29,7 @@
 - [x] Inspect BBS readiness sleeps and replace only those for which completion can be observed deterministically. Preserve deliberate time-behavior tests.
 - [x] Run unit, integration, bUnit, and provider-independent scene suites and compare durations with baseline. Keep concurrency 8 unless measured evidence supports a safe change; introduce no speculative limits.
 - [x] Run formatting and review the complete diff.
-- [ ] Commit and publish a PR with measured results and any material limitations.
+- [x] Commit and publish PR #1025 with measured results and material limitations.
 
 ## Validation commands
 
@@ -63,3 +63,11 @@ Final integration: 429 passed, zero failed/skipped, 79.167 seconds test duration
 Final bUnit: 655 passed, 5.306 seconds. Provider-independent scene tests: 21 passed, 0.196 seconds.
 
 Final unit: 9,479 total, 9,319 passed, 160 skipped, zero failures; 261.212 seconds test duration and 262.709 seconds wall time. This is 22.155 seconds slower than the baseline wall time (about 9.2%), with 22 additional passing cases. This run does not demonstrate a unit throughput improvement. Correct fixture shutdown and the additional active tests are part of the changed workload; no causal breakdown of the timing difference was measured. The capture contained only test results and runner artifact/summary lines, with no routine application logging.
+
+## CI follow-up
+
+The initial PR unit job passed only after retrying the entire suite. Its first attempt failed `FlagBatch_IsReportedAsOneLinePerHalf` with three notifications instead of two. Attribute-flag tests now own rooms as well as players, bind parsers to those actors explicitly, and disconnect their handles.
+
+The regression creates a private initial room through a scoped default-home override, leaves a witness there, and broadcasts while capturing the owner's unfiltered notification window. Removing the owner's isolation move reproduces the exact three-versus-two failure. The fixed tests preserve exact report counts and persisted-flag assertions.
+
+Full unit verification after the fix: 9,320 passed, 160 skipped, zero failures in 236.172 seconds, with only test-result output. The regression's broadcast was subsequently confined to its private initial room and checked again with the isolation move removed, then restored. Review cleanups use an explicit non-null parsed DBRef, Path.Join, and filtered directory cleanup. Optional FusionCache best-practice diagnostics are disabled in test hosts after their delayed task threw during short-host teardown.
