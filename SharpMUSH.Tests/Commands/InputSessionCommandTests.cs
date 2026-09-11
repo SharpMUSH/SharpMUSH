@@ -43,9 +43,20 @@ public class InputSessionCommandTests
 	private ValueTask<SharpMUSH.Library.Models.SchedulerModels.QueueAdmissionResult> Input(long handle, string input) =>
 		Scheduler.AdmitUserCommand(handle, MarkupText.Plain(input), ParserState.Empty with { Handle = handle });
 
+	/// <summary>
+	/// How long a wait for queued work may take before the test calls it hung.
+	/// </summary>
+	/// <remarks>
+	/// Every wait in this class is for the queue to reach an entry, never for the engine to be quick. One
+	/// scheduler, one entry at a time, is shared by the whole session, so the wait covers everything queued
+	/// ahead — measured at over four seconds for a single unrelated entry in a full SurrealDB run. The
+	/// deadline is a hang detector; a real failure to run the entry never becomes a pass by waiting longer.
+	/// </remarks>
+	private static readonly TimeSpan QueueDeadline = TimeSpan.FromSeconds(30);
+
 	private async Task WaitFor(DBRef player, string attribute, string expected)
 	{
-		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+		using var timeout = new CancellationTokenSource(QueueDeadline);
 		while (await Read(player, attribute) != expected) await Task.Delay(20, timeout.Token);
 	}
 
@@ -239,7 +250,7 @@ public class InputSessionCommandTests
 				await Assert.That((await Input(player.Handle, reply)).Accepted).IsTrue();
 				var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 				await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
-				await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
+				await drained.Task.WaitAsync(QueueDeadline);
 				await Assert.That(await Read(player.DbRef, "SET")).IsEqualTo($"||{reply}|{reply}|LOCAL OTHER")
 					.Because("no register carries over from the previous reply, and each is readable as it is set");
 				await Assert.That(await Read(player.DbRef, "READ")).IsEqualTo($"{reply}||")
@@ -267,7 +278,7 @@ public class InputSessionCommandTests
 			await Command(player.Handle, "&CALLBACK me=&ANSWER me=%0; @input/cancel");
 			await Input(player.Handle, "last");
 			await WaitFor(player.DbRef, "ANSWER", "last");
-			using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			using var deadline = new CancellationTokenSource(QueueDeadline);
 			while (Sessions.GetCapturing(player.Handle) is not null) await Task.Delay(10, deadline.Token);
 		}
 		finally { await Connections.Disconnect(player.Handle); }
@@ -324,7 +335,7 @@ public class InputSessionCommandTests
 			await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			await Command(player.Handle, $"@halt {target}");
 			await Input(player.Handle, "must not run");
-			using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+			using var deadline = new CancellationTokenSource(QueueDeadline);
 			while (Sessions.GetCapturing(player.Handle) is not null) await Task.Delay(10, deadline.Token);
 			await Assert.That(await Read(target, "ANSWER")).IsNull();
 		}
